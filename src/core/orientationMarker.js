@@ -8,21 +8,14 @@ import { getSceneObjects } from './scene.js';
 
 let axes = null;
 let axesPosition = null;
-let orientationWidget = null;  // Track the widget instance
+let orientationWidget = null;
+let isInitialized = false;
 
 export function createOrientationMarker() {
-  // Clean up existing widget if it exists
-  if (orientationWidget) {
-    orientationWidget.setEnabled(false);
-    orientationWidget.delete();
-    orientationWidget = null;
+  if (isInitialized) {
+    return; // Already exists, do nothing
   }
 
-  // Clean up existing axes if they exist
-  if (axes) {
-    axes.delete();
-    axes = null;
-  }
   const { interactor } = getSceneObjects();
 
   // create axes
@@ -68,7 +61,7 @@ export function createOrientationMarker() {
   axesPosition = axes.getPosition();
 
   // create orientation widget
-  const orientationWidget = vtkOrientationMarkerWidget.newInstance({
+  orientationWidget = vtkOrientationMarkerWidget.newInstance({
     actor: axes,
     interactor: interactor,
   });
@@ -79,19 +72,23 @@ export function createOrientationMarker() {
   orientationWidget.setViewportSize(0.1);
   orientationWidget.setMinPixelSize(100);
   orientationWidget.setMaxPixelSize(300);
+
+  isInitialized= true;
 }
 
+// For reset purposes
 export function destroyOrientationMarker() {
   if (orientationWidget) {
     orientationWidget.setEnabled(false);
     orientationWidget.delete();
     orientationWidget = null;
   }
-  
+
   if (axes) {
     axes.delete();
     axes = null;
   }
+  isInitialized = false;
 }
 
 export function getAxes() {
