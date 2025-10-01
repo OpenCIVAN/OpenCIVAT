@@ -15,7 +15,7 @@ import { getSceneObjects } from "../core/scene.js";
 
 // Generate a unique user ID for this session
 const userId = "user_" + Math.random().toString(36).substr(2, 9);
-let userName = localStorage.getItem('vtk-username') || ''; 
+let userName = localStorage.getItem("vtk-username") || "";
 
 // Store active cursors
 const activeCursors = new Map();
@@ -518,18 +518,6 @@ export function initializeCursorSystem() {
     // Set up syncing and cleanup
     setupCursorSync();
     startCursorCleanup();
-
-    // Add cursor controls to UI (with delay to ensure table exists)
-    setTimeout(() => {
-      try {
-        addCursorControls();
-      } catch (error) {
-        logWarning(`Could not add cursor controls: ${error.message}`);
-      }
-    }, 1000);
-
-    // Enhance VTK interaction
-    enhanceVTKInteraction();
 
     // Send initial cursor position after a short delay
     setTimeout(() => {
