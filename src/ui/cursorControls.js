@@ -3,13 +3,11 @@
 // ----------------------------------------------------------------------------
 
 import {
-  getUserId,
-  updateUserName,
   updateMyCursor,
   hideMyCursor,
   getActiveCursors,
-  getUserColor,
 } from "../collaboration/cursors.js";
+import { getUserId, updateUserName, getUserColor } from "../collaboration/userManagement.js";
 import { yUserNames } from "../collaboration/yjsSetup.js";
 import { logSuccess, logInfo } from "./logging.js";
 

@@ -1,4 +1,4 @@
-import { getUserId } from "../collaboration/cursors.js";
+import { getUserId } from "../collaboration/userManagement.js";
 import { getSceneObjects } from "../core/scene.js";
 
 // Track mouse position within the VTK.js render window
