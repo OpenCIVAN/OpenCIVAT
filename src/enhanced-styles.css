@@ -1,0 +1,441 @@
+/* ============================================================================
+   Enhanced Styling for VTK.js Collaborative Visualization Application
+   ============================================================================ */
+
+/* Global Variables */
+:root {
+  --primary-color: #2196F3;
+  --success-color: #4CAF50;
+  --warning-color: #ff9800;
+  --error-color: #f44336;
+  --dark-bg: #1e1e1e;
+  --medium-bg: #2d2d2d;
+  --light-bg: #3d3d3d;
+  --text-light: #ffffff;
+  --text-muted: #b0b0b0;
+  --border-color: #404040;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --border-radius: 8px;
+  --border-radius-sm: 4px;
+  --transition: all 0.2s ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #000;
+  overflow: hidden;
+}
+
+/* ============================================================================
+   Control Panel Base Styles
+   ============================================================================ */
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+table td {
+  padding: 0;
+}
+
+/* ============================================================================
+   Form Elements
+   ============================================================================ */
+
+select,
+input[type="text"],
+input[type="number"],
+input[type="file"] {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--medium-bg);
+  color: var(--text-light);
+  transition: var(--transition);
+  outline: none;
+  font-family: inherit;
+}
+
+select:hover,
+input:hover {
+  border-color: var(--primary-color);
+  background: var(--light-bg);
+}
+
+select:focus,
+input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  background: var(--light-bg);
+}
+
+button {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 11px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  background: var(--primary-color);
+  color: var(--text-light);
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+button:hover {
+  background: #1976D2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================================
+   Log Container Styles
+   ============================================================================ */
+
+#log-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 420px;
+  max-height: 500px;
+  background: var(--dark-bg);
+  color: var(--text-light);
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  padding: 16px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  line-height: 1.5;
+}
+
+#log-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+#log-container::-webkit-scrollbar-track {
+  background: var(--medium-bg);
+  border-radius: 4px;
+}
+
+#log-container::-webkit-scrollbar-thumb {
+  background: var(--light-bg);
+  border-radius: 4px;
+}
+
+#log-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+#log-container > div {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: var(--border-radius-sm);
+  border-left: 3px solid transparent;
+  background: rgba(255, 255, 255, 0.02);
+  transition: background 0.2s ease;
+}
+
+#log-container > div:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Log type colors - these match the logMessage() function colors */
+#log-container > div[style*="color: rgb(255, 255, 255)"],
+#log-container > div[style*="color: #ffffff"] {
+  border-left-color: #2196F3;
+}
+
+#log-container > div[style*="color: rgb(76, 175, 80)"],
+#log-container > div[style*="color: #4CAF50"] {
+  border-left-color: #4CAF50;
+}
+
+#log-container > div[style*="color: rgb(255, 152, 0)"],
+#log-container > div[style*="color: #ff9800"] {
+  border-left-color: #ff9800;
+}
+
+#log-container > div[style*="color: rgb(244, 67, 54)"],
+#log-container > div[style*="color: #f44336"] {
+  border-left-color: #f44336;
+  font-weight: 600;
+}
+
+#log-container > div[style*="color: rgb(33, 150, 243)"],
+#log-container > div[style*="color: #2196F3"] {
+  border-left-color: #03A9F4;
+}
+
+/* ============================================================================
+   Log Control Buttons
+   ============================================================================ */
+
+button[style*="position: fixed"][style*="right: 420px"],
+button[style*="position: fixed"][style*="right: 460px"] {
+  background: var(--dark-bg);
+  color: var(--text-light);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 1001;
+  transition: var(--transition);
+  box-shadow: var(--shadow);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  width: auto;
+  min-width: auto;
+}
+
+button[style*="position: fixed"][style*="right: 420px"]:hover,
+button[style*="position: fixed"][style*="right: 460px"]:hover {
+  background: var(--medium-bg);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================================
+   Collaborative Cursors
+   ============================================================================ */
+
+div[id^="cursor-"] {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+div[id^="cursor-"] > div {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+
+/* ============================================================================
+   Name Input Container
+   ============================================================================ */
+
+/* Target the name input row specifically */
+tr:has(input[placeholder*="name" i]) td > div {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+tr:has(input[placeholder*="name" i]) input {
+  flex: 1;
+  min-width: 0;
+}
+
+tr:has(input[placeholder*="name" i]) button {
+  width: auto;
+  min-width: 45px;
+  max-width: 55px;
+  flex-shrink: 0;
+  padding: 6px 10px;
+}
+
+/* ============================================================================
+   User List
+   ============================================================================ */
+
+#active-user-list {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+#active-user-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#active-user-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+#active-user-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+#active-user-list > div {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: var(--border-radius-sm);
+  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#active-user-list > div:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#active-user-list > div > div:first-child {
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   UMAP Parameters Row
+   ============================================================================ */
+
+.umap-params-row td > div {
+  background: rgba(33, 150, 243, 0.05);
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  border-radius: var(--border-radius-sm);
+  padding: 8px;
+}
+
+.umap-params-row label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.umap-params-row input {
+  padding: 6px 8px;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ============================================================================
+   Modal Dialog Styling
+   ============================================================================ */
+
+div[style*="rgba(0, 0, 0, 0.85)"][style*="position: fixed"] {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+div[style*="rgba(0, 0, 0, 0.85)"] > div {
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Style the modal dialog content */
+div[style*="rgba(0, 0, 0, 0.85)"] h3 {
+  font-weight: 700;
+  margin-top: 0;
+}
+
+div[style*="rgba(0, 0, 0, 0.85)"] input {
+  background: var(--medium-bg);
+  border: 2px solid var(--border-color);
+}
+
+div[style*="rgba(0, 0, 0, 0.85)"] input:focus {
+  border-color: var(--primary-color);
+}
+
+div[style*="rgba(0, 0, 0, 0.85)"] button {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* ============================================================================
+   Responsive Design
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  #log-container {
+    right: 10px;
+    top: 10px;
+    width: calc(100vw - 20px);
+    max-height: 300px;
+  }
+  
+  button[style*="position: fixed"][style*="right: 420px"] {
+    right: auto;
+    left: 10px;
+  }
+}
+
+/* ============================================================================
+   Utility Classes
+   ============================================================================ */
+
+.hidden {
+  display: none;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+/* ============================================================================
+   Loading State
+   ============================================================================ */
+
+.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--primary-color);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

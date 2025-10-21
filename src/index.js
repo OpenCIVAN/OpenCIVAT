@@ -17,7 +17,6 @@ import vtkRemoteView from '@kitware/vtk.js/Rendering/Misc/RemoteView';
 import vtkOrientationMarkerWidget from '@kitware/vtk.js/Interaction/Widgets/OrientationMarkerWidget';
 import vtkAnnotatedCubeActor from '@kitware/vtk.js/Rendering/Core/AnnotatedCubeActor';
 import vtkInteractorStyleTrackballCamera from '@kitware/vtk.js/Interaction/Style/InteractorStyleTrackballCamera';
-
 import { AttributeTypes } from '@kitware/vtk.js/Common/DataModel/DataSetAttributes/Constants';
 import { FieldDataTypes } from '@kitware/vtk.js/Common/DataModel/DataSet/Constants';
 import { XrSessionTypes } from '@kitware/vtk.js/Rendering/WebXR/RenderWindowHelper/Constants';
@@ -91,7 +90,7 @@ function initializeLogging() {
   toggleButton.style.cssText = `
     position: fixed;
     top: 10px;
-    right: 420px;
+    right: calc(10px + 400px + 10px);
     background: #f44336;
     color: white;
     border: none;
@@ -100,6 +99,7 @@ function initializeLogging() {
     font-size: 12px;
     cursor: pointer;
     z-index: 1001;
+    width: 100px;
   `;
   
   toggleButton.addEventListener('click', () => {
@@ -115,7 +115,7 @@ function initializeLogging() {
   clearButton.style.cssText = `
     position: fixed;
     top: 50px;
-    right: 420px;
+    right: calc(10px + 400px + 10px);
     background: #ff9800;
     color: white;
     border: none;
@@ -124,6 +124,7 @@ function initializeLogging() {
     font-size: 12px;
     cursor: pointer;
     z-index: 1001;
+    width:80px;
   `;
   
   clearButton.addEventListener('click', () => {
@@ -1312,12 +1313,16 @@ function preventDefaults(e) {
 // ----------------------------------------------------------------------------
 
 const ydoc = new Y.Doc();
-const provider = new WebsocketProvider('ws://localhost:8080', 'vtk-room', ydoc);
+const provider = new WebsocketProvider('ws://localhost:1234', 'vtk-room', ydoc);
 const yActor = ydoc.getMap('actor');
 const yFile = ydoc.getMap('fileData');
 const yReduction = ydoc.getMap('reduction');
+const yUIState = ydoc.getMap('uiState');
 
+// Track when changes are local to prevent loops
 let isLocalFileLoad = false;
+let isLocalUIChange = false;
+
 
 
 // ----------------------------------------------------------------------------
@@ -1402,6 +1407,7 @@ interactor.onMouseMove((callData) => {
     sendActorPosition();
   }
 });
+
 
 
 interactor.onLeftButtonPress((callData) => {
@@ -1738,6 +1744,70 @@ yReduction.observe(event => {
   }
 });
 
+// ----------------------------------------------------------------------------
+// Yjs Observer: Method Selection
+// ----------------------------------------------------------------------------
+
+// Synchronize method selector dropdown
+
+// Receive changes from other tabs
+yUIState.observe((event) => {
+  if (isLocalUIChange) {
+    isLocalUIChange = false;
+    return; // Skip if we made the change
+  }
+  
+  const method = yUIState.get('reductionMethod');
+  if(method){
+    logInfo(`THERE IS A NEW METHOD! ${method}`);
+  }
+
+  if (method && window.methodSelect.value != method) {
+    logInfo('the method updated!');
+    reductionMethod = method;
+
+    window.methodSelect.value = method;
+    
+    // Trigger the change event to update dependent UI
+    const changeEvent = new Event('change');
+    window.methodSelect.dispatchEvent(changeEvent);
+    
+    isLocalUIChange = true;
+    logInfo(`Method synchronized from another tab: ${method}`);
+  }
+  
+  const components = yUIState.get('reductionComponents');
+  if (components && window.componentsSelect.value != components) {
+      window.componentsSelect.value = components;
+      reductionComponents = components;
+
+      const changeEvent = new Event('change');
+      window.componentsSelect.dispatchEvent(changeEvent);
+
+      isLocalUIChange = true;
+      logInfo(`Components synchronized from another tab: ${components}`);
+    
+  }
+
+  const representation = yUIState.get('representation');
+  const syncRepresentationSelector = document.querySelector('.representations');
+
+  if(representation){
+    logInfo(`representation: ${representation}`);
+  }
+  if(syncRepresentationSelector.value){
+    logInfo(`curr value: ${syncRepresentationSelector.value}`);
+  }
+
+  if(representation && syncRepresentationSelector.value != representation){
+    syncRepresentationSelector.value = representation;
+    const changeEvent = new Event('change');
+    syncRepresentationSelector.dispatchEvent(changeEvent);
+    isLocalUIChange = true;
+    logInfo(`Representation synchronized from another tab: ${representation}`);
+  }
+});
+
 
 // ----------------------------------------------------------------------------
 // Create an Orientation Marker
@@ -1817,6 +1887,18 @@ function updateScene(fileData){
       logProgress(`  Points: ${numPoints.toLocaleString()}`);
       logProgress(`  Bounds: X[${bounds[0].toFixed(2)}, ${bounds[1].toFixed(2)}] Y[${bounds[2].toFixed(2)}, ${bounds[3].toFixed(2)}] Z[${bounds[4].toFixed(2)}, ${bounds[5].toFixed(2)}]`);
       
+      const center = [
+        (bounds[0] + bounds[1]) / 2,
+        (bounds[2] + bounds[3]) / 2,
+        (bounds[4] + bounds[5]) / 2,
+      ];
+
+      // Set the actor's origin to its geometric center
+      actor.setOrigin(center);
+
+      // Keep its position fixed at (0,0,0)
+      actor.setPosition(0, 0, 0);
+
       const cells = polyData.getPolys();
       if (cells) {
         const numCells = cells.getNumberOfCells();
@@ -1833,16 +1915,20 @@ function updateScene(fileData){
         logWarning('Very large dataset: Consider using smaller files for better performance');
       }
       
-      createOrientationMarker();
+      if(currentActor == null){
+        createOrientationMarker();
+      }
     } else {
       logWarning('No point data found in VTP file');
     }
+
+    currentActor = actor;
+
     
     mapper.setInputData(polyData);
     renderer.addActor(actor);
     renderer.resetCamera();
     renderWindow.render();
-    currentActor = actor;
     
     reductionApplied = false;
     
@@ -1908,7 +1994,9 @@ function setupDimensionalityReductionControls() {
   const methodRow = document.createElement('tr');
   const methodCell = document.createElement('td');
   const methodSelect = document.createElement('select');
+  methodSelect.className = 'reduction-method-select'
   methodSelect.style.width = '100%';
+  window.methodSelect = methodSelect;
   
   const pcaOption = document.createElement('option');
   pcaOption.value = 'pca';
@@ -1929,6 +2017,10 @@ function setupDimensionalityReductionControls() {
   methodSelect.addEventListener('change', (e) => {
     const oldMethod = reductionMethod;
     reductionMethod = e.target.value;
+
+    isLocalUIChange = true;
+    yUIState.set('reductionMethod', reductionMethod);
+
     logInfo(`Reduction method changed: ${oldMethod.toUpperCase()} -> ${reductionMethod.toUpperCase()}`);
     
     updateComponentsSelector();
@@ -2016,6 +2108,7 @@ function setupDimensionalityReductionControls() {
   const componentsSelect = document.createElement('select');
   componentsSelect.style.width = '100%';
   componentsSelect.className = 'components-selector';
+  window.componentsSelect = componentsSelect;
   
   function updateComponentsSelector() {
     componentsSelect.innerHTML = '';
@@ -2076,6 +2169,10 @@ function setupDimensionalityReductionControls() {
   componentsSelect.addEventListener('change', (e) => {
     const oldComponents = reductionComponents;
     reductionComponents = parseInt(e.target.value);
+
+    isLocalUIChange = true;
+    yUIState.set('reductionComponents', reductionComponents);
+
     logInfo(`Target dimensions changed: ${oldComponents}D -> ${reductionComponents}D`);
     
     if (reductionApplied) {
@@ -2106,30 +2203,30 @@ function setupDimensionalityReductionControls() {
   toggleRow.appendChild(toggleCell);
   controlTable.appendChild(toggleRow);
   
-  // Visual mode switch button row
-  const visualRow = document.createElement('tr');
-  const visualCell = document.createElement('td');
-  const visualButton = document.createElement('button');
-  visualButton.textContent = 'Switch to Points View';
-  visualButton.style.width = '100%';
-  visualButton.addEventListener('click', () => {
-    const representationSelector = document.querySelector('.representations');
-    if (representationSelector.value === '0') {
-      representationSelector.value = '2';
-      visualButton.textContent = 'Switch to Points View';
-      logInfo('Switched to Surface view');
-    } else {
-      representationSelector.value = '0';
-      visualButton.textContent = 'Switch to Surface View';
-      logInfo('Switched to Points view - better for seeing transformations!');
-    }
+  // // Visual mode switch button row
+  // const visualRow = document.createElement('tr');
+  // const visualCell = document.createElement('td');
+  // const visualButton = document.createElement('button');
+  // visualButton.textContent = 'Switch to Points View';
+  // visualButton.style.width = '100%';
+  // visualButton.addEventListener('click', () => {
+  //   const representationSelector = document.querySelector('.representations');
+  //   if (representationSelector.value === '0') {
+  //     representationSelector.value = '2';
+  //     visualButton.textContent = 'Switch to Points View';
+  //     logInfo('Switched to Surface view');
+  //   } else {
+  //     representationSelector.value = '0';
+  //     visualButton.textContent = 'Switch to Surface View';
+  //     logInfo('Switched to Points view - better for seeing transformations!');
+  //   }
     
-    const event = new Event('change');
-    representationSelector.dispatchEvent(event);
-  });
-  visualCell.appendChild(visualButton);
-  visualRow.appendChild(visualCell);
-  controlTable.appendChild(visualRow);
+  //   const event = new Event('change');
+  //   representationSelector.dispatchEvent(event);
+  // });
+  // visualCell.appendChild(visualButton);
+  // visualRow.appendChild(visualCell);
+  // controlTable.appendChild(visualRow);
   
   // Memory status button row
   const memoryRow = document.createElement('tr');
@@ -2148,39 +2245,39 @@ function setupDimensionalityReductionControls() {
   controlTable.appendChild(memoryRow);
   
   // 2D/3D view toggle button
-  const viewModeRow = document.createElement('tr');
-  const viewModeCell = document.createElement('td');
-  const viewModeButton = document.createElement('button');
-  viewModeButton.textContent = 'Force 2D View';
-  viewModeButton.style.width = '100%';
-  viewModeButton.style.backgroundColor = '#2196F3';
-  viewModeButton.style.color = 'white';
+  // const viewModeRow = document.createElement('tr');
+  // const viewModeCell = document.createElement('td');
+  // const viewModeButton = document.createElement('button');
+  // viewModeButton.textContent = 'Force 2D View';
+  // viewModeButton.style.width = '100%';
+  // viewModeButton.style.backgroundColor = '#2196F3';
+  // viewModeButton.style.color = 'white';
   
-  let is2DMode = false;
+  // let is2DMode = false;
   
-  viewModeButton.addEventListener('click', () => {
-    if (!is2DMode) {
-      // Force 2D mode
-      setup2DView();
-      viewModeButton.textContent = 'Switch to 3D View';
-      viewModeButton.style.backgroundColor = '#ff9800';
-      is2DMode = true;
-      logInfo('Forced 2D viewing mode - locked to top-down orthographic view');
-    } else {
-      // Switch back to 3D mode
-      restore3DView();
-      renderer.resetCamera();
-      renderWindow.render();
-      viewModeButton.textContent = 'Force 2D View';
-      viewModeButton.style.backgroundColor = '#2196F3';
-      is2DMode = false;
-      logInfo('Restored 3D viewing mode - full rotation enabled');
-    }
-  });
+  // viewModeButton.addEventListener('click', () => {
+  //   if (!is2DMode) {
+  //     // Force 2D mode
+  //     setup2DView();
+  //     viewModeButton.textContent = 'Switch to 3D View';
+  //     viewModeButton.style.backgroundColor = '#ff9800';
+  //     is2DMode = true;
+  //     logInfo('Forced 2D viewing mode - locked to top-down orthographic view');
+  //   } else {
+  //     // Switch back to 3D mode
+  //     restore3DView();
+  //     renderer.resetCamera();
+  //     renderWindow.render();
+  //     viewModeButton.textContent = 'Force 2D View';
+  //     viewModeButton.style.backgroundColor = '#2196F3';
+  //     is2DMode = false;
+  //     logInfo('Restored 3D viewing mode - full rotation enabled');
+  //   }
+  // });
   
-  viewModeCell.appendChild(viewModeButton);
-  viewModeRow.appendChild(viewModeCell);
-  controlTable.appendChild(viewModeRow);
+  // viewModeCell.appendChild(viewModeButton);
+  // viewModeRow.appendChild(viewModeCell);
+  // controlTable.appendChild(viewModeRow);
   
   logSuccess('Dimensionality Reduction controls initialized:');
   logProgress('  - PCA: TensorFlow.js with tf.tidy() memory management');
@@ -2205,6 +2302,8 @@ representationSelector.addEventListener('change', (e) => {
   const newRepValue = Number(e.target.value);
   actor.getProperty().setRepresentation(newRepValue);
   yActor.set('representation', newRepValue);
+  yUIState.set('representation', newRepValue);
+  isLocalUIChange = true;
   renderWindow.render();
 });
 
@@ -2532,6 +2631,7 @@ function getUserColor(userId) {
 
 let lastMousePosition = { x: 0, y: 0, timestamp: 0 };
 let mouseMoveTimeout = null;
+let toggleHideCursor = false;
 
 function trackMouse() {
   document.addEventListener('mousemove', (event) => {
@@ -2572,7 +2672,7 @@ function trackMouse() {
 }
 
 function updateMyCursor() {
-  if (!lastMousePosition || lastMousePosition.timestamp === 0) return;
+  if (!lastMousePosition || lastMousePosition.timestamp === 0 || toggleHideCursor) return;
   
   yCursors.set(userId, {
     x: lastMousePosition.x,
@@ -2818,10 +2918,12 @@ function addCursorControls() {
     if (cursorVisible) {
       cursorToggle.textContent = 'Hide My Cursor';
       cursorToggle.style.background = '#4CAF50';
+      toggleHideCursor = false;
       updateMyCursor();
     } else {
       cursorToggle.textContent = 'Show My Cursor';
       cursorToggle.style.background = '#f44336';
+      toggleHideCursor = true;
       hideMyCursor();
     }
     
