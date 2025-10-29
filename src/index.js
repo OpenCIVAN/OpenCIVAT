@@ -5,19 +5,8 @@
 // For streamlined VR development install the WebXR emulator extension
 // https://github.com/MozillaReality/WebXR-emulator-extension
 
-// Unused imports
-import vtkCalculator from "@kitware/vtk.js/Filters/General/Calculator";
-import vtkPolyDataNormals from "@kitware/vtk.js/Filters/Core/PolyDataNormals";
-import vtkRemoteView from "@kitware/vtk.js/Rendering/Misc/RemoteView";
-import vtkInteractorStyleTrackballCamera from "@kitware/vtk.js/Interaction/Style/InteractorStyleTrackballCamera";
-
-import { AttributeTypes } from "@kitware/vtk.js/Common/DataModel/DataSetAttributes/Constants";
-import { FieldDataTypes } from "@kitware/vtk.js/Common/DataModel/DataSet/Constants";
-
-import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
-import { colorSpaceToWorking } from "three/tsl";
-import vtkPolyData from "@kitware/vtk.js/Common/DataModel/PolyData";
-import { P } from "@kitware/vtk.js/Common/Core/Math/index";
+import { voiceChat } from './collaboration/voiceChat.js';
+import { getUserName, setupUserName } from './collaboration/userManagement.js';
 
 import {
   initializeLogging,
@@ -40,11 +29,18 @@ import {
   setReductionComponents,
 } from "./ui/controls.js";
 import { addCursorControls } from "./ui/cursorControls.js";
+import { addVoiceChatControls } from "./ui/voiceChatControls.js";
 import { initializeCursorSystem } from "./collaboration/cursors.js";
 import { setupActorSync } from "./collaboration/actorSync.js";
 import { setupReductionSync } from "./collaboration/reductionSync.js";
 import { toggleDimensionalityReduction } from "./core/reductionController.js";
 import { setupViewportInteraction } from "./ui/viewportInteraction.js";
+
+// Get room name from URL or use default
+function getRoomName() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('room') || 'default-analytics-room';
+}
 
 async function initializeApplication() {
   logInfo("Starting VTK.js with TensorFlow.js Application...");
@@ -70,6 +66,18 @@ async function initializeApplication() {
   setupDimensionalityReductionControls(toggleDimensionalityReduction);
   logProgress("Dimensionality reduction controls ready");
 
+  // Get room name for collaboration
+  const roomName = getRoomName();
+  logProgress(`Joining room: ${roomName}`);
+
+  // Setup user name BEFORE connecting to Yjs and voice chat
+  await setupUserName();
+  logProgress("User name configured");
+
+    // Note: Yjs is already connected via imports in other modules
+  // The WebsocketProvider connects automatically when yjsSetup.js is imported
+  logProgress("✅ Yjs collaboration ready");
+
   // Setup collaboration features
   setupActorSync();
   logProgress("Actor synchronization ready");
@@ -88,15 +96,33 @@ async function initializeApplication() {
 
   setupViewportInteraction();
 
-  // Add cursor UI controls with delay to ensure table exists
+// Add cursor UI controls with delay to ensure table exists
   setTimeout(() => {
     try {
       addCursorControls();
       logProgress("Cursor controls added");
+      
+      addVoiceChatControls(roomName);  // Pass roomName here!
+      logProgress("Voice chat controls added");
     } catch (error) {
-      console.warn("Could not add cursor controls:", error);
+      console.warn("Could not add controls:", error);
     }
   }, 1000);
+
+
+  // Voice chat will connect when user clicks "Join Voice Chat" button
+  logProgress("Voice chat ready - click 'Join Voice Chat' to connect");
+
+  // Adding click to connect voice chat directly on load is not user-friendly
+  // // Connect to voice chat AFTER user name is set
+  // try {
+  //   const userName = getUserName();
+  //   await voiceChat.connect(roomName, userName);
+  //   logProgress("✅ Voice chat connected");
+  // } catch (error) {
+  //   console.warn("Voice chat failed to connect:", error);
+  //   // Non-blocking - app continues without voice
+  // }
 
   logSuccess("Application initialized successfully!");
   logInfo("Available features:");
@@ -110,7 +136,7 @@ async function initializeApplication() {
   logProgress(
     "  ✓ Automatic optimization for datasets from 100 to 1,000,000+ points"
   );
-  logInfo("Load a VTP file to get started!");
+  logInfo(`Load a VTP file to get started! Room: ${roomName}`);
   logMemoryUsage("on startup");
 }
 
@@ -137,4 +163,9 @@ if (typeof window !== "undefined") {
 // Start the application
 initializeApplication().catch((error) => {
   console.error("Failed to initialize application:", error);
+});
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  voiceChat.disconnect();
 });

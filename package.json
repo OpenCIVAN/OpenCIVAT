@@ -23,6 +23,10 @@
   "dependencies": {
     "@kitware/vtk.js": "^32.14.0",
     "@tensorflow/tfjs": "^4.22.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "livekit-client": "^2.15.14",
+    "livekit-server-sdk": "^2.14.0",
     "three": "^0.175.0",
     "vtk.js": "^24.19.2",
     "webxr-polyfill": "^2.0.3",
