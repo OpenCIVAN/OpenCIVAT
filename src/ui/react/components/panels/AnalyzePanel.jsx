@@ -68,7 +68,7 @@ export default function AnalyzePanel() {
         }}>
           Dimensionality Reduction Algorithm
         </div>
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
             { value: 'pca', label: 'PCA', desc: 'Fast, linear reduction' },
@@ -123,7 +123,7 @@ export default function AnalyzePanel() {
         }}>
           Output Dimensions
         </div>
-        
+
         <div style={{ display: 'flex', gap: '8px' }}>
           {[2, 3].map((num) => (
             <button
@@ -157,10 +157,10 @@ export default function AnalyzePanel() {
             </button>
           ))}
         </div>
-        
+
         <div style={{ fontSize: '11px', color: '#666', marginTop: '8px' }}>
-          {components === 2 
-            ? '2D visualization (flat XY plane)' 
+          {components === 2
+            ? '2D visualization (flat XY plane)'
             : '3D visualization (full spatial)'
           }
         </div>
@@ -194,8 +194,8 @@ export default function AnalyzePanel() {
           e.currentTarget.style.boxShadow = 'none';
         }}
       >
-        {isReductionApplied 
-          ? `🔄 Reset to Original (Remove ${method.toUpperCase()})` 
+        {isReductionApplied
+          ? `🔄 Reset to Original (Remove ${method.toUpperCase()})`
           : `✨ Apply ${method.toUpperCase()} Reduction`
         }
       </button>
