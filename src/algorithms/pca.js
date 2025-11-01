@@ -3,7 +3,7 @@
 // ----------------------------------------------------------------------------
 
 import * as tf from '@tensorflow/tfjs';
-import { logInfo, logProgress, logSuccess, logError } from '../ui/logging.js';
+import { logInfo, logProgress, logSuccess, logError, logWarning } from "../ui/react/hooks/useLogging.js";
 import { logMemoryUsage, cleanupTensors } from '../utils/tensorflowSetup.js';
 
 export async function performPCA(pointsMatrix, numComponents = 3) {

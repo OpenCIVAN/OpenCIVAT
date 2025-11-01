@@ -8,8 +8,10 @@
     "build": "webpack --mode production"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
+    "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.20.0",
+    "@babel/preset-react": "^7.28.5",
+    "@vitejs/plugin-react": "^5.1.0",
     "babel-loader": "^8.4.1",
     "css-loader": "^7.1.2",
     "html-loader": "^5.1.0",
@@ -28,12 +30,16 @@
     "lib0": "^0.2.114",
     "livekit-client": "^2.15.14",
     "livekit-server-sdk": "^2.14.0",
+    "lucide-react": "^0.552.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "three": "^0.175.0",
     "vtk.js": "^24.19.2",
     "webxr-polyfill": "^2.0.3",
     "ws": "^8.18.3",
     "y-protocols": "^1.0.6",
     "y-websocket": "^3.0.0",
-    "yjs": "^13.6.27"
+    "yjs": "^13.6.27",
+    "zustand": "^5.0.8"
   }
 }

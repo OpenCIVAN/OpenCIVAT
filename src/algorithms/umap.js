@@ -2,7 +2,14 @@
 // TensorFlow.js UMAP Implementation
 // ----------------------------------------------------------------------------
 
-import { logInfo } from "../ui/logging";
+// Currently broken - will hang when used in app due to tf.tidy() memory management issues.
+// Leaving code here for future fixes and improvements.
+
+import { logInfo, logProgress, logSuccess, logError, logWarning } from "../ui/react/hooks/useLogging.js";
+import { logMemoryUsage, cleanupTensors } from '../utils/tensorflowSetup.js';
+import { ALGORITHM_LIMITS } from "../config/constants.js";
+import { performPCA } from "./pca.js";
+import * as tf from '@tensorflow/tfjs';
 
 export async function performUMAP(pointsMatrix, numComponents = 2, options = {}) {
   const { nNeighbors = 8, minDist = 0.1, nEpochs = 200 } = options;

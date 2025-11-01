@@ -1,5 +1,5 @@
 import vtkInteractorStyleImage from '@kitware/vtk.js/Interaction/Style/InteractorStyleImage';
-import { logProgress } from "../ui/logging.js";
+import { logProgress } from '../ui/react/hooks/useLogging.js';
 
 let renderer, renderWindow, camera, interactor;
 let original3DInteractorStyle = null;
@@ -61,6 +61,12 @@ export function restore3DView() {
   if (interactor && original3DInteractorStyle) {
     interactor.setInteractorStyle(original3DInteractorStyle);
     logProgress('Restored 3D interactor style (rotation enabled)');
+  }
+
+  // ADD THIS: Reset camera to show full 3D scene
+  if (renderer) {
+    renderer.resetCamera();
+    logProgress('Camera repositioned for 3D view');
   }
 
   logProgress(

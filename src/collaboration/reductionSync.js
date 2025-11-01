@@ -2,7 +2,7 @@ import {
   yReduction as yReductionMap,
   yActor as yActorForReduction,
 } from "./yjsSetup.js";
-import { logInfo } from "../ui/logging.js";
+import { logInfo } from "../ui/react/hooks/useLogging.js";
 import { getCurrentActor } from "../core/scene.js";
 
 let reductionMethod = "pca";

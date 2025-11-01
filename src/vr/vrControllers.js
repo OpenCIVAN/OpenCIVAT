@@ -4,7 +4,7 @@
 
 import { modeManager } from '../core/modeManager.js';
 import { getSceneObjects } from '../core/scene.js';
-import { logInfo, logSuccess } from '../ui/logging.js';
+import { logInfo, logSuccess } from '../ui/react/hooks/useLogging.js';
 
 class VRControllers {
   constructor() {

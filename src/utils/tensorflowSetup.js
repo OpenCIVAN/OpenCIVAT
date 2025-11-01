@@ -1,6 +1,6 @@
 // TensorFlow.js for PCA operations
 import * as tf from "@tensorflow/tfjs";
-import { logProgress, logSuccess, logError, logInfo, logWarning } from '../ui/logging.js';
+import { logProgress, logSuccess, logError, logInfo, logWarning } from '../ui/react/hooks/useLogging.js';
 import { MEMORY_THRESHOLDS } from "../config/constants";
 
 // ----------------------------------------------------------------------------

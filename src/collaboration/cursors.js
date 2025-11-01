@@ -3,7 +3,7 @@
 // ----------------------------------------------------------------------------
 
 import { yCursors } from "./yjsSetup.js";
-import { logInfo, logSuccess, logProgress, logError, logWarning } from "../ui/logging.js";
+import { logInfo, logSuccess, logProgress, logError, logWarning } from "../ui/react/hooks/useLogging.js";
 import { NETWORK_CONFIG } from "../config/constants.js";
 import { getUserId, getUserName, getUserColor } from "./userManagement.js";
 

@@ -8,7 +8,7 @@ import {
   logSuccess,
   logError,
   logWarning,
-} from "../ui/logging.js";
+} from "../ui/react/hooks/useLogging.js";
 import { ALGORITHM_LIMITS, REDUCTION_DEFAULTS } from "../config/constants.js";
 import { performPCA } from "./pca.js";
 import { interpolateResults } from "./interpolation.js";

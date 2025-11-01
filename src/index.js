@@ -6,45 +6,46 @@
 // https://github.com/MozillaReality/WebXR-emulator-extension
 
 import { voiceChat } from "./collaboration/voiceChat.js";
-import { getUserName, setupUserName, initializeNameEditor } from "./collaboration/userManagement.js";
+import { setupUserName } from "./collaboration/userManagement.js";
 import { modeManager } from "./core/modeManager.js";
-import { adaptiveUI } from "./ui/adaptiveUI.js";
 import { vrControllers } from "./vr/vrControllers.js";
 import { vrAvatarSystem } from "./vr/vrAvatars.js";
 import { vrSpatialUI } from "./vr/vrSpatialUI.js";
 
+// Import logging from the new hook
 import {
-  initializeLogging,
   logInfo,
   logSuccess,
   logProgress,
-} from "./ui/logging.js";
+} from "./ui/react/hooks/useLogging.js";
+
 import {
   initializeTensorFlow,
   logMemoryUsage,
   cleanupTensors,
 } from "./utils/tensorflowSetup.js";
-import { initializeScene } from "./core/scene.js";
+
 import { setupFileHandler } from "./core/fileHandler.js";
+
+// Import reduction state manager (not the hook!)
 import {
-  setupDimensionalityReductionControls,
   getReductionMethod,
   getReductionComponents,
   setReductionMethod,
   setReductionComponents,
-} from "./ui/controls.js";
-import { textChat } from './collaboration/textChat.js';
-import { addCursorControls } from "./ui/cursorControls.js";
-import { addAnnotationControls } from "./ui/annotationControls.js";
-import { initializePeopleControls } from "./ui/peopleControls.js";
-import { initializeTextChatControls } from "./ui/textChatControls.js";
-import { initializeVoiceChatControls } from "./ui/voiceChatControls.js";
+} from "./core/reductionState.js";
+
+import { textChat } from "./collaboration/textChat.js";
 import { initializeCursorSystem } from "./collaboration/cursors.js";
 import { setupActorSync } from "./collaboration/actorSync.js";
 import { setupReductionSync } from "./collaboration/reductionSync.js";
 import { toggleDimensionalityReduction } from "./core/reductionController.js";
 import { setupViewportInteraction } from "./ui/viewportInteraction.js";
 import { annotationRenderer } from "./core/annotationRenderer.js";
+import { annotationSystem } from "./collaboration/annotations.js";
+import { presenceSystem } from "./collaboration/presenceSystem.js";
+import { datasetManager } from "./core/datasetManager.js";
+import { simpleVisualizationManager } from "./core/simpleVisualizationManager.js";
 
 // Get room name from URL or use default
 function getRoomName() {
@@ -52,11 +53,12 @@ function getRoomName() {
   return params.get("room") || "default-analytics-room";
 }
 
-async function initializeApplication() {
-  logInfo("Starting VTK.js with TensorFlow.js Application...");
-
-  // Initialize logging system first
-  initializeLogging();
+// ========================================
+// PHASE 1: Pre-Scene Initialization
+// Things that don't need VTK scene
+// ========================================
+async function initializeApplicationPreScene() {
+  logInfo("Starting CIA War Room Application...");
 
   // Initialize TensorFlow.js
   const tfReady = await initializeTensorFlow();
@@ -64,9 +66,7 @@ async function initializeApplication() {
     console.error("TensorFlow.js failed to initialize, PCA will not work");
   }
 
-  // Initialize 3D scene
-  initializeScene();
-  logProgress("3D scene initialized");
+  logProgress("Scene will be initialized by War Room UI");
 
   // Setup file handling
   setupFileHandler();
@@ -77,8 +77,28 @@ async function initializeApplication() {
   logProgress(`Joining room: ${roomName}`);
 
   // Setup user name BEFORE connecting to Yjs and voice chat
-  await setupUserName();
-  logProgress("User name configured");
+  const hasUsername = await setupUserName();
+  if (hasUsername) {
+    logProgress("User name configured");
+  } else {
+    logProgress("User name will be prompted by UI");
+  }
+
+  // Initialize presence system (must be after user setup)
+  presenceSystem.initialize();
+  logProgress("Presence system initialized");
+
+  // Initialize dataset manager
+  datasetManager.initialize();
+  logProgress("Dataset manager initialized");
+
+  // Initialize visualization manager
+  simpleVisualizationManager.initialize();
+  logProgress("Visualization manager initialized");
+
+  // Initialize annotation system early
+  annotationSystem.initialize();
+  logProgress("Annotation system initialized");
 
   // Initialize text chat system (only once!)
   textChat.initialize();
@@ -88,9 +108,6 @@ async function initializeApplication() {
   try {
     modeManager.setupVRDetection();
     logProgress("VR detection initialized");
-
-    adaptiveUI.initialize();
-    logProgress("Adaptive UI initialized");
 
     vrControllers.initialize();
     logProgress("VR controllers initialized");
@@ -104,120 +121,52 @@ async function initializeApplication() {
     console.warn("VR systems failed to initialize (non-critical):", error);
   }
 
-  // Setup collaboration features
-  setupActorSync();
-  logProgress("Actor synchronization ready");
+  logSuccess("Pre-scene initialization complete!");
 
-  setupReductionSync(
-    toggleDimensionalityReduction,
-    getReductionMethod,
-    getReductionComponents,
-    setReductionMethod,
-    setReductionComponents
-  );
-  logProgress("Reduction synchronization ready");
+  return roomName;
+}
 
-  // Initialize collaborative cursor system
-  initializeCursorSystem();
+// ========================================
+// PHASE 2: Post-Scene Initialization
+// Things that REQUIRE VTK scene to exist
+// This is called by React after VTK is initialized
+// ========================================
+export function initializeApplicationPostScene() {
+  console.log("🔧 Starting post-scene initialization...");
 
-  // Setup viewport interaction (must be before annotation renderer)
-  setupViewportInteraction();
+  try {
+    // Setup collaboration features (these need the scene)
+    setupActorSync();
+    logProgress("Actor synchronization ready");
 
-  // Initialize annotation renderer after scene is ready
-  setTimeout(() => {
-    annotationRenderer.initialize();
-    logProgress("Annotation renderer initialized");
-  }, 500);
+    setupReductionSync(
+      toggleDimensionalityReduction,
+      getReductionMethod,
+      getReductionComponents,
+      setReductionMethod,
+      setReductionComponents
+    );
+    logProgress("Reduction synchronization ready");
 
-  // Add UI controls with delay to ensure DOM is ready
-  setTimeout(() => {
-    console.log("🔧 Starting to add controls...");
+    // Initialize collaborative cursor system
+    initializeCursorSystem();
+    logProgress("Collaborative cursor system ready");
 
-    try {
-      // LEFT PANEL: Data controls
-      console.log("Adding dimensionality reduction controls...");
-      setupDimensionalityReductionControls(toggleDimensionalityReduction);
-      logProgress("Data controls added");
-    } catch (error) {
-      console.error("Failed to add data controls:", error);
-    }
+    // Setup viewport interaction (must be before annotation renderer)
+    setupViewportInteraction();
+    logProgress("Viewport interaction ready");
 
-    try {
-      // RIGHT PANEL: Annotations only
-      console.log("Adding annotation controls...");
-      addAnnotationControls();
-      logProgress("Annotation controls added");
-    } catch (error) {
-      console.error("Failed to add annotation controls:", error);
-    }
+    // Initialize annotation renderer after scene is ready
+    setTimeout(() => {
+      annotationRenderer.initialize();
+      logProgress("Annotation renderer initialized");
+    }, 500);
 
-    try {
-      // COLLABORATION PANEL: Name editor
-      console.log("Initializing name editor...");
-      initializeNameEditor();
-      logProgress("Name editor initialized");
-    } catch (error) {
-      console.error("Failed to initialize name editor:", error);
-    }
-
-    try {
-      // COLLABORATION PANEL: People list
-      console.log("Initializing people controls...");
-      initializePeopleControls();
-      logProgress("People controls initialized");
-    } catch (error) {
-      console.error("Failed to initialize people controls:", error);
-    }
-
-    try {
-      // COLLABORATION PANEL: Text chat
-      console.log("Initializing text chat UI...");
-      initializeTextChatControls();
-      logProgress("Text chat UI initialized");
-    } catch (error) {
-      console.error("Failed to initialize text chat UI:", error);
-    }
-
-    try {
-      // COLLABORATION PANEL: Voice chat
-      console.log("Initializing voice chat controls...");
-      initializeVoiceChatControls(roomName);
-      logProgress("Voice chat controls initialized");
-    } catch (error) {
-      console.error("Failed to initialize voice chat controls:", error);
-    }
-
-    try {
-      // Cursor visibility controls
-      console.log("Adding cursor controls...");
-      addCursorControls();
-      logProgress("Cursor controls added");
-    } catch (error) {
-      console.error("Failed to add cursor controls:", error);
-    }
-
-    console.log("✅ Finished adding controls");
-  }, 1000);
-
-  // Voice chat will connect when user clicks "Join Voice Chat" button
-  logProgress("Voice chat ready - click 'Join Voice Chat' to connect");
-
-  logSuccess("Application initialized successfully!");
-  logInfo("Available features:");
-  logProgress("  ✓ VTP file loading and visualization");
-  logProgress("  ✓ WebXR/VR support");
-  logProgress("  ✓ PCA with TensorFlow.js (optimized memory management)");
-  logProgress("  ✓ t-SNE and UMAP (pure JavaScript implementations)");
-  logProgress("  ✓ Real-time collaboration (Yjs)");
-  logProgress("  ✓ Collaborative cursors");
-  logProgress("  ✓ Voice & text chat");
-  logProgress("  ✓ Annotations");
-  logProgress("  ✓ Advanced logging and performance monitoring");
-  logProgress(
-    "  ✓ Automatic optimization for datasets from 100 to 1,000,000+ points"
-  );
-  logInfo(`Load a VTP file to get started! Room: ${roomName}`);
-  logMemoryUsage("on startup");
+    logSuccess("Post-scene initialization complete!");
+    logInfo("🎉 War Room is ready!");
+  } catch (error) {
+    console.error("Error in post-scene initialization:", error);
+  }
 }
 
 // Set up cleanup on page unload
@@ -238,12 +187,79 @@ if (typeof window !== "undefined") {
     getReductionComponents,
     voiceChat,
     textChat,
+    annotationSystem,
+    annotationRenderer,
   };
 
-  console.log("Debug API available at window.debugAPI");
+  console.log("💡 Debug API available at window.debugAPI");
 }
 
-// Start the application
-initializeApplication().catch((error) => {
-  console.error("Failed to initialize application:", error);
-});
+// ========================================
+// Hide old UI elements
+// ========================================
+function hideOldUI() {
+  console.log("🧹 Hiding old UI elements...");
+
+  // Hide old VTK container (from vtkFullScreenRenderWindow)
+  const oldContainer = document.querySelector(".vtk-container");
+  if (oldContainer) {
+    oldContainer.style.display = "none";
+    console.log("✅ Hidden old VTK container");
+  }
+
+  // Hide any old control panels
+  const controlPanels = document.querySelectorAll(".control-panel");
+  controlPanels.forEach((panel) => {
+    panel.style.display = "none";
+  });
+
+  // Hide elements from old index.html
+  const elementsToHide = [
+    "leftPanel",
+    "rightPanel",
+    "collaborationPanel",
+    "logsPanel",
+    "leftPanelTable",
+    "rightPanelTable",
+  ];
+
+  elementsToHide.forEach((id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.style.display = "none";
+      console.log(`✅ Hidden ${id}`);
+    }
+  });
+
+  console.log("✅ Old UI elements hidden");
+}
+
+// ========================================
+// Start the application and mount React War Room
+// ========================================
+import { mountReactUI } from "./ui/react/index.js";
+
+// Flag to ensure we only initialize once
+let appInitialized = false;
+
+// Run pre-scene initialization, then mount React War Room
+if (!appInitialized) {
+  appInitialized = true;
+
+  initializeApplicationPreScene()
+    .then((roomName) => {
+      console.log("🎨 Mounting React War Room UI...");
+
+      // Hide old UI first
+      hideOldUI();
+
+      // Mount React War Room (which will initialize VTK and then call initializeApplicationPostScene)
+      mountReactUI(roomName);
+
+      console.log("🚀 War Room UI mounted - waiting for VTK initialization");
+    })
+    .catch((error) => {
+      console.error("Failed to initialize application:", error);
+      appInitialized = false; // Reset on error so it can be retried
+    });
+}

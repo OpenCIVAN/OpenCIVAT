@@ -11,7 +11,7 @@ import {
   logWarning,
   logError,
   logInfo,
-} from "../ui/logging.js";
+} from "../ui/react/hooks/useLogging.js";
 import { logMemoryUsage } from "../utils/tensorflowSetup.js";
 import { ALGORITHM_LIMITS } from "../config/constants.js";
 import { yFile } from "../collaboration/yjsSetup.js";

@@ -1,4 +1,4 @@
-import { logProgress, logSuccess } from "../ui/logging.js";
+import { logProgress, logSuccess } from "../ui/react/hooks/useLogging.js";
 import { setup2DView } from "./viewHelpers.js";
 
 // ----------------------------------------------------------------------------

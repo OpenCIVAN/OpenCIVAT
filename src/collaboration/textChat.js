@@ -10,27 +10,43 @@ class TextChat {
     this.messages = null;
     this.messageListeners = [];
     this.clearListeners = [];
+    this.deleteListeners = [];
     this.maxMessages = 100;
+    this._initialized = false;
   }
 
   initialize() {
+    if (this._initialized) return;
+    this._initialized = true;
+
     this.messages = ydoc.getArray("chatMessages");
 
-    // Listen for new messages AND deletions
+    // Listen for ALL changes (add, delete, update)
     this.messages.observe((event) => {
-      // New messages added
-      event.changes.added.forEach((item) => {
-        const message = item.content.getContent()[0];
-        this.notifyListeners(message);
+      // Check what changed
+      event.changes.delta.forEach((change) => {
+        // New messages added
+        if (change.insert) {
+          change.insert.forEach((message) => {
+            this.notifyListeners(message);
+          });
+        }
+        
+        // Messages deleted
+        if (change.delete) {
+          // Notify that messages were deleted
+          this.notifyDeleteListeners();
+        }
+        
+        // Messages retained (no action needed)
+        if (change.retain) {
+          // No action needed
+        }
       });
 
-      // Messages deleted (for clear)
-      if (event.changes.delta.length > 0) {
-        const hasDelete = event.changes.delta.some((change) => change.delete);
-        if (hasDelete && this.messages.length === 0) {
-          // Chat was cleared
-          this.notifyClearListeners();
-        }
+      // If entire array was cleared
+      if (this.messages.length === 0 && event.changes.delta.some(d => d.delete)) {
+        this.notifyClearListeners();
       }
     });
 
@@ -53,6 +69,7 @@ class TextChat {
 
     this.messages.push([message]);
 
+    // Limit message history
     if (this.messages.length > this.maxMessages) {
       this.messages.delete(0, this.messages.length - this.maxMessages);
     }
@@ -65,15 +82,24 @@ class TextChat {
     return this.messages.toArray();
   }
 
-  getRecentMessages(count = 50) {
-    const allMessages = this.getMessages();
-    return allMessages.slice(-count);
-  }
-
   clearMessages() {
     if (this.messages) {
       this.messages.delete(0, this.messages.length);
     }
+  }
+
+  deleteMessage(messageId) {
+    if (!this.messages) return;
+
+    const messages = this.messages.toArray();
+    const index = messages.findIndex((msg) => msg.id === messageId);
+
+    if (index !== -1) {
+      this.messages.delete(index, 1);
+      console.log("💬 Message deleted:", messageId);
+      return true;
+    }
+    return false;
   }
 
   onMessage(callback) {
@@ -82,6 +108,10 @@ class TextChat {
 
   onClear(callback) {
     this.clearListeners.push(callback);
+  }
+
+  onDelete(callback) {  // ← Add this
+    this.deleteListeners.push(callback);
   }
 
   notifyListeners(message) {
@@ -104,16 +134,14 @@ class TextChat {
     });
   }
 
-  deleteMessage(messageId) {
-    if (!this.messages) return;
-
-    const messages = this.messages.toArray();
-    const index = messages.findIndex((msg) => msg.id === messageId);
-
-    if (index !== -1) {
-      this.messages.delete(index, 1);
-      console.log("💬 Message deleted:", messageId);
-    }
+  notifyDeleteListeners() { 
+    this.deleteListeners.forEach((callback) => {
+      try {
+        callback();
+      } catch (error) {
+        console.error("Error in delete listener:", error);
+      }
+    });
   }
 }
 

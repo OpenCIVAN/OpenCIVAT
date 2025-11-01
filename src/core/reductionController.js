@@ -1,3 +1,7 @@
+// src/core/reductionController.js
+// Dimensionality Reduction Controller
+// UPDATED to use new state manager and logging
+
 import {
   getSceneObjects,
   getOriginalPointsData,
@@ -16,12 +20,17 @@ import {
   logSuccess,
   logError,
   logWarning,
-} from "../ui/logging.js";
+} from "../ui/react/hooks/useLogging.js";
 import { performPCA } from "../algorithms/pca.js";
 import { performTSNE } from "../algorithms/tsne.js";
 import { performUMAP } from "../algorithms/umap.js";
 import { broadcastReductionState } from "../collaboration/reductionSync.js";
-import { getReductionMethod, getReductionComponents } from "../ui/controls.js";
+import {
+  reductionState,
+  getReductionMethod,
+  getReductionComponents,
+  setReductionIsApplied,
+} from "./reductionState.js";
 import { REDUCTION_DEFAULTS } from "../config/constants.js";
 
 // ----------------------------------------------------------------------------
@@ -34,11 +43,11 @@ export async function toggleDimensionalityReduction(isRemote = false) {
   if (!originalPointsData) {
     logError("No data loaded for processing");
     alert("Please load a VTP file first!");
-    return;
+    return false;
   }
 
-  const { vtpReader, mapper, renderer, renderWindow } = getSceneObjects();
-  const currentPolyData = vtpReader.getOutputData(0);
+  const { mapper, renderer, renderWindow } = getSceneObjects();
+  const currentPolyData = mapper.getInputData(); // Get from mapper, not vtpReader
   const reductionMethod = getReductionMethod();
   const reductionComponents = getReductionComponents();
 
@@ -57,7 +66,7 @@ export async function toggleDimensionalityReduction(isRemote = false) {
       const pointsMatrix = await extractPointsFromPolyData(currentPolyData);
       if (!pointsMatrix) {
         logError("Failed to extract points from polydata");
-        return;
+        return false;
       }
 
       logProgress(`Processing ${pointsMatrix.length.toLocaleString()} points`);
@@ -100,27 +109,15 @@ export async function toggleDimensionalityReduction(isRemote = false) {
           logProgress("t-SNE 2D result padded to 3D for visualization (Z=0)");
         }
       } else if (reductionMethod === "umap") {
-        // Get UMAP parameters from UI if available
-        const umapNeighborsInput = document.querySelector(
-          ".umap-neighbors-input"
-        );
-        const umapMinDistInput = document.querySelector(".umap-mindist-input");
-
-        const nNeighbors = umapNeighborsInput
-          ? parseInt(umapNeighborsInput.value)
-          : REDUCTION_DEFAULTS.UMAP_N_NEIGHBORS;
-        const minDist = umapMinDistInput
-          ? parseFloat(umapMinDistInput.value)
-          : REDUCTION_DEFAULTS.UMAP_MIN_DIST;
-
+        // Get UMAP parameters with defaults
         const umapOptions = {
-          nNeighbors: nNeighbors,
-          minDist: minDist,
+          nNeighbors: REDUCTION_DEFAULTS.UMAP_N_NEIGHBORS,
+          minDist: REDUCTION_DEFAULTS.UMAP_MIN_DIST,
           nEpochs: REDUCTION_DEFAULTS.UMAP_N_EPOCHS,
         };
 
         logProgress(
-          `UMAP options: neighbors=${nNeighbors}, min_dist=${minDist}, target=${reductionComponents}D`
+          `UMAP options: neighbors=${umapOptions.nNeighbors}, min_dist=${umapOptions.minDist}, target=${reductionComponents}D`
         );
         reducedPoints = await performUMAP(
           pointsMatrix,
@@ -154,9 +151,7 @@ export async function toggleDimensionalityReduction(isRemote = false) {
 
       applyReductionToPolyData(currentPolyData, reducedPoints);
       setReductionApplied(true);
-
-      // Update the reduction state in other tabs
-      // sendReductionState();
+      setReductionIsApplied(true); // Update global state
 
       const newBounds = currentPolyData.getBounds();
       logProgress(
@@ -188,18 +183,31 @@ export async function toggleDimensionalityReduction(isRemote = false) {
       if (reductionMethod === "pca") {
         cleanupTensors();
       }
-      return;
+      return false;
     }
   } else {
     logInfo("Restoring original data...");
 
     const points = currentPolyData.getPoints();
-    points.setData(originalPointsData);
+    // Create a NEW Float32Array to ensure VTK detects the change
+    const restoredData = new Float32Array(originalPointsData);
+    points.setData(restoredData);
+
+    // CRITICAL: Mark as modified so VTK updates
+    points.modified();
     currentPolyData.modified();
+
+    // Update bounds
+    currentPolyData.getBounds();
+
     setReductionApplied(false);
+    setReductionIsApplied(false); // Update global state
 
     // Reset to 3D perspective view when restoring original data
     restore3DView();
+
+    // CRITICAL: Reset camera AFTER restoring 3D view
+    renderer.resetCamera();
 
     logSuccess("Original data restored successfully");
 
@@ -209,9 +217,18 @@ export async function toggleDimensionalityReduction(isRemote = false) {
 
   mapper.setInputData(currentPolyData);
 
-  // Always reset camera after data changes
+  // Always reset camera after data changes and render multiple times
   renderer.resetCamera();
   renderWindow.render();
+
+  // Force additional renders to ensure update
+  setTimeout(() => {
+    renderWindow.render();
+  }, 50);
+
+  setTimeout(() => {
+    renderWindow.render();
+  }, 200);
 
   logInfo("Visualization refreshed");
   logProgress(
@@ -221,4 +238,6 @@ export async function toggleDimensionalityReduction(isRemote = false) {
         : "Original 3D"
     }`
   );
+
+  return true;
 }
