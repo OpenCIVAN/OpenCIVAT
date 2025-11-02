@@ -22,19 +22,15 @@ export default function AnnotationsPanel() {
   const textInputRef = useRef(null);
 
   const handleCreateAnnotation = () => {
-    if (!annotationText.trim()) {
-      alert('Please enter annotation text');
-      return;
-    }
+    console.log('📝 Starting annotation creation flow...');
 
-    // For now, create annotation at a default position
-    // TODO: Implement click-to-place mode
-    const defaultPosition = { x: 0, y: 0, z: 0 };
+    // Enable annotation mode
+    import('../../../../core/annotationState.js').then(({ annotationModeState }) => {
+      annotationModeState.enable('note'); // Default type
+      console.log('   ✅ Annotation mode enabled');
+    });
 
-    createAnnotation(defaultPosition, annotationText, annotationType);
-
-    // Reset form
-    setAnnotationText('');
+    // The rest is handled by the instruction modal and annotation modal
     setIsCreating(false);
   };
 
@@ -102,10 +98,7 @@ export default function AnnotationsPanel() {
       {/* Create Annotation */}
       {!isCreating ? (
         <button
-          onClick={() => {
-            setIsCreating(true);
-            setTimeout(() => textInputRef.current?.focus(), 100);
-          }}
+          onClick={handleCreateAnnotation}
           disabled={!isFileLoaded}
           style={{
             width: '100%',
@@ -133,127 +126,7 @@ export default function AnnotationsPanel() {
         >
           ➕ New Annotation
         </button>
-      ) : (
-        <div style={{
-          marginBottom: '16px',
-          padding: '12px',
-          backgroundColor: '#1a1a1a',
-          border: '1px solid #4CAF50',
-          borderRadius: '4px'
-        }}>
-          <div style={{
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '8px',
-            color: '#aaa'
-          }}>
-            Create Annotation
-          </div>
-
-          {/* Type Selection */}
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '11px', color: '#999', marginBottom: '6px' }}>
-              TYPE
-            </div>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {[
-                { value: 'note', label: '📝 Note', color: '#4CAF50' },
-                { value: 'warning', label: '⚠️ Warning', color: '#FFA726' },
-                { value: 'info', label: 'ℹ️ Info', color: '#2196F3' },
-                { value: 'measurement', label: '📐 Measurement', color: '#9C27B0' }
-              ].map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setAnnotationType(type.value)}
-                  style={{
-                    padding: '6px 10px',
-                    backgroundColor: annotationType === type.value ? type.color + '33' : '#0a0a0a',
-                    border: `1px solid ${annotationType === type.value ? type.color : '#333'}`,
-                    borderRadius: '3px',
-                    color: '#e0e0e0',
-                    fontSize: '11px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Text Input */}
-          <textarea
-            ref={textInputRef}
-            value={annotationText}
-            onChange={(e) => setAnnotationText(e.target.value)}
-            placeholder="Enter annotation text..."
-            style={{
-              width: '100%',
-              minHeight: '80px',
-              padding: '8px',
-              marginBottom: '12px',
-              backgroundColor: '#0a0a0a',
-              border: '1px solid #333',
-              borderRadius: '3px',
-              color: '#e0e0e0',
-              fontSize: '13px',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-              boxSizing: 'border-box'
-            }}
-          />
-
-          {/* Buttons */}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={handleCreateAnnotation}
-              style={{
-                flex: 1,
-                padding: '8px',
-                backgroundColor: '#2a4a2a',
-                border: '1px solid #4CAF50',
-                borderRadius: '4px',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Create
-            </button>
-            <button
-              onClick={() => {
-                setIsCreating(false);
-                setAnnotationText('');
-              }}
-              style={{
-                flex: 1,
-                padding: '8px',
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #666',
-                borderRadius: '4px',
-                color: '#999',
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-
-          {/* TODO: Add click-to-place mode */}
-          <div style={{
-            marginTop: '12px',
-            fontSize: '11px',
-            color: '#666',
-            textAlign: 'center'
-          }}>
-            🚧 Click-to-place coming soon<br />
-            Annotations currently placed at origin
-          </div>
-        </div>
-      )}
+      ) : null}
 
       {/* My Annotations */}
       {myAnnotations.length > 0 && (

@@ -52,20 +52,23 @@ class PresenceSystem {
   }
 
   updateMyPresence(updates) {
-    if (!this.myPresence || !this.awareness) {
+    if (!this.localPresence || !this.awareness) {
       console.warn("⚠️ Cannot update presence - not initialized");
       return;
     }
 
     // Update local presence object
-    Object.assign(this.myPresence, updates, {
+    Object.assign(this.localPresence, updates, {
       lastSeen: Date.now(),
     });
 
     // Sync to Y.js
-    this.awareness.setLocalState(this.myPresence);
+    this.awareness.setLocalState(this.localPresence);
 
-    console.log("👤 Presence updated:", this.myPresence);
+    console.log("👤 Presence updated:", this.localPresence);
+
+    // CRITICAL: Notify listeners so React re-renders
+    this.notifyPresenceListeners();
   }
 
   setPresence(updates) {

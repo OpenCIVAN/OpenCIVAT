@@ -2,8 +2,8 @@
 // Collaborative Annotations System
 // ----------------------------------------------------------------------------
 
-import { ydoc } from './yjsSetup.js';
-import { getUserId, getUserName, getUserColor } from './userManagement.js';
+import { ydoc } from "./yjsSetup.js";
+import { getUserId, getUserName, getUserColor } from "./userManagement.js";
 
 class AnnotationSystem {
   constructor() {
@@ -13,64 +13,100 @@ class AnnotationSystem {
   }
 
   initialize() {
+    if (this._initialized) return;
+    this._initialized = true;
+
     // Get or create annotations map in Yjs
-    this.annotations = ydoc.getMap('annotations');
-    
+    this.annotations = ydoc.getMap("annotations");
+
     // Listen for annotation changes
     this.annotations.observe((event) => {
       event.changes.keys.forEach((change, key) => {
-        if (change.action === 'add' || change.action === 'update') {
+        if (change.action === "add" || change.action === "update") {
           const annotation = this.annotations.get(key);
-          this.notifyListeners('added', annotation);
-        } else if (change.action === 'delete') {
-          this.notifyListeners('deleted', { id: key });
+          console.log("📍 Annotation change detected:", annotation);
+          this.notifyListeners("added", annotation);
+
+          // CRITICAL: Immediately render the marker
+          import("../core/annotationRenderer.js").then(
+            ({ annotationRenderer }) => {
+              if (annotationRenderer.renderer) {
+                annotationRenderer.createAnnotationMarker(annotation);
+              }
+            }
+          );
+        } else if (change.action === "delete") {
+          this.notifyListeners("deleted", { id: key });
         }
       });
     });
 
-    console.log('📍 Annotation system initialized');
+    console.log("📍 Annotation system initialized");
   }
 
-  createAnnotation(position, text, type = 'note') {
+  createAnnotation(position, text, type = "note", datasetId = null) {
+    // Get current dataset if not specified
+    if (!datasetId) {
+      const {
+        simpleVisualizationManager,
+      } = require("../core/simpleVisualizationManager.js");
+      const currentViz = simpleVisualizationManager.getCurrentDataset();
+      if (currentViz) {
+        datasetId = currentViz.datasetId;
+      } else {
+        console.warn(
+          "⚠️ No current dataset - annotation will not be tied to a dataset"
+        );
+        datasetId = "unknown";
+      }
+    }
+
     const annotation = {
       id: `annotation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       userId: getUserId(),
       userName: getUserName(),
       userColor: getUserColor(getUserId()),
+      datasetId: datasetId,
       position: {
         x: position.x,
         y: position.y,
-        z: position.z
+        z: position.z,
       },
       text: text,
-      type: type, // 'note', 'warning', 'info', 'measurement'
+      type: type,
       timestamp: Date.now(),
-      visible: true
+      visible: true,
     };
 
     // Add to Yjs map (syncs to all clients)
     this.annotations.set(annotation.id, annotation);
 
+    console.log("📍 Created annotation for dataset:", datasetId);
+
     return annotation;
+  }
+
+  getAnnotationsByDataset(datasetId) {
+    return this.getAllAnnotations().filter((a) => a.datasetId === datasetId);
   }
 
   updateAnnotation(id, updates) {
     const annotation = this.annotations.get(id);
     if (!annotation) {
-      console.warn('Annotation not found:', id);
+      console.warn("Annotation not found:", id);
       return;
     }
 
     // Only allow creator to edit
     if (annotation.userId !== getUserId()) {
-      console.warn('Cannot edit annotation created by another user');
+      console.warn("Cannot edit annotation created by another user");
       return;
     }
 
     const updated = {
       ...annotation,
       ...updates,
-      lastModified: Date.now()
+      lastModified: Date.now(),
     };
 
     this.annotations.set(id, updated);
@@ -80,13 +116,13 @@ class AnnotationSystem {
   deleteAnnotation(id) {
     const annotation = this.annotations.get(id);
     if (!annotation) {
-      console.warn('Annotation not found:', id);
+      console.warn("Annotation not found:", id);
       return;
     }
 
     // Only allow creator to delete
     if (annotation.userId !== getUserId()) {
-      console.warn('Cannot delete annotation created by another user');
+      console.warn("Cannot delete annotation created by another user");
       return;
     }
 
@@ -97,30 +133,30 @@ class AnnotationSystem {
     return this.annotations.get(id);
   }
 
-getAllAnnotations() {
-  if (!this.annotations) {
-    return []; // Return empty array if not initialized yet
+  getAllAnnotations() {
+    if (!this.annotations) {
+      return []; // Return empty array if not initialized yet
+    }
+
+    const annotations = [];
+    this.annotations.forEach((annotation, id) => {
+      annotations.push(annotation);
+    });
+    return annotations;
   }
-  
-  const annotations = [];
-  this.annotations.forEach((annotation, id) => {
-    annotations.push(annotation);
-  });
-  return annotations;
-}
 
   getAnnotationsByUser(userId) {
-    return this.getAllAnnotations().filter(a => a.userId === userId);
+    return this.getAllAnnotations().filter((a) => a.userId === userId);
   }
 
   getAnnotationsByType(type) {
-    return this.getAllAnnotations().filter(a => a.type === type);
+    return this.getAllAnnotations().filter((a) => a.type === type);
   }
 
   clearAllAnnotations() {
     // Only clear own annotations
     const myAnnotations = this.getAnnotationsByUser(getUserId());
-    myAnnotations.forEach(annotation => {
+    myAnnotations.forEach((annotation) => {
       this.annotations.delete(annotation.id);
     });
   }
@@ -146,7 +182,7 @@ getAllAnnotations() {
       try {
         callback(action, annotation);
       } catch (error) {
-        console.error('Error in annotation listener:', error);
+        console.error("Error in annotation listener:", error);
       }
     });
   }

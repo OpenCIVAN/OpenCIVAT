@@ -1,15 +1,25 @@
 // ----------------------------------------------------------------------------
-// Collaborative Cursor System
+// Collaborative Cursor System - Redesigned
+// Separates cursor POSITION from cursor VISIBILITY
 // ----------------------------------------------------------------------------
 
-import { yCursors } from "./yjsSetup.js";
-import { logInfo, logSuccess, logProgress, logError, logWarning } from "../ui/react/hooks/useLogging.js";
+import { ydoc } from "./yjsSetup.js";
+import {
+  logInfo,
+  logSuccess,
+  logProgress,
+  logError,
+  logWarning,
+} from "../ui/react/hooks/useLogging.js";
 import { NETWORK_CONFIG } from "../config/constants.js";
 import { getUserId, getUserName, getUserColor } from "./userManagement.js";
 
+// Separate Yjs maps for position and preferences
+const yCursors = ydoc.getMap("cursors"); // Position data only
+const yCursorPrefs = ydoc.getMap("cursorPreferences"); // Visibility, size, style
+
 // Store active cursors
 const activeCursors = new Map();
-let isLocalMouseMove = false;
 let lastMousePosition = { x: 0, y: 0, timestamp: 0 };
 let mouseMoveTimeout = null;
 
@@ -17,31 +27,65 @@ let mouseMoveTimeout = null;
 // Cursor Visual Elements
 // ----------------------------------------------------------------------------
 
-function createCursorElement(userId, color, displayName) {
+function createCursorElement(userId, color, displayName, isPointer = false) {
   try {
     const cursor = document.createElement("div");
     cursor.id = `cursor-${userId}`;
-    cursor.style.cssText = `
-      position: fixed;
-      width: 20px;
-      height: 20px;
-      background: ${color};
-      border: 2px solid white;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 10000;
-      transform: translate(-50%, -50%);
-      transition: all 0.1s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    `;
+
+    if (isPointer) {
+      // Pointer-style cursor (better for precision)
+      cursor.style.cssText = `
+        position: fixed;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+        z-index: 10000;
+        transform: translate(-4px, -4px);
+        transition: all 0.1s ease;
+      `;
+
+      // Create arrow SVG
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("width", "24");
+      svg.setAttribute("height", "24");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.style.cssText = "filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));";
+
+      const path = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path"
+      );
+      path.setAttribute("d", "M3 3 L3 17 L9 13 L12 20 L14 19 L11 12 L18 12 Z");
+      path.setAttribute("fill", color);
+      path.setAttribute("stroke", "white");
+      path.setAttribute("stroke-width", "1");
+
+      svg.appendChild(path);
+      cursor.appendChild(svg);
+    } else {
+      // Circle cursor (legacy)
+      cursor.style.cssText = `
+        position: fixed;
+        width: 20px;
+        height: 20px;
+        background: ${color};
+        border: 2px solid white;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 10000;
+        transform: translate(-50%, -50%);
+        transition: all 0.1s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      `;
+    }
 
     // Add user label
     const label = document.createElement("div");
     label.style.cssText = `
       position: absolute;
-      top: 25px;
-      left: 50%;
-      transform: translateX(-50%);
+      top: ${isPointer ? "24px" : "25px"};
+      left: ${isPointer ? "0px" : "50%"};
+      transform: translateX(${isPointer ? "0%" : "-50%"});
       background: ${color};
       color: white;
       padding: 2px 6px;
@@ -54,7 +98,7 @@ function createCursorElement(userId, color, displayName) {
       text-overflow: ellipsis;
       overflow: hidden;
     `;
-    label.textContent = displayName || 'Unknown';
+    label.textContent = displayName || "Unknown";
 
     cursor.appendChild(label);
 
@@ -72,10 +116,12 @@ function createCursorElement(userId, color, displayName) {
   }
 }
 
+// ----------------------------------------------------------------------------
+// Mouse Tracking (Position Only)
+// ----------------------------------------------------------------------------
+
 function trackMouse() {
   document.addEventListener("mousemove", (event) => {
-    if (isLocalMouseMove) return;
-
     const now = Date.now();
     lastMousePosition = {
       x: event.clientX,
@@ -89,65 +135,115 @@ function trackMouse() {
     }
 
     mouseMoveTimeout = setTimeout(() => {
-      updateMyCursor();
+      updateMyCursorPosition();
     }, NETWORK_CONFIG.CURSOR_UPDATE_THROTTLE);
-  });
-
-  // Handle mouse leave
-  document.addEventListener("mouseleave", () => {
-    hideMyCursor(false);
   });
 
   // Handle window focus/blur
   window.addEventListener("blur", () => {
-    hideMyCursor(false);
+    // Don't update position, just mark as inactive in position data
+    updateMyCursorPosition(false);
   });
 
   window.addEventListener("focus", () => {
     if (lastMousePosition.timestamp > 0) {
-      updateMyCursor();
+      updateMyCursorPosition(true);
     }
   });
 }
 
-export function updateMyCursor() {
+// ----------------------------------------------------------------------------
+// Update Position (Reads Visibility from Preferences)
+// ----------------------------------------------------------------------------
+
+export function updateMyCursorPosition(windowActive = true) {
   if (!lastMousePosition || lastMousePosition.timestamp === 0) return;
 
-  // Include name in cursor data
+  // Read visibility preference (separate from position)
+  const prefs = yCursorPrefs.get(getUserId()) || {
+    visible: true,
+    style: "pointer",
+  };
+
+  // Update ONLY position data
   yCursors.set(getUserId(), {
     x: lastMousePosition.x,
     y: lastMousePosition.y,
     timestamp: lastMousePosition.timestamp,
     color: getUserColor(getUserId()),
     name: getUserName(),
-    active: true,
+    windowActive: windowActive,
   });
+}
+
+// ----------------------------------------------------------------------------
+// Cursor Visibility Control (Separate from Position)
+// ----------------------------------------------------------------------------
+
+export function setMyCursorVisible(visible) {
+  const currentPrefs = yCursorPrefs.get(getUserId()) || {};
+
+  yCursorPrefs.set(getUserId(), {
+    ...currentPrefs,
+    visible: visible,
+    timestamp: Date.now(),
+  });
+
+  console.log(`👁️ Cursor visibility set to: ${visible}`);
 }
 
 export function hideMyCursor(hide = true) {
-  const currentCursor = yCursors.get(getUserId()) || {};
-  
-  yCursors.set(getUserId(), {
-    ...currentCursor,
-    x: currentCursor.x || 0,
-    y: currentCursor.y || 0,
-    timestamp: Date.now(),
-    color: getUserColor(getUserId()),
-    name: getUserName(),
-    active: !hide,
-  });
+  setMyCursorVisible(!hide);
 }
 
-function updateRemoteCursor(userId, data) {
+export function setCursorStyle(style = "pointer") {
+  const currentPrefs = yCursorPrefs.get(getUserId()) || {};
+
+  yCursorPrefs.set(getUserId(), {
+    ...currentPrefs,
+    style: style, // 'pointer' or 'circle'
+    timestamp: Date.now(),
+  });
+
+  console.log(`🖱️ Cursor style set to: ${style}`);
+}
+
+// ----------------------------------------------------------------------------
+// Remote Cursor Rendering
+// ----------------------------------------------------------------------------
+
+function updateRemoteCursor(userId, positionData) {
+  // Get preferences for this user
+  const prefs = yCursorPrefs.get(userId) || { visible: true, style: "pointer" };
+
+  // Check if cursor should be visible
+  if (!prefs.visible || !positionData.windowActive) {
+    hideCursor(userId);
+    return;
+  }
+
   let cursorData = activeCursors.get(userId);
   let cursorElement = cursorData ? cursorData.element : null;
 
-  // Get display name from cursor data (not from yUserNames)
-  const displayName = data.name || 'Unknown';
+  const displayName = positionData.name || "Unknown";
+  const style = prefs.style || "pointer";
 
-  if (!cursorElement || !cursorElement.parentNode) {
-    // Create new cursor element
-    cursorElement = createCursorElement(userId, data.color, displayName);
+  // Create cursor if it doesn't exist or style changed
+  if (
+    !cursorElement ||
+    !cursorElement.parentNode ||
+    cursorData.style !== style
+  ) {
+    if (cursorElement && cursorElement.parentNode) {
+      cursorElement.parentNode.removeChild(cursorElement);
+    }
+
+    cursorElement = createCursorElement(
+      userId,
+      positionData.color,
+      displayName,
+      style === "pointer"
+    );
     if (!cursorElement) {
       logError(`Failed to create cursor element for ${userId}`);
       return;
@@ -155,39 +251,36 @@ function updateRemoteCursor(userId, data) {
 
     activeCursors.set(userId, {
       element: cursorElement,
-      lastUpdate: data.timestamp,
+      lastUpdate: positionData.timestamp,
       displayName: displayName,
+      style: style,
     });
-  }
-
-  // Update display name if it changed
-  const currentData = activeCursors.get(userId);
-  if (currentData && currentData.displayName !== displayName) {
-    const label = cursorElement.querySelector("div");
-    if (label) {
-      label.textContent = displayName;
-    }
-    currentData.displayName = displayName;
   }
 
   // Update position
   try {
     if (cursorElement && cursorElement.style) {
-      cursorElement.style.left = data.x + "px";
-      cursorElement.style.top = data.y + "px";
+      cursorElement.style.left = positionData.x + "px";
+      cursorElement.style.top = positionData.y + "px";
       cursorElement.style.display = "block";
 
       // Update last seen timestamp
       const cursorInfo = activeCursors.get(userId);
       if (cursorInfo) {
-        cursorInfo.lastUpdate = data.timestamp;
+        cursorInfo.lastUpdate = positionData.timestamp;
       }
 
-      // Add activity indicator
-      cursorElement.style.transform = "translate(-50%, -50%) scale(1.2)";
+      // Activity indicator
+      cursorElement.style.transform =
+        style === "pointer"
+          ? "translate(-4px, -4px) scale(1.2)"
+          : "translate(-50%, -50%) scale(1.2)";
       setTimeout(() => {
         if (cursorElement && cursorElement.parentNode && cursorElement.style) {
-          cursorElement.style.transform = "translate(-50%, -50%) scale(1)";
+          cursorElement.style.transform =
+            style === "pointer"
+              ? "translate(-4px, -4px) scale(1)"
+              : "translate(-50%, -50%) scale(1)";
         }
       }, 150);
     }
@@ -227,36 +320,54 @@ function removeCursor(userId) {
 // ----------------------------------------------------------------------------
 
 function setupCursorSync() {
+  // Listen for POSITION updates
   yCursors.observe((event) => {
     try {
       event.changes.keys.forEach((change, key) => {
         if (key === getUserId()) return; // Skip own cursor
 
         try {
-          const cursorData = yCursors.get(key);
-          if (!cursorData) {
+          const positionData = yCursors.get(key);
+          if (!positionData) {
             removeCursor(key);
             return;
           }
 
-          if (!cursorData.active) {
-            hideCursor(key);
-            return;
-          }
-
           // Validate cursor data
-          if (typeof cursorData.x !== "number" || typeof cursorData.y !== "number") {
+          if (
+            typeof positionData.x !== "number" ||
+            typeof positionData.y !== "number"
+          ) {
             logWarning(`Invalid cursor data for ${key}`);
             return;
           }
 
-          updateRemoteCursor(key, cursorData);
+          updateRemoteCursor(key, positionData);
         } catch (innerError) {
-          logError(`Error processing cursor update for ${key}: ${innerError.message}`);
+          logError(
+            `Error processing cursor update for ${key}: ${innerError.message}`
+          );
         }
       });
     } catch (error) {
       logError(`Error in cursor observer: ${error.message}`);
+    }
+  });
+
+  // Listen for PREFERENCE updates
+  yCursorPrefs.observe((event) => {
+    try {
+      event.changes.keys.forEach((change, key) => {
+        if (key === getUserId()) return; // Skip own preferences
+
+        // Re-render cursor with new preferences
+        const positionData = yCursors.get(key);
+        if (positionData) {
+          updateRemoteCursor(key, positionData);
+        }
+      });
+    } catch (error) {
+      logError(`Error in cursor preferences observer: ${error.message}`);
     }
   });
 }
@@ -317,10 +428,19 @@ export function initializeCursorSystem() {
     setupCursorSync();
     startCursorCleanup();
 
+    // Initialize preferences for this user
+    if (!yCursorPrefs.get(getUserId())) {
+      yCursorPrefs.set(getUserId(), {
+        visible: true,
+        style: "pointer",
+        timestamp: Date.now(),
+      });
+    }
+
     // Send initial cursor position after delay
     setTimeout(() => {
       if (lastMousePosition.timestamp > 0) {
-        updateMyCursor();
+        updateMyCursorPosition(true);
       }
     }, 1000);
 
@@ -342,6 +462,13 @@ export function getActiveCursors() {
 // Cleanup on page unload
 if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", () => {
-    hideMyCursor(true);
+    setMyCursorVisible(false);
   });
 }
+
+// TODO: Future enhancements
+// - Per-user cursor visibility control (hide specific users)
+// - Per-view cursor filtering (show cursors only in specific views)
+// - Cursor confined to visualization area
+// - Custom cursor sizes
+// - VR controller → 2D cursor projection

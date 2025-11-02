@@ -26,24 +26,26 @@ export function setupFileHandler() {
   }
 
   // ----------------------------------------------------------------------------
-  // Yjs Observer: File Data
+  // Yjs Observer: File Data (DEPRECATED - using datasetManager instead)
   // ----------------------------------------------------------------------------
 
-  yFile.observe((event) => {
-    if (isLocalFileLoad) {
-      isLocalFileLoad = false;
-      return;
-    }
+//   yFile.observe((event) => {
+//     if (isLocalFileLoad) {
+//       isLocalFileLoad = false;
+//       return;
+//     }
 
-    const b64 = yFile.get("polydata");
-    if (b64) {
-      const binary = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
-      updateScene(binary);
-    }
-  });
+//     const b64 = yFile.get("polydata");
+//     const datasetId = yFile.get("datasetId"); // ← Get dataset ID from Yjs
+
+//     if (b64) {
+//       const binary = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+//       updateScene(binary, datasetId); // ← Pass dataset ID
+//     }
+//   });
 }
 
-function handleFile(e) {
+async function handleFile(e) {
   preventDefaults(e);
   const dataTransfer = e.dataTransfer;
   const files = e.target.files || dataTransfer.files;
@@ -53,27 +55,50 @@ function handleFile(e) {
     logInfo(`Loading file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
     logMemoryUsage("before file loading");
 
-    const fileReader = new FileReader();
-    fileReader.onload = function onLoad(e) {
-      const fileData = fileReader.result;
-      const b64 = arrayBufferToBase64(fileData);
+    try {
+      // Use the modern dataset manager
+      const { datasetManager } = await import("./datasetManager.js");
+      const { simpleVisualizationManager } = await import(
+        "./simpleVisualizationManager.js"
+      );
 
-      isLocalFileLoad = true; //mark as a local change
-      //overwite the polydata if it already exists
-      yFile.set("polydata", b64);
+      logProgress("Creating dataset entry...");
+      const datasetId = await datasetManager.loadDataset(file, null);
 
-      updateScene(fileData);
-    };
+      logProgress("Waiting for polydata...");
 
-    fileReader.onerror = function (error) {
-      logError(`File reading failed: ${error.message}`);
-    };
+      // Wait for polydata to be ready (poll with timeout)
+      let attempts = 0;
+      const maxAttempts = 20;
 
-    fileReader.readAsArrayBuffer(files[0]);
+      while (attempts < maxAttempts) {
+        const dataset = datasetManager.getDataset(datasetId);
+
+        if (dataset && dataset.polydata) {
+          logSuccess("Dataset ready!");
+
+          // Now set as current - this will trigger loading in ALL tabs
+          simpleVisualizationManager.setCurrentDataset(datasetId, file.name);
+          logSuccess(`File loaded as dataset: ${datasetId}`);
+          break;
+        }
+
+        // Wait 200ms before next check
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        attempts++;
+      }
+
+      if (attempts >= maxAttempts) {
+        logError("Timeout waiting for polydata to be ready");
+      }
+    } catch (error) {
+      logError(`Failed to load file: ${error.message}`);
+      console.error(error);
+    }
   }
 }
 
-function updateScene(fileData) {
+function updateScene(fileData, datasetId = null) {
   const { vtpReader, mapper, renderer, renderWindow, actor } =
     getSceneObjects();
 
@@ -172,6 +197,26 @@ function updateScene(fileData) {
     logSuccess("Visualization rendered successfully");
     logInfo('Use "Toggle Reduction" to apply PCA, t-SNE, or UMAP');
     logMemoryUsage("after file loading complete");
+
+    // Load annotations for this dataset if datasetId provided
+    if (datasetId) {
+      setTimeout(() => {
+        import("../collaboration/annotations.js").then(
+          ({ annotationSystem }) => {
+            import("../core/annotationRenderer.js").then((module) => {
+              const annotations =
+                annotationSystem.getAnnotationsByDataset(datasetId);
+              console.log(
+                `📍 Loading ${annotations.length} annotations for dataset ${datasetId}`
+              );
+              annotations.forEach((ann) => {
+                module.annotationRenderer.createAnnotationMarker(ann);
+              });
+            });
+          }
+        );
+      }, 500);
+    }
   } catch (error) {
     logError(`Failed to load VTP file: ${error.message}`);
     logWarning("Make sure the file is a valid VTP (VTK XML PolyData) format");

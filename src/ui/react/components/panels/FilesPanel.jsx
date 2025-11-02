@@ -88,7 +88,7 @@ export default function FilesPanel() {
                 loadingRef.current = true;
 
                 try {
-                    loadDatasetIntoScene(dataset.polydata, true);
+                    loadDatasetIntoScene(dataset.polydata, true, current.datasetId);
                     sceneState.setLoadedDataset(current.datasetId);
                     console.log('✅ Loaded into scene');
                 } finally {
@@ -117,7 +117,7 @@ export default function FilesPanel() {
                         if (stillCurrent && stillCurrent.datasetId === current.datasetId && !sceneState.isDatasetLoaded(current.datasetId)) {
                             loadingRef.current = true;
                             try {
-                                loadDatasetIntoScene(updated.polydata, true);
+                                loadDatasetIntoScene(updated.polydata, true, current.datasetId);
                                 sceneState.setLoadedDataset(current.datasetId);
                                 console.log('✅ Loaded into scene after waiting');
                             } finally {

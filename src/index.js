@@ -46,6 +46,7 @@ import { annotationSystem } from "./collaboration/annotations.js";
 import { presenceSystem } from "./collaboration/presenceSystem.js";
 import { datasetManager } from "./core/datasetManager.js";
 import { simpleVisualizationManager } from "./core/simpleVisualizationManager.js";
+import { cameraSync } from "./collaboration/cameraSync.js";
 
 // Get room name from URL or use default
 function getRoomName() {
@@ -153,8 +154,17 @@ export function initializeApplicationPostScene() {
     logProgress("Collaborative cursor system ready");
 
     // Setup viewport interaction (must be before annotation renderer)
-    setupViewportInteraction();
-    logProgress("Viewport interaction ready");
+    try {
+      setupViewportInteraction();
+      logProgress("Viewport interaction ready");
+      console.log("✅ Viewport interaction initialized");
+    } catch (error) {
+      console.error("❌ Failed to setup viewport interaction:", error);
+    }
+
+    // Add camera sync
+    cameraSync.initialize();
+    logProgress("Camera synchronization ready");
 
     // Initialize annotation renderer after scene is ready
     setTimeout(() => {

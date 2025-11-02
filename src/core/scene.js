@@ -242,13 +242,41 @@ export function cleanupScene() {
 // Load Dataset into Scene
 // ----------------------------------------------------------------------------
 
-export function loadDatasetIntoScene(polyData, resetCamera = true) {
+export function loadDatasetIntoScene(
+  polyData,
+  resetCamera = true,
+  datasetId = null
+) {
   if (!mapper || !renderer || !renderWindow) {
     console.error("❌ Scene not initialized");
     return false;
   }
 
   console.log("📊 Loading dataset into scene...");
+
+  // Clear old annotations when switching datasets
+  if (datasetId) {
+    import("./annotationRenderer.js").then((module) => {
+      // Hide all annotations (we'll show only relevant ones after load)
+      module.annotationRenderer.clearAllMarkers();
+
+      // Reload annotations for this dataset
+      setTimeout(() => {
+        import("../collaboration/annotations.js").then(
+          ({ annotationSystem }) => {
+            const annotations =
+              annotationSystem.getAnnotationsByDataset(datasetId);
+            console.log(
+              `📍 Loading ${annotations.length} annotations for dataset`
+            );
+            annotations.forEach((ann) => {
+              module.annotationRenderer.createAnnotationMarker(ann);
+            });
+          }
+        );
+      }, 500);
+    });
+  }
 
   try {
     // CRITICAL: Extract and save original points data for dimensionality reduction
@@ -261,17 +289,21 @@ export function loadDatasetIntoScene(polyData, resetCamera = true) {
       const numPoints = points.getNumberOfPoints();
       const bounds = polyData.getBounds();
 
-      console.log(`✅ Saved ${numPoints.toLocaleString()} points for reduction`);
-      
+      console.log(
+        `✅ Saved ${numPoints.toLocaleString()} points for reduction`
+      );
+
       // Import logging functions
-      import('../ui/react/hooks/useLogging.js').then(({ logInfo, logProgress, logSuccess }) => {
-        logInfo(`Dataset: ${numPoints.toLocaleString()} points`);
-        logProgress(
-          `Bounds: X[${bounds[0].toFixed(2)}, ${bounds[1].toFixed(2)}] ` +
-          `Y[${bounds[2].toFixed(2)}, ${bounds[3].toFixed(2)}] ` +
-          `Z[${bounds[4].toFixed(2)}, ${bounds[5].toFixed(2)}]`
-        );
-      });
+      import("../ui/react/hooks/useLogging.js").then(
+        ({ logInfo, logProgress, logSuccess }) => {
+          logInfo(`Dataset: ${numPoints.toLocaleString()} points`);
+          logProgress(
+            `Bounds: X[${bounds[0].toFixed(2)}, ${bounds[1].toFixed(2)}] ` +
+              `Y[${bounds[2].toFixed(2)}, ${bounds[3].toFixed(2)}] ` +
+              `Z[${bounds[4].toFixed(2)}, ${bounds[5].toFixed(2)}]`
+          );
+        }
+      );
 
       // Auto-size annotation markers based on data bounds
       const xRange = bounds[1] - bounds[0];
@@ -284,7 +316,9 @@ export function loadDatasetIntoScene(polyData, resetCamera = true) {
       import("./annotationRenderer.js").then((module) => {
         if (module.annotationRenderer) {
           module.annotationRenderer.setMarkerRadius(annotationRadius);
-          console.log(`📍 Annotation marker size: ${annotationRadius.toFixed(4)}`);
+          console.log(
+            `📍 Annotation marker size: ${annotationRadius.toFixed(4)}`
+          );
         }
       });
     } else {
@@ -325,10 +359,34 @@ export function loadDatasetIntoScene(polyData, resetCamera = true) {
       renderWindow.render();
     }, 300);
 
-    import('../ui/react/hooks/useLogging.js').then(({ logSuccess }) => {
+    import("../ui/react/hooks/useLogging.js").then(({ logSuccess }) => {
       logSuccess("Visualization loaded successfully");
     });
-    
+
+    // Load annotations for this dataset
+    if (datasetId) {
+      setTimeout(() => {
+        import("../collaboration/annotations.js").then(
+          ({ annotationSystem }) => {
+            import("./annotationRenderer.js").then((module) => {
+              // Clear all markers first
+              module.annotationRenderer.clearAllMarkers();
+
+              // Load annotations for this specific dataset
+              const annotations =
+                annotationSystem.getAnnotationsByDataset(datasetId);
+              console.log(
+                `📍 Loading ${annotations.length} annotations for dataset ${datasetId}`
+              );
+              annotations.forEach((ann) => {
+                module.annotationRenderer.createAnnotationMarker(ann);
+              });
+            });
+          }
+        );
+      }, 500);
+    }
+
     console.log("✅ Dataset loaded into scene");
 
     return true;

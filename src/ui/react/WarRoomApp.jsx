@@ -10,12 +10,14 @@ import AnalyzePanel from './components/panels/AnalyzePanel.jsx';
 import FilesPanel from './components/panels/FilesPanel.jsx';
 import AnnotationsPanel from './components/panels/AnnotationsPanel.jsx';
 import LoggingPanel from './components/LoggingPanel.jsx';
-import UsernameModal from './components/UsernameModal.jsx';
+import UsernameModal from './components/modals/UsernameModal.jsx';
 import { useAppStore } from './store/appStore.js';
 import { initializeScene } from '../../core/scene.js';
 import { initializeApplicationPostScene } from '../../index.js';
 import { setUserName, hasUserName } from '../../collaboration/userManagement.js';
 import { presenceSystem } from '../../collaboration/presenceSystem.js';
+import AnnotationModal from './components/modals/AnnotationModal.jsx';
+import InstructionsModal from './components/modals/InstructionsModal.jsx';
 
 export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
   const [activeTool, setActiveTool] = useState(null);
@@ -26,6 +28,11 @@ export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
   const wrapperRef = useRef(null);
   const vtkContainerRef = useRef(null);
   const initOnce = useRef(false);
+  const [instructionsModal, setInstructionsModal] = useState(false);
+  const [annotationModal, setAnnotationModal] = useState({
+    isOpen: false,
+    position: null
+  });
 
   // Check if username is already set
   useEffect(() => {
@@ -104,6 +111,30 @@ export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
     }
 
     return () => { };
+  }, []);
+
+  // In WarRoomApp useEffect, replace window.showAnnotationModal:
+  useEffect(() => {
+    // Check if we should skip instructions
+    const skipInstructions = localStorage.getItem('annotation_skip_instructions') === 'true';
+
+    window.showAnnotationModal = (position) => {
+      if (skipInstructions) {
+        // Go directly to annotation modal
+        setAnnotationModal({ isOpen: true, position });
+      } else {
+        // Show instructions first
+        setInstructionsModal(true);
+
+        // Store position for later
+        window._annotationPosition = position;
+      }
+    };
+
+    return () => {
+      delete window.showAnnotationModal;
+      delete window._annotationPosition;
+    };
   }, []);
 
   // Initialize post-scene features after VTK is ready
@@ -229,6 +260,53 @@ export default function WarRoomApp({ roomName = 'default-analytics-room' }) {
             </div>
           )}
         </div>
+        {/* Instructions Modal */}
+        <InstructionsModal
+          isOpen={instructionsModal}
+          onClose={() => {
+            setInstructionsModal(false);
+
+            // Now show the annotation modal with stored position
+            if (window._annotationPosition) {
+              setAnnotationModal({
+                isOpen: true,
+                position: window._annotationPosition
+              });
+            }
+          }}
+          onDontShowAgain={() => {
+            console.log('✅ Instructions disabled for future sessions');
+          }}
+        />
+
+        {/* Annotation Creation Modal */}
+        <AnnotationModal
+          isOpen={annotationModal.isOpen}
+          position={annotationModal.position}
+          onClose={() => {
+            setAnnotationModal({ isOpen: false, position: null });
+            window._annotationPosition = null;
+
+            // Disable annotation mode
+            import('../../core/annotationState.js').then(({ annotationModeState }) => {
+              annotationModeState.disable();
+            });
+          }}
+          onSubmit={(text, type) => {
+            // Create annotation
+            import('../../collaboration/annotations.js').then(({ annotationSystem }) => {
+              annotationSystem.createAnnotation(annotationModal.position, text, type);
+            });
+
+            setAnnotationModal({ isOpen: false, position: null });
+            window._annotationPosition = null;
+
+            // Disable annotation mode
+            import('../../core/annotationState.js').then(({ annotationModeState }) => {
+              annotationModeState.disable();
+            });
+          }}
+        />
       </WarRoomLayout>
 
       {/* Logging Panel - outside main layout */}

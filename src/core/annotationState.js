@@ -5,7 +5,7 @@
 class AnnotationModeState {
   constructor() {
     this.isAnnotationMode = false;
-    this.annotationType = 'note'; // 'note', 'warning', 'info', 'measurement'
+    this.annotationType = "note"; // 'note', 'warning', 'info', 'measurement'
     this.listeners = [];
   }
 
@@ -15,7 +15,7 @@ class AnnotationModeState {
   }
 
   // Enter annotation mode
-  enable(type = 'note') {
+  enable(type = "note") {
     if (!this.isAnnotationMode || this.annotationType !== type) {
       this.isAnnotationMode = true;
       this.annotationType = type;
@@ -29,12 +29,12 @@ class AnnotationModeState {
     if (this.isAnnotationMode) {
       this.isAnnotationMode = false;
       this.notifyListeners();
-      console.log('📍 Annotation mode disabled');
+      console.log("📍 Annotation mode disabled");
     }
   }
 
   // Toggle annotation mode
-  toggle(type = 'note') {
+  toggle(type = "note") {
     if (this.isAnnotationMode) {
       this.disable();
     } else {
@@ -66,7 +66,7 @@ class AnnotationModeState {
       try {
         callback();
       } catch (error) {
-        console.error('Error in annotation mode listener:', error);
+        console.error("Error in annotation mode listener:", error);
       }
     });
   }
@@ -82,8 +82,13 @@ export const disableAnnotationMode = () => annotationModeState.disable();
 export const toggleAnnotationMode = (type) => annotationModeState.toggle(type);
 export const getAnnotationType = () => annotationModeState.getType();
 
-// Function to prompt for annotation text (used by viewportInteraction.js)
-export function promptForAnnotationText() {
-  const text = prompt('Enter annotation text:');
-  return text && text.trim() ? text.trim() : null;
+export function promptForAnnotationText(position) {
+  console.log('📍 Showing annotation modal for position:', position);
+  
+  // Let the global handler take care of modals
+  if (window.showAnnotationModal) {
+    window.showAnnotationModal(position);
+  } else {
+    console.error('❌ window.showAnnotationModal not available');
+  }
 }
