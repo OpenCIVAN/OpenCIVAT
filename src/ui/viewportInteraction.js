@@ -21,7 +21,7 @@ export function setupViewportInteraction() {
   const { renderer, renderWindow } = getSceneObjects();
 
   // Find the VTK container - try multiple methods
-  let vtkContainer = document.getElementById("vtk-workspace-container");
+  let vtkContainer = document.getElementById("vtk-war-room-container");
 
   if (!vtkContainer) {
     vtkContainer = document.querySelector('[id*="vtk"]');
@@ -34,7 +34,7 @@ export function setupViewportInteraction() {
   if (!vtkContainer) {
     console.error("❌ Could not find VTK container!");
     console.log("Available elements:", {
-      byId: document.getElementById("vtk-workspace-container"),
+      byId: document.getElementById("vtk-war-room-container"),
       byQuery: document.querySelector('[id*="vtk"]'),
       canvas: document.querySelector("canvas"),
     });

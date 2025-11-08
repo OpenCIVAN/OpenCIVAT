@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { presenceSystem } from '../../../collaboration/presenceSystem.js';
 
-export default function CIAWebLayout({
+export default function WarRoomLayout({
   children,
   leftPanel,
   rightPanel,
-  roomName = 'Analytics Web App',
+  roomName = 'Analytics War Room',
   datasetName = 'Untitled Dataset',
 }) {
   const [onlineCount, setOnlineCount] = useState(0);

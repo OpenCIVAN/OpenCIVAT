@@ -395,17 +395,3 @@ export function loadDatasetIntoScene(
     return false;
   }
 }
-
-// Force initial render after scene is ready
-export function forceInitialRender() {
-  const { renderWindow } = getSceneObjects();
-
-  // Multiple renders to ensure visibility
-  renderWindow.render();
-
-  setTimeout(() => renderWindow.render(), 100);
-  setTimeout(() => renderWindow.render(), 300);
-  setTimeout(() => renderWindow.render(), 500);
-}
-
-// Call this after loading any dataset

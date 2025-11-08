@@ -2,6 +2,9 @@
 // Application Initialization
 // ----------------------------------------------------------------------------
 
+// For streamlined VR development install the WebXR emulator extension
+// https://github.com/MozillaReality/WebXR-emulator-extension
+
 import { voiceChat } from "./collaboration/voiceChat.js";
 import { setupUserName } from "./collaboration/userManagement.js";
 import { modeManager } from "./core/modeManager.js";
@@ -9,7 +12,7 @@ import { vrControllers } from "./vr/vrControllers.js";
 import { vrAvatarSystem } from "./vr/vrAvatars.js";
 import { vrSpatialUI } from "./vr/vrSpatialUI.js";
 
-// Import logging
+// Import logging from the new hook
 import {
   logInfo,
   logSuccess,
@@ -24,22 +27,13 @@ import {
 
 import { setupFileHandler } from "./core/fileHandler.js";
 
-// Import reduction state manager
+// Import reduction state manager (not the hook!)
 import {
   getReductionMethod,
   getReductionComponents,
   setReductionMethod,
   setReductionComponents,
 } from "./core/reductionState.js";
-
-// Import Y.js setup and observers
-import {
-  syncDatasetToYjs,
-  syncInstanceToYjs,
-  syncAnnotationsToYjs,
-  initializeAllObservers,
-  yDatasets,
-} from "./collaboration/yjsSetup.js";
 
 import { textChat } from "./collaboration/textChat.js";
 import { initializeCursorSystem } from "./collaboration/cursors.js";
@@ -53,8 +47,6 @@ import { presenceSystem } from "./collaboration/presenceSystem.js";
 import { datasetManager } from "./core/datasetManager.js";
 import { simpleVisualizationManager } from "./core/simpleVisualizationManager.js";
 import { cameraSync } from "./collaboration/cameraSync.js";
-import { dataCleanup } from "./services/dataCleanup.js";
-import { dataCache } from "./services/dataCache.js";
 
 // Get room name from URL or use default
 function getRoomName() {
@@ -67,7 +59,7 @@ function getRoomName() {
 // Things that don't need VTK scene
 // ========================================
 async function initializeApplicationPreScene() {
-  logInfo("Starting CIA Web App Application...");
+  logInfo("Starting CIA War Room Application...");
 
   // Initialize TensorFlow.js
   const tfReady = await initializeTensorFlow();
@@ -75,7 +67,7 @@ async function initializeApplicationPreScene() {
     console.error("TensorFlow.js failed to initialize, PCA will not work");
   }
 
-  logProgress("Scene will be initialized by Web App UI");
+  logProgress("Scene will be initialized by War Room UI");
 
   // Setup file handling
   setupFileHandler();
@@ -97,14 +89,9 @@ async function initializeApplicationPreScene() {
   presenceSystem.initialize();
   logProgress("Presence system initialized");
 
-  // Dataset manager initialization
+  // Initialize dataset manager
   datasetManager.initialize();
   logProgress("Dataset manager initialized");
-
-  // 🔥 Initialize Y.js observers
-  logInfo("Initializing Y.js observers...");
-  initializeAllObservers();
-  logSuccess("Y.js observers ready");
 
   // Initialize visualization manager
   simpleVisualizationManager.initialize();
@@ -185,72 +172,36 @@ export function initializeApplicationPostScene() {
       logProgress("Annotation renderer initialized");
     }, 500);
 
-    // Setup store sync
-    setupStoreSync();
-
-    // 🔥 Make debugging tools available globally
-    if (typeof window !== "undefined") {
-      window.datasetManager = datasetManager;
-      window.dataCache = dataCache;
-      window.dataCleanup = dataCleanup;
-
-      window.debugAPI = {
-        // Dataset debugging
-        datasetManager,
-        dataCache,
-        dataCleanup,
-        checkDatasets: () => {
-          console.log("📊 Dataset Status:");
-          console.log(
-            "  In Memory:",
-            Array.from(datasetManager.datasets.keys()).length
-          );
-          console.log("  In Y.js:", yDatasets.size);
-
-          console.log("\n📋 Details:");
-          datasetManager.datasets.forEach((dataset, id) => {
-            console.log(`  ${id}:`, {
-              name: dataset.name,
-              hasPolydata: !!dataset.polydata,
-              points: dataset.polydata?.getPoints()?.getNumberOfPoints() || 0,
-            });
-          });
-        },
-
-        // Existing debug methods
-        toggleReduction: toggleDimensionalityReduction,
-        logMemory: logMemoryUsage,
-        cleanup: cleanupTensors,
-        getReductionMethod,
-        getReductionComponents,
-        voiceChat,
-        textChat,
-        annotationSystem,
-        annotationRenderer,
-      };
-
-      console.log("💡 Debug API available at window.debugAPI");
-      console.log("💡 Try: window.debugAPI.checkDatasets()");
-    }
-
     logSuccess("Post-scene initialization complete!");
-    logInfo("🎉 Web App is ready!");
+    logInfo("🎉 War Room is ready!");
   } catch (error) {
     console.error("Error in post-scene initialization:", error);
   }
 }
 
-// ========================================
-// Store Sync Setup
-// ========================================
-async function setupStoreSync() {
-  const { useDatasetStore } = await import("./ui/react/store/datasetStore.js");
-  const { useInstanceStore } = await import(
-    "./ui/react/store/instanceStore.js"
-  );
+// Set up cleanup on page unload
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    cleanupTensors();
+    voiceChat.disconnect();
+  });
+}
 
-  // Note: Automatic syncing is handled by observers
-  console.log("✅ Store sync ready");
+// Expose functions for debugging
+if (typeof window !== "undefined") {
+  window.debugAPI = {
+    toggleReduction: toggleDimensionalityReduction,
+    logMemory: logMemoryUsage,
+    cleanup: cleanupTensors,
+    getReductionMethod,
+    getReductionComponents,
+    voiceChat,
+    textChat,
+    annotationSystem,
+    annotationRenderer,
+  };
+
+  console.log("💡 Debug API available at window.debugAPI");
 }
 
 // ========================================
@@ -259,7 +210,7 @@ async function setupStoreSync() {
 function hideOldUI() {
   console.log("🧹 Hiding old UI elements...");
 
-  // Hide old VTK container
+  // Hide old VTK container (from vtkFullScreenRenderWindow)
   const oldContainer = document.querySelector(".vtk-container");
   if (oldContainer) {
     oldContainer.style.display = "none";
@@ -294,38 +245,28 @@ function hideOldUI() {
 }
 
 // ========================================
-// Cleanup on page unload
-// ========================================
-if (typeof window !== "undefined") {
-  window.addEventListener("beforeunload", () => {
-    cleanupTensors();
-    voiceChat.disconnect();
-  });
-}
-
-// ========================================
-// Start the application and mount React Web App
+// Start the application and mount React War Room
 // ========================================
 import { mountReactUI } from "./ui/react/index.js";
 
 // Flag to ensure we only initialize once
 let appInitialized = false;
 
-// Run pre-scene initialization, then mount React Web App
+// Run pre-scene initialization, then mount React War Room
 if (!appInitialized) {
   appInitialized = true;
 
   initializeApplicationPreScene()
     .then((roomName) => {
-      console.log("🎨 Mounting React Web App UI...");
+      console.log("🎨 Mounting React War Room UI...");
 
       // Hide old UI first
       hideOldUI();
 
-      // Mount React Web App (which will initialize VTK and then call initializeApplicationPostScene)
+      // Mount React War Room (which will initialize VTK and then call initializeApplicationPostScene)
       mountReactUI(roomName);
 
-      console.log("🚀 Web App UI mounted - waiting for VTK initialization");
+      console.log("🚀 War Room UI mounted - waiting for VTK initialization");
     })
     .catch((error) => {
       console.error("Failed to initialize application:", error);

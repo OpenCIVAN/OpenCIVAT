@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document explains the architecture and extensibility of the CIA Web App.
+This document explains the architecture and extensibility of the CIA War Room.
 
 ## Current State (Phase 1)
 
