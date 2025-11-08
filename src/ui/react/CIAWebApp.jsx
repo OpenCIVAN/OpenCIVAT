@@ -2,32 +2,34 @@
 // Updated to show username modal before main UI
 
 import React, { useState, useEffect, useRef } from 'react';
-import CIAWebLayout from './layouts/CIAWebLayout.jsx';
-import LeftToolbar from './components/LeftToolbar.jsx';
-import RightCollaborationPanel from './components/RightCollaborationPanel.jsx';
-import ToolPanel from './components/ToolPanel.jsx';
-import AnalyzePanel from './components/panels/AnalyzePanel.jsx';
-import FilesPanel from './components/panels/FilesPanel.jsx';
-import AnnotationsPanel from './components/panels/AnnotationsPanel.jsx';
-import LoggingPanel from './components/LoggingPanel.jsx';
-import UsernameModal from './components/modals/UsernameModal.jsx';
+import { CIAWebLayout } from './layouts/CIAWebLayout.jsx';
+import { LeftToolbar } from './components/LeftToolbar.jsx';
+import { RightCollaborationPanel } from './components/RightCollaborationPanel.jsx';
+import { ToolPanel } from './components/ToolPanel.jsx';
+import { AnalyzePanel } from './components/panels/AnalyzePanel.jsx';
+import { FilesPanel } from './components/panels/FilesPanel.jsx';
+import { AnnotationsPanel } from './components/panels/AnnotationsPanel.jsx';
+import { LoggingPanel } from './components/LoggingPanel.jsx';
+import { UsernameModal } from './components/modals/UsernameModal.jsx';
 import { useAppStore } from './store/appStore.js';
 import { initializeScene } from '../../core/scene.js';
 import { initializeApplicationPostScene } from '../../index.js';
 import { setUserName, hasUserName } from '../../collaboration/userManagement.js';
 import { presenceSystem } from '../../collaboration/presenceSystem.js';
-import AnnotationModal from './components/modals/AnnotationModal.jsx';
-import InstructionsModal from './components/modals/InstructionsModal.jsx';
+import { markSystemReady } from '../../collaboration/yjsSetup.js';
+import { AnnotationModal } from './components/modals/AnnotationModal.jsx';
+import { InstructionsModal } from './components/modals/InstructionsModal.jsx';
 import { TestPanel } from './components/TestPanel.jsx';
+import { DebugPanel } from './components/DebugPanel.jsx';
 
-export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
+export function CIAWebApp({ roomName = 'default-analytics-room' }) {
   const [activeTool, setActiveTool] = useState(null);
   const [vtkInitialized, setVtkInitialized] = useState(false);
   const [postSceneInitialized, setPostSceneInitialized] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const { users } = useAppStore();
   const wrapperRef = useRef(null);
-  const vtkContainerRef = useRef(null);
+  // const vtkContainerRef = useRef(null);
   const initOnce = useRef(false);
   const [instructionsModal, setInstructionsModal] = useState(false);
   const [annotationModal, setAnnotationModal] = useState({
@@ -39,11 +41,17 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
   useEffect(() => {
     if (!hasUserName()) {
       setShowUsernameModal(true);
-      // ✨ Still hide loading screen even if showing username modal
+      // Hide loading screen (username modal will be visible instead)
       if (window.hideLoadingScreen) {
         window.hideLoadingScreen();
       }
     } else {
+      // Username already exists from previous session
+      console.log("👤 Username already set, marking system ready");
+
+      // 🔥 CRITICAL: Mark system ready immediately if username exists
+      markSystemReady();
+
       if (window.hideLoadingScreen) {
         window.hideLoadingScreen();
       }
@@ -51,6 +59,8 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
   }, []);
 
   const handleUsernameSubmit = (username) => {
+    console.log("👤 Username submitted:", username);
+
     // Set username
     setUserName(username);
 
@@ -58,6 +68,11 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
     presenceSystem.updateMyPresence({
       userName: username,
     });
+
+    // 🔥 CRITICAL: Mark system as ready BEFORE hiding modal
+    // This allows Y.js observers to now process remote datasets
+    console.log("🚀 Marking system ready after username submission");
+    markSystemReady();
 
     setShowUsernameModal(false);
 
@@ -70,7 +85,6 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
 
   const handleToolSelect = (toolId) => {
     setActiveTool(activeTool === toolId ? null : toolId);
-    console.log('Tool selected:', toolId);
   };
 
   const handleClosePanel = () => {
@@ -83,39 +97,27 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
       initOnce.current = true;
       console.log('🎨 Creating VTK container...');
 
+      // Create the container OUTSIDE React's render tree
       const vtkContainer = document.createElement('div');
-      vtkContainer.id = 'vtk-war-room-container';
-      vtkContainer.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #1a1a1a;
-      `;
+      vtkContainer.id = 'vtk-workspace-container';
 
+      // Append it to the wrapper
       wrapperRef.current.appendChild(vtkContainer);
-      vtkContainerRef.current = vtkContainer;
+      // vtkContainerRef.current = vtkContainer;
+      wrapperRef.current = vtkContainer;
 
       console.log('📦 VTK container created, initializing scene...');
 
-      try {
-        const sceneObjects = initializeScene(vtkContainer);
+      // NOW initialize VTK scene in that container
+      const sceneObjects = initializeScene(vtkContainer);
 
-        if (sceneObjects) {
-          console.log('✅ VTK initialized in Web App');
-          setVtkInitialized(true);
-          window.vtkScene = sceneObjects;
-        } else {
-          console.error('❌ Failed to initialize VTK scene');
-        }
-      } catch (error) {
-        console.error('❌ Error initializing VTK:', error);
+      if (sceneObjects) {
+        setVtkInitialized(true);
+        window.vtkScene = sceneObjects;
       }
     }
-
-    return () => { };
   }, []);
+
 
   // In CIAWebApp useEffect, replace window.showAnnotationModal:
   useEffect(() => {
@@ -167,8 +169,8 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
     <>
       <TestPanel />
       <CIAWebLayout
-        roomName="Analytics Web App"
-        datasetName="{Project Name}"
+        roomName="Analytics Web App"  // Consider naming later since we want contained project rooms
+        datasetName="{Project Name}" // Need Way to set this dynamically later
         leftPanel={
           <LeftToolbar
             activeTool={activeTool}
@@ -179,6 +181,40 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
           <RightCollaborationPanel roomName={roomName} />
         }
       >
+        {/* VTK Container */}
+        {/* <div
+          ref={vtkContainerRef}
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative'
+          }}
+        /> */}
+        {/* VTK Canvas Wrapper */}
+        <div
+          ref={wrapperRef}
+          style={{
+            flex: 1,
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {!vtkInitialized && (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              color: '#666',
+              fontSize: '14px',
+              zIndex: 10
+            }}>
+              <div style={{ marginBottom: '10px' }}>🎨</div>
+              Initializing VTK Canvas...
+            </div>
+          )}
+        </div>
         {/* Tool Panels */}
         <ToolPanel
           isOpen={activeTool === 'files'}
@@ -239,32 +275,6 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
             Measurement tools coming soon...
           </div>
         </ToolPanel>
-
-        {/* VTK Canvas Wrapper */}
-        <div
-          ref={wrapperRef}
-          style={{
-            flex: 1,
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {!vtkInitialized && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-              color: '#666',
-              fontSize: '14px',
-              zIndex: 10
-            }}>
-              <div style={{ marginBottom: '10px' }}>🎨</div>
-              Initializing VTK Canvas...
-            </div>
-          )}
-        </div>
         {/* Instructions Modal */}
         <InstructionsModal
           isOpen={instructionsModal}
@@ -316,6 +326,7 @@ export default function CIAWebApp({ roomName = 'default-analytics-room' }) {
 
       {/* Logging Panel - outside main layout */}
       <LoggingPanel />
+      {process.env.NODE_ENV === 'development' && <DebugPanel />}
     </>
   );
 }

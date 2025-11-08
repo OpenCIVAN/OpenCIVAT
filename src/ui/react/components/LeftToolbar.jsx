@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { hideMyCursor } from '../../../collaboration/cursors.js';
 import { theme } from '../theme.js';
-import Icon from './Icon.jsx';
+import {Icon} from './Icon.jsx';
 
 const TOOLS = [
   { id: 'files', icon: '📁', label: 'Files', color: theme.colors.tools.files },
@@ -15,7 +15,7 @@ const TOOLS = [
   { id: 'measure', icon: '📐', label: 'Measure', color: theme.colors.tools.measure },
 ];
 
-export default function LeftToolbar({ onToolSelect, activeTool }) {
+export function LeftToolbar({ onToolSelect, activeTool }) {
   return (
     <div style={{
       width: '60px',

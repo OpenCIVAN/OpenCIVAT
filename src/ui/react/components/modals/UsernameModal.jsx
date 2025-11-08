@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-export default function UsernameModal({ onSubmit }) {
+export function UsernameModal({ onSubmit }) {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const inputRef = useRef(null);

@@ -15,6 +15,9 @@
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { NETWORK_CONFIG } from "../config/constants.js";
+import { useDatasetStore } from "../ui/react/store/datasetStore.js";
+import { useInstanceStore } from "../ui/react/store/instanceStore.js";
+import { hasUserName } from "./userManagement.js";
 
 // ----------------------------------------------------------------------------
 // Core Y.js Document
@@ -58,7 +61,7 @@ export const yInstances = ydoc.getMap("instances");
 // Replaces yVisualizations for better clarity
 
 // LEGACY: Keep yVisualizations for backward compatibility during migration
-export const yVisualizations = ydoc.getMap("visualizations");
+// export const yVisualizations = ydoc.getMap("visualizations");
 // TODO (Refactor): Migrate existing visualizations to instances
 
 // ANNOTATION STATE
@@ -80,6 +83,8 @@ export const yText = ydoc.getArray("chatMessages"); // Text chat
 // - Chat should be nested: groupId -> Array of messages
 // - Cursors should include instanceId for scoping
 
+export const yFile = ydoc.getMap("file");
+
 // VR COLLABORATION (Future)
 export const yAvatars = ydoc.getMap("avatars");
 export const yVRControllers = ydoc.getMap("vrControllers");
@@ -87,9 +92,117 @@ export const yVRControllers = ydoc.getMap("vrControllers");
 
 // 3D VISUALIZATION STATE (Legacy - consider refactoring)
 export const yActor = ydoc.getMap("actor");
-export const yFile = ydoc.getMap("fileData");
+// export const yFile = ydoc.getMap("fileData");
 export const yReduction = ydoc.getMap("reduction");
 // TODO (Refactor): Merge these into yInstances for consistency
+
+// ----------------------------------------------------------------------------
+// NEW: Readiness flag to prevent premature dataset processing
+// ----------------------------------------------------------------------------
+let isSystemReady = false;
+let pendingDatasets = new Map(); // Store datasets received before we're ready
+
+/**
+ * Call this AFTER the username modal is dismissed
+ * This signals that we're ready to process remote datasets
+ */
+export function markSystemReady() {
+  console.log("🚀 System marked as ready - processing pending datasets");
+  isSystemReady = true;
+
+  // Process any datasets that arrived while we were waiting
+  processPendingDatasets();
+}
+
+/**
+ * Process datasets that arrived before system was ready
+ */
+async function processPendingDatasets() {
+  if (pendingDatasets.size === 0) {
+    console.log("   No pending datasets to process");
+    return;
+  }
+
+  console.log(`   Processing ${pendingDatasets.size} pending datasets...`);
+
+  for (const [datasetId, metadata] of pendingDatasets.entries()) {
+    await processRemoteDataset(datasetId, metadata);
+  }
+
+  pendingDatasets.clear();
+  console.log("✅ All pending datasets processed");
+}
+
+/**
+ * Handle a remote dataset (either immediately or queue it)
+ */
+async function handleRemoteDataset(datasetId, metadata) {
+  // If system isn't ready yet, queue it
+  if (!isSystemReady) {
+    console.log(`📦 Queueing dataset ${datasetId} (system not ready yet)`);
+    pendingDatasets.set(datasetId, metadata);
+    return;
+  }
+
+  // System is ready, process immediately
+  await processRemoteDataset(datasetId, metadata);
+}
+
+/**
+ * Actually process a remote dataset
+ */
+async function processRemoteDataset(datasetId, metadata) {
+  console.log("📥 Processing remote dataset:", metadata.name);
+
+  // Add to Zustand store (metadata only)
+  useDatasetStore.getState().addDataset(datasetId, metadata);
+
+  // Check if we have the file in cache
+  const hasFile = await dataCache.hasDataset(metadata.hash);
+
+  if (!hasFile) {
+    console.log("📥 ⚠️  File not in cache");
+
+    // 🔥 Auto-fetch if it's a public file (sample dataset)
+    if (metadata.publicPath) {
+      console.log(`📥 🔄 Auto-fetching public file: ${metadata.publicPath}`);
+
+      try {
+        const response = await fetch(metadata.publicPath);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const file = new File([blob], metadata.name, {
+          type: "application/octet-stream",
+        });
+
+        // Store in cache
+        console.log("📥 Storing fetched file in cache...");
+        await dataCache.storeDataset(file);
+        console.log("📥 ✅ Public file cached successfully");
+
+        // Now load the polydata
+        console.log("📥 Loading polydata from cache...");
+        const { datasetManager } = await import("../core/datasetManager.js");
+        await datasetManager.loadPolydataFromCache(datasetId);
+      } catch (error) {
+        console.error(`📥 ❌ Failed to fetch public file:`, error);
+      }
+    } else {
+      // Not a public file - user would need to upload
+      // But DON'T show any prompts here - just log it
+      console.log(`📥    Hash: ${metadata.hash?.substring(0, 16)}...`);
+      console.log(`📥    File is user-uploaded, not in our cache`);
+    }
+  } else {
+    console.log("📥 ✅ File found in cache, loading polydata...");
+    const { datasetManager } = await import("../core/datasetManager.js");
+    await datasetManager.loadPolydataFromCache(datasetId);
+  }
+}
 
 // ----------------------------------------------------------------------------
 // Sync Helper Functions: Zustand → Y.js
@@ -231,11 +344,8 @@ export function initializeDatasetObserver() {
 
     // Process changes
     setTimeout(async () => {
-      const { useDatasetStore } = await import(
-        "../ui/react/store/datasetStore.js"
-      );
-      const { dataCache } = await import("../services/dataCache.js");
-      const { datasetManager } = await import("../core/datasetManager.js");
+      const { getUserId } = await import("./userManagement.js");
+      const myId = getUserId();
 
       for (const { action, datasetId, data } of changes) {
         if (action === "add" || action === "update") {
@@ -246,71 +356,21 @@ export function initializeDatasetObserver() {
             continue;
           }
 
+          // Skip if this dataset came from us
+          if (remoteDataset.uploadedBy === myId) {
+            console.log(`📥 Ignoring dataset from self: ${remoteDataset.name}`);
+            continue;
+          }
+
           console.log("📥 Remote dataset received:", remoteDataset.name);
 
-          // Check if we already have this dataset locally
-          const localDataset = useDatasetStore.getState().getDataset(datasetId);
-
-          if (!localDataset) {
-            console.log("📥 New dataset from remote user");
-
-            // Add to Zustand store (metadata only)
-            useDatasetStore.getState().addDataset(datasetId, remoteDataset);
-
-            // Check if we have the file in cache
-            const hasFile = await dataCache.hasDataset(remoteDataset.hash);
-
-            if (!hasFile) {
-              console.log("📥 ⚠️  File not in cache");
-
-              // 🔥 Auto-fetch if it's a public file (sample dataset)
-              if (remoteDataset.publicPath) {
-                console.log(
-                  `📥 🔄 Auto-fetching public file: ${remoteDataset.publicPath}`
-                );
-
-                try {
-                  const response = await fetch(remoteDataset.publicPath);
-
-                  if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                  }
-
-                  const blob = await response.blob();
-                  const file = new File([blob], remoteDataset.name, {
-                    type: "application/octet-stream",
-                  });
-
-                  // Store in cache
-                  console.log("📥 Storing fetched file in cache...");
-                  await dataCache.storeDataset(file);
-                  console.log("📥 ✅ Public file cached successfully");
-
-                  // Now load the polydata
-                  console.log("📥 Loading polydata from cache...");
-                  await datasetManager.loadPolydataFromCache(datasetId);
-                } catch (error) {
-                  console.error(`📥 ❌ Failed to fetch public file:`, error);
-                }
-              } else {
-                // Not a public file - user needs to upload
-                console.log(
-                  `📥    Hash: ${remoteDataset.hash?.substring(0, 16)}...`
-                );
-                console.log(`📥    User must upload matching file to view`);
-              }
-            } else {
-              console.log("📥 ✅ File found in cache, loading polydata...");
-              await datasetManager.loadPolydataFromCache(datasetId);
-            }
-          } else {
-            console.log("📥 Updating existing dataset metadata");
-            useDatasetStore.getState().updateDataset(datasetId, remoteDataset);
-          }
+          // 🔥 THIS IS THE KEY CHANGE - Call handleRemoteDataset instead of processing directly
+          await handleRemoteDataset(datasetId, remoteDataset);
         }
 
         if (action === "delete") {
           console.log(`📥 Remote dataset removed: ${datasetId}`);
+          const { useDatasetStore } = await import("../ui/react/store/datasetStore.js");
           useDatasetStore.getState().removeDataset(datasetId);
         }
       }
@@ -426,6 +486,8 @@ export function initializeAnnotationObserver() {
  * Call this once during app startup
  */
 export function initializeAllObservers() {
+  console.log("🔗 Setting up Y.js observers");
+
   initializeDatasetObserver();
   initializeInstanceObserver();
   initializeAnnotationObserver();

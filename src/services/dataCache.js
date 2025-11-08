@@ -95,6 +95,10 @@ class DataCache {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
+    console.log(`📊 Hash calculated for ${file.name}:`);
+    console.log(`   Full hash: ${hashHex}`);
+    console.log(`   Short hash: ${hashHex.substring(0, 16)}...`);
+
     return hashHex;
   }
 
@@ -104,18 +108,24 @@ class DataCache {
    * @param {File} file - VTP file to store
    * @returns {Promise<string>} Hash of the stored file
    */
+  /**
+   * Store dataset with hash verification
+   * If another user uploads the same file, it will have the same hash
+   * and we'll skip re-storing it
+   */
   async storeDataset(file) {
     console.log(`📦 Storing dataset in cache: ${file.name}`);
 
     try {
-      // Calculate hash
+      // Calculate hash - this is deterministic!
       const hash = await this.hashFile(file);
       console.log(`   Hash: ${hash.substring(0, 16)}...`);
 
-      // Check if already stored
+      // Check if already stored (by ANY user)
       const existing = await this.hasDataset(hash);
       if (existing) {
-        console.log(`   ℹ️  Dataset already in cache, skipping`);
+        console.log(`   ✅ Dataset already in cache (hash match!)`);
+        console.log(`   Another user must have uploaded the same file`);
         return hash;
       }
 
@@ -164,8 +174,11 @@ class DataCache {
    * @param {string} hash - Hash of the dataset to retrieve
    * @returns {Promise<Object|null>} Dataset object or null if not found
    */
+  /**
+   * Get dataset by hash
+   * This works across all users who have the same file!
+   */
   async getDataset(hash) {
-    // ✨ Validate hash parameter
     if (!hash || typeof hash !== "string") {
       console.warn("⚠️  Invalid hash provided to getDataset:", hash);
       return null;
@@ -184,12 +197,17 @@ class DataCache {
             console.log(
               `✅ Retrieved dataset from cache: ${request.result.name}`
             );
+            console.log(
+              `   This file was cached at: ${new Date(
+                request.result.storedAt
+              ).toLocaleString()}`
+            );
           } else {
             console.log(
               `ℹ️  Dataset not found in cache: ${hash.substring(0, 16)}...`
             );
           }
-          resolve(request.result || null);
+          resolve(request.result);
         };
 
         request.onerror = () => {
@@ -198,7 +216,7 @@ class DataCache {
         };
       });
     } catch (error) {
-      console.error("❌ Error getting dataset:", error);
+      console.error("❌ Error in getDataset:", error);
       return null;
     }
   }
@@ -209,15 +227,29 @@ class DataCache {
    * @param {string} hash - Hash to check
    * @returns {Promise<boolean>} True if exists
    */
+  /**
+   * Check if we have this exact file by hash
+   * This is what enables cross-user file matching!
+   */
   async hasDataset(hash) {
-    // ✨ Validate hash parameter
-    if (!hash || typeof hash !== "string") {
-      console.warn("⚠️  Invalid hash provided to hasDataset:", hash);
+    try {
+      const db = await this.initDB();
+      return new Promise((resolve) => {
+        const transaction = db.transaction([this.storeName], "readonly");
+        const store = transaction.objectStore(this.storeName);
+        const request = store.get(hash);
+
+        request.onsuccess = () => {
+          resolve(!!request.result);
+        };
+
+        request.onerror = () => {
+          resolve(false);
+        };
+      });
+    } catch {
       return false;
     }
-
-    const dataset = await this.getDataset(hash);
-    return dataset !== null;
   }
 
   /**

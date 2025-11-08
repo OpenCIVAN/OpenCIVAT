@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { voiceChat } from '../../../collaboration/voiceChat.js';
 import { getUserName } from '../../../collaboration/userManagement.js';
 
-export default function VoiceChatPanel({ roomName = 'default-analytics-room' }) {
+export function VoiceChatPanel({ roomName = 'default-analytics-room' }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(true);

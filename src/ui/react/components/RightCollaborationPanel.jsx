@@ -1,9 +1,9 @@
 import React from 'react';
-import PeoplePanel from './PeoplePanel.jsx';
-import VoiceChatPanel from './VoiceChatPanel.jsx';
-import TextChatPanel from './TextChatPanel.jsx';
+import { PeoplePanel } from './PeoplePanel.jsx';
+import { VoiceChatPanel } from './VoiceChatPanel.jsx';
+import { TextChatPanel } from './TextChatPanel.jsx';
 
-export default function RightCollaborationPanel({ roomName }) {
+export function RightCollaborationPanel({ roomName }) {
   return (
     <div style={{
       width: '300px',

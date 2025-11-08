@@ -1,0 +1,24 @@
+# docker-compose.dev.yml
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+    environment:
+      - NODE_ENV=development
+  
+  yjs-server:
+    image: yjs/y-websocket
+    ports:
+      - "8080:8080"
+  
+  livekit:
+    image: livekit/livekit-server
+    ports:
+      - "7880:7880"
+    environment:
+      - LIVEKIT_KEYS=[dev-keys]

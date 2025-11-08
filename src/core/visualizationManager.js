@@ -13,7 +13,7 @@
 // - View templates/presets
 // ----------------------------------------------------------------------------
 
-import { yVisualizations } from "../collaboration/yjsSetup.js";
+import { yInstances } from "../collaboration/yjsSetup.js";
 import { getUserId, getUserName } from "../collaboration/userManagement.js";
 import { datasetManager } from "./datasetManager.js";
 import { getSceneObjects } from "./scene.js";
@@ -30,7 +30,7 @@ class VisualizationManager {
     this._initialized = true;
 
     // Listen for visualization changes
-    yVisualizations.observe(() => {
+    yInstances.observe(() => {
       this._syncVisualizationsFromYjs();
     });
 
@@ -56,7 +56,7 @@ class VisualizationManager {
     const name = options.name || `View of ${dataset.filename}`;
 
     // Store metadata in Y.js
-    yVisualizations.set(id, {
+    yInstances.set(id, {
       id,
       datasetId,
       scope, // 'personal' | 'shared'
@@ -95,7 +95,7 @@ class VisualizationManager {
    * @returns {Object|null}
    */
   getVisualization(id) {
-    const yData = yVisualizations.get(id);
+    const yData = yInstances.get(id);
     const local = this.visualizations.get(id);
 
     return {
@@ -110,7 +110,7 @@ class VisualizationManager {
    */
   getAllVisualizations() {
     const viz = [];
-    yVisualizations.forEach((data, id) => {
+    yInstances.forEach((data, id) => {
       viz.push({
         id,
         ...data,
@@ -153,7 +153,7 @@ class VisualizationManager {
    * @param {string} newScope - 'personal' or 'shared'
    */
   changeScope(id, newScope) {
-    const viz = yVisualizations.get(id);
+    const viz = yInstances.get(id);
 
     if (!viz) {
       console.error("Visualization not found:", id);
@@ -164,7 +164,7 @@ class VisualizationManager {
     // Only creator or admin should be able to change
 
     viz.scope = newScope;
-    yVisualizations.set(id, viz);
+    yInstances.set(id, viz);
 
     console.log(`🔄 Visualization ${id} scope changed to: ${newScope}`);
   }
@@ -175,7 +175,7 @@ class VisualizationManager {
    * @param {Object} camera - Camera state
    */
   updateCamera(id, camera) {
-    const viz = yVisualizations.get(id);
+    const viz = yInstances.get(id);
 
     if (!viz) return;
 
@@ -183,7 +183,7 @@ class VisualizationManager {
     viz.lastUpdated = Date.now();
     viz.lastUpdatedBy = getUserId();
 
-    yVisualizations.set(id, viz);
+    yInstances.set(id, viz);
   }
 
   /**
@@ -191,7 +191,7 @@ class VisualizationManager {
    * @param {string} id - Visualization ID
    */
   removeVisualization(id) {
-    yVisualizations.delete(id);
+    yInstances.delete(id);
     this.visualizations.delete(id);
 
     console.log(`🗑️ Visualization removed: ${id}`);
@@ -227,7 +227,7 @@ class VisualizationManager {
   /**
    * TODO (Follow Mode): Follow another user's camera
    * enableFollowMode(vizId, targetUserId) {
-   *   const viz = yVisualizations.get(vizId);
+   *   const viz = yInstances.get(vizId);
    *   viz.followingUserId = targetUserId;
    *
    *   // Subscribe to their camera updates
@@ -239,7 +239,7 @@ class VisualizationManager {
   /**
    * TODO (Duplication): Duplicate a view
    * duplicateVisualization(sourceVizId) {
-   *   const source = yVisualizations.get(sourceVizId);
+   *   const source = yInstances.get(sourceVizId);
    *   return this.createVisualization(source.datasetId, 'personal', {
    *     name: `${source.name} (Copy)`,
    *     camera: source.camera,

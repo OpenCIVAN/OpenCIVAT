@@ -6,7 +6,7 @@ import { useVTKFile } from '../../hooks/useVTKFile.js';
 import { useVTKAnnotations } from '../../hooks/useVTKAnnotations.js';
 import { getUserId } from '../../../../collaboration/userManagement.js';
 
-export default function AnnotationsPanel() {
+export function AnnotationsPanel() {
   const { isFileLoaded } = useVTKFile();
   const {
     annotations,

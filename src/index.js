@@ -55,6 +55,7 @@ import { simpleVisualizationManager } from "./core/simpleVisualizationManager.js
 import { cameraSync } from "./collaboration/cameraSync.js";
 import { dataCleanup } from "./services/dataCleanup.js";
 import { dataCache } from "./services/dataCache.js";
+import { datasetLoadingOrchestrator } from "./core/datasetLoadingOrchestrator.js";
 
 // Get room name from URL or use default
 function getRoomName() {
@@ -109,6 +110,9 @@ async function initializeApplicationPreScene() {
   // Initialize visualization manager
   simpleVisualizationManager.initialize();
   logProgress("Visualization manager initialized");
+
+  // Initialize the orchestrator after the VTK scene is ready
+  datasetLoadingOrchestrator.initialize();
 
   // Initialize annotation system early
   annotationSystem.initialize();

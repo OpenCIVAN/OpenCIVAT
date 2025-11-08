@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import CIAWebApp from "./CIAWebApp.jsx";
+import { CIAWebApp } from "./CIAWebApp.jsx";
 
 // Store the root instance to prevent multiple createRoot calls
 let reactRoot = null;

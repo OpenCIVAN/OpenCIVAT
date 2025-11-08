@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function ToolPanel({ isOpen, title, icon, onClose, children }) {
+export function ToolPanel({ isOpen, title, icon, onClose, children }) {
     return (
         <div
             style={{

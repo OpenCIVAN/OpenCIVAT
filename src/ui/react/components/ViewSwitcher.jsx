@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { visualizationManager } from '../../../core/visualizationManager.js';
 import { datasetManager } from '../../../core/datasetManager.js';
-import { yVisualizations } from '../../../collaboration/yjsSetup.js';
+import { yInstances } from '../../../collaboration/yjsSetup.js';
 import { loadDatasetIntoScene } from '../../../core/scene.js';
 import { getUserId } from '../../../collaboration/userManagement.js';
 
-export default function ViewSwitcher() {
+export function ViewSwitcher() {
     const [visualizations, setVisualizations] = useState([]);
     const [activeVizId, setActiveVizId] = useState(null);
 
@@ -23,10 +23,10 @@ export default function ViewSwitcher() {
             }
         };
 
-        yVisualizations.observe(updateVisualizations);
+        yInstances.observe(updateVisualizations);
         updateVisualizations();
 
-        return () => yVisualizations.unobserve(updateVisualizations);
+        return () => yInstances.unobserve(updateVisualizations);
     }, []);
 
     const handleSwitchView = (vizId) => {

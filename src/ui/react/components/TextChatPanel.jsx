@@ -3,7 +3,7 @@ import { textChat } from '../../../collaboration/textChat.js';
 import { getUserId } from '../../../collaboration/userManagement.js';
 import { provider, yText } from '../../../collaboration/yjsSetup.js';
 
-export default function TextChatPanel() {
+export function TextChatPanel() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);

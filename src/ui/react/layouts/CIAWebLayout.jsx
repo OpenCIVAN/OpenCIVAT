@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { presenceSystem } from '../../../collaboration/presenceSystem.js';
 
-export default function CIAWebLayout({
+export function CIAWebLayout({
   children,
   leftPanel,
   rightPanel,

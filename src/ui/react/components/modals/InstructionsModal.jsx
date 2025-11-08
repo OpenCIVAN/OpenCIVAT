@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function InstructionsModal({ isOpen, onClose, onDontShowAgain }) {
+export function InstructionsModal({ isOpen, onClose, onDontShowAgain }) {
   if (!isOpen) return null;
 
   const handleDontShow = () => {

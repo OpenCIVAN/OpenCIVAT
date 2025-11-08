@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-export default function AnnotationModal({ isOpen, onClose, onSubmit, position }) {
+export function AnnotationModal({ isOpen, onClose, onSubmit, position }) {
   const [text, setText] = useState('');
   const [type, setType] = useState('note');
   const [dontShowAgain, setDontShowAgain] = useState(false);

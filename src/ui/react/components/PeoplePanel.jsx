@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { presenceSystem } from '../../../collaboration/presenceSystem.js';
 import { voiceChat } from '../../../collaboration/voiceChat.js';
 
-export default function PeoplePanel() {
+export function PeoplePanel() {
   const [users, setUsers] = useState([]);
   const [isConnectedToVoice, setIsConnectedToVoice] = useState(false);
   const [isMuted, setIsMuted] = useState(true);

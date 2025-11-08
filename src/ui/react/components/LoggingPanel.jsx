@@ -4,7 +4,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useLogging, LogType } from '../hooks/useLogging.js';
 
-export default function LoggingPanel() {
+export function LoggingPanel() {
   const { logs, clearLogs } = useLogging();
   const logsEndRef = useRef(null);
   const [isExpanded, setIsExpanded] = React.useState(false);
