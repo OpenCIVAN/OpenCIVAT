@@ -1,0 +1,248 @@
+/* src/ui/react/components/panels/FilesPanel.css */
+
+.files-panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-lg);
+    gap: var(--space-lg);
+}
+
+.files-panel__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.files-panel__header h3 {
+    flex: 1;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.files-panel__loading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 12px;
+    color: var(--warning);
+}
+
+.files-panel__upload-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+}
+
+.files-panel__tabs {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+}
+
+.files-panel__tab {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    background: transparent;
+    border: 1px solid var(--border-medium);
+    color: var(--text-tertiary);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.files-panel__tab.active {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-focus);
+}
+
+.files-panel__tab:hover:not(.active):not(:disabled) {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.files-panel__tab:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.files-panel__sample-files {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.files-panel__sample-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+    text-align: left;
+}
+
+.files-panel__sample-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--border-focus);
+}
+
+.files-panel__sample-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.files-panel__sample-name {
+    flex: 1;
+    font-size: 13px;
+}
+
+.files-panel__sample-size {
+    color: var(--text-tertiary);
+    font-size: 11px;
+}
+
+.files-panel__check {
+    color: var(--accent-primary);
+}
+
+.files-panel__upload-area {
+    text-align: center;
+    padding: var(--space-lg) 0;
+}
+
+.files-panel__upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-xl);
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.files-panel__upload-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.files-panel__upload-btn:disabled {
+    background: var(--text-disabled);
+    cursor: not-allowed;
+}
+
+.files-panel__hint {
+    margin-top: var(--space-md);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+.files-panel__datasets-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.files-panel__datasets-section h4 {
+    margin: 0 0 var(--space-md) 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.files-panel__dataset-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.files-panel__dataset-item {
+    padding: var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.files-panel__dataset-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-focus);
+}
+
+.files-panel__dataset-item.active {
+    background: var(--accent-subtle);
+    border-color: var(--accent-primary);
+}
+
+.files-panel__dataset-item.loading {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.files-panel__dataset-info {
+    flex: 1;
+}
+
+.files-panel__dataset-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 14px;
+    margin-bottom: var(--space-xs);
+    color: var(--text-primary);
+}
+
+.files-panel__stage {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.files-panel__dataset-meta {
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+.files-panel__current-badge {
+    padding: 2px 8px;
+    background: var(--accent-primary);
+    color: white;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Spinner animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}

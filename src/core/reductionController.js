@@ -2,36 +2,39 @@
 // Dimensionality Reduction Controller
 // UPDATED to use new state manager and logging
 
+import { performPCA } from "@Algorithms/dimensionality/pca.js";
+import { performTSNE } from "@Algorithms/dimensionality/tsne.js";
+import { performUMAP } from "@Algorithms/dimensionality/umap.js";
+import {
+  extractPointsFromPolyData,
+  applyReductionToPolyData,
+} from "@Algorithms/processing/pointProcessing.js";
+import { broadcastReductionState } from "@Collaboration/sync/reductionSync.js";
+import { REDUCTION_DEFAULTS } from "@Core/config/constants.js";
+import {
+  reductionState,
+  getReductionMethod,
+  getReductionComponents,
+  setReductionIsApplied,
+} from "@Core/reductionState.js";
 import {
   getSceneObjects,
   getOriginalPointsData,
   setReductionApplied,
   isReductionApplied,
-} from "./scene.js";
+} from "@Core/scene/sceneManager.js";
 import {
-  extractPointsFromPolyData,
-  applyReductionToPolyData,
-} from "../utils/pointProcessing.js";
-import { restore3DView } from "../utils/viewHelpers.js";
-import { cleanupTensors, logMemoryUsage } from "../utils/tensorflowSetup.js";
+  cleanupTensors,
+  logMemoryUsage,
+} from "@Services/tensorflow/tensorflowSetup.js";
+import { restore3DView } from "@Utils/viewHelpers.js";
 import {
   logInfo,
   logProgress,
   logSuccess,
   logError,
   logWarning,
-} from "../ui/react/hooks/useLogging.js";
-import { performPCA } from "../algorithms/pca.js";
-import { performTSNE } from "../algorithms/tsne.js";
-import { performUMAP } from "../algorithms/umap.js";
-import { broadcastReductionState } from "../collaboration/reductionSync.js";
-import {
-  reductionState,
-  getReductionMethod,
-  getReductionComponents,
-  setReductionIsApplied,
-} from "./reductionState.js";
-import { REDUCTION_DEFAULTS } from "../config/constants.js";
+} from "@UI/react/hooks/useLogging.js";
 
 // ----------------------------------------------------------------------------
 // Main Dimensionality Reduction Function

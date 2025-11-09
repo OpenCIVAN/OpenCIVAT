@@ -3,9 +3,10 @@
 // Bridges React UI with core reduction algorithms
 
 import { useState, useEffect, useCallback } from "react";
-import { toggleDimensionalityReduction } from "../../../core/reductionController.js";
-import { reductionState } from "../../../core/reductionState.js";
-import { getSceneObjects } from "../../../core/scene.js";
+
+import { toggleDimensionalityReduction } from "@Core/reductionController.js";
+import { reductionState } from "@Core/reductionState.js";
+import { getSceneObjects } from "@Core/scene/sceneManager.js";
 
 /**
  * Hook to control dimensionality reduction (PCA, t-SNE, UMAP)

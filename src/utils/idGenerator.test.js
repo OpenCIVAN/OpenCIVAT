@@ -4,7 +4,7 @@ import {
   generateDatasetId,
   generateInstanceId,
   getIdTimestamp,
-} from "./idGenerator.js";
+} from "@Utils/idGenerator.js";
 
 console.log("Testing ID Generator...\n");
 

@@ -3,9 +3,10 @@
 // Bridges React UI with collaborative annotation system
 
 import { useState, useEffect, useCallback } from "react";
-import { annotationSystem } from "../../../collaboration/annotations.js";
-import { annotationRenderer } from "../../../core/annotationRenderer.js";
-import { annotationModeState } from "../../../core/annotationState.js";
+
+import { annotationRenderer } from "@Collaboration/annotations/annotationRenderer.js";
+import { annotationModeState } from "@Collaboration/annotations/annotationState.js";
+import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
 
 /**
  * Hook to manage annotations and annotation mode

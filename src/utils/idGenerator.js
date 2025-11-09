@@ -8,7 +8,7 @@
  *   dataset_1234567890_abc123
  *   instance_1234567890_xyz789
  *
- * @param {string} prefix - Optional prefix (default: 'id')
+ * @param {string} prefix - Optional prefix (default: "id")
  * @returns {string} Unique ID
  */
 export function generateId(prefix = "id") {

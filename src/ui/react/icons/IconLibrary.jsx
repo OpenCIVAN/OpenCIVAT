@@ -1,5 +1,5 @@
 // src/icons/IconLibrary.jsx
-import * as LucideIcons from 'lucide-react';
+import * as LucideIcons from "lucide-react";
 
 export const Icons = {
   cursorOn: LucideIcons.Eye,

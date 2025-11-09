@@ -2,17 +2,15 @@
 // Viewport Interaction
 // ----------------------------------------------------------------------------
 
-import { getUserId } from "../collaboration/userManagement.js";
-import { getSceneObjects } from "../core/scene.js";
+import vtkCellPicker from "@kitware/vtk.js/Rendering/Core/CellPicker";
+import vtkPointPicker from "@kitware/vtk.js/Rendering/Core/PointPicker";
+
 import {
   isAnnotationMode,
   promptForAnnotationText,
-} from "../core/annotationState.js";
-import { annotationSystem } from "../collaboration/annotations.js";
-import { annotationRenderer } from "../core/annotationRenderer.js";
-
-import vtkCellPicker from "@kitware/vtk.js/Rendering/Core/CellPicker";
-import vtkPointPicker from "@kitware/vtk.js/Rendering/Core/PointPicker";
+} from "@Collaboration/annotations/annotationState.js";
+import { getUserId } from "@Collaboration/presence/userManagement.js";
+import { getSceneObjects } from "@Core/scene/sceneManager.js";
 
 // Track mouse position within the VTK.js render window
 let vtkMousePosition = { x: 0, y: 0 };
@@ -116,9 +114,11 @@ export function setupViewportInteraction() {
     if (event.key === "Escape" && isAnnotationMode()) {
       console.log("🖱️ ESC pressed - canceling annotation mode");
 
-      import("../core/annotationState.js").then(({ annotationModeState }) => {
-        annotationModeState.disable();
-      });
+      import("@Collaboration/annotations/annotationState.js").then(
+        ({ annotationModeState }) => {
+          annotationModeState.disable();
+        }
+      );
 
       // Clear pending annotation
       window._pendingAnnotation = null;
@@ -126,17 +126,19 @@ export function setupViewportInteraction() {
   });
 
   // Import annotation state to listen for changes
-  import("../core/annotationState.js").then(({ annotationModeState }) => {
-    annotationModeState.onChange(() => {
-      if (vtkContainer) {
-        const mode = annotationModeState.isActive();
-        vtkContainer.style.cursor = mode ? "crosshair" : "default";
-        console.log(
-          `🖱️ Cursor style changed to: ${mode ? "crosshair" : "default"}`
-        );
-      }
-    });
-  });
+  import("@Collaboration/annotations/annotationState.js").then(
+    ({ annotationModeState }) => {
+      annotationModeState.onChange(() => {
+        if (vtkContainer) {
+          const mode = annotationModeState.isActive();
+          vtkContainer.style.cursor = mode ? "crosshair" : "default";
+          console.log(
+            `🖱️ Cursor style changed to: ${mode ? "crosshair" : "default"}`
+          );
+        }
+      });
+    }
+  );
 }
 
 function get3DPositionFromClick(event, container) {

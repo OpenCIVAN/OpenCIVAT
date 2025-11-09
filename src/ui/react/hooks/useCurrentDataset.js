@@ -2,15 +2,16 @@
 // Enhanced hook that provides both the ID and full dataset info
 
 import { useEffect, useState } from "react";
-import { simpleVisualizationManager } from "../../../core/simpleVisualizationManager.js";
-import { datasetManager } from "../../../core/datasetManager.js";
+
+import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { visualizationManager } from "@Core/visualizationManager.js";
 
 /**
  * Hook to track the current dataset with complete information
  *
  * @returns {Object} An object containing:
  *   - datasetId: The ID of the current dataset (or null)
- *   - datasetInfo: The full current dataset object from simpleVisualizationManager
+ *   - datasetInfo: The full current dataset object from visualizationManager
  *   - datasetDetails: The actual dataset with polydata from datasetManager
  *   - isLoading: Whether the dataset is currently being loaded
  *   - hasPolydata: Whether the polydata is available
@@ -26,7 +27,7 @@ export function useCurrentDataset() {
     // Function to update all our state based on current situation
     const updateDatasetState = () => {
       // Get the current dataset info from the visualization manager
-      const current = simpleVisualizationManager.getCurrentDataset();
+      const current = visualizationManager.getCurrentDataset();
 
       if (current && current.datasetId) {
         // We have a current dataset selected
@@ -70,7 +71,7 @@ export function useCurrentDataset() {
     updateDatasetState();
 
     // Listen for changes from the visualization manager
-    simpleVisualizationManager.yViz.observe(updateDatasetState);
+    visualizationManager.yViz.observe(updateDatasetState);
 
     // Also listen for changes from the dataset manager
     // This catches when polydata becomes available
@@ -78,7 +79,7 @@ export function useCurrentDataset() {
 
     // Cleanup function - unsubscribe from both sources
     return () => {
-      simpleVisualizationManager.yViz.unobserve(updateDatasetState);
+      visualizationManager.yViz.unobserve(updateDatasetState);
       unsubscribeDataset();
     };
   }, []); // Empty deps - only set up listeners once
@@ -86,7 +87,7 @@ export function useCurrentDataset() {
   // Return a comprehensive object with all useful information
   return {
     datasetId, // Just the ID (for backward compatibility)
-    datasetInfo, // The info from simpleVisualizationManager
+    datasetInfo, // The info from visualizationManager
     datasetDetails, // The full dataset with polydata
     isLoading, // Loading state
     hasPolydata: !!datasetDetails?.polydata, // Quick check for polydata

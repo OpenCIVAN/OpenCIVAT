@@ -4,7 +4,7 @@
 
 class ReductionState {
   constructor() {
-    this.method = 'pca'; // 'pca', 'tsne', 'umap'
+    this.method = "pca"; // "pca", "tsne", "umap"
     this.components = 3; // 2 or 3
     this.isApplied = false;
     this.listeners = [];
@@ -64,7 +64,7 @@ class ReductionState {
       try {
         callback();
       } catch (error) {
-        console.error('Error in reduction state listener:', error);
+        console.error("Error in reduction state listener:", error);
       }
     });
   }

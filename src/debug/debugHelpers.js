@@ -1,12 +1,12 @@
 // src/debug/debugHelpers.js
 // This file exposes internal managers to the global window object for debugging
 
-import { datasetManager } from "../core/datasetManager.js";
-import { simpleVisualizationManager } from "../core/simpleVisualizationManager.js";
-import { dataCache } from "../services/dataCache.js";
-import { annotationSystem } from "../collaboration/annotations.js";
-import { presenceSystem } from "../collaboration/presenceSystem.js";
-import { getSceneObjects } from "../core/scene.js";
+import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
+import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
+import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { getSceneObjects } from "@Core/scene/sceneManager.js";
+import { visualizationManager } from "@Core/visualizationManager.js";
+import { dataCache } from "@Services/storage/dataCache.js";
 
 /**
  * Initialize debug helpers and expose managers to window for console access
@@ -17,14 +17,14 @@ export function initializeDebugHelpers() {
   window.CIA = {
     // Core managers
     datasetManager,
-    simpleVisualizationManager,
+    visualizationManager,
     dataCache,
     annotationSystem,
     presenceSystem,
 
     // Helper functions for common debugging tasks
     getCurrentDataset: () => {
-      const current = simpleVisualizationManager.getCurrentDataset();
+      const current = visualizationManager.getCurrentDataset();
       console.log("Current dataset:", current);
       return current;
     },
@@ -62,7 +62,7 @@ export function initializeDebugHelpers() {
       if (dataset) {
         console.log("✅ Dataset loaded:", dataset);
         // Try to load into scene
-        const { loadDatasetIntoScene } = await import("../core/scene.js");
+        const { loadDatasetIntoScene } = await import("@Core/scene/sceneManager.js");
         if (dataset.polydata) {
           loadDatasetIntoScene(dataset.polydata, true, datasetId);
           console.log("✅ Loaded into scene");
@@ -87,7 +87,7 @@ export function initializeDebugHelpers() {
       console.groupEnd();
 
       console.group("Current Visualization");
-      const current = simpleVisualizationManager.getCurrentDataset();
+      const current = visualizationManager.getCurrentDataset();
       if (current) {
         console.log("Dataset ID:", current.datasetId);
         console.log("Dataset Name:", current.datasetName);

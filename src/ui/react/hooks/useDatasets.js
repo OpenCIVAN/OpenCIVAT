@@ -2,8 +2,9 @@
 // Hook to track all datasets in the system
 
 import { useEffect, useState } from "react";
-import { useDatasetStore } from "../store/datasetStore.js";
-import { datasetManager } from "../../../core/datasetManager.js";
+
+import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 
 export function useDatasets() {
   const [datasets, setDatasets] = useState([]);

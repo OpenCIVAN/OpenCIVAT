@@ -5,10 +5,10 @@ import {
   yDatasets,
   yInstances,
   yAnnotations,
-} from "../collaboration/yjsSetup.js";
-import { dataCache } from "../services/dataCache.js";
-import { useDatasetStore } from "../ui/react/store/datasetStore.js";
-import { useInstanceStore } from "../ui/react/store/instanceStore.js";
+} from "@Collaboration/yjs/yjsSetup.js";
+import { dataCache } from "@Services/storage/dataCache.js";
+import { useDatasetStore } from "@UI/react/store/datasetStore.js";
+import { useInstanceStore } from "@UI/react/store/instanceStore.js";
 
 /**
  * Validate that datasets in Y.js have corresponding files in IndexedDB

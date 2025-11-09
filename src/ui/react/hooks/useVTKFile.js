@@ -3,9 +3,10 @@
 // Bridges the gap between core VTK modules and React components
 
 import { useState, useEffect } from "react";
-import { datasetManager } from "../../../core/datasetManager.js";
-import { simpleVisualizationManager } from "../../../core/simpleVisualizationManager.js";
-import { sceneState } from "../../../core/sceneState.js";
+
+import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { sceneState } from "@Core/scene/sceneState.js";
+import { visualizationManager } from "@Core/visualizationManager.js";
 
 /**
  * Hook to track the currently loaded VTK file
@@ -29,7 +30,7 @@ export function useVTKFile() {
 
     // Update function that gets called when datasets change
     const updateFileState = () => {
-      const current = simpleVisualizationManager.getCurrentDataset();
+      const current = visualizationManager.getCurrentDataset();
 
       if (!current) {
         setCurrentDataset(null);
@@ -72,14 +73,14 @@ export function useVTKFile() {
 
     // Listen for dataset changes
     datasetManager.onChange(updateFileState);
-    simpleVisualizationManager.yViz.observe(updateFileState);
+    visualizationManager.yViz.observe(updateFileState);
 
     // Initial update
     updateFileState();
 
     // Cleanup
     return () => {
-      simpleVisualizationManager.yViz.unobserve(updateFileState);
+      visualizationManager.yViz.unobserve(updateFileState);
     };
   }, []);
 

@@ -12,13 +12,14 @@ module.exports = {
   mode: "development",
   devtool: "source-map",
   devServer: {
-    static: [{
-      directory: path.join(__dirname, "dist"),
-    },
-        {
-      directory: path.join(__dirname, "public"),
-    },
-  ],
+    static: [
+      {
+        directory: path.join(__dirname, "dist"),
+      },
+      {
+        directory: path.join(__dirname, "public"),
+      },
+    ],
     compress: true,
     port: 8081,
     host: "0.0.0.0",
@@ -72,6 +73,20 @@ module.exports = {
     "./controller.html": "controller.html",
   },
   resolve: {
-    extensions: [".js", ".jsx"], // Add .jsx
+    extensions: [".js", ".jsx"],
+    // allow absolute imports from "src" too (e.g., "ui/..." if you want)
+    modules: [path.resolve(__dirname, "src"), "node_modules"],
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+      "@Algorithms": path.resolve(__dirname, "src/algorithms"),
+      "@Collaboration": path.resolve(__dirname, "src/collaboration"),
+      "@Core": path.resolve(__dirname, "src/core"),
+      "@Debug": path.resolve(__dirname, "src/debug"),
+      "@Init": path.resolve(__dirname, "src/init"),
+      "@Services": path.resolve(__dirname, "src/services"),
+      "@UI": path.resolve(__dirname, "src/ui"),
+      "@Utils": path.resolve(__dirname, "src/utils"),
+      "@VR": path.resolve(__dirname, "src/vr"),
+    },
   },
 };

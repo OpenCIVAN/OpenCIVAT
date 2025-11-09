@@ -1,19 +1,25 @@
-import vtkInteractorStyleImage from '@kitware/vtk.js/Interaction/Style/InteractorStyleImage';
-import { logProgress } from '../ui/react/hooks/useLogging.js';
+import vtkInteractorStyleImage from "@kitware/vtk.js/Interaction/Style/InteractorStyleImage";
+
+import { logProgress } from "@UI/react/hooks/useLogging.js";
 
 let renderer, renderWindow, camera, interactor;
 let original3DInteractorStyle = null;
 let image2DInteractorStyle = null;
 
-export function initializeViewHelpers(rendererRef, renderWindowRef, cameraRef, interactorRef) {
+export function initializeViewHelpers(
+  rendererRef,
+  renderWindowRef,
+  cameraRef,
+  interactorRef
+) {
   renderer = rendererRef;
   renderWindow = renderWindowRef;
   camera = cameraRef;
   interactor = interactorRef;
 
-    // Store the original 3D style
+  // Store the original 3D style
   original3DInteractorStyle = interactor.getInteractorStyle();
-  
+
   // Create 2D style (only create once)
   image2DInteractorStyle = vtkInteractorStyleImage.newInstance();
 }
@@ -42,7 +48,7 @@ export function setup2DView() {
   // Switch to 2D interactor style
   if (interactor && image2DInteractorStyle) {
     interactor.setInteractorStyle(image2DInteractorStyle);
-    logProgress('Switched to 2D interactor style (pan and zoom only)');
+    logProgress("Switched to 2D interactor style (pan and zoom only)");
   }
 
   // Force render
@@ -60,13 +66,13 @@ export function restore3DView() {
   // Restore 3D interactor style
   if (interactor && original3DInteractorStyle) {
     interactor.setInteractorStyle(original3DInteractorStyle);
-    logProgress('Restored 3D interactor style (rotation enabled)');
+    logProgress("Restored 3D interactor style (rotation enabled)");
   }
 
   // ADD THIS: Reset camera to show full 3D scene
   if (renderer) {
     renderer.resetCamera();
-    logProgress('Camera repositioned for 3D view');
+    logProgress("Camera repositioned for 3D view");
   }
 
   logProgress(

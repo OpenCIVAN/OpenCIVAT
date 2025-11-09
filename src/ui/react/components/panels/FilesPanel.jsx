@@ -1,40 +1,52 @@
 // src/ui/react/components/panels/FilesPanel.jsx
 // Enhanced version with proper publicPath handling for sample files
 
-import React, { useState, useEffect, useRef } from 'react';
-import { datasetManager } from '../../../../core/datasetManager.js';
-import { simpleVisualizationManager } from '../../../../core/simpleVisualizationManager.js';
-import { getUserName } from '../../../../collaboration/userManagement.js';
-import { useDatasets } from '../../hooks/useDatasets.js';
-import { useCurrentDataset } from '../../hooks/useCurrentDataset.js';
+import React, { useState, useRef } from "react";
+import { FolderOpen, Upload, File, Check, Loader } from "lucide-react";
+
+import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { visualizationManager } from "@Core/visualizationManager.js";
+import { useDatasets } from "@UI/react/hooks/useDatasets.js";
+import { useCurrentDataset } from "@UI/react/hooks/useCurrentDataset.js";
+
+import "./FilesPanel.css";  // Use a separate CSS file
 
 const SAMPLE_FILES = [
-    { name: 'Skull.vtp', path: '/vtp_files/Skull.vtp', size: '19.5 MB' },
-    { name: 'Bones.vtp', path: '/vtp_files/Bones.vtp', size: '26 MB' },
-    { name: 'Diskout.vtp', path: '/vtp_files/Diskout.vtp', size: '472 KB' },
-    { name: 'Lungs.vtp', path: '/vtp_files/Lungs.vtp', size: '10 MB' },
-    { name: 'LungVessels.vtp', path: '/vtp_files/LungVessels.vtp', size: '27 MB' },
-    { name: 'Earth.vtp', path: '/vtp_files/Earth.vtp', size: '1.2 MB' }
+    { name: "Skull.vtp", path: "/vtp_files/Skull.vtp", size: "19.5 MB" },
+    { name: "Bones.vtp", path: "/vtp_files/Bones.vtp", size: "26 MB" },
+    { name: "Diskout.vtp", path: "/vtp_files/Diskout.vtp", size: "472 KB" },
+    { name: "Lungs.vtp", path: "/vtp_files/Lungs.vtp", size: "10 MB" },
+    { name: "LungVessels.vtp", path: "/vtp_files/LungVessels.vtp", size: "27 MB" },
+    { name: "Earth.vtp", path: "/vtp_files/Earth.vtp", size: "1.2 MB" }
 ];
 
 export function FilesPanel() {
+    // Get datasets from the hook - this includes loading state
     const datasets = useDatasets();
-    const currentDatasetId = useCurrentDataset();
-    const [isLoading, setIsLoading] = useState(false);
-    const [uploadType, setUploadType] = useState('samples');
+    const { datasetId: currentDatasetId } = useCurrentDataset();
+    const [uploadType, setUploadType] = useState("samples");
     const fileInputRef = useRef(null);
+
+    // Check if ANY dataset is currently loading
+    const isAnyLoading = datasets.some(d => d.isLoading);
 
     // Handle loading a sample file
     const handleLoadSample = async (sampleFile) => {
         console.log(`📂 Loading sample: ${sampleFile.path}`);
-        setIsLoading(true);
 
         try {
-            // Check if already exists
-            const existing = datasetManager.findDatasetByFilename(sampleFile.name);
+            // Check if already exists and is loaded
+            const existing = datasets.find(d => d.name === sampleFile.name);
+            if (existing?.hasPolydata) {
+                console.log("📂 Sample already loaded, switching to it");
+                visualizationManager.setCurrentDataset(existing.id, sampleFile.name);
+                return;
+            }
+
+            // If exists but not loaded, just select it and let the system load it
             if (existing) {
-                console.log('📂 Sample already loaded, switching to it');
-                simpleVisualizationManager.setCurrentDataset(existing.id, sampleFile.name);
+                console.log("📂 Sample exists, selecting it...");
+                visualizationManager.setCurrentDataset(existing.id, sampleFile.name);
                 return;
             }
 
@@ -45,22 +57,20 @@ export function FilesPanel() {
             }
 
             const blob = await response.blob();
-            const file = new File([blob], sampleFile.name, { type: 'application/octet-stream' });
+            const file = new File([blob], sampleFile.name, { type: "application/octet-stream" });
 
-            // CRITICAL: Pass the publicPath so other browsers can fetch it!
+            // Load through dataset manager - it handles all state updates
             const publicPath = window.location.origin + sampleFile.path;
             const datasetId = await datasetManager.loadDataset(file, publicPath);
 
             console.log(`✅ Sample loaded successfully`);
 
             // Set as current dataset
-            simpleVisualizationManager.setCurrentDataset(datasetId, sampleFile.name);
+            visualizationManager.setCurrentDataset(datasetId, sampleFile.name);
 
         } catch (error) {
-            console.error('❌ Failed to load sample:', error);
+            console.error("❌ Failed to load sample:", error);
             alert(`Failed to load sample: ${error.message}`);
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -70,130 +80,135 @@ export function FilesPanel() {
         if (!file) return;
 
         console.log(`📂 Uploading file: ${file.name}`);
-        setIsLoading(true);
 
         try {
             // Check if already exists
-            const existing = datasetManager.findDatasetByFilename(file.name);
-            if (existing) {
-                console.log('📂 File already exists, switching to it');
-                simpleVisualizationManager.setCurrentDataset(existing.id, file.name);
+            const existing = datasets.find(d => d.name === file.name);
+            if (existing?.hasPolydata) {
+                console.log("📂 File already exists, switching to it");
+                visualizationManager.setCurrentDataset(existing.id, file.name);
                 if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
+                    fileInputRef.current.value = "";
                 }
                 return;
             }
 
-            // Load the file (no publicPath for user uploads)
+            // Load the file - dataset manager handles all state
             const datasetId = await datasetManager.loadDataset(file, null);
 
             console.log(`✅ File uploaded successfully`);
 
             // Set as current dataset
-            simpleVisualizationManager.setCurrentDataset(datasetId, file.name);
+            visualizationManager.setCurrentDataset(datasetId, file.name);
 
         } catch (error) {
-            console.error('❌ Failed to upload file:', error);
+            console.error("❌ Failed to upload file:", error);
             alert(`Failed to upload file: ${error.message}`);
         } finally {
-            setIsLoading(false);
             if (fileInputRef.current) {
-                fileInputRef.current.value = '';
+                fileInputRef.current.value = "";
             }
         }
     };
 
     // Handle clicking on an existing dataset
-    const handleSelectDataset = (datasetId) => {
-        const dataset = datasetManager.getDatasetSync(datasetId);
-
-        if (!dataset) {
-            console.log(`📂 Dataset not loaded locally, attempting to fetch...`);
-            setIsLoading(true);
-
-            // Trigger async load
-            datasetManager.getDataset(datasetId).then((loadedDataset) => {
-                if (loadedDataset?.polydata) {
-                    simpleVisualizationManager.setCurrentDataset(datasetId, loadedDataset.name);
-                } else {
-                    alert('This dataset needs to be uploaded locally. The original uploader needs to share the file.');
-                }
-                setIsLoading(false);
-            });
+    const handleSelectDataset = (dataset) => {
+        // If already loaded, just switch to it
+        if (dataset.hasPolydata) {
+            visualizationManager.setCurrentDataset(dataset.id, dataset.name);
             return;
         }
 
-        if (!dataset.polydata) {
-            alert('Dataset is still loading. Please wait...');
+        // If loading, do nothing (let it finish)
+        if (dataset.isLoading) {
+            console.log(`⏳ Dataset is loading: ${dataset.name}`);
             return;
         }
 
-        simpleVisualizationManager.setCurrentDataset(datasetId, dataset.name);
+        // Not loaded yet - trigger async load by selecting it
+        console.log(`📂 Dataset not loaded, triggering load: ${dataset.name}`);
+        visualizationManager.setCurrentDataset(dataset.id, dataset.name);
     };
 
     return (
         <div className="files-panel">
-            <div className="panel-header">
-                <h3>📁 Files</h3>
-                {isLoading && <span className="loading-indicator">Loading...</span>}
+            <div className="files-panel__header">
+                <FolderOpen size={20} />
+                <h3>Files</h3>
+                {isAnyLoading && (
+                    <span className="files-panel__loading">
+                        <Loader size={14} className="spinner" />
+                        Loading...
+                    </span>
+                )}
             </div>
 
             {/* Upload Section */}
-            <div className="upload-section">
-                <div className="upload-tabs">
+            <div className="files-panel__upload-section">
+                <div className="files-panel__tabs">
                     <button
-                        className={`tab ${uploadType === 'samples' ? 'active' : ''}`}
-                        onClick={() => setUploadType('samples')}
-                        disabled={isLoading}
+                        className={`files-panel__tab ${uploadType === "samples" ? "active" : ""}`}
+                        onClick={() => setUploadType("samples")}
+                        disabled={isAnyLoading}
                     >
                         Sample Files
                     </button>
                     <button
-                        className={`tab ${uploadType === 'upload' ? 'active' : ''}`}
-                        onClick={() => setUploadType('upload')}
-                        disabled={isLoading}
+                        className={`files-panel__tab ${uploadType === "upload" ? "active" : ""}`}
+                        onClick={() => setUploadType("upload")}
+                        disabled={isAnyLoading}
                     >
                         Upload VTP
                     </button>
                 </div>
 
-                {uploadType === 'samples' ? (
-                    <div className="sample-files">
-                        {SAMPLE_FILES.map(sample => (
-                            <button
-                                key={sample.name}
-                                className="sample-file-btn"
-                                onClick={() => handleLoadSample(sample)}
-                                disabled={isLoading || datasets.some(d => d.name === sample.name)}
-                            >
-                                <span className="file-icon">📄</span>
-                                <span className="file-name">{sample.name}</span>
-                                <span className="file-size">{sample.size}</span>
-                                {datasets.some(d => d.name === sample.name) &&
-                                    <span className="loaded-badge">✓</span>
-                                }
-                            </button>
-                        ))}
+                {uploadType === "samples" ? (
+                    <div className="files-panel__sample-files">
+                        {SAMPLE_FILES.map(sample => {
+                            const dataset = datasets.find(d => d.name === sample.name);
+                            const isThisLoading = dataset?.isLoading || false;
+                            const isLoaded = dataset?.hasPolydata || false;
+                            const isAlreadyAdded = datasets.some(d => d.name === sample.name);
+
+                            return (
+                                <button
+                                    key={sample.name}
+                                    className="files-panel__sample-btn"
+                                    onClick={() => handleLoadSample(sample)}
+                                    disabled={isAnyLoading || isAlreadyAdded}
+                                >
+                                    <File size={18} />
+                                    <span className="files-panel__sample-name">{sample.name}</span>
+                                    <span className="files-panel__sample-size">{sample.size}</span>
+                                    {isThisLoading && (
+                                        <Loader size={14} className="spinner" />
+                                    )}
+                                    {isLoaded && !isThisLoading && (
+                                        <Check size={16} className="files-panel__check" />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 ) : (
-                    <div className="upload-area">
+                    <div className="files-panel__upload-area">
                         <input
                             ref={fileInputRef}
                             type="file"
                             accept=".vtp"
                             onChange={handleFileUpload}
-                            disabled={isLoading}
-                            style={{ display: 'none' }}
+                            disabled={isAnyLoading}
+                            style={{ display: "none" }}
                         />
                         <button
-                            className="upload-btn"
+                            className="files-panel__upload-btn"
                             onClick={() => fileInputRef.current?.click()}
-                            disabled={isLoading}
+                            disabled={isAnyLoading}
                         >
-                            <span className="upload-icon">⬆️</span>
+                            <Upload size={20} />
                             Choose VTP File
                         </button>
-                        <p className="upload-hint">
+                        <p className="files-panel__hint">
                             Note: User-uploaded files are only visible to users who upload the same file
                         </p>
                     </div>
@@ -201,29 +216,38 @@ export function FilesPanel() {
             </div>
 
             {/* Loaded Datasets */}
-            <div className="datasets-section">
+            <div className="files-panel__datasets-section">
                 <h4>Loaded Datasets ({datasets.length})</h4>
-                <div className="dataset-list">
+                <div className="files-panel__dataset-list">
                     {datasets.map((dataset) => (
                         <div
                             key={dataset.id}
-                            className={`dataset-item ${dataset.id === currentDatasetId ? 'active' : ''}`}
-                            onClick={() => handleSelectDataset(dataset.id)}
+                            className={`files-panel__dataset-item ${dataset.id === currentDatasetId ? "active" : ""} ${dataset.isLoading ? "loading" : ""}`}
+                            onClick={() => handleSelectDataset(dataset)}
                         >
-                            <div className="dataset-info">
-                                <div className="dataset-name">
-                                    {dataset.hasPolydata ? '✅' : dataset.isLoading ? '⏳' : '⚠️'}
-                                    {' '}{dataset.name}
+                            <div className="files-panel__dataset-info">
+                                <div className="files-panel__dataset-name">
+                                    {dataset.isLoading ? (
+                                        <Loader size={14} className="spinner" />
+                                    ) : dataset.hasPolydata ? (
+                                        <Check size={14} />
+                                    ) : (
+                                        "⚠️"
+                                    )}
+                                    {dataset.name}
+                                    {dataset.isLoading && dataset.loadingStage && (
+                                        <span className="files-panel__stage"> ({dataset.loadingStage})</span>
+                                    )}
                                 </div>
-                                <div className="dataset-meta">
+                                <div className="files-panel__dataset-meta">
                                     {dataset.pointCount?.toLocaleString()} points
-                                    {' • '}
-                                    {dataset.uploadedByName || 'Unknown'}
-                                    {dataset.publicPath && ' • 🌐 Public'}
+                                    {" • "}
+                                    {dataset.uploadedByName || "Unknown"}
+                                    {dataset.publicPath && " • 🌐 Public"}
                                 </div>
                             </div>
                             {dataset.id === currentDatasetId &&
-                                <span className="current-badge">Current</span>
+                                <span className="files-panel__current-badge">Current</span>
                             }
                         </div>
                     ))}
@@ -441,6 +465,23 @@ export function FilesPanel() {
                     color: white;
                     border-radius: 3px;
                     font-size: 11px;
+                }
+
+                .loading-badge {
+                    color: #ff9800;
+                    font-size: 11px;
+                    animation: pulse 1s infinite;
+                }
+
+                .stage-indicator {
+                    color: #888;
+                    font-size: 11px;
+                    font-style: italic;
+                }
+
+                .dataset-item.loading {
+                    opacity: 0.7;
+                    cursor: wait;
                 }
             `}</style>
         </div>

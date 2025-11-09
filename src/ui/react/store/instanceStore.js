@@ -3,7 +3,8 @@
 // Each instance is a view of a dataset with its own camera, filters, etc.
 
 import { create } from "zustand";
-import { generateInstanceId } from "../../../utils/idGenerator.js";
+
+import { generateInstanceId } from "@Utils/idGenerator.js";
 
 /**
  * Instance Store
@@ -17,8 +18,8 @@ import { generateInstanceId } from "../../../utils/idGenerator.js";
  *   datasetId: string,       // Which dataset this instance is viewing
  *   userId: string,          // User who owns this instance
  *   userName: string,        // User's display name
- *   type: 'desktop' | 'vr',  // Instance type
- *   visibility: 'private' | 'shared',  // Can others see this?
+ *   type: "desktop" | "vr",  // Instance type
+ *   visibility: "private" | "shared",  // Can others see this?
  *
  *   // Camera state (instance-specific)
  *   camera: {
@@ -30,19 +31,19 @@ import { generateInstanceId } from "../../../utils/idGenerator.js";
  *
  *   // Filters applied to this instance
  *   filters: [{
- *     type: 'clip' | 'threshold' | 'contour',
+ *     type: "clip" | "threshold" | "contour",
  *     params: {...}
  *   }],
  *
  *   // Widgets active in this instance
  *   widgets: [{
- *     type: 'clipPlane' | 'ruler' | 'picker',
+ *     type: "clipPlane" | "ruler" | "picker",
  *     state: {...}
  *   }],
  *
  *   // Linking to other instances
  *   linkedTo: string[],      // Array of instance IDs
- *   linkMode: 'camera' | 'cursor' | 'both',
+ *   linkMode: "camera" | "cursor" | "both",
  *
  *   // Cursor position for cursor mirroring
  *   cursor: {
@@ -290,7 +291,7 @@ export const useInstanceStore = create((set, get) => ({
    *
    * @param {string} id - Instance ID
    * @param {string[]} linkedIds - Array of instance IDs to link to
-   * @param {string} linkMode - 'camera' | 'cursor' | 'both'
+   * @param {string} linkMode - "camera" | "cursor" | "both"
    */
   linkInstances: (id, linkedIds, linkMode = "both") => {
     set((state) => {
