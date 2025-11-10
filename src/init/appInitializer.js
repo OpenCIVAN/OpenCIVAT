@@ -7,7 +7,6 @@ import { markSystemReady } from "@Collaboration/yjs/yjsObservers.js";
 import { initializeAllObservers } from "@Collaboration/yjs/yjsObservers.js";
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { datasetManager } from "@Core/datasets/datasetManager.js";
-import { setupFileHandler } from "@Core/datasets/fileHandler.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
@@ -40,8 +39,10 @@ export async function initializePhase1() {
     console.warn("⚠️ TensorFlow.js not available");
   }
 
-  // Setup file handling (doesn't need username)
-  setupFileHandler();
+  // DISABLED: Old file handler is replaced by FilesPanel component
+  // The FilesPanel handles file uploads directly via datasetManager
+  // setupFileHandler();
+  console.log("ℹ️  File handling via FilesPanel (not legacy fileHandler)");
 
   console.log("✅ Phase 1 complete");
 
@@ -105,45 +106,49 @@ export async function initializePhase2(username) {
   console.log("✅ Phase 2 complete - Application ready!");
 }
 
+// src/init/appInitializer.js
+
 /**
- * Phase 3: Post-Scene Initialization (MINIMAL VERSION)
+ * Phase 3: Post-React Initialization (MINIMAL)
  *
- * With multi-instance architecture, VTK-dependent systems are initialized
- * per-instance, not globally. This phase now only handles systems that
- * don't require VTK containers.
+ * With multi-instance architecture, most VTK-dependent systems are initialized
+ * per-instance by InstanceViewport, not globally at app startup.
  *
- * ❌ REMOVED (moved to per-instance initialization):
- * - setupViewportInteraction (needs container)
- * - annotationRenderer.initialize (needs renderer)
- * - cameraSync.initialize (needs camera)
- * - actorSync (needs scene objects)
- *
- * ✅ KEPT (work without VTK):
- * - Cursor system (tracks positions, no container needed)
- * - Dataset orchestrator (coordinates loading)
+ * This phase only initializes systems that:
+ * - Don't require VTK containers
+ * - Work across all instances globally
+ * - Can't be per-instance (like debug tools)
  */
 export function initializePhase3() {
-  console.log("🚀 Phase 3: Post-Scene Initialization (Minimal)");
+  console.log("🚀 Phase 3: Post-React Initialization (Minimal)");
 
-  // Initialize collaborative cursors
-  // This tracks cursor positions but doesn't need VTK containers
-  import("@Collaboration/presence/cursors.js")
-    .then(({ initializeCursorSystem }) => {
-      try {
-        initializeCursorSystem();
-        console.log("✅ Cursor system initialized");
-      } catch (error) {
-        console.warn("⚠️ Cursor system not available:", error.message);
-      }
+  // Load legacy systems documentation
+  import("@Init/legacySystemsDisabled.js")
+    .then(() => {
+      console.log("📋 Legacy systems documentation loaded");
     })
-    .catch((error) => {
-      console.warn("⚠️ Could not load cursor system:", error.message);
+    .catch(() => {
+      console.warn("⚠️  Could not load legacy systems docs");
     });
 
+  // DISABLED: Cursor system initialization
+  // The cursor system needs to be refactored to work per-instance
+  // before we can safely re-enable it
+  // import("@Collaboration/presence/cursors.js")
+  //   .then(({ initializeCursorSystem }) => {
+  //     initializeCursorSystem();
+  //     console.log("✅ Cursor system initialized");
+  //   });
+
+  // DISABLED: Dataset loading orchestrator
+  // Instances now handle their own dataset loading via InstanceViewport
+  // No need for a global orchestrator
+
+  // DISABLED: Viewport interaction setup
+  // Each instance will set up its own interaction handlers when created
+
   console.log("✅ Phase 3 complete - Ready for instances!");
-  console.log(
-    "💡 Instance-specific systems will initialize when instances are created"
-  );
+  console.log("💡 VTK systems initialize per-instance in WorkspaceGrid");
 }
 
 /**

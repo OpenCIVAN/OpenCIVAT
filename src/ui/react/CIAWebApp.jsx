@@ -31,24 +31,22 @@ export function CIAWebApp({ roomName, userName }) {
   }, []); // ← Empty deps - only run once
 
   // Initialize Phase 3 after component mounts
-  // FIXED: Use useRef to prevent double-initialization
   useEffect(() => {
     if (!initOnce.current) {
       initOnce.current = true;
 
-      console.log("🔧 Initializing post-scene features...");
+      console.log("🔧 Initializing post-React features...");
 
-      // Small delay to ensure DOM is ready
       setTimeout(() => {
         try {
           initializePhase3();
-          console.log("✅ Post-scene initialization complete");
+          console.log("✅ Post-React initialization complete");
         } catch (error) {
-          console.error("❌ Error in post-scene initialization:", error);
+          console.error("❌ Error in Phase 3:", error);
         }
       }, 500);
     }
-  }, []); // ← CRITICAL: Empty deps array - only run once on mount!
+  }, []);
 
   const handleToolSelect = (toolId) => {
     setActiveTool(activeTool === toolId ? null : toolId);
@@ -65,18 +63,12 @@ export function CIAWebApp({ roomName, userName }) {
       <CIAWebLayout
         roomName={roomName}
         datasetName="{Project Name}" // Need Way to set this dynamically later
-        leftPanel={
-          <LeftToolbar
-            activeTool={activeTool}
-            onToolSelect={handleToolSelect}
-          />
-        }
+        leftToolbar={<LeftToolbar activeTool={activeTool} onToolSelect={handleToolSelect} />}
+        mainContent={<WorkspaceGrid />}  // ← This creates instances, not a global container
         rightPanel={
           <RightCollaborationPanel roomName={roomName} userName={userName} />
         }
       >
-        {/* Replace single VTK container with WorkspaceGrid */}
-        <WorkspaceGrid />
 
         {/* Tool Panels */}
         <ToolPanel
