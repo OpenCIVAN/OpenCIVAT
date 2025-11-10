@@ -85,7 +85,7 @@ export function CIAWebApp({ roomName, userName }) {
           icon="📁"
           onClose={handleClosePanel}
         >
-          <FilesPanel />
+          {/* <FilesPanel /> */}
         </ToolPanel>
 
         <ToolPanel
@@ -94,7 +94,7 @@ export function CIAWebApp({ roomName, userName }) {
           icon="💬"
           onClose={handleClosePanel}
         >
-          <AnnotationsPanel />
+          {/* <AnnotationsPanel /> */}
         </ToolPanel>
 
         <ToolPanel
