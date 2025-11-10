@@ -1,5 +1,4 @@
 // src/ui/react/CIAWebApp.jsx
-// Main application component - handles VTK scene and UI layout
 
 import React, { useState, useEffect, useRef } from "react";
 
@@ -11,14 +10,13 @@ import { LoggingPanel } from "@UI/react/components/LoggingPanel.jsx";
 import { AnalyzePanel } from "@UI/react/components/panels/AnalyzePanel.jsx";
 import { AnnotationsPanel } from "@UI/react/components/panels/AnnotationsPanel.jsx";
 import { FilesPanel } from "@UI/react/components/panels/FilesPanel.jsx";
-import { TestPanel } from "@UI/react/components/TestPanel.jsx";
 import { LeftToolbar } from "@UI/react/components/toolbars/LeftToolbar.jsx";
 import { WorkspaceGrid } from "@UI/react/components/workspace/WorkspaceGrid.jsx";
 import { CIAWebLayout } from "@UI/react/layouts/CIAWebLayout.jsx";
 
 export function CIAWebApp({ roomName, userName }) {
   const [activeTool, setActiveTool] = useState(null);
-  const initOnce = useRef(false);  // ← Prevent double-init in Strict Mode
+  const initOnce = useRef(false);
 
   // Hide loading screen on mount
   useEffect(() => {
@@ -28,7 +26,7 @@ export function CIAWebApp({ roomName, userName }) {
         console.log("🎬 Loading screen hidden - application ready");
       }, 300);
     }
-  }, []); // ← Empty deps - only run once
+  }, []);
 
   // Initialize Phase 3 after component mounts
   useEffect(() => {
@@ -58,19 +56,26 @@ export function CIAWebApp({ roomName, userName }) {
 
   return (
     <>
-      {/* {process.env.NODE_ENV === "development" && <TestPanel />} */}
-
       <CIAWebLayout
         roomName={roomName}
-        datasetName="{Project Name}" // Need Way to set this dynamically later
-        leftToolbar={<LeftToolbar activeTool={activeTool} onToolSelect={handleToolSelect} />}
-        mainContent={<WorkspaceGrid />}  // ← This creates instances, not a global container
+        datasetName="{Project Name}"
+        leftPanel={
+          <LeftToolbar
+            activeTool={activeTool}
+            onToolSelect={handleToolSelect}
+          />
+        }
         rightPanel={
-          <RightCollaborationPanel roomName={roomName} userName={userName} />
+          <RightCollaborationPanel
+            roomName={roomName}
+            userName={userName}
+          />
         }
       >
+        {/* Main Content - WorkspaceGrid goes inside as children */}
+        <WorkspaceGrid />
 
-        {/* Tool Panels */}
+        {/* Tool Panels - These overlay on top when opened */}
         <ToolPanel
           isOpen={activeTool === "files"}
           title="File Manager"

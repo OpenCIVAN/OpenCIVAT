@@ -4,6 +4,8 @@
 import React, { useState, useRef } from "react";
 import { FolderOpen, Upload, File, Check, Loader } from "lucide-react";
 
+console.log("📦 Lucide imports:", { FolderOpen, Upload, File, Check, Loader });
+
 import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 import { useDatasets } from "@UI/react/hooks/useDatasets.js";
