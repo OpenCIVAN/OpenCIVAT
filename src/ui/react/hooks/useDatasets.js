@@ -1,29 +1,30 @@
 // src/ui/react/hooks/useDatasets.js
-// FIXED: Stable subscribe function to prevent infinite re-render loop
+// FIXED: Use shallow comparison to prevent infinite loop from array recreation
 
-import { useSyncExternalStore, useCallback } from "react";
-
-import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { useSyncExternalStore } from "react";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
+import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { shallow } from "zustand/shallow";
 
-// CRITICAL: Move subscribe function OUTSIDE the hook
-// This ensures it has a stable reference and doesn't recreate on every render
+// CRITICAL: Move subscribe/getSnapshot functions OUTSIDE the hook
 const subscribeToDatasetManager = (callback) => {
   return datasetManager.onChange(callback);
 };
 
-// CRITICAL: Move getSnapshot function OUTSIDE the hook
-// This ensures React can properly cache the snapshot
 const getDatasetManagerSnapshot = () => {
   return datasetManager.datasets.size + datasetManager.loadingDatasets.size;
 };
 
 export function useDatasets() {
-  // Subscribe to Zustand for metadata changes
-  const datasetsMetadata = useDatasetStore((state) => state.getAllDatasets());
+  // CRITICAL FIX: Use shallow equality to compare array contents
+  // Without this, Zustand creates a new array reference every time,
+  // causing infinite re-renders even when the data hasn't changed
+  const datasetsMetadata = useDatasetStore(
+    (state) => state.getAllDatasets(),
+    shallow // ← This is the key fix!
+  );
 
   // Subscribe to datasetManager for loading state
-  // Using STABLE functions that don't recreate on every render
   const managerVersion = useSyncExternalStore(
     subscribeToDatasetManager,
     getDatasetManagerSnapshot

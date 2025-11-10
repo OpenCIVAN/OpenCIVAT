@@ -1,7 +1,7 @@
 // src/ui/react/CIAWebApp.jsx
 // Main application component - handles VTK scene and UI layout
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import { initializePhase3 } from "@Init/appInitializer.js";
 import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel.jsx";
@@ -18,7 +18,7 @@ import { CIAWebLayout } from "@UI/react/layouts/CIAWebLayout.jsx";
 
 export function CIAWebApp({ roomName, userName }) {
   const [activeTool, setActiveTool] = useState(null);
-  const [postSceneInitialized, setPostSceneInitialized] = useState(false);
+  const initOnce = useRef(false);  // ← Prevent double-init in Strict Mode
 
   // Hide loading screen on mount
   useEffect(() => {
@@ -28,24 +28,27 @@ export function CIAWebApp({ roomName, userName }) {
         console.log("🎬 Loading screen hidden - application ready");
       }, 300);
     }
-  }, []);
+  }, []); // ← Empty deps - only run once
 
   // Initialize Phase 3 after component mounts
-  // WorkspaceGrid will handle creating VTK instances
+  // FIXED: Use useRef to prevent double-initialization
   useEffect(() => {
-    if (!postSceneInitialized) {
+    if (!initOnce.current) {
+      initOnce.current = true;
+
       console.log("🔧 Initializing post-scene features...");
+
+      // Small delay to ensure DOM is ready
       setTimeout(() => {
         try {
           initializePhase3();
-          setPostSceneInitialized(true);
           console.log("✅ Post-scene initialization complete");
         } catch (error) {
           console.error("❌ Error in post-scene initialization:", error);
         }
       }, 500);
     }
-  }, [postSceneInitialized]);
+  }, []); // ← CRITICAL: Empty deps array - only run once on mount!
 
   const handleToolSelect = (toolId) => {
     setActiveTool(activeTool === toolId ? null : toolId);
@@ -57,7 +60,7 @@ export function CIAWebApp({ roomName, userName }) {
 
   return (
     <>
-      {process.env.NODE_ENV === "development" && <TestPanel />}
+      {/* {process.env.NODE_ENV === "development" && <TestPanel />} */}
 
       <CIAWebLayout
         roomName={roomName}
@@ -106,7 +109,7 @@ export function CIAWebApp({ roomName, userName }) {
 
       {/* Logging Panel - outside main layout */}
       <LoggingPanel />
-      {process.env.NODE_ENV === "development" && <DebugPanel />}
+      {/* {process.env.NODE_ENV === "development" && <DebugPanel />} */}
     </>
   );
 }

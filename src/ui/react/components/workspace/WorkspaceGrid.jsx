@@ -5,11 +5,16 @@
 // 2. Loading a saved session with open windows (future)
 // 3. Joining a room where others have shared windows (future)
 
+// src/ui/react/components/workspace/WorkspaceGrid.jsx
+// Grid layout for multiple VTK instances
+// AUTO-CREATES first instance when a dataset is loaded if no instances exist
+
 import React, { useState, useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 
 import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import { useCurrentDataset } from "@UI/react/hooks/useCurrentDataset.js";
 
 export function WorkspaceGrid() {
     const [instances, setInstances] = useState([]);
@@ -17,26 +22,31 @@ export function WorkspaceGrid() {
     const gridRef = useRef(null);
     const initialized = useRef(false);
 
+    // Watch for dataset changes to auto-create instance
+    const { datasetId } = useCurrentDataset();
+
     // Initialize workspace manager once
     useEffect(() => {
         if (!initialized.current) {
             initialized.current = true;
             console.log("🎨 WorkspaceGrid mounted");
             workspaceManager.initialize();
-
-            // DO NOT auto-create instances here!
-            // Instances should only be created when:
-            // 1. User clicks "Add Instance" button
-            // 2. Loading a saved session (future implementation)
-            // 3. Joining a room with shared windows (future implementation)
         }
     }, []);
+
+    // Auto-create instance when a dataset is loaded and no instances exist
+    useEffect(() => {
+        if (datasetId && instances.length === 0) {
+            console.log(`🎨 Auto-creating instance for dataset: ${datasetId}`);
+            createNewInstance();
+        }
+    }, [datasetId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const createNewInstance = () => {
         const instanceId = `instance-${Date.now()}`;
         const instanceName = `View ${instances.length + 1}`;
 
-        console.log(`✅ User creating new instance: ${instanceId}`);
+        console.log(`✅ Creating instance: ${instanceId}`);
 
         setInstances(prev => [...prev, {
             id: instanceId,
@@ -46,7 +56,7 @@ export function WorkspaceGrid() {
     };
 
     const handleDeleteInstance = (instanceId) => {
-        console.log(`🗑️  User deleting instance: ${instanceId}`);
+        console.log(`🗑️  Deleting instance: ${instanceId}`);
 
         // Clean up in workspace manager
         workspaceManager.deleteInstance(instanceId);
@@ -56,10 +66,7 @@ export function WorkspaceGrid() {
     };
 
     const handleDuplicateInstance = (instanceId) => {
-        console.log(`📋 User duplicating instance: ${instanceId}`);
-
-        // For now, just create a new instance
-        // Later we'll implement true duplication with camera/filters copied
+        console.log(`📋 Duplicating instance: ${instanceId}`);
         createNewInstance();
     };
 
@@ -198,8 +205,8 @@ export function WorkspaceGrid() {
                         maxWidth: "400px",
                         lineHeight: 1.5
                     }}>
-                        Click "Add Instance" to create a visualization window, or load a dataset
-                        from the Files panel to automatically create one.
+                        Load a dataset from the Files panel to automatically create a window,
+                        or click "Add Instance" to create one manually.
                     </div>
                     <button
                         onClick={createNewInstance}
