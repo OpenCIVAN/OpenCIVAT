@@ -1,7 +1,4 @@
-// ----------------------------------------------------------------------------
-// Simple Visualization Manager
-// Single shared visualization that everyone sees
-// ----------------------------------------------------------------------------
+// src/core/visualizationManager.js
 
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
@@ -35,10 +32,42 @@ class VisualizationManager {
   }
 
   /**
-   * Get current dataset
+   * Get current dataset (with validation)
+   * ✨ NEW: Only returns dataset if it actually exists in datasetManager
    */
   getCurrentDataset() {
-    return this.yViz.get("current") || null;
+    const stored = this.yViz.get("current");
+
+    if (!stored) {
+      return null;
+    }
+
+    // ✨ CRITICAL FIX: Validate that the dataset actually exists
+    // Import dynamically to avoid circular dependency
+    const { datasetManager } = require("@Core/datasets/datasetManager.js");
+
+    // Check if this dataset exists in the store
+    const exists = datasetManager.datasets.has(stored.datasetId);
+
+    if (!exists) {
+      console.warn(
+        `⚠️  Current dataset ${stored.datasetId} no longer exists, clearing it`
+      );
+      // Clear the stale reference
+      this.yViz.delete("current");
+      return null;
+    }
+
+    return stored;
+  }
+
+  /**
+   * Clear the current dataset
+   * ✨ NEW: Useful for explicitly clearing stale state
+   */
+  clearCurrentDataset() {
+    this.yViz.delete("current");
+    console.log("🗑️  Current dataset cleared");
   }
 
   /**
