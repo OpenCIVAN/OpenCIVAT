@@ -2,9 +2,7 @@
 // Enhanced version with proper publicPath handling for sample files
 
 import React, { useState, useRef } from "react";
-import { FolderOpen, Upload, File, Check, Loader } from "lucide-react";
-
-console.log("📦 Lucide imports:", { FolderOpen, Upload, File, Check, Loader });
+import { FolderOpen, Upload, File as FileIcon, Check, Loader } from "lucide-react";
 
 import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
@@ -179,7 +177,7 @@ export function FilesPanel() {
                                     onClick={() => handleLoadSample(sample)}
                                     disabled={isAnyLoading || isAlreadyAdded}
                                 >
-                                    <File size={18} />
+                                    <FileIcon size={18} />
                                     <span className="files-panel__sample-name">{sample.name}</span>
                                     <span className="files-panel__sample-size">{sample.size}</span>
                                     {isThisLoading && (
