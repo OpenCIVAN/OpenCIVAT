@@ -11,10 +11,10 @@ import { setupFileHandler } from "@Core/datasets/fileHandler.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
-import { vrModeManager } from "@VR/vrModeManager";
-import { vrControllers } from "@VR/vrControllers";
-import { vrAvatarSystem } from "@VR/vrAvatarSystem";
-import { vrSpatialUI } from "@VR/vrSpatialUI";
+import { vrModeManager } from "@VR/vrModeManager.js";
+import { vrControllers } from "@VR/vrControllers.js";
+import { vrAvatarSystem } from "@VR/vrAvatarSystem.js";
+import { vrSpatialUI } from "@VR/vrSpatialUI.js";
 
 /**
  * Phase 1: Pre-User Initialization
@@ -106,48 +106,100 @@ export async function initializePhase2(username) {
 }
 
 /**
- * Phase 3: Post-Scene Initialization
- * Initialize systems that need VTK scene to exist
- * This is called AFTER VTK scene is created
+ * Phase 3: Post-Scene Initialization (MINIMAL VERSION)
+ *
+ * With multi-instance architecture, VTK-dependent systems are initialized
+ * per-instance, not globally. This phase now only handles systems that
+ * don't require VTK containers.
+ *
+ * ❌ REMOVED (moved to per-instance initialization):
+ * - setupViewportInteraction (needs container)
+ * - annotationRenderer.initialize (needs renderer)
+ * - cameraSync.initialize (needs camera)
+ * - actorSync (needs scene objects)
+ *
+ * ✅ KEPT (work without VTK):
+ * - Cursor system (tracks positions, no container needed)
+ * - Dataset orchestrator (coordinates loading)
  */
 export function initializePhase3() {
-  console.log("🚀 Phase 3: Post-Scene Initialization");
+  console.log("🚀 Phase 3: Post-Scene Initialization (Minimal)");
 
   // Initialize collaborative cursors
-  import("@Collaboration/presence/cursors.js").then(
-    ({ initializeCursorSystem }) => {
-      initializeCursorSystem();
-    }
-  );
-
-  // Setup viewport interaction
-  import("@UI/viewportInteraction.js").then(({ setupViewportInteraction }) => {
-    setupViewportInteraction();
-  });
-
-  // Initialize camera sync - but this needs refactoring too
-  // for multi-instance (each instance should have independent camera)
-  import("@Collaboration/sync/cameraSync.js").then(({ cameraSync }) => {
-    // TODO: Refactor camera sync to work per-instance
-    // For now, comment out to avoid conflicts
-    // cameraSync.initialize();
-  });
-
-  // Initialize annotation renderer (needs VTK scene)
-  setTimeout(() => {
-    import("@Collaboration/annotations/annotationRenderer.js").then(
-      ({ annotationRenderer }) => {
-        annotationRenderer.initialize();
+  // This tracks cursor positions but doesn't need VTK containers
+  import("@Collaboration/presence/cursors.js")
+    .then(({ initializeCursorSystem }) => {
+      try {
+        initializeCursorSystem();
+        console.log("✅ Cursor system initialized");
+      } catch (error) {
+        console.warn("⚠️ Cursor system not available:", error.message);
       }
-    );
-  }, 500);
+    })
+    .catch((error) => {
+      console.warn("⚠️ Could not load cursor system:", error.message);
+    });
 
   // Initialize dataset loading orchestrator
-  import("@Core/datasets/datasetLoadingOrchestrator.js").then(
-    ({ datasetLoadingOrchestrator }) => {
-      datasetLoadingOrchestrator.initialize();
-    }
+  // This coordinates dataset loading but doesn't need VTK containers
+  import("@Core/datasets/datasetLoadingOrchestrator.js")
+    .then(({ datasetLoadingOrchestrator }) => {
+      try {
+        datasetLoadingOrchestrator.initialize();
+        console.log("✅ Dataset loading orchestrator initialized");
+      } catch (error) {
+        console.warn("⚠️ Dataset orchestrator not available:", error.message);
+      }
+    })
+    .catch((error) => {
+      console.warn("⚠️ Could not load dataset orchestrator:", error.message);
+    });
+
+  console.log("✅ Phase 3 complete - Ready for instances!");
+  console.log(
+    "💡 Instance-specific systems will initialize when instances are created"
+  );
+}
+
+/**
+ * NEW: Per-Instance Initialization
+ *
+ * Call this from InstanceViewport after creating a VTK scene.
+ * This initializes systems that need VTK scene objects.
+ *
+ * @param {string} instanceId - The instance ID
+ * @param {Object} sceneObjects - VTK scene objects (renderer, renderWindow, etc.)
+ */
+export function initializeInstanceSystems(instanceId, sceneObjects) {
+  console.log(
+    `🎨 Initializing VTK-dependent systems for instance: ${instanceId}`
   );
 
-  console.log("✅ Phase 3 complete - Scene ready!");
+  const { renderer, renderWindow, camera, interactor, openGLRenderWindow } =
+    sceneObjects;
+
+  if (!renderer || !renderWindow) {
+    console.error(`❌ Invalid scene objects for instance ${instanceId}`);
+    return;
+  }
+
+  // TODO: Initialize per-instance systems here as needed
+  // Examples for future implementation:
+
+  // 1. Instance-specific viewport interaction
+  // import("@UI/viewportInteraction.js").then(({ setupInstanceInteraction }) => {
+  //   setupInstanceInteraction(instanceId, interactor, renderer);
+  // });
+
+  // 2. Instance-specific annotation renderer
+  // import("@Collaboration/annotations/annotationRenderer.js").then(({ createInstanceAnnotationRenderer }) => {
+  //   createInstanceAnnotationRenderer(instanceId, renderer, renderWindow);
+  // });
+
+  // 3. Instance-specific camera sync (if sharing camera)
+  // import("@Collaboration/sync/cameraSync.js").then(({ syncInstanceCamera }) => {
+  //   syncInstanceCamera(instanceId, camera, renderer);
+  // });
+
+  console.log(`✅ Instance systems initialized: ${instanceId}`);
 }

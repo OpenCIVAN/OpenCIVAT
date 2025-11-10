@@ -1,25 +1,32 @@
 // src/ui/react/hooks/useDatasets.js
-import { useSyncExternalStore } from "react";
-import { useDatasetStore } from "@UI/react/store/datasetStore.js";
+// FIXED: Stable subscribe function to prevent infinite re-render loop
+
+import { useSyncExternalStore, useCallback } from "react";
+
 import { datasetManager } from "@Core/datasets/datasetManager.js";
+import { useDatasetStore } from "@UI/react/store/datasetStore.js";
+
+// CRITICAL: Move subscribe function OUTSIDE the hook
+// This ensures it has a stable reference and doesn't recreate on every render
+const subscribeToDatasetManager = (callback) => {
+  return datasetManager.onChange(callback);
+};
+
+// CRITICAL: Move getSnapshot function OUTSIDE the hook
+// This ensures React can properly cache the snapshot
+const getDatasetManagerSnapshot = () => {
+  return datasetManager.datasets.size + datasetManager.loadingDatasets.size;
+};
 
 export function useDatasets() {
   // Subscribe to Zustand for metadata changes
   const datasetsMetadata = useDatasetStore((state) => state.getAllDatasets());
 
-  // Subscribe to datasetManager for loading state using React 18's useSyncExternalStore
-  // This hook is specifically designed for subscribing to external stores
+  // Subscribe to datasetManager for loading state
+  // Using STABLE functions that don't recreate on every render
   const managerVersion = useSyncExternalStore(
-    // subscribe function
-    (callback) => {
-      return datasetManager.onChange(callback);
-    },
-    // getSnapshot function - returns a value that changes when manager state changes
-    () => {
-      // Return a simple number that increments when datasets change
-      // This forces a re-render without creating new object references
-      return datasetManager.datasets.size + datasetManager.loadingDatasets.size;
-    }
+    subscribeToDatasetManager,
+    getDatasetManagerSnapshot
   );
 
   // Transform the data - runs on every render but that's fine, it's fast
