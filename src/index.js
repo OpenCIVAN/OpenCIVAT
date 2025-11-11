@@ -3,7 +3,7 @@
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
+import { Bootstrap } from "@UI/react/Bootstrap.jsx";
 
 // Import global styles
 import "@UI/react/styles/global.css";
@@ -58,12 +58,8 @@ function initializeApp() {
   }
 
   // Create React root and render app
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <React.StrictMode>
-      <CIAWebApp />
-    </React.StrictMode>
-  );
+  const root = ReactDOM.createRoot(document.getElementById("root"));
+  root.render(<Bootstrap />);
 
   console.log("✅ React app rendered");
   console.log("📝 Type CIA.help() in console for debug commands");

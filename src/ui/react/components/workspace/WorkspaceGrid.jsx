@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { EnhancedInstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
+import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
 import { useCurrentDataset } from "@UI/react/hooks/useCurrentDataset.js";
 
 export function WorkspaceGrid() {
@@ -170,7 +170,7 @@ export function WorkspaceGrid() {
             ) : (
                 <div ref={gridRef} style={getGridStyle()}>
                     {instances.map(instance => (
-                        <EnhancedInstanceViewport
+                        <InstanceViewport
                             key={instance.id}
                             instanceId={instance.id}
                             instanceName={instance.name}

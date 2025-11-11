@@ -1,4 +1,4 @@
-// src/ui/react/components/workspace/EnhancedInstanceViewport.jsx
+// src/ui/react/components/workspace/InstanceViewport.jsx
 // Enhanced instance viewport with tools integration
 
 import React, { useRef, useEffect, useState } from "react";
@@ -19,7 +19,7 @@ import {
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { datasetManager } from "@Core/datasets/datasetManager.js";
 
-export function EnhancedInstanceViewport({
+export function InstanceViewport({
     instanceId,
     instanceName,
     datasetId,
