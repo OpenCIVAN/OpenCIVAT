@@ -2,10 +2,10 @@
 // CORRECTLY FIXED VERSION matching your actual folder structure
 
 import { sessionManager } from "@Core/session/sessionManager.js";
-import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js"; // ← CORRECT PATH
+import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
-import { presenceSystem } from "@Collaboration/presence/presenceSystem.js"; // ← CORRECT: presenceSystem, not presenceManager
+import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import { datasetManager } from "@Core/datasets/datasetManager.js";
 import { visualizationManager } from "@Core/visualizationManager.js";
 import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
@@ -13,8 +13,12 @@ import {
   initializeAllObservers,
   markSystemReady,
 } from "@Collaboration/yjs/yjsObservers.js";
-import { textChat } from "@Collaboration/communication/textChat.js"; // ← CORRECT PATH: communication folder
+import { textChat } from "@Collaboration/communication/textChat.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import { runFoundationTests } from "@Tests/core/instanceTypes.test.js";
+
+// Instance type registration
+import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 
 // VR imports - these exist in your structure
 import { vrModeManager } from "@VR/vrModeManager.js";
@@ -219,7 +223,6 @@ export async function initializePhase2() {
     }
 
     console.log("✅ Phase 2 complete - User services ready");
-    console.log("");
   } catch (error) {
     console.error("❌ Phase 2 initialization failed:", error);
     throw error;
@@ -287,7 +290,6 @@ export async function initializePhase3() {
     console.log("✅ Debug helpers available");
 
     console.log("✅ Phase 3 complete");
-    console.log("");
     console.log("🎉 CIA Web fully initialized!");
     console.log("📝 Type CIA.help() for debug commands");
   } catch (error) {
@@ -485,6 +487,11 @@ export async function initializeCIAWeb() {
     console.log("✅ CIA Web Ready!");
     console.log("Type CIA.help() in console for debug commands");
     console.log("====================================");
+
+    if (process.env.NODE_ENV === "development") {
+      window.CIA = window.CIA || {};
+      window.CIA.runFoundationTests = runFoundationTests;
+    }
 
     return true;
   } catch (error) {

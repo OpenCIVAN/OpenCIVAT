@@ -169,39 +169,19 @@ class InstanceTypeRegistry {
   }
 }
 
-// Export singleton registry
+// Export the class for testing and advanced use cases
+export { InstanceTypeRegistry };
+
+// Export singleton registry for normal application use
 export const instanceTypeRegistry = new InstanceTypeRegistry();
 
 /**
- * Convenience function to register instance types during app initialization
+ * NOTE: Instance type registration has moved!
  *
- * Import this in your app initialization code and call it to register
- * all your instance type plugins in one place.
+ * To register instance types, import and call registerInstanceTypes()
+ * from instanceTypesInit.js during application initialization.
  *
  * @example
- * // In appInitializer.js:
- * import { registerDefaultInstanceTypes } from '@Core/instances/types/InstanceTypeRegistry.js';
- *
- * async function initializeApp() {
- *   // ... other initialization ...
- *   registerDefaultInstanceTypes();
- *   // Now all instance types are available
- * }
+ * import { registerInstanceTypes } from '@Core/instances/types/instanceTypesInit.js';
+ * registerInstanceTypes();
  */
-export function registerDefaultInstanceTypes() {
-  console.log("📋 Registering default instance types...");
-
-  // Import and register VTK handler
-  import("./VTKInstanceHandler.js").then((module) => {
-    instanceTypeRegistry.register(module.vtkInstanceHandler);
-  });
-
-  // Contributors: Add your instance types here!
-  // import('./PlotlyInstanceHandler.js').then(module => {
-  //   instanceTypeRegistry.register(module.plotlyInstanceHandler);
-  // });
-
-  // import('./ThreeJSInstanceHandler.js').then(module => {
-  //   instanceTypeRegistry.register(module.threeJSInstanceHandler);
-  // });
-}
