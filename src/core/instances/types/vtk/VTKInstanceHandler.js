@@ -105,60 +105,116 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
    * Called when instance is deleted. Must properly dispose of all VTK
    * objects to prevent memory leaks. This is critical in long-running
    * collaborative sessions.
+   *
+   * CRITICAL: Cleanup order matters! Disconnect observers BEFORE deleting
+   * the objects they reference, or you'll get callbacks firing on deleted objects.
    */
   async cleanup(instanceData) {
     const { instanceId, sceneObjects, actors, widgets } = instanceData;
 
     console.log(`🧹 VTK Handler: Cleaning up instance ${instanceId}`);
 
-    // Clean up VTK widgets
+    // STEP 1: Disconnect observers FIRST, before touching any VTK objects
+    // This prevents callbacks from firing during or after cleanup
+    if (sceneObjects?.resizeObserver) {
+      try {
+        sceneObjects.resizeObserver.disconnect();
+        console.log("  ✓ ResizeObserver disconnected");
+      } catch (error) {
+        console.warn("  ⚠️  Error disconnecting ResizeObserver:", error);
+      }
+    }
+
+    // STEP 2: Clean up VTK widgets
+    // Widgets often have their own internal state and event listeners
     if (widgets && widgets.size > 0) {
       widgets.forEach((widget, widgetId) => {
         console.log(`  Disposing widget: ${widgetId}`);
-        if (widget.delete) widget.delete();
+        try {
+          if (widget.delete) widget.delete();
+        } catch (error) {
+          console.warn(`  ⚠️  Error deleting widget ${widgetId}:`, error);
+        }
       });
       widgets.clear();
     }
 
-    // Clean up VTK actors
+    // STEP 3: Clean up VTK actors
+    // Remove actors from the renderer before deleting them
     if (actors && actors.size > 0) {
       actors.forEach((actor, datasetId) => {
         console.log(`  Removing actor for dataset: ${datasetId}`);
-        if (sceneObjects && sceneObjects.renderer) {
-          sceneObjects.renderer.removeActor(actor);
+        try {
+          // Remove from renderer first, then delete
+          if (sceneObjects?.renderer) {
+            sceneObjects.renderer.removeActor(actor);
+          }
+          if (actor.delete) actor.delete();
+        } catch (error) {
+          console.warn(
+            `  ⚠️  Error cleaning up actor for ${datasetId}:`,
+            error
+          );
         }
-        if (actor.delete) actor.delete();
       });
       actors.clear();
     }
 
-    // Clean up renderer and render window
+    // STEP 4: Clean up core VTK rendering objects
+    // These must be deleted in a specific order: interactor, then renderer, then renderWindow
     if (sceneObjects) {
-      const { renderer, renderWindow, interactor } = sceneObjects;
+      const { renderer, renderWindow, interactor, openGLRenderWindow } =
+        sceneObjects;
 
+      // Disconnect interactor from events
       if (interactor) {
-        interactor.unbindEvents();
-        if (interactor.delete) interactor.delete();
+        try {
+          interactor.unbindEvents();
+          console.log("  ✓ Interactor events unbound");
+          if (interactor.delete) interactor.delete();
+        } catch (error) {
+          console.warn("  ⚠️  Error cleaning up interactor:", error);
+        }
       }
 
-      if (renderer && renderer.delete) {
-        renderer.delete();
+      // Delete OpenGL render window if it exists
+      if (openGLRenderWindow) {
+        try {
+          if (openGLRenderWindow.delete) openGLRenderWindow.delete();
+          console.log("  ✓ OpenGL render window deleted");
+        } catch (error) {
+          console.warn("  ⚠️  Error deleting OpenGL render window:", error);
+        }
       }
 
-      if (renderWindow && renderWindow.delete) {
-        renderWindow.delete();
+      // Delete renderer
+      if (renderer) {
+        try {
+          if (renderer.delete) renderer.delete();
+          console.log("  ✓ Renderer deleted");
+        } catch (error) {
+          console.warn("  ⚠️  Error deleting renderer:", error);
+        }
+      }
+
+      // Delete render window last
+      if (renderWindow) {
+        try {
+          if (renderWindow.delete) renderWindow.delete();
+          console.log("  ✓ Render window deleted");
+        } catch (error) {
+          console.warn("  ⚠️  Error deleting render window:", error);
+        }
       }
     }
 
-    // Clean up handler-specific tracking
+    // STEP 5: Clean up handler-specific tracking
     this.activeWidgets.delete(instanceId);
     this.cursorActors.delete(instanceId);
     this.annotationActors.delete(instanceId);
 
     console.log(`✅ VTK Handler: Instance ${instanceId} cleaned up`);
   }
-
-  // In VTKInstanceHandler.js, replace the loadData method:
 
   /**
    * Load data into this VTK instance
