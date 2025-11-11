@@ -84,6 +84,7 @@ module.exports = {
       "@Debug": path.resolve(__dirname, "src/debug"),
       "@Init": path.resolve(__dirname, "src/init"),
       "@Services": path.resolve(__dirname, "src/services"),
+      "@Tests": path.resolve(__dirname, "src/__tests__"),
       "@UI": path.resolve(__dirname, "src/ui"),
       "@Utils": path.resolve(__dirname, "src/utils"),
       "@VR": path.resolve(__dirname, "src/vr"),

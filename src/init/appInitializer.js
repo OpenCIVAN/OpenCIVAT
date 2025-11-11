@@ -40,6 +40,11 @@ export async function initializePhase1() {
   console.log("==================================");
 
   try {
+    // Instance type registration - MUST happen first
+    // This makes visualization types (VTK, Plotly, etc.) available
+    console.log("📋 Registering instance types...");
+    registerInstanceTypes();
+
     // Session management - critical for room setup
     console.log("📋 Initializing session...");
     sessionManager.initializeFromURL();

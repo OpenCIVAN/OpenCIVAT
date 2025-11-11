@@ -158,14 +158,14 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     console.log(`✅ VTK Handler: Instance ${instanceId} cleaned up`);
   }
 
+  // In VTKInstanceHandler.js, replace the loadData method:
+
   /**
    * Load data into this VTK instance
    *
-   * The handler receives dataset metadata and the actual data (polydata),
-   * and is responsible for rendering it using VTK.
-   *
-   * This is where your existing data loading code would be called.
-   * For now, this is a stub showing the pattern.
+   * This is where we integrate your existing VTK data loading logic.
+   * The handler receives polydata and needs to create a mapper and actor,
+   * add the actor to the scene, and render the result.
    */
   async loadData(instanceData, dataset, data) {
     const { instanceId, sceneObjects, actors } = instanceData;
@@ -174,18 +174,52 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       `📦 VTK Handler: Loading dataset ${dataset.id} into instance ${instanceId}`
     );
 
-    // TODO: Integrate your existing data loading code here
-    // This would use your existing mapper/actor creation logic
-    // from datasetManager or wherever it currently lives
+    // Defensive check - make sure we have the necessary scene objects
+    if (!sceneObjects || !sceneObjects.renderer || !sceneObjects.renderWindow) {
+      console.error(
+        "❌ Cannot load data: scene objects not properly initialized"
+      );
+      return;
+    }
 
-    // Example pattern (you'll fill in with actual implementation):
-    // const actor = createActorFromPolydata(data);
-    // sceneObjects.renderer.addActor(actor);
-    // actors.set(dataset.id, actor);
-    // sceneObjects.renderer.resetCamera();
-    // sceneObjects.renderWindow.render();
+    const { renderer, renderWindow, mapper, actor } = sceneObjects;
 
-    console.log(`✅ VTK Handler: Dataset ${dataset.id} loaded`);
+    try {
+      // This is the critical VTK operation: set the polydata as the mapper's input
+      // Your existing code likely does exactly this somewhere
+      mapper.setInputData(data);
+
+      // Check if the actor is already in the renderer
+      // This prevents duplicate actors if loadData is called multiple times
+      const actorsInScene = renderer.getActors();
+      if (!actorsInScene.includes(actor)) {
+        renderer.addActor(actor);
+        console.log("  ✓ Actor added to renderer");
+      } else {
+        console.log("  ✓ Actor already in renderer, updated data");
+      }
+
+      // Reset the camera to frame the data nicely
+      // This ensures the entire dataset is visible
+      renderer.resetCamera();
+
+      // Trigger a render to display the data
+      renderWindow.render();
+
+      // Store the actor reference for this dataset
+      // This allows us to remove it later if needed
+      actors.set(dataset.id, actor);
+
+      console.log(`✅ VTK Handler: Dataset ${dataset.id} loaded and rendered`);
+      console.log(`   Points: ${data.getPoints().getNumberOfPoints()}`);
+      console.log(`   Cells: ${data.getNumberOfCells()}`);
+    } catch (error) {
+      console.error(
+        `❌ VTK Handler: Failed to load dataset ${dataset.id}:`,
+        error
+      );
+      throw error;
+    }
   }
 
   // ===========================================================================
@@ -234,12 +268,45 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
    */
   getHeaderInfo(instanceData) {
     const actors = instanceData?.actors;
+    const sceneObjects = instanceData?.sceneObjects;
+
+    const stats = [];
+
+    // Always show dataset count
+    stats.push({
+      label: "Datasets",
+      value: actors ? actors.size.toString() : "0",
+    });
+
+    // If we have scene objects, we can extract detailed VTK statistics
+    if (sceneObjects && sceneObjects.mapper) {
+      const mapper = sceneObjects.mapper;
+      const input = mapper.getInputData();
+
+      if (input) {
+        // Get point count from the actual VTK data
+        const points = input.getPoints();
+        if (points) {
+          const pointCount = points.getNumberOfPoints();
+          stats.push({
+            label: "Points",
+            value: pointCount.toLocaleString(), // Formats with commas: 541,199
+          });
+        }
+
+        // Get cell/polygon count
+        const cellCount = input.getNumberOfCells();
+        if (cellCount > 0) {
+          stats.push({
+            label: "Cells",
+            value: cellCount.toLocaleString(),
+          });
+        }
+      }
+    }
 
     return {
-      stats: [
-        { label: "Datasets", value: actors ? actors.size.toString() : "0" },
-        // TODO: Add more stats like point count, polygon count
-      ],
+      stats,
       indicators: [{ icon: "cube", label: "3D View", color: "#4CAF50" }],
     };
   }
