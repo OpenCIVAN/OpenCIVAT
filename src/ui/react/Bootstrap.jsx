@@ -1,150 +1,264 @@
 // src/ui/react/Bootstrap.jsx
-// Minimal component to collect username before full app initialization
-// Ensures username is collected before initializing collaboration systems
+// Gate-keeping layer that handles authentication, username collection, and Phase 2 initialization
+// This component ensures all prerequisites are met before rendering the main application
 
 import React, { useState, useEffect, useRef } from "react";
-
 import { hasUserName, getUserName, setUserName } from "@Collaboration/presence/userManagement.js";
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
-import { UsernameModal } from "@UI/react/components/modals/UsernameModal.jsx";
 
-// Track if Phase 2 has run at module level (persists across remounts)
-let phase2Complete = false;
+/**
+ * Bootstrap Component
+ * 
+ * This is the gate-keeping layer of the application. It handles:
+ * 1. Authentication checks (future feature)
+ * 2. Username collection/validation
+ * 3. Phase 2 initialization (user services)
+ * 4. License validation (future feature)
+ * 5. Feature flags (future feature)
+ * 
+ * Only after all prerequisites are met does it render the main application.
+ * This separation allows contributors to add authentication or other gate-keeping
+ * features without modifying the core application.
+ */
+export function Bootstrap() {
+    // State management for the bootstrap process
+    const [bootstrapState, setBootstrapState] = useState('checking'); // checking | username | initializing | ready | error
+    const [username, setUsername] = useState('');
+    const [errorMessage, setErrorMessage] = useState(null);
 
-export function Bootstrap({ roomName }) {
-    const [username, setUsername] = useState(null);
-    const [isInitializing, setIsInitializing] = useState(false);
-    const [initializationComplete, setInitializationComplete] = useState(phase2Complete);
-    const [showModal, setShowModal] = useState(true);
-    const initOnce = useRef(false); // Prevent double-initialization in React Strict Mode
+    // Ref to prevent double initialization in React StrictMode
+    const initializationStarted = useRef(false);
+    const phase2Complete = useRef(false);
 
-    // Check if username already exists (from localStorage)
+    // STEP 1: Check prerequisites on mount
     useEffect(() => {
-        // If Phase 2 already completed from a previous mount, skip to the end
-        if (phase2Complete) {
-            const existingName = getUserName();
-            setUsername(existingName);
-            setShowModal(false);
-            setInitializationComplete(true);
+        checkPrerequisites();
+    }, []);
+
+    /**
+     * Check all prerequisites before allowing app access
+     * This is where future authentication checks would go
+     */
+    async function checkPrerequisites() {
+        console.log("🔐 Bootstrap: Checking prerequisites...");
+
+        try {
+            // FUTURE: Add authentication check here
+            // const isAuthenticated = await checkAuthentication();
+            // if (!isAuthenticated) {
+            //   setBootstrapState('login');
+            //   return;
+            // }
+
+            // FUTURE: Check license validity
+            // const hasValidLicense = await checkLicense();
+            // if (!hasValidLicense) {
+            //   setBootstrapState('license');
+            //   return;
+            // }
+
+            // Check for existing username
+            if (hasUserName()) {
+                const existingName = getUserName();
+                console.log(`✅ Bootstrap: Found existing username: ${existingName}`);
+                setUsername(existingName);
+
+                // If we already completed Phase 2 in a previous mount, skip to ready
+                if (phase2Complete.current) {
+                    setBootstrapState('ready');
+                } else {
+                    setBootstrapState('initializing');
+                    await runPhase2Initialization(existingName);
+                }
+            } else {
+                console.log("📝 Bootstrap: Username required");
+                setBootstrapState('username');
+            }
+        } catch (error) {
+            console.error("❌ Bootstrap: Prerequisite check failed:", error);
+            setErrorMessage(`System check failed: ${error.message}`);
+            setBootstrapState('error');
+        }
+    }
+
+    /**
+     * Handle username submission
+     */
+    async function handleUsernameSubmit(event) {
+        event.preventDefault();
+
+        const trimmedName = username.trim();
+
+        // Validate username
+        if (!trimmedName) {
+            alert("Please enter a username");
             return;
         }
 
-        // Check if username already exists (from localStorage)
-        if (hasUserName()) {
-            const existingName = getUserName();
-            console.log("✅ Username already set:", existingName);
-            setUsername(existingName);
-            setShowModal(false);
-
-            // Only trigger Phase 2 once, even if this effect runs twice
-            if (!initOnce.current) {
-                initOnce.current = true;
-                handleUsernameSet(existingName);
-            }
+        if (trimmedName.length > 20) {
+            alert("Username must be 20 characters or less");
+            return;
         }
-    }, []);
 
-    const handleUsernameSet = async (name) => {
-        // CRITICAL: Set the username in userManagement FIRST, SYNCHRONOUSLY
-        setUserName(name);
-        console.log("👤 Username set:", name);
-        setUsername(name); // This username for React state
-        setShowModal(false);
-        setIsInitializing(true);
+        // FUTURE: Check username against server for uniqueness
+        // const isUnique = await checkUsernameUniqueness(trimmedName);
+        // if (!isUnique) {
+        //   alert("Username already taken in this room");
+        //   return;
+        // }
 
-        // Small delay to ensure userManagement state is fully updated
-        await new Promise(resolve => setTimeout(resolve, 50));
-
-        try {
-            // Run Phase 2 initialization with the username
-            await initializePhase2(name);
-
-            // Mark as complete at module level so remounts skip initialization
-            phase2Complete = true;
-
-            setInitializationComplete(true);
-            setIsInitializing(false);
-
-            console.log("✅ Application fully initialized!");
-
-        } catch (error) {
-            console.error("❌ Phase 2 initialization failed:", error);
-            setIsInitializing(false);
-            alert("Failed to initialize application. Please refresh and try again.");
-        }
-    };
-
-    // Show username modal if needed
-    if (showModal) {
-        return (
-            <UsernameModal onSubmit={handleUsernameSet} />
-        );
+        console.log(`👤 Bootstrap: Setting username: ${trimmedName}`);
+        setUserName(trimmedName);
+        setBootstrapState('initializing');
+        await runPhase2Initialization(trimmedName);
     }
 
-    // Show loading screen while Phase 2 runs
-    if (isInitializing) {
+    /**
+     * Run Phase 2 initialization with the validated username
+     */
+    async function runPhase2Initialization(validatedUsername) {
+        // Prevent double initialization
+        if (initializationStarted.current) {
+            console.log("⚠️ Bootstrap: Phase 2 already started, skipping");
+            return;
+        }
+
+        initializationStarted.current = true;
+        console.log("🚀 Bootstrap: Starting Phase 2 initialization...");
+
+        try {
+            await initializePhase2();
+
+            phase2Complete.current = true;
+            console.log("✅ Bootstrap: Phase 2 complete, user services ready");
+
+            // FUTURE: Initialize user-specific features here
+            // await loadUserPreferences(validatedUsername);
+            // await connectToUserChannels(validatedUsername);
+
+            setBootstrapState('ready');
+        } catch (error) {
+            console.error("❌ Bootstrap: Phase 2 initialization failed:", error);
+            setErrorMessage(`Failed to initialize user services: ${error.message}`);
+            setBootstrapState('error');
+        }
+    }
+
+    /**
+     * Handle retry after error
+     */
+    function handleRetry() {
+        // Reset state and try again
+        initializationStarted.current = false;
+        phase2Complete.current = false;
+        setErrorMessage(null);
+        setBootstrapState('checking');
+        checkPrerequisites();
+    }
+
+    // RENDER: Different UI based on bootstrap state
+
+    // Error state
+    if (bootstrapState === 'error') {
         return (
-            <div style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                backgroundColor: "#0a0a0a",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 10000
-            }}>
-                <div style={{
-                    textAlign: "center",
-                    color: "#e0e0e0"
-                }}>
-                    <div style={{
-                        fontSize: "48px",
-                        marginBottom: "20px"
-                    }}>
-                        🔄
-                    </div>
-                    <h2 style={{
-                        margin: "0 0 10px 0",
-                        fontSize: "20px",
-                        fontWeight: "600"
-                    }}>
-                        Initializing Collaboration Systems...
-                    </h2>
-                    <p style={{
-                        margin: 0,
-                        fontSize: "14px",
-                        color: "#999"
-                    }}>
-                        Setting up real-time features for {username}
-                    </p>
-                    <div style={{
-                        marginTop: "30px",
-                        width: "40px",
-                        height: "40px",
-                        border: "4px solid #333",
-                        borderTop: "4px solid #4CAF50",
-                        borderRadius: "50%",
-                        animation: "spin 1s linear infinite",
-                        margin: "30px auto 0"
-                    }} />
+            <div className="bootstrap-error">
+                <div className="error-card">
+                    <h1>Initialization Error</h1>
+                    <p>{errorMessage}</p>
+                    <button onClick={handleRetry} className="retry-button">
+                        Try Again
+                    </button>
+                    <button onClick={() => window.location.reload()} className="reload-button">
+                        Reload Page
+                    </button>
                 </div>
             </div>
         );
     }
 
-
-    // Phase 2 complete - render the full application
-    if (initializationComplete) {
+    // Checking prerequisites
+    if (bootstrapState === 'checking') {
         return (
-            <CIAWebApp
-                roomName={roomName}
-                userName={username}
-            />
+            <div className="bootstrap-checking">
+                <div className="checking-card">
+                    <h2>Initializing CIA Web</h2>
+                    <div className="checking-spinner" />
+                    <p>Checking system requirements...</p>
+                </div>
+            </div>
         );
+    }
+
+    // Username collection
+    if (bootstrapState === 'username') {
+        return (
+            <div className="bootstrap-username">
+                <div className="username-card">
+                    <h1>Welcome to CIA Web</h1>
+                    <p className="subtitle">Collaborative Immersive Analytics Platform</p>
+                    <p className="description">
+                        Enter your name to join the collaborative session
+                    </p>
+
+                    <form onSubmit={handleUsernameSubmit} className="username-form">
+                        <input
+                            type="text"
+                            placeholder="Enter your username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            autoFocus
+                            maxLength={20}
+                            className="username-input"
+                            required
+                        />
+                        <button type="submit" className="username-submit">
+                            Join Session
+                        </button>
+                    </form>
+
+                    <div className="room-info">
+                        Room: {window.sessionManager?.getRoomId() || 'default-analytics-room'}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Initializing user services
+    if (bootstrapState === 'initializing') {
+        return (
+            <div className="bootstrap-initializing">
+                <div className="initializing-card">
+                    <h2>Setting Up Your Workspace</h2>
+                    <div className="progress-bar">
+                        <div className="progress-fill" />
+                    </div>
+                    <p>Initializing collaboration services for {username}...</p>
+                    <ul className="initialization-steps">
+                        <li className="step-complete">Core services initialized ✓</li>
+                        <li className="step-active">Setting up user presence...</li>
+                        <li className="step-pending">Connecting to collaboration room</li>
+                        <li className="step-pending">Loading workspace</li>
+                    </ul>
+                </div>
+            </div>
+        );
+    }
+
+    // FUTURE: Login state (when authentication is added)
+    // if (bootstrapState === 'login') {
+    //   return <LoginComponent onSuccess={checkPrerequisites} />;
+    // }
+
+    // FUTURE: License state (for enterprise features)
+    // if (bootstrapState === 'license') {
+    //   return <LicenseComponent onSuccess={checkPrerequisites} />;
+    // }
+
+    // Ready - render the main application
+    if (bootstrapState === 'ready') {
+        return <CIAWebApp username={username} />;
     }
 
     // Fallback (shouldn't reach here)

@@ -26,7 +26,7 @@ export function ControlPanel() {
     // Get connected users periodically
     React.useEffect(() => {
         const updateUsers = () => {
-            const users = presenceSystem.getConnectedUsers();
+            const users = presenceSystem.getOnlineUsers();
             setConnectedUsers(users);
         };
 
