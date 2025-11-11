@@ -4,27 +4,7 @@
 import { initializeScene } from "@Core/scene/sceneManager.js";
 import { generateId } from "@Utils/idGenerator.js";
 
-/**
- * WorkspaceManager
- *
- * Manages multiple VTK renderer instances, each in their own container.
- * Each instance has independent camera, filters, and widgets but can share
- * datasets and annotations.
- *
- * Instance Structure:
- * {
- *   instanceId: string,
- *   container: HTMLElement,
- *   sceneObjects: {
- *     renderer, renderWindow, openGLRenderWindow, camera,
- *     interactor, interactorStyle, XRHelper, vtpReader, mapper, actor
- *   },
- *   datasetId: string | null,
- *   filters: Map<string, any>,
- *   widgets: Map<string, any>,
- *   visibility: Map<string, boolean>
- * }
- */
+
 
 class WorkspaceManager {
   constructor() {

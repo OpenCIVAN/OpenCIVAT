@@ -1,6 +1,5 @@
 // src/ui/react/CIAWebApp.jsx
-// Pure application layer - only handles UI and Phase 3 (optional enhancements)
-// Assumes Bootstrap has already handled authentication, username, and Phase 2
+// FIXED: Proper flex layout so status bar doesn't overlay content
 
 import React, { useEffect, useRef, useState } from "react";
 import { initializePhase3 } from "@Init/appInitializer.js";
@@ -18,29 +17,18 @@ import "./styles/panels.css";
 /**
  * Main Application Component
  * 
- * This is the pure application layer. It assumes:
- * 1. Phase 1 (core services) is complete - handled by index.js
- * 2. Username is set - handled by Bootstrap.jsx
- * 3. Phase 2 (user services) is complete - handled by Bootstrap.jsx
- * 
- * This component's only responsibilities are:
- * 1. Render the main application UI
- * 2. Initialize Phase 3 (optional enhancements) after UI is ready
- * 
- * This separation allows the application to focus purely on functionality
- * without worrying about authentication, permissions, or initialization.
+ * LAYOUT FIX: The entire app uses flexbox with proper sizing
+ * so that the status bar is part of the layout flow rather than
+ * floating above everything with position: fixed
  */
 export function CIAWebApp({ username }) {
-  const [phase3Status, setPhase3Status] = useState('pending'); // pending | running | complete | failed
+  const [phase3Status, setPhase3Status] = useState('pending');
   const phase3Started = useRef(false);
 
   // Run Phase 3 after the UI has mounted
-  // This phase includes optional enhancements that aren't critical for basic functionality
   useEffect(() => {
-    // Prevent double initialization
     if (phase3Started.current) return;
 
-    // Small delay to ensure all React components are fully mounted
     const timer = setTimeout(() => {
       phase3Started.current = true;
       console.log("🎨 CIAWebApp: Starting Phase 3 (optional enhancements)...");
@@ -48,12 +36,10 @@ export function CIAWebApp({ username }) {
 
       initializePhase3()
         .then(() => {
-          console.log("✅ CIAWebApp: Phase 3 complete - All enhancements loaded");
+          console.log("✅ CIAWebApp: Phase 3 complete");
           setPhase3Status('complete');
         })
         .catch(error => {
-          // Phase 3 failures are non-critical
-          // The app works fine without these enhancements
           console.warn("⚠️ CIAWebApp: Some enhancements couldn't be loaded:", error.message);
           console.log("Continuing with basic features...");
           setPhase3Status('failed');
@@ -61,49 +47,74 @@ export function CIAWebApp({ username }) {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, []); // Only run once on mount
-
-  // Log when component mounts/unmounts for debugging
-  useEffect(() => {
-    console.log("🖼️ CIAWebApp: Main UI rendered");
-
-    return () => {
-      console.log("🖼️ CIAWebApp: Main UI unmounting");
-    };
   }, []);
 
-  // Main application UI
-  // This renders immediately, while Phase 3 runs in the background
   return (
-    <div className="cia-web-app">
-      {/* Top Bar with branding and user info */}
-      <TopBar username={username} />
+    <div className="cia-web-app" style={{
+      // CRITICAL: Use viewport height and flexbox to create proper layout
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      width: '100vw',
+      overflow: 'hidden', // Prevent page-level scrolling
+      position: 'fixed', // Lock to viewport
+      top: 0,
+      left: 0,
+    }}>
+      {/* Top Bar - Fixed height, doesn't grow or shrink */}
+      <div style={{ flexShrink: 0 }}>
+        <TopBar username={username} />
+      </div>
 
-      {/* Main Content Area */}
-      <div className="app-body">
-        {/* Left Panel - File Management */}
-        <div className="left-panel">
+      {/* Main Content Area - Takes all available space */}
+      <div className="app-body" style={{
+        flex: 1, // Grow to fill available space
+        display: 'flex',
+        overflow: 'hidden', // Let children handle their own overflow
+        minHeight: 0, // Critical for flex children to respect overflow
+      }}>
+        {/* Left Panel - Fixed width */}
+        <div className="left-panel" style={{
+          width: '250px',
+          flexShrink: 0,
+          overflow: 'auto', // This panel can scroll if content is too tall
+          backgroundColor: 'var(--bg-primary)',
+          borderRight: '1px solid var(--border-subtle)',
+        }}>
           <FilesPanel />
         </div>
 
-        {/* Center Panel - Visualization Workspace */}
-        <div className="center-panel">
+        {/* Center Panel - Grows to fill available horizontal space */}
+        <div className="center-panel" style={{
+          flex: 1,
+          overflow: 'hidden', // WorkspaceGrid will handle its own scrolling
+          minWidth: 0, // Critical for flex children
+        }}>
           <WorkspaceGrid />
         </div>
 
-        {/* Right Panel - Tools and Controls */}
-        <div className="right-panel">
+        {/* Right Panel - Fixed width */}
+        <div className="right-panel" style={{
+          width: '280px',
+          flexShrink: 0,
+          overflow: 'auto', // This panel can scroll if content is too tall
+          backgroundColor: 'var(--bg-primary)',
+          borderLeft: '1px solid var(--border-subtle)',
+        }}>
           <ControlPanel />
         </div>
       </div>
 
-      {/* Status Bar - Shows system state */}
-      <StatusBar
-        username={username}
-        phase3Status={phase3Status}
-      />
+      {/* Status Bar - Fixed height, doesn't grow or shrink */}
+      {/* CRITICAL: This is part of flex layout, not position: fixed */}
+      <div style={{ flexShrink: 0 }}>
+        <StatusBar
+          username={username}
+          phase3Status={phase3Status}
+        />
+      </div>
 
-      {/* Optional: Development mode indicators */}
+      {/* Development mode indicators */}
       {process.env.NODE_ENV === 'development' && (
         <div className="dev-indicators">
           {phase3Status === 'running' && (
