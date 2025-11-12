@@ -290,7 +290,7 @@ export function InstanceViewport({
         // Menu - a dropdown with options
         if (tool.type === 'menu') {
             return (
-                <div key={tool.id || `menu-${index}`} className="toolbar-menu">  // ✅ Added fallback
+                <div key={tool.id || `menu-${index}`} className="toolbar-menu">
                     <button
                         className={`toolbar-btn ${tool.active ? 'active' : ''}`}
                         disabled={tool.disabled}
@@ -302,9 +302,9 @@ export function InstanceViewport({
 
                     {/* Dropdown menu - would be shown on hover/click */}
                     <div className="toolbar-menu-dropdown">
-                        {tool.options?.map((option, optIndex) => (  // ✅ Added index
+                        {tool.options?.map((option, optIndex) => (
                             <button
-                                key={option.id || `option-${optIndex}`}  // ✅ Added fallback
+                                key={option.id || `option-${optIndex}`}
                                 onClick={option.onClick}
                                 className={`menu-option ${option.active ? 'active' : ''}`}
                                 disabled={option.disabled}
@@ -324,7 +324,7 @@ export function InstanceViewport({
         // Default: Simple button
         return (
             <button
-                key={tool.id || `tool-${index}`}  // ✅ Added fallback
+                key={tool.id || `tool-${index}`}
                 onClick={tool.onClick}
                 className={`toolbar-btn ${tool.active ? 'active' : ''}`}
                 title={tool.description || tool.label}
