@@ -1,39 +1,36 @@
+// src/init/appInitializer.js
+// Application initialization - three-phase startup
+
+import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
+import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter.js";
+import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
-import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
+import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
+import { workspaceManager } from "@Core/instances/workspaceManager.js"; // ✅ ADD THIS IMPORT
 import { dataCache } from "@Services/storage/dataCache.js";
+import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
-
-// Data architecture
-import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter.js";
-import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
-
-// Collaboration systems
-import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
+import { textChat } from "@Collaboration/communication/textChat.js";
 import {
   initializeAllObservers,
   markSystemReady,
 } from "@Collaboration/yjs/yjsObservers.js";
-import { textChat } from "@Collaboration/communication/textChat.js";
 
-// Instance management
-import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
+// ✅ NEW: Import annotation system
+// We'll initialize this in Phase 2 after DatasetManager is ready
+let annotationManager = null;
 
-// Testing
-import { runFoundationTests } from "@Tests/core/instanceTypes.test.js";
-// At the top of appInitializer.js, add this export after initialization
-export { datasetManager };
-
-// ⭐ NEW: Global references to new architecture components
-let datasetManager = null; // Will be the NEW DatasetManager instance
-let dataCacheAdapter = null; // Adapter that bridges dataCache to DatasetManager
+// Global references (exported for use throughout the app)
+export let datasetManager = null;
+export let dataCacheAdapter = null;
+export let viewConfigurationManager = null;
 
 /**
- * Phase 1: Pre-User Initialization
+ * Phase 1: Core Services Initialization
  *
- * Initializes core services that don't depend on user identity.
  * These are the foundational systems that everything else builds on.
+ * No user authentication required yet.
  */
 export async function initializePhase1() {
   console.log("🚀 Phase 1: Core Services Initialization");
@@ -51,9 +48,7 @@ export async function initializePhase1() {
     sessionManager.initializeFromURL();
     console.log(`✅ Session initialized - Room: ${sessionManager.getRoomId()}`);
 
-    // STEP 3: Data storage layer
-    // Sets up the three-layer data architecture:
-    // dataCache → DatasetManagerAdapter → DatasetManager
+    // STEP 3: Data storage layer (Layer 1)
     console.log("💾 Setting up data storage layer...");
 
     if (dataCache) {
@@ -70,14 +65,20 @@ export async function initializePhase1() {
     await dataCacheAdapter.initialize();
     console.log("  ✓ Cache adapter ready");
 
-    console.log("  Creating dataset manager...");
+    console.log("  Creating dataset manager (Layer 1)...");
     datasetManager = new DatasetManager();
     await datasetManager.initialize(dataCacheAdapter);
     console.log("  ✓ Dataset manager ready");
 
     console.log("✅ Data storage layer complete");
 
-    // STEP 4: TensorFlow setup
+    // STEP 4: View Configuration layer (Layer 2)
+    console.log("📋 Setting up view configuration layer...");
+    viewConfigurationManager = new ViewConfigurationManager();
+    console.log("  ✓ View configuration manager ready");
+    console.log("✅ View configuration layer complete");
+
+    // STEP 5: TensorFlow setup
     // Needed for dimensionality reduction algorithms (PCA, t-SNE, UMAP)
     console.log("🧠 Setting up TensorFlow...");
     try {
@@ -92,7 +93,7 @@ export async function initializePhase1() {
       console.log("   Continuing without TensorFlow support");
     }
 
-    // STEP 5: Y.js provider
+    // STEP 6: Y.js provider
     // Required for real-time collaboration
     console.log("🔗 Initializing Y.js provider...");
     if (typeof initializeYjsProvider === "function") {
@@ -102,7 +103,12 @@ export async function initializePhase1() {
       throw new Error("Y.js provider is required for collaboration");
     }
 
-    // STEP 6: Debug helpers
+    // STEP 7: Initialize ViewConfigurationManager AFTER Y.js is ready
+    console.log("🔗 Initializing view configuration sync...");
+    viewConfigurationManager.initialize();
+    console.log("✅ View configuration sync ready");
+
+    // STEP 8: Debug helpers
     setupDebugHelpers();
     console.log("✅ Debug helpers available");
 
@@ -125,73 +131,53 @@ export async function initializePhase2() {
   console.log("=====================================");
 
   try {
-    // ⭐ NEW: Wait for Y.js to be synced before initializing presence
-    const { provider } = await import("@Collaboration/yjs/yjsSetup.js");
-
+    // STEP 1: Wait for Y.js to sync
     console.log("⏳ Checking Y.js sync status...");
-    if (!provider.synced) {
-      console.log("⏳ Waiting for Y.js sync before Phase 2...");
-
-      await new Promise((resolve) => {
-        // Check if already synced
-        if (provider.synced) {
-          resolve();
-          return;
-        }
-
-        // Wait for sync event
-        const onSync = (synced) => {
-          if (synced) {
-            console.log("✅ Y.js synced!");
-            provider.off("sync", onSync);
-            resolve();
-          }
-        };
-        provider.on("sync", onSync);
-
-        // Safety timeout after 10 seconds
-        setTimeout(() => {
-          console.warn("⚠️ Y.js sync timeout, continuing anyway");
-          provider.off("sync", onSync);
-          resolve();
-        }, 10000);
-      });
-    } else {
+    const synced = await waitForYjsSync();
+    if (synced) {
       console.log("✅ Y.js already synced");
+    } else {
+      console.warn("⚠️ Y.js sync timeout, continuing anyway");
     }
 
-    // STEP 1: Presence system
-    // Now safe to initialize since Y.js is synced
+    // STEP 2: Presence system
+    // Tracks which users are in the room and their activities
     console.log("👥 Initializing presence system...");
     if (presenceSystem && typeof presenceSystem.initialize === "function") {
       presenceSystem.initialize();
       console.log("✅ Presence system ready");
-
-      // ⭐ NEW: Verify presence is working
-      const myPresence = presenceSystem.localPresence;
-      const onlineUsers = presenceSystem.getOnlineUsers();
-      console.log("   My presence:", myPresence);
-      console.log("   Online users:", onlineUsers.length);
+      // Note: Presence system logs its own status, we don't need to query it here
+    } else if (
+      presenceSystem &&
+      typeof presenceSystem.initializePresence === "function"
+    ) {
+      presenceSystem.initializePresence();
+      console.log("✅ Presence system ready");
     } else {
       console.warn("⚠️ Presence system not available");
     }
 
-    // STEP 2: Data managers
+    // STEP 3: Data managers
     // DatasetManager was initialized in Phase 1, confirm it's ready
     console.log("📦 Confirming data managers...");
     console.log("   ✓ Dataset manager ready (initialized in Phase 1)");
 
-    // Annotation system for collaborative annotations
-    if (annotationSystem) {
-      if (typeof annotationSystem.initialize === "function") {
-        annotationSystem.initialize();
-      }
+    // ✅ NEW: Initialize annotation system
+    console.log("📍 Initializing annotation system...");
+    try {
+      // Dynamically import to avoid circular dependencies
+      const { initializeAnnotationManager } = await import(
+        "@Core/data/managers/AnnotationManager.js"
+      );
+      annotationManager = initializeAnnotationManager(datasetManager);
       console.log("   ✓ Annotation system ready");
+    } catch (annotError) {
+      console.warn("⚠️ Annotation system failed to initialize:", annotError);
     }
 
     console.log("✅ Data managers ready");
 
-    // STEP 3: Y.js observers
+    // STEP 4: Y.js observers
     // Set up observers for real-time data sync
     console.log("👁️ Setting up Y.js observers...");
     try {
@@ -209,7 +195,7 @@ export async function initializePhase2() {
       );
     }
 
-    // STEP 4: Text chat
+    // STEP 5: Text chat
     // Real-time text communication between users
     console.log("💬 Initializing text chat...");
     if (textChat && typeof textChat.initialize === "function") {
@@ -223,7 +209,7 @@ export async function initializePhase2() {
       console.warn("⚠️ Text chat not available");
     }
 
-    // STEP 5: Workspace manager
+    // STEP 6: Workspace manager
     // Manages multiple visualization instances
     console.log("🎨 Initializing workspace manager...");
     if (workspaceManager && typeof workspaceManager.initialize === "function") {
@@ -245,15 +231,12 @@ export async function initializePhase2() {
  * extend core functionality. These systems don't exist yet, so this
  * phase is commented out.
  *
- * TO ENABLE THIS PHASE:
- * 1. Implement the systems it references
- * 2. Test each system independently
- * 3. Uncomment and test the integration
- *
- * SYSTEMS TO IMPLEMENT:
- * - syncManager: Advanced synchronization beyond Y.js basics
- * - instanceCollaboration: Per-instance collaborative features
- * - VTK instance tools: Widget management, measurements, clipping
+ * Future systems to add here:
+ * - Advanced VR features (spatial UI, controller mapping)
+ * - Plugin system for custom visualizations
+ * - Advanced collaboration features (screen sharing, co-editing)
+ * - Cloud sync and backup
+ * - Analytics and telemetry
  */
 export async function initializePhase3() {
   console.log("🚀 Phase 3: Enhanced Systems (Currently Disabled)");
@@ -263,190 +246,158 @@ export async function initializePhase3() {
   );
   console.log("   See comments in appInitializer.js for details");
 
-  // Phase 3 would go here when systems are ready
+  // When ready, uncomment and implement:
+  // await initializeVREnhancements();
+  // await initializePluginSystem();
+  // await initializeCloudSync();
 
   console.log("✅ Phase 3 complete (no optional systems loaded)");
 }
 
-/* ============================================================================
- * PHASE 3 IMPLEMENTATION (Commented out - enable when systems are ready)
- * ============================================================================
- 
-export async function initializePhase3() {
-  console.log("🚀 Phase 3: Enhanced Systems Initialization");
-  console.log("========================================");
+/**
+ * Wait for Y.js to synchronize with the server
+ * Returns a promise that resolves when synced or times out
+ */
+function waitForYjsSync(timeoutMs = 2000) {
+  return new Promise((resolve) => {
+    // Import provider dynamically to avoid circular dependency
+    import("@Collaboration/yjs/yjsSetup.js").then(({ provider }) => {
+      // Check if already synced
+      if (provider.synced) {
+        resolve(true);
+        return;
+      }
 
-  try {
-    let syncManager = null;
-    let instanceCollaboration = null;
-    let vtkInstanceTools = null;
+      console.log("⏳ Waiting for Y.js sync before Phase 2...");
 
-    console.log("📦 Loading enhanced systems...");
-
-    // Try to load sync manager
-    try {
-      const syncModule = await import("@Collaboration/sync/syncManager.js");
-      if (syncModule?.syncManager) {
-        syncManager = syncModule.syncManager;
-        if (typeof syncManager.initialize === "function") {
-          syncManager.initialize();
-          console.log("✅ Sync manager initialized");
+      // Set up sync listener
+      const handleSync = (synced) => {
+        if (synced) {
+          provider.off("sync", handleSync);
+          clearTimeout(timeout);
+          resolve(true);
         }
-      }
-    } catch (e) {
-      console.log("   Sync manager not available");
-    }
+      };
 
-    // Try to load instance collaboration
-    try {
-      const collabModule = await import(
-        "@Collaboration/perInstance/instanceCollaboration.js"
-      );
-      if (collabModule?.instanceCollaboration) {
-        instanceCollaboration = collabModule.instanceCollaboration;
-        console.log("✅ Instance collaboration loaded");
-      }
-    } catch (e) {
-      console.log("   Instance collaboration not available");
-    }
+      provider.on("sync", handleSync);
 
-    // Try to load VTK instance tools
-    try {
-      const toolsModule = await import(
-        "@Core/instances/types/vtk/VTKInstanceTools.js"
-      );
-      if (toolsModule?.vtkInstanceTools) {
-        vtkInstanceTools = toolsModule.vtkInstanceTools;
-        console.log("✅ VTK instance tools loaded");
-      }
-    } catch (e) {
-      console.log("   VTK instance tools not available");
-    }
-
-    // Set up instance hooks if we have enhanced systems
-    if (instanceCollaboration || vtkInstanceTools) {
-      setupInstanceHooks(instanceCollaboration, vtkInstanceTools);
-      console.log("✅ Instance hooks configured");
-    }
-
-    console.log("✅ Phase 3 complete");
-  } catch (error) {
-    console.warn("⚠️ Phase 3 partial failure:", error);
-    console.log("Continuing with basic features");
-  }
+      // Timeout fallback
+      const timeout = setTimeout(() => {
+        provider.off("sync", handleSync);
+        resolve(false);
+      }, timeoutMs);
+    });
+  });
 }
 
 /**
- * Set up debug helpers for console access
+ * Set up debug helpers in window.CIA for console debugging
  */
 function setupDebugHelpers() {
-  if (typeof window !== "undefined") {
-    window.CIA = window.CIA || {};
+  if (typeof window === "undefined") return;
 
-    // Expose core systems
-    window.CIA.datasetManager = datasetManager;
-    window.CIA.dataCacheAdapter = dataCacheAdapter;
-    window.CIA.dataCache = dataCache;
-    window.CIA.workspaceManager = workspaceManager;
-    window.CIA.annotationSystem = annotationSystem;
-    window.CIA.presenceSystem = presenceSystem;
+  window.CIA = window.CIA || {};
 
-    // Helper functions
-    window.CIA.listInstances = () => {
-      const ids = workspaceManager.getAllInstanceIds();
-      console.log(`📊 Active instances: ${ids.length}`);
-      ids.forEach((id) => {
-        const inst = workspaceManager.getInstance(id);
-        console.log(
-          `  • ${id.slice(-8)}: dataset=${inst?.datasetId?.slice(-8) || "none"}`
-        );
-      });
-      return ids;
+  // Expose managers for debugging
+  window.CIA.datasetManager = datasetManager;
+  window.CIA.viewConfigurationManager = viewConfigurationManager;
+  window.CIA.workspaceManager = workspaceManager;
+  window.CIA.sessionManager = sessionManager;
+
+  // Helper functions
+  window.CIA.help = function () {
+    console.log(`
+=== CIA Web Debug Helpers ===
+
+Managers:
+  CIA.datasetManager          - Dataset management
+  CIA.viewConfigurationManager - View configuration management
+  CIA.workspaceManager        - Instance management
+  CIA.sessionManager          - Session management
+
+Commands:
+  CIA.help()                  - Show this help
+  CIA.info()                  - Show system info
+  CIA.listDatasets()          - List all datasets
+  CIA.listViews()             - List all view configurations
+  CIA.listInstances()         - List all instances
+  CIA.getDataset(id)          - Get dataset by ID
+  CIA.getView(id)             - Get view by ID
+  CIA.getInstance(id)         - Get instance by ID
+
+Examples:
+  CIA.info()
+  CIA.listDatasets()
+  CIA.getDataset('dataset_123')
+    `);
+  };
+
+  window.CIA.info = function () {
+    const info = {
+      room: sessionManager.getRoomId(),
+      datasets: datasetManager?.getAllDatasets()?.length || 0,
+      views: viewConfigurationManager?.getActiveViews()?.length || 0,
+      instances: workspaceManager?.getInstanceCount() || 0,
     };
+    console.log("=== System Info ===");
+    console.log(`Room: ${info.room}`);
+    console.log(`Datasets: ${info.datasets}`);
+    console.log(`Active Views: ${info.views}`);
+    console.log(`Instances: ${info.instances}`);
+    return info;
+  };
 
-    window.CIA.listDatasets = () => {
-      const datasets = datasetManager.getAllDatasets();
-      if (datasets.length === 0) {
-        console.log("No datasets loaded");
-        return [];
-      }
-      console.table(
-        datasets.map((d) => ({
-          id: d.id?.slice(-8),
-          filename: d.filename,
-          fileType: d.metadata?.fileType,
-          annotations: d.annotations?.length || 0,
-          analyzed: d.isAnalyzed(),
-        }))
-      );
-      return datasets;
-    };
+  window.CIA.listDatasets = function () {
+    const datasets = datasetManager?.getAllDatasets() || [];
+    console.log(`=== Datasets (${datasets.length}) ===`);
+    datasets.forEach((ds) => {
+      console.log(`  ${ds.id}: ${ds.filename}`);
+      console.log(`    Points: ${ds.metadata.pointCount || "unknown"}`);
+      console.log(`    Annotations: ${ds.annotations?.length || 0}`);
+    });
+    return datasets;
+  };
 
-    window.CIA.cacheStats = async () => {
-      const stats = await dataCacheAdapter.getStats();
-      console.log("📊 Cache Statistics:");
-      console.log(`  Total files: ${stats.count}`);
-      console.log(
-        `  Total size: ${(stats.totalSize / 1024 / 1024).toFixed(2)} MB`
-      );
-      console.table(stats.files);
-      return stats;
-    };
+  window.CIA.listViews = function () {
+    const views = viewConfigurationManager?.getActiveViews() || [];
+    console.log(`=== Active Views (${views.length}) ===`);
+    views.forEach((view) => {
+      console.log(`  ${view.id}: ${view.name}`);
+      console.log(`    Dataset: ${view.datasetId}`);
+      console.log(`    Active Instances: ${view.activeInstanceCount}`);
+    });
+    return views;
+  };
 
-    window.CIA.help = () => {
-      console.log("🔧 CIA Web Debug Commands:");
-      console.log("  CIA.listInstances() - List all active instances");
-      console.log("  CIA.listDatasets() - List all loaded datasets");
-      console.log("  CIA.cacheStats() - Show cache statistics");
-      console.log("  CIA.datasetManager - Access dataset manager");
-      console.log("  CIA.workspaceManager - Access workspace manager");
-      console.log("  CIA.presenceSystem - Access presence system");
-      console.log("\nType any command to try it!");
-    };
-  }
+  window.CIA.listInstances = function () {
+    const instanceIds = workspaceManager?.getAllInstanceIds() || [];
+    console.log(`=== Instances (${instanceIds.length}) ===`);
+    instanceIds.forEach((id) => {
+      const instance = workspaceManager.getInstance(id);
+      console.log(`  ${id}:`);
+      console.log(`    Type: ${instance.type}`);
+      console.log(`    Dataset: ${instance.datasetId || "none"}`);
+    });
+    return instanceIds;
+  };
+
+  window.CIA.getDataset = function (id) {
+    return datasetManager?.getDataset(id);
+  };
+
+  window.CIA.getView = function (id) {
+    return viewConfigurationManager?.getView(id);
+  };
+
+  window.CIA.getInstance = function (id) {
+    return workspaceManager?.getInstance(id);
+  };
+
+  console.log("✅ Debug helpers available");
+  console.log("   Type CIA.help() for available commands");
 }
 
-function setupInstanceHooks(instanceCollaboration, vtkInstanceTools) {
-  // Hook implementation would go here
-  // This would enhance workspaceManager.createInstance and deleteInstance
-  // to automatically initialize/cleanup enhanced features
+// Export annotation manager getter (since it's created in Phase 2)
+export function getAnnotationManager() {
+  return annotationManager;
 }
-
-/**
- * Main initialization function
- */
-export async function initializeCIAWeb() {
-  console.log("====================================");
-  console.log("🚀 Initializing CIA Web Application");
-  console.log("====================================");
-  console.log("");
-
-  try {
-    await initializePhase1();
-    await initializePhase2();
-    await initializePhase3();
-
-    console.log("====================================");
-    console.log("✅ CIA Web Ready!");
-    console.log("Type CIA.help() in console for debug commands");
-    console.log("====================================");
-
-    if (process.env.NODE_ENV === "development") {
-      window.CIA = window.CIA || {};
-      window.CIA.runFoundationTests = runFoundationTests;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("❌ Fatal initialization error:", error);
-    return false;
-  }
-}
-
-// Export everything for flexibility
-export default {
-  initializePhase1,
-  initializePhase2,
-  initializePhase3,
-  initializeCIAWeb,
-};

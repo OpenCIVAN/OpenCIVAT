@@ -69,11 +69,30 @@ export function WorkspaceGrid() {
     }, []); // Empty deps - run exactly once
 
     // Listen for dataset selection requests from FilesPanel
+    // Listen for dataset selection requests from FilesPanel
     useEffect(() => {
-        const handleInstanceRequest = (event) => {
-            const { datasetId } = event.detail;
-            console.log(`📬 Instance request received for dataset: ${datasetId}`);
-            handleCreateInstance(datasetId);
+        const handleInstanceRequest = (event) => {  // ✅ FIXED - regular function, extract from event.detail
+            const datasetId = event.detail?.datasetId;
+
+            console.log('📬 Instance request received for dataset:', datasetId);
+
+            if (!datasetId || typeof datasetId !== 'string') {
+                console.error('❌ Invalid dataset ID:', datasetId);
+                return;
+            }
+
+            console.log('✅ Creating instance via instanceManager');
+            console.log('   Dataset ID:', datasetId);
+
+            // Create the instance and add to grid
+            const instanceId = `temp-${Date.now()}`;
+
+            setInstances((prev) => [...prev, {
+                id: instanceId,
+                datasetId: datasetId,  // Pass the ID, not the object
+                isRemote: false,
+                created: Date.now(),
+            }]);
         };
 
         window.addEventListener('cia:request-instance', handleInstanceRequest);
@@ -81,7 +100,7 @@ export function WorkspaceGrid() {
         return () => {
             window.removeEventListener('cia:request-instance', handleInstanceRequest);
         };
-    }, [handleCreateInstance]); // Now safe to include because it's memoized
+    }, []); // ✅ Empty deps - event listener doesn't need to recreate
 
     /**
      * Accept pending remote instances and spawn them

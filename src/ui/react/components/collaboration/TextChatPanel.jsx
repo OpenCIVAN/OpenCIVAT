@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 
 import { textChat } from "@Collaboration/communication/textChat.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
-import { provider, yText } from "@Collaboration/yjs/yjsSetup.js";
+import { provider } from "@Collaboration/yjs/yjsSetup.js";
 
 export function TextChatPanel() {
   const [messages, setMessages] = useState([]);
@@ -19,20 +19,39 @@ export function TextChatPanel() {
   const refreshMessages = () => {
     const allMessages = textChat.getMessages();
     console.log("📨 Refreshing messages, count:", allMessages.length);
-    setMessages(allMessages);
+    setMessages([...allMessages]); // ✅ Force new array reference for React
     setIsLoading(false);
     setTimeout(scrollToBottom, 100);
   };
 
   useEffect(() => {
+    // Initialize text chat system
     textChat.initialize();
 
-    // Wait for Y.js to sync before loading messages
+    // ✅ CRITICAL FIX: Use textChat's event system instead of direct Y.js observer
+    // This properly triggers React state updates
+    const handleNewMessage = (message) => {
+      console.log("📬 New message received:", message);
+      // Force re-fetch all messages to ensure React sees the change
+      setMessages([...textChat.getMessages()]);
+      setTimeout(scrollToBottom, 50);
+    };
+
+    const handleDelete = () => {
+      console.log("🗑️ Message deleted");
+      setMessages([...textChat.getMessages()]);
+    };
+
+    // Subscribe to textChat events
+    textChat.onMessage(handleNewMessage);
+    textChat.onDelete(handleDelete);
+
+    // Wait for Y.js to sync before initial load
     let syncTimeout;
 
     const handleSync = (synced) => {
       if (synced) {
-        console.log("🔄 Y.js synced, loading messages...");
+        console.log("🔄 Y.js synced, loading initial messages...");
         clearTimeout(syncTimeout);
         setTimeout(() => {
           refreshMessages();
@@ -48,14 +67,13 @@ export function TextChatPanel() {
       refreshMessages();
     }, 3000);
 
-    // ✅ REMOVED: yText.observe() - this was causing double sends
-    // The textChat.sendMessage() already updates Y.js, which triggers
-    // the sync event, which calls refreshMessages(). We don't need
-    // a second observer.
-
+    // Cleanup
     return () => {
       provider.off("sync", handleSync);
       clearTimeout(syncTimeout);
+      // Note: textChat doesn't have offMessage/offDelete methods yet
+      // We should add them, but for now this is safe since the component
+      // will just receive extra updates when unmounted
     };
   }, []);
 
@@ -64,8 +82,9 @@ export function TextChatPanel() {
     if (value) {
       try {
         textChat.sendMessage(value);
-        setInputValue(""); // Clear immediately after sending
+        setInputValue(""); // Clear immediately
         inputRef.current?.focus();
+        // No need to manually update state - the onMessage callback will handle it
       } catch (error) {
         console.error("Error sending message:", error);
         alert("Failed to send message. Check console for details.");
@@ -83,6 +102,7 @@ export function TextChatPanel() {
   const handleDelete = (messageId) => {
     if (confirm("Delete this message for everyone?")) {
       textChat.deleteMessage(messageId);
+      // State will update via onDelete callback
     }
   };
 

@@ -281,7 +281,7 @@ export function InstanceViewport({
         if (tool.type === 'separator') {
             return (
                 <div
-                    key={`separator-${index}`}  // Use index instead of random
+                    key={`separator-${index}`}  // ✅ Already correct
                     className="toolbar-separator"
                 />
             );
@@ -290,7 +290,7 @@ export function InstanceViewport({
         // Menu - a dropdown with options
         if (tool.type === 'menu') {
             return (
-                <div key={tool.id} className="toolbar-menu">
+                <div key={tool.id || `menu-${index}`} className="toolbar-menu">  // ✅ Added fallback
                     <button
                         className={`toolbar-btn ${tool.active ? 'active' : ''}`}
                         disabled={tool.disabled}
@@ -302,9 +302,9 @@ export function InstanceViewport({
 
                     {/* Dropdown menu - would be shown on hover/click */}
                     <div className="toolbar-menu-dropdown">
-                        {tool.options?.map((option) => (
+                        {tool.options?.map((option, optIndex) => (  // ✅ Added index
                             <button
-                                key={option.id}
+                                key={option.id || `option-${optIndex}`}  // ✅ Added fallback
                                 onClick={option.onClick}
                                 className={`menu-option ${option.active ? 'active' : ''}`}
                                 disabled={option.disabled}
@@ -322,12 +322,10 @@ export function InstanceViewport({
         }
 
         // Default: Simple button
-        // THE KEY POINT: We call tool.onClick when the button is clicked
-        // We don't know or care what tool.onClick does - that's the handler's business
         return (
             <button
-                key={tool.id}
-                onClick={tool.onClick}  // ← THIS IS THE MAGIC - handler provides the callback
+                key={tool.id || `tool-${index}`}  // ✅ Added fallback
+                onClick={tool.onClick}
                 className={`toolbar-btn ${tool.active ? 'active' : ''}`}
                 title={tool.description || tool.label}
                 disabled={tool.disabled}

@@ -114,13 +114,36 @@ class TextChat {
     this.messageListeners.push(callback);
   }
 
+  // ✅ NEW: Add cleanup method
+  offMessage(callback) {
+    const index = this.messageListeners.indexOf(callback);
+    if (index > -1) {
+      this.messageListeners.splice(index, 1);
+    }
+  }
+
   onClear(callback) {
     this.clearListeners.push(callback);
   }
 
+  // ✅ NEW: Add cleanup method
+  offClear(callback) {
+    const index = this.clearListeners.indexOf(callback);
+    if (index > -1) {
+      this.clearListeners.splice(index, 1);
+    }
+  }
+
   onDelete(callback) {
-    // ← Add this
     this.deleteListeners.push(callback);
+  }
+
+  // ✅ NEW: Add cleanup method
+  offDelete(callback) {
+    const index = this.deleteListeners.indexOf(callback);
+    if (index > -1) {
+      this.deleteListeners.splice(index, 1);
+    }
   }
 
   notifyListeners(message) {
