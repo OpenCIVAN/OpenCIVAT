@@ -1,6 +1,7 @@
 // src/core/data/models/Dataset.js
 
 import { Annotation } from "@Core/data/models/Annotation.js";
+import { generateDatasetId } from "@Utils/idGenerator.js";
 
 /**
  * Dataset - Represents a raw data file with associated metadata and annotations
@@ -64,7 +65,7 @@ export class Dataset {
    * Generate a unique ID for this dataset
    */
   _generateId() {
-    return `dataset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateDatasetId();
   }
 
   /**

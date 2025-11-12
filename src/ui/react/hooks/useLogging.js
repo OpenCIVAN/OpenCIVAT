@@ -3,6 +3,7 @@
 // Provides real-time log access to React components
 
 import { useState, useEffect, useCallback } from "react";
+import { generateLogId } from "@Utils/idGenerator.js";
 
 // Global log storage (shared across all components)
 const logStore = {
@@ -43,7 +44,7 @@ export function logProgress(message) {
 
 function addLog(type, message) {
   const log = {
-    id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: generateLogId("log"),
     type,
     message,
     timestamp: new Date(),

@@ -1,6 +1,7 @@
 // src/core/data/models/ViewConfiguration.js
 
 import { AnnotationDisplayConfig } from "@Core/data/models/Annotation.js";
+import { generateViewId } from "@Utils/idGenerator.js";
 
 /**
  * ViewConfiguration - Layer 2 of the architecture
@@ -64,7 +65,7 @@ export class ViewConfiguration {
   }
 
   _generateId() {
-    return `view_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateViewId();
   }
 
   _getDefaultCamera() {

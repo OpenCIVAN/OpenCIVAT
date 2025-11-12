@@ -48,6 +48,7 @@ export class DatasetManager {
       datasetAdded: [],
       datasetRemoved: [],
       datasetUpdated: [],
+      datasetLoaded: [],
       annotationAdded: [],
       annotationRemoved: [],
       annotationUpdated: [],
@@ -418,37 +419,50 @@ export class DatasetManager {
     }
 
     try {
-      // Get the cached file
+      // Check for publicPath BEFORE trying to load from cache
+      if (!dataset.file && dataset.metadata?.publicPath) {
+        console.log(
+          `  🌐 Public file detected, fetching from URL: ${dataset.metadata.publicPath}`
+        );
+        const response = await fetch(dataset.metadata.publicPath);
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch public file: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const blob = await response.blob();
+        const fetchedFile = new File([blob], dataset.filename, {
+          type: "application/octet-stream",
+        });
+
+        // Parse and store the polydata
+        const polydata = await this._parseAndStorePolydata(
+          datasetId,
+          fetchedFile
+        );
+
+        // CRITICAL FIX: Emit the datasetLoaded event
+        this._emit("datasetLoaded", { datasetId, dataset });
+
+        return polydata;
+      }
+
+      // Normal path: Load from cache
       const file = await this.loadFile(datasetId);
 
       if (!file) {
-        // If not in cache but has publicPath, fetch it
-        if (dataset.metadata.publicPath) {
-          console.log(
-            `  ⏳ Fetching from public path: ${dataset.metadata.publicPath}`
-          );
-          const response = await fetch(dataset.metadata.publicPath);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch: ${response.status}`);
-          }
-          const blob = await response.blob();
-          const fetchedFile = new File([blob], dataset.filename, {
-            type: "application/octet-stream",
-          });
-
-          // Store in cache for future use
-          const hash = await this._fileCache.storeFile(fetchedFile);
-          await this.updateMetadata(datasetId, { hash });
-
-          // Parse and return
-          return await this._parseAndStorePolydata(datasetId, fetchedFile);
-        }
-
-        throw new Error(`File not in cache and no public path available`);
+        throw new Error(`File not found in cache for dataset ${datasetId}`);
       }
 
       // Parse the cached file
-      return await this._parseAndStorePolydata(datasetId, file);
+      const polydata = await this._parseAndStorePolydata(datasetId, file);
+
+      // CRITICAL FIX: Emit the datasetLoaded event here too
+      this._emit("datasetLoaded", { datasetId, dataset });
+
+      return polydata;
     } catch (error) {
       console.error(
         `❌ DatasetManager: Failed to load polydata from cache:`,

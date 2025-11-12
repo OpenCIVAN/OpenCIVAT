@@ -1,88 +1,75 @@
-// src/init/appInitializer.js - UPDATED FOR NEW ARCHITECTURE
-// Changes are marked with // ⭐ NEW or // ❌ REMOVED
-
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
-import { dataCache } from "@Services/storage/dataCache.js"; // ⭐ Keep this - it's your working cache
+import { dataCache } from "@Services/storage/dataCache.js";
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 
-// ⭐ NEW: Import the new architecture components
+// Data architecture
 import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter.js";
 import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
 
-import { visualizationManager } from "@Core/visualizationManager.js";
+// Collaboration systems
 import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
 import {
   initializeAllObservers,
   markSystemReady,
 } from "@Collaboration/yjs/yjsObservers.js";
 import { textChat } from "@Collaboration/communication/textChat.js";
-import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { runFoundationTests } from "@Tests/core/instanceTypes.test.js";
 
-// Instance type registration
+// Instance management
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 
-// VR imports
-import { vrModeManager } from "@VR/vrModeManager.js";
-import { vrControllers } from "@VR/controllers/vrControllers.js";
-import { vrAvatarSystem } from "@VR/avatars/vrAvatarSystem.js";
-import { vrSpatialUI } from "@VR/ui/vrSpatialUI.js";
-
+// Testing
+import { runFoundationTests } from "@Tests/core/instanceTypes.test.js";
 // At the top of appInitializer.js, add this export after initialization
 export { datasetManager };
-
-// Enhanced systems
-let syncManager = null;
-let instanceCollaboration = null;
-let instanceTools = null;
 
 // ⭐ NEW: Global references to new architecture components
 let datasetManager = null; // Will be the NEW DatasetManager instance
 let dataCacheAdapter = null; // Adapter that bridges dataCache to DatasetManager
 
 /**
- * Phase 1: Pre-React Initialization
- * Initialize core services that don't depend on UI
+ * Phase 1: Pre-User Initialization
  *
- * ⭐ UPDATED: Now initializes new DatasetManager with adapter
+ * Initializes core services that don't depend on user identity.
+ * These are the foundational systems that everything else builds on.
  */
 export async function initializePhase1() {
   console.log("🚀 Phase 1: Core Services Initialization");
   console.log("==================================");
 
   try {
-    // Instance type registration - MUST happen first
+    // STEP 1: Register instance types
+    // This MUST happen first so handlers are available when needed
     console.log("📋 Registering instance types...");
     registerInstanceTypes();
 
-    // Session management - critical for room setup
+    // STEP 2: Session management
+    // Sets up room ID from URL for collaboration
     console.log("📋 Initializing session...");
     sessionManager.initializeFromURL();
     console.log(`✅ Session initialized - Room: ${sessionManager.getRoomId()}`);
 
-    // ⭐ NEW: Initialize data cache with adapter pattern
+    // STEP 3: Data storage layer
+    // Sets up the three-layer data architecture:
+    // dataCache → DatasetManagerAdapter → DatasetManager
     console.log("💾 Setting up data storage layer...");
 
-    // Step 1: Ensure dataCache is ready
     if (dataCache) {
       if (typeof dataCache.initialize === "function") {
         await dataCache.initialize();
         console.log("  ✓ Data cache initialized");
       } else {
-        // dataCache auto-initializes on first use
         console.log("  ✓ Data cache ready (auto-initialized)");
       }
     }
 
-    // Step 2: Create adapter that bridges dataCache to DatasetManager interface
     console.log("  Creating cache adapter...");
     dataCacheAdapter = new DatasetManagerAdapter(dataCache);
     await dataCacheAdapter.initialize();
     console.log("  ✓ Cache adapter ready");
 
-    // Step 3: Create and initialize the NEW DatasetManager
     console.log("  Creating dataset manager...");
     datasetManager = new DatasetManager();
     await datasetManager.initialize(dataCacheAdapter);
@@ -90,7 +77,8 @@ export async function initializePhase1() {
 
     console.log("✅ Data storage layer complete");
 
-    // TensorFlow setup for dimensionality reduction algorithms
+    // STEP 4: TensorFlow setup
+    // Needed for dimensionality reduction algorithms (PCA, t-SNE, UMAP)
     console.log("🧠 Setting up TensorFlow...");
     try {
       if (initializeTensorFlow && typeof initializeTensorFlow === "function") {
@@ -104,7 +92,8 @@ export async function initializePhase1() {
       console.log("   Continuing without TensorFlow support");
     }
 
-    // Y.js provider for real-time collaboration
+    // STEP 5: Y.js provider
+    // Required for real-time collaboration
     console.log("🔗 Initializing Y.js provider...");
     if (typeof initializeYjsProvider === "function") {
       initializeYjsProvider();
@@ -113,7 +102,7 @@ export async function initializePhase1() {
       throw new Error("Y.js provider is required for collaboration");
     }
 
-    // Set up debug helpers for console access
+    // STEP 6: Debug helpers
     setupDebugHelpers();
     console.log("✅ Debug helpers available");
 
@@ -126,17 +115,18 @@ export async function initializePhase1() {
 }
 
 /**
- * Phase 2: Post-Username Initialization
- * Initialize user-dependent services after username is set
+ * Phase 2: Post-User Initialization
  *
- * ⭐ UPDATED: No longer initializes old datasetManager
+ * Initializes services that depend on user identity (username, userId).
+ * User must be authenticated before this phase runs.
  */
 export async function initializePhase2() {
   console.log("🚀 Phase 2: User Services Initialization");
   console.log("=====================================");
 
   try {
-    // Presence system for user awareness
+    // STEP 1: Presence system
+    // Tracks which users are in the room and their activities
     console.log("👥 Initializing presence system...");
     if (presenceSystem && typeof presenceSystem.initialize === "function") {
       presenceSystem.initialize();
@@ -151,21 +141,12 @@ export async function initializePhase2() {
       console.warn("⚠️ Presence system not available");
     }
 
-    // ⭐ UPDATED: Data managers section
-    console.log("📦 Initializing data managers...");
-
-    // DatasetManager was already initialized in Phase 1
+    // STEP 2: Data managers
+    // DatasetManager was initialized in Phase 1, confirm it's ready
+    console.log("📦 Confirming data managers...");
     console.log("   ✓ Dataset manager ready (initialized in Phase 1)");
 
-    // ⭐ TODO: These managers will be updated in future sessions
-    // For now, keep them as-is but they'll need refactoring
-    if (visualizationManager) {
-      if (typeof visualizationManager.initialize === "function") {
-        visualizationManager.initialize();
-      }
-      console.log("   ✓ Visualization manager ready");
-    }
-
+    // Annotation system for collaborative annotations
     if (annotationSystem) {
       if (typeof annotationSystem.initialize === "function") {
         annotationSystem.initialize();
@@ -175,7 +156,8 @@ export async function initializePhase2() {
 
     console.log("✅ Data managers ready");
 
-    // Y.js observers for real-time sync
+    // STEP 3: Y.js observers
+    // Set up observers for real-time data sync
     console.log("👁️ Setting up Y.js observers...");
     try {
       if (typeof initializeAllObservers === "function") {
@@ -192,7 +174,8 @@ export async function initializePhase2() {
       );
     }
 
-    // Text chat for communication
+    // STEP 4: Text chat
+    // Real-time text communication between users
     console.log("💬 Initializing text chat...");
     if (textChat && typeof textChat.initialize === "function") {
       try {
@@ -205,53 +188,8 @@ export async function initializePhase2() {
       console.warn("⚠️ Text chat not available");
     }
 
-    // VR systems initialization
-    console.log("🥽 Initializing VR systems...");
-    let vrInitialized = 0;
-
-    if (vrModeManager && typeof vrModeManager.setupVRDetection === "function") {
-      try {
-        vrModeManager.setupVRDetection();
-        vrInitialized++;
-      } catch (e) {
-        console.log(`   ⚠️ VR mode manager failed: ${e.message}`);
-      }
-    }
-
-    if (vrControllers && typeof vrControllers.initialize === "function") {
-      try {
-        vrControllers.initialize();
-        vrInitialized++;
-      } catch (e) {
-        console.log(`   ⚠️ VR controllers failed: ${e.message}`);
-      }
-    }
-
-    if (vrAvatarSystem && typeof vrAvatarSystem.initialize === "function") {
-      try {
-        vrAvatarSystem.initialize();
-        vrInitialized++;
-      } catch (e) {
-        console.log(`   ⚠️ VR avatar system failed: ${e.message}`);
-      }
-    }
-
-    if (vrSpatialUI && typeof vrSpatialUI.initialize === "function") {
-      try {
-        vrSpatialUI.initialize();
-        vrInitialized++;
-      } catch (e) {
-        console.log(`   ⚠️ VR spatial UI failed: ${e.message}`);
-      }
-    }
-
-    if (vrInitialized > 0) {
-      console.log(`✅ VR systems ready (${vrInitialized}/4 initialized)`);
-    } else {
-      console.log("⚠️ No VR systems available");
-    }
-
-    // Workspace manager for multi-instance support
+    // STEP 5: Workspace manager
+    // Manages multiple visualization instances
     console.log("🎨 Initializing workspace manager...");
     if (workspaceManager && typeof workspaceManager.initialize === "function") {
       workspaceManager.initialize();
@@ -266,20 +204,51 @@ export async function initializePhase2() {
 }
 
 /**
- * Phase 3: Post-React Initialization
- * Initialize optional enhancement systems
+ * Phase 3: Enhanced Systems (CURRENTLY DISABLED)
  *
- * (No changes needed here for now)
+ * This phase was designed to load optional enhancement systems that
+ * extend core functionality. These systems don't exist yet, so this
+ * phase is commented out.
+ *
+ * TO ENABLE THIS PHASE:
+ * 1. Implement the systems it references
+ * 2. Test each system independently
+ * 3. Uncomment and test the integration
+ *
+ * SYSTEMS TO IMPLEMENT:
+ * - syncManager: Advanced synchronization beyond Y.js basics
+ * - instanceCollaboration: Per-instance collaborative features
+ * - VTK instance tools: Widget management, measurements, clipping
  */
+export async function initializePhase3() {
+  console.log("🚀 Phase 3: Enhanced Systems (Currently Disabled)");
+  console.log("================================================");
+  console.log(
+    "⚠️ Phase 3 is disabled until enhancement systems are implemented"
+  );
+  console.log("   See comments in appInitializer.js for details");
+
+  // Phase 3 would go here when systems are ready
+
+  console.log("✅ Phase 3 complete (no optional systems loaded)");
+}
+
+/* ============================================================================
+ * PHASE 3 IMPLEMENTATION (Commented out - enable when systems are ready)
+ * ============================================================================
+ 
 export async function initializePhase3() {
   console.log("🚀 Phase 3: Enhanced Systems Initialization");
   console.log("========================================");
 
   try {
-    // Load optional enhanced systems dynamically
+    let syncManager = null;
+    let instanceCollaboration = null;
+    let vtkInstanceTools = null;
+
     console.log("📦 Loading enhanced systems...");
 
-    // Try to load the sync manager from the sync folder
+    // Try to load sync manager
     try {
       const syncModule = await import("@Collaboration/sync/syncManager.js");
       if (syncModule?.syncManager) {
@@ -293,7 +262,7 @@ export async function initializePhase3() {
       console.log("   Sync manager not available");
     }
 
-    // Try to load instance collaboration from perInstance folder
+    // Try to load instance collaboration
     try {
       const collabModule = await import(
         "@Collaboration/perInstance/instanceCollaboration.js"
@@ -306,147 +275,48 @@ export async function initializePhase3() {
       console.log("   Instance collaboration not available");
     }
 
-    // Try to load instance tools
+    // Try to load VTK instance tools
     try {
-      const toolsModule = await import("@Core/instances/instanceTools.js");
-      if (toolsModule?.instanceTools) {
-        instanceTools = toolsModule.instanceTools;
-        console.log("✅ Instance tools loaded");
+      const toolsModule = await import(
+        "@Core/instances/types/vtk/VTKInstanceTools.js"
+      );
+      if (toolsModule?.vtkInstanceTools) {
+        vtkInstanceTools = toolsModule.vtkInstanceTools;
+        console.log("✅ VTK instance tools loaded");
       }
     } catch (e) {
-      console.log("   Instance tools not available");
+      console.log("   VTK instance tools not available");
     }
 
-    // Set up instance creation hooks if we have enhanced systems
-    if (instanceCollaboration || instanceTools) {
-      setupInstanceHooks();
+    // Set up instance hooks if we have enhanced systems
+    if (instanceCollaboration || vtkInstanceTools) {
+      setupInstanceHooks(instanceCollaboration, vtkInstanceTools);
       console.log("✅ Instance hooks configured");
     }
 
     console.log("✅ Phase 3 complete");
-    console.log("🎉 CIA Web fully initialized!");
-    console.log("📋 Type CIA.help() for debug commands");
   } catch (error) {
-    // Phase 3 errors are non-critical
     console.warn("⚠️ Phase 3 partial failure:", error);
     console.log("Continuing with basic features");
   }
 }
 
 /**
- * Set up hooks for instance creation/deletion to add enhanced features
- * (No changes needed here for now)
- */
-function setupInstanceHooks() {
-  if (!workspaceManager) {
-    console.log("⚠️ Workspace manager not available for hooks");
-    return;
-  }
-
-  if (!instanceCollaboration && !instanceTools) {
-    console.log("⚠️ No enhanced systems for instance hooks");
-    return;
-  }
-
-  // Save original methods
-  const originalCreateInstance =
-    workspaceManager.createInstance.bind(workspaceManager);
-  const originalDeleteInstance =
-    workspaceManager.deleteInstance.bind(workspaceManager);
-
-  // Override createInstance to add enhancements
-  workspaceManager.createInstance = function (containerElement, options = {}) {
-    const instanceId = originalCreateInstance(containerElement, options);
-    if (!instanceId) return null;
-
-    const instance = workspaceManager.getInstance(instanceId);
-
-    if (instance && instance.sceneObjects) {
-      if (instanceCollaboration) {
-        try {
-          instanceCollaboration.initializeForInstance(
-            instanceId,
-            instance.sceneObjects
-          );
-          instanceCollaboration.setCursorTracking(instanceId, true);
-          console.log(`🤝 Collaboration enabled for instance: ${instanceId}`);
-        } catch (error) {
-          console.warn(
-            `⚠️ Could not initialize collaboration for ${instanceId}:`,
-            error
-          );
-        }
-      }
-
-      if (instanceTools) {
-        try {
-          instanceTools.initializeTools(instanceId, instance.sceneObjects);
-          console.log(`🛠️ Tools enabled for instance: ${instanceId}`);
-        } catch (error) {
-          console.warn(
-            `⚠️ Could not initialize tools for ${instanceId}:`,
-            error
-          );
-        }
-      }
-    }
-
-    return instanceId;
-  };
-
-  // Override deleteInstance to clean up enhancements
-  workspaceManager.deleteInstance = function (instanceId) {
-    if (instanceCollaboration) {
-      try {
-        instanceCollaboration.cleanupInstance(instanceId);
-      } catch (error) {
-        console.warn(
-          `⚠️ Error cleaning up collaboration for ${instanceId}:`,
-          error
-        );
-      }
-    }
-
-    if (instanceTools) {
-      try {
-        instanceTools.cleanupTools(instanceId);
-      } catch (error) {
-        console.warn(`⚠️ Error cleaning up tools for ${instanceId}:`, error);
-      }
-    }
-
-    originalDeleteInstance(instanceId);
-  };
-
-  console.log("   Instance hooks installed");
-}
-
-/**
  * Set up debug helpers for console access
- * ⭐ UPDATED: Exposes new DatasetManager and adapter
  */
 function setupDebugHelpers() {
   if (typeof window !== "undefined") {
     window.CIA = window.CIA || {};
 
-    // ⭐ NEW: Expose new architecture components
-    window.CIA.datasetManager = datasetManager; // NEW DatasetManager
-    window.CIA.dataCacheAdapter = dataCacheAdapter; // The adapter
-    window.CIA.dataCache = dataCache; // Original cache (for comparison)
-
-    // Add core managers
+    // Expose core systems
+    window.CIA.datasetManager = datasetManager;
+    window.CIA.dataCacheAdapter = dataCacheAdapter;
+    window.CIA.dataCache = dataCache;
     window.CIA.workspaceManager = workspaceManager;
-    window.CIA.visualizationManager = visualizationManager;
     window.CIA.annotationSystem = annotationSystem;
     window.CIA.presenceSystem = presenceSystem;
 
-    // Add enhanced systems if available
-    if (syncManager) window.CIA.syncManager = syncManager;
-    if (instanceCollaboration)
-      window.CIA.instanceCollaboration = instanceCollaboration;
-    if (instanceTools) window.CIA.instanceTools = instanceTools;
-
-    // Helper functions for debugging
+    // Helper functions
     window.CIA.listInstances = () => {
       const ids = workspaceManager.getAllInstanceIds();
       console.log(`📊 Active instances: ${ids.length}`);
@@ -459,7 +329,6 @@ function setupDebugHelpers() {
       return ids;
     };
 
-    // ⭐ UPDATED: Uses new DatasetManager
     window.CIA.listDatasets = () => {
       const datasets = datasetManager.getAllDatasets();
       if (datasets.length === 0) {
@@ -478,7 +347,6 @@ function setupDebugHelpers() {
       return datasets;
     };
 
-    // ⭐ NEW: Helper to check cache stats
     window.CIA.cacheStats = async () => {
       const stats = await dataCacheAdapter.getStats();
       console.log("📊 Cache Statistics:");
@@ -495,27 +363,22 @@ function setupDebugHelpers() {
       console.log("  CIA.listInstances() - List all active instances");
       console.log("  CIA.listDatasets() - List all loaded datasets");
       console.log("  CIA.cacheStats() - Show cache statistics");
-      console.log("  CIA.datasetManager - Access new dataset manager");
-      console.log("  CIA.dataCache - Access original cache");
-      console.log("  CIA.dataCacheAdapter - Access the adapter");
+      console.log("  CIA.datasetManager - Access dataset manager");
       console.log("  CIA.workspaceManager - Access workspace manager");
       console.log("  CIA.presenceSystem - Access presence system");
-      if (syncManager) {
-        console.log("  CIA.syncManager.forceSyncAll() - Force sync all data");
-      }
-      if (instanceTools) {
-        console.log(
-          "  CIA.instanceTools.resetCamera(instanceId) - Reset camera"
-        );
-      }
       console.log("\nType any command to try it!");
     };
   }
 }
 
+function setupInstanceHooks(instanceCollaboration, vtkInstanceTools) {
+  // Hook implementation would go here
+  // This would enhance workspaceManager.createInstance and deleteInstance
+  // to automatically initialize/cleanup enhanced features
+}
+
 /**
  * Main initialization function
- * Call this from your app entry point
  */
 export async function initializeCIAWeb() {
   console.log("====================================");

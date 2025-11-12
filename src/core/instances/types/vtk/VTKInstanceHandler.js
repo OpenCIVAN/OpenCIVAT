@@ -2,8 +2,13 @@
 // Reference implementation of InstanceTypeHandler for VTK.js
 // This serves as the blueprint for contributors adding new instance types
 
+import vtkPlaneWidget from "@kitware/vtk.js/Widgets/Widgets3D/ImplicitPlaneWidget";
+import vtkLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
+import vtkWidgetManager from "@kitware/vtk.js/Widgets/Core/WidgetManager";
+
 import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface.js";
 import { initializeScene } from "@VTK/scene/sceneManager.js";
+import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature.js";
 
 /**
  * VTKInstanceHandler
@@ -27,11 +32,18 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   constructor() {
     super();
 
-    // VTK-specific state that's private to this handler
-    // The core system never sees or touches this
-    this.activeWidgets = new Map(); // instanceId → widget instances
-    this.cursorActors = new Map(); // instanceId → userId → actor
-    this.annotationActors = new Map(); // instanceId → annotationId → actor
+    // Features - each is independent and self-contained
+    this.reductionFeature = new VTKReductionFeature();
+    // this.annotationFeature = new VTKAnnotationFeature(); // TODO
+    // this.vrFeature = new VTKVRFeature(); // TODO
+
+    // Widget tracking
+    this.widgetManagers = new Map();
+    this.activeWidgets = new Map();
+
+    // Placeholders for future features
+    this.cursorActors = new Map();
+    this.annotationActors = new Map();
 
     console.log("🎨 VTKInstanceHandler: Created");
   }
@@ -71,32 +83,31 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   async initialize(containerElement, options) {
     const { instanceId } = options;
 
-    console.log(`🎨 VTK Handler: Initializing instance ${instanceId}`);
-
-    // Use existing sceneManager to create VTK pipeline
-    // This demonstrates wrapping existing code rather than rewriting
+    // Create VTK scene
     const sceneObjects = initializeScene(containerElement);
 
-    if (!sceneObjects) {
-      throw new Error("Failed to initialize VTK scene");
-    }
+    // Create widget manager for this instance
+    const widgetManager = vtkWidgetManager.newInstance();
+    widgetManager.setRenderer(sceneObjects.renderer);
+    this.widgetManagers.set(instanceId, widgetManager);
 
-    // VTK-specific setup that the core doesn't need to know about
-    // For example, configure interaction style, set background color, etc.
-    const { renderer } = sceneObjects;
-    renderer.setBackground(0.1, 0.1, 0.1); // Dark background
-
-    // Return instance data - this gets stored and passed back to us
-    // The structure here is VTK-specific; other handlers return different structures
-    return {
+    const instanceData = {
       instanceId,
       sceneObjects,
-      // VTK-specific metadata
-      actors: new Map(), // datasetId → actor
-      filters: new Map(), // filterId → filter object
-      widgets: new Map(), // widgetId → widget instance
-      lastCameraState: null, // For syncing camera positions
+      widgetManager,
+      features: {},
+      actors: new Map(), // Track actors for each dataset
     };
+
+    // Initialize features
+    await this.reductionFeature.initialize(instanceId, instanceData);
+    instanceData.features.reduction = this.reductionFeature;
+
+    // TODO: Initialize other features as needed
+    // await this.annotationFeature.initialize(instanceId, instanceData);
+    // await this.vrFeature.initialize(instanceId, instanceData);
+
+    return instanceData;
   }
 
   /**
@@ -113,6 +124,16 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const { instanceId, sceneObjects, actors, widgets } = instanceData;
 
     console.log(`🧹 VTK Handler: Cleaning up instance ${instanceId}`);
+
+    // Cleanup features
+    await this.reductionFeature.cleanup(instanceId);
+    // await this.annotationFeature.cleanup(instanceId);
+    // await this.vrFeature.cleanup(instanceId);
+
+    // Cleanup widgets
+    this._disableAllWidgets(instanceId);
+    this.widgetManagers.delete(instanceId);
+    this.activeWidgets.delete(instanceId);
 
     // STEP 1: Disconnect observers FIRST, before touching any VTK objects
     // This prevents callbacks from firing during or after cleanup
@@ -212,6 +233,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     this.activeWidgets.delete(instanceId);
     this.cursorActors.delete(instanceId);
     this.annotationActors.delete(instanceId);
+
+    await this.reductionFeature.cleanup(instanceData.instanceId);
 
     console.log(`✅ VTK Handler: Instance ${instanceId} cleaned up`);
   }
@@ -418,74 +441,407 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   // These enhance functionality but aren't required
   // ===========================================================================
 
-  /**
-   * Get tools available for VTK instances
-   *
-   * This defines what buttons appear in the instance toolbar.
-   * Each tool includes an icon, label, and callback.
-   *
-   * Contributors adding VTK widgets would add entries here.
-   */
+  // =========================================================================
+  // TOOLS - THIS IS WHERE ALL VTK-SPECIFIC UI COMES FROM
+  // React calls this method and renders whatever we return
+  // =========================================================================
+
   getTools(instanceData) {
-    return [
-      {
-        id: "reset-camera",
-        label: "Reset Camera",
-        icon: "camera",
-        onClick: () => this._resetCamera(instanceData),
-      },
-      {
-        id: "clip",
-        label: "Clip Plane",
-        icon: "scissors",
-        onClick: () => this._activateClipWidget(instanceData),
-      },
-      {
-        id: "measure",
-        label: "Measure Distance",
-        icon: "ruler",
-        onClick: () => this._activateMeasureWidget(instanceData),
-      },
-      // Contributors: Add more tools here!
-      // Each tool is isolated - adding one doesn't affect others
-    ];
+    const { instanceId } = instanceData;
+    const tools = [];
+
+    // =======================================================================
+    // CAMERA CONTROLS
+    // =======================================================================
+
+    tools.push({
+      id: "reset-camera",
+      label: "Reset Camera",
+      icon: "📷",
+      description: "Reset camera to fit all data",
+      onClick: () => this._resetCamera(instanceData),
+    });
+
+    tools.push({
+      id: "view-preset",
+      label: "View",
+      type: "menu",
+      description: "Set camera to predefined views",
+      options: [
+        {
+          id: "front",
+          label: "Front View",
+          onClick: () => this._setView(instanceData, "front"),
+        },
+        {
+          id: "back",
+          label: "Back View",
+          onClick: () => this._setView(instanceData, "back"),
+        },
+        {
+          id: "left",
+          label: "Left View",
+          onClick: () => this._setView(instanceData, "left"),
+        },
+        {
+          id: "right",
+          label: "Right View",
+          onClick: () => this._setView(instanceData, "right"),
+        },
+        {
+          id: "top",
+          label: "Top View",
+          onClick: () => this._setView(instanceData, "top"),
+        },
+        {
+          id: "bottom",
+          label: "Bottom View",
+          onClick: () => this._setView(instanceData, "bottom"),
+        },
+      ],
+    });
+
+    tools.push({ type: "separator" });
+
+    // =======================================================================
+    // VISUALIZATION CONTROLS
+    // These are VTK-specific - other handlers would provide different controls
+    // =======================================================================
+
+    tools.push({
+      id: "wireframe",
+      label: "Wireframe",
+      icon: "🔲",
+      description: "Toggle wireframe mode",
+      onClick: () => this._toggleWireframe(instanceData),
+    });
+
+    tools.push({
+      id: "colormap",
+      label: "Colors",
+      type: "menu",
+      description: "Change color mapping",
+      options: [
+        {
+          id: "rainbow",
+          label: "Rainbow",
+          onClick: () => this._setColorMap(instanceData, "rainbow"),
+        },
+        {
+          id: "grayscale",
+          label: "Grayscale",
+          onClick: () => this._setColorMap(instanceData, "grayscale"),
+        },
+        {
+          id: "hot",
+          label: "Hot",
+          onClick: () => this._setColorMap(instanceData, "hot"),
+        },
+        {
+          id: "cool",
+          label: "Cool",
+          onClick: () => this._setColorMap(instanceData, "cool"),
+        },
+      ],
+    });
+
+    tools.push({ type: "separator" });
+
+    // =======================================================================
+    // WIDGET TOOLS
+    // =======================================================================
+
+    const activeWidget = this.activeWidgets.get(instanceId);
+
+    tools.push({
+      id: "clip",
+      label: "Clip Plane",
+      icon: "✂️",
+      description: "Add clipping plane",
+      active: activeWidget?.clip !== undefined,
+      onClick: () => this._toggleClipWidget(instanceData),
+    });
+
+    tools.push({
+      id: "measure",
+      label: "Measure",
+      icon: "📏",
+      description: "Measure distance",
+      active: activeWidget?.measure !== undefined,
+      onClick: () => this._toggleMeasureWidget(instanceData),
+    });
+
+    tools.push({ type: "separator" });
+
+    // =======================================================================
+    // FEATURE TOOLS
+    // Features provide their own tools through their getTools() method
+    // =======================================================================
+
+    const reductionTools = this.reductionFeature.getTools(instanceId);
+    tools.push(...reductionTools);
+
+    return tools;
   }
+
+  // =========================================================================
+  // TOOL IMPLEMENTATIONS
+  // These are private methods that implement the actual functionality
+  // React never calls these directly - they're called by the onClick callbacks
+  // =========================================================================
+
+  _resetCamera(instanceData) {
+    const { renderer, renderWindow } = instanceData.sceneObjects;
+    renderer.resetCamera();
+    renderWindow.render();
+    console.log("📷 Camera reset");
+  }
+
+  _setView(instanceData, view) {
+    const { camera, renderer, renderWindow } = instanceData.sceneObjects;
+
+    const views = {
+      front: { position: [0, -1, 0], up: [0, 0, 1] },
+      back: { position: [0, 1, 0], up: [0, 0, 1] },
+      left: { position: [-1, 0, 0], up: [0, 0, 1] },
+      right: { position: [1, 0, 0], up: [0, 0, 1] },
+      top: { position: [0, 0, 1], up: [0, 1, 0] },
+      bottom: { position: [0, 0, -1], up: [0, 1, 0] },
+    };
+
+    if (views[view]) {
+      const bounds = renderer.computeVisiblePropBounds();
+      const center = [
+        (bounds[0] + bounds[1]) / 2,
+        (bounds[2] + bounds[3]) / 2,
+        (bounds[4] + bounds[5]) / 2,
+      ];
+
+      const distance =
+        Math.max(
+          bounds[1] - bounds[0],
+          bounds[3] - bounds[2],
+          bounds[5] - bounds[4]
+        ) * 2;
+
+      const pos = views[view].position;
+      camera.setPosition(
+        center[0] + pos[0] * distance,
+        center[1] + pos[1] * distance,
+        center[2] + pos[2] * distance
+      );
+      camera.setFocalPoint(...center);
+      camera.setViewUp(...views[view].up);
+
+      renderer.resetCameraClippingRange();
+      renderWindow.render();
+
+      console.log(`📷 Camera set to ${view} view`);
+    }
+  }
+
+  _toggleWireframe(instanceData) {
+    const { actor, renderWindow } = instanceData.sceneObjects;
+    const property = actor.getProperty();
+
+    const currentRep = property.getRepresentation();
+    const newRep = currentRep === 2 ? 1 : 2;
+
+    property.setRepresentation(newRep);
+    renderWindow.render();
+
+    console.log(`🔲 Wireframe ${newRep === 1 ? "enabled" : "disabled"}`);
+  }
+
+  _setColorMap(instanceData, preset) {
+    const { actor, renderWindow } = instanceData.sceneObjects;
+    const mapper = actor.getMapper();
+    const input = mapper.getInputData();
+
+    // CRITICAL FIX: Check if the data has scalars
+    const pointData = input.getPointData();
+    const scalars = pointData.getScalars();
+
+    if (!scalars) {
+      console.warn(`⚠️ Cannot set color map: data has no scalar values`);
+      console.log(
+        `   Tip: VTP files need scalar data (colors per point) for color mapping`
+      );
+      return;
+    }
+
+    const vtkColorTransferFunction =
+      require("@kitware/vtk.js/Rendering/Core/ColorTransferFunction").default;
+
+    const ctf = vtkColorTransferFunction.newInstance();
+
+    const presets = {
+      rainbow: [
+        [0.0, 0, 0, 1],
+        [0.25, 0, 1, 1],
+        [0.5, 0, 1, 0],
+        [0.75, 1, 1, 0],
+        [1.0, 1, 0, 0],
+      ],
+      grayscale: [
+        [0.0, 0, 0, 0],
+        [1.0, 1, 1, 1],
+      ],
+      hot: [
+        [0.0, 0, 0, 0],
+        [0.33, 1, 0, 0],
+        [0.66, 1, 1, 0],
+        [1.0, 1, 1, 1],
+      ],
+      cool: [
+        [0.0, 0, 0, 1],
+        [0.5, 0, 1, 1],
+        [1.0, 0, 1, 0],
+      ],
+    };
+
+    const colors = presets[preset] || presets.rainbow;
+    const dataRange = scalars.getRange(); // Now safe to call
+
+    colors.forEach(([pos, r, g, b]) => {
+      const value = dataRange[0] + pos * (dataRange[1] - dataRange[0]);
+      ctf.addRGBPoint(value, r, g, b);
+    });
+
+    mapper.setLookupTable(ctf);
+    renderWindow.render();
+
+    console.log(`🎨 Color map set to ${preset}`);
+  }
+
+  _toggleClipWidget(instanceData) {
+    const { instanceId, sceneObjects, widgetManager } = instanceData;
+    const { mapper, renderWindow } = sceneObjects;
+
+    const activeWidget = this.activeWidgets.get(instanceId);
+
+    if (activeWidget?.clip) {
+      this._disableAllWidgets(instanceId);
+      mapper.removeAllClippingPlanes();
+      renderWindow.render();
+      console.log(`✂️ Clip widget disabled`);
+      return;
+    }
+
+    this._disableAllWidgets(instanceId);
+
+    const vtkImplicitPlaneWidget =
+      require("@kitware/vtk.js/Widgets/Widgets3D/ImplicitPlaneWidget").default;
+
+    const widget = vtkImplicitPlaneWidget.newInstance();
+
+    // FIXED: Use placeWidget() not setPlaceWidget()
+    const bounds = mapper.getInputData().getBounds();
+    widget.placeWidget(bounds); // Correct API
+    widget.setPlaceFactor(1.25);
+
+    const handle = widgetManager.addWidget(widget);
+    widgetManager.grabFocus(widget);
+
+    widget.onInteractionEvent(() => {
+      const plane = widget.getPlane();
+      mapper.removeAllClippingPlanes();
+      mapper.addClippingPlane(plane);
+      renderWindow.render();
+    });
+
+    if (!this.activeWidgets.has(instanceId)) {
+      this.activeWidgets.set(instanceId, {});
+    }
+    this.activeWidgets.get(instanceId).clip = { widget, handle };
+
+    console.log(`✂️ Clip widget activated`);
+  }
+
+  _toggleMeasureWidget(instanceData) {
+    const { instanceId, sceneObjects, widgetManager } = instanceData;
+    const { renderWindow } = sceneObjects;
+
+    const activeWidget = this.activeWidgets.get(instanceId);
+
+    if (activeWidget?.measure) {
+      this._disableAllWidgets(instanceId);
+      return;
+    }
+
+    this._disableAllWidgets(instanceId);
+
+    const widget = vtkLineWidget.newInstance();
+    const widgetRep = widget.getWidgetRepresentation();
+    widgetRep.setGlyphScale(5);
+
+    const handle = widgetManager.addWidget(widget);
+    handle.setEnabled(true);
+
+    widget.onEndInteractionEvent(() => {
+      const distance = widgetRep.getDistance();
+      console.log(`📏 Distance measured: ${distance.toFixed(2)} units`);
+      renderWindow.render();
+    });
+
+    if (!this.activeWidgets.has(instanceId)) {
+      this.activeWidgets.set(instanceId, {});
+    }
+    this.activeWidgets.get(instanceId).measure = { widget, handle };
+
+    console.log(`📏 Measure widget activated`);
+  }
+
+  _disableAllWidgets(instanceId) {
+    const activeWidget = this.activeWidgets.get(instanceId);
+    if (!activeWidget) return;
+
+    const widgetManager = this.widgetManagers.get(instanceId);
+    if (!widgetManager) return;
+
+    Object.values(activeWidget).forEach(({ widget, handle }) => {
+      handle.setEnabled(false);
+      widgetManager.removeWidget(widget);
+    });
+
+    this.activeWidgets.delete(instanceId);
+  }
+
+  // =========================================================================
+  // HEADER INFO
+  // =========================================================================
 
   /**
    * Get header information to display
    *
-   * Returns stats and indicators to show in the instance viewport header.
-   * This gives users context about what they're viewing.
+   * Returns stats about the currently loaded data.
+   *
+   * NOTE: We don't show "number of datasets" because in the new architecture,
+   * an instance displays ONE dataset at a time (not multiple simultaneously).
+   * The stat would always be either 0 or 1, which isn't useful information.
+   *
+   * Instead, we show meaningful stats about the DATA itself (points, cells).
    */
   getHeaderInfo(instanceData) {
-    const actors = instanceData?.actors;
     const sceneObjects = instanceData?.sceneObjects;
-
     const stats = [];
 
-    // Always show dataset count
-    stats.push({
-      label: "Datasets",
-      value: actors ? actors.size.toString() : "0",
-    });
-
-    // If we have scene objects, we can extract detailed VTK statistics
+    // Only show stats if we have data loaded
     if (sceneObjects && sceneObjects.mapper) {
       const mapper = sceneObjects.mapper;
       const input = mapper.getInputData();
 
       if (input) {
-        // Get point count from the actual VTK data
+        // Show point count
         const points = input.getPoints();
         if (points) {
-          const pointCount = points.getNumberOfPoints();
           stats.push({
             label: "Points",
-            value: pointCount.toLocaleString(), // Formats with commas: 541,199
+            value: points.getNumberOfPoints().toLocaleString(),
           });
         }
 
-        // Get cell/polygon count
+        // Show cell count
         const cellCount = input.getNumberOfCells();
         if (cellCount > 0) {
           stats.push({
@@ -498,7 +854,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     return {
       stats,
-      indicators: [{ icon: "cube", label: "3D View", color: "#4CAF50" }],
+      indicators: [{ icon: "🎲", label: "3D View", color: "#4CAF50" }],
     };
   }
 
@@ -646,35 +1002,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   async updateInstanceVR(instanceData, vrData, frame) {
     // TODO: Implement VR frame update
     // This renders stereo views for left and right eyes
-  }
-
-  // ===========================================================================
-  // HELPER METHODS (Private to this handler)
-  // ===========================================================================
-
-  _resetCamera(instanceData) {
-    const sceneObjects = instanceData?.sceneObjects;
-
-    if (sceneObjects && sceneObjects.renderer) {
-      sceneObjects.renderer.resetCamera();
-      sceneObjects.renderWindow.render();
-      console.log("🎥 Camera reset");
-    }
-  }
-
-  _activateClipWidget(instanceData) {
-    console.log("🔧 VTK: Activating clip plane widget");
-
-    // TODO: Implement clip widget
-    // This would be a separate widget module under vtk/widgets/ClipWidget.js
-    // Following the pattern of modular, isolated features
-  }
-
-  _activateMeasureWidget(instanceData) {
-    console.log("🔧 VTK: Activating measure widget");
-
-    // TODO: Implement measure widget
-    // This would be under vtk/widgets/MeasureWidget.js
   }
 
   // ===========================================================================

@@ -1,4 +1,5 @@
 // src/core/data/models/InstanceWindow.js
+import { generateInstanceId } from "@Utils/idGenerator.js";
 
 /**
  * InstanceWindow - Layer 3 of the architecture
@@ -56,7 +57,7 @@ export class InstanceWindow {
   }
 
   _generateId() {
-    return `instance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return generateInstanceId();
   }
 
   // ==================== LIFECYCLE ====================

@@ -17,6 +17,8 @@
  * - Persistence: Annotations exist independent of views
  */
 
+import { generateAnnotationId } from "@Utils/idGenerator.js";
+
 export class Annotation {
   constructor(config = {}) {
     // Core identification
@@ -62,9 +64,7 @@ export class Annotation {
    * In production, you might use a UUID library
    */
   _generateId() {
-    return `annotation_${Date.now()}_${Math.random()
-      .toString(36)
-      .substr(2, 9)}`;
+    return generateAnnotationId();
   }
 
   /**

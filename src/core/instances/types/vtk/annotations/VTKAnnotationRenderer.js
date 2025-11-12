@@ -10,8 +10,6 @@ import vtkCylinderSource from "@kitware/vtk.js/Filters/Sources/CylinderSource";
 import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 
 import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
-import { getUserId } from "@Collaboration/presence/userManagement.js";
-import { getSceneObjects } from "@VTK/scene/sceneManager.js";
 
 class AnnotationRenderer {
   constructor() {
@@ -33,62 +31,57 @@ class AnnotationRenderer {
     return this.markerRadius;
   }
 
-  initialize() {
-    const { renderer, renderWindow } = getSceneObjects();
+  /**
+   * Initialize renderer for a specific instance
+   *
+   * CRITICAL CHANGE: In multi-instance architecture, each instance has its own
+   * renderer. We don't initialize a global renderer anymore.
+   *
+   * @param {Object} sceneObjects - The VTK scene objects for this instance
+   * @param {string} instanceId - Which instance this renderer is for
+   * @param {string} datasetId - Which dataset this instance is showing
+   */
+  initializeForInstance(sceneObjects, instanceId, datasetId) {
+    const { renderer, renderWindow } = sceneObjects;
 
     if (!renderer || !renderWindow) {
-      console.warn("Cannot initialize annotation renderer: scene not ready");
+      console.warn(
+        `Cannot initialize annotation renderer for instance ${instanceId}: scene not ready`
+      );
       return;
     }
 
     this.renderer = renderer;
     this.renderWindow = renderWindow;
 
-    // Make sure annotation system is initialized first
-    if (!annotationSystem.annotations) {
-      annotationSystem.initialize();
-    }
+    console.log(
+      `📍 Annotation renderer initialized for instance ${instanceId}`
+    );
+    console.log(`   Dataset: ${datasetId}`);
 
-    // CRITICAL: Listen for annotation changes (add/delete)
-    annotationSystem.onAnnotationChange((action, annotation) => {
-      console.log(`📍 Annotation change: ${action}`, annotation);
-
-      if (action === "added") {
-        // Check if this annotation belongs to current dataset
-        import("@Core/visualizationManager.js").then((module) => {
-          const currentViz = module.visualizationManager.getCurrentDataset();
-          const currentDatasetId = currentViz ? currentViz.datasetId : null;
-
-          // Only render if it matches current dataset or no dataset filter
-          if (!currentDatasetId || annotation.datasetId === currentDatasetId) {
-            this.createAnnotationMarker(annotation);
-          }
-        });
-      } else if (action === "deleted") {
-        console.log(`📍 Attempting to remove marker: ${annotation.id}`);
-        this.removeAnnotationMarker(annotation.id);
-      }
-    });
-
-    // Load existing annotations (filtered by current dataset)
-    import("@Core/visualizationManager.js").then((module) => {
-      const currentViz = module.visualizationManager.getCurrentDataset();
-      const currentDatasetId = currentViz ? currentViz.datasetId : null;
-
-      const annotations = annotationSystem.getAllAnnotations();
-      const relevantAnnotations = currentDatasetId
-        ? annotations.filter((a) => a.datasetId === currentDatasetId)
-        : annotations;
-
+    // Load annotations for THIS SPECIFIC dataset
+    if (datasetId) {
+      const annotations = annotationSystem.getAnnotationsByDataset(datasetId);
       console.log(
-        `📍 Loading ${relevantAnnotations.length} annotations for dataset ${currentDatasetId}`
+        `📍 Loading ${annotations.length} annotations for dataset ${datasetId}`
       );
-      relevantAnnotations.forEach((annotation) => {
+
+      annotations.forEach((annotation) => {
         this.createAnnotationMarker(annotation);
       });
-    });
+    }
 
-    console.log("📍 Annotation renderer initialized");
+    // Listen for new annotations for this dataset
+    annotationSystem.onAnnotationChange((action, annotation) => {
+      // Only render if this annotation is for our dataset
+      if (annotation.datasetId === datasetId) {
+        if (action === "added") {
+          this.createAnnotationMarker(annotation);
+        } else if (action === "deleted") {
+          this.removeAnnotationMarker(annotation.id);
+        }
+      }
+    });
   }
 
   createAnnotationMarker(annotation) {

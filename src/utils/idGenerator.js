@@ -34,6 +34,38 @@ export function generateInstanceId() {
 }
 
 /**
+ * Generate an view ID
+ * @returns {string} View ID
+ */
+export function generateViewId() {
+  return generateId("view");
+}
+
+/**
+ * Generate an annotation ID
+ * @returns {string} Annotation ID
+ */
+export function generateAnnotationId() {
+  return generateId("annotation");
+}
+
+/**
+ * Generate an annotation ID
+ * @returns {string} Annotation ID
+ */
+export function generateTextChatId() {
+  return generateId("textchat");
+}
+
+/**
+ * Generate an log ID
+ * @returns {string} Log ID
+ */
+export function generateLogId() {
+  return generateId("log");
+}
+
+/**
  * Extract timestamp from ID
  * Useful for sorting or debugging
  *

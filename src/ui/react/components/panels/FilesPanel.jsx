@@ -4,11 +4,9 @@
 import React, { useState, useRef } from "react";
 import { FolderOpen, Upload, File as FileIcon, Check, Loader, Eye } from "lucide-react";
 
-import { datasetManager } from "@Core/data/index.js";
-import { visualizationManager } from "@Core/visualizationManager.js";
+import { datasetManager } from "@Init/appInitializer.js";
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { useDatasets } from "@UI/react/hooks/useDatasets.js";
-import { useCurrentDataset } from "@UI/react/hooks/useCurrentDataset.js";
 
 import "./FilesPanel.css";
 
@@ -23,7 +21,6 @@ const SAMPLE_FILES = [
 
 export function FilesPanel() {
     const datasets = useDatasets();
-    const { datasetId: currentDatasetId } = useCurrentDataset();
     const [uploadType, setUploadType] = useState("samples");
     const fileInputRef = useRef(null);
     const [spawnNewInstances, setSpawnNewInstances] = useState(true);
@@ -37,23 +34,27 @@ export function FilesPanel() {
 
     const isAnyLoading = datasets.some(d => d.isLoading);
 
-    /**
-     * Handle dataset selection
-     * Creates a new instance or replaces current based on toggle
-     */
     const handleDatasetAction = async (datasetId, datasetName) => {
         console.log(`📂 Dataset selected: ${datasetName}`);
-        console.log(`   Action: ${spawnNewInstances ? 'spawn new' : 'replace current'}`);
 
+        // Check if we should spawn new or replace existing based on toggle
         if (spawnNewInstances) {
-            // This will be handled by WorkspaceGrid
-            // Just set it as current so WorkspaceGrid detects it
-            visualizationManager.setCurrentDataset(datasetId, datasetName);
+            // Create a placeholder in WorkspaceGrid's state
+            // The actual VTK scene will be created when InstanceViewport mounts
+            // For now, just trigger instance creation through the manager
+
+            // WorkspaceGrid will detect this through instanceManager's listeners
+            // and add it to its instances array
+            console.log(`🎨 Requesting new instance for dataset: ${datasetId}`);
+
+            // Option: Emit an event that WorkspaceGrid listens for
+            window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                detail: { datasetId }
+            }));
         } else {
-            // Replace current instance's dataset
-            // This would require getting the active instance and updating it
-            // For now, just set as current
-            visualizationManager.setCurrentDataset(datasetId, datasetName);
+            // Replace current active instance's dataset
+            console.log(`🔄 Replacing current instance dataset with: ${datasetId}`);
+            // This would need to be implemented in instanceManager
         }
     };
 
@@ -66,33 +67,59 @@ export function FilesPanel() {
         try {
             // Check if already exists
             const existing = datasets.find(d => d.name === sampleFile.name);
-            if (existing?.hasPolydata) {
-                console.log("📂 Sample already loaded");
-                await handleDatasetAction(existing.id, sampleFile.name);
-                return;
-            }
 
             if (existing) {
-                console.log("📂 Sample exists, loading...");
-                await handleDatasetAction(existing.id, sampleFile.name);
-                return;
+                console.log("📂 Sample exists in metadata");
+
+                // CRITICAL: Check if polydata is actually loaded
+                if (existing.hasPolydata) {
+                    console.log("✅ Sample already loaded with polydata");
+                    // Trigger instance creation
+                    window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                        detail: { datasetId: existing.id }
+                    }));
+                    return;
+                } else {
+                    // Metadata exists but no polydata - need to load it
+                    console.log("📂 Sample metadata exists, loading polydata from cache...");
+
+                    // Trigger async load from cache
+                    const loaded = await datasetManager.loadPolydataFromCache(existing.id);
+
+                    if (loaded) {
+                        console.log("✅ Sample polydata loaded from cache");
+                        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                            detail: { datasetId: existing.id }
+                        }));
+                        return;
+                    } else {
+                        console.log("⚠️ Sample not in cache, fetching...");
+                        // Fall through to fetch and load
+                    }
+                }
             }
 
-            // Fetch the sample file
+            // Fetch the sample file (either new or re-fetching)
             const response = await fetch(sampleFile.path);
             if (!response.ok) {
                 throw new Error(`Failed to load sample: ${response.status}`);
             }
 
             const blob = await response.blob();
-            const file = new File([blob], sampleFile.name, { type: "application/octet-stream" });
+            const file = new File([blob], sampleFile.name, {
+                type: "application/octet-stream"
+            });
 
             // Load through dataset manager
             const publicPath = window.location.origin + sampleFile.path;
             const datasetId = await datasetManager.loadDataset(file, publicPath);
 
             console.log(`✅ Sample loaded successfully`);
-            await handleDatasetAction(datasetId, sampleFile.name);
+
+            // Trigger instance creation
+            window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                detail: { datasetId }
+            }));
 
         } catch (error) {
             console.error("❌ Failed to load sample:", error);
@@ -250,8 +277,7 @@ export function FilesPanel() {
                     {datasetsWithCounts.map(dataset => (
                         <div
                             key={dataset.id}
-                            className={`files-panel__dataset ${dataset.id === currentDatasetId ? "active" : ""
-                                } ${dataset.isLoading ? "loading" : ""}`}
+                            className={`files-panel__dataset ${dataset.isLoading ? "loading" : ""}`}
                             onClick={() => handleSelectDataset(dataset)}
                         >
                             <div className="files-panel__dataset-info">
@@ -278,9 +304,6 @@ export function FilesPanel() {
 
                             {/* Show instance count badge */}
                             <div className="files-panel__dataset-actions">
-                                {dataset.id === currentDatasetId && (
-                                    <span className="files-panel__current-badge">Current</span>
-                                )}
                                 {dataset.instanceCount > 0 && (
                                     <span
                                         className="files-panel__instance-badge"

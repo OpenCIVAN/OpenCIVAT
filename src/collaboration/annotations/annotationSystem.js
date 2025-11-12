@@ -8,6 +8,7 @@ import {
   getUserColor,
 } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
+import { generateAnnotationId } from "@Utils/idGenerator.js";
 
 class AnnotationSystem {
   constructor() {
@@ -30,15 +31,6 @@ class AnnotationSystem {
           const annotation = this.annotations.get(key);
           console.log("📍 Annotation change detected:", annotation);
           this.notifyListeners("added", annotation);
-
-          // CRITICAL: Immediately render the marker
-          import("@Collaboration/annotations/annotationRenderer.js").then(
-            ({ annotationRenderer }) => {
-              if (annotationRenderer.renderer) {
-                annotationRenderer.createAnnotationMarker(annotation);
-              }
-            }
-          );
         } else if (change.action === "delete") {
           this.notifyListeners("deleted", { id: key });
         }
@@ -48,23 +40,18 @@ class AnnotationSystem {
     console.log("📍 Annotation system initialized");
   }
 
-  createAnnotation(position, text, type = "note", datasetId = null) {
-    // Get current dataset if not specified
+  createAnnotation(position, text, type = "note", datasetId) {
+    // ✅ REQUIRE datasetId parameter
     if (!datasetId) {
-      const { visualizationManager } = require("@Core/visualizationManager.js");
-      const currentViz = visualizationManager.getCurrentDataset();
-      if (currentViz) {
-        datasetId = currentViz.datasetId;
-      } else {
-        console.warn(
-          "⚠️ No current dataset - annotation will not be tied to a dataset"
-        );
-        datasetId = "unknown";
-      }
+      console.error("❌ Cannot create annotation without datasetId");
+      console.error(
+        "   In multi-instance architecture, annotations must be tied to a dataset"
+      );
+      throw new Error("datasetId is required for createAnnotation");
     }
 
     const annotation = {
-      id: `annotation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateAnnotationId(),
       userId: getUserId(),
       userName: getUserName(),
       userColor: getUserColor(getUserId()),

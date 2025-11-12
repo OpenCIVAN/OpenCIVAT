@@ -8,6 +8,7 @@ import {
   getUserColor,
 } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
+import { generateTextChatId } from "@Utils/idGenerator.js";
 
 class TextChat {
   constructor() {
@@ -66,7 +67,7 @@ class TextChat {
     }
 
     const message = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateTextChatId(),
       userId: getUserId(),
       userName: getUserName(),
       userColor: getUserColor(getUserId()),

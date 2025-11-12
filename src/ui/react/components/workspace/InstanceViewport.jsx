@@ -1,75 +1,142 @@
 // src/ui/react/components/workspace/InstanceViewport.jsx
-// Enhanced instance viewport with tools integration
+// Generic instance container that works with ANY visualization type
+//through the handler interface. No VTK-specific code.
 
 import React, { useRef, useEffect, useState } from "react";
-import {
-    Maximize2,
-    Minimize2,
-    RotateCw,
-    Grid,
-    Palette,
-    Ruler,
-    Scissors,
-    Pin,
-    Copy,
-    Trash2,
-    Settings
-} from "lucide-react";
-
+import { Maximize2, Copy, Trash2, AlertCircle } from "lucide-react";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import "./InstanceViewport.css";
 
+/**
+ * InstanceViewport
+ * 
+ * This is a completely generic container that can host any type of visualization
+ * instance (VTK, Plotly, Three.js, custom WebGL, etc.). It works by asking the
+ * instance's handler for its tools and then rendering them.
+ * 
+ * CRITICAL ARCHITECTURAL PRINCIPLE:
+ * This component NEVER knows what type of instance it's hosting. It discovers
+ * the instance's capabilities at runtime by asking the handler. This makes the
+ * system truly extensible - new instance types can be added without changing
+ * any React code.
+ * 
+ * @param {string} instanceId - Unique identifier for this instance
+ * @param {string} datasetId - Optional dataset to display
+ * @param {Function} onDelete - Callback when instance should be deleted
+ * @param {Function} onDuplicate - Callback when instance should be duplicated
+ */
 export function InstanceViewport({
     instanceId,
-    instanceName,
     datasetId,
     onDelete,
     onDuplicate
 }) {
+    // =========================================================================
+    // STATE MANAGEMENT
+    // =========================================================================
+
+    // DOM reference to the container where the visualization renders
     const containerRef = useRef(null);
-    const [initialized, setInitialized] = useState(false);
-    const [hasData, setHasData] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [activeTool, setActiveTool] = useState(null);
-    const [showControls, setShowControls] = useState(true);
-    const [opacity, setOpacity] = useState(1);
-    const [pointSize, setPointSize] = useState(1);
-    const [colorMap, setColorMap] = useState('rainbow');
+
+    // Initialization tracking - prevents double initialization in React StrictMode
     const initOnce = useRef(false);
 
-    // Initialize the VTK scene once
+    // Has the handler been initialized and started rendering?
+    const [initialized, setInitialized] = useState(false);
+
+    // Is a dataset currently being loaded?
+    const [loading, setLoading] = useState(false);
+
+    // Tools provided by the handler - this is the key to extensibility
+    // The handler tells us what tools it has, we just render them
+    const [tools, setTools] = useState([]);
+
+    // Header information from the handler (stats, indicators, etc.)
+    const [headerInfo, setHeaderInfo] = useState({ stats: [], indicators: [] });
+
+    // Error state if initialization fails
+    const [error, setError] = useState(null);
+
+    // =========================================================================
+    // INSTANCE INITIALIZATION
+    // This happens once when the component mounts
+    // =========================================================================
+
     useEffect(() => {
+        // Guard against double initialization (React StrictMode calls effects twice)
         if (containerRef.current && !initOnce.current) {
             initOnce.current = true;
 
-            console.log(`🎨 Initializing enhanced instance viewport: ${instanceId}`);
+            console.log(`🎨 InstanceViewport: Initializing instance ${instanceId}`);
 
             try {
-                // Add instance ID to container for cursor tracking
-                containerRef.current.setAttribute('data-instance-id', instanceId);
-                containerRef.current.classList.add('instance-viewport');
-
-                // Create the instance (hooks in appInitializer will enhance it)
+                // STEP 1: Create the instance through workspaceManager
                 workspaceManager.createInstance(containerRef.current, {
-                    instanceId: instanceId
+                    instanceId: instanceId,
+                    type: 'vtk',
                 });
 
-                setInitialized(true);
-                console.log(`✅ Enhanced instance viewport initialized: ${instanceId}`);
+                // STEP 2: Poll for instance to be ready
+                // WorkspaceManager.createInstance() does async work internally but doesn't
+                // return a promise, so we need to poll until the instance is registered
+                let attempts = 0;
+                const maxAttempts = 10; // Wait up to 1 second (10 attempts × 100ms)
+
+                const checkInstanceReady = () => {
+                    const instance = workspaceManager.getInstance(instanceId);
+
+                    if (instance) {
+                        // Success! Instance is ready
+                        console.log(`✅ Instance ready: ${instanceId}`);
+
+                        // STEP 3: Get tools from handler
+                        const instanceTools = workspaceManager.getInstanceTools(instanceId);
+                        console.log(`   Handler provided ${instanceTools.length} tools`);
+                        setTools(instanceTools);
+
+                        // STEP 4: Get header info from handler
+                        const header = workspaceManager.getInstanceHeaderInfo(instanceId);
+                        setHeaderInfo(header);
+
+                        setInitialized(true);
+
+                    } else if (attempts < maxAttempts) {
+                        // Not ready yet, try again in 100ms
+                        attempts++;
+                        setTimeout(checkInstanceReady, 100);
+
+                    } else {
+                        // Timed out after 1 second
+                        throw new Error(`Instance failed to initialize after ${maxAttempts} attempts`);
+                    }
+                };
+
+                // Start checking
+                checkInstanceReady();
 
             } catch (error) {
                 console.error(`❌ Failed to initialize instance viewport:`, error);
+                setError(error.message);
             }
         }
 
         return () => {
-            // Cleanup will be handled by workspaceManager
+            // WorkspaceManager handles cleanup when we delete the instance
         };
     }, [instanceId]);
 
-    // Load dataset when it changes and scene is ready
+    // =========================================================================
+    // DATASET LOADING
+    // This happens when datasetId changes and the instance is ready
+    // =========================================================================
+
     useEffect(() => {
-        if (!initialized || !datasetId) {
-            setHasData(false);
+        // Don't try to load if instance isn't initialized yet
+        if (!initialized) return;
+
+        // If no dataset specified, leave instance empty
+        if (!datasetId) {
+            setLoading(false);
             return;
         }
 
@@ -77,43 +144,94 @@ export function InstanceViewport({
         console.log(`📊 Loading dataset ${datasetId} into instance ${instanceId}`);
 
         const loadDataset = async () => {
-            const dataset = window.CIA.datasetManager.getDatasetSync(datasetId);
-
-            if (!dataset) {
-                console.warn(`⚠️ Dataset ${datasetId} not found in manager`);
-                setLoading(false);
-                return;
-            }
-
-            if (!dataset.polydata) {
-                console.warn(`⚠️ Dataset ${datasetId} has no polydata yet - waiting...`);
-
-                // Set up a listener for when it loads
-                const checkInterval = setInterval(() => {
-                    const updatedDataset = window.CIA.datasetManager.getDatasetSync(datasetId);
-                    if (updatedDataset?.polydata) {
-                        clearInterval(checkInterval);
-                        workspaceManager.loadDatasetIntoInstance(instanceId, datasetId, updatedDataset.polydata);
-                        setHasData(true);
-                        setLoading(false);
-                    }
-                }, 500);
-
-                // Clean up after 30 seconds
-                setTimeout(() => {
-                    clearInterval(checkInterval);
-                    setLoading(false);
-                }, 30000);
-                return;
-            }
-
             try {
-                console.log(`🎨 Loading ${dataset.polydata.getPoints().getNumberOfPoints()} points into instance`);
-                workspaceManager.loadDatasetIntoInstance(instanceId, datasetId, dataset.polydata);
-                setHasData(true);
+                const datasetManager = window.CIA?.datasetManager;
+
+                if (!datasetManager) {
+                    throw new Error('DatasetManager not initialized');
+                }
+
+                const dataset = datasetManager.getDataset(datasetId);
+
+                if (!dataset) {
+                    console.warn(`⚠️ Dataset ${datasetId} not found in manager`);
+                    setLoading(false);
+                    return;
+                }
+
+                // Check if polydata is loaded
+                if (!dataset.polydata) {
+                    console.log(`⏳ Dataset polydata not loaded yet, waiting for load event...`);
+
+                    // Set up listener with correct event structure
+                    const handleLoad = (eventData) => {
+                        // CRITICAL FIX: eventData is an object { datasetId, dataset }
+                        if (eventData && eventData.datasetId === datasetId) {
+                            console.log(`✅ Dataset ${datasetId} finished loading`);
+
+                            const updatedDataset = datasetManager.getDataset(datasetId);
+                            if (updatedDataset?.polydata) {
+                                workspaceManager.loadDatasetIntoInstance(
+                                    instanceId,
+                                    datasetId,
+                                    updatedDataset.polydata
+                                );
+
+                                const newHeaderInfo = workspaceManager.getInstanceHeaderInfo(instanceId);
+                                setHeaderInfo(newHeaderInfo);
+
+                                setLoading(false);
+                            }
+
+                            // Clean up listener
+                            datasetManager.off('datasetLoaded', handleLoad);
+                        }
+                    };
+
+                    datasetManager.on('datasetLoaded', handleLoad);
+
+                    // IMPORTANT: Trigger the load if it hasn't started yet
+                    // This handles the case where the dataset exists but polydata isn't loaded
+                    if (!dataset.polydata) {
+                        console.log(`   Triggering polydata load from cache...`);
+                        datasetManager.loadPolydataFromCache(datasetId).catch(error => {
+                            console.error(`   Failed to load polydata:`, error);
+                            setLoading(false);
+                            setError(error.message);
+                            datasetManager.off('datasetLoaded', handleLoad);
+                        });
+                    }
+
+                    // Timeout after 30 seconds
+                    setTimeout(() => {
+                        datasetManager.off('datasetLoaded', handleLoad);
+                        if (loading) {
+                            setLoading(false);
+                            setError('Dataset loading timed out after 30 seconds');
+                        }
+                    }, 30000);
+
+                    return;
+                }
+
+                // Dataset is loaded, render immediately
+                console.log(`📦 Loading ${dataset.polydata.getPoints().getNumberOfPoints()} points`);
+
+                workspaceManager.loadDatasetIntoInstance(
+                    instanceId,
+                    datasetId,
+                    dataset.polydata
+                );
+
+                const newHeaderInfo = workspaceManager.getInstanceHeaderInfo(instanceId);
+                setHeaderInfo(newHeaderInfo);
+
+                setLoading(false);
+                console.log(`✅ Dataset loaded into instance`);
+
             } catch (error) {
                 console.error(`❌ Failed to load dataset:`, error);
-            } finally {
+                setError(error.message);
                 setLoading(false);
             }
         };
@@ -121,75 +239,27 @@ export function InstanceViewport({
         loadDataset();
     }, [initialized, datasetId, instanceId]);
 
-    // Tool handlers using the global instanceTools if available
-    const callToolMethod = (methodName, ...args) => {
-        if (window.CIA?.instanceTools) {
-            try {
-                return window.CIA.instanceTools[methodName](instanceId, ...args);
-            } catch (error) {
-                console.warn(`Tool method ${methodName} failed:`, error);
-            }
+    // =========================================================================
+    // UI HELPERS
+    // =========================================================================
+
+    /**
+     * Get a display-friendly name for this instance
+     * Uses the dataset filename if available, otherwise shows instance ID
+     */
+    const getDisplayName = () => {
+        if (!datasetId) {
+            return `Instance ${instanceId.slice(-6)}`;
         }
+
+        const datasetManager = window.CIA?.datasetManager;
+        const dataset = datasetManager?.getDataset(datasetId);
+        return dataset?.filename || `Instance ${instanceId.slice(-6)}`;
     };
 
-    const handleResetCamera = () => {
-        callToolMethod('resetCamera');
-    };
-
-    const handleSetView = (view) => {
-        callToolMethod('setCameraView', view);
-    };
-
-    const handleToggleWireframe = () => {
-        callToolMethod('toggleWireframe');
-    };
-
-    const handleToggleTool = (toolName) => {
-        if (activeTool === toolName) {
-            callToolMethod('disableAllTools');
-            setActiveTool(null);
-        } else {
-            // Disable previous tool
-            if (activeTool) {
-                callToolMethod('disableAllTools');
-            }
-
-            // Enable new tool
-            switch (toolName) {
-                case 'distance':
-                    callToolMethod('enableDistanceMeasurement');
-                    break;
-                case 'angle':
-                    callToolMethod('enableAngleMeasurement');
-                    break;
-                case 'clip':
-                    callToolMethod('enableClippingPlane');
-                    break;
-                case 'annotate':
-                    if (window.CIA?.instanceCollaboration) {
-                        window.CIA.instanceCollaboration.setAnnotationMode(instanceId, true);
-                    }
-                    break;
-            }
-            setActiveTool(toolName);
-        }
-    };
-
-    const handleColorMapChange = (preset) => {
-        setColorMap(preset);
-        callToolMethod('setColorMap', preset);
-    };
-
-    const handleOpacityChange = (value) => {
-        setOpacity(value);
-        callToolMethod('setOpacity', value);
-    };
-
-    const handlePointSizeChange = (value) => {
-        setPointSize(value);
-        callToolMethod('setPointSize', value);
-    };
-
+    /**
+     * Toggle fullscreen mode for this instance
+     */
     const handleFullscreen = () => {
         if (containerRef.current) {
             if (!document.fullscreenElement) {
@@ -200,182 +270,188 @@ export function InstanceViewport({
         }
     };
 
-    // Get dataset name for display
-    const dataset = datasetId ? window.CIA.datasetManager.getDatasetSync(datasetId) : null;
-    const displayName = instanceName || dataset?.name || `Instance ${instanceId.slice(-6)}`;
+    /**
+     * Render a single tool from the handler
+     * 
+     * This function is generic - it can render any tool type that a handler
+     * might provide. The handler defines the tool structure, we just render it.
+     */
+    const renderTool = (tool, index) => {
+        // Separator - just a visual divider
+        if (tool.type === 'separator') {
+            return (
+                <div
+                    key={`separator-${index}`}  // Use index instead of random
+                    className="toolbar-separator"
+                />
+            );
+        }
+
+        // Menu - a dropdown with options
+        if (tool.type === 'menu') {
+            return (
+                <div key={tool.id} className="toolbar-menu">
+                    <button
+                        className={`toolbar-btn ${tool.active ? 'active' : ''}`}
+                        disabled={tool.disabled}
+                    >
+                        {tool.icon && <span className="tool-icon">{tool.icon}</span>}
+                        <span className="tool-label">{tool.label}</span>
+                        <span className="menu-arrow">▼</span>
+                    </button>
+
+                    {/* Dropdown menu - would be shown on hover/click */}
+                    <div className="toolbar-menu-dropdown">
+                        {tool.options?.map((option) => (
+                            <button
+                                key={option.id}
+                                onClick={option.onClick}
+                                className={`menu-option ${option.active ? 'active' : ''}`}
+                                disabled={option.disabled}
+                            >
+                                {option.icon && <span className="option-icon">{option.icon}</span>}
+                                <span className="option-label">{option.label}</span>
+                                {option.description && (
+                                    <span className="option-description">{option.description}</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Default: Simple button
+        // THE KEY POINT: We call tool.onClick when the button is clicked
+        // We don't know or care what tool.onClick does - that's the handler's business
+        return (
+            <button
+                key={tool.id}
+                onClick={tool.onClick}  // ← THIS IS THE MAGIC - handler provides the callback
+                className={`toolbar-btn ${tool.active ? 'active' : ''}`}
+                title={tool.description || tool.label}
+                disabled={tool.disabled}
+            >
+                {tool.icon && <span className="tool-icon">{tool.icon}</span>}
+                <span className="tool-label">{tool.label}</span>
+            </button>
+        );
+    };
+
+    // =========================================================================
+    // RENDER
+    // =========================================================================
 
     return (
-        <div className="enhanced-instance-container">
+        <div className="instance-container">
+            {/* Header - Shows instance name, stats, and actions */}
             <div className="instance-header">
-                <h3 className="instance-title">{displayName}</h3>
+                <div className="instance-title-section">
+                    <h3 className="instance-title">{getDisplayName()}</h3>
 
-                <div className="instance-controls">
-                    {/* View controls */}
-                    <div className="control-group">
-                        <button
-                            onClick={handleResetCamera}
-                            title="Reset Camera"
-                            className="control-btn"
-                        >
-                            <RotateCw size={16} />
-                        </button>
-
-                        <select
-                            onChange={(e) => handleSetView(e.target.value)}
-                            className="control-select"
-                            defaultValue=""
-                        >
-                            <option value="" disabled>View</option>
-                            <option value="front">Front</option>
-                            <option value="back">Back</option>
-                            <option value="left">Left</option>
-                            <option value="right">Right</option>
-                            <option value="top">Top</option>
-                            <option value="bottom">Bottom</option>
-                        </select>
-                    </div>
-
-                    {/* Visualization controls */}
-                    {hasData && (
-                        <div className="control-group">
-                            <button
-                                onClick={handleToggleWireframe}
-                                title="Toggle Wireframe"
-                                className="control-btn"
-                            >
-                                <Grid size={16} />
-                            </button>
-
-                            <select
-                                onChange={(e) => handleColorMapChange(e.target.value)}
-                                value={colorMap}
-                                className="control-select"
-                                title="Color Map"
-                            >
-                                <option value="rainbow">Rainbow</option>
-                                <option value="grayscale">Grayscale</option>
-                                <option value="hot">Hot</option>
-                                <option value="cool">Cool</option>
-                            </select>
-
-                            <div className="slider-container" title="Opacity">
-                                <span className="slider-label">O:</span>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="1"
-                                    step="0.1"
-                                    value={opacity}
-                                    onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
-                                    className="control-slider"
-                                />
-                            </div>
-
-                            <div className="slider-container" title="Point Size">
-                                <span className="slider-label">P:</span>
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="10"
-                                    step="1"
-                                    value={pointSize}
-                                    onChange={(e) => handlePointSizeChange(parseInt(e.target.value))}
-                                    className="control-slider"
-                                />
-                            </div>
+                    {/* Stats from handler (e.g., point count, cell count) */}
+                    {headerInfo.stats && headerInfo.stats.length > 0 && (
+                        <div className="instance-stats">
+                            {headerInfo.stats.map((stat, idx) => (
+                                <span key={idx} className="stat">
+                                    <span className="stat-label">{stat.label}:</span>
+                                    <span className="stat-value">{stat.value}</span>
+                                </span>
+                            ))}
                         </div>
                     )}
 
-                    {/* Tools */}
-                    {hasData && window.CIA?.instanceTools && (
-                        <div className="control-group">
-                            <button
-                                onClick={() => handleToggleTool('distance')}
-                                className={`control-btn ${activeTool === 'distance' ? 'active' : ''}`}
-                                title="Distance Measurement"
-                            >
-                                <Ruler size={16} />
-                            </button>
-
-                            <button
-                                onClick={() => handleToggleTool('clip')}
-                                className={`control-btn ${activeTool === 'clip' ? 'active' : ''}`}
-                                title="Clipping Plane"
-                            >
-                                <Scissors size={16} />
-                            </button>
-
-                            <button
-                                onClick={() => handleToggleTool('annotate')}
-                                className={`control-btn ${activeTool === 'annotate' ? 'active' : ''}`}
-                                title="Add Annotation"
-                            >
-                                <Pin size={16} />
-                            </button>
+                    {/* Indicators from handler (e.g., "3D View", "VR Mode") */}
+                    {headerInfo.indicators && headerInfo.indicators.length > 0 && (
+                        <div className="instance-indicators">
+                            {headerInfo.indicators.map((indicator, idx) => (
+                                <span
+                                    key={idx}
+                                    className="indicator"
+                                    style={{ color: indicator.color }}
+                                >
+                                    {indicator.icon && <span>{indicator.icon}</span>}
+                                    <span>{indicator.label}</span>
+                                </span>
+                            ))}
                         </div>
                     )}
+                </div>
 
-                    {/* Instance actions */}
-                    <div className="control-group">
-                        <button
-                            onClick={handleFullscreen}
-                            className="control-btn"
-                            title="Fullscreen"
-                        >
-                            <Maximize2 size={16} />
-                        </button>
+                {/* Generic instance actions */}
+                <div className="instance-actions">
+                    <button
+                        onClick={handleFullscreen}
+                        className="action-btn"
+                        title="Fullscreen"
+                    >
+                        <Maximize2 size={16} />
+                    </button>
 
+                    {onDuplicate && (
                         <button
                             onClick={onDuplicate}
-                            className="control-btn"
+                            className="action-btn"
                             title="Duplicate Instance"
                         >
                             <Copy size={16} />
                         </button>
+                    )}
 
-                        <button
-                            onClick={onDelete}
-                            className="control-btn danger"
-                            title="Delete Instance"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
+                    <button
+                        onClick={onDelete}
+                        className="action-btn danger"
+                        title="Delete Instance"
+                    >
+                        <Trash2 size={16} />
+                    </button>
                 </div>
             </div>
 
-            <div className="instance-viewport-wrapper">
+            {/* Toolbar - Dynamically rendered from handler tools */}
+            {/* THIS IS WHERE THE MAGIC HAPPENS: We render whatever tools the handler gives us */}
+            {initialized && tools.length > 0 && (
+                <div className="instance-toolbar">
+                    {tools.map((tool, index) => renderTool(tool, index))}
+                </div>
+            )}
+
+            {/* Viewport Container - Where the actual visualization renders */}
+            <div className="viewport-wrapper">
+                {/* The handler renders into this container */}
                 <div
                     ref={containerRef}
-                    className="instance-viewport-container"
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        position: 'relative',
-                        background: '#1a1a1a'
-                    }}
+                    className="viewport-container"
+                    data-instance-id={instanceId}
                 />
 
+                {/* Loading overlay */}
                 {loading && (
-                    <div className="instance-overlay loading">
+                    <div className="viewport-overlay loading">
                         <div className="loading-spinner" />
                         <p>Loading dataset...</p>
                     </div>
                 )}
 
-                {!hasData && !loading && initialized && (
-                    <div className="instance-overlay empty">
-                        <p>No dataset loaded</p>
-                        <p className="hint">Select a file from the Files panel</p>
+                {/* Error overlay */}
+                {error && (
+                    <div className="viewport-overlay error">
+                        <AlertCircle size={48} color="#f44336" />
+                        <p className="error-message">{error}</p>
+                        <button
+                            onClick={() => setError(null)}
+                            className="error-dismiss"
+                        >
+                            Dismiss
+                        </button>
                     </div>
                 )}
 
-                {activeTool && (
-                    <div className="tool-indicator">
-                        {activeTool === 'distance' && '📏 Distance Tool'}
-                        {activeTool === 'angle' && '📐 Angle Tool'}
-                        {activeTool === 'clip' && '✂️ Clipping Plane'}
-                        {activeTool === 'annotate' && '📍 Click to Annotate'}
+                {/* Empty state */}
+                {!datasetId && !loading && initialized && !error && (
+                    <div className="viewport-overlay empty">
+                        <p>No dataset loaded</p>
+                        <p className="hint">Select a file from the Files panel</p>
                     </div>
                 )}
             </div>

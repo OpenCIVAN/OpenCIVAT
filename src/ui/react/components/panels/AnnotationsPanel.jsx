@@ -6,7 +6,6 @@ import { MessageSquarePlus, Info, MapPin, MessageSquare, HelpCircle } from "luci
 
 import { annotationModeState } from "@Collaboration/annotations/annotationState.js";
 import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
-import { useCurrentDataset } from "@UI/react/hooks/useCurrentDataset.js";
 import { useDatasets } from "@UI/react/hooks/useDatasets.js";
 
 import "./AnnotationsPanel.css";

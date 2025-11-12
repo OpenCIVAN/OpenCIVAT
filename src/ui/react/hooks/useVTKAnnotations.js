@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-import { annotationRenderer } from "@Collaboration/annotations/annotationRenderer.js";
+import { annotationRenderer } from "@VTK/annotations/annotationRenderer.js";
 import { annotationModeState } from "@Collaboration/annotations/annotationState.js";
 import { annotationSystem } from "@Collaboration/annotations/annotationSystem.js";
 

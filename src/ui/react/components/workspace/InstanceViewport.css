@@ -1,0 +1,318 @@
+/* src/ui/react/components/workspace/InstanceViewport.css */
+
+.instance-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Header Section */
+.instance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #242424;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+.instance-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.instance-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instance-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #888;
+}
+
+.stat {
+  display: flex;
+  gap: 4px;
+}
+
+.stat-label {
+  color: #666;
+}
+
+.stat-value {
+  color: #aaa;
+  font-weight: 500;
+}
+
+.instance-indicators {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.instance-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  padding: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #3a3a3a;
+}
+
+.action-btn.danger:hover {
+  background: #3a2a2a;
+  color: #f44336;
+  border-color: #f44336;
+}
+
+/* Toolbar Section */
+.instance-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #3a3a3a;
+}
+
+.toolbar-btn.active {
+  background: #2a3a2a;
+  color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tool-icon,
+.option-icon {
+  display: flex;
+  align-items: center;
+}
+
+.tool-label,
+.option-label {
+  font-size: 12px;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: #2a2a2a;
+  margin: 0 4px;
+}
+
+/* Menu dropdowns */
+.toolbar-menu {
+  position: relative;
+}
+
+.menu-arrow {
+  font-size: 8px;
+  margin-left: 2px;
+}
+
+.toolbar-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 180px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  padding: 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.toolbar-menu:hover .toolbar-menu-dropdown {
+  display: block;
+}
+
+.menu-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: #aaa;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.menu-option:hover:not(:disabled) {
+  background: #3a3a3a;
+  color: #e0e0e0;
+}
+
+.menu-option.active {
+  background: #2a3a2a;
+  color: #4CAF50;
+}
+
+.menu-option:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.option-description {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Viewport Section */
+.viewport-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+
+.viewport-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Overlays */
+.viewport-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.viewport-overlay.loading {
+  background: rgba(0, 0, 0, 0.85);
+  color: #e0e0e0;
+}
+
+.viewport-overlay.error {
+  background: rgba(26, 10, 10, 0.95);
+  color: #f44336;
+}
+
+/* CRITICAL FIX: Make empty state fully opaque to hide black VTK canvas */
+.viewport-overlay.empty {
+  background: #1a1a1a; /* Solid background instead of transparent */
+  color: #666;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #333;
+  border-top-color: #4CAF50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  max-width: 300px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.error-dismiss {
+  padding: 8px 16px;
+  background: #f44336;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.error-dismiss:hover {
+  background: #d32f2f;
+}
+
+.hint {
+  font-size: 12px;
+  color: #555;
+}

@@ -16,7 +16,7 @@ import "@kitware/vtk.js/IO/Core/DataAccessHelper/JSZipDataAccessHelper";
 import vtkResourceLoader from "@kitware/vtk.js/IO/Core/ResourceLoader";
 import vtkXMLPolyDataReader from "@kitware/vtk.js/IO/XML/XMLPolyDataReader";
 
-import { initializeViewHelpers } from "@Utils/viewHelpers.js";
+import { initializeViewHelpers } from "@VTK/utils/VTKViewHelpers.js";
 
 // Load WebXR polyfill if needed
 if (navigator.xr === undefined) {
@@ -257,30 +257,10 @@ export function loadDatasetIntoScene(
   console.log("📊 Loading dataset into scene...");
 
   // Clear old annotations when switching datasets
-  if (datasetId) {
-    import("@Collaboration/annotations/annotationRenderer.js").then(
-      (module) => {
-        // Hide all annotations (we'll show only relevant ones after load)
-        module.annotationRenderer.clearAllMarkers();
-
-        // Reload annotations for this dataset
-        setTimeout(() => {
-          import("@Collaboration/annotations/annotationSystem.js").then(
-            ({ annotationSystem }) => {
-              const annotations =
-                annotationSystem.getAnnotationsByDataset(datasetId);
-              console.log(
-                `📍 Loading ${annotations.length} annotations for dataset`
-              );
-              annotations.forEach((ann) => {
-                module.annotationRenderer.createAnnotationMarker(ann);
-              });
-            }
-          );
-        }, 500);
-      }
-    );
-  }
+  // ⭐ FUTURE: Render annotations if system is available
+  // if (typeof renderAnnotations === 'function' && options.showAnnotations) {
+  //   renderAnnotations(renderer, options.annotations);
+  // }
 
   try {
     // CRITICAL: Extract and save original points data for dimensionality reduction
@@ -316,17 +296,10 @@ export function loadDatasetIntoScene(
       const maxRange = Math.max(xRange, yRange, zRange);
       const annotationRadius = maxRange * 0.01;
 
-      // Update annotation marker size if renderer is available
-      import("@Collaboration/annotations/annotationRenderer.js").then(
-        (module) => {
-          if (module.annotationRenderer) {
-            module.annotationRenderer.setMarkerRadius(annotationRadius);
-            console.log(
-              `📍 Annotation marker size: ${annotationRadius.toFixed(4)}`
-            );
-          }
-        }
-      );
+      // Set annotation annotation marker size if renderer is available
+      // ⭐ FUTURE: Render annotations if system is available
+      // annotationRenderer.setMarkerRadius(annotationRadius);
+      // }
     } else {
       console.warn("⚠️ No point data found in polydata");
     }
@@ -369,31 +342,11 @@ export function loadDatasetIntoScene(
       logSuccess("Visualization loaded successfully");
     });
 
-    // Load annotations for this dataset
-    if (datasetId) {
-      setTimeout(() => {
-        import("@Collaboration/annotations/annotationSystem.js").then(
-          ({ annotationSystem }) => {
-            import("@Collaboration/annotations/annotationRenderer.js").then(
-              (module) => {
-                // Clear all markers first
-                module.annotationRenderer.clearAllMarkers();
-
-                // Load annotations for this specific dataset
-                const annotations =
-                  annotationSystem.getAnnotationsByDataset(datasetId);
-                console.log(
-                  `📍 Loading ${annotations.length} annotations for dataset ${datasetId}`
-                );
-                annotations.forEach((ann) => {
-                  module.annotationRenderer.createAnnotationMarker(ann);
-                });
-              }
-            );
-          }
-        );
-      }, 500);
-    }
+    // ⭐ FUTURE: Annotation system integration
+    // When annotation system is implemented, add initialization here:
+    // if (annotationSystem) {
+    //   annotationSystem.attachToScene(renderer);
+    // }
 
     console.log("✅ Dataset loaded into scene");
 

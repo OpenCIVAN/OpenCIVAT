@@ -2,12 +2,11 @@
 // Simplified grid that uses instanceManager for all operations
 // Includes notification system for remote instances
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, Users, X } from "lucide-react";
 
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
-import { useCurrentDataset } from "@UI/react/hooks/useCurrentDataset.js";
 
 export function WorkspaceGrid() {
     // Local state for viewports to render
@@ -20,8 +19,22 @@ export function WorkspaceGrid() {
     const gridRef = useRef(null);
     const initialized = useRef(false);
 
-    // Watch for dataset changes to auto-create first instance
-    const { datasetId } = useCurrentDataset();
+    // CRITICAL: Memoize this function so it doesn't change on every render
+    const handleCreateInstance = useCallback((datasetIdForInstance = null) => {
+        const instanceId = `temp-${Date.now()}`;
+
+        console.log(`✅ Creating instance via instanceManager`);
+        if (datasetIdForInstance) {
+            console.log(`   Dataset: ${datasetIdForInstance}`);
+        }
+
+        setInstances((prev) => [...prev, {
+            id: instanceId,
+            datasetId: datasetIdForInstance,
+            isRemote: false,
+            created: Date.now(),
+        }]);
+    }, []); // Empty deps - this function never changes
 
     // Initialize instance manager once
     useEffect(() => {
@@ -29,33 +42,21 @@ export function WorkspaceGrid() {
             initialized.current = true;
             console.log("🎨 WorkspaceGrid: Initializing...");
 
-            // Initialize the instance manager
             instanceManager.initialize();
 
-            // Listen for remote instances
             const cleanup = instanceManager.onRemoteInstanceChange((event) => {
                 if (event.action === "add") {
                     console.log(`📬 Notification: Remote instance available`);
-                    console.log(`   From: ${event.instance.userName}`);
-                    console.log(`   Dataset: ${event.instance.datasetId || "none"}`);
-
-                    // Add to pending list and show notification
-                    setPendingRemoteInstances((prev) => [
-                        ...prev,
-                        {
-                            instanceId: event.instanceId,
-                            userName: event.instance.userName,
-                            datasetId: event.instance.datasetId,
-                        },
-                    ]);
+                    setPendingRemoteInstances((prev) => [...prev, {
+                        instanceId: event.instanceId,
+                        userName: event.instance.userName,
+                        datasetId: event.instance.datasetId,
+                    }]);
                     setShowNotification(true);
                 }
 
                 if (event.action === "delete") {
-                    // Remove from our grid if we had spawned it
                     setInstances((prev) => prev.filter((i) => i.id !== event.instanceId));
-
-                    // Remove from pending if it hadn't been accepted yet
                     setPendingRemoteInstances((prev) =>
                         prev.filter((p) => p.instanceId !== event.instanceId)
                     );
@@ -63,42 +64,24 @@ export function WorkspaceGrid() {
             });
 
             console.log("✅ WorkspaceGrid initialized");
-
             return cleanup;
         }
-    }, []);
+    }, []); // Empty deps - run exactly once
 
-    // Auto-create first instance when dataset selected
+    // Listen for dataset selection requests from FilesPanel
     useEffect(() => {
-        if (datasetId && instances.length === 0) {
-            console.log(`🎨 Auto-creating first instance for dataset: ${datasetId}`);
+        const handleInstanceRequest = (event) => {
+            const { datasetId } = event.detail;
+            console.log(`📬 Instance request received for dataset: ${datasetId}`);
             handleCreateInstance(datasetId);
-        }
-    }, [datasetId]);
+        };
 
-    /**
-     * Create a new instance using the abstracted API
-     */
-    const handleCreateInstance = (datasetIdForInstance = null) => {
-        const instanceId = `temp-${Date.now()}`; // Temporary ID until container is ready
+        window.addEventListener('cia:request-instance', handleInstanceRequest);
 
-        console.log(`✅ Creating instance via instanceManager`);
-        if (datasetIdForInstance) {
-            console.log(`   Dataset: ${datasetIdForInstance}`);
-        }
-
-        // Add to local grid state
-        // The actual VTK scene will be created when InstanceViewport mounts
-        setInstances((prev) => [
-            ...prev,
-            {
-                id: instanceId,
-                datasetId: datasetIdForInstance,
-                isRemote: false,
-                created: Date.now(),
-            },
-        ]);
-    };
+        return () => {
+            window.removeEventListener('cia:request-instance', handleInstanceRequest);
+        };
+    }, [handleCreateInstance]); // Now safe to include because it's memoized
 
     /**
      * Accept pending remote instances and spawn them
@@ -130,7 +113,7 @@ export function WorkspaceGrid() {
      * Dismiss remote instance notification
      */
     const handleDismissNotification = () => {
-        console.log(`⏭️ Dismissed remote instance notification`);
+        console.log(`⭐️ Dismissed remote instance notification`);
         setPendingRemoteInstances([]);
         setShowNotification(false);
     };
@@ -183,7 +166,7 @@ export function WorkspaceGrid() {
             gap: "12px",
             padding: "12px",
             height: "100%",
-            overflow: "auto", // Enable scrolling if instances exceed viewport
+            overflow: "auto",
         };
     };
 
@@ -298,7 +281,7 @@ export function WorkspaceGrid() {
                     padding: "12px 16px",
                     backgroundColor: "#1a1a1a",
                     borderBottom: "1px solid #2a2a2a",
-                    flexShrink: 0, // Don't let toolbar shrink
+                    flexShrink: 0,
                 }}
             >
                 <span style={{ color: "#fff", fontSize: "14px", fontWeight: 600 }}>
@@ -325,7 +308,7 @@ export function WorkspaceGrid() {
                     )}
                 </span>
                 <button
-                    onClick={() => handleCreateInstance(datasetId)}
+                    onClick={() => handleCreateInstance(null)}
                     disabled={instances.length >= 9}
                     style={{
                         display: "flex",
@@ -375,11 +358,11 @@ export function WorkspaceGrid() {
                             lineHeight: 1.5,
                         }}
                     >
-                        Load a dataset from the Files panel to automatically create a
-                        window, or click "Add Instance" to create one manually.
+                        Click a dataset from the Files panel to create a window with that data,
+                        or click "Add Instance" below to create an empty window.
                     </div>
                     <button
-                        onClick={() => handleCreateInstance(datasetId)}
+                        onClick={() => handleCreateInstance(null)}
                         style={{
                             marginTop: "16px",
                             display: "flex",
@@ -397,7 +380,7 @@ export function WorkspaceGrid() {
                         }}
                     >
                         <Plus size={18} />
-                        Create First Instance
+                        Create Instance
                     </button>
                 </div>
             ) : (
@@ -415,7 +398,7 @@ export function WorkspaceGrid() {
                 </div>
             )}
 
-            {/* Add keyframe animation for notification */}
+            {/* Keyframe animations */}
             <style>{`
                 @keyframes slideDown {
                     from {

@@ -2,7 +2,7 @@
 // Type-agnostic workspace manager using the plugin architecture
 // Manages multiple visualization instances without knowing their specific implementations
 
-import { generateId } from "@Utils/idGenerator.js";
+import { generateInstanceId } from "@Utils/idGenerator.js";
 import { getHandlerForType } from "@Core/instances/types/instanceTypesInit.js";
 
 /**
@@ -76,7 +76,7 @@ class WorkspaceManager {
     }
 
     // Extract options with defaults
-    const instanceId = options.instanceId || generateId();
+    const instanceId = options.instanceId || generateInstanceId();
     const type = options.type || "vtk"; // Default to VTK for backward compatibility
     const datasetId = options.datasetId || null;
 

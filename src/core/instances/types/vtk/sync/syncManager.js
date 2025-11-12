@@ -1,4 +1,3 @@
-// src/collaboration/sync/syncManager.js
 // Centralized synchronization manager for cross-browser collaboration
 
 import {
@@ -16,8 +15,7 @@ import {
   getUserId,
   getUserName,
 } from "@Collaboration/presence/userManagement.js";
-
-const { datasetManager } = window.CIA;
+import { datasetManager } from "@Init/appInitializer.js";
 
 class SyncManager {
   constructor() {
