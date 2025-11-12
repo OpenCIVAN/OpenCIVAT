@@ -6,9 +6,11 @@ import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
 import vtkRenderWindowInteractor from "@kitware/vtk.js/Rendering/Core/RenderWindowInteractor";
 import vtkInteractorStyleTrackballCamera from "@kitware/vtk.js/Interaction/Style/InteractorStyleTrackballCamera";
+import vtkOpenGLRenderWindow from "@kitware/vtk.js/Rendering/OpenGL/RenderWindow";
 import vtkMapper from "@kitware/vtk.js/Rendering/Core/Mapper";
 import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
 import vtkXMLPolyDataReader from "@kitware/vtk.js/IO/XML/XMLPolyDataReader";
+import "@kitware/vtk.js/Rendering/Profiles/Geometry";
 
 /**
  * VTKInstanceHandler
@@ -160,47 +162,80 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   }
 
   /**
-   * Load data into the instance
+   * Load data into this VTK instance
+   *
+   * This method handles both the initial pipeline setup (if needed) and the
+   * actual data loading. The lazy initialization pattern means we don't create
+   * the expensive WebGL context until we actually have data to display.
    */
-  async loadData(instanceData, dataset, polydata) {
+  async loadData(instanceData, dataset, data) {
     const { instanceId } = instanceData;
 
     console.log(`📊 VTK Handler: Loading data into instance ${instanceId}`);
 
-    // LAZY INITIALIZATION: Initialize VTK pipeline now that we have data
-    if (!instanceData.initialized) {
-      this._initializeVTKPipeline(instanceData);
+    // STEP 1: Initialize VTK pipeline if this is the first time loading data
+    // This is our lazy initialization - we defer creating WebGL resources
+    // until they're actually needed
+    if (!instanceData.sceneObjects) {
+      console.log(`🎨 First data load - initializing VTK pipeline...`);
+
+      // Create all the VTK rendering components
+      const pipelineObjects = this._initializeVTKPipeline(instanceData);
+
+      // Store them in instanceData so they persist and can be accessed
+      // by all future operations on this instance
+      instanceData.sceneObjects = pipelineObjects;
+
+      console.log(`✅ VTK pipeline ready for rendering`);
     }
 
-    // Clear existing actors
-    if (instanceData.actors.size > 0) {
-      instanceData.actors.forEach((actor) => {
-        instanceData.renderer.removeActor(actor);
-      });
-      instanceData.actors.clear();
+    // STEP 2: Now extract what we need from the stored scene objects
+    // We can safely do this because we know sceneObjects exists
+    // (either it was already there or we just created it above)
+    const { renderer, renderWindow, mapper, actor } = instanceData.sceneObjects;
+
+    try {
+      // STEP 3: Load the geometry data into the mapper
+      // This is where the actual 3D data (your skull) gets connected
+      // to the rendering pipeline
+      mapper.setInputData(data);
+
+      // STEP 4: Add the actor to the scene if it's not already there
+      // We check first to avoid duplicate actors if loadData is called multiple times
+      const actorsInScene = renderer.getActors();
+      if (!actorsInScene.includes(actor)) {
+        renderer.addActor(actor);
+        console.log(`  ✓ Actor added to renderer`);
+      } else {
+        console.log(`  ✓ Actor already in renderer, updated data`);
+      }
+
+      // STEP 5: Position the camera to show the entire dataset nicely
+      // This adjusts the camera so you can see all the data at once
+      renderer.resetCamera();
+
+      // STEP 6: Render the scene to display everything
+      // This triggers the WebGL drawing that makes the visualization appear
+      renderWindow.render();
+
+      // STEP 7: Keep track of which actor belongs to which dataset
+      // This allows us to remove or update specific datasets later
+      instanceData.actors.set(dataset.id, actor);
+
+      // STEP 8: Log success with some helpful statistics
+      const pointCount = data.getPoints().getNumberOfPoints();
+      const cellCount = data.getNumberOfCells();
+
+      console.log(`✅ VTK Handler: Dataset ${dataset.id} loaded and rendered`);
+      console.log(`   📊 Points: ${pointCount.toLocaleString()}`);
+      console.log(`   📊 Cells: ${cellCount.toLocaleString()}`);
+    } catch (error) {
+      console.error(
+        `❌ VTK Handler: Failed to load dataset ${dataset.id}:`,
+        error
+      );
+      throw error;
     }
-
-    // Create mapper and actor for the polydata
-    const mapper = vtkMapper.newInstance();
-    mapper.setInputData(polydata);
-
-    const actor = vtkActor.newInstance();
-    actor.setMapper(mapper);
-
-    // Add to renderer
-    instanceData.renderer.addActor(actor);
-    instanceData.actors.set("main", actor);
-
-    // Reset camera to fit data
-    instanceData.renderer.resetCamera();
-    instanceData.renderWindow.render();
-
-    instanceData.hasData = true;
-    instanceData.datasetId = dataset.id;
-
-    console.log(`✅ Data loaded into instance ${instanceId}`);
-
-    return true;
   }
 
   // ===========================================================================
@@ -457,68 +492,117 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   // ===========================================================================
 
   /**
-   * Initialize the actual VTK rendering pipeline
+   * Initialize the VTK rendering pipeline for this instance
+   *
+   * CRITICAL: The order of operations here matters! VTK.js requires
+   * each component to be fully connected before moving to the next.
+   *
+   * @private
    */
   _initializeVTKPipeline(instanceData) {
-    if (instanceData.initialized) return;
+    const { container } = instanceData;
 
-    const { instanceId, container, placeholder } = instanceData;
-
-    console.log(`🎨 Initializing VTK rendering pipeline for ${instanceId}`);
-
-    // Remove placeholder
-    if (placeholder) {
-      placeholder.remove();
-      instanceData.placeholder = null;
-    }
-
-    // Create VTK rendering pipeline
-    const renderWindow = vtkRenderWindow.newInstance();
-    const renderer = vtkRenderer.newInstance({ background: [0.1, 0.1, 0.1] });
-    renderWindow.addRenderer(renderer);
-
-    // Create WebGL render window
-    const glWindow = renderWindow.newOpenGLRenderWindow();
-    glWindow.setContainer(container);
-    glWindow.setSize(container.clientWidth, container.clientHeight);
-
-    // Create interactor
-    const interactor = vtkRenderWindowInteractor.newInstance();
-    interactor.setView(glWindow);
-    interactor.initialize();
-    interactor.bindEvents(container);
-    interactor.setInteractorStyle(
-      vtkInteractorStyleTrackballCamera.newInstance()
+    console.log(
+      `🎨 Initializing VTK rendering pipeline for ${instanceData.instanceId}`
     );
 
-    // Store scene objects
-    instanceData.sceneObjects = {
-      renderWindow,
-      renderer,
-      glWindow,
-      interactor,
-      camera: renderer.getActiveCamera(),
-    };
+    // Clear the container to ensure clean slate
+    container.innerHTML = "";
 
-    // Store direct references for convenience
-    instanceData.renderer = renderer;
-    instanceData.renderWindow = renderWindow;
-    instanceData.glWindow = glWindow;
-    instanceData.interactor = interactor;
-    instanceData.camera = renderer.getActiveCamera();
+    // =========================================================================
+    // PHASE 1: Create the rendering core (renderer + render window)
+    // =========================================================================
 
-    instanceData.initialized = true;
+    // Create the renderer (manages the 3D scene)
+    const renderer = vtkRenderer.newInstance();
+    renderer.setBackground(0.1, 0.1, 0.1);
 
-    // Set up resize observer
+    // Create the abstract render window (manages renderers and views)
+    const renderWindow = vtkRenderWindow.newInstance();
+    renderWindow.addRenderer(renderer);
+
+    // =========================================================================
+    // PHASE 2: Create and connect the OpenGL view (WebGL rendering context)
+    // THIS MUST HAPPEN BEFORE INTERACTOR INITIALIZATION
+    // =========================================================================
+
+    // Create the OpenGL render window (creates WebGL context)
+    const openGLRenderWindow = vtkOpenGLRenderWindow.newInstance();
+    openGLRenderWindow.setContainer(container);
+
+    // CRITICAL: Connect the OpenGL window to the render window
+    // This must happen BEFORE we create/initialize the interactor
+    renderWindow.addView(openGLRenderWindow);
+
+    // Set the size based on container dimensions
+    const { width, height } = container.getBoundingClientRect();
+    openGLRenderWindow.setSize(width, height);
+
+    // =========================================================================
+    // PHASE 3: Create and initialize the interactor (mouse/keyboard handling)
+    // THIS REQUIRES THE VIEW TO BE ALREADY CONNECTED
+    // =========================================================================
+
+    // Create the interactor
+    const interactor = vtkRenderWindowInteractor.newInstance();
+
+    // CRITICAL: Set the view BEFORE calling initialize()
+    interactor.setView(openGLRenderWindow);
+
+    // Now it's safe to initialize because the view is connected
+    interactor.initialize();
+
+    // Set up the interaction style (how mouse movements control camera)
+    const interactorStyle = vtkInteractorStyleTrackballCamera.newInstance();
+    interactor.setInteractorStyle(interactorStyle);
+
+    // Bind DOM events to the container
+    interactor.bindEvents(container);
+
+    // =========================================================================
+    // PHASE 4: Create rendering components (camera, mapper, actor)
+    // =========================================================================
+
+    // Get the camera reference from the renderer
+    const camera = renderer.getActiveCamera();
+
+    // Create mapper (converts data to renderable primitives)
+    const mapper = vtkMapper.newInstance();
+
+    // Create actor (represents an object in the scene)
+    const actor = vtkActor.newInstance();
+    actor.setMapper(mapper);
+    actor.setPickable(true);
+
+    // =========================================================================
+    // PHASE 5: Set up responsive resizing
+    // =========================================================================
+
+    // Handle container resize events
     const resizeObserver = new ResizeObserver(() => {
-      const { width, height } = container.getBoundingClientRect();
-      glWindow.setSize(width, height);
-      renderWindow.render();
+      // Safety check: only resize if objects still exist and aren't deleted
+      if (openGLRenderWindow && !openGLRenderWindow.isDeleted()) {
+        const { width, height } = container.getBoundingClientRect();
+        openGLRenderWindow.setSize(width, height);
+        renderWindow.render();
+      }
     });
     resizeObserver.observe(container);
-    instanceData.resizeObserver = resizeObserver;
 
-    console.log(`✅ VTK pipeline initialized for ${instanceId}`);
+    console.log(`✅ VTK pipeline initialized for ${instanceData.instanceId}`);
+
+    // Return all the scene objects that need to be tracked
+    return {
+      renderer,
+      renderWindow,
+      openGLRenderWindow,
+      camera,
+      interactor,
+      interactorStyle,
+      mapper,
+      actor,
+      resizeObserver,
+    };
   }
 
   /**
