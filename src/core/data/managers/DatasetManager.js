@@ -103,12 +103,50 @@ export class DatasetManager {
         storedDatasets.forEach((data) => {
           const dataset = Dataset.fromJSON(data);
           this._datasets.set(dataset.id, dataset);
+
+          // IMPORTANT: Sync metadata to Y.js for collaboration
+          // This ensures other users can see what datasets we have
+          this._syncDatasetMetadataToYjs(dataset);
         });
+
+        console.log(`📦 Synced ${storedDatasets.length} datasets to Y.js`);
         resolve();
       };
       request.onerror = () =>
         reject(new Error("Failed to load existing datasets"));
     });
+  }
+
+  /**
+   * Sync dataset metadata to Y.js so other clients can see it
+   * This is called when loading datasets and when creating new ones
+   */
+  _syncDatasetMetadataToYjs(dataset) {
+    const ydoc = window.CIA?.ydoc;
+    if (!ydoc) {
+      console.warn("⚠️ Cannot sync dataset metadata: Y.js not available");
+      return;
+    }
+
+    const yDatasets = ydoc.getMap("datasets");
+
+    // Only sync the metadata needed for fetching, not the entire dataset
+    yDatasets.set(dataset.id, {
+      id: dataset.id,
+      filename: dataset.filename,
+      fileType: dataset.fileType,
+      hash: dataset.hash,
+      publicPath: dataset.publicPath, // Critical for fetching
+      storageKey: dataset.storageKey, // For server-stored files
+      userId: dataset.userId,
+      metadata: {
+        fileSize: dataset.metadata.fileSize,
+        uploadedAt: dataset.metadata.uploadedAt,
+        uploadedBy: dataset.metadata.uploadedBy,
+      },
+    });
+
+    console.log(`🔄 Dataset metadata synced to Y.js: ${dataset.filename}`);
   }
 
   // ==================== DATASET MANAGEMENT ====================
@@ -234,6 +272,7 @@ export class DatasetManager {
         dataset.quickMetadata = metadata;
         console.log(`  ✓ Quick metadata extracted by handler`);
         if (metadata.pointCount) {
+          // VTK specific needs to be removed
           console.log(`    Points: ${metadata.pointCount.toLocaleString()}`);
         }
         if (metadata.estimatedMemory) {
@@ -250,28 +289,7 @@ export class DatasetManager {
     // In your DatasetManager.loadDataset method, after creating the dataset:
 
     // Sync dataset metadata to Y.js so other clients can fetch if needed
-    const ydoc = window.CIA?.ydoc;
-    if (ydoc) {
-      const yDatasets = ydoc.getMap("datasets");
-
-      // Only sync the metadata needed for fetching, not the entire dataset
-      yDatasets.set(dataset.id, {
-        id: dataset.id,
-        filename: dataset.filename,
-        fileType: dataset.fileType,
-        hash: dataset.hash,
-        publicPath: dataset.publicPath, // Critical for fetching
-        storageKey: dataset.storageKey, // For server-stored files
-        userId: dataset.userId,
-        metadata: {
-          fileSize: dataset.metadata.fileSize,
-          uploadedAt: dataset.metadata.uploadedAt,
-          uploadedBy: dataset.metadata.uploadedBy,
-        },
-      });
-
-      console.log(`📤 Dataset metadata synced to Y.js: ${dataset.filename}`);
-    }
+    this._syncDatasetMetadataToYjs(dataset);
 
     return dataset;
   }

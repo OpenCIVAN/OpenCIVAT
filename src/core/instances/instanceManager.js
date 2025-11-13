@@ -12,14 +12,42 @@ class InstanceManager {
   constructor() {
     this._observerAttached = false;
     this._syncCallbacks = [];
-
-    // Track which instances we've created locally
-    // This prevents creating duplicates when our own Y.js changes echo back
     this._localInstanceIds = new Set();
+    this._initializationComplete = false; // NEW: Track if we've started observing
+  }
+
+  /**
+   * Register a callback for remote instance changes
+   *
+   * This should be called BEFORE initialize() so callbacks are ready
+   * when Y.js events start firing
+   */
+  onRemoteInstanceChange(callback) {
+    console.log(
+      `📝 InstanceManager: Registering callback (total: ${
+        this._syncCallbacks.length + 1
+      })`
+    );
+    this._syncCallbacks.push(callback);
+
+    // If we're already observing Y.js, we need to check for existing instances
+    // This handles the case where a component registers late
+    if (this._initializationComplete) {
+      console.log(
+        `   ⚠️ Late registration - checking for existing remote instances`
+      );
+      this._checkForExistingRemoteInstances(callback);
+    }
+
+    return () => {
+      this._syncCallbacks = this._syncCallbacks.filter((cb) => cb !== callback);
+    };
   }
 
   /**
    * Initialize - set up Y.js observation
+   *
+   * This should be called AFTER components have registered their callbacks
    */
   initialize() {
     if (this._observerAttached) {
@@ -28,6 +56,9 @@ class InstanceManager {
     }
 
     console.log("🎨 InstanceManager: Initializing...");
+    console.log(
+      `   ${this._syncCallbacks.length} callback(s) already registered`
+    );
     console.log("   Setting up Y.js instance observer...");
 
     // Observe Y.js for remote instance changes
@@ -64,7 +95,6 @@ class InstanceManager {
             `   📢 Notifying ${this._syncCallbacks.length} callback(s)`
           );
 
-          // Notify UI about this remote instance
           this._notifySyncCallbacks({
             action: "add",
             instanceId,
@@ -82,7 +112,6 @@ class InstanceManager {
         } else if (change.action === "delete") {
           console.log(`🗑️ Remote instance deleted: ${instanceId}`);
 
-          // If we have this instance locally, delete it
           if (this._localInstanceIds.has(instanceId)) {
             this._deleteLocalInstance(instanceId);
           }
@@ -96,7 +125,72 @@ class InstanceManager {
     });
 
     this._observerAttached = true;
+    this._initializationComplete = true;
+
+    // After setting up the observer, check for any instances that already exist
+    // These might have been created before we started observing
+    this._checkForExistingRemoteInstances();
+
     console.log("✅ InstanceManager initialized with Y.js observer attached");
+  }
+
+  /**
+   * Check Y.js for remote instances that already exist
+   * Called after observer setup to catch instances created before we were watching
+   */
+  _checkForExistingRemoteInstances(specificCallback = null) {
+    const currentUserId = getUserId();
+    const existingRemote = [];
+
+    yInstances.forEach((instance, instanceId) => {
+      // Skip our own instances
+      if (instance.userId === currentUserId) {
+        return;
+      }
+
+      // Skip private instances from other users
+      if (instance.visibility === "private") {
+        return;
+      }
+
+      // Check if we've already processed this instance
+      // (Don't want to notify about the same instance twice)
+      if (this._localInstanceIds.has(instanceId)) {
+        return;
+      }
+
+      existingRemote.push({
+        instanceId,
+        instance,
+      });
+    });
+
+    if (existingRemote.length > 0) {
+      console.log(
+        `📦 Found ${existingRemote.length} existing remote instance(s)`
+      );
+
+      existingRemote.forEach(({ instanceId, instance }) => {
+        console.log(`   - ${instanceId} from ${instance.userName}`);
+
+        // Notify either the specific callback or all callbacks
+        if (specificCallback) {
+          specificCallback({
+            action: "add",
+            instanceId,
+            instance,
+          });
+        } else {
+          this._notifySyncCallbacks({
+            action: "add",
+            instanceId,
+            instance,
+          });
+        }
+      });
+    } else {
+      console.log(`   No existing remote instances found`);
+    }
   }
 
   /**

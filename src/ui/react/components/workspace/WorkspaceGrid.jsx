@@ -27,10 +27,8 @@ export function WorkspaceGrid() {
             initialized.current = true;
             console.log("🎨 WorkspaceGrid: Initializing...");
 
-            // Initialize the instance manager
-            instanceManager.initialize();
-
-            // Listen for remote instance changes
+            // IMPORTANT: Register callback FIRST, before initialization
+            console.log("📝 WorkspaceGrid: Registering callback...");
             const cleanup = instanceManager.onRemoteInstanceChange((event) => {
                 console.log('📬 WorkspaceGrid: Received remote instance event:', event.action);
 
@@ -44,6 +42,7 @@ export function WorkspaceGrid() {
                             instanceId: event.instanceId,
                             userName: event.instance.userName,
                             datasetId: event.instance.datasetId,
+                            userId: event.instance.userId, // Also store userId
                         }];
                         console.log(`   Total pending: ${newPending.length}`);
                         return newPending;
@@ -61,34 +60,13 @@ export function WorkspaceGrid() {
                 }
             });
 
-            // NEW: Check for existing remote instances after callback is registered
-            // This handles instances that were created before we connected
-            setTimeout(() => {
-                const yInstances = window.CIA?.yInstances;
-                const getUserId = window.CIA?.getUserId;
+            // NOW initialize the instance manager
+            // This starts the Y.js observer, which can now safely notify our callback
+            console.log("🎨 WorkspaceGrid: Initializing instance manager...");
+            instanceManager.initialize();
 
-                if (yInstances && getUserId) {
-                    const currentUserId = getUserId();
-                    const existingRemote = [];
-
-                    yInstances.forEach((instance, instanceId) => {
-                        if (instance.userId !== currentUserId && instance.visibility === 'shared') {
-                            console.log(`📬 WorkspaceGrid: Found existing remote instance: ${instanceId}`);
-                            existingRemote.push({
-                                instanceId,
-                                userName: instance.userName,
-                                datasetId: instance.datasetId,
-                            });
-                        }
-                    });
-
-                    if (existingRemote.length > 0) {
-                        console.log(`   Found ${existingRemote.length} existing remote instances`);
-                        setPendingRemoteInstances(existingRemote);
-                        setShowNotification(true);
-                    }
-                }
-            }, 100);
+            // Remove the setTimeout check for existing instances - not needed anymore
+            // The instance manager's _checkForExistingRemoteInstances() handles this
 
             console.log("✅ WorkspaceGrid initialized");
             return cleanup;
@@ -399,6 +377,8 @@ export function WorkspaceGrid() {
                     </button>
                 </div>
             ) : (
+                // Inside your WorkspaceGrid component, in the render section
+
                 <div ref={gridRef} style={getGridStyle()}>
                     {instances.map((instance) => {
                         // For remote instances, check if we have the dataset
@@ -414,11 +394,37 @@ export function WorkspaceGrid() {
                                 const datasetMetadata = yDatasets?.get(instance.datasetId);
 
                                 if (!datasetMetadata) {
-                                    // No metadata available - can't create placeholder
-                                    console.warn(`No metadata for dataset ${instance.datasetId}`);
-                                    return null;
+                                    // No metadata available - show a temporary placeholder
+                                    console.warn(`⚠️ No metadata for dataset ${instance.datasetId}`);
+
+                                    return (
+                                        <div
+                                            key={instance.key}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                background: '#1a1a1a',
+                                                border: '2px dashed rgba(255,255,255,0.1)',
+                                                borderRadius: '8px',
+                                                padding: '40px',
+                                                textAlign: 'center',
+                                                color: '#666',
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{ fontSize: '14px', marginBottom: '8px' }}>
+                                                    {instance.userName}'s view
+                                                </div>
+                                                <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                                                    Waiting for dataset information...
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
                                 }
 
+                                // We have metadata but not the dataset itself
                                 return (
                                     <RemoteInstancePlaceholder
                                         key={instance.key}
@@ -432,17 +438,11 @@ export function WorkspaceGrid() {
                                         storageKey={datasetMetadata.storageKey}
                                         onFetchAndView={async (fetchInfo) => {
                                             try {
-                                                // Fetch the dataset using instance manager
                                                 await instanceManager.fetchDatasetForRemoteInstance(fetchInfo);
-
-                                                // Force re-render by updating state
-                                                // This will cause the check above to pass next render
-                                                // and display an InstanceViewport instead of placeholder
                                                 setInstances([...instances]);
-
                                             } catch (error) {
                                                 console.error('Failed to fetch dataset:', error);
-                                                throw error; // Let placeholder component show the error
+                                                throw error;
                                             }
                                         }}
                                     />
