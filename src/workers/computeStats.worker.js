@@ -12,6 +12,7 @@ function buildGrid(points, cellSize) {
   }
   return { grid, key };
 }
+
 function neighborsOf(idx, points, cellSize, grid, key) {
   const x = points[idx * 3], y = points[idx * 3 + 1], z = points[idx * 3 + 2];
   const ix = Math.floor(x / cellSize), iy = Math.floor(y / cellSize), iz = Math.floor(z / cellSize);
@@ -24,24 +25,52 @@ function neighborsOf(idx, points, cellSize, grid, key) {
       }
   return out;
 }
+
 function dist2(i, j, pts) {
   const ax = pts[i*3], ay = pts[i*3+1], az = pts[i*3+2];
   const bx = pts[j*3], by = pts[j*3+1], bz = pts[j*3+2];
   const dx = ax-bx, dy = ay-by, dz = az-bz;
   return dx*dx + dy*dy + dz*dz;
 }
+
 function percentile(arr, p) {
   if (!arr.length) return 0;
   const a = [...arr].sort((x,y)=>x-y);
   const i = Math.min(a.length-1, Math.max(0, Math.floor((p/100)*a.length)));
   return a[i];
 }
+
+// 🔥 FIX #3: adaptive hotspot selection instead of hard 99th percentile
+function topHotIndices(arr) {
+  const a = Array.from(arr).filter(v => Number.isFinite(v) && v > 0);
+  if (!a.length) return [];
+
+  // Large meshes → stricter (top ~1.5%)
+  // Smaller meshes → looser (top ~5%)
+  const thresholdPercentile = a.length > 50000 ? 98.5 : 95;
+  const th = percentile(a, thresholdPercentile);
+
+  const out = [];
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] >= th) out.push(i);
+  }
+  return out;
+}
+
 self.onmessage = async (e) => {
   const { pointsBuffer, numPoints, bbox, opts } = e.data;
   const points = new Float32Array(pointsBuffer);
 
+  // 🔧 FIX #2: better step logic so we don't throw away too many points
   const maxPoints = opts.maxPoints ?? 30000;
-  const step = Math.max(1, Math.floor(numPoints / maxPoints));
+
+  // rough step estimate
+  let step = Math.floor(numPoints / maxPoints);
+
+  // never skip too much: clamp between 1 and 4
+  if (step < 1) step = 1;
+  if (step > 4) step = 4;
+
   const processed = Math.ceil(numPoints / step);
 
   const extent = ((bbox[1]-bbox[0]) + (bbox[3]-bbox[2]) + (bbox[5]-bbox[4])) / 3;
@@ -114,16 +143,11 @@ self.onmessage = async (e) => {
     },
   };
 
-  function top1Idx(arr) {
-    const th = percentile(Array.from(arr), 99);
-    const out = [];
-    for (let i=0;i<arr.length;i++) if (arr[i] >= th) out.push(i);
-    return out;
-  }
+  // use adaptive hotspot picker
   const hotspot = {
-    density: top1Idx(density),
-    curvature: top1Idx(curvature),
-    symmetry: top1Idx(symmetry),
+    density:   topHotIndices(density),
+    curvature: topHotIndices(curvature),
+    symmetry:  topHotIndices(symmetry),
   };
 
   self.postMessage({ type:'done', result: { summary, hotspot, perPoint:{ density, curvature, symmetry } } });
