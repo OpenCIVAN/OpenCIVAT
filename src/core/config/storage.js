@@ -1,5 +1,9 @@
 // src/core/config/storage.js
 
+import { ServerStorageProvider } from "@Core/data/providers/ServerStorageProvider.js";
+import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter.js";
+import { dataCache } from "@Services/storage/dataCache.js";
+
 /**
  * Storage configuration for the application
  *
@@ -22,12 +26,12 @@ export const USE_SERVER_STORAGE = true;
 
 // API server configuration
 // For local development with Docker
-export const API_BASE_URL = "http://localhost:3001";
+export const API_BASE_URL = "http://localhost:3001/api";
 
 // Session configuration
 // Fixed UUID for local development - all local users share this session
 // In production, this would be generated per collaborative workspace
-export const DEFAULT_SESSION_ID = '00000000-0000-0000-0000-000000000001';
+export const DEFAULT_SESSION_ID = "00000000-0000-0000-0000-000000000001";
 
 /**
  * Helper to log the current storage configuration
@@ -35,31 +39,58 @@ export const DEFAULT_SESSION_ID = '00000000-0000-0000-0000-000000000001';
  */
 export function logStorageConfig() {
   console.log("📡 Storage Configuration:");
-  console.log(`   Mode: ${USE_SERVER_STORAGE ? "Server" : "Local"}`);
+  console.log(
+    `   Mode: ${
+      USE_SERVER_STORAGE ? "Server (with local fallback)" : "Local only"
+    }`
+  );
   console.log(`   API Base URL: ${API_BASE_URL}`);
   console.log(`   Session ID: ${DEFAULT_SESSION_ID}`);
 }
 
 /**
- * Get the configured storage provider instance
+ * Initialize storage provider with automatic fallback
  *
- * This function is called once during app initialization to create
- * the appropriate storage provider based on configuration.
+ * This function implements the storage initialization strategy:
+ * 1. If USE_SERVER_STORAGE is true, try to connect to the server
+ * 2. If server connection fails OR USE_SERVER_STORAGE is false, use local storage
+ * 3. Return both the provider and what mode we're in
+ *
+ * The automatic fallback ensures the app can work even if the server is down,
+ * providing graceful degradation from full server functionality to local-only mode.
+ *
+ * @returns {Promise<{provider: StorageProvider, mode: string}>}
  */
-export function createStorageProvider() {
+export async function initializeStorageProvider() {
   if (USE_SERVER_STORAGE) {
-    // Dynamic import to avoid loading LocalStorageProvider when not needed
-    const {
-      ServerStorageProvider,
-    } = require("@Core/data/providers/ServerStorageProvider");
-    console.log("📡 Using ServerStorageProvider with API:", API_BASE_URL);
-    return new ServerStorageProvider(API_BASE_URL);
-  } else {
-    // Fallback to local storage (you'd implement this if you want offline support)
-    const {
-      LocalStorageProvider,
-    } = require("@Core/data/providers/LocalStorageProvider");
-    console.log("💾 Using LocalStorageProvider (offline mode)");
-    return new LocalStorageProvider();
+    console.log("  📡 Creating server storage provider...");
+    const provider = new ServerStorageProvider(
+      API_BASE_URL,
+      DEFAULT_SESSION_ID
+    );
+
+    try {
+      await provider.initialize();
+      console.log("  ✅ Server storage provider ready");
+      return { provider, mode: "server" };
+    } catch (error) {
+      console.warn("  ⚠️ Server storage provider failed:", error.message);
+      console.warn("  Falling back to local storage...");
+      // Fall through to local storage initialization below
+    }
   }
+
+  // Either USE_SERVER_STORAGE is false, or server initialization failed
+  console.log("  💾 Creating local storage adapter...");
+
+  // Initialize the data cache if needed
+  if (dataCache && typeof dataCache.initialize === "function") {
+    await dataCache.initialize();
+  }
+
+  const provider = new DatasetManagerAdapter(dataCache);
+  await provider.initialize();
+  console.log("  ✅ Local storage provider ready");
+
+  return { provider, mode: "local" };
 }

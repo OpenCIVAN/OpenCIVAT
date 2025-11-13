@@ -9,7 +9,7 @@
 // 3. Add one line to registerInstanceTypes()
 // 4. Done! Your type is now available throughout the application
 
-import { instanceTypeRegistry } from "@Core/instances/types/InstanceTypeRegistry.js";
+import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
 import { vtkInstanceHandler } from "@Core/instances/types/vtk/VTKInstanceHandler.js";
 
 /**

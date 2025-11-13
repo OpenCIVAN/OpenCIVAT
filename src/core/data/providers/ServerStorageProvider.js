@@ -15,6 +15,14 @@
  */
 export class ServerStorageProvider {
   constructor(apiBaseUrl, sessionId) {
+    // Validate required parameters
+    if (!apiBaseUrl) {
+      throw new Error("ServerStorageProvider requires apiBaseUrl parameter");
+    }
+    if (!sessionId) {
+      throw new Error("ServerStorageProvider requires sessionId parameter");
+    }
+
     this.apiBaseUrl = apiBaseUrl; // e.g., 'http://localhost:3001'
     this.sessionId = sessionId; // Current collaboration session
 
@@ -53,7 +61,9 @@ export class ServerStorageProvider {
       );
     } catch (error) {
       console.error("❌ ServerStorageProvider: Initialization failed:", error);
-      // Don't throw - we can still upload new files even if loading fails
+
+      // Re-throw so the fallback logic in initializeStorageProvider can catch it
+      throw new Error(`Failed to initialize server storage: ${error.message}`);
     }
   }
 
@@ -243,28 +253,39 @@ export class ServerStorageProvider {
   }
 
   /**
-   * List all datasets in the current session
-   *
-   * @returns {Promise<Array>} - Array of dataset metadata
+   * List all available datasets from server
+   * @returns {Promise<Array>} Array of dataset metadata
    */
   async listDatasets() {
+    console.log("📡 ServerStorageProvider: Listing datasets from server");
+
     try {
       const response = await fetch(
-        `${this.apiBaseUrl}/api/datasets/session/${this.sessionId}`
+        `${this.apiBaseUrl}/sessions/${this.sessionId}/datasets`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to list datasets: ${response.statusText}`);
+        throw new Error(
+          `Server returned ${response.status}: ${response.statusText}`
+        );
       }
 
-      const { datasets } = await response.json();
+      const datasets = await response.json();
+      console.log(`   ✓ Retrieved ${datasets.length} datasets from server`);
+
       return datasets;
     } catch (error) {
       console.error(
         "❌ ServerStorageProvider: Failed to list datasets:",
         error
       );
-      return [];
+      throw error;
     }
   }
 

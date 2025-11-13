@@ -1,15 +1,12 @@
 // src/init/appInitializer.js
 // Application initialization - three-phase startup
 
+import { initializeStorageProvider } from "@Core/config/storage.js";
 import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
-import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter.js";
 import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import { DEFAULT_SESSION_ID, API_BASE_URL, USE_SERVER_STORAGE } from "@Core/config/storage.js";
-import { ServerStorageProvider } from "@Core/data/providers/ServerStorageProvider.js";
-import { dataCache } from "@Services/storage/dataCache.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
 import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
@@ -26,7 +23,6 @@ let annotationManager = null;
 // Global references (exported for use throughout the app)
 export let datasetManager = null;
 export let dataCacheAdapter = null;
-export let storageProvider = null;
 export let viewConfigurationManager = null;
 
 /**
@@ -54,30 +50,29 @@ export async function initializePhase1() {
     // STEP 3: Data storage layer (Layer 1)
     console.log("💾 Setting up data storage layer...");
 
-    if (USE_SERVER_STORAGE) {
-      console.log("  📡 Creating server storage provider...");
-      storageProvider = new ServerStorageProvider(
-        API_BASE_URL,
-        DEFAULT_SESSION_ID
-      );
-      await storageProvider.initialize();
-    } else {
-      console.log("  💾 Creating local storage adapter...");
-      if (dataCache) {
-        if (typeof dataCache.initialize === "function") {
-          await dataCache.initialize();
-        }
-      }
-      storageProvider = new DatasetManagerAdapter(dataCache);
-      await storageProvider.initialize();
-    }
+    // Initialize storage provider (with automatic fallback)
+    const { provider: storageProvider, mode: storageMode } =
+      await initializeStorageProvider();
 
+    // Create dataset manager WITH the storage provider
     console.log("  Creating dataset manager (Layer 1)...");
-    datasetManager = new DatasetManager();
-    await datasetManager.initialize(storageProvider);
+    datasetManager = new DatasetManager(storageProvider);
+    await datasetManager.initialize();
     console.log("  ✓ Dataset manager ready");
 
+    // Sync from server if we're in server mode
+    if (storageMode === "server") {
+      try {
+        await datasetManager.syncDatasetsFromServer();
+        console.log("  ✓ Synced datasets from server");
+      } catch (error) {
+        console.warn("  ⚠️ Failed to sync from server:", error.message);
+        console.warn("  Continuing with local datasets only...");
+      }
+    }
+
     console.log("✅ Data storage layer complete");
+    console.log(`   Storage mode: ${storageMode}`);
 
     // STEP 4: View Configuration layer (Layer 2)
     console.log("📋 Setting up view configuration layer...");
@@ -120,7 +115,6 @@ export async function initializePhase1() {
     console.log("✅ Debug helpers available");
 
     console.log("✅ Phase 1 complete - Core services ready");
-    console.log("");
   } catch (error) {
     console.error("❌ Phase 1 initialization failed:", error);
     throw error;
@@ -310,7 +304,18 @@ function setupDebugHelpers() {
   window.CIA.viewConfigurationManager = viewConfigurationManager;
   window.CIA.workspaceManager = workspaceManager;
   window.CIA.sessionManager = sessionManager;
-  window.CIA.storageProvider = storageProvider;
+
+  // For debugging only - expose the internal storage provider
+  // This violates encapsulation but is useful for development
+  if (process.env.NODE_ENV === "development") {
+    Object.defineProperty(window.CIA, "storageProvider", {
+      get() {
+        // Access it through the datasetManager
+        return datasetManager?.storageProvider;
+      },
+      enumerable: false, // Don't show it in console autocomplete
+    });
+  }
 
   // Helper functions
   window.CIA.help = function () {

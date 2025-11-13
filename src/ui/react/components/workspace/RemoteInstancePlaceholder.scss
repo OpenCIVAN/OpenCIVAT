@@ -1,0 +1,159 @@
+// src/ui/react/components/workspace/RemoteInstancePlaceholder.scss
+@use "@UI/react/styles/tokens" as *;
+
+// The "as *" part tells SCSS to import all variables into the current namespace
+// This means you can write $color-primary instead of tokens.$color-primary
+// Without "as *", you'd need to write tokens.$color-primary everywhere
+
+.remote-instance-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // Using SCSS nesting - this compiles to:
+  // background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  background: linear-gradient(
+    135deg,
+    $color-bg-primary 0%,
+    $color-bg-secondary 100%
+  );
+  border: 2px dashed $color-border-subtle;
+  border-radius: $border-radius-lg;
+
+  .placeholder-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xl;
+    padding: $space-3xl;
+    text-align: center;
+    max-width: 400px;
+  }
+
+  .remote-user-badge {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-sm $space-lg;
+    background: $color-primary-alpha-10;
+    border: 1px solid $color-primary-alpha-30;
+    border-radius: $border-radius-xl;
+    color: $color-primary;
+    font-size: 14px;
+    font-weight: 500;
+
+    svg {
+      opacity: 0.8;
+    }
+  }
+
+  .dataset-info {
+    display: flex;
+    align-items: center;
+    gap: $space-lg;
+
+    .dataset-icon {
+      font-size: 48px;
+      opacity: 0.6;
+    }
+
+    .dataset-details {
+      text-align: left;
+
+      .dataset-filename {
+        font-size: 18px;
+        font-weight: 600;
+        color: $color-text-primary;
+        margin-bottom: $space-xs;
+      }
+
+      .dataset-type {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: $color-text-tertiary;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+
+  .fetch-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: $space-md $space-2xl;
+    background: linear-gradient(
+      135deg,
+      $color-primary 0%,
+      $color-primary-dark 100%
+    );
+    border: none;
+    border-radius: $border-radius-md;
+    color: $color-text-primary;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px $color-primary-alpha-40;
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .spinning {
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .placeholder-hint {
+    font-size: 13px;
+    color: $color-text-quaternary;
+    line-height: 1.5;
+  }
+
+  .error-message {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+    padding: $space-lg;
+    background: $color-error-alpha-10;
+    border: 1px solid $color-error-alpha-30;
+    border-radius: $border-radius-md;
+    color: $color-error;
+    font-size: 14px;
+
+    button {
+      padding: $space-sm $space-lg;
+      background: $color-error-alpha-20;
+      border: 1px solid $color-error-alpha-40;
+      border-radius: $border-radius-sm;
+      color: $color-error;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+
+      &:hover {
+        background: $color-error-alpha-30;
+      }
+    }
+  }
+}

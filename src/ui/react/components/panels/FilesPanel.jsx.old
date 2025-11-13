@@ -64,29 +64,47 @@ export function FilesPanel() {
      * Load a sample file
      */
     // Modify your handleLoadSample function
-    const handleLoadSample = async (filename) => {
-        // Check if this file is already being loaded
-        if (loadingFilesRef.current.has(filename)) {
-            console.log(`📂 File ${filename} is already loading, ignoring duplicate request`);
+    const handleLoadSample = async (sample) => {
+        // Check if already loading
+        if (loadingFilesRef.current.has(sample.name)) {
+            console.log(`📂 File ${sample.name} is already loading, ignoring duplicate`);
             return;
         }
 
-        // Mark this file as loading
-        loadingFilesRef.current.add(filename);
+        // Mark as loading
+        loadingFilesRef.current.add(sample.name);
 
         try {
+            const publicPath = sample.path;  // Get the path from the sample object
             console.log(`📂 Loading sample: ${publicPath}`);
 
-            // Your existing loading logic here...
+            // Fetch the file from the public path
             const response = await fetch(publicPath);
-            // ... rest of your code
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${sample.name}: ${response.status} ${response.statusText}`);
+            }
+
+            // Convert response to a File object
+            const blob = await response.blob();
+            const file = new File([blob], sample.name, {
+                type: 'application/octet-stream'
+            });
+
+            // Load through the dataset manager
+            const dataset = await datasetManager.loadDataset(file, publicPath);
+
+            console.log(`✅ Sample loaded successfully: ${sample.name}`);
+
+            // Trigger visualization
+            await handleDatasetAction(dataset.id, sample.name);
 
         } catch (error) {
             console.error('❌ Failed to load sample:', error);
-            // Show error to user
+            alert(`Failed to load ${sample.name}: ${error.message}`);
         } finally {
-            // Always remove from loading set when done (success or failure)
-            loadingFilesRef.current.delete(filename);
+            // Always clean up loading state
+            loadingFilesRef.current.delete(sample.name);
         }
     };
 

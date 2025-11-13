@@ -6,7 +6,7 @@ import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 
 // Import UI components
-import { FilesPanel } from "./components/panels/FilesPanel.jsx";
+import { FilesPanel } from "./components/panels/FilesPanel";
 import { WorkspaceGrid } from "./components/workspace/WorkspaceGrid.jsx";
 import { TopBar } from "./components/layout/TopBar.jsx";
 import { StatusBar } from "./components/layout/StatusBar.jsx";

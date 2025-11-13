@@ -1,0 +1,31 @@
+// src/ui/react/styles/tokens/_colors.scss
+// Central color definitions for the entire application
+
+// Neutral colors
+$color-bg-primary: #1a1a1a;
+$color-bg-secondary: #2a2a2a;
+$color-bg-tertiary: #3a3a3a;
+
+$color-text-primary: #ffffff;
+$color-text-secondary: rgba(255, 255, 255, 0.7);
+$color-text-tertiary: rgba(255, 255, 255, 0.5);
+$color-text-quaternary: rgba(255, 255, 255, 0.4);
+
+// Brand colors
+$color-primary: #4299e1;
+$color-primary-dark: #3182ce;
+$color-primary-alpha-10: rgba(66, 153, 225, 0.1);
+$color-primary-alpha-30: rgba(66, 153, 225, 0.3);
+$color-primary-alpha-40: rgba(66, 153, 225, 0.4);
+
+// Semantic colors
+$color-error: #f56565;
+$color-error-alpha-10: rgba(245, 101, 101, 0.1);
+$color-error-alpha-20: rgba(245, 101, 101, 0.2);
+$color-error-alpha-30: rgba(245, 101, 101, 0.3);
+$color-error-alpha-40: rgba(245, 101, 101, 0.4);
+
+$color-success: #4CAF50;
+
+// Border colors
+$color-border-subtle: rgba(255, 255, 255, 0.1);

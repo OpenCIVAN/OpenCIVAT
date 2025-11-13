@@ -1,6 +1,5 @@
 // src/core/instances/instanceManager.js
-// High-level API for instance management
-// Abstracts away the complexity of Y.js sync, stores, and workspace management
+// Complete orchestration of instance operations with full sync support
 
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { yInstances } from "@Collaboration/yjs/yjsSetup.js";
@@ -9,25 +8,18 @@ import {
   getUserName,
 } from "@Collaboration/presence/userManagement.js";
 
-/**
- * InstanceManager
- *
- * Provides a simple, high-level API for managing visualization instances.
- * Handles all the complexity of synchronization, state management, and collaboration.
- *
- * This is the ONLY API that components should use for instance operations.
- * It sits above workspaceManager, instanceStore, and Y.js, orchestrating them all.
- */
 class InstanceManager {
   constructor() {
-    this.localInstances = new Map(); // instanceId → metadata
-    this.remoteInstanceCallbacks = [];
     this._observerAttached = false;
+    this._syncCallbacks = [];
+
+    // Track which instances we've created locally
+    // This prevents creating duplicates when our own Y.js changes echo back
+    this._localInstanceIds = new Set();
   }
 
   /**
-   * Initialize the instance manager
-   * Sets up Y.js observation for remote instances
+   * Initialize - set up Y.js observation
    */
   initialize() {
     if (this._observerAttached) {
@@ -36,45 +28,66 @@ class InstanceManager {
     }
 
     console.log("🎨 InstanceManager: Initializing...");
+    console.log("   Setting up Y.js instance observer...");
 
-    // Set up Y.js observer for remote instances
+    // Observe Y.js for remote instance changes
     yInstances.observe((event) => {
-      const currentUserId = getUserId();
+      console.log(
+        `🔔 InstanceManager observer triggered: ${event.changes.keys.size} changes`
+      );
 
       event.changes.keys.forEach((change, instanceId) => {
-        if (change.action === "add" || change.action === "update") {
-          const remoteInstance = yInstances.get(instanceId);
+        const instance = yInstances.get(instanceId);
 
-          if (!remoteInstance) return;
-
-          // Skip our own instances (already handled locally)
-          if (remoteInstance.userId === currentUserId) {
-            return;
-          }
-
-          // Skip private instances from other users
-          if (remoteInstance.visibility !== "shared") {
-            return;
-          }
-
-          // Notify listeners about this remote instance
-          console.log(`🌐 Remote instance detected: ${instanceId}`);
-          console.log(
-            `   User: ${remoteInstance.userName || remoteInstance.userId}`
-          );
-          console.log(`   Dataset: ${remoteInstance.datasetId || "none"}`);
-
-          this._notifyRemoteInstanceCallbacks({
-            action: "add",
-            instanceId,
-            instance: remoteInstance,
-          });
+        if (!instance) {
+          console.log(`   ⚠️ Instance ${instanceId} not found in Y.js map`);
+          return;
         }
 
-        if (change.action === "delete") {
-          console.log(`🗑️ Remote instance removed: ${instanceId}`);
+        const currentUserId = getUserId();
+        console.log(`   Change: ${change.action} for ${instanceId}`);
+        console.log(`   Owner: ${instance.userName} (${instance.userId})`);
+        console.log(`   Current user: ${currentUserId}`);
+        console.log(`   Is mine: ${instance.userId === currentUserId}`);
 
-          this._notifyRemoteInstanceCallbacks({
+        // Skip our own instances - we already created them locally
+        if (instance.userId === currentUserId) {
+          console.log(`   ⏭️ Skipping own instance`);
+          return;
+        }
+
+        if (change.action === "add") {
+          console.log(`🌐 Remote instance added: ${instanceId}`);
+          console.log(`   From: ${instance.userName || instance.userId}`);
+          console.log(`   Dataset: ${instance.datasetId || "none"}`);
+          console.log(
+            `   📢 Notifying ${this._syncCallbacks.length} callback(s)`
+          );
+
+          // Notify UI about this remote instance
+          this._notifySyncCallbacks({
+            action: "add",
+            instanceId,
+            instance,
+          });
+
+          console.log(`   ✅ Callbacks notified`);
+        } else if (change.action === "update") {
+          console.log(`🔄 Remote instance updated: ${instanceId}`);
+          this._notifySyncCallbacks({
+            action: "update",
+            instanceId,
+            instance,
+          });
+        } else if (change.action === "delete") {
+          console.log(`🗑️ Remote instance deleted: ${instanceId}`);
+
+          // If we have this instance locally, delete it
+          if (this._localInstanceIds.has(instanceId)) {
+            this._deleteLocalInstance(instanceId);
+          }
+
+          this._notifySyncCallbacks({
             action: "delete",
             instanceId,
           });
@@ -83,172 +96,226 @@ class InstanceManager {
     });
 
     this._observerAttached = true;
-    console.log("✅ InstanceManager initialized");
+    console.log("✅ InstanceManager initialized with Y.js observer attached");
   }
 
   /**
-   * Spawn a new instance
+   * Create an instance locally and sync to Y.js
    *
    * This is the PRIMARY method for creating instances.
-   * It handles all the synchronization automatically.
+   * Call this from the UI when a user wants a new viewport.
    *
-   * @param {Object} options - Instance configuration
-   * @param {string} options.datasetId - Dataset to load (optional)
-   * @param {HTMLElement} options.container - Container element for VTK scene
-   * @param {string} options.visibility - "shared" or "private" (default: shared)
+   * @param {HTMLElement} container - DOM element to render into
+   * @param {string} datasetId - Optional dataset to load immediately
    * @returns {string} The instance ID
    */
-  spawnInstance({ datasetId = null, container, visibility = "shared" }) {
+  async createInstance(container, datasetId = null) {
     const instanceId = `instance-${Date.now()}-${Math.random()
       .toString(36)
       .substr(2, 9)}`;
-    const currentUserId = getUserId();
-    const currentUserName = getUserName();
 
-    console.log(`🆕 Spawning new instance: ${instanceId}`);
+    console.log(`🆕 Creating instance: ${instanceId}`);
     if (datasetId) {
       console.log(`   Dataset: ${datasetId}`);
     }
-    console.log(`   Visibility: ${visibility}`);
 
-    // Create the metadata
-    const instanceMetadata = {
-      id: instanceId,
-      userId: currentUserId,
-      userName: currentUserName,
-      datasetId: datasetId,
-      visibility: visibility,
-      type: "desktop", // future: could be "vr"
-      camera: null, // will be set by VTK scene
-      createdAt: Date.now(),
-      lastActive: Date.now(),
-    };
+    // Mark this as a local instance so we don't recreate it when Y.js echoes back
+    this._localInstanceIds.add(instanceId);
 
-    // Store locally
-    this.localInstances.set(instanceId, instanceMetadata);
+    // Create through workspace manager
+    await workspaceManager.createInstance(container, {
+      instanceId,
+      type: "vtk",
+      datasetId,
+    });
 
-    // Create the VTK scene
-    if (container) {
-      try {
-        workspaceManager.createInstance(container, { instanceId });
-        console.log(`✅ VTK scene created for instance: ${instanceId}`);
-      } catch (error) {
-        console.error(`❌ Failed to create VTK scene:`, error);
-        this.localInstances.delete(instanceId);
-        throw error;
-      }
-    }
-
-    // Sync to Y.js if shared
-    if (visibility === "shared") {
-      this._syncInstanceToYjs(instanceId, instanceMetadata);
-    }
+    // Sync to Y.js so other users can see it
+    this._syncToYjs(instanceId, datasetId);
 
     return instanceId;
   }
 
   /**
-   * Load a dataset into an existing instance
+   * Create a local instance from remote Y.js data
    *
-   * @param {string} instanceId - Instance to load into
+   * This is called when another user creates an instance and we want to
+   * mirror it locally. The instance already exists in Y.js, we're just
+   * creating the local rendering of it.
+   *
+   * @param {HTMLElement} container - DOM element to render into
+   * @param {string} instanceId - The instance ID from Y.js
    * @param {string} datasetId - Dataset to load
-   * @param {Object} polydata - VTK polydata object
+   * @returns {string} The instance ID
    */
-  loadDatasetIntoInstance(instanceId, datasetId, polydata) {
-    console.log(`📊 Loading dataset ${datasetId} into instance ${instanceId}`);
-
-    // Update local metadata
-    const instance = this.localInstances.get(instanceId);
-    if (instance) {
-      instance.datasetId = datasetId;
-      instance.lastActive = Date.now();
-
-      // Sync the update to Y.js
-      if (instance.visibility === "shared") {
-        this._syncInstanceToYjs(instanceId, instance);
-      }
+  async createRemoteInstance(container, instanceId, datasetId = null) {
+    console.log(
+      `🌐 Creating local rendering of remote instance: ${instanceId}`
+    );
+    if (datasetId) {
+      console.log(`   Dataset: ${datasetId}`);
     }
 
-    // Load into VTK
-    try {
-      workspaceManager.loadDatasetIntoInstance(instanceId, datasetId, polydata);
-      console.log(`✅ Dataset loaded into instance`);
-    } catch (error) {
-      console.error(`❌ Failed to load dataset:`, error);
-      throw error;
+    // Mark as local so we don't try to create it again
+    this._localInstanceIds.add(instanceId);
+
+    // Create through workspace manager with the exact ID from Y.js
+    await workspaceManager.createInstance(container, {
+      instanceId, // Use the remote instance ID, not a new one
+      type: "vtk",
+      datasetId,
+    });
+
+    // Note: We do NOT sync to Y.js here because this instance already
+    // exists in Y.js. We're just creating the local rendering.
+
+    return instanceId;
+  }
+
+  /**
+   * Load dataset into instance and sync
+   */
+  async loadDatasetIntoInstance(instanceId, datasetId, polydata) {
+    console.log(`📊 Loading dataset ${datasetId} into instance ${instanceId}`);
+
+    // Load through workspace manager
+    await workspaceManager.loadDatasetIntoInstance(
+      instanceId,
+      datasetId,
+      polydata
+    );
+
+    // Update Y.js with new dataset
+    // This is important - when you change what dataset an instance is showing,
+    // other users should see that change
+    const existing = yInstances.get(instanceId);
+    if (existing && existing.userId === getUserId()) {
+      this._syncToYjs(instanceId, datasetId);
     }
   }
 
   /**
-   * Delete an instance
-   *
-   * @param {string} instanceId - Instance to delete
+   * Delete instance and remove from Y.js
    */
   deleteInstance(instanceId) {
     console.log(`🗑️ Deleting instance: ${instanceId}`);
 
-    // Clean up VTK scene
-    try {
-      workspaceManager.deleteInstance(instanceId);
-    } catch (error) {
-      console.warn(`⚠️ Error cleaning up VTK:`, error);
-    }
+    this._deleteLocalInstance(instanceId);
 
-    // Remove from local storage
-    this.localInstances.delete(instanceId);
-
-    // Remove from Y.js
-    if (yInstances.has(instanceId)) {
+    // Remove from Y.js if it's our instance
+    const instance = yInstances.get(instanceId);
+    if (instance && instance.userId === getUserId()) {
       yInstances.delete(instanceId);
-      console.log(`📤 Removed from Y.js: ${instanceId}`);
     }
   }
 
   /**
-   * Get all local instances (created by this user)
-   *
-   * @returns {Array} Array of instance metadata
+   * Fetch a dataset and prepare it for a remote instance
+   * This is called when a user wants to view a dataset from a remote instance
+   * that they don't have locally yet.
    */
-  getLocalInstances() {
-    return Array.from(this.localInstances.values());
+  async fetchDatasetForRemoteInstance(fetchInfo) {
+    const { datasetId, publicPath, storageKey, filename, fileType } = fetchInfo;
+
+    console.log(`📥 Fetching dataset for remote instance: ${filename}`);
+
+    const datasetManager = window.CIA?.datasetManager;
+    if (!datasetManager) {
+      throw new Error("DatasetManager not available");
+    }
+
+    // Check if we already have it (user might have clicked twice)
+    const existing = datasetManager.getDataset(datasetId);
+    if (existing) {
+      console.log(`  ✓ Dataset already exists`);
+      return existing;
+    }
+
+    try {
+      let dataset;
+
+      if (publicPath) {
+        // Fetch from public path (sample files)
+        console.log(`  🌐 Fetching from: ${publicPath}`);
+
+        const response = await fetch(publicPath);
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const blob = await response.blob();
+        const file = new File([blob], filename, {
+          type: "application/octet-stream",
+        });
+
+        // Load through DatasetManager - this creates the dataset and syncs metadata
+        // Note: We pass null for userId to use the current user
+        dataset = await datasetManager.loadDataset(file, publicPath, null);
+
+        console.log(`  ✅ Dataset fetched and loaded: ${dataset.filename}`);
+      } else if (storageKey) {
+        // Fetch from server storage
+        console.log(`  📡 Fetching from server with key: ${storageKey}`);
+
+        // TODO: Implement server fetching when server storage is ready
+        throw new Error("Server storage fetching not yet implemented");
+      } else {
+        throw new Error(
+          "Dataset has no fetchable path (no publicPath or storageKey)"
+        );
+      }
+
+      return dataset;
+    } catch (error) {
+      console.error(`❌ Failed to fetch dataset:`, error);
+      throw error; // Propagate to caller so UI can show error
+    }
   }
 
   /**
-   * Get all remote instances (from other users)
-   *
-   * @returns {Array} Array of remote instance metadata
+   * Request state sync for an instance
+   * Call this after user interactions (camera move, widget change, etc.)
    */
-  getRemoteInstances() {
-    const currentUserId = getUserId();
-    const remoteInstances = [];
+  async requestSync(instanceId) {
+    const instance = workspaceManager.getInstance(instanceId);
+    if (!instance) {
+      console.warn(`⚠️ Cannot sync: instance ${instanceId} not found`);
+      return;
+    }
 
-    yInstances.forEach((instance, instanceId) => {
-      if (
-        instance.userId !== currentUserId &&
-        instance.visibility === "shared"
-      ) {
-        remoteInstances.push({
-          ...instance,
-          id: instanceId,
-        });
-      }
-    });
+    // Get shared state from the handler
+    const state = await instance.handler.getSharedState(instance.instanceData);
 
-    return remoteInstances;
+    if (!state) {
+      // Handler returned null (might be applying remote state)
+      return;
+    }
+
+    // Update the type-specific state in Y.js
+    const yInstance = yInstances.get(instanceId);
+    if (yInstance && yInstance.userId === getUserId()) {
+      yInstances.set(instanceId, {
+        ...yInstance,
+        typeSpecificState: state,
+        lastModified: Date.now(),
+      });
+
+      console.log(`📡 Synced state for instance ${instanceId}`);
+    }
   }
 
   /**
    * Get count of instances viewing a specific dataset
-   *
-   * @param {string} datasetId - Dataset ID
-   * @returns {number} Number of instances
    */
   getInstanceCountForDataset(datasetId) {
     let count = 0;
 
     // Count local instances
-    this.localInstances.forEach((instance) => {
-      if (instance.datasetId === datasetId) {
+    const allInstanceIds = workspaceManager.getAllInstanceIds();
+    allInstanceIds.forEach((instanceId) => {
+      const instance = workspaceManager.getInstance(instanceId);
+      if (instance && instance.datasetId === datasetId) {
         count++;
       }
     });
@@ -256,8 +323,11 @@ class InstanceManager {
     // Count remote instances
     const currentUserId = getUserId();
     yInstances.forEach((instance) => {
+      if (instance.userId === currentUserId) {
+        return; // Skip our own instances
+      }
+
       if (
-        instance.userId !== currentUserId &&
         instance.datasetId === datasetId &&
         instance.visibility === "shared"
       ) {
@@ -271,58 +341,60 @@ class InstanceManager {
   /**
    * Listen for remote instance changes
    *
-   * @param {Function} callback - Called when remote instances change
-   * @returns {Function} Cleanup function
+   * This is how the UI (WorkspaceGrid) learns about instances
+   * created by other users.
    */
   onRemoteInstanceChange(callback) {
-    this.remoteInstanceCallbacks.push(callback);
-
-    // Return cleanup function
+    this._syncCallbacks.push(callback);
     return () => {
-      this.remoteInstanceCallbacks = this.remoteInstanceCallbacks.filter(
-        (cb) => cb !== callback
-      );
+      this._syncCallbacks = this._syncCallbacks.filter((cb) => cb !== callback);
     };
   }
 
   /**
-   * INTERNAL: Sync instance to Y.js
+   * INTERNAL: Delete an instance locally only
    */
-  _syncInstanceToYjs(instanceId, metadata) {
-    try {
-      yInstances.set(instanceId, {
-        id: metadata.id,
-        userId: metadata.userId,
-        userName: metadata.userName,
-        datasetId: metadata.datasetId,
-        visibility: metadata.visibility,
-        type: metadata.type,
-        camera: metadata.camera,
-        createdAt: metadata.createdAt,
-        lastActive: metadata.lastActive,
-      });
+  _deleteLocalInstance(instanceId) {
+    // Delete through workspace manager
+    workspaceManager.deleteInstance(instanceId);
 
-      console.log(`📤 Instance synced to Y.js: ${instanceId}`);
-    } catch (error) {
-      console.error(`❌ Failed to sync to Y.js:`, error);
-    }
+    // Remove from our tracking
+    this._localInstanceIds.delete(instanceId);
   }
 
   /**
-   * INTERNAL: Notify callbacks about remote instance changes
+   * INTERNAL: Sync instance metadata to Y.js
    */
-  _notifyRemoteInstanceCallbacks(event) {
-    this.remoteInstanceCallbacks.forEach((callback) => {
+  _syncToYjs(instanceId, datasetId) {
+    yInstances.set(instanceId, {
+      id: instanceId,
+      userId: getUserId(),
+      userName: getUserName(),
+      datasetId: datasetId || null,
+      type: "vtk",
+      visibility: "shared",
+      createdAt: Date.now(),
+      lastModified: Date.now(),
+      typeSpecificState: null, // Will be populated by requestSync()
+    });
+
+    console.log(`📤 Instance synced to Y.js: ${instanceId}`);
+  }
+
+  /**
+   * INTERNAL: Notify callbacks about remote changes
+   */
+  _notifySyncCallbacks(event) {
+    this._syncCallbacks.forEach((callback) => {
       try {
         callback(event);
       } catch (error) {
-        console.error("Error in remote instance callback:", error);
+        console.error("Error in sync callback:", error);
       }
     });
   }
 }
 
-// Create and export singleton
 export const instanceManager = new InstanceManager();
 
 // Make available for debugging

@@ -40,6 +40,14 @@ module.exports = {
         use: ["style-loader", "css-loader"],
       },
       {
+        test: /\.scss$/,
+        use: [
+          "style-loader", // Injects CSS into the DOM
+          "css-loader", // Translates CSS into CommonJS modules
+          "sass-loader", // Compiles SCSS to CSS
+        ],
+      },
+      {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
         type: "asset/resource",
       },

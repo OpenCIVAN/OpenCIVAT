@@ -39,6 +39,157 @@ export class InstanceTypeHandler {
     throw new Error("InstanceTypeHandler.getDisplayName() must be implemented");
   }
 
+  // =========================================================================
+  // FILE TYPE CAPABILITY DECLARATION
+  // This is the single source of truth for what formats a handler supports
+  // =========================================================================
+
+  /**
+   * Get the file types this handler supports and what operations it can perform on them
+   *
+   * This is the SINGLE SOURCE OF TRUTH for a handler's format capabilities.
+   * All other capability checks (canExtractMetadata, canHandle, etc.) query this list.
+   *
+   * IMPORTANT: Handlers must override this method to declare their capabilities.
+   * The default implementation returns an empty array.
+   *
+   * @returns {Array<Object>} Array of supported file type configurations
+   *
+   * Each configuration object should have:
+   * - extension {string}: File extension (e.g., 'vtp', 'json', 'csv')
+   * - mimeType {string}: MIME type for this format
+   * - displayName {string}: Human-readable name for UI
+   * - capabilities {Object}: What this handler can do with this format
+   *   - canRender {boolean}: Can visualize this format
+   *   - canExtractMetadata {boolean}: Can quickly extract metadata
+   *   - canExport {boolean}: Can export to this format
+   * - priority {number}: Handler priority (higher = preferred), optional
+   *
+   * Example return value:
+   * [
+   *   {
+   *     extension: 'vtp',
+   *     mimeType: 'application/vnd.vtk.polydata+xml',
+   *     displayName: 'VTK PolyData',
+   *     capabilities: {
+   *       canRender: true,
+   *       canExtractMetadata: true,
+   *       canExport: false,
+   *     },
+   *     priority: 10
+   *   },
+   *   {
+   *     extension: 'stl',
+   *     mimeType: 'model/stl',
+   *     displayName: 'STL Model',
+   *     capabilities: {
+   *       canRender: true,
+   *       canExtractMetadata: false,
+   *       canExport: true,
+   *     },
+   *     priority: 5
+   *   }
+   * ]
+   */
+  getSupportedFileTypes() {
+    // Default: no formats supported
+    // Handlers MUST override this to declare their capabilities
+    return [];
+  }
+
+  /**
+   * Check if this handler can extract metadata from a file type
+   *
+   * This is a CONVENIENCE METHOD that queries getSupportedFileTypes().
+   * Handlers typically don't need to override this - just implement
+   * getSupportedFileTypes() properly and this will work automatically.
+   *
+   * @param {string} fileType - File extension (e.g., 'vtp', 'json')
+   * @returns {boolean} True if this handler can extract metadata from this format
+   */
+  canExtractMetadata(fileType) {
+    const supportedTypes = this.getSupportedFileTypes();
+    const typeConfig = supportedTypes.find(
+      (t) => t.extension.toLowerCase() === fileType.toLowerCase()
+    );
+    return typeConfig?.capabilities?.canExtractMetadata || false;
+  }
+
+  /**
+   * Check if this handler can render a file type
+   *
+   * This is a CONVENIENCE METHOD that queries getSupportedFileTypes().
+   * Handlers typically don't need to override this - just implement
+   * getSupportedFileTypes() properly and this will work automatically.
+   *
+   * @param {string} fileType - File extension (e.g., 'vtp', 'json')
+   * @returns {boolean} True if this handler can render this format
+   */
+  canHandle(fileType) {
+    const supportedTypes = this.getSupportedFileTypes();
+    const typeConfig = supportedTypes.find(
+      (t) => t.extension.toLowerCase() === fileType.toLowerCase()
+    );
+    return typeConfig?.capabilities?.canRender || false;
+  }
+
+  /**
+   * Check if this handler can handle a specific dataset
+   *
+   * This is similar to canHandle() but operates on dataset objects rather than
+   * just file extensions. This allows handlers to make more sophisticated decisions
+   * based on dataset metadata, not just the file type.
+   *
+   * For example, a handler might accept JSON files but only if they contain
+   * specific fields. Or it might accept VTP files but only if they're under
+   * a certain size. The dataset object provides that additional context.
+   *
+   * Most handlers can just use the default implementation which checks the
+   * fileType property. Override this only if you need more sophisticated logic.
+   *
+   * @param {Object} dataset - Dataset metadata object
+   * @returns {boolean} Can this handler display this dataset
+   */
+  canHandleDataset(dataset) {
+    // Default: check if we can handle the file type
+    return dataset?.fileType ? this.canHandle(dataset.fileType) : false;
+  }
+
+  /**
+   * Extract lightweight metadata from a dataset file
+   *
+   * This is called during dataset upload to get basic information that can
+   * be displayed in the UI before any visualization occurs. The goal is to
+   * be fast - read file headers or minimal parsing only, not full data loading.
+   *
+   * Handlers should check canExtractMetadata(fileType) before calling this.
+   * If canExtractMetadata returns false, this method will return null.
+   *
+   * @param {File} file - The raw file object
+   * @param {string} fileType - File extension (e.g., 'vtp', 'json', 'csv')
+   * @returns {Promise<Object|null>} Metadata object or null if not supported
+   *
+   * Example return value for VTK:
+   * {
+   *   format: 'vtp',
+   *   pointCount: 142573,
+   *   cellCount: 284001,
+   *   bounds: { xMin: -50, xMax: 50, ... },
+   *   dataArrays: ['temperature', 'pressure'],
+   *   estimatedMemory: '12 MB'
+   * }
+   */
+  async extractMetadata(file, fileType) {
+    // Default: no metadata extraction implemented
+    // Handlers that can extract metadata override this method
+    return null;
+  }
+
+  // =========================================================================
+  // CORE RENDERING LIFECYCLE
+  // These methods handle the basic instance lifecycle
+  // =========================================================================
+
   /**
    * Initialize a new instance in the provided container
    *
@@ -73,7 +224,7 @@ export class InstanceTypeHandler {
   /**
    * Load data into this instance
    *
-   * The handler receives the dataset metadata and polydata/data object.
+   * The handler receives the dataset metadata and data object.
    * It's responsible for rendering that data in its specific way.
    * VTK uses polydata directly. Plotly might transform it to traces.
    *
@@ -84,6 +235,25 @@ export class InstanceTypeHandler {
   async loadData(instanceData, dataset, data) {
     throw new Error("InstanceTypeHandler.loadData() must be implemented");
   }
+
+  /**
+   * Handle window resize
+   *
+   * Called when the instance viewport resizes. Some renderers need
+   * to update their internal dimensions.
+   *
+   * @param {Object} instanceData - Instance-specific data
+   * @param {number} width - New width
+   * @param {number} height - New height
+   */
+  async onResize(instanceData, width, height) {
+    // Default: do nothing (many renderers handle this automatically)
+  }
+
+  // =========================================================================
+  // UI INTEGRATION
+  // These methods provide UI elements for the instance
+  // =========================================================================
 
   /**
    * Get available tools/widgets for this instance type
@@ -100,15 +270,20 @@ export class InstanceTypeHandler {
    * [
    *   {
    *     id: 'clip',
+   *     type: 'button',
    *     label: 'Clip Plane',
    *     icon: 'scissors',
    *     onClick: () => this.activateClipWidget(instanceData)
    *   },
    *   {
-   *     id: 'measure',
-   *     label: 'Measure',
-   *     icon: 'ruler',
-   *     onClick: () => this.activateMeasureWidget(instanceData)
+   *     type: 'separator'
+   *   },
+   *   {
+   *     id: 'colormap',
+   *     type: 'menu',
+   *     label: 'Color Map',
+   *     icon: 'palette',
+   *     options: [...]
    *   }
    * ]
    */
@@ -143,10 +318,85 @@ export class InstanceTypeHandler {
     return { stats: [], indicators: [] };
   }
 
+  /**
+   * Export instance content
+   *
+   * Returns the instance content in an exportable format.
+   * VTK might return a screenshot or VTP file. Plotly might return JSON.
+   *
+   * @param {Object} instanceData - Instance-specific data
+   * @param {string} format - Desired export format ('png', 'json', etc.)
+   * @returns {Blob|string} Exported content
+   */
+  async export(instanceData, format) {
+    throw new Error("Export not supported for this instance type");
+  }
+
   // =========================================================================
   // COLLABORATIVE FEATURES
   // These methods handle how collaborative features work for this type
   // =========================================================================
+
+  /**
+   * Get the current shared state for this instance
+   *
+   * This state will be synced to other collaborators via Y.js.
+   * Return only the state that should be shared - don't include
+   * internal implementation details.
+   *
+   * The state structure is type-specific. VTK returns camera positions
+   * and widget states. A chart visualization might return axis ranges
+   * and selected data points.
+   *
+   * @param {Object} instanceData - Instance-specific data
+   * @returns {Object|null} Shareable state, or null if not ready
+   *
+   * Example for VTK:
+   * {
+   *   camera: { position: [x,y,z], focalPoint: [x,y,z], viewUp: [x,y,z] },
+   *   widgets: { sphere: { center: [x,y,z], radius: 5 } },
+   *   visualization: { colorMap: 'rainbow', opacity: 0.8 }
+   * }
+   */
+  async getSharedState(instanceData) {
+    // Default: no shared state
+    return null;
+  }
+
+  /**
+   * Apply shared state received from another collaborator
+   *
+   * This is called when remote changes arrive via Y.js.
+   * The handler should update its visualization to match the provided state.
+   *
+   * IMPORTANT: Set a flag to prevent sync loops. When you apply remote state,
+   * your visualization will change (camera moves, widgets activate), which
+   * might trigger local change events. You don't want to sync those changes
+   * back out because they came from a remote user.
+   *
+   * @param {Object} instanceData - Instance-specific data
+   * @param {Object} state - The state to apply (structure is type-specific)
+   * @param {string} sourceUserId - ID of the user who made this change
+   * @returns {Promise<void>}
+   *
+   * Example implementation:
+   * async applySharedState(instanceData, state, sourceUserId) {
+   *   this._isApplyingRemoteState = true;
+   *   try {
+   *     if (state.camera) {
+   *       instanceData.camera.setPosition(...state.camera.position);
+   *       // ... apply other camera properties
+   *     }
+   *     instanceData.renderWindow.render();
+   *   } finally {
+   *     this._isApplyingRemoteState = false;
+   *   }
+   * }
+   */
+  async applySharedState(instanceData, state, sourceUserId) {
+    // Default: do nothing
+    // Handlers that want to sync state must override this
+  }
 
   /**
    * Show/hide collaborative cursors
@@ -236,8 +486,8 @@ export class InstanceTypeHandler {
   }
 
   // =========================================================================
-  // VR CAPABILITY DECLARATION
-  // These methods tell the core what VR features this type supports
+  // VR CAPABILITIES
+  // These methods declare and implement VR support for this instance type
   // =========================================================================
 
   /**
@@ -294,11 +544,6 @@ export class InstanceTypeHandler {
       },
     };
   }
-
-  // =========================================================================
-  // INSTANCE-LEVEL VR
-  // "Send this specific instance to VR"
-  // =========================================================================
 
   /**
    * Enter VR mode for this instance
@@ -357,11 +602,6 @@ export class InstanceTypeHandler {
     // Default: do nothing
   }
 
-  // =========================================================================
-  // APPLICATION-LEVEL VR
-  // "The entire app is now in VR"
-  // =========================================================================
-
   /**
    * Notify instance that application entered VR mode
    *
@@ -406,10 +646,6 @@ export class InstanceTypeHandler {
     };
   }
 
-  // =========================================================================
-  // VR-SPECIFIC COLLABORATIVE FEATURES
-  // =========================================================================
-
   /**
    * Render remote user avatars in VR
    *
@@ -432,78 +668,28 @@ export class InstanceTypeHandler {
     // Default: use regular annotation rendering
     return this.setAnnotationVisibility(instanceData, true, annotations);
   }
-
-  // =========================================================================
-  // OPTIONAL ADVANCED FEATURES
-  // These are optional and only needed for specific instance types
-  // =========================================================================
-
-  /**
-   * Handle window resize
-   *
-   * Called when the instance viewport resizes. Some renderers need
-   * to update their internal dimensions.
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {number} width - New width
-   * @param {number} height - New height
-   */
-  async onResize(instanceData, width, height) {
-    // Default: do nothing (many renderers handle this automatically)
-  }
-
-  /**
-   * Export instance content
-   *
-   * Returns the instance content in an exportable format.
-   * VTK might return a screenshot or VTP file. Plotly might return JSON.
-   *
-   * @param {Object} instanceData - Instance-specific data
-   * @param {string} format - Desired export format ('png', 'json', etc.)
-   * @returns {Blob|string} Exported content
-   */
-  async export(instanceData, format) {
-    throw new Error("Export not supported for this instance type");
-  }
-
-  /**
-   * Check if this handler can handle a specific dataset type
-   *
-   * Used to determine if this instance type is compatible with a dataset.
-   * VTK handler returns true for .vtp files. Plotly might return true for JSON.
-   *
-   * @param {Object} dataset - Dataset metadata
-   * @returns {boolean} Can this handler display this dataset
-   */
-  canHandleDataset(dataset) {
-    // Default: assume can handle any dataset
-    return true;
-  }
 }
 
 /**
- * Example skeleton for implementers:
+ * Quick reference for implementers:
  *
- * class MyCustomHandler extends InstanceTypeHandler {
- *   getType() { return 'my-custom-type'; }
- *   getDisplayName() { return 'My Custom Visualization'; }
+ * MUST OVERRIDE:
+ * - getType() - Your type identifier
+ * - getDisplayName() - Human-readable name
+ * - getSupportedFileTypes() - What formats you support
+ * - initialize() - Set up rendering
+ * - cleanup() - Dispose resources
+ * - loadData() - Display data
  *
- *   async initialize(container, options) {
- *     // Set up your rendering system
- *     const myRenderer = createMyRenderer(container);
- *     return { renderer: myRenderer }; // Return instance data
- *   }
+ * SHOULD OVERRIDE if applicable:
+ * - extractMetadata() - Fast metadata extraction
+ * - getTools() - Toolbar buttons/menus
+ * - getHeaderInfo() - Stats to show in header
+ * - getSharedState() / applySharedState() - Collaboration sync
+ * - VR methods if you support VR
  *
- *   async cleanup(instanceData) {
- *     // Clean up resources
- *     instanceData.renderer.dispose();
- *   }
- *
- *   async loadData(instanceData, dataset, data) {
- *     // Render the data
- *     instanceData.renderer.setData(data);
- *   }
- *
- *   // Implement other methods as needed...
- * }
+ * DON'T NEED TO OVERRIDE (convenience methods):
+ * - canHandle() - Queries getSupportedFileTypes()
+ * - canExtractMetadata() - Queries getSupportedFileTypes()
+ * - canHandleDataset() - Uses canHandle() internally
  */

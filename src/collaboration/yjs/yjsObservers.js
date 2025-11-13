@@ -195,56 +195,15 @@ export function initializeDatasetObserver() {
 // Watches for remote instance changes
 // ----------------------------------------------------------------------------
 export function initializeInstanceObserver() {
-  console.log("🔍 Setting up instance observer");
-  yInstances.observe((event) => {
-    console.log(
-      "🔍 Instance observer fired",
-      event.changes.keys.size,
-      "changes"
-    );
-    const changes = [];
-    event.changes.keys.forEach((change, key) => {
-      changes.push({
-        action: change.action,
-        instanceId: key,
-        data: yInstances.get(key),
-      });
-    });
-
-    setTimeout(async () => {
-      const currentUserId = getUserId();
-
-      for (const { action, instanceId, data } of changes) {
-        if (action === "add" || action === "update") {
-          const remoteInstance = data;
-
-          console.log(
-            `📥 Remote instance received: ${instanceId} (${remoteInstance.type})`
-          );
-
-          // Don't sync private instances from other users
-          if (remoteInstance.visibility === "private") {
-            if (remoteInstance.userId !== currentUserId) {
-              console.log(`   Skipping private instance from another user`);
-              continue;
-            }
-          }
-
-          // Update or create instance
-          useInstanceStore
-            .getState()
-            .updateInstance(instanceId, remoteInstance);
-        }
-
-        if (action === "delete") {
-          console.log(`📥 Remote instance removed: ${instanceId}`);
-          useInstanceStore.getState().removeInstance(instanceId);
-        }
-      }
-    }, 0);
-  });
-
-  console.log("✅ Instance observer initialized");
+  console.log('🔍 Setting up instance observer');
+  
+  // REMOVED: The instance observer is now handled by instanceManager.js
+  // This eliminates duplicate observers and ensures callbacks fire correctly
+  
+  // The instanceManager sets up its own Y.js observer when initialized
+  // and provides a proper callback system via onRemoteInstanceChange()
+  
+  console.log('✅ Instance observer initialization deferred to InstanceManager');
 }
 
 // ----------------------------------------------------------------------------

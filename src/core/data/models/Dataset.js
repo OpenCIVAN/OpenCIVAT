@@ -21,256 +21,128 @@ import { generateDatasetId } from "@Utils/idGenerator.js";
  * each showing different aspects of it with different filters and cameras.
  */
 
+// src/core/data/models/Dataset.js
+
 export class Dataset {
   constructor(config = {}) {
-    // Core identification
-    this.id = config.id || this._generateId();
-    this.filename = config.filename; // Required
+    this.id = config.id;
+    this.filename = config.filename;
+    this.name = config.name || config.filename;
+    this.fileType = config.fileType;
+    this.hash = config.hash;
+    this.publicPath = config.publicPath;
+    this.storageKey = config.storageKey;
+    this.userId = config.userId;
 
-    // The actual file data (stored in IndexedDB via your existing cache system)
-    // This might be a File object or a reference to IndexedDB storage
-    this.file = config.file || null;
-
-    // Dataset-level metadata extracted from the file
-    this.metadata = {
-      fileSize: config.metadata?.fileSize || 0,
-      fileType: config.metadata?.fileType || this._inferFileType(this.filename),
-      uploadedAt: config.metadata?.uploadedAt || Date.now(),
-      uploadedBy: config.metadata?.uploadedBy || null,
-
-      // Spatial metadata (populated after loading)
-      bounds: config.metadata?.bounds || null, // [xmin, xmax, ymin, ymax, zmin, zmax]
-      pointCount: config.metadata?.pointCount || null,
-      cellCount: config.metadata?.cellCount || null,
-
-      // Optional domain-specific metadata
-      ...config.metadata,
+    this.metadata = config.metadata || {
+      fileSize: 0,
+      uploadedAt: Date.now(),
+      uploadedBy: config.userId,
     };
 
-    // Annotations on this dataset - this is the key part
-    // Annotations are stored as an array of Annotation objects
-    // They live here at the dataset level, not in view configurations
-    this.annotations =
-      config.annotations?.map((a) =>
-        a instanceof Annotation ? a : Annotation.fromJSON(a)
-      ) || [];
+    // Runtime properties that are NOT persisted
+    this.rawFile = config.rawFile || null;
+    this.parsedDataCache = config.parsedDataCache || {};
+    this.quickMetadata = config.quickMetadata || null;
 
-    // Validation
-    if (!this.filename) {
-      throw new Error("Dataset requires a filename");
-    }
+    this.annotations = config.annotations || [];
   }
 
   /**
-   * Generate a unique ID for this dataset
-   */
-  _generateId() {
-    return generateDatasetId();
-  }
-
-  /**
-   * Infer file type from filename extension
-   */
-  _inferFileType(filename) {
-    if (!filename) return "unknown";
-    const ext = filename.split(".").pop().toLowerCase();
-    const typeMap = {
-      vtp: "vtk-polydata",
-      vti: "vtk-imagedata",
-      vtu: "vtk-unstructuredgrid",
-      stl: "stl",
-      obj: "obj",
-      ply: "ply",
-      csv: "csv",
-      json: "json",
-    };
-    return typeMap[ext] || ext;
-  }
-
-  // ==================== ANNOTATION MANAGEMENT ====================
-  // These methods manage annotations at the dataset level
-
-  /**
-   * Add an annotation to this dataset
-   * @param {Annotation} annotation - The annotation to add
-   */
-  addAnnotation(annotation) {
-    if (!(annotation instanceof Annotation)) {
-      throw new Error("Must provide an Annotation instance");
-    }
-
-    if (annotation.datasetId !== this.id) {
-      throw new Error("Annotation datasetId does not match this dataset");
-    }
-
-    this.annotations.push(annotation);
-    return annotation;
-  }
-
-  /**
-   * Remove an annotation from this dataset
-   * @param {string} annotationId - ID of the annotation to remove
-   * @returns {boolean} - Whether the annotation was found and removed
-   */
-  removeAnnotation(annotationId) {
-    const initialLength = this.annotations.length;
-    this.annotations = this.annotations.filter((a) => a.id !== annotationId);
-    return this.annotations.length < initialLength;
-  }
-
-  /**
-   * Get an annotation by ID
-   * @param {string} annotationId - ID of the annotation
-   * @returns {Annotation|null} - The annotation or null if not found
-   */
-  getAnnotation(annotationId) {
-    return this.annotations.find((a) => a.id === annotationId) || null;
-  }
-
-  /**
-   * Get all annotations (optionally filtered)
-   * @param {object} filter - Optional filter specification
-   * @param {string} currentUserId - User requesting annotations (for permission checks)
-   * @returns {Annotation[]} - Filtered annotations
-   */
-  getAnnotations(filter = null, currentUserId = null) {
-    let filtered = this.annotations;
-
-    // Apply permission filtering if userId provided
-    if (currentUserId) {
-      filtered = filtered.filter((a) => a.canView(currentUserId));
-    }
-
-    // Apply additional filters if provided
-    if (filter) {
-      filtered = filtered.filter((a) => a.matchesFilter(filter));
-    }
-
-    return filtered;
-  }
-
-  /**
-   * Query annotations by creator
-   * This is useful for auditing and filtering by user
-   * @param {string} userId - User ID to filter by
-   * @returns {Annotation[]} - Annotations created by this user
-   */
-  getAnnotationsByUser(userId) {
-    return this.annotations.filter((a) => a.createdBy === userId);
-  }
-
-  /**
-   * Query annotations by tag
-   * @param {string[]} tags - Tags to filter by (annotation must have at least one)
-   * @returns {Annotation[]} - Matching annotations
-   */
-  getAnnotationsByTags(tags) {
-    return this.annotations.filter((a) =>
-      tags.some((tag) => a.tags.includes(tag))
-    );
-  }
-
-  /**
-   * Query annotations by date range
-   * This is critical for auditing - "show me all annotations made last week"
-   * @param {number} startTime - Start timestamp (inclusive)
-   * @param {number} endTime - End timestamp (inclusive)
-   * @returns {Annotation[]} - Annotations created in this range
-   */
-  getAnnotationsByDateRange(startTime, endTime) {
-    return this.annotations.filter(
-      (a) => a.createdAt >= startTime && a.createdAt <= endTime
-    );
-  }
-
-  /**
-   * Get annotation statistics
-   * Useful for displaying in UI and for auditing
-   * @returns {object} - Statistics about annotations on this dataset
-   */
-  getAnnotationStats() {
-    const stats = {
-      total: this.annotations.length,
-      byUser: {},
-      byType: {},
-      byTag: {},
-      byVisibility: {
-        public: 0,
-        private: 0,
-        shared: 0,
-      },
-    };
-
-    this.annotations.forEach((annotation) => {
-      // Count by user
-      stats.byUser[annotation.createdBy] =
-        (stats.byUser[annotation.createdBy] || 0) + 1;
-
-      // Count by type
-      stats.byType[annotation.type] = (stats.byType[annotation.type] || 0) + 1;
-
-      // Count by visibility
-      stats.byVisibility[annotation.visibility]++;
-
-      // Count by tag
-      annotation.tags.forEach((tag) => {
-        stats.byTag[tag] = (stats.byTag[tag] || 0) + 1;
-      });
-    });
-
-    return stats;
-  }
-
-  // ==================== METADATA MANAGEMENT ====================
-
-  /**
-   * Update dataset metadata
-   * This is called after the file is loaded and analyzed
-   * @param {object} updates - Metadata fields to update
-   */
-  updateMetadata(updates) {
-    this.metadata = {
-      ...this.metadata,
-      ...updates,
-    };
-  }
-
-  /**
-   * Check if the dataset has been fully loaded and analyzed
-   * @returns {boolean} - Whether spatial metadata is available
-   */
-  isAnalyzed() {
-    return this.metadata.bounds !== null && this.metadata.pointCount !== null;
-  }
-
-  // ==================== SERIALIZATION ====================
-
-  /**
-   * Serialize for storage
-   * Note: The file itself is stored separately in IndexedDB
-   * This just stores the metadata and annotations
-   * @returns {object} - Serializable representation
+   * Convert this Dataset to a plain object for storage
+   * This is called when saving to IndexedDB
    */
   toJSON() {
     return {
       id: this.id,
       filename: this.filename,
+      name: this.name,
+      fileType: this.fileType,
+      hash: this.hash,
+      publicPath: this.publicPath,
+      storageKey: this.storageKey,
+      userId: this.userId,
       metadata: this.metadata,
-      annotations: this.annotations.map((a) => a.toJSON()),
-      // Note: file is not included - it's stored separately in IndexedDB
+      annotations: this.annotations,
     };
   }
 
   /**
-   * Create a Dataset from stored JSON
-   * @param {object} json - Serialized dataset data
-   * @returns {Dataset} - New Dataset instance
+   * Create a Dataset instance from stored data
+   * This is called when loading from IndexedDB
    */
   static fromJSON(json) {
     return new Dataset({
-      ...json,
-      annotations: json.annotations?.map((a) => Annotation.fromJSON(a)) || [],
+      id: json.id,
+      filename: json.filename,
+      name: json.name,
+      fileType: json.fileType,
+      hash: json.hash,
+      publicPath: json.publicPath,
+      storageKey: json.storageKey,
+      userId: json.userId,
+      metadata: json.metadata,
+      annotations: json.annotations,
     });
+  }
+
+  /**
+   * Check if this dataset has been analyzed
+   * A dataset is "analyzed" if it has spatial metadata like point count and bounds
+   */
+  isAnalyzed() {
+    return !!(
+      this.metadata?.pointCount ||
+      this.metadata?.bounds ||
+      this.quickMetadata?.pointCount
+    );
+  }
+
+  /**
+   * Update dataset metadata
+   */
+  updateMetadata(updates) {
+    this.metadata = { ...this.metadata, ...updates };
+  }
+
+  /**
+   * Add an annotation to this dataset
+   */
+  addAnnotation(annotation) {
+    this.annotations.push(annotation);
+  }
+
+  /**
+   * Remove an annotation from this dataset
+   */
+  removeAnnotation(annotationId) {
+    const index = this.annotations.findIndex((a) => a.id === annotationId);
+    if (index !== -1) {
+      this.annotations.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get an annotation by ID
+   */
+  getAnnotation(annotationId) {
+    return this.annotations.find((a) => a.id === annotationId);
+  }
+
+  /**
+   * Get all annotations (optionally filtered)
+   */
+  getAnnotations(filter = null, userId = null) {
+    let results = this.annotations;
+
+    if (filter) {
+      // Apply filter logic here
+      // For now, just return all
+    }
+
+    return results;
   }
 }
 

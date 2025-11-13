@@ -1,16 +1,9 @@
 // src/collaboration/sync/collaborationSyncManager.js
-// Minimal working sync manager - no breaking changes
+// Handles dataset, annotation, and cursor layer synchronization
+// Instance sync is handled by instanceManager - this deals with data layers
 
-import {
-  ydoc,
-  yDatasets,
-  yInstances,
-  yAnnotations,
-  syncDatasetToYjs,
-  syncInstanceToYjs,
-} from "@Collaboration/yjs/yjsSetup.js";
+import { ydoc, yDatasets, yAnnotations } from "@Collaboration/yjs/yjsSetup.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
-import { useInstanceStore } from "@UI/react/store/instanceStore.js";
 import {
   getUserId,
   getUserName,
@@ -34,14 +27,11 @@ class CollaborationSyncManager {
 
     console.log("🔄 Initializing CollaborationSyncManager...");
 
-    // Set up dataset synchronization
+    // Only dataset and annotation sync - no instance sync
     this.setupDatasetSync();
-
-    // Set up instance synchronization
-    this.setupInstanceSync();
-
-    // Set up annotation synchronization
     this.setupAnnotationSync();
+
+    // Future: this.setupCursorSync();
 
     // Handle initial sync when connecting
     this.handleInitialSync();
@@ -82,7 +72,6 @@ class CollaborationSyncManager {
     });
 
     // Listen for local dataset changes from Zustand store
-    // DatasetManager doesn't have subscribe, but the Zustand store does
     useDatasetStore.subscribe((state) => {
       const datasets = state.datasets;
 
@@ -97,82 +86,6 @@ class CollaborationSyncManager {
           ) {
             this.syncLocalDataset(dataset);
           }
-        }
-      });
-    });
-  }
-
-  /**
-   * Setup instance synchronization
-   */
-  setupInstanceSync() {
-    // Listen for remote instance changes
-    yInstances.observe((event) => {
-      console.log("📥 Instance sync event received");
-
-      event.changes.keys.forEach((change, instanceId) => {
-        if (change.action === "add" || change.action === "update") {
-          const remoteInstance = yInstances.get(instanceId);
-
-          if (!remoteInstance) return;
-
-          console.log(`📥 Remote instance received: ${instanceId}`);
-          console.log(`   Type: ${remoteInstance.type}`);
-
-          // Skip if this is our own instance
-          if (remoteInstance.userId === getUserId()) {
-            console.log("   (Skipping own instance)");
-            return;
-          }
-
-          // Update the instance store
-          this.handleRemoteInstance(instanceId, remoteInstance);
-        } else if (change.action === "delete") {
-          console.log(`🗑️ Remote instance deleted: ${instanceId}`);
-
-          // Remove from local store if it exists
-          const instanceStore = useInstanceStore.getState();
-          const instances = instanceStore.instances || [];
-          if (instances.find((i) => i.id === instanceId)) {
-            instanceStore.removeInstance(instanceId);
-          }
-        }
-      });
-    });
-
-    // Listen for local instance changes to sync them
-    useInstanceStore.subscribe((state) => {
-      const instances = state.instances || [];
-
-      instances.forEach((instance) => {
-        // Skip remote instances
-        if (instance.isRemote) return;
-
-        // Sync to Y.js
-        const syncData = {
-          id: instance.id,
-          name: instance.name,
-          type: instance.type || "vtk",
-          datasetId: instance.datasetId,
-          userId: getUserId(),
-          userName: getUserName(),
-          visibility: instance.visibility || "shared",
-          camera: instance.camera,
-          filters: instance.filters || [],
-          widgets: instance.widgets || [],
-          lastActive: Date.now(),
-        };
-
-        // Only sync if changed
-        const existing = yInstances.get(instance.id);
-        if (
-          !existing ||
-          JSON.stringify(existing) !== JSON.stringify(syncData)
-        ) {
-          yInstances.set(instance.id, syncData);
-          console.log(
-            `📤 Instance synced: ${instance.id} (type: ${instance.type})`
-          );
         }
       });
     });
@@ -200,7 +113,7 @@ class CollaborationSyncManager {
             updateAnnotations(datasetId, annotations);
           }
 
-          // Notify instances about annotation changes
+          // Notify all instances showing this dataset that annotations changed
           this.notifyAnnotationChange(datasetId, annotations);
         }
       });
@@ -222,17 +135,6 @@ class CollaborationSyncManager {
         const remoteDataset = yDatasets.get(datasetId);
         if (remoteDataset && remoteDataset.userId !== getUserId()) {
           await this.handleRemoteDataset(datasetId, remoteDataset);
-        }
-      }
-
-      // Sync all remote instances
-      const remoteInstanceIds = Array.from(yInstances.keys());
-      console.log(`   Found ${remoteInstanceIds.length} remote instances`);
-
-      for (const instanceId of remoteInstanceIds) {
-        const remoteInstance = yInstances.get(instanceId);
-        if (remoteInstance && remoteInstance.userId !== getUserId()) {
-          this.handleRemoteInstance(instanceId, remoteInstance);
         }
       }
 
@@ -319,32 +221,6 @@ class CollaborationSyncManager {
   }
 
   /**
-   * Handle a remote instance
-   */
-  handleRemoteInstance(instanceId, remoteInstance) {
-    console.log(`   Processing remote instance: ${instanceId}`);
-
-    // Add to instance store
-    const addInstance = useInstanceStore.getState().addInstance;
-    if (addInstance) {
-      addInstance({
-        id: instanceId,
-        name: remoteInstance.name,
-        type: remoteInstance.type || "vtk",
-        datasetId: remoteInstance.datasetId,
-        userId: remoteInstance.userId,
-        userName: remoteInstance.userName,
-        visibility: remoteInstance.visibility,
-        camera: remoteInstance.camera,
-        filters: remoteInstance.filters,
-        widgets: remoteInstance.widgets,
-        lastActive: remoteInstance.lastActive,
-        isRemote: true,
-      });
-    }
-  }
-
-  /**
    * Sync local dataset to Y.js
    */
   syncLocalDataset(dataset) {
@@ -367,82 +243,62 @@ class CollaborationSyncManager {
   }
 
   /**
-   * Notify about annotation changes
+   * Notify all instances viewing this dataset about annotation changes
+   *
+   * This walks through all instances and tells those showing this dataset
+   * to update their annotation rendering. Each instance handler decides
+   * how to display annotations for its visualization type.
    */
   notifyAnnotationChange(datasetId, annotations) {
-    // Get workspace manager if available
     const workspaceManager = window.CIA?.workspaceManager;
     if (!workspaceManager) return;
 
-    // Get all instances showing this dataset
-    const instances = workspaceManager.getInstancesByDataset?.(datasetId) || [];
+    // Get all instances in the workspace
+    const allInstanceIds = workspaceManager.getAllInstanceIds();
 
-    instances.forEach((instance) => {
-      console.log(
-        `   Notifying instance ${instance.instanceId} about annotations`
-      );
+    allInstanceIds.forEach((instanceId) => {
+      const instance = workspaceManager.getInstance(instanceId);
+
+      // Check if this instance is showing the dataset with changed annotations
+      if (instance && instance.datasetId === datasetId) {
+        console.log(
+          `   Notifying instance ${instanceId} about annotation changes`
+        );
+
+        // Ask the handler to update annotation display
+        // This is type-agnostic - VTK will project annotations into 3D,
+        // a 2D chart might show them as markers, etc.
+        if (instance.handler && instance.handler.setAnnotationVisibility) {
+          instance.handler.setAnnotationVisibility(
+            instance.instanceData,
+            true,
+            annotations
+          );
+        }
+      }
     });
   }
 
   /**
-   * Force sync all local data
-   */
-  forceSyncAll() {
-    console.log("🔄 Force syncing all local data...");
-
-    // Sync all datasets from store
-    const datasets = useDatasetStore.getState().datasets;
-    Object.values(datasets).forEach((dataset) => {
-      if (dataset && !dataset.isRemote) {
-        this.syncLocalDataset(dataset);
-      }
-    });
-
-    // Sync all instances from store
-    const instances = useInstanceStore.getState().instances || [];
-    instances.forEach((instance) => {
-      if (!instance.isRemote) {
-        syncInstanceToYjs(instance.id, instance);
-      }
-    });
-
-    console.log("✅ Force sync complete");
-  }
-
-  /**
-   * Get sync status
+   * Get sync status for debugging
    */
   getSyncStatus() {
     const datasetStore = useDatasetStore.getState();
-    const instanceStore = useInstanceStore.getState();
 
     return {
       initialized: this._initialized,
       pendingDatasets: this.pendingDatasets.size,
       loadingDatasets: this.loadingDatasets.size,
       remoteDatasets: Array.from(yDatasets.keys()).length,
-      remoteInstances: Array.from(yInstances.keys()).length,
       localDatasets: Object.keys(datasetStore.datasets || {}).length,
-      localInstances: (instanceStore.instances || []).length,
     };
   }
 
   /**
-   * Clear all remote data
+   * Clear all remote data (for testing or cleanup)
    */
   clearRemoteData() {
     console.log("🗑️ Clearing remote data...");
-
-    // Clear remote instances
-    const instanceStore = useInstanceStore.getState();
-    const instances = instanceStore.instances || [];
-    const remoteInstances = instances.filter((i) => i.isRemote);
-
-    remoteInstances.forEach((instance) => {
-      if (instanceStore.removeInstance) {
-        instanceStore.removeInstance(instance.id);
-      }
-    });
 
     // Clear remote datasets
     const datasetStore = useDatasetStore.getState();

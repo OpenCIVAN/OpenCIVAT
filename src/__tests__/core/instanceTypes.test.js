@@ -111,7 +111,7 @@ async function testRegistrySystem() {
 
   try {
     const { InstanceTypeRegistry } = await import(
-      "@Core/instances/types/InstanceTypeRegistry.js"
+      "@Core/instances/types/instanceTypeRegistry.js"
     );
     const { InstanceTypeHandler } = await import(
       "@Core/instances/types/InstanceTypeInterface.js"
@@ -229,7 +229,7 @@ async function testRegistrySystem() {
   } catch (error) {
     console.error("❌ Layer 2 Failed:", error);
     console.error(
-      "   Make sure InstanceTypeRegistry.js exists at src/core/instances/types/"
+      "   Make sure instanceTypeRegistry.js exists at src/core/instances/types/"
     );
     return false;
   }
@@ -323,7 +323,7 @@ async function testIntegration() {
 
   try {
     const { InstanceTypeRegistry } = await import(
-      "@Core/instances/types/InstanceTypeRegistry.js"
+      "@Core/instances/types/instanceTypeRegistry.js"
     );
     const { VTKInstanceHandler } = await import(
       "@Core/instances/types/vtk/VTKInstanceHandler.js"
