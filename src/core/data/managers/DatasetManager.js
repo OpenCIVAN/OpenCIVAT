@@ -1,5 +1,6 @@
 // src/core/data/managers/DatasetManager.js
 
+import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { Dataset } from "@Core/data/models/Dataset.js";
 import { Annotation } from "@Core/data/models/Annotation.js";
 import { generateDatasetId } from "@Utils/idGenerator.js";
@@ -39,6 +40,23 @@ export class DatasetManager {
     console.log(
       `📦 DatasetManager: Initialized with ${this._datasets.size} datasets`
     );
+  }
+
+  /**
+   * Sync all datasets to Y.js
+   * Call this after Y.js becomes available to ensure collaboration
+   */
+  syncAllDatasetsToYjs() {
+    console.log("🔄 DatasetManager: Syncing all datasets to Y.js...");
+
+    let syncedCount = 0;
+    this._datasets.forEach((dataset) => {
+      this._syncDatasetMetadataToYjs(dataset);
+      syncedCount++;
+    });
+
+    console.log(`✅ DatasetManager: Synced ${syncedCount} dataset(s) to Y.js`);
+    return syncedCount;
   }
 
   async generateFileHash(file) {
@@ -119,12 +137,15 @@ export class DatasetManager {
 
   /**
    * Sync dataset metadata to Y.js so other clients can see it
-   * This is called when loading datasets and when creating new ones
+   * This should only be called after Y.js is connected
    */
   _syncDatasetMetadataToYjs(dataset) {
-    const ydoc = window.CIA?.ydoc;
+    // Use direct import instead of global variable
+    // This ensures we get the ydoc as soon as the module is loaded
     if (!ydoc) {
-      console.warn("⚠️ Cannot sync dataset metadata: Y.js not available");
+      console.error(
+        `❌ Cannot sync dataset ${dataset.filename}: Y.js not initialized`
+      );
       return;
     }
 

@@ -105,6 +105,10 @@ export async function initializePhase1() {
       throw new Error("Y.js provider is required for collaboration");
     }
 
+    // Sync existing datasets now that Y.js is ready
+    console.log("🔄 Syncing existing datasets to Y.js...");
+    datasetManager.syncAllDatasetsToYjs();
+
     // STEP 7: Initialize ViewConfigurationManager AFTER Y.js is ready
     console.log("🔗 Initializing view configuration sync...");
     viewConfigurationManager.initialize();
