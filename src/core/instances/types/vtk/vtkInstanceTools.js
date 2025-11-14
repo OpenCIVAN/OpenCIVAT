@@ -1,13 +1,13 @@
-// src/core/instances/instanceTools.js
+// src/core/instances/types/vtk/vtkInstanceTools.js
 // Tools and utilities for VTK instances
+// MERGED VERSION: Combines existing tools + new widget implementations
 
 import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
 import vtkPiecewiseFunction from "@kitware/vtk.js/Common/DataModel/PiecewiseFunction";
 import vtkWidgetManager from "@kitware/vtk.js/Widgets/Core/WidgetManager";
 import vtkAngleWidget from "@kitware/vtk.js/Widgets/Widgets3D/AngleWidget";
 import vtkPlaneWidget from "@kitware/vtk.js/Widgets/Widgets3D/ImplicitPlaneWidget";
-import vtkLineWidget from '@kitware/vtk.js/Widgets/Widgets3D/LineWidget';
-
+import vtkLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
 
 /**
  * InstanceToolsManager
@@ -40,6 +40,7 @@ class InstanceToolsManager {
       opacityFunction: null,
       clippingPlane: null,
       measurements: [],
+      axesVisible: false, // 🆕 ADD THIS
     };
 
     // Create widget manager
@@ -270,9 +271,29 @@ class InstanceToolsManager {
     );
   }
 
+  // ===========================================================================
+  // 🆕 WIDGET MANAGEMENT (New helper methods)
+  // ===========================================================================
+
   /**
-   * MEASUREMENT TOOLS
+   * Check if a widget is active
    */
+  isWidgetActive(instanceId, widgetType) {
+    const tools = this.instanceTools.get(instanceId);
+    return tools?.widgets.has(widgetType) || false;
+  }
+
+  /**
+   * Check if any widgets are active
+   */
+  hasActiveWidgets(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return tools?.widgets.size > 0 || false;
+  }
+
+  // ===========================================================================
+  // MEASUREMENT TOOLS (🆕 Updated with actual VTK widget creation)
+  // ===========================================================================
 
   /**
    * Enable distance measurement
@@ -281,13 +302,22 @@ class InstanceToolsManager {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
+    // If already active, deactivate
+    if (tools.widgets.has("distance")) {
+      this._deactivateWidget(instanceId, "distance");
+      return;
+    }
+
     // Disable other tools first
     this.disableAllTools(instanceId);
 
-    // Create distance widget
+    // 🆕 CREATE ACTUAL VTK WIDGET
     const widget = vtkLineWidget.newInstance();
-    const widgetRep = widget.getWidgetRepresentation();
-    widgetRep.setGlyphScale(5);
+    const widgetState = widget.getWidgetState();
+
+    // Configure widget appearance
+    widgetState.getPoint1Handle().setScale1(5);
+    widgetState.getPoint2Handle().setScale1(5);
 
     // Add to widget manager
     const handle = tools.widgetManager.addWidget(widget);
@@ -297,17 +327,28 @@ class InstanceToolsManager {
     tools.widgets.set("distance", { widget, handle });
     this.activeTools.set(instanceId, "distance");
 
-    // Listen for measurements
+    // 🆕 LISTEN FOR MEASUREMENTS
     widget.onEndInteractionEvent(() => {
-      const distance = widgetRep.getDistance();
-      console.log(`📏 Distance measured: ${distance.toFixed(2)} units`);
+      const handles = widgetState.getHandles();
+      if (handles.length >= 2) {
+        const p1 = handles[0].getOrigin();
+        const p2 = handles[1].getOrigin();
 
-      // Store measurement
-      tools.measurements.push({
-        type: "distance",
-        value: distance,
-        timestamp: Date.now(),
-      });
+        const dx = p2[0] - p1[0];
+        const dy = p2[1] - p1[1];
+        const dz = p2[2] - p1[2];
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        console.log(`📏 Distance measured: ${distance.toFixed(2)} units`);
+
+        tools.measurements.push({
+          type: "distance",
+          value: distance,
+          points: [p1, p2],
+          timestamp: Date.now(),
+        });
+      }
+      tools.sceneObjects.renderWindow.render();
     });
 
     console.log(`📏 Distance measurement enabled for instance: ${instanceId}`);
@@ -320,13 +361,23 @@ class InstanceToolsManager {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
+    // If already active, deactivate
+    if (tools.widgets.has("angle")) {
+      this._deactivateWidget(instanceId, "angle");
+      return;
+    }
+
     // Disable other tools first
     this.disableAllTools(instanceId);
 
-    // Create angle widget
+    // 🆕 CREATE ACTUAL VTK WIDGET
     const widget = vtkAngleWidget.newInstance();
-    const widgetRep = widget.getWidgetRepresentation();
-    widgetRep.setGlyphScale(5);
+    const widgetState = widget.getWidgetState();
+
+    // Configure widget appearance
+    widgetState.getPoint1Handle().setScale1(5);
+    widgetState.getPoint2Handle().setScale1(5);
+    widgetState.getPoint3Handle().setScale1(5);
 
     // Add to widget manager
     const handle = tools.widgetManager.addWidget(widget);
@@ -336,24 +387,41 @@ class InstanceToolsManager {
     tools.widgets.set("angle", { widget, handle });
     this.activeTools.set(instanceId, "angle");
 
-    // Listen for measurements
+    // 🆕 LISTEN FOR MEASUREMENTS
     widget.onEndInteractionEvent(() => {
-      const angle = widgetRep.getAngle();
-      console.log(`📐 Angle measured: ${angle.toFixed(2)}°`);
+      const handles = widgetState.getHandles();
+      if (handles.length >= 3) {
+        const p1 = handles[0].getOrigin();
+        const p2 = handles[1].getOrigin(); // vertex
+        const p3 = handles[2].getOrigin();
 
-      // Store measurement
-      tools.measurements.push({
-        type: "angle",
-        value: angle,
-        timestamp: Date.now(),
-      });
+        // Calculate angle
+        const v1 = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]];
+        const v2 = [p3[0] - p2[0], p3[1] - p2[1], p3[2] - p2[2]];
+
+        const dot = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+        const mag1 = Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1] + v1[2] * v1[2]);
+        const mag2 = Math.sqrt(v2[0] * v2[0] + v2[1] * v2[1] + v2[2] * v2[2]);
+
+        const angle = Math.acos(dot / (mag1 * mag2)) * (180 / Math.PI);
+
+        console.log(`📐 Angle measured: ${angle.toFixed(2)}°`);
+
+        tools.measurements.push({
+          type: "angle",
+          value: angle,
+          points: [p1, p2, p3],
+          timestamp: Date.now(),
+        });
+      }
+      tools.sceneObjects.renderWindow.render();
     });
 
     console.log(`📐 Angle measurement enabled for instance: ${instanceId}`);
   }
 
   /**
-   * CLIPPING TOOLS
+   * CLIPPING TOOLS (🆕 Updated with actual VTK widget creation)
    */
 
   /**
@@ -363,15 +431,26 @@ class InstanceToolsManager {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
+    // If already active, deactivate
+    if (tools.widgets.has("plane")) {
+      this.resetClipping(instanceId);
+      return;
+    }
+
     // Disable other tools first
     this.disableAllTools(instanceId);
 
-    const { mapper, renderer, renderWindow } = tools.sceneObjects;
+    const { mapper, renderWindow } = tools.sceneObjects;
 
-    // Create plane widget
+    // 🆕 CREATE ACTUAL VTK WIDGET
     const widget = vtkPlaneWidget.newInstance();
     widget.setPlaceFactor(1.25);
-    widget.setPlaceWidget(mapper.getInputData().getBounds());
+
+    // Get bounds for initial placement
+    const inputData = mapper.getInputData();
+    if (inputData) {
+      widget.placeWidget(inputData.getBounds());
+    }
 
     // Add to widget manager
     const handle = tools.widgetManager.addWidget(widget);
@@ -383,9 +462,10 @@ class InstanceToolsManager {
     tools.clippingPlane = widget;
     this.activeTools.set(instanceId, "plane");
 
-    // Apply clipping
+    // 🆕 APPLY CLIPPING when widget moves
     widget.onInteractionEvent(() => {
       const plane = widget.getPlane();
+      mapper.removeAllClippingPlanes();
       mapper.addClippingPlane(plane);
       renderWindow.render();
     });
@@ -404,14 +484,40 @@ class InstanceToolsManager {
     mapper.removeAllClippingPlanes();
 
     // Disable plane widget if active
-    const planeWidget = tools.widgets.get("plane");
-    if (planeWidget) {
-      planeWidget.handle.setEnabled(false);
-      tools.widgets.delete("plane");
-    }
+    this._deactivateWidget(instanceId, "plane");
 
     renderWindow.render();
     console.log(`✂️ Clipping reset for instance: ${instanceId}`);
+  }
+
+  // ===========================================================================
+  // 🆕 AXES MANAGEMENT (New)
+  // ===========================================================================
+
+  /**
+   * Check if axes are visible
+   */
+  isAxesVisible(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return tools?.axesVisible || false;
+  }
+
+  /**
+   * Toggle orientation axes
+   */
+  toggleAxes(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    tools.axesVisible = !tools.axesVisible;
+
+    // TODO: Implement with vtkOrientationMarkerWidget
+    console.log(`🧭 Axes ${tools.axesVisible ? "shown" : "hidden"}`);
+
+    // Re-render
+    if (tools.sceneObjects?.renderWindow) {
+      tools.sceneObjects.renderWindow.render();
+    }
   }
 
   /**
@@ -426,13 +532,36 @@ class InstanceToolsManager {
     if (!tools) return;
 
     // Disable all widgets
-    tools.widgets.forEach((widget, name) => {
-      widget.handle.setEnabled(false);
+    const widgetTypes = Array.from(tools.widgets.keys());
+    widgetTypes.forEach((type) => {
+      this._deactivateWidget(instanceId, type);
     });
-    tools.widgets.clear();
 
     this.activeTools.delete(instanceId);
     console.log(`🛠️ All tools disabled for instance: ${instanceId}`);
+  }
+
+  /**
+   * 🆕 Deactivate a specific widget (private helper)
+   */
+  _deactivateWidget(instanceId, widgetType) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.widgets.has(widgetType)) return;
+
+    const { widget, handle } = tools.widgets.get(widgetType);
+
+    // Disable and remove
+    if (handle) {
+      handle.setEnabled(false);
+      tools.widgetManager.removeWidget(widget);
+    }
+
+    tools.widgets.delete(widgetType);
+
+    // Clear active tool if this was it
+    if (this.activeTools.get(instanceId) === widgetType) {
+      this.activeTools.delete(instanceId);
+    }
   }
 
   /**

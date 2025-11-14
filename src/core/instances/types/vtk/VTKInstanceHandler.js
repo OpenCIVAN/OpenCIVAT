@@ -3,6 +3,7 @@
 
 import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface.js";
 import { ViewStateAdapter } from "@Core/instances/ViewStateAdapter.js";
+import { instanceTools } from "@VTK/vtkInstanceTools.js";
 
 import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
@@ -129,18 +130,14 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       `🎨 VTK Handler: Initializing instance ${instanceId} (lazy mode)`
     );
 
-    // ✨ ADD THESE TWO LINES - Create the state adapter
     const stateAdapter = new ViewStateAdapter(instanceId, "vtk");
     console.log(`📡 Created stateAdapter for ${instanceId}`);
 
-    // Create instance data structure WITHOUT initializing VTK yet
     const instanceData = {
       instanceId,
       container: containerElement,
       datasetId,
-
-      // Add the state adapter to instance data
-      stateAdapter, // NEW!
+      stateAdapter,
 
       // VTK objects will be created lazily
       sceneObjects: null,
@@ -150,44 +147,34 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       interactor: null,
       camera: null,
 
-      // State flags
       initialized: false,
       hasData: false,
 
-      // Actors and widgets
+      // Tool state managed by this handler
+      activeTools: new Set(), // Track which tools are active
+
+      // DON'T create actors/widgets here - let vtkInstanceTools handle it
       actors: new Map(),
       widgets: new Map(),
       annotations: new Map(),
       cursors: new Map(),
-
-      // Tools this instance provides
-      tools: this._createTools(),
     };
 
-    // Store the instance
     this.instances.set(instanceId, instanceData);
 
-    // Create a placeholder div to show loading state
+    // Create placeholder
     const placeholder = document.createElement("div");
     placeholder.className = "vtk-placeholder";
     placeholder.style.cssText = `
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #1a1a1a;
-      color: #666;
-      font-family: system-ui, -apple-system, sans-serif;
+        width: 100%; height: 100%; display: flex; align-items: center;
+        justify-content: center; background: #1a1a1a; color: #666;
+        font-family: system-ui, -apple-system, sans-serif;
     `;
     placeholder.innerHTML = "<div>Ready for data...</div>";
     containerElement.appendChild(placeholder);
-
-    // Store placeholder reference for removal later
     instanceData.placeholder = placeholder;
 
     console.log(`✅ VTK instance ${instanceId} created (awaiting data)`);
-
     return instanceData;
   }
 
@@ -546,10 +533,233 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   // ===========================================================================
 
   /**
-   * Get tools available for this instance
+   * Get tools for this instance type
+   * Returns dynamic tools based on instance state
    */
   getTools(instanceData) {
-    return instanceData?.tools || this._createTools();
+    // 🔍 DIAGNOSTIC: Log what we received
+    console.log(`🛠️ VTKInstanceHandler.getTools() called`);
+    console.log(`   instanceData exists: ${!!instanceData}`);
+    console.log(`   instanceData.initialized: ${instanceData?.initialized}`);
+    console.log(`   instanceData.instanceId: ${instanceData?.instanceId}`);
+
+    // Check if instance is ready
+    if (!instanceData) {
+      console.warn(`⚠️ getTools() - No instanceData provided`);
+      return [];
+    }
+
+    if (!instanceData.initialized) {
+      console.warn(`⚠️ getTools() - Instance not initialized yet`);
+      return [];
+    }
+
+    const { instanceId } = instanceData;
+    console.log(`✅ Building tools for instance: ${instanceId}`);
+
+    const tools = [];
+
+    // ========================================================================
+    // CAMERA TOOLS
+    // ========================================================================
+    tools.push({
+      id: "camera",
+      type: "menu",
+      icon: "camera",
+      label: "Camera",
+      description: "Camera views and controls",
+      options: [
+        {
+          id: "reset-camera",
+          icon: "camera-reset",
+          label: "Reset View",
+          description: "Fit all data in view",
+          onClick: () => {
+            console.log("🎯 Reset camera clicked");
+            instanceTools.resetCamera(instanceId);
+          },
+        },
+        { type: "separator" },
+        {
+          id: "view-front",
+          icon: "camera-front",
+          label: "Front View",
+          onClick: () => {
+            console.log("🎯 Front view clicked");
+            instanceTools.setCameraView(instanceId, "front");
+          },
+        },
+        {
+          id: "view-back",
+          icon: "camera",
+          label: "Back View",
+          onClick: () => instanceTools.setCameraView(instanceId, "back"),
+        },
+        {
+          id: "view-top",
+          icon: "camera-top",
+          label: "Top View",
+          onClick: () => instanceTools.setCameraView(instanceId, "top"),
+        },
+        {
+          id: "view-bottom",
+          icon: "camera",
+          label: "Bottom View",
+          onClick: () => instanceTools.setCameraView(instanceId, "bottom"),
+        },
+        {
+          id: "view-left",
+          icon: "camera",
+          label: "Left View",
+          onClick: () => instanceTools.setCameraView(instanceId, "left"),
+        },
+        {
+          id: "view-right",
+          icon: "camera",
+          label: "Right View",
+          onClick: () => instanceTools.setCameraView(instanceId, "right"),
+        },
+      ],
+    });
+
+    tools.push({ type: "separator" });
+
+    // ========================================================================
+    // WIDGETS MENU
+    // ========================================================================
+
+    // 🔍 DIAGNOSTIC: Check widget states
+    const clipActive = instanceTools.isWidgetActive(instanceId, "plane");
+    const lineActive = instanceTools.isWidgetActive(instanceId, "distance");
+    const angleActive = instanceTools.isWidgetActive(instanceId, "angle");
+
+    console.log(
+      `   Widget states: clip=${clipActive}, line=${lineActive}, angle=${angleActive}`
+    );
+
+    tools.push({
+      id: "widgets",
+      type: "menu",
+      icon: "transform",
+      label: "Widgets",
+      description: "Interactive measurement and manipulation tools",
+      options: [
+        {
+          id: "widget-clip",
+          icon: "clip",
+          label: "Clipping Plane",
+          description: "Cut away parts of the data",
+          active: clipActive,
+          onClick: () => {
+            console.log("🎯 Clipping plane clicked");
+            instanceTools.enableClippingPlane(instanceId);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        {
+          id: "widget-line",
+          icon: "measure-distance",
+          label: "Line Measurement",
+          description: "Measure distance between two points",
+          active: lineActive,
+          onClick: () => {
+            console.log("🎯 Line measurement clicked");
+            instanceTools.enableDistanceMeasurement(instanceId);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        {
+          id: "widget-angle",
+          icon: "measure-angle",
+          label: "Angle Measurement",
+          description: "Measure angle between three points",
+          active: angleActive,
+          onClick: () => {
+            console.log("🎯 Angle measurement clicked");
+            instanceTools.enableAngleMeasurement(instanceId);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+        { type: "separator" },
+        {
+          id: "clear-widgets",
+          icon: "delete",
+          label: "Clear All Widgets",
+          description: "Remove all active widgets",
+          disabled: !instanceTools.hasActiveWidgets(instanceId),
+          onClick: () => {
+            console.log("🎯 Clear all widgets clicked");
+            instanceTools.disableAllTools(instanceId);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+      ],
+    });
+
+    tools.push({ type: "separator" });
+
+    // ========================================================================
+    // AXES TOGGLE
+    // ========================================================================
+    tools.push({
+      id: "toggle-axes",
+      type: "button",
+      icon: "toggle-axes",
+      label: "Orientation Axes",
+      description: "Toggle orientation cube",
+      active: instanceTools.isAxesVisible(instanceId),
+      onClick: () => {
+        console.log("🎯 Toggle axes clicked");
+        instanceTools.toggleAxes(instanceId);
+        this._emitToolsUpdate(instanceId);
+      },
+    });
+
+    console.log(`✅ Built ${tools.length} tools`);
+    return tools;
+  }
+
+  // ===========================================================================
+  // 🧪 TESTING IN BROWSER CONSOLE
+  // ===========================================================================
+
+  /*
+To test if tools are working, open browser console and run:
+
+// 1. Check if handler exists
+window.CIA.vtkInstanceHandler
+
+// 2. Get an instance
+const instances = Array.from(window.CIA.vtkInstanceHandler.instances.values());
+console.log('Instances:', instances);
+
+// 3. Get tools for first instance
+const firstInstance = instances[0];
+const tools = window.CIA.vtkInstanceHandler.getTools(firstInstance);
+console.log('Tools:', tools);
+
+// 4. You should see:
+// - Camera menu with 7 options
+// - Widgets menu with 4 options
+// - Axes toggle button
+// = Total of 5 items (3 tools + 2 separators)
+*/
+
+  // ===========================================================================
+  // ADD this helper method
+  // ===========================================================================
+
+  /**
+   * Emit event that tools changed (triggers React re-render)
+   */
+  _emitToolsUpdate(instanceId) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cia:tools-updated", {
+          detail: { instanceId },
+        })
+      );
+    }
   }
 
   /**
@@ -1118,10 +1328,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     });
     resizeObserver.observe(container);
 
-    console.log(`✅ VTK pipeline initialized for ${instanceData.instanceId}`);
-
     // Return all the scene objects that need to be tracked
-    return {
+    const sceneObjects = {
       renderer,
       renderWindow,
       openGLRenderWindow,
@@ -1132,45 +1340,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       actor,
       resizeObserver,
     };
-  }
 
-  /**
-   * Create the tools array
-   */
-  _createTools() {
-    return [
-      {
-        id: "reset-camera",
-        type: "button",
-        icon: "Maximize2",
-        label: "Reset Camera",
-        onClick: (instanceData) => this.resetCamera(instanceData),
-      },
-      {
-        type: "separator",
-      },
-      {
-        id: "toggle-axes",
-        type: "button",
-        icon: "Axis3d",
-        label: "Toggle Axes",
-        onClick: (instanceData) => this.toggleAxes(instanceData),
-      },
-      {
-        id: "measure",
-        type: "button",
-        icon: "Ruler",
-        label: "Measure",
-        onClick: (instanceData) => this.toggleMeasureTool(instanceData),
-      },
-      {
-        id: "clip",
-        type: "button",
-        icon: "Scissors",
-        label: "Clipping Plane",
-        onClick: (instanceData) => this.toggleClipTool(instanceData),
-      },
-    ];
+    // Initialize the tools manager
+    instanceTools.initializeTools(instanceData.instanceId, sceneObjects);
+
+    console.log(`✅ VTK pipeline initialized for ${instanceData.instanceId}`);
+    return sceneObjects;
   }
 
   /**
@@ -1191,32 +1366,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const actor = vtkActor.newInstance();
     // Set up actor with annotation data
     return actor;
-  }
-
-  // ===========================================================================
-  // TOOL IMPLEMENTATIONS
-  // ===========================================================================
-
-  resetCamera(instanceData) {
-    if (instanceData?.sceneObjects?.renderer) {
-      instanceData.sceneObjects.renderer.resetCamera();
-      instanceData.sceneObjects.renderWindow.render();
-    }
-  }
-
-  toggleAxes(instanceData) {
-    // TODO: Implement orientation marker toggle
-    console.log("Toggle axes for", instanceData.instanceId);
-  }
-
-  toggleMeasureTool(instanceData) {
-    // TODO: Implement measure tool
-    console.log("Toggle measure tool for", instanceData.instanceId);
-  }
-
-  toggleClipTool(instanceData) {
-    // TODO: Implement clipping plane
-    console.log("Toggle clipping for", instanceData.instanceId);
   }
 }
 

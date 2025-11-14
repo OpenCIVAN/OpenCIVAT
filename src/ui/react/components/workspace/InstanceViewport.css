@@ -190,11 +190,23 @@
    RICH TOOLTIPS - Professional, informative
    ============================================================================ */
 
+/* ============================================================================
+   SMART TOOLTIPS - Stay within viewport
+   ============================================================================ */
+
+/* ============================================================================
+   FIXED TOOLTIP POSITIONING
+   Replace your current .toolbar-tooltip styles with this
+   ============================================================================ */
+
 .toolbar-tooltip {
+  /* Use absolute positioning relative to button */
   position: absolute;
-  bottom: calc(100% + 6px);
+  
+  /* Position ABOVE the button by default */
+  bottom: calc(100% + 8px);  /* 100% = button height, +8px gap */
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%);  /* Center horizontally */
   
   background: #2a2a2a;
   border: 1px solid #4CAF50;
@@ -202,56 +214,83 @@
   padding: 8px 12px;
   
   min-width: max-content;
-  max-width: 200px;
+  max-width: 250px;
   
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
   
-  z-index: 1000;
+  z-index: 10000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  
+  white-space: normal;
 }
 
+/* Show on hover */
 .toolbar-icon-btn:hover .toolbar-tooltip {
   opacity: 1;
-  transition-delay: 0.4s; /* Slight delay before showing tooltip */
+  transition-delay: 0.4s;
 }
 
-/* Tooltip arrow */
+/* Arrow pointing down (tooltip above button) */
 .toolbar-tooltip::after {
   content: '';
   position: absolute;
-  top: 100%;
+  top: 100%;  /* At the bottom of tooltip */
   left: 50%;
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-top-color: #4CAF50;
 }
 
-/* Tooltip content */
+/* ============================================================================
+   FALLBACK: If tooltip would go off-screen, position below button instead
+   This requires a tiny bit of JavaScript, see below
+   ============================================================================ */
+
+.toolbar-tooltip.below {
+  bottom: auto;
+  top: calc(100% + 8px);  /* Position BELOW button */
+}
+
+.toolbar-tooltip.below::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: #4CAF50;
+}
+
+/* ============================================================================
+   TOOLTIP CONTENT STYLES
+   ============================================================================ */
+
 .tooltip-title {
-  font-size: 13px;
   font-weight: 600;
+  font-size: 13px;
   color: #e0e0e0;
-  margin-bottom: 2px;
   line-height: 1.3;
 }
 
 .tooltip-desc {
   font-size: 11px;
-  color: #999;
+  color: #888;
   line-height: 1.4;
   margin-top: 4px;
 }
 
 .tooltip-shortcut {
-  font-size: 10px;
-  color: #666;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  display: inline-block;
   margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid #333;
-  text-align: center;
+  padding: 2px 6px;
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: #4CAF50;
 }
 
 /* ============================================================================

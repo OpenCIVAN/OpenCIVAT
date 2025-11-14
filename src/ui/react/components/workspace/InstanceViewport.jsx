@@ -85,9 +85,9 @@ export function InstanceViewport({
 
                 setActualInstanceId(instanceId);
 
-                const instanceTools = workspaceManager.getInstanceTools(instanceId);
-                console.log(`   Handler provided ${instanceTools.length} tools`);
-                setTools(instanceTools);
+                // const instanceTools = workspaceManager.getInstanceTools(instanceId);
+                // console.log(`   Handler provided ${instanceTools.length} tools`);
+                // setTools(instanceTools);
 
                 const header = workspaceManager.getInstanceHeaderInfo(instanceId);
                 setHeaderInfo(header);
@@ -110,6 +110,51 @@ export function InstanceViewport({
             }
         };
     }, []);
+
+    // =========================================================================
+    // 🔧 USEEFFECT #2: GET INITIAL TOOLS AFTER INITIALIZATION
+    // This runs when instance is initialized AND has an ID
+    // =========================================================================
+    useEffect(() => {
+        // Wait until we have both initialized flag AND actualInstanceId
+        if (!initialized || !actualInstanceId) {
+            console.log(`⏳ Waiting for initialization... initialized=${initialized}, id=${actualInstanceId}`);
+            return;
+        }
+
+        console.log(`🛠️ Getting initial tools for ${actualInstanceId}`);
+
+        const initialTools = workspaceManager.getInstanceTools(actualInstanceId);
+        console.log(`   Found ${initialTools.length} tools`);
+
+        setTools(initialTools);
+
+    }, [initialized, actualInstanceId]);
+
+    // Later, when tools update event fires
+    useEffect(() => {
+        if (!actualInstanceId) return;
+
+        const handleToolsUpdate = (event) => {
+            // Only update if this event is for OUR instance
+            if (event.detail?.instanceId === actualInstanceId) {
+                console.log(`🔄 Tools updated for ${actualInstanceId}, refreshing toolbar`);
+
+                const updatedTools = workspaceManager.getInstanceTools(actualInstanceId);
+                console.log(`   Got ${updatedTools.length} updated tools`);
+
+                setTools(updatedTools);
+            }
+        };
+
+        // Listen for custom events from VTKInstanceHandler
+        window.addEventListener('cia:tools-updated', handleToolsUpdate);
+
+        // Cleanup listener when component unmounts or actualInstanceId changes
+        return () => {
+            window.removeEventListener('cia:tools-updated', handleToolsUpdate);
+        };
+    }, [actualInstanceId]);
 
     // =========================================================================
     // DATASET LOADING
@@ -311,7 +356,6 @@ export function InstanceViewport({
                 className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
                 disabled={tool.disabled}
                 aria-label={tool.label}
-                title={tool.label}
             >
                 <IconComponent size={18} strokeWidth={2} />
                 <div className="toolbar-tooltip">
