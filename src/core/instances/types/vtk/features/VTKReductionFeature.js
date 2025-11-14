@@ -227,6 +227,11 @@ export class VTKReductionFeature extends ReductionFeature {
   /**
    * Get tools for the toolbar
    */
+  /**
+   * Get tools for the toolbar
+   *
+   * Returns tool definitions using Lucide icon IDs (no emojis)
+   */
   getTools(instanceId) {
     const state = this.instanceStates.get(instanceId);
 
@@ -236,35 +241,38 @@ export class VTKReductionFeature extends ReductionFeature {
 
     const tools = [];
 
-    // Main reduction menu
+    // ========================================================================
+    // MAIN REDUCTION MENU
+    // ========================================================================
     tools.push({
       id: "reduction",
+      icon: "reduction", // → Maps to BarChart3
       label: "Dimensionality Reduction",
-      icon: "reduction",  // This gets mapped to BarChart3
+      description: "Reduce data to 2D or 3D",
       type: "menu",
-      shortcut: "Alt+R",  // Optional keyboard shortcut hint
+      active: state.isApplied,
       options: [
         {
           id: "pca",
+          icon: "pca", // → Maps to TrendingUp
           label: "PCA",
-          icon: "pca",
-          description: "Fast, linear reduction",
+          description: "Principal Component Analysis - Fast, linear",
           active: state.isApplied && state.method === "pca",
           onClick: () => this._toggleReduction(instanceId, "pca"),
         },
         {
           id: "tsne",
+          icon: "tsne", // → Maps to Network
           label: "t-SNE",
-          icon: "tsne",
-          description: "Preserves local structure",
+          description: "Preserves local structure, nonlinear",
           active: state.isApplied && state.method === "tsne",
           onClick: () => this._toggleReduction(instanceId, "tsne"),
         },
         {
           id: "umap",
+          icon: "umap", // → Maps to Network
           label: "UMAP",
-          icon: "umap",
-          description: "Balances local & global",
+          description: "Balances local and global structure",
           active: state.isApplied && state.method === "umap",
           onClick: () => this._toggleReduction(instanceId, "umap"),
         },
@@ -273,32 +281,40 @@ export class VTKReductionFeature extends ReductionFeature {
         },
         {
           id: "restore",
+          icon: "restore", // → Maps to RotateCcw
           label: "Restore Original",
-          icon: "restore",
-          description: "Reset to original data",
+          description: "Reset to full-dimensional data",
           disabled: !state.isApplied,
           onClick: () => this.restoreOriginal(instanceId),
         },
       ],
     });
 
-    // If reduction is applied, show dimension selector
+    // ========================================================================
+    // DIMENSION SELECTOR (only shown when reduction is active)
+    // ========================================================================
     if (state.isApplied) {
       tools.push({
         id: "dimensions",
-        label: `${state.components}D`,
-        icon: "📦",
+        icon: "dimensions", // → Maps to Layers
+        label: `${state.components}D Projection`,
+        description: "Change projection dimensions",
         type: "menu",
+        active: true,
         options: [
           {
-            id: "2d",
+            id: "dimension-2d",
+            icon: "dimension-2d", // → Maps to Square
             label: "2D Projection",
+            description: "Flatten to 2 dimensions",
             active: state.components === 2,
             onClick: () => this._changeDimensions(instanceId, 2),
           },
           {
-            id: "3d",
+            id: "dimension-3d",
+            icon: "dimension-3d", // → Maps to Box
             label: "3D Projection",
+            description: "Reduce to 3 dimensions",
             active: state.components === 3,
             onClick: () => this._changeDimensions(instanceId, 3),
           },
@@ -308,6 +324,75 @@ export class VTKReductionFeature extends ReductionFeature {
 
     return tools;
   }
+
+  // Helper methods (no changes needed, included for completeness)
+  async _toggleReduction(instanceId, method) {
+    const state = this.instanceStates.get(instanceId);
+
+    if (state.isApplied && state.method === method) {
+      // If same method is active, restore original
+      await this.restoreOriginal(instanceId);
+    } else {
+      // Apply reduction (defaults to 2D)
+      await this.applyReduction(instanceId, method, 2);
+    }
+  }
+
+  async _changeDimensions(instanceId, components) {
+    const state = this.instanceStates.get(instanceId);
+
+    if (state.isApplied && state.method) {
+      // Restore original first, then reapply with new dimensions
+      await this.restoreOriginal(instanceId);
+      await this.applyReduction(instanceId, state.method, components);
+    }
+  }
+
+  // ============================================================================
+  // ICON CHOICES EXPLAINED
+  // ============================================================================
+
+  /*
+Why these specific icons?
+
+✅ reduction: BarChart3
+   - Represents data analysis and statistical operations
+   - Commonly used for analytics features
+
+✅ pca: TrendingUp
+   - PCA finds linear trends in data
+   - Upward arrow suggests progressive transformation
+
+✅ tsne / umap: Network
+   - Both algorithms work with data manifolds and neighborhoods
+   - Network icon represents interconnected data points
+
+✅ restore: RotateCcw
+   - Universal "undo" symbol
+   - Counter-clockwise arrow suggests going back
+
+✅ dimensions: Layers
+   - Multiple layers represent multiple dimensions
+   - Common metaphor for dimensional data
+
+✅ dimension-2d: Square
+   - Flat square represents 2D plane
+   - Simple, clear geometric shape
+
+✅ dimension-3d: Box
+   - 3D cube represents 3D space
+   - Obvious visual for three dimensions
+
+ALTERNATIVES YOU COULD USE:
+
+If you want different aesthetics:
+- reduction: Network, GitBranch (branching paths)
+- pca: GitBranch (component branches)
+- tsne/umap: TrendingUp (data transformation)
+- dimensions: Box (geometric), Maximize2 (expanding)
+
+The key is consistency - pick icons that make sense together!
+*/
 
   // Helper methods
   async _toggleReduction(instanceId, method) {
