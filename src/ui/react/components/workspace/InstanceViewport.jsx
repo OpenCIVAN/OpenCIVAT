@@ -199,8 +199,27 @@ export function InstanceViewport({
                 console.log(`✅ Dataset loaded successfully`);
 
             } catch (error) {
+                // Now we can access dataset because it was declared outside the try block
+                const errorMessage = error.message || 'Unknown error occurred';
                 console.error(`❌ Failed to load dataset:`, error);
                 setError(error.message);
+
+                // Build rich error state with information about what can be done
+                // We have access to dataset here because we declared it in the outer scope
+                // Create rich error state
+                const dataset = window.CIA?.datasetManager?.getDataset(datasetId);
+                setError({
+                    message: errorMessage,
+                    datasetId: datasetId,
+                    datasetName: dataset?.filename || 'Unknown dataset',
+                    // Check if the dataset has a way to automatically fetch the file
+                    canAutoFetch: dataset?.canAutoFetch?.() || false,
+                    // Determine if this is a "needs reupload" situation
+                    needsReupload: errorMessage.includes('not available') ||
+                        errorMessage.includes('no longer in cache') ||
+                        errorMessage.includes('re-upload'),
+                });
+
                 setLoading(false);
             }
         };
@@ -405,17 +424,51 @@ export function InstanceViewport({
                     </div>
                 )}
 
-                {/* Error overlay */}
+                {/* Enhanced Error overlay */}
                 {error && (
                     <div className="viewport-overlay error">
                         <AlertCircle size={48} color="#f44336" />
-                        <p className="error-message">{error}</p>
-                        <button
-                            onClick={() => setError(null)}
-                            className="error-dismiss"
-                        >
-                            Dismiss
-                        </button>
+                        <h3 className="error-title">Unable to Load Dataset</h3>
+                        <p className="error-message">{error.message}</p>
+
+                        <div className="error-actions">
+                            {error.canAutoFetch && (
+                                <button
+                                    onClick={() => {
+                                        setError(null);
+                                        // The effect will automatically re-run and try fetching
+                                    }}
+                                    className="error-action-primary"
+                                >
+                                    Try Fetching Again
+                                </button>
+                            )}
+
+                            {error.needsReupload && !error.canAutoFetch && (
+                                <button
+                                    onClick={() => {
+                                        // Emit event that Files panel can listen to
+                                        window.dispatchEvent(new CustomEvent('requestDatasetReupload', {
+                                            detail: {
+                                                datasetId: error.datasetId,
+                                                datasetName: error.datasetName
+                                            }
+                                        }));
+                                        setError(null);
+                                    }}
+                                    className="error-action-primary"
+                                >
+                                    Upload File
+                                </button>
+                            )}
+
+                            <button
+                                onClick={() => setError(null)}
+                                className="error-action-secondary"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
                     </div>
                 )}
 

@@ -15,6 +15,7 @@ import {
   initializeAllObservers,
   markSystemReady,
 } from "@Collaboration/yjs/yjsObservers.js";
+import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 
 // ✅ NEW: Import annotation system
 // We'll initialize this in Phase 2 after DatasetManager is ready
@@ -181,6 +182,8 @@ export async function initializePhase2() {
     }
 
     console.log("✅ Data managers ready");
+
+    useDatasetStore.getState().initialize(datasetManager);
 
     // STEP 4: Y.js observers
     // Set up observers for real-time data sync

@@ -49,9 +49,12 @@ export function FilesPanel() {
     const handleSampleSelect = async (sample) => {
         setError(null);
         try {
-            const dataset = await loadSample(sample);
-            if (dataset) {
-                requestVisualization(dataset.id);
+            // FIXED: Variable name reflects what we actually get
+            const datasetId = await loadSample(sample);
+
+            if (datasetId) {
+                // FIXED: Just pass the ID directly - no .id property access needed
+                requestVisualization(datasetId);
             }
         } catch (err) {
             setError(err.message);
@@ -61,9 +64,11 @@ export function FilesPanel() {
     const handleFileUpload = async (file) => {
         setError(null);
         try {
-            const dataset = await uploadFile(file);
-            if (dataset) {
-                requestVisualization(dataset.id);
+            // FIXED: Same clarity here
+            const datasetId = await uploadFile(file);
+
+            if (datasetId) {
+                requestVisualization(datasetId);
             }
         } catch (err) {
             setError(err.message);
@@ -74,6 +79,8 @@ export function FilesPanel() {
         if (dataset.isLoading) {
             return; // Can't select while loading
         }
+        // This one actually receives a dataset object from useDatasets,
+        // so accessing .id is correct here
         requestVisualization(dataset.id);
     };
 

@@ -9,7 +9,6 @@ import {
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
-import { useInstanceStore } from "@UI/react/store/instanceStore.js";
 import { datasetManager } from "@Init/appInitializer.js";
 
 // ----------------------------------------------------------------------------
@@ -65,72 +64,98 @@ async function handleRemoteDataset(datasetId, metadata) {
   await processRemoteDataset(datasetId, metadata);
 }
 
+// src/collaboration/yjs/yjsObservers.js
+
 /**
  * Actually process a remote dataset
+ *
+ * This is called when Y.js notifies us that a dataset exists. This can happen in
+ * several scenarios:
+ *
+ * 1. Initial page load - datasets sync from Y.js to us
+ * 2. Another user loads a dataset - we see it appear in Y.js
+ * 3. Our own dataset from another tab - we created it elsewhere
+ * 4. Our own dataset we just created - we added it to Y.js and the observer fired
+ *
+ * The key insight: We only need to process datasets that DatasetManager doesn't
+ * already have. If DatasetManager has it, we can skip because the local state
+ * is already correct.
  */
 async function processRemoteDataset(datasetId, metadata) {
   const myId = getUserId();
-  console.log("📥 Processing remote dataset:", metadata.name);
+
+  console.log("📥 Remote dataset received:", metadata.filename);
   console.log(`   Uploaded by: ${metadata.uploadedBy}`);
   console.log(`   My ID: ${myId}`);
   console.log(`   Am I the uploader? ${metadata.uploadedBy === myId}`);
 
-  // Add to Zustand store (metadata only)
-  useDatasetStore.getState().addDataset(datasetId, metadata);
+  // CRITICAL CHECK: Does DatasetManager already have this dataset?
+  const existingDataset = datasetManager.getDataset(datasetId);
 
-  // Check if we already have polydata in memory
-  const inMemory = datasetManager.datasets.get(datasetId);
-  if (inMemory?.polydata) {
-    console.log("📥 ✅ Already have polydata in memory, skipping load");
+  if (existingDataset) {
+    console.log(`   ✓ Already have dataset in DatasetManager, skipping`);
+
+    // Emit event so React updates (datasetStore listens to this)
+    datasetManager._emit("datasetAdded", existingDataset);
+
     return;
   }
 
-  // Check if we have the file in IndexedDB cache
+  console.log(`   ℹ️ New dataset, adding to DatasetManager...`);
+
+  // Import Dataset class
+  const { Dataset } = await import("@Core/data/models/Dataset.js");
+
+  // Create dataset from Y.js metadata
+  const dataset = Dataset.fromJSON({
+    id: datasetId,
+    filename: metadata.filename,
+    name: metadata.name || metadata.filename,
+    fileType: metadata.fileType,
+    hash: metadata.hash,
+    publicPath: metadata.publicPath,
+    storageKey: metadata.storageKey,
+    userId: metadata.userId,
+    metadata: metadata.metadata || {},
+  });
+
+  // Add to DatasetManager's internal map
+  datasetManager._datasets.set(datasetId, dataset);
+
+  // Persist to IndexedDB
+  await datasetManager._persistDataset(dataset);
+
+  // Emit event - datasetStore listens and triggers React re-render
+  datasetManager._emit("datasetAdded", dataset);
+
+  console.log(`   ✅ Dataset added to DatasetManager`);
+
+  // Handle file fetching if needed
   const hasFile = await dataCache.hasDataset(metadata.hash);
-  console.log(`📥 File in cache: ${hasFile}`);
 
   if (hasFile) {
-    // We have it cached - load from cache
-    console.log("📥 Loading polydata from our cache...");
-    await datasetManager.loadPolydataFromCache(datasetId);
-    console.log("📥 ✅ Loaded from cache successfully");
+    console.log(`   ✓ File already cached`);
     return;
   }
 
-  // Not in cache - try to fetch if it's a public file
   if (metadata.publicPath) {
-    console.log(`📥 📄 Auto-fetching public file: ${metadata.publicPath}`);
+    console.log(`   🌐 Fetching from: ${metadata.publicPath}`);
+
     try {
       const response = await fetch(metadata.publicPath);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const blob = await response.blob();
-      const file = new File([blob], metadata.name, {
+      const file = new File([blob], metadata.filename, {
         type: "application/octet-stream",
       });
 
-      console.log("📥 Storing fetched file in cache...");
       await dataCache.storeDataset(file);
-      console.log("📥 ✅ Public file cached successfully");
+      dataset.rawFile = file;
 
-      await datasetManager.loadPolydataFromCache(datasetId);
+      console.log(`   ✅ File fetched and cached`);
     } catch (error) {
-      console.error(`📥 ❌ Failed to fetch public file:`, error);
-    }
-  } else {
-    // Not a public file and not in our cache
-    // This is where we would show an upload prompt (but only if we don't recognize it)
-    console.log(`📥 Hash: ${metadata.hash?.substring(0, 16)}...`);
-    console.log(`📥 File is user-uploaded, not in our cache`);
-
-    // Only show prompt if this is NOT our own upload from a previous session
-    // (If it is ours, it should be in cache, so something went wrong)
-    if (metadata.uploadedBy === myId) {
-      console.warn(
-        "📥 ⚠️ This is our own upload but not in cache - data may have been cleared"
-      );
+      console.error(`   ❌ Failed to fetch:`, error);
     }
   }
 }
@@ -195,15 +220,17 @@ export function initializeDatasetObserver() {
 // Watches for remote instance changes
 // ----------------------------------------------------------------------------
 export function initializeInstanceObserver() {
-  console.log('🔍 Setting up instance observer');
-  
+  console.log("🔍 Setting up instance observer");
+
   // REMOVED: The instance observer is now handled by instanceManager.js
   // This eliminates duplicate observers and ensures callbacks fire correctly
-  
+
   // The instanceManager sets up its own Y.js observer when initialized
   // and provides a proper callback system via onRemoteInstanceChange()
-  
-  console.log('✅ Instance observer initialization deferred to InstanceManager');
+
+  console.log(
+    "✅ Instance observer initialization deferred to InstanceManager"
+  );
 }
 
 // ----------------------------------------------------------------------------

@@ -172,21 +172,76 @@ export class DatasetManager {
 
   // ==================== DATASET MANAGEMENT ====================
 
-  async addDataset(dataset) {
-    console.log(`📦 DatasetManager: Adding dataset "${dataset.filename}"`);
+  /**
+   * Add a new dataset from a file (UPDATED WITH FILE TYPE)
+   *
+   * This is the primary entry point for creating datasets. It now properly
+   * extracts and stores the file type as part of the dataset's core metadata.
+   *
+   * The flow:
+   * 1. Extract file type from filename
+   * 2. Validate it's a supported type (optional but recommended)
+   * 3. Store the file in cache
+   * 4. Create Dataset object WITH fileType set
+   * 5. Persist everything
+   *
+   * @param {File} file - The file object from user input
+   * @param {string} userId - ID of the user adding this dataset
+   * @returns {Promise<Dataset>} - The created dataset
+   */
+  async addDataset(file, userId) {
+    console.log(`📦 DatasetManager: Adding dataset "${file.name}"`);
 
     try {
-      if (!dataset.id) {
-        dataset.id = generateDatasetId();
+      // STEP 1: Extract file type from filename
+      const fileType = this._extractFileType(file.name);
+      console.log(`  📋 File type: ${fileType}`);
+
+      // STEP 2: Validate file type is supported (optional but helpful)
+      const isSupported = await this._isFileTypeSupported(fileType);
+      if (!isSupported) {
+        console.warn(
+          `  ⚠️ Warning: File type "${fileType}" may not be supported`
+        );
       }
 
+      // STEP 3: Generate hash and store file using YOUR storageProvider
+      const hash = await this.generateFileHash(file);
+      const storageResult = await this.storageProvider.storeFile(file);
+      console.log(`  ✓ File stored: ${hash.substring(0, 16)}...`);
+
+      // STEP 4: Create the Dataset object with fileType
+      const dataset = new Dataset({
+        id: generateDatasetId(),
+        filename: file.name,
+        fileType: fileType, // ← THE KEY FIX
+        hash: hash,
+        storageKey: storageResult.key || hash,
+        userId: userId,
+        metadata: {
+          fileSize: file.size,
+          uploadedBy: userId,
+          uploadedAt: Date.now(),
+        },
+      });
+
+      // STEP 5: Store in memory
       this._datasets.set(dataset.id, dataset);
+
+      // STEP 6: Persist to IndexedDB
       await this._persistDataset(dataset);
+
+      // STEP 7: Sync to Y.js
+      this._syncDatasetMetadataToYjs(dataset);
+
+      // STEP 8: Notify listeners
       this._emit("datasetAdded", dataset);
 
       console.log(
-        `📦 DatasetManager: Dataset "${dataset.filename}" added with ID ${dataset.id}`
+        `✅ DatasetManager: Dataset "${file.name}" added with ID ${dataset.id}`
       );
+      console.log(`   File type: ${fileType}`);
+
       return dataset;
     } catch (error) {
       console.error("📦 DatasetManager: Failed to add dataset:", error);
@@ -238,12 +293,22 @@ export class DatasetManager {
   }
 
   /**
-   * Load a dataset file - this is the main entry point for adding new datasets
-   * This method is format-agnostic and works with any file type
+   * Load a dataset file (UPDATED WITH FILE TYPE)
+   *
+   * This is the bridge method that handles the complete loading workflow.
+   * It now also ensures fileType is properly set when loading datasets.
+   *
+   * @param {File} file - The file to load
+   * @param {string} publicPath - Optional public URL for sample files
+   * @param {string} userId - User loading the file
+   * @returns {Promise<string>} - The dataset ID
    */
+  // In DatasetManager.js, update the loadDataset method
+
   async loadDataset(file, publicPath = null, userId = null) {
     console.log(`📦 DatasetManager: Loading dataset "${file.name}"`);
 
+    // Use current user if not specified
     if (!userId) {
       const { getUserId } = await import(
         "@Collaboration/presence/userManagement.js"
@@ -251,68 +316,134 @@ export class DatasetManager {
       userId = getUserId();
     }
 
-    const hash = await this.generateFileHash(file);
-    console.log(`  ✓ Hash: ${hash.substring(0, 16)}...`);
-
-    const existingDataset = await this.findDatasetByHash(hash);
-    if (existingDataset) {
-      console.log(`  ℹ️ Dataset already exists: ${existingDataset.id}`);
-      return existingDataset;
-    }
-
-    const fileType = file.name.split(".").pop().toLowerCase();
-    const datasetId = generateDatasetId();
-
-    const dataset = new Dataset({
-      id: datasetId,
-      filename: file.name,
-      name: file.name,
-      fileType: fileType,
-      hash: hash,
-      publicPath: publicPath,
-      userId: userId,
-      rawFile: file,
-      parsedDataCache: {},
-      quickMetadata: null,
-      metadata: {
-        fileSize: file.size,
-        uploadedAt: Date.now(),
-        uploadedBy: userId,
-      },
-    });
-
-    await this.addDataset(dataset);
-
-    // Try to extract quick metadata using registered handlers
     try {
-      const metadata = await this.extractQuickMetadataUsingHandlers(
-        file,
-        fileType
-      );
-      if (metadata) {
-        dataset.quickMetadata = metadata;
-        console.log(`  ✓ Quick metadata extracted by handler`);
-        if (metadata.pointCount) {
-          // VTK specific needs to be removed
-          console.log(`    Points: ${metadata.pointCount.toLocaleString()}`);
-        }
-        if (metadata.estimatedMemory) {
-          console.log(`    Estimated size: ${metadata.estimatedMemory}`);
+      // STEP 1: Extract file type
+      const fileType = this._extractFileType(file.name);
+      console.log(`  📋 File type: ${fileType}`);
+
+      // STEP 2: Calculate hash
+      const hash = await this.generateFileHash(file);
+      console.log(`  ✓ Hash: ${hash.substring(0, 16)}...`);
+
+      // STEP 3: Check if we already have this dataset metadata
+      const existing = await this.findDatasetByHash(hash);
+
+      if (existing) {
+        console.log(`  📋 Found existing dataset: ${existing.id}`);
+
+        // CRITICAL: Even though we have metadata, we might not have the file!
+        // Store the file so it's available for visualization
+        console.log(`  💾 Updating file data for existing dataset...`);
+
+        // Store the file in cache
+        try {
+          const storageResult = await this.storageProvider.storeFile(file);
+          console.log(`  ✓ File stored successfully`);
+
+          // Update the dataset object with the new file reference
+          existing.rawFile = file;
+          existing.setFileStatus("available", file);
+
+          // If publicPath was provided, update it (in case it changed)
+          if (publicPath && publicPath !== existing.publicPath) {
+            existing.publicPath = publicPath;
+            await this._persistDataset(existing);
+          }
+
+          // Emit events so UI updates
+          this._emit("datasetUpdated", existing);
+          this._syncDatasetMetadataToYjs(existing);
+
+          // Emit datasetLoaded event so instances can load it
+          this._emit("datasetLoaded", {
+            datasetId: existing.id,
+            dataset: existing,
+          });
+
+          console.log(
+            `✅ DatasetManager: Existing dataset updated with new file`
+          );
+          console.log(`   ID: ${existing.id}`);
+
+          return existing.id;
+        } catch (storageError) {
+          console.error(`  ❌ Failed to store file:`, storageError);
+          throw new Error(
+            `Failed to update file for ${file.name}: ${storageError.message}`
+          );
         }
       }
+
+      // STEP 4: This is a truly new dataset - validate file type support
+      const isSupported = await this._isFileTypeSupported(fileType);
+      if (!isSupported) {
+        throw new Error(
+          `File type ${fileType.toUpperCase()} is not supported by any registered handler. ` +
+            `Please ensure the appropriate visualization plugin is installed.`
+        );
+      }
+
+      // STEP 5: Store the raw file
+      const storageResult = await this.storageProvider.storeFile(file);
+
+      // STEP 6: Create dataset metadata
+      const dataset = new Dataset({
+        id: generateDatasetId(),
+        filename: file.name,
+        fileType: fileType,
+        hash: hash,
+        publicPath: publicPath,
+        storageKey: storageResult.key || hash,
+        userId: userId,
+        rawFile: file, // Keep reference for immediate use
+        metadata: {
+          fileSize: file.size,
+          uploadedBy: userId,
+          uploadedAt: Date.now(),
+        },
+      });
+
+      // STEP 7: Try to extract quick metadata (optional, non-blocking)
+      try {
+        const quickMetadata = await this.extractQuickMetadataUsingHandlers(
+          file,
+          fileType
+        );
+        if (quickMetadata) {
+          dataset.quickMetadata = quickMetadata;
+          dataset.updateMetadata(quickMetadata);
+          console.log(`  ✓ Quick metadata extracted`);
+        }
+      } catch (error) {
+        console.warn(`  ⚠️ Could not extract quick metadata:`, error.message);
+      }
+
+      // STEP 8: Store and sync
+      this._datasets.set(dataset.id, dataset);
+      await this._persistDataset(dataset);
+      this._syncDatasetMetadataToYjs(dataset);
+
+      // STEP 9: Notify listeners
+      this._emit("datasetAdded", dataset);
+
+      // STEP 10: Emit datasetLoaded event
+      this._emit("datasetLoaded", {
+        datasetId: dataset.id,
+        dataset: dataset,
+      });
+
+      console.log(`✅ DatasetManager: Dataset "${file.name}" ready`);
+      console.log(`   ID: ${dataset.id}`);
+      console.log(`   Type: ${fileType}`);
+
+      return dataset.id;
     } catch (error) {
-      console.warn("⚠️ Could not extract quick metadata:", error.message);
+      console.error(
+        `❌ DatasetManager: Failed to load dataset "${file.name}":`,
+        error
+      );
+      throw error;
     }
-
-    this._emit("datasetLoaded", { datasetId, dataset });
-    console.log(`✅ DatasetManager: Dataset "${file.name}" loaded`);
-
-    // In your DatasetManager.loadDataset method, after creating the dataset:
-
-    // Sync dataset metadata to Y.js so other clients can fetch if needed
-    this._syncDatasetMetadataToYjs(dataset);
-
-    return dataset;
   }
 
   async extractQuickMetadataUsingHandlers(file, fileType) {
@@ -373,6 +504,131 @@ export class DatasetManager {
     const dataset = this._datasets.get(datasetId);
     if (!dataset) return null;
     return dataset.parsedDataCache[handlerType] || null;
+  }
+
+  // ==================== FILE TYPE UTILITIES ====================
+  // These helper methods extract and validate file types
+  // They live in DatasetManager because this is where datasets are created
+
+  /**
+   * Extract file type (extension) from filename
+   *
+   * This is the authoritative place where file type determination happens.
+   * Extract once at dataset creation, store it, and all subsequent code
+   * can simply read dataset.fileType with confidence it's always populated.
+   *
+   * Examples:
+   *   "Earth.vtp" → "vtp"
+   *   "model.STL" → "stl"
+   *   "data.tar.gz" → "gz" (last extension)
+   *
+   * @param {string} filename - The filename to parse
+   * @returns {string} - The lowercase file extension without the dot
+   * @throws {Error} - If filename is invalid or has no extension
+   * @private
+   */
+  _extractFileType(filename) {
+    // Defensive validation
+    if (!filename || typeof filename !== "string") {
+      throw new Error("Invalid filename: must be a non-empty string");
+    }
+
+    // Handle filenames with multiple dots (like "data.tar.gz")
+    // We want the last part after the final dot
+    const parts = filename.split(".");
+
+    if (parts.length < 2) {
+      throw new Error(
+        `Filename "${filename}" has no extension. ` +
+          `All dataset files must have a file extension (e.g., .vtp, .vti, .stl)`
+      );
+    }
+
+    // Get the last part and normalize to lowercase
+    const extension = parts[parts.length - 1].toLowerCase();
+
+    // Additional validation: extension should not be empty
+    if (extension.length === 0) {
+      throw new Error(`Filename "${filename}" has empty extension`);
+    }
+
+    return extension;
+  }
+
+  /**
+   * Validate that a file type is supported by at least one registered handler
+   *
+   * This provides early validation - we can reject unsupported file types
+   * immediately at upload time with a helpful error message, rather than
+   * letting the file get stored and only failing later when someone tries
+   * to visualize it.
+   *
+   * @param {string} fileType - The file extension to validate
+   * @returns {boolean} - True if at least one handler supports this type
+   * @private
+   */
+  async _isFileTypeSupported(fileType) {
+    try {
+      const { instanceTypeRegistry } = await import(
+        "@Core/instances/types/instanceTypeRegistry.js"
+      );
+
+      // Create a descriptor that matches what canHandleDataset() expects
+      // The interface default implementation looks for dataset.fileType
+      const descriptor = {
+        extension: fileType,
+        filename: `test.${fileType}`,
+        fileType: fileType, // ← ADD THIS - matches interface expectations
+      };
+
+      // Ask registry which handlers can work with this type
+      const compatibleHandlers =
+        instanceTypeRegistry.getCompatibleHandlers(descriptor);
+
+      return compatibleHandlers.length > 0;
+    } catch (error) {
+      // If we can't check (registry not available), be permissive
+      console.warn("Could not validate file type support:", error);
+      return true;
+    }
+  }
+
+  // ==================== HELPER METHODS ====================
+
+  /**
+   * Get the file type for a dataset
+   *
+   * This is a convenience method that returns the fileType with validation.
+   * It's useful when you want to be extra defensive in case old datasets
+   * don't have fileType set.
+   *
+   * @param {string} datasetId - The dataset ID
+   * @returns {string|null} - The file type, or null if dataset not found
+   */
+  getDatasetFileType(datasetId) {
+    const dataset = this.getDataset(datasetId);
+    if (!dataset) {
+      return null;
+    }
+
+    // If fileType is missing (old dataset), extract it from filename
+    if (!dataset.fileType && dataset.filename) {
+      try {
+        dataset.fileType = this._extractFileType(dataset.filename);
+        // Persist the update so we don't have to extract again
+        this._persistDataset(dataset).catch((err) => {
+          console.warn("Failed to persist fileType update:", err);
+        });
+      } catch (error) {
+        console.warn(
+          `Could not extract file type for ${dataset.filename}:`,
+          error
+        );
+        return null;
+      }
+    }
+
+    return dataset.fileType;
   }
 
   // ==================== ANNOTATION MANAGEMENT ====================

@@ -237,6 +237,18 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
    * actual data loading. The lazy initialization pattern means we don't create
    * the expensive WebGL context until we actually have data to display.
    */
+  // src/core/instances/types/vtk/VTKInstanceHandler.js
+  // This is the SIMPLIFIED version - no file type extraction needed!
+
+  /**
+   * Load data into this VTK instance (SIMPLIFIED)
+   *
+   * Notice how much cleaner this is - we simply trust that dataset.fileType
+   * is populated and ready to use. No extraction, no parsing filename strings.
+   *
+   * This is the power of properly architected data layers: each layer does its
+   * job once, stores the result, and subsequent layers just read what they need.
+   */
   async loadData(instanceData, dataset, data) {
     const { instanceId } = instanceData;
 
@@ -244,15 +256,26 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       `📊 VTK Handler: Loading dataset ${dataset.id} into instance ${instanceId}`
     );
 
-    // Check if we support this file type
-    if (!this.canHandle(dataset.fileType)) {
+    // Validate file type
+    const fileType = dataset.fileType;
+
+    if (!fileType) {
+      throw new Error(
+        `Dataset ${dataset.filename} is missing fileType property. ` +
+          `This indicates a bug in dataset creation.`
+      );
+    }
+
+    console.log(`  📋 File type: ${fileType}`);
+
+    if (!this.canHandle(fileType)) {
       const supported = this.getSupportedFileTypes()
         .filter((t) => t.capabilities.canRender)
         .map((t) => t.extension.toUpperCase())
         .join(", ");
 
       throw new Error(
-        `VTK handler cannot display ${dataset.fileType} files. ` +
+        `VTK handler cannot display ${fileType.toUpperCase()} files. ` +
           `Supported formats: ${supported}`
       );
     }
@@ -263,6 +286,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       throw new Error("DatasetManager not available");
     }
 
+    // Check if we have cached parsed data
     let polydata;
     const cached = datasetManager.getCachedParsedData(dataset.id, "vtk");
 
@@ -270,47 +294,78 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       console.log(`  ✓ Using cached VTK polydata`);
       polydata = cached.data;
     } else {
-      console.log(`  ⏳ Parsing ${dataset.fileType.toUpperCase()} file...`);
+      console.log(`  ⏳ Parsing ${fileType.toUpperCase()} file...`);
 
-      // CRITICAL FIX: Get the raw file, fetching if necessary
+      // Try to get the raw file
       let rawFile = datasetManager.getRawFile(dataset.id);
 
-      // If rawFile is null, we need to fetch it
+      // If rawFile is null, try to fetch it
       if (!rawFile) {
-        console.log(`  📥 Raw file not in memory, fetching...`);
+        console.log(`  📥 Raw file not in memory, attempting to fetch...`);
 
-        // Check if this is a public file (sample from /vtp_files/)
+        // Try public path first (for samples)
         if (dataset.publicPath) {
           console.log(`  🌐 Fetching from public path: ${dataset.publicPath}`);
-          const response = await fetch(dataset.publicPath);
 
-          if (!response.ok) {
+          try {
+            // Update status to show we're fetching
+            dataset.setFileStatus("fetching");
+            datasetManager._emit("datasetUpdated", dataset);
+
+            const response = await fetch(dataset.publicPath);
+
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch ${dataset.filename}: ${response.status} ${response.statusText}`
+              );
+            }
+
+            const blob = await response.blob();
+            rawFile = new File([blob], dataset.filename, {
+              type: "application/octet-stream",
+            });
+
+            // Store it back in the dataset for future use
+            dataset.setFileStatus("available", rawFile);
+
+            // Also store in cache so we don't fetch again
+            try {
+              await datasetManager.storageProvider.storeFile(rawFile);
+              console.log(`  ✓ File fetched and cached successfully`);
+            } catch (cacheError) {
+              console.warn(`  ⚠️ File fetched but caching failed:`, cacheError);
+              // Continue anyway - we have the file in memory
+            }
+
+            // Notify that dataset was updated
+            datasetManager._emit("datasetUpdated", dataset);
+          } catch (fetchError) {
+            dataset.setFileStatus("fetch-failed");
+            datasetManager._emit("datasetUpdated", dataset);
+
             throw new Error(
-              `Failed to fetch ${dataset.filename}: ${response.status} ${response.statusText}`
+              `Failed to fetch ${dataset.filename} from ${dataset.publicPath}: ${fetchError.message}`
             );
           }
-
-          const blob = await response.blob();
-          rawFile = new File([blob], dataset.filename, {
-            type: "application/octet-stream",
-          });
-
-          // Store it back in the dataset for future use
-          dataset.rawFile = rawFile;
-
-          console.log(`  ✓ File fetched successfully`);
         } else {
-          // This is an uploaded file - we'd need to get it from storage provider
-          // For now, throw a helpful error
+          // No public path - mark as needing upload
+          dataset.setFileStatus("needs-upload");
+          datasetManager._emit("datasetUpdated", dataset);
+
           throw new Error(
-            `Dataset ${dataset.filename} has no raw file and no public path. ` +
-              `This dataset was loaded in a previous session and the file is not available. ` +
-              `Please re-upload the file.`
+            `Dataset ${dataset.filename} is not available. ` +
+              `The file was loaded in a previous session and is no longer in cache. ` +
+              `Please re-upload this file to visualize it.`
           );
         }
       }
 
-      // Now we have the raw file, parse it
+      // Now we should have rawFile - parse it
+      if (!rawFile) {
+        throw new Error(`Failed to obtain file for ${dataset.filename}`);
+      }
+
+      // Parse the file
       polydata = await this.parseVTKFile(rawFile);
 
       // Extract metadata for caching
@@ -335,7 +390,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       console.log(`    Points: ${metadata.pointCount.toLocaleString()}`);
     }
 
-    // Now we have polydata - proceed with VTK rendering
+    // Initialize VTK pipeline if this is the first data load
     if (!instanceData.sceneObjects) {
       console.log(`  🎨 First data load - initializing VTK pipeline...`);
       const pipelineObjects = this._initializeVTKPipeline(instanceData);

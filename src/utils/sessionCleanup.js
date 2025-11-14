@@ -8,7 +8,6 @@ import {
 } from "@Collaboration/yjs/yjsSetup.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
-import { useInstanceStore } from "@UI/react/store/instanceStore.js";
 
 /**
  * Validate that datasets in Y.js have corresponding files in IndexedDB
@@ -119,7 +118,6 @@ export async function clearAllData() {
 
   // Clear Zustand stores
   useDatasetStore.getState().clearAll();
-  useInstanceStore.getState().clearAll();
   console.log("  ✅ Zustand stores cleared");
 
   // Clear IndexedDB
@@ -138,10 +136,6 @@ export async function getDataStats() {
       inYjs: yDatasets.size,
       inZustand: useDatasetStore.getState().getDatasetCount(),
       inCache: 0,
-    },
-    instances: {
-      inYjs: yInstances.size,
-      inZustand: useInstanceStore.getState().getInstanceCount(),
     },
     annotations: yAnnotations.size,
   };

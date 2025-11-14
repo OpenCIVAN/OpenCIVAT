@@ -26,10 +26,12 @@ export function useFileOperations() {
         type: "application/octet-stream",
       });
 
-      const dataset = await datasetManager.loadDataset(file, sample.path);
+      // FIXED: Variable name now accurately reflects what this is
+      const datasetId = await datasetManager.loadDataset(file, sample.path);
       console.log(`✅ Sample loaded: ${sample.name}`);
 
-      return dataset;
+      // Return just the ID - let the caller decide if they need the full object
+      return datasetId;
     } catch (error) {
       console.error("❌ Failed to load sample:", error);
       throw new Error(`Failed to load ${sample.name}: ${error.message}`);
@@ -43,9 +45,12 @@ export function useFileOperations() {
 
     try {
       console.log(`📂 Uploading file: ${file.name}`);
-      const dataset = await datasetManager.loadDataset(file, null);
+
+      // FIXED: Same clarity here
+      const datasetId = await datasetManager.loadDataset(file, null);
       console.log(`✅ File uploaded: ${file.name}`);
-      return dataset;
+
+      return datasetId;
     } catch (error) {
       console.error("❌ Failed to upload file:", error);
       throw new Error(`Failed to upload ${file.name}: ${error.message}`);

@@ -487,6 +487,88 @@ class InstanceManager {
       }
     });
   }
+  // These support the dataset deletion workflow by finding and managing
+  // instances that are viewing a particular dataset
+
+  // Add these methods to src/core/instances/instanceManager.js
+  // FIXED VERSION with proper defensive checks
+
+  /**
+   * Get all instance IDs that are currently viewing a specific dataset
+   *
+   * This is crucial for the delete workflow - before we delete a dataset,
+   * we need to know which instances are using it so we can either warn
+   * the user or close those instances automatically.
+   *
+   * DEFENSIVE: Checks if Maps exist before iterating
+   *
+   * @param {string} datasetId - The dataset ID to search for
+   * @returns {string[]} - Array of instance IDs viewing this dataset
+   */
+  getInstancesForDataset(datasetId) {
+    const instanceIds = [];
+
+    // Check local instances (might be undefined or not initialized yet)
+    if (this.localInstances instanceof Map) {
+      for (const [instanceId, instance] of this.localInstances.entries()) {
+        if (instance.datasetId === datasetId) {
+          instanceIds.push(instanceId);
+        }
+      }
+    }
+
+    // Also check remote instances (from Y.js) if they exist
+    if (this.remoteInstances instanceof Map) {
+      for (const [instanceId, instance] of this.remoteInstances.entries()) {
+        if (instance.datasetId === datasetId) {
+          instanceIds.push(instanceId);
+        }
+      }
+    }
+
+    return instanceIds;
+  }
+
+  /**
+   * Get the count of instances viewing a specific dataset
+   *
+   * This is used in the UI to show how many viewports are currently
+   * displaying each dataset. It's a lighter-weight query than getting
+   * all the instance IDs when you just need the count.
+   *
+   * @param {string} datasetId - The dataset ID
+   * @returns {number} - Count of instances viewing this dataset
+   */
+  getInstanceCountForDataset(datasetId) {
+    return this.getInstancesForDataset(datasetId).length;
+  }
+
+  /**
+   * Delete all instances viewing a specific dataset
+   *
+   * This is called when deleting a dataset that has active instances.
+   * We clean up all the viewports before removing the underlying data.
+   *
+   * @param {string} datasetId - The dataset whose instances should be deleted
+   * @returns {number} - Count of instances that were deleted
+   */
+  deleteInstancesForDataset(datasetId) {
+    const instanceIds = this.getInstancesForDataset(datasetId);
+
+    console.log(
+      `🗑️ Deleting ${instanceIds.length} instance(s) for dataset ${datasetId}`
+    );
+
+    for (const instanceId of instanceIds) {
+      try {
+        this.deleteInstance(instanceId);
+      } catch (error) {
+        console.warn(`⚠️ Failed to delete instance ${instanceId}:`, error);
+      }
+    }
+
+    return instanceIds.length;
+  }
 }
 
 export const instanceManager = new InstanceManager();
