@@ -240,27 +240,31 @@ export class VTKReductionFeature extends ReductionFeature {
     tools.push({
       id: "reduction",
       label: "Dimensionality Reduction",
-      icon: "📊",
+      icon: "reduction",  // This gets mapped to BarChart3
       type: "menu",
+      shortcut: "Alt+R",  // Optional keyboard shortcut hint
       options: [
         {
           id: "pca",
           label: "PCA",
-          description: "Principal Component Analysis - Fast, linear",
+          icon: "pca",
+          description: "Fast, linear reduction",
           active: state.isApplied && state.method === "pca",
           onClick: () => this._toggleReduction(instanceId, "pca"),
         },
         {
           id: "tsne",
           label: "t-SNE",
-          description: "T-SNE - Nonlinear, preserves local structure",
+          icon: "tsne",
+          description: "Preserves local structure",
           active: state.isApplied && state.method === "tsne",
           onClick: () => this._toggleReduction(instanceId, "tsne"),
         },
         {
           id: "umap",
           label: "UMAP",
-          description: "UMAP - Nonlinear, preserves global structure",
+          icon: "umap",
+          description: "Balances local & global",
           active: state.isApplied && state.method === "umap",
           onClick: () => this._toggleReduction(instanceId, "umap"),
         },
@@ -270,7 +274,8 @@ export class VTKReductionFeature extends ReductionFeature {
         {
           id: "restore",
           label: "Restore Original",
-          icon: "↩️",
+          icon: "restore",
+          description: "Reset to original data",
           disabled: !state.isApplied,
           onClick: () => this.restoreOriginal(instanceId),
         },

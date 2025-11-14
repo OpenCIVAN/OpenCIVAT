@@ -2,7 +2,20 @@
 // Generic instance container with proper local/remote handling
 
 import React, { useRef, useEffect, useState } from "react";
-import { Maximize2, Copy, Trash2, AlertCircle } from "lucide-react";
+import {
+    BarChart3,      // Dimensionality Reduction
+    Camera,         // Camera controls
+    Scissors,       // Clipping plane
+    Eye,            // Visibility
+    Ruler,          // Measurements
+    MessageSquare,  // Annotations
+    Box,            // 3D/2D toggle
+    RotateCcw,      // Reset/Restore
+    Maximize2,      // Fullscreen
+    Trash2,         // Delete
+    ChevronDown,    // Dropdown indicator
+    AlertCircle
+} from 'lucide-react';
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import "./InstanceViewport.css";
@@ -270,10 +283,75 @@ export function InstanceViewport({
         }
     };
 
+    // ============================================================================
+    // Icon Mapping Helper
+    // ============================================================================
+
+    /**
+     * Maps tool IDs to Lucide icons
+     * Add new mappings here as you create more features
+     */
+    const TOOL_ICON_MAP = {
+        // Reduction tools
+        'reduction': BarChart3,
+        'pca': BarChart3,
+        'tsne': BarChart3,
+        'umap': BarChart3,
+        'dimensions': Box,
+        'restore': RotateCcw,
+
+        // Camera tools
+        'camera': Camera,
+        'camera-reset': Camera,
+        'camera-fit': Camera,
+
+        // Analysis tools
+        'clipping': Scissors,
+        'measurements': Ruler,
+        'measure-distance': Ruler,
+        'measure-angle': Ruler,
+
+        // Display tools
+        'visibility': Eye,
+        'annotations': MessageSquare,
+
+        // Default fallback
+        'default': Box,
+    };
+
+    /**
+ * Get Lucide icon component for a tool
+ */
+    const getToolIcon = (toolId, toolIcon) => {
+        // If tool provides explicit icon string, try to map it
+        if (typeof toolIcon === 'string') {
+            return TOOL_ICON_MAP[toolIcon] || TOOL_ICON_MAP['default'];
+        }
+
+        // Try mapping by tool ID
+        if (TOOL_ICON_MAP[toolId]) {
+            return TOOL_ICON_MAP[toolId];
+        }
+
+        // Default fallback
+        return TOOL_ICON_MAP['default'];
+    };
+
+
     /**
      * Render a tool from the handler
+     * Now renders compact icon-only buttons with rich tooltips
+     */
+    /**
+     * Render a tool from the handler as an icon button with tooltip
+     * 
+     * This handles three types of tools:
+     * 1. Separator - visual divider between tool groups
+     * 2. Menu - dropdown menu with multiple options
+     * 3. Button - simple click action
      */
     const renderTool = (tool, index) => {
+        // Separator
         if (tool.type === 'separator') {
             return (
                 <div
@@ -283,51 +361,99 @@ export function InstanceViewport({
             );
         }
 
+        // Get the icon component
+        const IconComponent = getToolIcon(tool.id, tool.icon);
+
+        // Menu-type tool (has dropdown options)
         if (tool.type === 'menu') {
             return (
                 <div key={tool.id || `menu-${index}`} className="toolbar-menu">
                     <button
-                        className={`toolbar-btn ${tool.active ? 'active' : ''}`}
+                        className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
                         disabled={tool.disabled}
+                        aria-label={tool.label}
                     >
-                        {tool.icon && <span className="tool-icon">{tool.icon}</span>}
-                        <span className="tool-label">{tool.label}</span>
-                        <span className="menu-arrow">▼</span>
+                        <IconComponent size={18} strokeWidth={2} />
+                        <ChevronDown size={10} className="menu-indicator" />
+
+                        {/* Rich Tooltip */}
+                        <div className="toolbar-tooltip">
+                            <div className="tooltip-title">{tool.label}</div>
+                            {tool.description && (
+                                <div className="tooltip-desc">{tool.description}</div>
+                            )}
+                            {tool.shortcut && (
+                                <div className="tooltip-shortcut">{tool.shortcut}</div>
+                            )}
+                        </div>
                     </button>
 
+                    {/* Dropdown menu */}
                     <div className="toolbar-menu-dropdown">
-                        {tool.options?.map((option, optIndex) => (
-                            <button
-                                key={option.id || `option-${optIndex}`}
-                                onClick={option.onClick}
-                                className={`menu-option ${option.active ? 'active' : ''}`}
-                                disabled={option.disabled}
-                            >
-                                {option.icon && <span className="option-icon">{option.icon}</span>}
-                                <span className="option-label">{option.label}</span>
-                                {option.description && (
-                                    <span className="option-description">{option.description}</span>
-                                )}
-                            </button>
-                        ))}
+                        {tool.options?.map((option, optIndex) => {
+                            // Skip separators in menu
+                            if (option.type === 'separator') {
+                                return (
+                                    <div
+                                        key={`menu-sep-${optIndex}`}
+                                        className="menu-separator"
+                                    />
+                                );
+                            }
+
+                            const OptionIcon = getToolIcon(option.id, option.icon);
+
+                            return (
+                                <button
+                                    key={option.id || `option-${optIndex}`}
+                                    onClick={option.onClick}
+                                    className={`menu-option ${option.active ? 'active' : ''}`}
+                                    disabled={option.disabled}
+                                >
+                                    <OptionIcon size={14} className="option-icon" />
+                                    <div className="option-text">
+                                        <span className="option-label">{option.label}</span>
+                                        {option.description && (
+                                            <span className="option-description">
+                                                {option.description}
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             );
         }
 
+        // Regular button tool
         return (
             <button
                 key={tool.id || `tool-${index}`}
                 onClick={tool.onClick}
-                className={`toolbar-btn ${tool.active ? 'active' : ''}`}
-                title={tool.description || tool.label}
+                className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
                 disabled={tool.disabled}
+                aria-label={tool.label}
             >
-                {tool.icon && <span className="tool-icon">{tool.icon}</span>}
-                <span className="tool-label">{tool.label}</span>
+                <IconComponent size={18} strokeWidth={2} />
+
+                {/* Rich Tooltip */}
+                <div className="toolbar-tooltip">
+                    <div className="tooltip-title">{tool.label}</div>
+                    {tool.description && (
+                        <div className="tooltip-desc">{tool.description}</div>
+                    )}
+                    {tool.shortcut && (
+                        <div className="tooltip-shortcut">{tool.shortcut}</div>
+                    )}
+                </div>
             </button>
         );
     };
+
+
+
 
     // =========================================================================
     // RENDER

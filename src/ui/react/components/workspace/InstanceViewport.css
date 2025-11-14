@@ -1,5 +1,15 @@
 /* src/ui/react/components/workspace/InstanceViewport.css */
 
+:root {
+  --toolbar-bg: #1e1e1e;
+  --toolbar-border: #2a2a2a;
+  --toolbar-btn-hover: #2a2a2a;
+  --toolbar-btn-active: #2a3a2a;
+  --toolbar-accent: #4CAF50;
+  --toolbar-text: #888;
+  --toolbar-text-hover: #e0e0e0;
+}
+
 .instance-container {
   display: flex;
   flex-direction: column;
@@ -108,65 +118,323 @@
 }
 
 /* Toolbar Section */
+/* ============================================================================
+   COMPACT ICON-ONLY TOOLBAR STYLES
+   Replace the toolbar styles in InstanceViewport.css with these
+   ============================================================================ */
+
+/* Toolbar Container - More compact */
 .instance-toolbar {
   display: flex;
   gap: 2px;
-  padding: 6px;
+  padding: 4px;
   background: #1e1e1e;
   border-bottom: 1px solid #2a2a2a;
   flex-shrink: 0;
   flex-wrap: wrap;
   align-items: center;
+  min-height: 40px; /* Down from ~60px */
 }
 
-.toolbar-btn {
+/* ============================================================================
+   ICON BUTTONS - Compact, icon-only design
+   ============================================================================ */
+
+.toolbar-icon-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
+  justify-content: center;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 4px;
   color: #888;
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 12px;
-  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.toolbar-btn:hover:not(:disabled) {
+.toolbar-icon-btn:hover:not(:disabled) {
   background: #2a2a2a;
   color: #e0e0e0;
   border-color: #3a3a3a;
 }
 
-.toolbar-btn.active {
+.toolbar-icon-btn.active {
   background: #2a3a2a;
   color: #4CAF50;
   border-color: #4CAF50;
 }
 
-.toolbar-btn:disabled {
+.toolbar-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: #555;
+}
+
+/* Menu indicator (small chevron) */
+.menu-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  opacity: 0.6;
+}
+
+.toolbar-icon-btn:hover .menu-indicator {
+  opacity: 1;
+}
+
+/* ============================================================================
+   RICH TOOLTIPS - Professional, informative
+   ============================================================================ */
+
+.toolbar-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  
+  background: #2a2a2a;
+  border: 1px solid #4CAF50;
+  border-radius: 6px;
+  padding: 8px 12px;
+  
+  min-width: max-content;
+  max-width: 200px;
+  
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.toolbar-icon-btn:hover .toolbar-tooltip {
+  opacity: 1;
+  transition-delay: 0.4s; /* Slight delay before showing tooltip */
+}
+
+/* Tooltip arrow */
+.toolbar-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #4CAF50;
+}
+
+/* Tooltip content */
+.tooltip-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-bottom: 2px;
+  line-height: 1.3;
+}
+
+.tooltip-desc {
+  font-size: 11px;
+  color: #999;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.tooltip-shortcut {
+  font-size: 10px;
+  color: #666;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #333;
+  text-align: center;
+}
+
+/* ============================================================================
+   SEPARATORS - Visual grouping
+   ============================================================================ */
+
+.toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: #333;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   DROPDOWN MENUS - Clean, organized
+   ============================================================================ */
+
+.toolbar-menu {
+  position: relative;
+}
+
+.toolbar-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  
+  min-width: 200px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 4px;
+  
+  display: none;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.toolbar-menu:hover .toolbar-menu-dropdown {
+  display: block;
+}
+
+/* Prevent tooltip from showing when menu is open */
+.toolbar-menu:hover .toolbar-tooltip {
+  opacity: 0;
+  transition-delay: 0s;
+}
+
+/* Menu separator */
+.menu-separator {
+  height: 1px;
+  background: #333;
+  margin: 4px 0;
+}
+
+/* ============================================================================
+   MENU OPTIONS - Rich information display
+   ============================================================================ */
+
+.menu-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.menu-option:hover:not(:disabled) {
+  background: #3a3a3a;
+}
+
+.menu-option.active {
+  background: #2a3a2a;
+  color: #4CAF50;
+}
+
+.menu-option.active .option-icon {
+  color: #4CAF50;
+}
+
+.menu-option:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.tool-icon,
+/* Option icon */
 .option-icon {
+  flex-shrink: 0;
+  color: #888;
+  transition: color 0.15s ease;
+}
+
+.menu-option:hover:not(:disabled) .option-icon {
+  color: #e0e0e0;
+}
+
+/* Option text container */
+.option-text {
+  flex: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.tool-label,
 .option-label {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #e0e0e0;
+  line-height: 1.3;
 }
 
-.toolbar-separator {
-  width: 1px;
-  height: 20px;
-  background: #2a2a2a;
-  margin: 0 4px;
+.option-description {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.3;
+}
+
+.menu-option:hover:not(:disabled) .option-description {
+  color: #888;
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+/* For very small viewports, make buttons slightly larger for touch */
+@media (max-width: 768px) {
+  .toolbar-icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .instance-toolbar {
+    padding: 6px;
+  }
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+/* Focus styles for keyboard navigation */
+.toolbar-icon-btn:focus-visible {
+  outline: 2px solid #4CAF50;
+  outline-offset: 2px;
+}
+
+.menu-option:focus-visible {
+  outline: 2px solid #4CAF50;
+  outline-offset: -2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .toolbar-icon-btn {
+    border-color: #444;
+  }
+  
+  .toolbar-icon-btn:hover {
+    border-color: #666;
+  }
+  
+  .toolbar-icon-btn.active {
+    border-color: #4CAF50;
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-icon-btn,
+  .toolbar-tooltip,
+  .menu-option,
+  .option-icon {
+    transition: none;
+  }
 }
 
 /* Menu dropdowns */
