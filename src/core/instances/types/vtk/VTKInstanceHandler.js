@@ -633,7 +633,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: lineActive,
           onClick: () => {
             console.log("🎯 Line measurement clicked");
-            instanceTools.toggleLineMeasurement(instanceId);
+            instanceTools.enableDistanceMeasurement(instanceId);
             this._emitToolsUpdate(instanceData);
           },
         },
@@ -645,7 +645,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: angleActive,
           onClick: () => {
             console.log("🎯 Angle measurement clicked");
-            instanceTools.toggleAngleMeasurement(instanceId);
+            instanceTools.enableAngleMeasurement(instanceId);
             this._emitToolsUpdate(instanceData);
           },
         },
@@ -657,7 +657,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: planeActive,
           onClick: () => {
             console.log("🎯 Clipping plane clicked");
-            instanceTools.toggleClippingPlane(instanceId);
+            instanceTools.enableClippingPlane(instanceId);
             this._emitToolsUpdate(instanceData);
           },
         },
@@ -854,7 +854,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       active: orientationEnabled,
       onClick: () => {
         console.log("🎯 Toggle orientation clicked");
-        instanceTools.toggleOrientation(instanceId);
+        instanceTools.toggleAxes(instanceId);
         this._emitToolsUpdate(instanceData);
       },
     });

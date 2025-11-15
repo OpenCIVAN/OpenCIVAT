@@ -314,19 +314,9 @@
 }
 
 .toolbar-menu-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  
-  min-width: 200px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  padding: 4px;
-  
-  display: none;
-  z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  max-height: min(400px, calc(100vh - 80px)); /* Never exceed viewport */
+  overflow-y: auto;  /* Enable scrolling */
+  scroll-behavior: smooth;
 }
 
 .toolbar-menu:hover .toolbar-menu-dropdown {
