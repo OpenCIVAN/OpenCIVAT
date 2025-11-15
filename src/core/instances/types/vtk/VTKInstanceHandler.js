@@ -727,7 +727,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       options: [
         {
           id: "widget-line",
-          icon: "measure-distance",
+          icon: "ruler",
           label: "Line Measurement",
           description: "Measure distance between two points",
           active: lineActive,
@@ -735,12 +735,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: () => {
             console.log("🎯 Line measurement clicked");
             instanceTools.toggleDistanceMeasurement(instanceId);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
           id: "widget-angle",
-          icon: "measure-angle",
+          icon: "triangle",
           label: "Angle Measurement",
           description: "Measure angle between three points",
           active: angleActive,
@@ -748,7 +748,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: () => {
             console.log("🎯 Angle measurement clicked");
             instanceTools.toggleAngleMeasurement(instanceId);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
@@ -761,7 +761,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: () => {
             console.log("🎯 Clipping plane clicked");
             instanceTools.toggleClippingPlane(instanceId);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         { type: "separator" },
@@ -774,13 +774,13 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: () => {
             console.log("🎯 Clear all widgets clicked");
             instanceTools.disableMeasurementTools(instanceId);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         { type: "separator" },
         {
           id: "show-measurements",
-          icon: "list",
+          icon: "pencil-ruler",
           label: "Show Measurements",
           description: "View all recorded measurements",
           onClick: () => {
@@ -816,19 +816,19 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       options: [
         {
           id: "pca",
-          icon: "chart",
+          icon: "trend",
           label: "PCA",
           description: "Principal Component Analysis",
           active: currentMethod === "pca",
           onClick: async () => {
             console.log("🎯 PCA clicked");
             await this.reductionFeature.toggleReduction(instanceId, "pca");
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
           id: "tsne",
-          icon: "chart",
+          icon: "network",
           label: "t-SNE",
           description: "t-Distributed Stochastic Neighbor Embedding",
           active: currentMethod === "tsne",
@@ -836,12 +836,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: async () => {
             console.log("🎯 t-SNE clicked");
             await this.reductionFeature.toggleReduction(instanceId, "tsne");
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
           id: "umap",
-          icon: "chart",
+          icon: "network",
           label: "UMAP",
           description: "Uniform Manifold Approximation and Projection",
           active: currentMethod === "umap",
@@ -849,13 +849,13 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: async () => {
             console.log("🎯 UMAP clicked");
             await this.reductionFeature.toggleReduction(instanceId, "umap");
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         { type: "separator" },
         {
           id: "dimension-2d",
-          icon: "layers-2",
+          icon: "square",
           label: "2D Projection",
           description: "Reduce to 2 dimensions",
           active: hasReduction && currentComponents === 2,
@@ -863,12 +863,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: async () => {
             console.log("🎯 2D projection clicked");
             await this.reductionFeature.setComponents(instanceId, 2);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
           id: "dimension-3d",
-          icon: "layers-3",
+          icon: "cube",
           label: "3D Projection",
           description: "Reduce to 3 dimensions",
           active: hasReduction && currentComponents === 3,
@@ -876,7 +876,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: async () => {
             console.log("🎯 3D projection clicked");
             await this.reductionFeature.setComponents(instanceId, 3);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         { type: "separator" },
@@ -889,7 +889,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           onClick: async () => {
             console.log("🎯 Restore original clicked");
             await this.reductionFeature.restoreOriginal(instanceId);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
       ],
@@ -926,7 +926,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: currentRep === "surface",
           onClick: () => {
             instanceTools.setRepresentation(instanceId, "surface");
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
@@ -937,18 +937,18 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: currentRep === "wireframe",
           onClick: () => {
             instanceTools.setRepresentation(instanceId, "wireframe");
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
           id: "rep-points",
-          icon: "circle-dot",
+          icon: "points",
           label: "Points",
           description: "Show individual vertices",
           active: currentRep === "points",
           onClick: () => {
             instanceTools.setRepresentation(instanceId, "points");
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         { type: "separator" },
@@ -961,7 +961,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: currentOpacity === 1.0,
           onClick: () => {
             instanceTools.setOpacity(instanceId, 1.0);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
@@ -972,7 +972,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: Math.abs(currentOpacity - 0.75) < 0.01,
           onClick: () => {
             instanceTools.setOpacity(instanceId, 0.75);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
@@ -983,7 +983,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: Math.abs(currentOpacity - 0.5) < 0.01,
           onClick: () => {
             instanceTools.setOpacity(instanceId, 0.5);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         {
@@ -994,7 +994,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: Math.abs(currentOpacity - 0.25) < 0.01,
           onClick: () => {
             instanceTools.setOpacity(instanceId, 0.25);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
       ],
@@ -1020,24 +1020,28 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           icon: "palette",
           label: "Rainbow",
           onClick: () => instanceTools.setColorMap(instanceId, "rainbow"),
+          disabled: !caps.canUseColormap,
         },
         {
           id: "colormap-grayscale",
           icon: "palette",
           label: "Grayscale",
           onClick: () => instanceTools.setColorMap(instanceId, "grayscale"),
+          disabled: !caps.canUseColormap,
         },
         {
           id: "colormap-hot",
           icon: "palette",
           label: "Hot",
           onClick: () => instanceTools.setColorMap(instanceId, "hot"),
+          disabled: !caps.canUseColormap,
         },
         {
           id: "colormap-cool",
           icon: "palette",
           label: "Cool",
           onClick: () => instanceTools.setColorMap(instanceId, "cool"),
+          disabled: !caps.canUseColormap,
         },
       ],
     });
@@ -1063,11 +1067,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         // Toggle on/off
         {
           id: "orientation-toggle",
-          icon: orientationEnabled ? "eye-off" : "eye",
+          icon: orientationEnabled ? "compass" : "compass-off",
           label: orientationEnabled ? "Hide Cube" : "Show Cube",
           onClick: () => {
             instanceTools.toggleOrientation(instanceId);
-            this._emitToolsUpdate(instanceData);
+            this._emitToolsUpdate(instanceId);
           },
         },
         { type: "separator" },
@@ -1177,25 +1181,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     }
   }
 
-  /**
-   * Emit tools update event (causes InstanceViewport to refresh toolbar)
-   *
-   * @param {Object} instanceData - Complete instance data object
-   */
-  _emitToolsUpdate(instanceData) {
-    // Notify InstanceViewport that tools have changed
-    // InstanceViewport will call getTools() again to rebuild toolbar
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("instance-tools-updated", {
-          detail: {
-            instanceId: instanceData.instanceId,
-            instanceData,
-          },
-        })
-      );
-    }
-  }
 
   // ===========================================================================
   // 🧪 TESTING IN BROWSER CONSOLE

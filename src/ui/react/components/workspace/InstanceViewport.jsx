@@ -138,9 +138,16 @@ export function InstanceViewport({
         const handleToolsUpdate = (event) => {
             // Only update if this event is for OUR instance
             if (event.detail?.instanceId === actualInstanceId) {
+
+                const before = tools.length;
+                const updatedTools = workspaceManager.getInstanceTools(actualInstanceId);
+
+                console.log('📊 Tools comparison:');
+                console.log('  - Array changed?', tools !== updatedTools);
+                console.log('  - Length before:', before);
+                console.log('  - Length after:', updatedTools.length);
                 console.log(`🔄 Tools updated for ${actualInstanceId}, refreshing toolbar`);
 
-                const updatedTools = workspaceManager.getInstanceTools(actualInstanceId);
                 console.log(`   Got ${updatedTools.length} updated tools`);
 
                 setTools(updatedTools);

@@ -1,201 +1,256 @@
-// src/ui/react/components/workspace/ToolbarIconRegistry.js
-// Centralized icon mapping for toolbar tools
-// Separates icon concerns from InstanceViewport logic
+// CLEAN PATTERN: Map semantic icon names, not tool IDs
+
+import { createSlashedIcon } from "@UI/react/components/common/IconOverlay.jsx";
 
 import {
-  // Reduction & Analysis
+  // Geometry & 3D
+  Box,
+  Circle,
+  Square,
+  Triangle,
+  Layers,
+
+  // Measurement & Analysis
+  Ruler,
+  Move,
   BarChart3,
   TrendingUp,
-  GitBranch,
   Network,
-
-  // Dimensions & Geometry
-  Box,
-  Square,
-  Layers,
-  Maximize2,
-  Minimize2,
 
   // Camera & View
   Camera,
-  Video,
+  Eye,
+  EyeOff,
   Focus,
   ZoomIn,
   ZoomOut,
 
   // Tools & Editing
   Scissors,
-  Ruler,
-  Triangle,
   Wand2,
-  Move,
   RotateCw,
   RotateCcw,
+  Move3d,
 
-  // Visibility & Display
-  Eye,
-  EyeOff,
+  // Visual Properties
   Sun,
   Palette,
   Contrast,
-  PencilRuler,
-  Wallpaper,
-  ThermometerSnowflake,
   Rainbow,
+  ThermometerSnowflake,
   ThermometerSun,
   Eclipse,
-  Compass,
-  Move3d,
-  Rotate3d,
-  Scale3d,
+  Grid,
   Grid3x3,
+  CircleDot,
 
-  // Annotations & Communication
-  MessageSquare,
+  // Navigation
+  Compass,
+  Maximize2,
+  Minimize2,
+
+  // UI Actions
   Plus,
   Edit3,
   Trash2,
-
-  // Data & Files
-  Database,
-  FileText,
-  Download,
-  Upload,
-
-  // Actions
-  Play,
-  Pause,
-  RefreshCw,
   Check,
   X,
-
-  // Indicators
-  ChevronDown,
-  ChevronRight,
-  Info,
-  AlertCircle,
+  RefreshCw,
+  Download,
+  Upload,
   Settings,
   Sliders,
+  Info,
+
+  // Communication
+  MessageSquare,
+  PencilRuler,
+
+  // Data
+  Database,
+  FileText,
+  Wallpaper,
+
+  // Corner positioning
+  CornerDownRight,
+  CornerDownLeft,
+  CornerUpRight,
+  CornerUpLeft,
 } from "lucide-react";
 
+const SlashedCompass = createSlashedIcon(Compass);
+const SlashedGrid = createSlashedIcon(Grid);
+const SlashedRuler = createSlashedIcon(Ruler);
+
 /**
- * Master icon mapping for all toolbar tools
- * Maps string IDs to Lucide React components
+ * ICON REGISTRY
  *
- * Contributors: Add your tool icons here!
+ * Maps semantic icon NAMES to Lucide components.
+ * Tool definitions reference these names via the `icon` property.
+ *
+ * PATTERN:
+ * - Use lowercase-with-hyphens for names
+ * - Keep names semantic, not tool-specific
+ * - Allow multiple tools to share one icon
+ * - Add aliases for common variations
+ *
+ * USAGE IN TOOLS:
+ * {
+ *   id: "my-specific-tool",        ← Unique tool ID
+ *   icon: "compass",               ← Semantic icon name
+ *   label: "My Tool"
+ * }
  */
 const TOOL_ICON_MAP = {
-  // ========================================================================
-  // DIMENSIONALITY REDUCTION
-  // ========================================================================
-  reduction: BarChart3,
-  pca: TrendingUp,
-  tsne: Network,
-  umap: Network,
-  restore: RotateCcw,
+  // ==========================================================================
+  // GEOMETRY & 3D
+  // Used by: general shapes, bounds, primitives
+  // ==========================================================================
+  box: Box,
+  cube: Box,
+  square: Square,
+  circle: Circle,
+  triangle: Triangle,
+  layers: Layers,
 
-  // ========================================================================
-  // DIMENSIONS & PROJECTIONS
-  // ========================================================================
-  dimensions: Layers,
-  "dimension-2d": Square,
-  "dimension-3d": Box,
-  "toggle-2d-3d": Layers,
+  // ==========================================================================
+  // MEASUREMENT & ANALYSIS
+  // Used by: measurement tools, statistics, data analysis
+  // ==========================================================================
+  ruler: Ruler,
+  measure: Ruler, // Alias
+  "ruler-off": SlashedRuler,
+  "measure-off": SlashedRuler,
+  "bar-chart": BarChart3,
+  trend: TrendingUp,
+  network: Network,
+  graph: Network, // Alias
 
-  // ========================================================================
-  // CAMERA CONTROLS
-  // ========================================================================
+  // ==========================================================================
+  // CAMERA & VIEWING
+  // Used by: camera controls, view presets, zoom
+  // ==========================================================================
   camera: Camera,
-  "camera-reset": Focus,
-  "reset-camera": Focus, // Alias for camera-reset
-  "camera-fit": Focus, // Alias for reset
-  "camera-top": Camera,
-  "camera-front": Camera,
-  "camera-side": Camera,
-  "camera-isometric": Camera,
+  eye: Eye,
+  "eye-off": EyeOff,
+  focus: Focus,
   "zoom-in": ZoomIn,
   "zoom-out": ZoomOut,
 
-  // ========================================================================
-  // ANALYSIS TOOLS
-  // ========================================================================
-  clipping: Scissors,
-  clip: Scissors, // Alias for clipping
-  "clip-x": Scissors,
-  "clip-y": Scissors,
-  "clip-z": Scissors,
+  // ==========================================================================
+  // TOOLS & MANIPULATION
+  // Used by: transform, clipping, editing tools
+  // ==========================================================================
+  scissors: Scissors,
+  clip: Scissors, // Alias
+  wand: Wand2,
+  transform: Wand2, // Alias
+  move: Move,
+  translate: Move, // Alias
+  "rotate-cw": RotateCw,
+  "rotate-ccw": RotateCcw,
+  rotate: RotateCw, // Alias
+  "move-3d": Move3d,
+  axes: Move3d, // Alias
 
-  measurements: Ruler,
-  measure: Ruler, // Alias for measurements
-  "measure-distance": Ruler,
-  "measure-angle": Triangle,
-  "measure-area": Square,
-
-  // ========================================================================
-  // TRANSFORM TOOLS
-  // ========================================================================
-  transform: Wand2,
-  translate: Move,
-  rotate: RotateCw,
-  scale: Maximize2,
-
-  // ========================================================================
-  // VISIBILITY & DISPLAY
-  // ========================================================================
-  visibility: Eye,
-  show: Eye,
-  hide: EyeOff,
-  "toggle-axes": Move3d, // Show/hide axis indicators
-  "toggle-grid": Box, // Show/hide grid
-  lighting: Sun,
-  colormap: Palette,
-  "colormap-cool": ThermometerSnowflake,
-  "colormap-hot": ThermometerSun,
-  "colormap-rainbow": Rainbow,
-  "colormap-greyscale": Eclipse,
+  // ==========================================================================
+  // VISUAL PROPERTIES
+  // Used by: colormaps, lighting, rendering options
+  // ==========================================================================
+  palette: Palette,
+  colormap: Palette, // Alias
+  sun: Sun,
+  lighting: Sun, // Alias
   contrast: Contrast,
-  wireframe: Box,
-  solid: Box,
-  "show-measurements": PencilRuler,
-  visualization: Wallpaper,
+  rainbow: Rainbow,
+  "temp-cold": ThermometerSnowflake,
+  "temp-hot": ThermometerSun,
+  eclipse: Eclipse,
+  grayscale: Eclipse, // Alias
+  wallpaper: Wallpaper,
+  texture: Wallpaper, // Alias
+  grid: Grid,
+  "grid-off": SlashedGrid,
+  "grid-3x3": Grid3x3,
+  points: CircleDot,
+
+  // ==========================================================================
+  // NAVIGATION & ORIENTATION
+  // Used by: orientation cube, navigation aids
+  // ==========================================================================
   compass: Compass,
+  "compass-off": SlashedCompass,
 
-  // ========================================================================
-  // ANNOTATIONS
-  // ========================================================================
-  annotations: MessageSquare,
-  "add-annotation": Plus,
-  "edit-annotation": Edit3,
-  "delete-annotation": Trash2,
+  // ==========================================================================
+  // CORNER POSITIONING
+  // Used by: widget positioning controls
+  // ==========================================================================
+  "corner-down-right": CornerDownRight,
+  "corner-down-left": CornerDownLeft,
+  "corner-up-right": CornerUpRight,
+  "corner-up-left": CornerUpLeft,
+  "corner-br": CornerDownRight, // Alias
+  "corner-bl": CornerDownLeft, // Alias
+  "corner-tr": CornerUpRight, // Alias
+  "corner-tl": CornerUpLeft, // Alias
 
-  // ========================================================================
-  // DATA & EXPORT
-  // ========================================================================
-  "dataset-info": Database,
-  "file-info": FileText,
-  export: Download,
-  import: Upload,
+  // ==========================================================================
+  // ANNOTATIONS & COMMUNICATION
+  // Used by: annotations, notes, measurements display
+  // ==========================================================================
+  message: MessageSquare,
+  annotation: MessageSquare, // Alias
+  note: MessageSquare, // Alias
+  "pencil-ruler": PencilRuler,
 
-  // ========================================================================
-  // PROPERTIES & SETTINGS
-  // ========================================================================
-  properties: Sliders,
-  settings: Settings,
-  info: Info,
-
-  // ========================================================================
-  // ACTIONS
-  // ========================================================================
-  apply: Check,
-  cancel: X,
-  refresh: RefreshCw,
-  fullscreen: Maximize2,
-  minimize: Minimize2,
+  // ==========================================================================
+  // UI ACTIONS
+  // Used by: buttons, confirmations, common actions
+  // ==========================================================================
+  plus: Plus,
+  add: Plus, // Alias
+  edit: Edit3,
   delete: Trash2,
+  trash: Trash2, // Alias
+  check: Check,
+  confirm: Check, // Alias
+  x: X,
+  cancel: X, // Alias
+  close: X, // Alias
+  refresh: RefreshCw,
+  reload: RefreshCw, // Alias
+  fullscreen: Maximize2,
+  maximize: Maximize2, // Alias
+  minimize: Minimize2,
 
-  // ========================================================================
+  // ==========================================================================
+  // DATA & FILES
+  // Used by: data info, import/export
+  // ==========================================================================
+  database: Database,
+  data: Database, // Alias
+  file: FileText,
+  document: FileText, // Alias
+  download: Download,
+  export: Download, // Alias
+  upload: Upload,
+  import: Upload, // Alias
+
+  // ==========================================================================
+  // SETTINGS & INFO
+  // Used by: configuration, properties, information
+  // ==========================================================================
+  settings: Settings,
+  config: Settings, // Alias
+  sliders: Sliders,
+  properties: Sliders, // Alias
+  controls: Sliders, // Alias
+  info: Info,
+  help: Info, // Alias
+
+  // ==========================================================================
   // FALLBACK
-  // ========================================================================
+  // ==========================================================================
   default: Box,
 };
 
@@ -203,94 +258,102 @@ const TOOL_ICON_MAP = {
  * Get Lucide icon component for a tool
  *
  * Priority order:
- * 1. Explicit icon ID provided by tool
- * 2. Tool's own ID
- * 3. Default fallback icon
+ * 1. Explicit icon provided by tool definition (tool.icon)
+ * 2. Tool's ID if it matches an icon name (tool.id)
+ * 3. Default fallback (Box)
  *
- * @param {string} toolId - The tool's ID
- * @param {string} [toolIcon] - Optional explicit icon ID from tool definition
+ * @param {string} toolId - The tool's unique ID
+ * @param {string} [toolIcon] - Optional explicit icon name from tool.icon
  * @returns {React.Component} Lucide icon component
  */
 export function getToolIcon(toolId, toolIcon) {
-  console.log(toolId, toolIcon);
-  // Priority 1: Explicit icon provided by tool
+  // Priority 1: Explicit icon name provided
   if (toolIcon && TOOL_ICON_MAP[toolIcon]) {
     return TOOL_ICON_MAP[toolIcon];
   }
 
-  // Priority 2: Map by tool ID
+  // Priority 2: Tool ID matches an icon name
   if (TOOL_ICON_MAP[toolId]) {
     return TOOL_ICON_MAP[toolId];
   }
 
   // Priority 3: Default fallback
   console.warn(`⚠️ No icon mapping for tool: ${toolId}, using default`);
-  console.log(
-    `   Available mappings: ${Object.keys(TOOL_ICON_MAP)
-      .slice(0, 10)
-      .join(", ")}...`
-  );
+  console.log(`   Hint: Add 'icon: "icon-name"' to tool definition`);
+  console.log(`   Or add mapping: "${toolId}": IconComponent`);
   return TOOL_ICON_MAP["default"];
 }
 
 /**
- * Check if a tool ID has an icon mapping
- * Useful for debugging and validation
+ * Check if an icon name exists
  *
- * @param {string} toolId - Tool ID to check
+ * @param {string} iconName - Icon name to check
  * @returns {boolean}
  */
-export function hasIconMapping(toolId) {
-  return toolId in TOOL_ICON_MAP;
+export function hasIconMapping(iconName) {
+  return iconName in TOOL_ICON_MAP;
 }
 
 /**
- * Get all available icon mappings
+ * Get all available icon names
  * Useful for documentation and debugging
  *
- * @returns {Object} All icon mappings
+ * @returns {string[]} Array of all icon names
  */
-export function getAllIconMappings() {
-  return { ...TOOL_ICON_MAP };
+export function getAvailableIcons() {
+  return Object.keys(TOOL_ICON_MAP);
 }
 
 /**
- * Register a new icon mapping at runtime
- * Allows plugins to add their own icons
+ * Register a new icon at runtime
+ * Allows features/plugins to add their own icons
  *
- * @param {string} toolId - Tool ID to register
+ * @param {string} iconName - Name to register
  * @param {React.Component} iconComponent - Lucide icon component
  */
-export function registerIcon(toolId, iconComponent) {
-  if (TOOL_ICON_MAP[toolId]) {
-    console.warn(`⚠️ Overwriting existing icon mapping for: ${toolId}`);
+export function registerIcon(iconName, iconComponent) {
+  if (TOOL_ICON_MAP[iconName]) {
+    console.warn(`⚠️ Overwriting existing icon mapping: ${iconName}`);
   }
-  TOOL_ICON_MAP[toolId] = iconComponent;
+  TOOL_ICON_MAP[iconName] = iconComponent;
 }
 
 /**
- * USAGE GUIDE FOR CONTRIBUTORS
+ * USAGE EXAMPLES
  *
- * Adding a new tool with an icon:
+ * Example 1: Explicit icon (recommended)
+ * ----------------------------------------
+ * {
+ *   id: "orientation-cube-toggle",
+ *   icon: "compass",          ← References TOOL_ICON_MAP["compass"]
+ *   label: "Orientation"
+ * }
  *
- * 1. In your feature's getTools() method:
- *    return [
- *        {
- *            id: 'my-tool',
- *            icon: 'my-icon',  // String ID
- *            label: 'My Tool',
- *            onClick: () => ...
- *        }
- *    ];
+ * Example 2: Multiple tools, same icon
+ * ----------------------------------------
+ * {
+ *   id: "line-measurement",
+ *   icon: "ruler",            ← Reuses "ruler"
+ *   label: "Line"
+ * }
+ * {
+ *   id: "distance-tool",
+ *   icon: "ruler",            ← Same icon!
+ *   label: "Distance"
+ * }
  *
- * 2. Add to TOOL_ICON_MAP above:
- *    'my-icon': MyLucideIcon,
+ * Example 3: Using aliases
+ * ----------------------------------------
+ * {
+ *   id: "import-data",
+ *   icon: "upload",           ← Or "import" - both work!
+ *   label: "Import"
+ * }
  *
- * 3. That's it! The toolbar will automatically pick it up.
- *
- * Common icon IDs and their meanings:
- * - Use verb-noun format: 'reset-camera', 'toggle-axes', 'add-annotation'
- * - Keep lowercase with hyphens: 'clip-plane' not 'ClipPlane'
- * - Be specific: 'measure-distance' not just 'measure'
- * - Add aliases if needed: both 'clip' and 'clipping' work
+ * Example 4: ID fallback (less flexible)
+ * ----------------------------------------
+ * {
+ *   id: "compass",            ← If no icon property, uses ID
+ *   label: "Orientation"      ← Works if TOOL_ICON_MAP["compass"] exists
+ * }
  */
