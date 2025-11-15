@@ -4,6 +4,7 @@
 import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface.js";
 import { ViewStateAdapter } from "@Core/instances/ViewStateAdapter.js";
 import { instanceTools } from "@VTK/vtkInstanceTools.js";
+import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature";
 
 import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
@@ -32,6 +33,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   constructor() {
     super();
     this.instances = new Map(); // instanceId -> instance data
+    this.reductionFeature = new VTKReductionFeature();
     this._isApplyingRemoteState = false;
   }
 
@@ -407,6 +409,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       instanceData.sceneObjects = pipelineObjects;
       instanceData.initialized = true;
 
+      // Emit event so React knows tools are now available
+      console.log(
+        `📢 Emitting tools-updated event after pipeline initialization`
+      );
+      this._emitToolsUpdate(instanceId);
+
       // Remove the placeholder now that we have real rendering
       if (instanceData.placeholder) {
         instanceData.placeholder.remove();
@@ -534,60 +542,32 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
   /**
    * Get tools for this instance type
-   * Returns dynamic tools based on instance state
+   * Returns dynamic tools based on instance statet
+   *
+   * @param {Object} instanceData - Complete instance data object
+   * @returns {Array<Object>} Tool definitions for toolbar
    */
   getTools(instanceData) {
-    // 🔍 DIAGNOSTIC: Log what we received
-    console.log(`🛠️ VTKInstanceHandler.getTools() called`);
-    console.log(`   instanceData exists: ${!!instanceData}`);
-    console.log(`   instanceData.initialized: ${instanceData?.initialized}`);
-    console.log(`   instanceData.instanceId: ${instanceData?.instanceId}`);
+    if (!instanceData) return [];
 
-    // Check if instance is ready
-    if (!instanceData) {
-      console.warn(`⚠️ getTools() - No instanceData provided`);
-      return [];
-    }
-
-    if (!instanceData.initialized) {
-      console.warn(`⚠️ getTools() - Instance not initialized yet`);
-      return [];
-    }
-
-    const { instanceId } = instanceData;
-    console.log(`✅ Building tools for instance: ${instanceId}`);
-
+    const instanceId = instanceData.instanceId;
     const tools = [];
 
     // ========================================================================
-    // CAMERA TOOLS
+    // CAMERA VIEWS MENU
     // ========================================================================
     tools.push({
-      id: "camera",
+      id: "views",
       type: "menu",
       icon: "camera",
-      label: "Camera",
-      description: "Camera views and controls",
+      label: "Views",
+      description: "Standard camera views",
       options: [
         {
-          id: "reset-camera",
-          icon: "camera-reset",
-          label: "Reset View",
-          description: "Fit all data in view",
-          onClick: () => {
-            console.log("🎯 Reset camera clicked");
-            instanceTools.resetCamera(instanceId);
-          },
-        },
-        { type: "separator" },
-        {
           id: "view-front",
-          icon: "camera-front",
+          icon: "camera",
           label: "Front View",
-          onClick: () => {
-            console.log("🎯 Front view clicked");
-            instanceTools.setCameraView(instanceId, "front");
-          },
+          onClick: () => instanceTools.setCameraView(instanceId, "front"),
         },
         {
           id: "view-back",
@@ -597,7 +577,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         },
         {
           id: "view-top",
-          icon: "camera-top",
+          icon: "camera",
           label: "Top View",
           onClick: () => instanceTools.setCameraView(instanceId, "top"),
         },
@@ -619,23 +599,24 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "Right View",
           onClick: () => instanceTools.setCameraView(instanceId, "right"),
         },
+        { type: "separator" },
+        {
+          id: "reset-camera",
+          icon: "refresh",
+          label: "Reset Camera",
+          onClick: () => instanceTools.resetCamera(instanceId),
+        },
       ],
     });
 
     tools.push({ type: "separator" });
 
     // ========================================================================
-    // WIDGETS MENU
+    // MEASUREMENT WIDGETS MENU (Following plugin pattern)
     // ========================================================================
-
-    // 🔍 DIAGNOSTIC: Check widget states
-    const clipActive = instanceTools.isWidgetActive(instanceId, "plane");
-    const lineActive = instanceTools.isWidgetActive(instanceId, "distance");
+    const lineActive = instanceTools.isWidgetActive(instanceId, "line");
     const angleActive = instanceTools.isWidgetActive(instanceId, "angle");
-
-    console.log(
-      `   Widget states: clip=${clipActive}, line=${lineActive}, angle=${angleActive}`
-    );
+    const planeActive = instanceTools.isWidgetActive(instanceId, "plane");
 
     tools.push({
       id: "widgets",
@@ -645,18 +626,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       description: "Interactive measurement and manipulation tools",
       options: [
         {
-          id: "widget-clip",
-          icon: "clip",
-          label: "Clipping Plane",
-          description: "Cut away parts of the data",
-          active: clipActive,
-          onClick: () => {
-            console.log("🎯 Clipping plane clicked");
-            instanceTools.enableClippingPlane(instanceId);
-            this._emitToolsUpdate(instanceId);
-          },
-        },
-        {
           id: "widget-line",
           icon: "measure-distance",
           label: "Line Measurement",
@@ -664,8 +633,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: lineActive,
           onClick: () => {
             console.log("🎯 Line measurement clicked");
-            instanceTools.enableDistanceMeasurement(instanceId);
-            this._emitToolsUpdate(instanceId);
+            instanceTools.toggleLineMeasurement(instanceId);
+            this._emitToolsUpdate(instanceData);
           },
         },
         {
@@ -676,8 +645,20 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: angleActive,
           onClick: () => {
             console.log("🎯 Angle measurement clicked");
-            instanceTools.enableAngleMeasurement(instanceId);
-            this._emitToolsUpdate(instanceId);
+            instanceTools.toggleAngleMeasurement(instanceId);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "widget-clip",
+          icon: "clip",
+          label: "Clipping Plane",
+          description: "Cut away parts of the data",
+          active: planeActive,
+          onClick: () => {
+            console.log("🎯 Clipping plane clicked");
+            instanceTools.toggleClippingPlane(instanceId);
+            this._emitToolsUpdate(instanceData);
           },
         },
         { type: "separator" },
@@ -689,8 +670,20 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !instanceTools.hasActiveWidgets(instanceId),
           onClick: () => {
             console.log("🎯 Clear all widgets clicked");
-            instanceTools.disableAllTools(instanceId);
-            this._emitToolsUpdate(instanceId);
+            instanceTools.disableMeasurementTools(instanceId);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        { type: "separator" },
+        {
+          id: "show-measurements",
+          icon: "list",
+          label: "Show Measurements",
+          description: "View all recorded measurements",
+          onClick: () => {
+            const measurements = instanceTools.getMeasurements(instanceId);
+            console.log("📊 Measurements:", measurements);
+            // TODO: Show in UI panel
           },
         },
       ],
@@ -699,24 +692,195 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     tools.push({ type: "separator" });
 
     // ========================================================================
-    // AXES TOGGLE
+    // DIMENSIONALITY REDUCTION MENU (Feature pattern)
+    // ========================================================================
+    const reductionState = this.reductionFeature.getState(instanceId);
+    const hasReduction = reductionState?.isApplied || false;
+    const currentMethod = reductionState?.method || null;
+    const currentComponents = reductionState?.components || 2;
+
+    tools.push({
+      id: "reduction",
+      type: "menu",
+      icon: "layers",
+      label: "Dimensionality Reduction",
+      description: "Reduce high-dimensional data for visualization",
+      active: hasReduction,
+      options: [
+        {
+          id: "pca",
+          icon: "chart",
+          label: "PCA",
+          description: "Principal Component Analysis",
+          active: currentMethod === "pca",
+          onClick: async () => {
+            console.log("🎯 PCA clicked");
+            await this.reductionFeature.toggleReduction(instanceId, "pca");
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "tsne",
+          icon: "chart",
+          label: "t-SNE",
+          description: "t-Distributed Stochastic Neighbor Embedding",
+          active: currentMethod === "tsne",
+          onClick: async () => {
+            console.log("🎯 t-SNE clicked");
+            await this.reductionFeature.toggleReduction(instanceId, "tsne");
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "umap",
+          icon: "chart",
+          label: "UMAP",
+          description: "Uniform Manifold Approximation and Projection",
+          active: currentMethod === "umap",
+          onClick: async () => {
+            console.log("🎯 UMAP clicked");
+            await this.reductionFeature.toggleReduction(instanceId, "umap");
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        { type: "separator" },
+        {
+          id: "dimension-2d",
+          icon: "layers-2",
+          label: "2D Projection",
+          description: "Reduce to 2 dimensions",
+          active: hasReduction && currentComponents === 2,
+          disabled: !hasReduction,
+          onClick: async () => {
+            console.log("🎯 2D projection clicked");
+            await this.reductionFeature.setComponents(instanceId, 2);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        {
+          id: "dimension-3d",
+          icon: "layers-3",
+          label: "3D Projection",
+          description: "Reduce to 3 dimensions",
+          active: hasReduction && currentComponents === 3,
+          disabled: !hasReduction,
+          onClick: async () => {
+            console.log("🎯 3D projection clicked");
+            await this.reductionFeature.setComponents(instanceId, 3);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+        { type: "separator" },
+        {
+          id: "restore",
+          icon: "refresh",
+          label: "Restore Original",
+          description: "Remove dimensionality reduction",
+          disabled: !hasReduction,
+          onClick: async () => {
+            console.log("🎯 Restore original clicked");
+            await this.reductionFeature.restoreOriginal(instanceId);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+      ],
+    });
+
+    tools.push({ type: "separator" });
+
+    // ========================================================================
+    // VISUALIZATION CONTROLS MENU
     // ========================================================================
     tools.push({
-      id: "toggle-axes",
+      id: "visualization",
+      type: "menu",
+      icon: "palette",
+      label: "Visualization",
+      description: "Appearance and rendering settings",
+      options: [
+        {
+          id: "colormap-rainbow",
+          icon: "palette",
+          label: "Rainbow Colors",
+          onClick: () => instanceTools.setColorMap(instanceId, "rainbow"),
+        },
+        {
+          id: "colormap-grayscale",
+          icon: "palette",
+          label: "Grayscale",
+          onClick: () => instanceTools.setColorMap(instanceId, "grayscale"),
+        },
+        {
+          id: "colormap-hot",
+          icon: "palette",
+          label: "Hot",
+          onClick: () => instanceTools.setColorMap(instanceId, "hot"),
+        },
+        {
+          id: "colormap-cool",
+          icon: "palette",
+          label: "Cool",
+          onClick: () => instanceTools.setColorMap(instanceId, "cool"),
+        },
+        { type: "separator" },
+        {
+          id: "wireframe",
+          icon: "grid",
+          label: "Toggle Wireframe",
+          onClick: () => {
+            instanceTools.toggleWireframe(instanceId);
+            this._emitToolsUpdate(instanceData);
+          },
+        },
+      ],
+    });
+
+    tools.push({ type: "separator" });
+
+    // ========================================================================
+    // ORIENTATION WIDGET TOGGLE (Following plugin pattern)
+    // ========================================================================
+    const orientationEnabled = instanceTools.isWidgetActive(
+      instanceId,
+      "orientation"
+    );
+
+    tools.push({
+      id: "toggle-orientation",
       type: "button",
-      icon: "toggle-axes",
-      label: "Orientation Axes",
+      icon: "compass",
+      label: "Orientation Cube",
       description: "Toggle orientation cube",
-      active: instanceTools.isAxesVisible(instanceId),
+      active: orientationEnabled,
       onClick: () => {
-        console.log("🎯 Toggle axes clicked");
-        instanceTools.toggleAxes(instanceId);
-        this._emitToolsUpdate(instanceId);
+        console.log("🎯 Toggle orientation clicked");
+        instanceTools.toggleOrientation(instanceId);
+        this._emitToolsUpdate(instanceData);
       },
     });
 
-    console.log(`✅ Built ${tools.length} tools`);
+    console.log(`✅ Built ${tools.length} tools for instance ${instanceId}`);
     return tools;
+  }
+
+  /**
+   * Emit tools update event (causes InstanceViewport to refresh toolbar)
+   *
+   * @param {Object} instanceData - Complete instance data object
+   */
+  _emitToolsUpdate(instanceData) {
+    // Notify InstanceViewport that tools have changed
+    // InstanceViewport will call getTools() again to rebuild toolbar
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("instance-tools-updated", {
+          detail: {
+            instanceId: instanceData.instanceId,
+            instanceData,
+          },
+        })
+      );
+    }
   }
 
   // ===========================================================================

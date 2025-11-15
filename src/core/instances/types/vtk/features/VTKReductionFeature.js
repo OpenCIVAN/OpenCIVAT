@@ -8,7 +8,7 @@ import {
   extractPointsFromPolyData,
   applyReductionToPolyData,
   clonePolydata,
-} from "../utils/VTKPointProcessing.js";
+} from "@VTK/utils/VTKPointProcessing.js";
 
 /**
  * VTK Dimensionality Reduction Feature

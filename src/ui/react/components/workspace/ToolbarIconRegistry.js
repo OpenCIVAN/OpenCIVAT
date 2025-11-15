@@ -38,6 +38,12 @@ import {
   Sun,
   Palette,
   Contrast,
+  PencilRuler,
+  Wallpaper,
+  ThermometerSnowflake,
+  Rainbow,
+  ThermometerSun,
+  Eclipse,
 
   // Annotations & Communication
   MessageSquare,
@@ -138,9 +144,15 @@ const TOOL_ICON_MAP = {
   "toggle-grid": Box, // Show/hide grid
   lighting: Sun,
   colormap: Palette,
+  "colormap-cool": ThermometerSnowflake,
+  "colormap-hot": ThermometerSun,
+  "colormap-rainbow": Rainbow,
+  "colormap-greyscale": Eclipse,
   contrast: Contrast,
   wireframe: Box,
   solid: Box,
+  "show-measurements": PencilRuler,
+  visualization: Wallpaper,
 
   // ========================================================================
   // ANNOTATIONS
