@@ -6,6 +6,7 @@ import { ViewStateAdapter } from "@Core/instances/ViewStateAdapter.js";
 import { instanceTools } from "@VTK/vtkInstanceTools.js";
 import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature";
 import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget";
+import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 
 import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
@@ -177,6 +178,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     containerElement.appendChild(placeholder);
     instanceData.placeholder = placeholder;
 
+    vtkInstanceCursors.setupInstanceCursors(
+      instanceData.instanceId,
+      containerElement
+    );
+    console.log(`✅ Cursors initialized for ${instanceData.instanceId}`);
+
     console.log(`✅ VTK instance ${instanceId} created (awaiting data)`);
     return instanceData;
   }
@@ -189,9 +196,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     console.log(`🧹 VTK Handler: Cleaning up instance ${instanceId}`);
 
-    // 🆕 CLEAN UP FEATURES FIRST (before sceneObjects are destroyed)
+    // CLEAN UP FEATURES FIRST (before sceneObjects are destroyed)
     await this.reductionFeature.cleanup(instanceId);
     vtkOrientationWidget.cleanup(instanceId);
+
+    vtkInstanceCursors.cleanupInstance(instanceId);
+    console.log(`✅ Cursors cleaned up for ${instanceId}`);
 
     // Clean up instance tools
     instanceTools.cleanupTools(instanceId);
@@ -1180,7 +1190,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       tools.sceneObjects.renderWindow.render();
     }
   }
-
 
   // ===========================================================================
   // 🧪 TESTING IN BROWSER CONSOLE

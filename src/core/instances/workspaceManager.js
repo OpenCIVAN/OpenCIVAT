@@ -181,7 +181,7 @@ class WorkspaceManager {
   /**
    * Delete an instance and clean up its resources
    *
-   * UPDATED: Now delegates cleanup to the handler instead of directly
+   * Now delegates cleanup to the handler instead of directly
    * deleting VTK objects. Each handler knows how to clean up its own resources.
    *
    * @param {string} instanceId - ID of instance to delete
@@ -197,7 +197,18 @@ class WorkspaceManager {
     console.log(`🗑️  Deleting instance: ${instanceId} (${instance.type})`);
 
     try {
-      // THE KEY CHANGE: Delegate cleanup to the handler
+      // Unsubscribe from state updates
+      if (
+        this._stateSubscriptions &&
+        this._stateSubscriptions.has(instanceId)
+      ) {
+        const unsubscribe = this._stateSubscriptions.get(instanceId);
+        unsubscribe();
+        this._stateSubscriptions.delete(instanceId);
+        console.log(`✅ State subscription cleaned up for ${instanceId}`);
+      }
+
+      // Delegate cleanup to the handler
       // The handler knows how to properly dispose of its resources
       // VTK handler deletes VTK objects, Plotly handler cleans up Plotly, etc.
       await instance.handler.cleanup(instance.instanceData);

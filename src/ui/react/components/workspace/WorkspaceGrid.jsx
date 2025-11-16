@@ -129,6 +129,7 @@ export function WorkspaceGrid() {
                 isRemote: true,
                 remoteId: remote.instanceId,  // The actual instance ID from Y.js
                 userName: remote.userName,
+                userId: remote.userId,  // FIX: Include userId for RemoteInstancePlaceholder
             }]);
         });
 

@@ -42,8 +42,7 @@ export function useInstances() {
 
     return () => {
       console.log("🔗 useInstances: Cleaning up subscription");
-      // Note: workspaceManager doesn't have removeListener yet,
-      // but we'll add it in the full implementation
+      workspaceManager.removeListener(updateInstances);
     };
   }, []);
 

@@ -75,20 +75,25 @@ export const useDatasetStore = create((set, get) => ({
    */
   refresh: () => {
     // Import dynamically to avoid circular dependency
-    import("@Init/appInitializer.js").then(({ datasetManager }) => {
-      if (!datasetManager) {
-        console.warn("⚠️ DatasetManager not available yet");
-        return;
-      }
+    import("@Init/appInitializer.js")
+      .then(({ datasetManager }) => {
+        if (!datasetManager) {
+          console.warn("⚠️ DatasetManager not available yet");
+          return;
+        }
 
-      const datasets = datasetManager.getAllDatasets();
-      const ids = datasets.map((ds) => ds.id);
+        const datasets = datasetManager.getAllDatasets();
+        const ids = datasets.map((ds) => ds.id);
 
-      set({
-        datasetIds: ids,
-        _refreshCounter: get()._refreshCounter + 1,
+        set({
+          datasetIds: ids,
+          _refreshCounter: get()._refreshCounter + 1,
+        });
+      })
+      .catch((error) => {
+        console.error("❌ Failed to refresh dataset store:", error);
+        // Don't throw - just log the error to prevent unhandled rejection
       });
-    });
   },
 
   /**
@@ -114,6 +119,82 @@ export const useDatasetStore = create((set, get) => ({
    */
   clearSelection: () => {
     set({ selectedDatasetId: null });
+  },
+
+  /**
+   * Add a dataset to the store
+   * Called when a remote dataset is discovered
+   */
+  addDataset: (dataset) => {
+    console.log("📊 React: Adding dataset to store:", dataset.id);
+
+    // Import dynamically to avoid circular dependency
+    import("@Init/appInitializer.js").then(({ datasetManager }) => {
+      if (!datasetManager) {
+        console.warn("⚠️ DatasetManager not available yet");
+        return;
+      }
+
+      // Add to dataset manager if it's a placeholder/remote dataset
+      if (dataset.isRemote || dataset.unavailable) {
+        // Store in a separate map for remote/unavailable datasets
+        // This is just for UI - we don't actually have the data
+        const currentIds = get().datasetIds;
+        if (!currentIds.includes(dataset.id)) {
+          set({
+            datasetIds: [...currentIds, dataset.id],
+            _refreshCounter: get()._refreshCounter + 1,
+          });
+        }
+      } else {
+        // Refresh from manager for local datasets
+        get().refresh();
+      }
+    });
+  },
+
+  /**
+   * Remove a dataset from the store
+   */
+  removeDataset: (datasetId) => {
+    console.log("📊 React: Removing dataset from store:", datasetId);
+
+    const currentIds = get().datasetIds;
+    set({
+      datasetIds: currentIds.filter((id) => id !== datasetId),
+      _refreshCounter: get()._refreshCounter + 1,
+    });
+
+    // Clear selection if this was the selected dataset
+    if (get().selectedDatasetId === datasetId) {
+      set({ selectedDatasetId: null });
+    }
+  },
+
+  /**
+   * Update annotations for a dataset
+   */
+  updateAnnotations: (datasetId, annotations) => {
+    console.log("📊 React: Updating annotations for dataset:", datasetId);
+
+    // Import dynamically to avoid circular dependency
+    import("@Init/appInitializer.js").then(({ datasetManager }) => {
+      if (!datasetManager) {
+        console.warn("⚠️ DatasetManager not available yet");
+        return;
+      }
+
+      const dataset = datasetManager.getDataset(datasetId);
+      if (dataset) {
+        // Update annotations in the dataset
+        dataset.annotations = annotations;
+
+        // Trigger refresh to update UI
+        set({
+          _refreshCounter: get()._refreshCounter + 1,
+        });
+      }
+    });
   },
 }));
 

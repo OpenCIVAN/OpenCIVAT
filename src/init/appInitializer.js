@@ -213,7 +213,19 @@ export async function initializePhase2() {
       );
     }
 
-    // STEP 5: Text chat
+    // STEP 6: Cursor system
+    console.log("🖱️ Initializing cursor system...");
+    try {
+      const { initializeCursorTracking } = await import(
+        "@Collaboration/presence/cursors.js"
+      );
+      initializeCursorTracking();
+      console.log("   ✓ Cursor tracking active");
+    } catch (cursorError) {
+      console.warn("⚠️ Cursor system failed to initialize:", cursorError);
+    }
+
+    // STEP 7: Text chat
     // Real-time text communication between users
     console.log("💬 Initializing text chat...");
     if (textChat && typeof textChat.initialize === "function") {
@@ -227,7 +239,7 @@ export async function initializePhase2() {
       console.warn("⚠️ Text chat not available");
     }
 
-    // STEP 6: Workspace manager
+    // STEP 8: Workspace manager
     // Manages multiple visualization instances
     console.log("🎨 Initializing workspace manager...");
     if (workspaceManager && typeof workspaceManager.initialize === "function") {

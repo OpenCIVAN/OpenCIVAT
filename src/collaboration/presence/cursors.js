@@ -29,6 +29,21 @@ let mouseMoveTimeout = null;
 const cursorUpdateListeners = new Set();
 const cursorRemoveListeners = new Set();
 
+// Track which instance is currently active
+let activeInstanceId = null;
+
+export function setActiveInstance(instanceId) {
+  activeInstanceId = instanceId;
+  // Re-broadcast with new instance context
+  if (lastMousePosition.timestamp > 0) {
+    broadcastCursorPosition();
+  }
+}
+
+export function getActiveInstance() {
+  return activeInstanceId;
+}
+
 // ----------------------------------------------------------------------------
 // Mouse Tracking (Global Page Coordinates)
 // ----------------------------------------------------------------------------
@@ -82,7 +97,10 @@ function broadcastCursorPosition(windowActive = true) {
   };
 
   // Update position data in Y.js
+  if (!activeInstanceId) return;
+
   yCursors.set(getUserId(), {
+    instanceId: activeInstanceId,
     x: lastMousePosition.x,
     y: lastMousePosition.y,
     timestamp: lastMousePosition.timestamp,

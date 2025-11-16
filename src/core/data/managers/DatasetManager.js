@@ -125,12 +125,26 @@ export class DatasetManager extends EventEmitter {
       request.onsuccess = () => {
         const storedDatasets = request.result;
         storedDatasets.forEach((data) => {
-          const dataset = Dataset.fromJSON(data);
-          this._datasets.set(dataset.id, dataset);
+          if (!data.id) {
+            console.warn(
+              `⚠️ Skipping dataset without ID: ${data.filename || "unknown"}`
+            );
+            console.warn(`   This dataset is corrupted and will be ignored`);
+            return; // Skip this dataset
+          }
 
-          // IMPORTANT: Sync metadata to Y.js for collaboration
-          // This ensures other users can see what datasets we have
-          this._syncDatasetMetadataToYjs(dataset);
+          try {
+            const dataset = Dataset.fromJSON(data);
+            this._datasets.set(dataset.id, dataset);
+
+            // IMPORTANT: Sync metadata to Y.js for collaboration
+            // This ensures other users can see what datasets we have
+            this._syncDatasetMetadataToYjs(dataset);
+          } catch (error) {
+            console.error(`❌ Failed to load dataset ${data.id}:`, error);
+            console.error(`   Dataset: ${data.filename || "unknown"}`);
+            // Skip corrupted datasets instead of crashing
+          }
         });
 
         console.log(`📦 Synced ${storedDatasets.length} datasets to Y.js`);
@@ -776,14 +790,36 @@ export class DatasetManager extends EventEmitter {
   // ==================== PERSISTENCE ====================
 
   async _persistDataset(dataset) {
+    // Validate dataset has required id field before persisting
+    if (!dataset.id) {
+      console.error("❌ Cannot persist dataset without ID:", dataset);
+      throw new Error(
+        `Dataset ${dataset.filename} is missing required 'id' field`
+      );
+    }
+
     const transaction = this._db.transaction(["datasets"], "readwrite");
     const store = transaction.objectStore("datasets");
     const data = dataset.toJSON();
 
+    // Double-check the JSON has the id
+    if (!data.id) {
+      console.error("❌ Dataset.toJSON() did not include 'id':", data);
+      throw new Error(
+        `Dataset ${dataset.filename} toJSON() missing 'id' field`
+      );
+    }
+
     return new Promise((resolve, reject) => {
       const request = store.put(data);
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(new Error("Failed to persist dataset"));
+      request.onerror = () => {
+        console.error("❌ IndexedDB put failed:", request.error);
+        console.error("   Dataset:", data);
+        reject(
+          new Error(`Failed to persist dataset: ${request.error.message}`)
+        );
+      };
     });
   }
 
@@ -839,6 +875,30 @@ export class DatasetManager extends EventEmitter {
       this._db = null;
     }
     console.log("📦 DatasetManager: Cleanup complete");
+  }
+
+  async clearCorruptedData() {
+    console.log("🗑️ Clearing potentially corrupted IndexedDB data...");
+
+    try {
+      const transaction = this._db.transaction(["datasets"], "readwrite");
+      const store = transaction.objectStore("datasets");
+
+      return new Promise((resolve, reject) => {
+        const request = store.clear();
+        request.onsuccess = () => {
+          console.log("✅ IndexedDB cleared successfully");
+          console.log("   Please refresh the page to start fresh");
+          resolve();
+        };
+        request.onerror = () => {
+          console.error("❌ Failed to clear IndexedDB:", request.error);
+          reject(request.error);
+        };
+      });
+    } catch (error) {
+      console.error("❌ Error clearing IndexedDB:", error);
+    }
   }
 }
 

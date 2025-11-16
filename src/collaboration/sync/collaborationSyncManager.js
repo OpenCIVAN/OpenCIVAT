@@ -12,7 +12,6 @@ import {
 class CollaborationSyncManager {
   constructor() {
     this._initialized = false;
-    this.pendingDatasets = new Map();
     this.loadingDatasets = new Set();
   }
 
@@ -149,34 +148,31 @@ class CollaborationSyncManager {
    * Handle a remote dataset
    */
   async handleRemoteDataset(datasetId, remoteDataset) {
-    // Prevent infinite loops
+    // FIX: Set loading flag FIRST to prevent race conditions
     if (this.loadingDatasets.has(datasetId)) {
       console.log(`   Already loading dataset: ${datasetId}`);
       return;
     }
 
-    // Check if we already have this dataset
-    const datasetManager = window.CIA?.datasetManager;
-    if (datasetManager && datasetManager.getDatasetSync) {
-      const localDataset = datasetManager.getDatasetSync(datasetId);
-
-      if (localDataset?.polydata) {
-        console.log(`   Dataset already loaded locally: ${remoteDataset.name}`);
-        return;
-      }
-    }
-
-    // Check if we're already loading this dataset
-    if (this.pendingDatasets.has(datasetId)) {
-      console.log(`   Dataset already being loaded: ${remoteDataset.name}`);
-      return;
-    }
-
-    console.log(`   Processing remote dataset: ${remoteDataset.name}`);
-    this.pendingDatasets.set(datasetId, true);
+    // Mark as loading immediately to prevent duplicate requests
     this.loadingDatasets.add(datasetId);
 
     try {
+      // Check if we already have this dataset
+      const datasetManager = window.CIA?.datasetManager;
+      if (datasetManager && datasetManager.getDatasetSync) {
+        const localDataset = datasetManager.getDatasetSync(datasetId);
+
+        if (localDataset?.polydata) {
+          console.log(
+            `   Dataset already loaded locally: ${remoteDataset.name}`
+          );
+          return;
+        }
+      }
+
+      console.log(`   Processing remote dataset: ${remoteDataset.name}`);
+
       // If it has a public path, fetch from server
       if (
         remoteDataset.publicPath &&
@@ -215,7 +211,7 @@ class CollaborationSyncManager {
     } catch (error) {
       console.error(`❌ Failed to load remote dataset:`, error);
     } finally {
-      this.pendingDatasets.delete(datasetId);
+      // FIX: Remove pendingDatasets - only use loadingDatasets
       this.loadingDatasets.delete(datasetId);
     }
   }

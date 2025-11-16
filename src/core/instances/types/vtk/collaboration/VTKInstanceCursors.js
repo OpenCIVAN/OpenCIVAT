@@ -58,6 +58,13 @@ class VTKInstanceCursors {
     const cursors = this.cursorElements.get(instanceId);
     if (!cursors) return;
 
+    // NEW: Only show cursor if it's in THIS instance
+    if (cursorData.instanceId !== instanceId) {
+      // Cursor is in a different instance, hide it
+      this.removeCursor(instanceId, userId);
+      return;
+    }
+
     // Get or create cursor element
     let cursorEl = cursors.get(userId);
     if (!cursorEl) {

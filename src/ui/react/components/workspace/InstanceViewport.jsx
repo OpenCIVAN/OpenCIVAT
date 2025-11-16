@@ -10,11 +10,12 @@ import {
 } from 'lucide-react';
 
 // Import centralized icon registry
-import { getToolIcon } from "./ToolbarIconRegistry.js";
+import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
 
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
-import "./InstanceViewport.css";
+import { setActiveInstance } from '@Collaboration/presence/cursors.js';
+import "@UI/react/components/workspace/InstanceViewport.css";
 
 /**
  * InstanceViewport
@@ -456,7 +457,11 @@ export function InstanceViewport({
 
             {/* Viewport */}
             <div className="viewport-wrapper">
-                <div ref={containerRef} className="viewport-container" />
+                <div ref={containerRef} className="viewport-container" onMouseEnter={() => {
+                    if (actualInstanceId) {
+                        setActiveInstance(actualInstanceId);
+                    }
+                }} />
 
                 {loading && (
                     <div className="viewport-overlay loading">
