@@ -173,7 +173,69 @@ async function processRemoteDataset(datasetId, metadata) {
 export function initializeDatasetObserver() {
   // ← No parameter!
   console.log("🔍 Setting up dataset observer");
+  // CRITICAL FIX: Check for existing datasets in Y.js before setting up observer
+  // Y.js observers only fire for NEW changes, not existing data
+  console.log("🔍 Checking for existing datasets in Y.js...");
+  const existingDatasets = Array.from(yDatasets.keys());
+  console.log(`   Found ${existingDatasets.length} existing dataset(s)`);
 
+  existingDatasets.forEach((datasetId) => {
+    const remoteDataset = yDatasets.get(datasetId);
+
+    if (!remoteDataset) {
+      console.log(`   ⚠️ Dataset ${datasetId} not found in Y.js map`);
+      return;
+    }
+
+    // Get current user ID
+    const currentUserId = window.CIA?.sessionManager?.userId;
+
+    // FIX: Use userId field (top-level) instead of uploadedBy (nested in metadata)
+    if (remoteDataset.userId === currentUserId) {
+      console.log(`   ⏭️ Skipping own dataset: ${remoteDataset.filename}`);
+      return;
+    }
+
+    // Check if we already have this dataset
+    const existing = datasetManager.getDataset(datasetId);
+    if (existing) {
+      console.log(
+        `   ✓ Already have dataset ${remoteDataset.filename}, skipping`
+      );
+      return;
+    }
+
+    console.log(
+      `   📥 Processing existing remote dataset: ${remoteDataset.filename}`
+    );
+
+    // Create dataset from remote metadata (same logic as the observer)
+    const dataset = new Dataset({
+      id: datasetId,
+      filename: remoteDataset.filename,
+      fileType: remoteDataset.fileType,
+      hash: remoteDataset.hash,
+      publicPath: remoteDataset.publicPath,
+      storageKey: remoteDataset.storageKey,
+      userId: remoteDataset.userId,
+      fileStatus: remoteDataset.publicPath ? "fetchable" : "needs-upload",
+      metadata: {
+        fileSize: remoteDataset.metadata?.fileSize || 0,
+        uploadedAt: remoteDataset.metadata?.uploadedAt || Date.now(),
+        uploadedBy: remoteDataset.metadata?.uploadedBy,
+      },
+    });
+
+    // Add to DatasetManager
+    datasetManager._datasets.set(datasetId, dataset);
+    // Persist to IndexedDB so it survives page reload
+    datasetManager._persistDataset(dataset).catch((err) => {
+      console.error(`   ❌ Failed to persist dataset ${datasetId}:`, err);
+    });
+    datasetManager._emit("datasetAdded", dataset);
+  });
+
+  // Now set up the observer for FUTURE changes
   yDatasets.observe((event) => {
     console.log(`🔍 Dataset observer fired ${event.changes.keys.size} changes`);
 
@@ -187,18 +249,21 @@ export function initializeDatasetObserver() {
         }
 
         console.log(`📥 Remote dataset received: ${remoteDataset.filename}`);
-        console.log(`   Uploaded by: ${remoteDataset.uploadedBy}`);
+        console.log(
+          `   Uploaded by: ${remoteDataset.metadata?.uploadedBy || "unknown"}`
+        );
 
         // Get current user ID - this is a VALUE not a function
         const currentUserId = window.CIA?.sessionManager?.userId;
         console.log(`   My ID: ${currentUserId}`);
+        // FIX: Use userId field (top-level) instead of uploadedBy (nested in metadata)
         console.log(
-          `   Am I the uploader? ${remoteDataset.uploadedBy === currentUserId}`
+          `   Am I the uploader? ${remoteDataset.userId === currentUserId}`
         );
 
         // FIX 1: Remove the parentheses - currentUserId is a value, not a function!
-        if (remoteDataset.uploadedBy === currentUserId) {
-          // ← No parentheses!
+        // FIX: Compare userId instead of uploadedBy
+        if (remoteDataset.userId === currentUserId) {
           console.log(`   ⏭️ Skipping own dataset`);
           return;
         }
