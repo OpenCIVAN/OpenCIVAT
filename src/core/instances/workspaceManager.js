@@ -5,6 +5,7 @@
 import { generateInstanceId } from "@Utils/idGenerator.js";
 import { getHandlerForType } from "@Core/instances/types/instanceTypesInit.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
+import { yInstances } from "@Collaboration/yjs/yjsSetup.js";
 
 /**
  * WorkspaceManager
@@ -133,9 +134,9 @@ class WorkspaceManager {
         );
         const unsubscribe = instanceData.stateAdapter.observe((stateUpdate) => {
           // Update Y.js with the new state so other users can see it
-          const yInstance = window.CIA?.yInstances?.get(instanceId);
+          const yInstance = yInstances.get(instanceId);
           if (yInstance && yInstance.userId === this._getCurrentUserId()) {
-            window.CIA.yInstances.set(instanceId, {
+            yInstances.set(instanceId, {
               ...yInstance,
               typeSpecificState: stateUpdate.fullState,
               lastModified: Date.now(),

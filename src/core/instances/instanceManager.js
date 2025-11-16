@@ -488,9 +488,6 @@ class InstanceManager {
    * INTERNAL: Sync instance metadata to Y.js
    */
   _syncToYjs(instanceId, datasetId) {
-    // Access yInstances through global to ensure it's initialized
-    const yInstances = window.CIA?.yInstances;
-
     if (!yInstances) {
       console.error("❌ Cannot sync instance: Y.js not initialized yet");
       console.error("   This should not happen if Phase 1 completed correctly");
@@ -502,7 +499,7 @@ class InstanceManager {
         userId: getUserId(),
         userName: getUserName(),
         datasetId: datasetId || null,
-        type: "vtk",
+        type: "vtk", // TODO: Check if this should be here
         visibility: "shared",
         createdAt: Date.now(),
         lastModified: Date.now(),

@@ -19,6 +19,22 @@ const upload = multer({
 const UPLOAD_DIR = path.join(__dirname, "../../uploads");
 
 /**
+ * Extract file type (extension) from filename
+ * @param {string} filename - The filename to parse
+ * @returns {string} - The lowercase file extension without the dot
+ */
+function extractFileType(filename) {
+  if (!filename || typeof filename !== 'string') {
+    return 'unknown';
+  }
+  const parts = filename.split('.');
+  if (parts.length < 2) {
+    return 'unknown';
+  }
+  return parts[parts.length - 1].toLowerCase();
+}
+
+/**
  * POST /api/datasets/upload
  * Upload a new dataset file
  * This matches what your ServerStorageProvider expects
@@ -62,6 +78,9 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
     const storageKey = `${datasetId}-${originalname}`;
     const filePath = path.join(UPLOAD_DIR, storageKey);
 
+    // Extract file type from filename
+    const fileType = extractFileType(originalname);
+
     // Ensure uploads directory exists
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
 
@@ -76,15 +95,16 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
 
     // Insert database record with hash in metadata
     const result = await pool.query(
-      `INSERT INTO datasets 
-       (id, session_id, filename, file_size, mime_type, storage_key, uploaded_by, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO datasets
+       (id, session_id, filename, file_size, file_type, mime_type, storage_key, uploaded_by, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         datasetId,
         defaultSessionId,
         originalname,
         size,
+        fileType,
         mimetype,
         storageKey,
         uploadedBy || "anonymous",
@@ -174,9 +194,9 @@ router.get("/session/:sessionId", async (req, res, next) => {
     const { sessionId } = req.params;
 
     const result = await pool.query(
-      `SELECT id, filename, file_size, mime_type, metadata, uploaded_at, uploaded_by
-       FROM datasets 
-       WHERE session_id = $1 
+      `SELECT id, filename, file_size, file_type, mime_type, metadata, uploaded_at, uploaded_by
+       FROM datasets
+       WHERE session_id = $1
        ORDER BY uploaded_at DESC`,
       [sessionId]
     );

@@ -304,7 +304,7 @@ export class DatasetManager extends EventEmitter {
         filename: file.name,
         fileType: fileType, // ← THE KEY FIX
         hash: hash,
-        storageKey: storageResult.key || hash,
+        storageKey: storageResult || hash, // storageResult IS the key, not storageResult.key
         userId: userId,
         metadata: {
           fileSize: file.size,
@@ -481,7 +481,7 @@ export class DatasetManager extends EventEmitter {
         fileType: fileType,
         hash: hash,
         publicPath: publicPath,
-        storageKey: storageResult.key || hash,
+        storageKey: storageResult || hash, // storageResult IS the key, not storageResult.key
         userId: userId,
         rawFile: file, // Keep reference for immediate use
         metadata: {

@@ -22,6 +22,7 @@ CREATE TABLE datasets (
     session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
     filename VARCHAR(255) NOT NULL,
     file_size BIGINT NOT NULL,
+    file_type VARCHAR(20) NOT NULL DEFAULT 'unknown',
     mime_type VARCHAR(100),
     storage_key VARCHAR(500) NOT NULL,
     metadata JSONB DEFAULT '{}'::jsonb,
@@ -94,13 +95,13 @@ $$ language 'plpgsql';
 -- Apply the trigger to relevant tables
 CREATE TRIGGER update_sessions_updated_at BEFORE UPDATE ON sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-    
+
 CREATE TRIGGER update_datasets_updated_at BEFORE UPDATE ON datasets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-    
+
 CREATE TRIGGER update_annotations_updated_at BEFORE UPDATE ON annotations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-    
+
 CREATE TRIGGER update_view_configs_updated_at BEFORE UPDATE ON view_configurations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

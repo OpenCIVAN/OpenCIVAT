@@ -211,7 +211,6 @@ class CollaborationSyncManager {
     } catch (error) {
       console.error(`❌ Failed to load remote dataset:`, error);
     } finally {
-      // FIX: Remove pendingDatasets - only use loadingDatasets
       this.loadingDatasets.delete(datasetId);
     }
   }
@@ -283,7 +282,6 @@ class CollaborationSyncManager {
 
     return {
       initialized: this._initialized,
-      pendingDatasets: this.pendingDatasets.size,
       loadingDatasets: this.loadingDatasets.size,
       remoteDatasets: Array.from(yDatasets.keys()).length,
       localDatasets: Object.keys(datasetStore.datasets || {}).length,
