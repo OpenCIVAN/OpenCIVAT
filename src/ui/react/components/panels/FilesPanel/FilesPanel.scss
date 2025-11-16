@@ -1,0 +1,34 @@
+@use "@UI/react/styles/tokens" as *;
+
+.files-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-secondary);
+}
+
+.files-panel__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-md;
+}
+
+.files-panel__upload-btn {
+  width: 100%;
+  padding: $space-sm $space-md;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: $border-radius-sm;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--accent-hover);
+  }
+}
+
+.files-panel__list {
+  margin-top: $space-md;
+}

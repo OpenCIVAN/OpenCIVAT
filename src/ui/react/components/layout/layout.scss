@@ -1,0 +1,324 @@
+// src/ui/react/components/layout/layout.scss
+// Styles for ThreeEdgeLayout and ResizablePanel components
+// Uses design tokens for consistency
+
+@use "@UI/react/styles/tokens" as *;
+
+// =============================================================================
+// THREE EDGE LAYOUT
+// =============================================================================
+
+.three-edge-layout {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.three-edge-layout__top {
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.three-edge-layout__main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.three-edge-layout__center {
+  flex: 1;
+  min-width: 0; // Critical for flexbox children
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.three-edge-layout__bottom {
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+// =============================================================================
+// RESIZABLE PANEL
+// =============================================================================
+
+.resizable-panel {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--bg-secondary);
+  transition: width var(--transition-smooth);
+
+  &--left {
+    border-right: 1px solid var(--border-subtle);
+  }
+
+  &--right {
+    border-left: 1px solid var(--border-subtle);
+  }
+}
+
+.resizable-panel__content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// =============================================================================
+// PANEL DIVIDER (Resize Handle)
+// =============================================================================
+
+.panel-divider {
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1000;
+  background: transparent;
+  transition: background var(--transition-fast);
+
+  &--left {
+    left: -2px;
+  }
+
+  &--right {
+    right: -2px;
+  }
+
+  &:hover {
+    background: var(--accent-primary-subtle);
+  }
+
+  &--active {
+    background: var(--accent-primary);
+  }
+}
+
+.panel-divider__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  background: var(--border-medium);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+
+  .panel-divider:hover &,
+  .panel-divider--active & {
+    opacity: 1;
+  }
+}
+
+// =============================================================================
+// ACTIVITY BAR (Collapsed State)
+// =============================================================================
+
+.activity-bar {
+  width: 48px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $space-md 0;
+  background: var(--bg-secondary);
+}
+
+.activity-bar__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-sm;
+  width: 100%;
+}
+
+.activity-bar__expand {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-medium);
+    color: var(--text-secondary);
+  }
+
+  &:active {
+    background: var(--accent-primary-subtle);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+}
+
+// =============================================================================
+// PANEL HEADER (For child components)
+// =============================================================================
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 $space-md;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+}
+
+.panel-header__content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.panel-header__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.panel-header__collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-medium);
+    color: var(--text-secondary);
+  }
+}
+
+// =============================================================================
+// ACTIVITY BAR ICON BUTTON (For child components to use)
+// =============================================================================
+
+.activity-bar-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+
+  &:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-medium);
+    color: var(--text-secondary);
+  }
+
+  &--active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+
+    &:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+  }
+}
+
+// Badge for activity bar icons (notifications, counts, etc.)
+.activity-bar-icon__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--error);
+  color: var(--text-primary);
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 2px solid var(--bg-secondary);
+}
+
+// =============================================================================
+// RESPONSIVE ADJUSTMENTS
+// =============================================================================
+
+@media (max-width: 768px) {
+  .resizable-panel {
+    // On mobile, panels become full-screen overlays when open
+    &--left,
+    &--right {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      z-index: 200;
+    }
+
+    &--left {
+      left: 0;
+    }
+
+    &--right {
+      right: 0;
+    }
+  }
+
+  // Disable resize on mobile
+  .panel-divider {
+    display: none;
+  }
+}
+
+// =============================================================================
+// ACCESSIBILITY
+// =============================================================================
+
+// Focus indicators
+.activity-bar__expand:focus-visible,
+.panel-header__collapse:focus-visible,
+.activity-bar-icon:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  .resizable-panel,
+  .panel-divider,
+  .activity-bar__expand,
+  .panel-header__collapse,
+  .activity-bar-icon {
+    transition: none;
+  }
+}

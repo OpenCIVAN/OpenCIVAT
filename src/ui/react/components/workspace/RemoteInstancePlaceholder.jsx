@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { User, Download, Eye } from 'lucide-react';
-// import './RemoteInstancePlaceholder.scss';
+import './RemoteInstancePlaceholder.scss';
 
 /**
  * RemoteInstancePlaceholder
