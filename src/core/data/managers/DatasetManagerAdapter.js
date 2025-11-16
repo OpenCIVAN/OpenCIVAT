@@ -280,6 +280,7 @@ export class DatasetManagerAdapter {
           filename: serverDataset.filename,
           fileType: serverDataset.file_type,
           fileSize: serverDataset.file_size || 0,
+          userId: serverDataset.uploaded_by, // CRITICAL: Set userId for Y.js filtering
           uploadedBy: serverDataset.uploaded_by,
           uploadedAt: serverDataset.uploaded_at || Date.now(),
           publicPath: serverDataset.public_path || null,

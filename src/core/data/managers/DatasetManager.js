@@ -193,6 +193,7 @@ export class DatasetManager extends EventEmitter {
           filename: serverDataset.filename,
           fileType: serverDataset.file_type,
           fileSize: serverDataset.file_size,
+          userId: serverDataset.uploaded_by, // CRITICAL: Set userId for Y.js filtering
           uploadedBy: serverDataset.uploaded_by,
           uploadedAt: serverDataset.uploaded_at,
           cacheKey: serverDataset.id,
