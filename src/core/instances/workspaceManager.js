@@ -159,6 +159,12 @@ class WorkspaceManager {
 
           // Update Y.js with the new state so other users can see it
           const yInstance = yInstances.get(instanceId);
+          console.log(
+            `   yInstances.get(${instanceId}): ${
+              yInstance ? "FOUND" : "NOT FOUND"
+            }`
+          );
+
           // FIX: Allow ANY viewer of a shared instance to publish state changes
           // This enables true bidirectional syncing for all collaborators
           if (yInstance) {
@@ -183,7 +189,6 @@ class WorkspaceManager {
               const inst = yInstances.get(id);
               console.warn(`     - ${id} (owner: ${inst.userId})`);
             });
-            console.log(`📤 Published state update for ${instanceId}`);
             if (allYInstances.length === 0) {
               console.warn(`     (none - Y.js instances map is empty!)`);
             }
