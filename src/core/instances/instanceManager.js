@@ -72,20 +72,15 @@ class InstanceManager {
         const instance = yInstances.get(instanceId);
 
         if (!instance) {
-          console.log(`   ⚠️ Instance ${instanceId} not found in Y.js map`);
-          console.log(`   Change action was: ${change.action}`);
-          console.log(`   Y.js map size: ${yInstances.size}`);
-          console.log(
-            `   Y.js map keys: [${Array.from(yInstances.keys()).join(", ")}]`
-          );
-
           // If this is a delete event, that's expected behavior
           if (change.action === "delete") {
-            console.log(`   ✓ Delete event - instance was removed as expected`);
+            console.log(`   ✓ Delete event for ${instanceId}`);
             this._notifySyncCallbacks({
               action: "delete",
               instanceId,
             });
+          } else {
+            console.log(`   ⚠️ Instance ${instanceId} not found in Y.js map`);
           }
           return;
         }
@@ -144,12 +139,6 @@ class InstanceManager {
                 ? instance.lastModifiedBy === getUserId()
                 : instance.userId === getUserId()) &&
               Date.now() - instance.typeSpecificState.lastUpdated < 100;
-
-            console.log(`📨 Received state update for ${instanceId}`);
-            console.log(
-              `   From user: ${instance.lastModifiedBy || instance.userId}`
-            );
-            console.log(`   Is our recent update: ${isOurRecentUpdate}`);
 
             if (!isOurRecentUpdate && localInstance.instanceData.stateAdapter) {
               // Apply the remote state through the adapter
@@ -273,18 +262,18 @@ class InstanceManager {
     // Mark this as a local instance so we don't recreate it when Y.js echoes back
     this._localInstanceIds.add(instanceId);
 
+    // CRITICAL FIX: Sync to Y.js BEFORE creating the instance so the Y.js entry
+    // exists when the stateAdapter observer is set up. This prevents the race
+    // condition where the observer fires but can't find the instance in Y.js.
+    this._syncToYjs(instanceId, datasetId);
+
     // Create through workspace manager
+    // The observer set up here will now find the instance in Y.js
     await workspaceManager.createInstance(container, {
       instanceId,
       type: "vtk",
       datasetId,
     });
-
-    // CRITICAL: Sync to Y.js so other users can see it!
-    console.log(`🔍 About to sync instance ${instanceId} to Y.js`);
-    console.log(`   yInstances exists: ${!!yInstances}`);
-    console.log(`   getUserId: ${getUserId()}`);
-    this._syncToYjs(instanceId, datasetId);
 
     return instanceId;
   }
@@ -520,14 +509,6 @@ class InstanceManager {
       return;
     }
     try {
-      // DEBUG: Log map state BEFORE writing
-      console.log(`🔍 [instanceManager] BEFORE set:`);
-      console.log(`   yInstances reference: ${yInstances.constructor.name}`);
-      console.log(`   yInstances.size: ${yInstances.size}`);
-      console.log(
-        `   yInstances keys: [${Array.from(yInstances.keys()).join(", ")}]`
-      );
-
       yInstances.set(instanceId, {
         id: instanceId,
         userId: getUserId(),
@@ -539,18 +520,6 @@ class InstanceManager {
         lastModified: Date.now(),
         typeSpecificState: null, // Will be populated by requestSync()
       });
-
-      // DEBUG: Log map state AFTER writing and verify we can read it back
-      console.log(`🔍 [instanceManager] AFTER set:`);
-      console.log(`   yInstances.size: ${yInstances.size}`);
-      console.log(
-        `   yInstances keys: [${Array.from(yInstances.keys()).join(", ")}]`
-      );
-      const readBack = yInstances.get(instanceId);
-      console.log(`   Can read back: ${readBack ? "YES" : "NO"}`);
-      if (readBack) {
-        console.log(`   Read back userId: ${readBack.userId}`);
-      }
 
       console.log(`📤 Instance synced to Y.js: ${instanceId}`);
       console.log(`   Owner: ${getUserName()} (${getUserId()})`);
