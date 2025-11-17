@@ -1514,6 +1514,17 @@ console.log('Tools:', tools);
       };
     }
 
+    // 🆕 ADD REDUCTION STATE: Include dimensionality reduction state
+    const instanceId = instanceData.instanceId;
+    const reductionState = this.reductionFeature.getState(instanceId);
+    if (reductionState) {
+      state.reduction = {
+        method: reductionState.method,
+        components: reductionState.components,
+        isApplied: reductionState.isApplied,
+      };
+    }
+
     return state;
   }
 
@@ -1567,6 +1578,43 @@ console.log('Tools:', tools);
 
         if (state.visualization.representation !== undefined) {
           property.setRepresentation(state.visualization.representation);
+        }
+      }
+
+      // 🆕 Apply reduction state
+      if (state.reduction) {
+        const instanceId = instanceData.instanceId;
+        const currentReductionState =
+          this.reductionFeature.getState(instanceId);
+
+        // Check if we need to update the reduction state
+        const needsUpdate =
+          !currentReductionState ||
+          currentReductionState.method !== state.reduction.method ||
+          currentReductionState.components !== state.reduction.components ||
+          currentReductionState.isApplied !== state.reduction.isApplied;
+
+        if (needsUpdate) {
+          if (state.reduction.isApplied && state.reduction.method) {
+            // Apply the reduction (skipSync to avoid infinite loop)
+            console.log(
+              `📥 Applying remote reduction: ${state.reduction.method} (${state.reduction.components}D)`
+            );
+            await this.reductionFeature.applyReduction(
+              instanceId,
+              state.reduction.method,
+              state.reduction.components,
+              { skipSync: true }
+            );
+          } else {
+            // Restore original (no reduction) (skipSync to avoid infinite loop)
+            console.log(
+              `📥 Restoring original data (remote user removed reduction)`
+            );
+            await this.reductionFeature.restoreOriginal(instanceId, {
+              skipSync: true,
+            });
+          }
         }
       }
 

@@ -156,6 +156,8 @@ export class VTKReductionFeature extends ReductionFeature {
    * Apply reduction to the instance's data
    *
    * CRITICAL: We save the original polydata the FIRST time this is called
+   *
+   * @param {boolean} options.skipSync - If true, don't call requestSync (used when applying remote state)
    */
   async applyReduction(instanceId, method, components, options = {}) {
     const state = this.instanceStates.get(instanceId);
@@ -244,6 +246,15 @@ export class VTKReductionFeature extends ReductionFeature {
       renderWindow.render();
 
       console.log(`✅ Reduction applied successfully`);
+
+      // 🆕 REQUEST SYNC: Notify other users about the reduction (unless this is from remote state)
+      if (!options.skipSync) {
+        const instanceManager = window.CIA?.instanceManager;
+        if (instanceManager) {
+          await instanceManager.requestSync(instanceId);
+          console.log(`📡 Reduction synced to remote users`);
+        }
+      }
     } catch (error) {
       console.error(`❌ Reduction failed:`, error);
       throw error;
@@ -252,8 +263,11 @@ export class VTKReductionFeature extends ReductionFeature {
 
   /**
    * Restore original data
+   *
+   * @param {Object} options - Options
+   * @param {boolean} options.skipSync - If true, don't call requestSync (used when applying remote state)
    */
-  async restoreOriginal(instanceId) {
+  async restoreOriginal(instanceId, options = {}) {
     const state = this.instanceStates.get(instanceId);
 
     if (!state || !state.isApplied) {
@@ -289,6 +303,15 @@ export class VTKReductionFeature extends ReductionFeature {
     renderWindow.render();
 
     console.log(`✅ Original data restored`);
+    
+    // 🆕 REQUEST SYNC: Notify other users about the restoration (unless this is from remote state)
+    if (!options.skipSync) {
+      const instanceManager = window.CIA?.instanceManager;
+      if (instanceManager) {
+        await instanceManager.requestSync(instanceId);
+        console.log(`📡 Restoration synced to remote users`);
+      }
+    }
   }
 
   isApplied(instanceId) {
