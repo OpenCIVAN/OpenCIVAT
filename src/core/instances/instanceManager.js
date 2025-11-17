@@ -73,6 +73,20 @@ class InstanceManager {
 
         if (!instance) {
           console.log(`   ⚠️ Instance ${instanceId} not found in Y.js map`);
+          console.log(`   Change action was: ${change.action}`);
+          console.log(`   Y.js map size: ${yInstances.size}`);
+          console.log(
+            `   Y.js map keys: [${Array.from(yInstances.keys()).join(", ")}]`
+          );
+
+          // If this is a delete event, that's expected behavior
+          if (change.action === "delete") {
+            console.log(`   ✓ Delete event - instance was removed as expected`);
+            this._notifySyncCallbacks({
+              action: "delete",
+              instanceId,
+            });
+          }
           return;
         }
 
@@ -122,13 +136,22 @@ class InstanceManager {
             localInstance.instanceData &&
             instance.typeSpecificState
           ) {
-            // Check if this update is from another user (not echoing our own change back)
-            const isOurUpdate =
-              instance.userId === getUserId() &&
+            // Check if this is our own recently-sent update (echo back prevention)
+            // Check lastModifiedBy if available, otherwise fall back to instance owner check
+            const isOurRecentUpdate =
               instance.typeSpecificState.updatedBy === "local" &&
+              (instance.lastModifiedBy
+                ? instance.lastModifiedBy === getUserId()
+                : instance.userId === getUserId()) &&
               Date.now() - instance.typeSpecificState.lastUpdated < 100;
 
-            if (!isOurUpdate && localInstance.instanceData.stateAdapter) {
+            console.log(`📨 Received state update for ${instanceId}`);
+            console.log(
+              `   From user: ${instance.lastModifiedBy || instance.userId}`
+            );
+            console.log(`   Is our recent update: ${isOurRecentUpdate}`);
+
+            if (!isOurRecentUpdate && localInstance.instanceData.stateAdapter) {
               // Apply the remote state through the adapter
               localInstance.instanceData.stateAdapter.applyRemoteState(
                 instance.typeSpecificState,
@@ -258,6 +281,9 @@ class InstanceManager {
     });
 
     // CRITICAL: Sync to Y.js so other users can see it!
+    console.log(`🔍 About to sync instance ${instanceId} to Y.js`);
+    console.log(`   yInstances exists: ${!!yInstances}`);
+    console.log(`   getUserId: ${getUserId()}`);
     this._syncToYjs(instanceId, datasetId);
 
     return instanceId;
@@ -494,6 +520,14 @@ class InstanceManager {
       return;
     }
     try {
+      // DEBUG: Log map state BEFORE writing
+      console.log(`🔍 [instanceManager] BEFORE set:`);
+      console.log(`   yInstances reference: ${yInstances.constructor.name}`);
+      console.log(`   yInstances.size: ${yInstances.size}`);
+      console.log(
+        `   yInstances keys: [${Array.from(yInstances.keys()).join(", ")}]`
+      );
+
       yInstances.set(instanceId, {
         id: instanceId,
         userId: getUserId(),
@@ -505,6 +539,18 @@ class InstanceManager {
         lastModified: Date.now(),
         typeSpecificState: null, // Will be populated by requestSync()
       });
+
+      // DEBUG: Log map state AFTER writing and verify we can read it back
+      console.log(`🔍 [instanceManager] AFTER set:`);
+      console.log(`   yInstances.size: ${yInstances.size}`);
+      console.log(
+        `   yInstances keys: [${Array.from(yInstances.keys()).join(", ")}]`
+      );
+      const readBack = yInstances.get(instanceId);
+      console.log(`   Can read back: ${readBack ? "YES" : "NO"}`);
+      if (readBack) {
+        console.log(`   Read back userId: ${readBack.userId}`);
+      }
 
       console.log(`📤 Instance synced to Y.js: ${instanceId}`);
       console.log(`   Owner: ${getUserName()} (${getUserId()})`);

@@ -126,6 +126,18 @@ class WorkspaceManager {
 
       // Store the instance
       this.instances.set(instanceId, instance);
+
+      // DEBUG: Check if instance exists in Y.js
+      const yInstance = yInstances.get(instanceId);
+      console.log(
+        `🔍 WorkspaceManager: Instance ${instanceId} created locally`
+      );
+      console.log(`   Exists in Y.js: ${yInstance ? "YES" : "NO"}`);
+      if (yInstance) {
+        console.log(`   Y.js instance owner: ${yInstance.userId}`);
+        console.log(`   Current user: ${this._getCurrentUserId()}`);
+      }
+
       // 🆕 NEW: Subscribe to state changes from this instance's adapter
       // This ensures camera movements get synced to Y.js for other users to see
       if (instanceData.stateAdapter) {
@@ -133,15 +145,48 @@ class WorkspaceManager {
           `📡 WorkspaceManager: Subscribing to state changes for ${instanceId}`
         );
         const unsubscribe = instanceData.stateAdapter.observe((stateUpdate) => {
+          // DEBUG: Log map state when observer fires
+          console.log(
+            `🔍 [workspaceManager] Observer fired for ${instanceId}:`
+          );
+          console.log(
+            `   yInstances reference: ${yInstances.constructor.name}`
+          );
+          console.log(`   yInstances.size: ${yInstances.size}`);
+          console.log(
+            `   yInstances keys: [${Array.from(yInstances.keys()).join(", ")}]`
+          );
+
           // Update Y.js with the new state so other users can see it
           const yInstance = yInstances.get(instanceId);
-          if (yInstance && yInstance.userId === this._getCurrentUserId()) {
+          // FIX: Allow ANY viewer of a shared instance to publish state changes
+          // This enables true bidirectional syncing for all collaborators
+          if (yInstance) {
+            const currentUserId = this._getCurrentUserId();
             yInstances.set(instanceId, {
               ...yInstance,
               typeSpecificState: stateUpdate.fullState,
               lastModified: Date.now(),
+              lastModifiedBy: currentUserId, // Track who made the change
+            });
+            console.log(
+              `📤 Published state update for ${instanceId} by user ${currentUserId}`
+            );
+          } else {
+            // DEBUG: Show what instances ARE in Y.js
+            console.warn(
+              `⚠️  Instance ${instanceId} not found in Y.js - cannot sync state`
+            );
+            console.warn(`   Available Y.js instances:`);
+            const allYInstances = Array.from(yInstances.keys());
+            allYInstances.forEach((id) => {
+              const inst = yInstances.get(id);
+              console.warn(`     - ${id} (owner: ${inst.userId})`);
             });
             console.log(`📤 Published state update for ${instanceId}`);
+            if (allYInstances.length === 0) {
+              console.warn(`     (none - Y.js instances map is empty!)`);
+            }
           }
         });
         // Store the unsubscribe function for cleanup
