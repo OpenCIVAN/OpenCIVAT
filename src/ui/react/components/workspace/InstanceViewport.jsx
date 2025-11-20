@@ -16,6 +16,10 @@ import { instanceManager } from "@Core/instances/instanceManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
 import { SliderMenuOption } from '@UI/react/components/workspace/SliderMenuOption';
+import { CameraViewGridPicker } from '@UI/react/components/workspace/CameraViewGridPicker';
+import { SliderWithPresets } from '@UI/react/components/workspace/SliderWithPresets';
+import { ColorSwatchGrid } from '@UI/react/components/workspace/ColorSwatchGrid';
+
 import "@UI/react/components/workspace/InstanceViewport.css";
 
 /**
@@ -313,6 +317,60 @@ export function InstanceViewport({
         }
 
         // =====================================================================
+        // ✅ CAMERA GRID - UI layer interprets the plain object
+        // =====================================================================
+        if (option.type === 'camera-grid') {
+            return (
+                <CameraViewGridPicker
+                    key={option.id}
+                    views={option.views}
+                    disabled={option.disabled}
+                    onViewChange={option.onViewSelect}
+                />
+            );
+        }
+
+        // =====================================================================
+        // ✅ SLIDER WITH PRESETS - UI layer interprets the plain object
+        // =====================================================================
+        if (option.type === 'slider-with-presets') {
+            const IconComponent = getToolIcon(option.icon);
+
+            return (
+                <SliderWithPresets
+                    key={option.id}
+                    icon={IconComponent ? <IconComponent size={14} /> : null}
+                    label={option.label}
+                    value={option.value}
+                    min={option.min}
+                    max={option.max}
+                    step={option.step}
+                    formatValue={option.formatValue}
+                    presets={option.presets}
+                    onChange={option.onChange}
+                    disabled={option.disabled}
+                    disabledReason={option.disabledReason}
+                />
+            );
+        }
+
+        // =====================================================================
+        // ✅ COLOR SWATCH GRID - UI layer interprets the plain object
+        // =====================================================================
+        if (option.type === 'color-swatch-grid') {
+            return (
+                <ColorSwatchGrid
+                    key={option.id}
+                    colormaps={option.colormaps}
+                    currentColormap={option.currentColormap}
+                    disabled={option.disabled}
+                    onColormapChange={option.onColormapChange}
+                />
+            );
+        }
+
+
+        // =====================================================================
         // SLIDER - Convert plain object to React component
         // =====================================================================
         if (option.type === 'slider') {
@@ -561,3 +619,29 @@ export function InstanceViewport({
         </div>
     );
 }
+
+/* ============================================================================
+   USAGE PATTERN FOR OTHER COMPONENTS
+   
+   To add a new visual picker:
+   
+   1. In Core (VTKInstanceHandler):
+      {
+        type: 'my-custom-picker',
+        id: 'my-picker',
+        data: { ... plain data ... },
+        onAction: (value) => { ... plain callback ... }
+      }
+   
+   2. In UI (InstanceViewport renderMenuOption):
+      if (option.type === 'my-custom-picker') {
+        return <MyCustomPicker {...option} />;
+      }
+   
+   3. Create Component (MyCustomPicker.jsx):
+      export function MyCustomPicker({ data, onAction }) {
+        // Pure React, receives plain props
+      }
+   
+   This pattern keeps core pure and UI flexible!
+   ============================================================================ */

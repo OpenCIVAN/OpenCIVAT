@@ -82,6 +82,198 @@ class InstanceToolsManager {
   // BASIC RENDERING PROPERTIES (Not widgets - just VTK actor properties)
   // ==========================================================================
 
+  // Add these methods to vtkInstanceTools.js (InstanceToolsManager class)
+  // Place them in the "BASIC RENDERING PROPERTIES" section
+
+  // ==========================================================================
+  // CAMERA CONTROLS
+  // ==========================================================================
+
+  /**
+   * Set camera to standard view
+   * @param {string} instanceId - Instance identifier
+   * @param {string} view - View name: 'front', 'back', 'top', 'bottom', 'left', 'right', 'isometric'
+   */
+  setCameraView(instanceId, view) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    const { camera, renderer, renderWindow } = tools.sceneObjects;
+
+    // Get bounds of the data for proper positioning
+    const bounds = renderer.computeVisiblePropBounds();
+    const center = [
+      (bounds[0] + bounds[1]) / 2,
+      (bounds[2] + bounds[3]) / 2,
+      (bounds[4] + bounds[5]) / 2,
+    ];
+
+    // Calculate distance from center (for camera position)
+    const diagonal = Math.sqrt(
+      Math.pow(bounds[1] - bounds[0], 2) +
+        Math.pow(bounds[3] - bounds[2], 2) +
+        Math.pow(bounds[5] - bounds[4], 2)
+    );
+    const distance = diagonal * 1.5; // 1.5x diagonal for good view
+
+    // Camera configurations for each standard view
+    const views = {
+      front: {
+        position: [center[0], center[1], center[2] + distance],
+        focalPoint: center,
+        viewUp: [0, 1, 0],
+      },
+      back: {
+        position: [center[0], center[1], center[2] - distance],
+        focalPoint: center,
+        viewUp: [0, 1, 0],
+      },
+      top: {
+        position: [center[0], center[1] + distance, center[2]],
+        focalPoint: center,
+        viewUp: [0, 0, -1], // Z points down when looking from top
+      },
+      bottom: {
+        position: [center[0], center[1] - distance, center[2]],
+        focalPoint: center,
+        viewUp: [0, 0, 1], // Z points up when looking from bottom
+      },
+      left: {
+        position: [center[0] - distance, center[1], center[2]],
+        focalPoint: center,
+        viewUp: [0, 1, 0],
+      },
+      right: {
+        position: [center[0] + distance, center[1], center[2]],
+        focalPoint: center,
+        viewUp: [0, 1, 0],
+      },
+      isometric: {
+        position: [
+          center[0] + distance * 0.7,
+          center[1] + distance * 0.7,
+          center[2] + distance * 0.7,
+        ],
+        focalPoint: center,
+        viewUp: [0, 1, 0],
+      },
+    };
+
+    const config = views[view];
+    if (!config) {
+      console.warn(`Unknown camera view: ${view}`);
+      return;
+    }
+
+    // Apply camera configuration
+    camera.setPosition(...config.position);
+    camera.setFocalPoint(...config.focalPoint);
+    camera.setViewUp(...config.viewUp);
+
+    // Reset camera clipping range for new position
+    renderer.resetCameraClippingRange();
+
+    // Render
+    renderWindow.render();
+
+    console.log(`📷 Camera set to ${view} view for instance: ${instanceId}`);
+  }
+
+  /**
+   * Reset camera to fit all data in view
+   * @param {string} instanceId - Instance identifier
+   */
+  resetCamera(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    const { renderer, renderWindow } = tools.sceneObjects;
+
+    // Reset camera to show all actors
+    renderer.resetCamera();
+
+    // Render
+    renderWindow.render();
+
+    console.log(`📷 Camera reset for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get current camera state
+   * @param {string} instanceId - Instance identifier
+   * @returns {Object} Camera state with position, focalPoint, viewUp
+   */
+  getCameraState(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return null;
+
+    const camera = tools.sceneObjects.camera;
+
+    return {
+      position: camera.getPosition(),
+      focalPoint: camera.getFocalPoint(),
+      viewUp: camera.getViewUp(),
+      parallelScale: camera.getParallelScale(),
+      clippingRange: camera.getClippingRange(),
+      viewAngle: camera.getViewAngle(),
+    };
+  }
+
+  /**
+   * Set camera state (for sync or loading)
+   * @param {string} instanceId - Instance identifier
+   * @param {Object} cameraState - Camera configuration
+   */
+  setCameraState(instanceId, cameraState) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    const { camera, renderer, renderWindow } = tools.sceneObjects;
+
+    // Apply camera state
+    if (cameraState.position) {
+      camera.setPosition(...cameraState.position);
+    }
+    if (cameraState.focalPoint) {
+      camera.setFocalPoint(...cameraState.focalPoint);
+    }
+    if (cameraState.viewUp) {
+      camera.setViewUp(...cameraState.viewUp);
+    }
+    if (cameraState.parallelScale !== undefined) {
+      camera.setParallelScale(cameraState.parallelScale);
+    }
+    if (cameraState.clippingRange) {
+      camera.setClippingRange(...cameraState.clippingRange);
+    }
+    if (cameraState.viewAngle !== undefined) {
+      camera.setViewAngle(cameraState.viewAngle);
+    }
+
+    // Reset clipping range for new position
+    renderer.resetCameraClippingRange();
+
+    // Render
+    renderWindow.render();
+
+    console.log(`📷 Camera state applied for instance: ${instanceId}`);
+  }
+
+  /* ============================================================================
+   USAGE IN VTKInstanceHandler:
+   
+   The methods are now available:
+   - instanceTools.setCameraView(instanceId, 'front')
+   - instanceTools.setCameraView(instanceId, 'top')
+   - instanceTools.setCameraView(instanceId, 'isometric')
+   - instanceTools.resetCamera(instanceId)
+   - instanceTools.getCameraState(instanceId)
+   - instanceTools.setCameraState(instanceId, state)
+   
+   These integrate with the existing camera modification listeners
+   and will automatically trigger state synchronization.
+   ============================================================================ */
+
   /**
    * Set opacity (0.0 = transparent, 1.0 = opaque)
    */
