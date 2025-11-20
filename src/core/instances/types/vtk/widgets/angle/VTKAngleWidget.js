@@ -1,7 +1,7 @@
 // src/core/instances/types/vtk/widgets/angle/VTKAngleWidget.js
 // Angle measurement widget following the plugin pattern
 
-import vtkAngleWidget from "@kitware/vtk.js/Widgets/Widgets3D/AngleWidget";
+import VtkJsAngleWidget from "@kitware/vtk.js/Widgets/Widgets3D/AngleWidget";
 
 /**
  * VTKAngleWidget
@@ -42,7 +42,7 @@ export class VTKAngleWidget {
 
     try {
       // Create VTK.js widget
-      const widget = vtkAngleWidget.newInstance();
+      const widget = VtkJsAngleWidget.newInstance();
 
       // Add to widget manager and get handle
       const handle = widgetManager.addWidget(widget);

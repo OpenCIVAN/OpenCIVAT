@@ -1,25 +1,35 @@
 // src/core/instances/types/vtk/vtkInstanceTools.js
-// Tools and utilities for VTK instances
-// MERGED VERSION: Combines existing tools + new widget implementations
+// REFACTORED: Thin coordination layer - No widget creation duplication!
 
 import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
-import vtkPiecewiseFunction from "@kitware/vtk.js/Common/DataModel/PiecewiseFunction";
 import vtkWidgetManager from "@kitware/vtk.js/Widgets/Core/WidgetManager";
-import vtkAngleWidget from "@kitware/vtk.js/Widgets/Widgets3D/AngleWidget";
-import vtkPlaneWidget from "@kitware/vtk.js/Widgets/Widgets3D/ImplicitPlaneWidget";
-import vtkLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
+
+// Import widget modules (already created!)
+import { vtkPlaneWidget } from "@VTK/widgets/plane/VTKPlaneWidget.js";
+import { vtkLineWidget } from "@VTK/widgets/line/VTKLineWidget.js";
+import { vtkAngleWidget } from "@VTK/widgets/angle/VTKAngleWidget.js";
 import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget.js";
 
 /**
  * InstanceToolsManager
  *
- * Provides tools for manipulating and analyzing data in VTK instances
+ * RESPONSIBILITIES:
+ * - Basic rendering properties (opacity, representation, etc.)
+ * - Widget coordination (thin wrappers that delegate to widget modules)
+ * - State queries (convenience methods)
+ *
+ * NOT RESPONSIBLE FOR:
+ * - VTK widget creation (that's in widget files!)
+ * - Widget lifecycle details (that's in widget files!)
  */
 class InstanceToolsManager {
   constructor() {
     this.instanceTools = new Map(); // instanceId -> tools
-    this.activeTools = new Map(); // instanceId -> active tool name
   }
+
+  // ==========================================================================
+  // INITIALIZATION
+  // ==========================================================================
 
   /**
    * Initialize tools for an instance
@@ -36,150 +46,173 @@ class InstanceToolsManager {
       instanceId,
       sceneObjects,
       widgetManager: null,
-      widgets: new Map(),
+      measurements: [],
+      clipPosition: 50, // For slider
       colorMap: null,
       opacityFunction: null,
-      clippingPlane: null,
-      measurements: [],
-      axesVisible: false, // 🆕 ADD THIS
     };
 
-    // Create widget manager
+    // Create widget manager (shared by all widgets)
     tools.widgetManager = vtkWidgetManager.newInstance();
     tools.widgetManager.setRenderer(sceneObjects.renderer);
 
-    // Store tools
     this.instanceTools.set(instanceId, tools);
-
     console.log(`✅ Tools initialized for instance: ${instanceId}`);
   }
 
   /**
-   * CAMERA TOOLS
+   * Clean up tools for an instance
    */
+  cleanupTools(instanceId) {
+    console.log(`🧹 Cleaning up tools for instance: ${instanceId}`);
+
+    // Clean up all widgets first
+    vtkPlaneWidget.cleanup(instanceId);
+    vtkLineWidget.cleanup(instanceId);
+    vtkAngleWidget.cleanup(instanceId);
+    vtkOrientationWidget.cleanup(instanceId);
+
+    // Clean up tools
+    this.instanceTools.delete(instanceId);
+
+    console.log(`✅ Tools cleaned up for instance: ${instanceId}`);
+  }
+
+  // ==========================================================================
+  // BASIC RENDERING PROPERTIES (Not widgets - just VTK actor properties)
+  // ==========================================================================
 
   /**
-   * Reset camera to fit all data
+   * Set opacity (0.0 = transparent, 1.0 = opaque)
    */
-  resetCamera(instanceId) {
+  setOpacity(instanceId, opacity) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
-    const { renderer, renderWindow } = tools.sceneObjects;
-    renderer.resetCamera();
-    renderWindow.render();
+    tools.sceneObjects.actor.getProperty().setOpacity(opacity);
+    tools.sceneObjects.renderWindow.render();
 
-    console.log(`📷 Camera reset for instance: ${instanceId}`);
+    console.log(`👁️ Opacity set to ${opacity} for instance: ${instanceId}`);
   }
 
   /**
-   * Set camera to a specific view
+   * Get current opacity
    */
-  setCameraView(instanceId, view) {
+  getOpacity(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return 1.0;
+
+    return tools.sceneObjects.actor.getProperty().getOpacity();
+  }
+
+  /**
+   * Set representation mode (surface, wireframe, or points)
+   */
+  setRepresentation(instanceId, mode) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
-    const { camera, renderer, renderWindow } = tools.sceneObjects;
-
-    const views = {
-      front: { position: [0, -1, 0], up: [0, 0, 1] },
-      back: { position: [0, 1, 0], up: [0, 0, 1] },
-      left: { position: [-1, 0, 0], up: [0, 0, 1] },
-      right: { position: [1, 0, 0], up: [0, 0, 1] },
-      top: { position: [0, 0, 1], up: [0, 1, 0] },
-      bottom: { position: [0, 0, -1], up: [0, 1, 0] },
+    const modeMap = {
+      surface: 2,
+      wireframe: 1,
+      points: 0,
     };
 
-    if (views[view]) {
-      const bounds = renderer.computeVisiblePropBounds();
-      const center = [
-        (bounds[0] + bounds[1]) / 2,
-        (bounds[2] + bounds[3]) / 2,
-        (bounds[4] + bounds[5]) / 2,
-      ];
-
-      const distance =
-        Math.max(
-          bounds[1] - bounds[0],
-          bounds[3] - bounds[2],
-          bounds[5] - bounds[4]
-        ) * 2;
-
-      const pos = views[view].position;
-      camera.setPosition(
-        center[0] + pos[0] * distance,
-        center[1] + pos[1] * distance,
-        center[2] + pos[2] * distance
-      );
-      camera.setFocalPoint(...center);
-      camera.setViewUp(...views[view].up);
-
-      renderer.resetCameraClippingRange();
-      renderWindow.render();
-
-      console.log(`📷 Camera view set to ${view} for instance: ${instanceId}`);
+    const representation = modeMap[mode];
+    if (representation === undefined) {
+      console.warn(`Unknown representation mode: ${mode}`);
+      return;
     }
+
+    const property = tools.sceneObjects.actor.getProperty();
+    property.setRepresentation(representation);
+
+    // Auto-adjust point size for points mode
+    if (mode === "points") {
+      property.setPointSize(5);
+    }
+
+    tools.sceneObjects.renderWindow.render();
+
+    console.log(`🎨 Representation set to ${mode} for instance: ${instanceId}`);
   }
 
   /**
-   * Get current camera state
+   * Get current representation mode
    */
-  getCameraState(instanceId) {
+  getRepresentation(instanceId) {
     const tools = this.instanceTools.get(instanceId);
-    if (!tools) return null;
+    if (!tools) return "surface";
 
-    const { camera } = tools.sceneObjects;
+    const rep = tools.sceneObjects.actor.getProperty().getRepresentation();
+    const modeMap = { 0: "points", 1: "wireframe", 2: "surface" };
 
-    return {
-      position: camera.getPosition(),
-      focalPoint: camera.getFocalPoint(),
-      viewUp: camera.getViewUp(),
-      viewAngle: camera.getViewAngle(),
-      parallelScale: camera.getParallelScale(),
-    };
+    return modeMap[rep] || "surface";
   }
 
   /**
-   * Set camera state
+   * Set point size
    */
-  setCameraState(instanceId, state) {
+  setPointSize(instanceId, size) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
-    const { camera, renderWindow } = tools.sceneObjects;
+    tools.sceneObjects.actor.getProperty().setPointSize(size);
+    tools.sceneObjects.renderWindow.render();
 
-    if (state.position) camera.setPosition(...state.position);
-    if (state.focalPoint) camera.setFocalPoint(...state.focalPoint);
-    if (state.viewUp) camera.setViewUp(...state.viewUp);
-    if (state.viewAngle) camera.setViewAngle(state.viewAngle);
-    if (state.parallelScale) camera.setParallelScale(state.parallelScale);
-
-    renderWindow.render();
+    console.log(`⚫ Point size set to ${size} for instance: ${instanceId}`);
   }
 
   /**
-   * VISUALIZATION TOOLS
+   * Get current point size
    */
+  getPointSize(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return 5;
+
+    return tools.sceneObjects.actor.getProperty().getPointSize();
+  }
 
   /**
-   * Set color mapping
+   * Set line width
    */
-  setColorMap(instanceId, preset = "rainbow") {
+  setLineWidth(instanceId, width) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    tools.sceneObjects.actor.getProperty().setLineWidth(width);
+    tools.sceneObjects.renderWindow.render();
+
+    console.log(`━ Line width set to ${width} for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get current line width
+   */
+  getLineWidth(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return 2;
+
+    return tools.sceneObjects.actor.getProperty().getLineWidth();
+  }
+
+  /**
+   * Set color map
+   */
+  setColorMap(instanceId, preset) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
     const { actor, renderWindow } = tools.sceneObjects;
-
-    // Create color transfer function
     const ctf = vtkColorTransferFunction.newInstance();
 
+    // Define presets
     const presets = {
       rainbow: [
-        [0.0, 0, 0, 1], // Blue
-        [0.25, 0, 1, 1], // Cyan
-        [0.5, 0, 1, 0], // Green
-        [0.75, 1, 1, 0], // Yellow
-        [1.0, 1, 0, 0], // Red
+        [0.0, 0, 0, 1],
+        [0.33, 0, 1, 1],
+        [0.66, 1, 1, 0],
+        [1.0, 1, 0, 0],
       ],
       grayscale: [
         [0.0, 0, 0, 0],
@@ -222,124 +255,7 @@ class InstanceToolsManager {
   }
 
   /**
-   * Set opacity
-   */
-  setOpacity(instanceId, opacity) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    const { actor, renderWindow } = tools.sceneObjects;
-    actor.getProperty().setOpacity(opacity);
-    renderWindow.render();
-
-    console.log(`👁️ Opacity set to ${opacity} for instance: ${instanceId}`);
-  }
-
-  /**
-   * Set point size
-   */
-  setPointSize(instanceId, size) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    const { actor, renderWindow } = tools.sceneObjects;
-    actor.getProperty().setPointSize(size);
-    renderWindow.render();
-
-    console.log(`⚫ Point size set to ${size} for instance: ${instanceId}`);
-  }
-
-  /**
-   * Toggle wireframe mode
-   */
-  toggleWireframe(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    const { actor, renderWindow } = tools.sceneObjects;
-    const property = actor.getProperty();
-
-    const currentRep = property.getRepresentation();
-    const newRep = currentRep === 2 ? 1 : 2; // Toggle between wireframe (1) and surface (2)
-
-    property.setRepresentation(newRep);
-    renderWindow.render();
-
-    console.log(
-      `🔲 Wireframe ${
-        newRep === 1 ? "enabled" : "disabled"
-      } for instance: ${instanceId}`
-    );
-  }
-
-  /**
-   * Set representation mode (surface, wireframe, or points)
-   * VTK representation values: 0 = points, 1 = wireframe, 2 = surface
-   */
-  setRepresentation(instanceId, mode) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    const { actor, renderWindow } = tools.sceneObjects;
-    const property = actor.getProperty();
-
-    const modeMap = {
-      surface: 2,
-      wireframe: 1,
-      points: 0,
-    };
-
-    const representation = modeMap[mode];
-    if (representation === undefined) {
-      console.warn(`Unknown representation mode: ${mode}`);
-      return;
-    }
-
-    property.setRepresentation(representation);
-
-    // For points mode, make them bigger so they're visible
-    if (mode === "points") {
-      property.setPointSize(5);
-    }
-
-    renderWindow.render();
-
-    console.log(`🎨 Representation set to ${mode} for instance: ${instanceId}`);
-  }
-
-  /**
-   * Get current representation mode
-   */
-  getRepresentation(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return null;
-
-    const { actor } = tools.sceneObjects;
-    const property = actor.getProperty();
-    const rep = property.getRepresentation();
-
-    const modeMap = {
-      0: "points",
-      1: "wireframe",
-      2: "surface",
-    };
-
-    return modeMap[rep] || "surface";
-  }
-
-  /**
-   * Get current opacity
-   */
-  getOpacity(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return 1.0;
-
-    const { actor } = tools.sceneObjects;
-    return actor.getProperty().getOpacity();
-  }
-
-  /**
-   * Force a render (useful after widget config changes)
+   * Force a render
    */
   forceRender(instanceId) {
     const tools = this.instanceTools.get(instanceId);
@@ -348,351 +264,213 @@ class InstanceToolsManager {
     }
   }
 
-  // ===========================================================================
-  // 🆕 WIDGET MANAGEMENT (New helper methods)
-  // ===========================================================================
+  // ==========================================================================
+  // WIDGET COORDINATION (Thin wrappers that delegate to widget modules)
+  // ==========================================================================
 
   /**
-   * Check if a widget is active
-   */
-  isWidgetActive(instanceId, widgetType) {
-    const tools = this.instanceTools.get(instanceId);
-    return tools?.widgets.has(widgetType) || false;
-  }
-
-  /**
-   * Check if any widgets are active
-   */
-  hasActiveWidgets(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    return tools?.widgets.size > 0 || false;
-  }
-
-  // ===========================================================================
-  // MEASUREMENT TOOLS (🆕 Updated with actual VTK widget creation)
-  // ===========================================================================
-
-  /**
-   * Enable distance measurement
-   */
-  toggleDistanceMeasurement(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    // If already active, deactivate
-    if (tools.widgets.has("distance")) {
-      this._deactivateWidget(instanceId, "distance");
-      return;
-    }
-
-    // Disable other tools first
-    this.disableAllTools(instanceId);
-
-    // 🆕 CREATE ACTUAL VTK WIDGET
-    const widget = vtkLineWidget.newInstance();
-    const widgetState = widget.getWidgetState();
-
-    // Configure widget appearance
-    widgetState.getPoint1Handle().setScale1(5);
-    widgetState.getPoint2Handle().setScale1(5);
-
-    // Add to widget manager
-    const handle = tools.widgetManager.addWidget(widget);
-    handle.setEnabled(true);
-
-    // Store widget
-    tools.widgets.set("distance", { widget, handle });
-    this.activeTools.set(instanceId, "distance");
-
-    // 🆕 LISTEN FOR MEASUREMENTS
-    widget.onEndInteractionEvent(() => {
-      const handles = widgetState.getHandles();
-      if (handles.length >= 2) {
-        const p1 = handles[0].getOrigin();
-        const p2 = handles[1].getOrigin();
-
-        const dx = p2[0] - p1[0];
-        const dy = p2[1] - p1[1];
-        const dz = p2[2] - p1[2];
-        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-        console.log(`📏 Distance measured: ${distance.toFixed(2)} units`);
-
-        tools.measurements.push({
-          type: "distance",
-          value: distance,
-          points: [p1, p2],
-          timestamp: Date.now(),
-        });
-      }
-      tools.sceneObjects.renderWindow.render();
-    });
-
-    console.log(`📏 Distance measurement enabled for instance: ${instanceId}`);
-  }
-
-  /**
-   * Enable angle measurement
-   */
-  toggleAngleMeasurement(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    // If already active, deactivate
-    if (tools.widgets.has("angle")) {
-      this._deactivateWidget(instanceId, "angle");
-      return;
-    }
-
-    // Disable other tools first
-    this.disableAllTools(instanceId);
-
-    // 🆕 CREATE ACTUAL VTK WIDGET
-    const widget = vtkAngleWidget.newInstance();
-    const widgetState = widget.getWidgetState();
-
-    // Configure widget appearance
-    widgetState.getPoint1Handle().setScale1(5);
-    widgetState.getPoint2Handle().setScale1(5);
-    widgetState.getPoint3Handle().setScale1(5);
-
-    // Add to widget manager
-    const handle = tools.widgetManager.addWidget(widget);
-    handle.setEnabled(true);
-
-    // Store widget
-    tools.widgets.set("angle", { widget, handle });
-    this.activeTools.set(instanceId, "angle");
-
-    // 🆕 LISTEN FOR MEASUREMENTS
-    widget.onEndInteractionEvent(() => {
-      const handles = widgetState.getHandles();
-      if (handles.length >= 3) {
-        const p1 = handles[0].getOrigin();
-        const p2 = handles[1].getOrigin(); // vertex
-        const p3 = handles[2].getOrigin();
-
-        // Calculate angle
-        const v1 = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]];
-        const v2 = [p3[0] - p2[0], p3[1] - p2[1], p3[2] - p2[2]];
-
-        const dot = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
-        const mag1 = Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1] + v1[2] * v1[2]);
-        const mag2 = Math.sqrt(v2[0] * v2[0] + v2[1] * v2[1] + v2[2] * v2[2]);
-
-        const angle = Math.acos(dot / (mag1 * mag2)) * (180 / Math.PI);
-
-        console.log(`📐 Angle measured: ${angle.toFixed(2)}°`);
-
-        tools.measurements.push({
-          type: "angle",
-          value: angle,
-          points: [p1, p2, p3],
-          timestamp: Date.now(),
-        });
-      }
-      tools.sceneObjects.renderWindow.render();
-    });
-
-    console.log(`📐 Angle measurement enabled for instance: ${instanceId}`);
-  }
-
-  /**
-   * CLIPPING TOOLS (🆕 Updated with actual VTK widget creation)
-   */
-
-  /**
-   * Enable clipping plane
+   * Toggle clipping plane widget
+   * THIN WRAPPER - Delegates to VTKPlaneWidget module
    */
   toggleClippingPlane(instanceId) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
-    // If already active, deactivate
-    if (tools.widgets.has("plane")) {
-      this.resetClipping(instanceId);
-      return;
-    }
+    const isActive = vtkPlaneWidget.isEnabled(instanceId);
 
-    // Disable other tools first
-    this.disableAllTools(instanceId);
-
-    const { mapper, renderWindow } = tools.sceneObjects;
-
-    // 🆕 CREATE ACTUAL VTK WIDGET
-    const widget = vtkPlaneWidget.newInstance();
-    widget.setPlaceFactor(1.25);
-
-    // Get bounds for initial placement
-    const inputData = mapper.getInputData();
-    if (inputData) {
-      widget.placeWidget(inputData.getBounds());
-    }
-
-    // Add to widget manager
-    const handle = tools.widgetManager.addWidget(widget);
-    handle.setEnabled(true);
-    handle.setHandleVisibility(true);
-
-    // Store widget
-    tools.widgets.set("plane", { widget, handle });
-    tools.clippingPlane = widget;
-    this.activeTools.set(instanceId, "plane");
-
-    // 🆕 APPLY CLIPPING when widget moves
-    widget.onInteractionEvent(() => {
-      const plane = widget.getPlane();
-      mapper.removeAllClippingPlanes();
-      mapper.addClippingPlane(plane);
-      renderWindow.render();
-    });
-
-    console.log(`✂️ Clipping plane enabled for instance: ${instanceId}`);
-  }
-
-  /**
-   * Reset clipping planes
-   */
-  resetClipping(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    const { mapper, renderWindow } = tools.sceneObjects;
-    mapper.removeAllClippingPlanes();
-
-    // Disable plane widget if active
-    this._deactivateWidget(instanceId, "plane");
-
-    renderWindow.render();
-    console.log(`✂️ Clipping reset for instance: ${instanceId}`);
-  }
-
-  // ===========================================================================
-  // 🆕 AXES MANAGEMENT (New)
-  // ===========================================================================
-
-  /**
-   * Check if axes are visible
-   */
-  isAxesVisible(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    return tools?.axesVisible || false;
-  }
-
-  /**
-   * Toggle orientation axes
-   */
-  toggleAxes(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    tools.axesVisible = !tools.axesVisible;
-
-    // TODO: Implement with vtkOrientationMarkerWidget
-    console.log(`🧭 Axes ${tools.axesVisible ? "shown" : "hidden"}`);
-
-    // Re-render
-    if (tools.sceneObjects?.renderWindow) {
-      tools.sceneObjects.renderWindow.render();
+    if (isActive) {
+      // Disable
+      vtkPlaneWidget.cleanup(instanceId);
+      console.log(`✂️ Clipping plane disabled for instance: ${instanceId}`);
+    } else {
+      // Enable
+      vtkPlaneWidget.initialize(instanceId, {
+        widgetManager: tools.widgetManager,
+        sceneObjects: tools.sceneObjects,
+        placeFactor: 1.25,
+      });
+      console.log(`✂️ Clipping plane enabled for instance: ${instanceId}`);
     }
   }
 
   /**
-   * Initialize orientation widget tracking
-   * Called by VTKInstanceHandler after widget is created
+   * Toggle ruler measurement widget
+   * THIN WRAPPER - Delegates to VTKLineWidget module
    */
-  initializeOrientationWidget(instanceId) {
+  toggleRulerMeasurement(instanceId) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
-    // Mark orientation as active in widgets map
-    tools.widgets.set("orientation", { enabled: true });
+    const isActive = vtkLineWidget.isEnabled(instanceId);
 
-    console.log(`🧭 Orientation widget tracked for instance: ${instanceId}`);
+    if (isActive) {
+      // Disable
+      vtkLineWidget.cleanup(instanceId);
+      console.log(`📏 Ruler measurement disabled for instance: ${instanceId}`);
+    } else {
+      // Enable
+      vtkLineWidget.initialize(instanceId, {
+        widgetManager: tools.widgetManager,
+        sceneObjects: tools.sceneObjects,
+        onMeasurement: (measurement) => {
+          tools.measurements.push(measurement);
+          console.log(`📏 Distance measured: ${measurement.value.toFixed(2)}`);
+        },
+      });
+      console.log(`📏 Ruler measurement enabled for instance: ${instanceId}`);
+    }
+  }
+
+  /**
+   * Toggle angle measurement widget
+   * THIN WRAPPER - Delegates to VTKAngleWidget module
+   */
+  toggleAngleMeasurement(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    const isActive = vtkAngleWidget.isEnabled(instanceId);
+
+    if (isActive) {
+      // Disable
+      vtkAngleWidget.cleanup(instanceId);
+      console.log(`📐 Angle measurement disabled for instance: ${instanceId}`);
+    } else {
+      // Enable
+      vtkAngleWidget.initialize(instanceId, {
+        widgetManager: tools.widgetManager,
+        sceneObjects: tools.sceneObjects,
+        onMeasurement: (measurement) => {
+          tools.measurements.push(measurement);
+          console.log(`📐 Angle measured: ${measurement.value.toFixed(2)}°`);
+        },
+      });
+      console.log(`📐 Angle measurement enabled for instance: ${instanceId}`);
+    }
   }
 
   /**
    * Toggle orientation widget
-   * This now actually calls the VTKOrientationWidget module
+   * THIN WRAPPER - Delegates to VTKOrientationWidget module
    */
   toggleOrientation(instanceId) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
-    // Check current state
-    const isActive = tools.widgets.has("orientation");
+    const isActive = vtkOrientationWidget.isEnabled(instanceId);
+    vtkOrientationWidget.setVisible(instanceId, !isActive);
 
-    if (isActive) {
-      // Hide the widget
-      vtkOrientationWidget.setVisible(instanceId, false);
-      tools.widgets.delete("orientation");
-      console.log(`🧭 Orientation widget disabled for instance: ${instanceId}`);
-    } else {
-      // Show the widget
-      vtkOrientationWidget.setVisible(instanceId, true);
-      tools.widgets.set("orientation", { enabled: true });
-      console.log(`🧭 Orientation widget enabled for instance: ${instanceId}`);
-    }
+    // ✅ CRITICAL: Force render to update display immediately
+    tools.sceneObjects.renderWindow.render();
 
-    // Force render to show/hide immediately
-    if (tools.sceneObjects?.renderWindow) {
-      tools.sceneObjects.renderWindow.render();
-    }
+    console.log(
+      `🧭 Orientation ${
+        !isActive ? "enabled" : "disabled"
+      } for instance: ${instanceId}`
+    );
   }
 
   /**
-   * UTILITY FUNCTIONS
+   * Initialize orientation widget tracking
+   * Called by VTKInstanceHandler after orientation widget is created
    */
+  initializeOrientationWidget(instanceId) {
+    // Just for tracking - actual widget managed by vtkOrientationWidget module
+    console.log(`🧭 Orientation widget tracked for instance: ${instanceId}`);
+  }
+
+  // ==========================================================================
+  // CLIPPING STATE HELPERS (For slider support)
+  // ==========================================================================
 
   /**
-   * Disable all active tools
+   * Get clipping state for UI
    */
-  disableAllTools(instanceId) {
+  getClipState(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return { active: false, position: 50 };
+
+    return {
+      active: vtkPlaneWidget.isEnabled(instanceId),
+      position: tools.clipPosition || 50,
+    };
+  }
+
+  /**
+   * Set clipping plane position (0-100%)
+   * Delegates to VTKPlaneWidget
+   */
+  setClipPosition(instanceId, percentage) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
-    // Disable all widgets
-    const widgetTypes = Array.from(tools.widgets.keys());
-    widgetTypes.forEach((type) => {
-      this._deactivateWidget(instanceId, type);
-    });
+    // Store position
+    tools.clipPosition = percentage;
 
-    this.activeTools.delete(instanceId);
-    console.log(`🛠️ All tools disabled for instance: ${instanceId}`);
+    // Delegate to widget if active
+    if (vtkPlaneWidget.isEnabled(instanceId)) {
+      vtkPlaneWidget.setPosition(instanceId, percentage);
+      console.log(
+        `✂️ Clip position set to ${percentage}% for instance: ${instanceId}`
+      );
+    }
   }
 
   /**
-   * 🆕 Deactivate a specific widget (private helper)
+   * Reset clipping
    */
-  _deactivateWidget(instanceId, widgetType) {
+  resetClipping(instanceId) {
     const tools = this.instanceTools.get(instanceId);
-    if (!tools?.widgets.has(widgetType)) return;
+    if (!tools) return;
 
-    const { widget, handle } = tools.widgets.get(widgetType);
+    // Clean up widget
+    vtkPlaneWidget.cleanup(instanceId);
 
-    // Disable and remove
-    if (handle) {
-      handle.setEnabled(false);
-      tools.widgetManager.removeWidget(widget);
-    }
+    // Reset position
+    tools.clipPosition = 50;
 
-    tools.widgets.delete(widgetType);
+    // Remove any clipping from mapper
+    tools.sceneObjects.mapper.removeAllClippingPlanes();
+    tools.sceneObjects.renderWindow.render();
 
-    // Clear active tool if this was it
-    if (this.activeTools.get(instanceId) === widgetType) {
-      this.activeTools.delete(instanceId);
-    }
+    console.log(`✂️ Clipping reset for instance: ${instanceId}`);
   }
 
+  // ==========================================================================
+  // STATE QUERIES (Convenience methods)
+  // ==========================================================================
+
   /**
-   * Get active tool
+   * Check if a specific widget is active
    */
-  getActiveTool(instanceId) {
-    return this.activeTools.get(instanceId) || null;
+  isWidgetActive(instanceId, widgetType) {
+    switch (widgetType) {
+      case "plane":
+        return vtkPlaneWidget.isEnabled(instanceId);
+      case "line":
+        return vtkLineWidget.isEnabled(instanceId);
+      case "angle":
+        return vtkAngleWidget.isEnabled(instanceId);
+      case "orientation":
+        return vtkOrientationWidget.isEnabled(instanceId);
+      default:
+        return false;
+    }
   }
 
   /**
-   * Get measurements
+   * Check if any measurement widgets are active
+   */
+  hasActiveWidgets(instanceId) {
+    return (
+      vtkLineWidget.isEnabled(instanceId) ||
+      vtkAngleWidget.isEnabled(instanceId) ||
+      vtkPlaneWidget.isEnabled(instanceId)
+    );
+  }
+
+  /**
+   * Get all measurements for an instance
    */
   getMeasurements(instanceId) {
     const tools = this.instanceTools.get(instanceId);
@@ -700,79 +478,33 @@ class InstanceToolsManager {
   }
 
   /**
-   * Clear measurements
+   * Disable all measurement tools
    */
-  clearMeasurements(instanceId) {
+  disableMeasurementTools(instanceId) {
+    vtkLineWidget.cleanup(instanceId);
+    vtkAngleWidget.cleanup(instanceId);
+    vtkPlaneWidget.cleanup(instanceId);
+
     const tools = this.instanceTools.get(instanceId);
     if (tools) {
       tools.measurements = [];
-      console.log(`📏 Measurements cleared for instance: ${instanceId}`);
     }
+
+    console.log(
+      `🧹 All measurement tools disabled for instance: ${instanceId}`
+    );
   }
 
   /**
-   * Export instance state
+   * Disable all tools
    */
-  exportInstanceState(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return null;
+  disableAllTools(instanceId) {
+    this.disableMeasurementTools(instanceId);
+    vtkOrientationWidget.setVisible(instanceId, false);
 
-    return {
-      camera: this.getCameraState(instanceId),
-      measurements: this.getMeasurements(instanceId),
-      activeTool: this.getActiveTool(instanceId),
-      timestamp: Date.now(),
-    };
-  }
-
-  /**
-   * Import instance state
-   */
-  importInstanceState(instanceId, state) {
-    if (state.camera) {
-      this.setCameraState(instanceId, state.camera);
-    }
-
-    if (state.measurements) {
-      const tools = this.instanceTools.get(instanceId);
-      if (tools) {
-        tools.measurements = state.measurements;
-      }
-    }
-
-    console.log(`📥 State imported for instance: ${instanceId}`);
-  }
-
-  /**
-   * Clean up tools for an instance
-   */
-  cleanupTools(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
-
-    console.log(`🧹 Cleaning up tools for instance: ${instanceId}`);
-
-    // Disable all tools
-    this.disableAllTools(instanceId);
-
-    // Remove widget manager
-    if (tools.widgetManager) {
-      tools.widgetManager.delete();
-    }
-
-    // Remove from maps
-    this.instanceTools.delete(instanceId);
-    this.activeTools.delete(instanceId);
-
-    console.log(`✅ Tools cleaned up for instance: ${instanceId}`);
+    console.log(`🧹 All tools disabled for instance: ${instanceId}`);
   }
 }
 
-// Create and export singleton
+// Export singleton
 export const instanceTools = new InstanceToolsManager();
-
-// Export for debugging
-if (typeof window !== "undefined") {
-  window.CIA = window.CIA || {};
-  window.CIA.instanceTools = instanceTools;
-}

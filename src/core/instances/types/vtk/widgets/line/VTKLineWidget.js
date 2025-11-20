@@ -1,7 +1,7 @@
 // src/core/instances/types/vtk/widgets/line/VTKLineWidget.js
 // Line measurement widget following the plugin pattern
 
-import vtkLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
+import VtkJsLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
 
 /**
  * VTKLineWidget
@@ -43,7 +43,7 @@ export class VTKLineWidget {
 
     try {
       // Create VTK.js widget
-      const widget = vtkLineWidget.newInstance();
+      const widget = VtkJsLineWidget.newInstance();
 
       // Add to widget manager and get handle
       const handle = widgetManager.addWidget(widget);

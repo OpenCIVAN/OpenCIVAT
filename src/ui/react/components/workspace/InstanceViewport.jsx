@@ -15,6 +15,7 @@ import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
+import { SliderMenuOption } from '@UI/react/components/workspace/SliderMenuOption';
 import "@UI/react/components/workspace/InstanceViewport.css";
 
 /**
@@ -52,6 +53,9 @@ export function InstanceViewport({
     const [tools, setTools] = useState([]);
     const [headerInfo, setHeaderInfo] = useState({ stats: [], indicators: [] });
     const [error, setError] = useState(null);
+
+    // Track which menu is currently open
+    const [openMenuId, setOpenMenuId] = useState(null);
 
     // =========================================================================
     // INSTANCE INITIALIZATION
@@ -104,10 +108,19 @@ export function InstanceViewport({
 
         createInstance();
 
+        // CRITICAL FIX: DO NOT delete instances during component cleanup!
+        // Instances are shared state in Y.js and should persist even if the
+        // React component unmounts. They should only be deleted when:
+        // 1. User explicitly clicks the delete button
+        // 2. Session cleanup runs
+        // Deleting during cleanup was causing instances to disappear from Y.js
+        // during React re-renders, breaking bidirectional sync.
         return () => {
             if (actualInstanceId && initOnce.current) {
-                console.log(`🧹 InstanceViewport: Cleaning up ${actualInstanceId}`);
-                instanceManager.deleteInstance(actualInstanceId);
+                console.log(`🧹 InstanceViewport: Component unmounting (instance ${actualInstanceId} preserved)`);
+
+                // Clean up local rendering only, don't delete from Y.js
+                // instanceManager.deleteInstance(actualInstanceId);  ← REMOVED
             }
         };
     }, []);
@@ -271,7 +284,94 @@ export function InstanceViewport({
     // =========================================================================
 
     /**
-     * Render a tool as an icon button with tooltip
+ * Render individual menu option
+ * UPDATED to support 'custom' type for sliders
+ */
+    const renderMenuOption = (option, optIndex, menuId) => {
+        // Handle separator
+        if (option.type === 'separator') {
+            return (
+                <div
+                    key={`menu-sep-${menuId}-${optIndex}`}
+                    className="menu-separator"
+                />
+            );
+        }
+
+        // =====================================================================
+        // HEADER (for section labels like "Quick Presets")
+        // =====================================================================
+        if (option.type === 'header') {
+            return (
+                <div
+                    key={option.id || `header-${menuId}-${optIndex}`}
+                    className="menu-header"
+                >
+                    {option.label}
+                </div>
+            );
+        }
+
+        // =====================================================================
+        // SLIDER - Convert plain object to React component
+        // =====================================================================
+        if (option.type === 'slider') {
+            // Resolve icon string to React component
+            const IconComponent = getToolIcon(option.icon);
+
+            return (
+                <SliderMenuOption
+                    key={option.id || `slider-${menuId}-${optIndex}`}
+                    icon={IconComponent ? <IconComponent size={14} /> : null}
+                    label={option.label}
+                    description={option.description}
+                    value={option.value}
+                    min={option.min}
+                    max={option.max}
+                    step={option.step}
+                    onChange={option.onChange}
+                    formatValue={option.formatValue}
+                    presets={option.presets}
+                    disabled={option.disabled}
+                />
+            );
+        }
+
+
+        // =====================================================================
+        // BUTTON - Regular clickable option
+        // =====================================================================
+        const OptionIcon = getToolIcon(option.id, option.icon);
+
+        return (
+            <button
+                key={option.id || `option-${menuId}-${optIndex}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (option.onClick) {
+                        option.onClick();
+                    }
+                }}
+                className={`menu-option ${option.active ? 'active' : ''}`}
+                disabled={option.disabled}
+                aria-label={option.label}
+            >
+                <OptionIcon size={14} className="option-icon" />
+                <div className="option-text">
+                    <span className="option-label">{option.label}</span>
+                    {option.description && (
+                        <span className="option-description">
+                            {option.description}
+                        </span>
+                    )}
+                </div>
+            </button>
+        );
+    };
+
+    /**
+     * Render individual tool button
+     * UPDATED with smart dropdown positioning
      */
     const renderTool = (tool, index) => {
         // Separator
@@ -284,20 +384,26 @@ export function InstanceViewport({
             );
         }
 
-        // Get icon from registry
         const IconComponent = getToolIcon(tool.id, tool.icon);
+        const isOpen = openMenuId === tool.id;
 
         // Menu with dropdown
         if (tool.type === 'menu') {
             return (
-                <div key={tool.id || `menu-${index}`} className="toolbar-menu">
+                <div
+                    key={tool.id || `menu-${index}`}
+                    className="toolbar-menu"
+                    onMouseEnter={() => setOpenMenuId(tool.id)}
+                    onMouseLeave={() => setOpenMenuId(null)}
+                >
                     <button
                         className={`toolbar-icon-btn ${tool.active ? 'active' : ''}`}
                         disabled={tool.disabled}
                         aria-label={tool.label}
                         aria-haspopup="true"
+                        aria-expanded={isOpen}
                     >
-                        <IconComponent size={18} strokeWidth={2} />
+                        {IconComponent && <IconComponent size={18} strokeWidth={2} />}
                         <ChevronDown size={10} className="menu-indicator" />
 
                         <div className="toolbar-tooltip">
@@ -311,45 +417,11 @@ export function InstanceViewport({
                         </div>
                     </button>
 
-                    {tool.options && tool.options.length > 0 && (
+                    {isOpen && tool.options && tool.options.length > 0 && (
                         <div className="toolbar-menu-dropdown">
-                            {tool.options.map((option, optIndex) => {
-                                if (option.type === 'separator') {
-                                    return (
-                                        <div
-                                            key={`menu-sep-${optIndex}`}
-                                            className="menu-separator"
-                                        />
-                                    );
-                                }
-
-                                const OptionIcon = getToolIcon(option.id, option.icon);
-
-                                return (
-                                    <button
-                                        key={option.id || `option-${optIndex}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (option.onClick) {
-                                                option.onClick();
-                                            }
-                                        }}
-                                        className={`menu-option ${option.active ? 'active' : ''}`}
-                                        disabled={option.disabled}
-                                        aria-label={option.label}
-                                    >
-                                        <OptionIcon size={14} className="option-icon" />
-                                        <div className="option-text">
-                                            <span className="option-label">{option.label}</span>
-                                            {option.description && (
-                                                <span className="option-description">
-                                                    {option.description}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                            {tool.options.map((option, optIndex) =>
+                                renderMenuOption(option, optIndex, tool.id)
+                            )}
                         </div>
                     )}
                 </div>
@@ -365,7 +437,7 @@ export function InstanceViewport({
                 disabled={tool.disabled}
                 aria-label={tool.label}
             >
-                <IconComponent size={18} strokeWidth={2} />
+                {IconComponent && <IconComponent size={18} strokeWidth={2} />}
                 <div className="toolbar-tooltip">
                     <div className="tooltip-title">{tool.label}</div>
                     {tool.description && (

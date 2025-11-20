@@ -910,31 +910,66 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // ========================================================================
     // 🆕 APPEARANCE MENU - Representation & Opacity
     // ========================================================================
-    const currentRep = caps.hasData
+    // Get current values with safe defaults
+    const currentRepresentation = caps.hasData
       ? instanceTools.getRepresentation(instanceId)
       : "surface";
+
     const currentOpacity = caps.hasData
       ? instanceTools.getOpacity(instanceId)
-      : 1.0;
+      : 1.0; // ✅ 1.0 = 100% opacity
+
+    const currentPointSize = caps.hasData
+      ? instanceTools.getPointSize?.(instanceId) || 5
+      : 5;
+
+    const currentLineWidth = caps.hasData
+      ? instanceTools.getLineWidth?.(instanceId) || 2
+      : 2;
 
     tools.push({
       id: "appearance",
       type: "menu",
-      icon: "palette",
+      icon: "eye",
       label: "Appearance",
-      description: caps.hasData
-        ? "Surface rendering and transparency"
-        : "Appearance requires loaded data",
-      disabled: !caps.hasData,
+      description: caps.hasData ? "Visual settings" : "Load data first",
+      disabled: !caps.hasData, // Disable entire menu if no data
       options: [
-        // Representation modes
+        // ✅ OPACITY SLIDER
+        {
+          type: "slider",
+          id: "opacity-slider",
+          label: "Opacity",
+          icon: "circle",
+          value: currentOpacity,
+          min: 0,
+          max: 1,
+          step: 0.01,
+          formatValue: (val) => `${Math.round(val * 100)}%`,
+          presets: [0, 0.25, 0.5, 0.75, 1.0],
+          description: caps.hasData
+            ? "Adjust material transparency"
+            : "Load data to adjust opacity",
+          disabled: !caps.hasData,
+          onChange: (value) => {
+            if (!caps.hasData) return;
+            instanceTools.setOpacity(instanceId, value);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+
+        { type: "separator" },
+
+        // REPRESENTATION OPTIONS
         {
           id: "rep-surface",
           icon: "box",
           label: "Surface",
           description: "Solid surface rendering",
-          active: currentRep === "surface",
+          active: currentRepresentation === "surface",
+          disabled: !caps.hasData,
           onClick: () => {
+            if (!caps.hasData) return;
             instanceTools.setRepresentation(instanceId, "surface");
             this._emitToolsUpdate(instanceId);
           },
@@ -944,66 +979,201 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           icon: "grid-3x3",
           label: "Wireframe",
           description: "Show mesh edges",
-          active: currentRep === "wireframe",
+          active: currentRepresentation === "wireframe",
+          disabled: !caps.hasData,
           onClick: () => {
+            if (!caps.hasData) return;
             instanceTools.setRepresentation(instanceId, "wireframe");
             this._emitToolsUpdate(instanceId);
           },
         },
         {
           id: "rep-points",
-          icon: "points",
+          icon: "circle",
           label: "Points",
-          description: "Show individual vertices",
-          active: currentRep === "points",
+          description: "Show vertices only",
+          active: currentRepresentation === "points",
+          disabled: !caps.hasData,
           onClick: () => {
+            if (!caps.hasData) return;
             instanceTools.setRepresentation(instanceId, "points");
             this._emitToolsUpdate(instanceId);
           },
         },
+
         { type: "separator" },
-        // Opacity presets
+
+        // ✅ POINT SIZE SLIDER - Only enabled in points mode
         {
-          id: "opacity-100",
+          type: "slider",
+          id: "point-size-slider",
+          label: "Point Size",
           icon: "circle",
-          label: "Opaque (100%)",
-          description: "Fully solid",
-          active: currentOpacity === 1.0,
-          onClick: () => {
-            instanceTools.setOpacity(instanceId, 1.0);
+          value: currentPointSize,
+          min: 1,
+          max: 20,
+          step: 0.5,
+          formatValue: (val) => `${val.toFixed(1)}px`,
+          presets: [1, 5, 10, 15, 20],
+          description: !caps.hasData
+            ? "Load data first"
+            : currentRepresentation !== "points"
+            ? "Switch to Points mode to adjust"
+            : "Size of rendered points",
+          disabled: !caps.hasData || currentRepresentation !== "points",
+          onChange: (value) => {
+            if (!caps.hasData || currentRepresentation !== "points") return;
+            instanceTools.setPointSize?.(instanceId, value);
             this._emitToolsUpdate(instanceId);
           },
         },
+
+        // ✅ LINE WIDTH SLIDER - Only enabled in wireframe mode
         {
-          id: "opacity-75",
+          type: "slider",
+          id: "line-width-slider",
+          label: "Line Width",
+          icon: "minus",
+          value: currentLineWidth,
+          min: 1,
+          max: 10,
+          step: 0.5,
+          formatValue: (val) => `${val.toFixed(1)}px`,
+          presets: [1, 2, 5, 10],
+          description: !caps.hasData
+            ? "Load data first"
+            : currentRepresentation !== "wireframe"
+            ? "Switch to Wireframe mode to adjust"
+            : "Width of wireframe lines",
+          disabled: !caps.hasData || currentRepresentation !== "wireframe",
+          onChange: (value) => {
+            if (!caps.hasData || currentRepresentation !== "wireframe") return;
+            instanceTools.setLineWidth?.(instanceId, value);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+
+        { type: "separator" },
+
+        // Quick preset header
+        {
+          type: "header",
+          id: "opacity-presets-header",
+          label: "Quick Opacity Presets",
+        },
+
+        // Quick preset buttons
+        {
+          id: "opacity-100",
           icon: "circle",
-          label: "75% Opacity",
-          description: "Slightly transparent",
-          active: Math.abs(currentOpacity - 0.75) < 0.01,
+          label: "Opaque",
+          description: "100% opacity",
+          active: Math.abs(currentOpacity - 1.0) < 0.01,
+          disabled: !caps.hasData,
           onClick: () => {
-            instanceTools.setOpacity(instanceId, 0.75);
+            if (!caps.hasData) return;
+            instanceTools.setOpacity(instanceId, 1.0);
             this._emitToolsUpdate(instanceId);
           },
         },
         {
           id: "opacity-50",
           icon: "circle-dashed",
-          label: "50% Opacity",
-          description: "Half transparent",
+          label: "Half",
+          description: "50% opacity",
           active: Math.abs(currentOpacity - 0.5) < 0.01,
+          disabled: !caps.hasData,
           onClick: () => {
+            if (!caps.hasData) return;
             instanceTools.setOpacity(instanceId, 0.5);
             this._emitToolsUpdate(instanceId);
           },
         },
         {
-          id: "opacity-25",
-          icon: "circle-dashed",
-          label: "25% Opacity",
-          description: "Very transparent",
-          active: Math.abs(currentOpacity - 0.25) < 0.01,
+          id: "opacity-0",
+          icon: "circle-off",
+          label: "Invisible",
+          description: "0% opacity",
+          active: currentOpacity < 0.01,
+          disabled: !caps.hasData,
           onClick: () => {
-            instanceTools.setOpacity(instanceId, 0.25);
+            if (!caps.hasData) return;
+            instanceTools.setOpacity(instanceId, 0.0);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+      ],
+    });
+
+    // ========================================================================
+    // CLIPPING MENU with position slider
+    // ========================================================================
+    const clipState = instanceTools.getClipState?.(instanceId);
+    const isClipping = clipState?.active || false;
+    const clipPosition = clipState?.position || 50;
+
+    tools.push({
+      id: "clipping",
+      type: "menu",
+      icon: "scissors",
+      label: "Clipping",
+      description: caps.canUseClipping
+        ? "Cut away data"
+        : "Not available for this data",
+      active: isClipping,
+      disabled: !caps.canUseClipping,
+      options: [
+        // Toggle clipping
+        {
+          id: "clip-toggle",
+          icon: isClipping ? "toggle-right" : "toggle-left",
+          label: isClipping ? "Disable Clipping" : "Enable Clipping",
+          description: isClipping
+            ? "Remove clipping plane"
+            : "Add clipping plane",
+          disabled: !caps.canUseClipping,
+          onClick: () => {
+            if (!caps.canUseClipping) return;
+            instanceTools.toggleClippingPlane(instanceId);
+            this._emitToolsUpdate(instanceId);
+          },
+        },
+
+        { type: "separator" },
+
+        // ✅ CLIP POSITION SLIDER - Only when clipping is active
+        ...(isClipping && caps.canUseClipping
+          ? [
+              {
+                type: "slider",
+                id: "clip-position-slider",
+                label: "Clip Position",
+                icon: "move",
+                value: clipPosition,
+                min: 0,
+                max: 100,
+                step: 1,
+                formatValue: (val) => `${val}%`,
+                presets: [0, 25, 50, 75, 100],
+                description: "Position along clipping axis",
+                onChange: (value) => {
+                  instanceTools.setClipPosition?.(instanceId, value);
+                  this._emitToolsUpdate(instanceId);
+                },
+              },
+            ]
+          : []),
+
+        // Reset button
+        {
+          id: "clip-reset",
+          icon: "rotate-ccw",
+          label: "Reset Clipping",
+          description: "Remove clipping plane",
+          disabled: !caps.canUseClipping || !isClipping,
+          onClick: () => {
+            if (!caps.canUseClipping || !isClipping) return;
+            instanceTools.resetClipping(instanceId);
             this._emitToolsUpdate(instanceId);
           },
         },
