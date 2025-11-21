@@ -1,18 +1,10 @@
-// src/ui/react/components/workspace/InstanceViewport.jsx
-// Generic instance container with proper local/remote handling
-
 import React, { useRef, useEffect, useState } from "react";
 import { createPortal } from 'react-dom';
 import {
-    ChevronDown,    // Dropdown indicator
-    Maximize2,      // Fullscreen
-    Trash2,         // Delete
-    AlertCircle     // Error icon
+    ChevronDown, Maximize2, Trash2, AlertCircle
 } from 'lucide-react';
 
-// Import centralized icon registry
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
-
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
@@ -22,25 +14,27 @@ import { SliderWithPresets } from '@UI/react/components/workspace/SliderWithPres
 import { ColorSwatchGrid } from '@UI/react/components/workspace/ColorSwatchGrid.jsx';
 import { PositionGridPicker } from '@UI/react/components/workspace/PositionGridPicker.jsx';
 
+// ✅ NEW: Import managers
+import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
+
 import "@UI/react/components/workspace/InstanceViewport.css";
 
 /**
  * InstanceViewport
- *
- * Generic container that can host any visualization type.
- * Handles both local instances (created by this user) and remote instances
- * (created by other users and mirrored locally).
- *
+ * 
+ * ✅ UPDATED: Now uses ViewConfiguration layer
+ * 
  * Props:
- * - datasetId: Dataset to display (optional)
+ * - viewConfigId: ViewConfiguration ID (replaces datasetId)
+ * - type: Instance type ('vtk', 'plotly', etc.)
  * - isRemote: Whether this is a remote instance
- * - remoteInstanceId: The instance ID from Y.js (only for remote instances)
- * - ownerUserName: Name of user who created this (only for remote instances)
+ * - remoteInstanceId: The instance ID from Y.js
+ * - ownerUserName: Name of user who created this
  * - onDelete: Callback when instance should be deleted
  */
 export function InstanceViewport({
-    viewConfigId,        // Changed from datasetId
-    type = 'vtk',       // Instance type
+    viewConfigId,        // ✅ Changed from datasetId
+    type = 'vtk',
     isRemote = false,
     remoteInstanceId = null,
     ownerUserName = null,
@@ -52,205 +46,193 @@ export function InstanceViewport({
 
     const containerRef = useRef(null);
     const initOnce = useRef(false);
+
     const [actualInstanceId, setActualInstanceId] = useState(
         isRemote ? remoteInstanceId : null
     );
     const [initialized, setInitialized] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [tools, setTools] = useState([]);
-    const [headerInfo, setHeaderInfo] = useState({ stats: [], indicators: [] });
     const [error, setError] = useState(null);
-
-    // Track which menu is currently open
-    const [openMenuId, setOpenMenuId] = useState(null);
+    const [tools, setTools] = useState([]);
+    const [headerInfo, setHeaderInfo] = useState(null);
+    const [openMenuId, setOpenMenuId] = useState(null); 
+    const [activeDropdown, setActiveDropdown] = useState(null);
 
     // =========================================================================
     // INSTANCE INITIALIZATION
     // =========================================================================
 
     useEffect(() => {
-        if (!containerRef.current || initOnce.current) return;
+        if (initOnce.current || !containerRef.current) return;
+
         initOnce.current = true;
 
-        console.log(`🎨 InstanceViewport: Initializing`);
-        console.log(`   Mode: ${isRemote ? 'remote' : 'local'}`);
-
-        const createInstance = async () => {
+        const initialize = async () => {
             try {
-                let instanceId;
-
                 if (isRemote) {
-                    console.log(`🌐 Creating local rendering of remote instance`);
-                    await instanceManager.createRemoteInstance(
-                        containerRef.current,
-                        remoteInstanceId,
-                        datasetId
-                    );
-                    instanceId = remoteInstanceId;
-                } else {
-                    console.log(`🆕 Creating new local instance`);
-                    instanceId = await instanceManager.createInstance(
-                        containerRef.current,
-                        datasetId
-                    );
+                    console.log(`🔗 Remote instance already has ID: ${remoteInstanceId}`);
+                    setActualInstanceId(remoteInstanceId);
+                    setInitialized(true);
+                    return;
                 }
 
+                console.log(`🎨 Creating new local instance (type: ${type})`);
+
+                // ✅ UPDATED: Store viewConfigId in options
+                const instanceId = await workspaceManager.createInstance(
+                    containerRef.current,
+                    type,
+                    { viewConfigId }  // Pass viewConfigId to instance
+                );
+
                 setActualInstanceId(instanceId);
-
-                // const instanceTools = workspaceManager.getInstanceTools(instanceId);
-                // console.log(`   Handler provided ${instanceTools.length} tools`);
-                // setTools(instanceTools);
-
-                const header = workspaceManager.getInstanceHeaderInfo(instanceId);
-                setHeaderInfo(header);
-
                 setInitialized(true);
-                console.log(`✅ Instance ready: ${instanceId}`);
 
-            } catch (error) {
-                console.error(`❌ Failed to initialize instance:`, error);
-                setError(error.message);
+                setActiveInstance(instanceId);
+                console.log(`✅ Instance created: ${instanceId}`);
+
+            } catch (err) {
+                console.error(`❌ Failed to initialize instance:`, err);
+                setError({
+                    message: err.message || 'Initialization failed',
+                    canRetry: true,
+                });
             }
         };
 
-        createInstance();
+        initialize();
+    }, [isRemote, remoteInstanceId, type, viewConfigId]);
 
-        // CRITICAL FIX: DO NOT delete instances during component cleanup!
-        // Instances are shared state in Y.js and should persist even if the
-        // React component unmounts. They should only be deleted when:
-        // 1. User explicitly clicks the delete button
-        // 2. Session cleanup runs
-        // Deleting during cleanup was causing instances to disappear from Y.js
-        // during React re-renders, breaking bidirectional sync.
-        return () => {
-            if (actualInstanceId && initOnce.current) {
-                console.log(`🧹 InstanceViewport: Component unmounting (instance ${actualInstanceId} preserved)`);
+    // =========================================================================
+    // TOOLS LOADING
+    // =========================================================================
 
-                // Clean up local rendering only, don't delete from Y.js
-                // instanceManager.deleteInstance(actualInstanceId);  ← REMOVED
+    useEffect(() => {
+        if (!initialized || !actualInstanceId) return;
+
+        const loadTools = () => {
+            try {
+                const toolsList = workspaceManager.getInstanceTools(actualInstanceId);
+                console.log(`🔧 Loaded ${toolsList.length} tools for instance ${actualInstanceId}`);
+                setTools(toolsList);
+            } catch (err) {
+                console.warn(`⚠️ Failed to load tools:`, err);
             }
         };
-    }, []);
 
-    // =========================================================================
-    // 🔧 USEEFFECT #2: GET INITIAL TOOLS AFTER INITIALIZATION
-    // This runs when instance is initialized AND has an ID
-    // =========================================================================
-    useEffect(() => {
-        // Wait until we have both initialized flag AND actualInstanceId
-        if (!initialized || !actualInstanceId) {
-            console.log(`⏳ Waiting for initialization... initialized=${initialized}, id=${actualInstanceId}`);
-            return;
-        }
-
-        console.log(`🛠️ Getting initial tools for ${actualInstanceId}`);
-
-        const initialTools = workspaceManager.getInstanceTools(actualInstanceId);
-        console.log(`   Found ${initialTools.length} tools`);
-
-        setTools(initialTools);
-
-    }, [initialized, actualInstanceId]);
-
-    // Later, when tools update event fires
-    useEffect(() => {
-        if (!actualInstanceId) return;
+        loadTools();
 
         const handleToolsUpdate = (event) => {
-            // Only update if this event is for OUR instance
             if (event.detail?.instanceId === actualInstanceId) {
-
-                const before = tools.length;
-                const updatedTools = workspaceManager.getInstanceTools(actualInstanceId);
-
-                console.log('📊 Tools comparison:');
-                console.log('  - Array changed?', tools !== updatedTools);
-                console.log('  - Length before:', before);
-                console.log('  - Length after:', updatedTools.length);
                 console.log(`🔄 Tools updated for ${actualInstanceId}, refreshing toolbar`);
-
-                console.log(`   Got ${updatedTools.length} updated tools`);
-
+                const updatedTools = workspaceManager.getInstanceTools(actualInstanceId);
                 setTools(updatedTools);
             }
         };
 
-        // Listen for custom events from VTKInstanceHandler
         window.addEventListener('cia:tools-updated', handleToolsUpdate);
-
-        // Cleanup listener when component unmounts or actualInstanceId changes
-        return () => {
-            window.removeEventListener('cia:tools-updated', handleToolsUpdate);
-        };
-    }, [actualInstanceId]);
+        return () => window.removeEventListener('cia:tools-updated', handleToolsUpdate);
+    }, [actualInstanceId, initialized]);
 
     // =========================================================================
-    // DATASET LOADING
+    // ✅ NEW: VIEW CONFIGURATION LOADING
+    // This replaces the old dataset loading logic
     // =========================================================================
 
     useEffect(() => {
-        if (!initialized || !actualInstanceId || !datasetId) {
+        if (!initialized || !actualInstanceId || !viewConfigId) {
             setLoading(false);
             return;
         }
 
-        const loadDataset = async () => {
+        const loadView = async () => {
             try {
-                const datasetManager = window.CIA?.datasetManager;
-                if (!datasetManager) {
-                    throw new Error('DatasetManager not initialized');
+                // STEP 1: Get the ViewConfiguration
+                const view = viewConfigurationManager.getView(viewConfigId);
+                if (!view) {
+                    throw new Error(`ViewConfiguration ${viewConfigId} not found`);
                 }
 
-                const dataset = datasetManager.getDataset(datasetId);
+                console.log(`📋 Loading view ${viewConfigId}`);
+
+                // STEP 2: Get the Dataset from the view
+                const dataset = datasetManager.getDataset(view.datasetId);
                 if (!dataset) {
-                    console.warn(`⚠️ Dataset ${datasetId} not found`);
-                    return;
+                    throw new Error(`Dataset ${view.datasetId} not found for view`);
                 }
 
+                console.log(`📊 Loading dataset ${dataset.filename} via view`);
+
+                // STEP 3: Get the instance
                 const instance = workspaceManager.getInstance(actualInstanceId);
                 if (!instance) {
-                    console.warn(`⚠️ Instance ${actualInstanceId} not found`);
-                    return;
+                    throw new Error(`Instance ${actualInstanceId} not found`);
                 }
 
-                const registry = window.CIA?.vtkInstanceHandler;
-                if (!registry) {
-                    throw new Error('VTK handler not available');
+                // STEP 4: Get the handler
+                const handler = instance.handler;
+                if (!handler) {
+                    throw new Error('Instance handler not available');
                 }
 
                 setLoading(true);
-                console.log(`📊 Loading dataset ${dataset.filename} into instance`);
 
-                await registry.loadData(instance.instanceData, dataset, null);
+                // STEP 5: Load the data
+                console.log(`📊 Loading data into instance ${actualInstanceId}`);
+                await handler.loadData(instance.instanceData, dataset, null);
 
+                // STEP 6: Apply saved camera state if it exists
+                if (view.camera && handler.applyCameraState) {
+                    console.log(`📷 Applying saved camera state from view`);
+                    handler.applyCameraState(actualInstanceId, view.camera);
+                }
+
+                // STEP 7: Apply filters if any
+                if (view.filters && view.filters.length > 0) {
+                    console.log(`🎨 Applying ${view.filters.length} filter(s) from view`);
+                    // TODO: Implement filter application
+                }
+
+                // STEP 8: Restore widgets if any
+                if (view.widgets && view.widgets.length > 0) {
+                    console.log(`🔧 Restoring ${view.widgets.length} widget(s) from view`);
+                    // TODO: Implement widget restoration
+                }
+
+                // Update header info
                 const newHeaderInfo = workspaceManager.getInstanceHeaderInfo(actualInstanceId);
                 setHeaderInfo(newHeaderInfo);
 
                 setLoading(false);
-                console.log(`✅ Dataset loaded successfully`);
+                console.log(`✅ View loaded successfully`);
 
             } catch (error) {
                 const errorMessage = error.message || 'Unknown error occurred';
-                console.error(`❌ Failed to load dataset:`, error);
+                console.error(`❌ Failed to load view:`, error);
 
-                const dataset = window.CIA?.datasetManager?.getDataset(datasetId);
+                // Get dataset info for error display
+                let datasetName = 'Unknown';
+                try {
+                    const view = viewConfigurationManager.getView(viewConfigId);
+                    if (view) {
+                        const dataset = datasetManager.getDataset(view.datasetId);
+                        datasetName = dataset?.filename || 'Unknown';
+                    }
+                } catch (e) {
+                    console.warn('Could not get dataset name for error display');
+                }
+
                 setError({
                     message: errorMessage,
-                    datasetId: datasetId,
-                    datasetName: dataset?.filename || 'Unknown dataset',
-                    canAutoFetch: dataset?.canAutoFetch?.() || false,
-                    needsReupload: errorMessage.includes('not available') ||
-                        errorMessage.includes('no longer in cache') ||
-                        errorMessage.includes('re-upload'),
+                    viewConfigId: viewConfigId,
+                    datasetName: datasetName,
                 });
-
                 setLoading(false);
             }
         };
 
-        loadDataset();
-
-    }, [initialized, actualInstanceId, datasetId]);
+        loadView();
+    }, [initialized, actualInstanceId, viewConfigId]);
 
     // =========================================================================
     // UI HELPERS
@@ -258,19 +240,31 @@ export function InstanceViewport({
 
     const getDisplayName = () => {
         if (isRemote && ownerUserName) {
-            if (datasetId) {
-                const datasetManager = window.CIA?.datasetManager;
-                const dataset = datasetManager?.getDataset(datasetId);
-                const filename = dataset?.filename || 'Unknown';
-                return `${ownerUserName}'s view of ${filename}`;
+            if (viewConfigId) {
+                try {
+                    const view = viewConfigurationManager.getView(viewConfigId);
+                    if (view) {
+                        const dataset = datasetManager.getDataset(view.datasetId);
+                        const filename = dataset?.filename || 'Unknown';
+                        return `${ownerUserName}'s view of ${filename}`;
+                    }
+                } catch (e) {
+                    return `${ownerUserName}'s view`;
+                }
             }
             return `${ownerUserName}'s view`;
         }
 
-        if (datasetId) {
-            const datasetManager = window.CIA?.datasetManager;
-            const dataset = datasetManager?.getDataset(datasetId);
-            return dataset?.filename || `Dataset ${datasetId.slice(0, 8)}`;
+        if (viewConfigId) {
+            try {
+                const view = viewConfigurationManager.getView(viewConfigId);
+                if (view) {
+                    const dataset = datasetManager.getDataset(view.datasetId);
+                    return dataset?.filename || view.name || 'View';
+                }
+            } catch (e) {
+                return `View ${viewConfigId.slice(0, 8)}`;
+            }
         }
 
         return `Instance ${actualInstanceId ? actualInstanceId.slice(-6) : '...'}`;
@@ -285,6 +279,7 @@ export function InstanceViewport({
             }
         }
     };
+
 
     // =========================================================================
     // TOOLBAR RENDERING
@@ -527,138 +522,80 @@ export function InstanceViewport({
     };
 
     // =========================================================================
-    // RENDER
+    // MAIN RENDER
     // =========================================================================
 
     return (
-        <div className="instance-container">
+        <div
+            className="instance-viewport"
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                backgroundColor: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: '4px',
+                overflow: 'hidden',
+            }}
+        >
             {/* Header */}
-            <div className="instance-header">
-                <div className="instance-title-section">
-                    <h3 className="instance-title">
-                        {getDisplayName()}
-                        {isRemote && (
-                            <span style={{
-                                marginLeft: '8px',
-                                fontSize: '11px',
-                                color: '#4CAF50',
-                                fontWeight: 'normal'
-                            }}>
-                                (shared)
-                            </span>
-                        )}
-                    </h3>
-
-                    {headerInfo.stats && headerInfo.stats.length > 0 && (
-                        <div className="instance-stats">
-                            {headerInfo.stats.map((stat, idx) => (
-                                <span key={idx} className="stat">
-                                    <span className="stat-label">{stat.label}:</span>
-                                    <span className="stat-value">{stat.value}</span>
-                                </span>
-                            ))}
-                        </div>
-                    )}
-
-                    {headerInfo.indicators && headerInfo.indicators.length > 0 && (
-                        <div className="instance-indicators">
-                            {headerInfo.indicators.map((indicator, idx) => (
-                                <span
-                                    key={idx}
-                                    className="indicator"
-                                    style={{ color: indicator.color }}
-                                >
-                                    {indicator.icon && <span>{indicator.icon}</span>}
-                                    <span>{indicator.label}</span>
-                                </span>
-                            ))}
-                        </div>
-                    )}
+            <div className="instance-viewport__header">
+                <div className="instance-viewport__header-title">
+                    {getDisplayName()}
                 </div>
-
-                <div className="instance-actions">
+                <div className="instance-viewport__header-actions">
                     <button
                         onClick={handleFullscreen}
-                        className="action-btn"
+                        className="instance-viewport__header-button"
                         title="Fullscreen"
                     >
-                        <Maximize2 size={16} />
+                        <Maximize2 size={14} />
                     </button>
-
-                    <button
-                        onClick={onDelete}
-                        className="action-btn danger"
-                        title="Delete Instance"
-                    >
-                        <Trash2 size={16} />
-                    </button>
+                    {onDelete && (
+                        <button
+                            onClick={onDelete}
+                            className="instance-viewport__header-button"
+                            title="Delete"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Toolbar */}
-            {initialized && tools.length > 0 && (
-                <div className="instance-toolbar">
+            {tools.length > 0 && (
+                <div className="instance-viewport__toolbar">
                     {tools.map((tool, index) => renderTool(tool, index))}
                 </div>
             )}
 
-            {/* Viewport */}
-            <div className="viewport-wrapper">
-                <div ref={containerRef} className="viewport-container" onMouseEnter={() => {
-                    if (actualInstanceId) {
-                        setActiveInstance(actualInstanceId);
-                    }
-                }} />
-
+            {/* Content */}
+            <div
+                ref={containerRef}
+                className="instance-viewport__content"
+                style={{
+                    flex: 1,
+                    position: 'relative',
+                    backgroundColor: '#0a0a0a',
+                }}
+                onMouseEnter={() => actualInstanceId && setActiveInstance(actualInstanceId)}
+            >
                 {loading && (
-                    <div className="viewport-overlay loading">
-                        <div className="loading-spinner" />
-                        <p>Loading dataset...</p>
+                    <div className="instance-viewport__loading">
+                        Loading view...
                     </div>
                 )}
-
                 {error && (
-                    <div className="viewport-overlay error">
-                        <AlertCircle size={48} color="#f44336" />
-                        <h3 className="error-title">Unable to Load Dataset</h3>
-                        <p className="error-message">{error.message}</p>
-                        {/* ... error actions ... */}
-                    </div>
-                )}
-
-                {!datasetId && !loading && initialized && !error && (
-                    <div className="viewport-overlay empty">
-                        <p>No dataset loaded</p>
-                        <p className="hint">Select a file from the Files panel</p>
+                    <div className="instance-viewport__error">
+                        <AlertCircle size={24} />
+                        <div>{error.message}</div>
+                        <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                            View: {error.viewConfigId?.slice(0, 12)}...
+                        </div>
                     </div>
                 )}
             </div>
         </div>
     );
 }
-
-/* ============================================================================
-   USAGE PATTERN FOR OTHER COMPONENTS
-   
-   To add a new visual picker:
-   
-   1. In Core (VTKInstanceHandler):
-      {
-        type: 'my-custom-picker',
-        id: 'my-picker',
-        data: { ... plain data ... },
-        onAction: (value) => { ... plain callback ... }
-      }
-   
-   2. In UI (InstanceViewport renderMenuOption):
-      if (option.type === 'my-custom-picker') {
-        return <MyCustomPicker {...option} />;
-      }
-   
-   3. Create Component (MyCustomPicker.jsx):
-      export function MyCustomPicker({ data, onAction }) {
-        // Pure React, receives plain props
-      }
-   
-   This pattern keeps core pure and UI flexible!
-   ============================================================================ */

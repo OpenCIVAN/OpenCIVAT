@@ -209,7 +209,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.updateCamera(cameraState);
-    this._syncToYjs(view);
+    this._syncToYjs(view); // ✅ This syncs to Y.js
     this._emit("viewUpdated", view);
   }
 

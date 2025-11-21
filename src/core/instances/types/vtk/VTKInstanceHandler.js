@@ -7,6 +7,7 @@ import { instanceTools } from "@VTK/vtkInstanceTools.js";
 import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature";
 import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget";
 import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
+import { viewConfigurationManager } from "@Init/appInitializer.js";
 
 import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
@@ -128,7 +129,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
    * Initialize a new VTK instance with LAZY rendering
    */
   async initialize(containerElement, options = {}) {
-    const { instanceId, datasetId } = options;
+    const { instanceId, datasetId, viewConfigId } = options;
 
     console.log(
       `🎨 VTK Handler: Initializing instance ${instanceId} (lazy mode)`
@@ -141,6 +142,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       instanceId,
       container: containerElement,
       datasetId,
+      viewConfigId,
       stateAdapter,
 
       // VTK objects will be created lazily
@@ -1854,6 +1856,41 @@ console.log('Tools:', tools);
     }
   }
 
+  /**
+   * Apply camera state from a ViewConfiguration
+   */
+  applyCameraState(instanceId, cameraState) {
+    const instanceData = this.instances.get(instanceId);
+    if (!instanceData?.sceneObjects?.camera) {
+      console.warn(
+        `⚠️ Cannot apply camera state - instance ${instanceId} not initialized`
+      );
+      return;
+    }
+
+    this._isApplyingRemoteState = true;
+
+    try {
+      const camera = instanceData.sceneObjects.camera;
+
+      if (cameraState.position) camera.setPosition(...cameraState.position);
+      if (cameraState.focalPoint)
+        camera.setFocalPoint(...cameraState.focalPoint);
+      if (cameraState.viewUp) camera.setViewUp(...cameraState.viewUp);
+      if (cameraState.parallelScale)
+        camera.setParallelScale(cameraState.parallelScale);
+      if (cameraState.clippingRange)
+        camera.setClippingRange(...cameraState.clippingRange);
+      if (cameraState.viewAngle) camera.setViewAngle(cameraState.viewAngle);
+
+      instanceData.sceneObjects.renderWindow.render();
+
+      console.log(`📷 Applied camera state to instance ${instanceId}`);
+    } finally {
+      this._isApplyingRemoteState = false;
+    }
+  }
+
   // ===========================================================================
   // VR SUPPORT
   // ===========================================================================
@@ -1994,6 +2031,21 @@ console.log('Tools:', tools);
 
     // Listen for camera modifications and publish through adapter
     camera.onModified(() => {
+      if (!this._isApplyingRemoteState && instanceData.viewConfigId) {
+        const cameraState = {
+          position: camera.getPosition(),
+          focalPoint: camera.getFocalPoint(),
+          viewUp: camera.getViewUp(),
+          parallelScale: camera.getParallelScale(),
+          clippingRange: camera.getClippingRange(),
+          viewAngle: camera.getViewAngle(),
+        };
+
+        viewConfigurationManager.updateCamera(
+          instanceData.viewConfigId,
+          cameraState
+        );
+      }
       // Only publish if we're not applying remote state
       if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
         const cameraState = {
@@ -2001,7 +2053,6 @@ console.log('Tools:', tools);
           focalPoint: camera.getFocalPoint(),
           viewUp: camera.getViewUp(),
           parallelScale: camera.getParallelScale(),
-          // 🆕 ADD THESE for proper zoom synchronization:
           clippingRange: camera.getClippingRange(),
           viewAngle: camera.getViewAngle(),
         };

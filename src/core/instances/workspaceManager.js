@@ -72,15 +72,14 @@ class WorkspaceManager {
    * @param {string} [options.datasetId] - Optional dataset to load immediately
    * @returns {string} The instance ID
    */
-  async createInstance(containerElement, options = {}) {
+  async createInstance(containerElement, type, options = {}) {
     if (!containerElement) {
       throw new Error("Container element is required for createInstance");
     }
 
     // Extract options with defaults
     const instanceId = options.instanceId || generateInstanceId();
-    const type = options.type || "vtk"; // Default to VTK for backward compatibility
-    const datasetId = options.datasetId || null;
+    const { viewConfigId, datasetId } = options;
 
     // Check if instance already exists
     if (this.instances.has(instanceId)) {
@@ -102,6 +101,7 @@ class WorkspaceManager {
       const instanceData = await handler.initialize(containerElement, {
         instanceId,
         datasetId,
+        viewConfigId,
       });
 
       // Create general metadata structure
@@ -112,6 +112,7 @@ class WorkspaceManager {
         type, // NEW: track what type this instance is
         container: containerElement,
         datasetId,
+        viewConfigId,
         createdAt: Date.now(),
         lastActive: Date.now(),
 
