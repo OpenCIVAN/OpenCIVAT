@@ -39,7 +39,8 @@ import "@UI/react/components/workspace/InstanceViewport.css";
  * - onDelete: Callback when instance should be deleted
  */
 export function InstanceViewport({
-    datasetId,
+    viewConfigId,        // Changed from datasetId
+    type = 'vtk',       // Instance type
     isRemote = false,
     remoteInstanceId = null,
     ownerUserName = null,

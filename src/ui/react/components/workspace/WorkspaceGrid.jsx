@@ -3,13 +3,15 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, Users, X } from "lucide-react";
+
+import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 import { instanceManager } from "@Core/instances/instanceManager.js";
 import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport.jsx";
 import { RemoteInstancePlaceholder } from "@UI/react/components/workspace/RemoteInstancePlaceholder.jsx";
 
 export function WorkspaceGrid() {
     // Track instances to render
-    // Structure: { key, datasetId, isRemote, remoteId, userName }
+    // New structure: { key, viewConfigId, type, isRemote, remoteId, userName }
     const [instances, setInstances] = useState([]);
 
     // Pending remote instances
