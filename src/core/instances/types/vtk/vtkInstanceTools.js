@@ -366,16 +366,16 @@ class InstanceToolsManager {
   }
 
   /**
-   * Set line width
+   * Set line width (for wireframe representation)
    */
   setLineWidth(instanceId, width) {
     const tools = this.instanceTools.get(instanceId);
-    if (!tools) return;
+    if (!tools?.sceneObjects?.actor) return;
 
     tools.sceneObjects.actor.getProperty().setLineWidth(width);
     tools.sceneObjects.renderWindow.render();
 
-    console.log(`━ Line width set to ${width} for instance: ${instanceId}`);
+    console.log(`📏 Line width set to ${width}px for instance: ${instanceId}`);
   }
 
   /**
@@ -532,10 +532,6 @@ class InstanceToolsManager {
       vtkAngleWidget.initialize(instanceId, {
         widgetManager: tools.widgetManager,
         sceneObjects: tools.sceneObjects,
-        onMeasurement: (measurement) => {
-          tools.measurements.push(measurement);
-          console.log(`📐 Angle measured: ${measurement.value.toFixed(2)}°`);
-        },
       });
       console.log(`📐 Angle measurement enabled for instance: ${instanceId}`);
     }
@@ -582,30 +578,33 @@ class InstanceToolsManager {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return { active: false, position: 50 };
 
+    const isActive = vtkPlaneWidget.isEnabled(instanceId);
+
     return {
-      active: vtkPlaneWidget.isEnabled(instanceId),
+      active: isActive,
       position: tools.clipPosition || 50,
     };
   }
 
   /**
    * Set clipping plane position (0-100%)
-   * Delegates to VTKPlaneWidget
+   * Note: This just stores the position value.
+   * The clipping plane position is controlled by user dragging the widget.
    */
   setClipPosition(instanceId, percentage) {
     const tools = this.instanceTools.get(instanceId);
     if (!tools) return;
 
-    // Store position
+    // Store position for UI display
     tools.clipPosition = percentage;
 
-    // Delegate to widget if active
-    if (vtkPlaneWidget.isEnabled(instanceId)) {
-      vtkPlaneWidget.setPosition(instanceId, percentage);
-      console.log(
-        `✂️ Clip position set to ${percentage}% for instance: ${instanceId}`
-      );
-    }
+    // Note: VTKPlaneWidget doesn't have a programmatic setPosition method.
+    // The plane position is controlled by the user dragging the widget handles.
+    // This slider just tracks the approximate position for display purposes.
+
+    console.log(
+      `✂️ Clip position tracked at ${percentage}% for instance: ${instanceId}`
+    );
   }
 
   /**

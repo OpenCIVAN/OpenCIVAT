@@ -2,6 +2,7 @@
 // Generic instance container with proper local/remote handling
 
 import React, { useRef, useEffect, useState } from "react";
+import { createPortal } from 'react-dom';
 import {
     ChevronDown,    // Dropdown indicator
     Maximize2,      // Fullscreen

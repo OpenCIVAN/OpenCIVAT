@@ -1,35 +1,14 @@
-// src/core/instances/types/vtk/widgets/angle/VTKAngleWidget.js
-// Angle measurement widget following the plugin pattern
-
 import VtkJsAngleWidget from "@kitware/vtk.js/Widgets/Widgets3D/AngleWidget";
 
 /**
  * VTKAngleWidget
- *
- * Provides angle measurement between three points.
- *
- * CONTRIBUTOR PATTERN:
- * - Each instance has its own widget (no global state)
- * - Widget lifecycle tied to instance lifecycle
- * - Clean separation from core architecture
- * - Measurements passed via callback
+ * Angle measurement widget following the plugin pattern
  */
 export class VTKAngleWidget {
   constructor() {
-    // Per-instance widget storage
-    // Maps instanceId → { widget, handle, config }
     this.instances = new Map();
   }
 
-  /**
-   * Initialize widget for a specific instance
-   *
-   * @param {string} instanceId - Unique instance identifier
-   * @param {Object} config - Configuration
-   * @param {Object} config.widgetManager - VTK widget manager
-   * @param {Object} config.sceneObjects - VTK scene components
-   * @param {Function} config.onMeasurement - Callback for measurements
-   */
   initialize(instanceId, config) {
     if (this.instances.has(instanceId)) {
       console.warn(`⚠️ Angle widget already exists for ${instanceId}`);
@@ -38,44 +17,56 @@ export class VTKAngleWidget {
 
     console.log(`📐 Initializing angle measurement for ${instanceId}`);
 
-    const { widgetManager, sceneObjects, onMeasurement } = config;
+    const { widgetManager, sceneObjects } = config;
 
     try {
       // Create VTK.js widget
       const widget = VtkJsAngleWidget.newInstance();
 
-      // Add to widget manager and get handle
-      const handle = widgetManager.addWidget(widget);
+      // Place widget
+      const inputData = sceneObjects.mapper.getInputData();
+      if (inputData) {
+        const bounds = inputData.getBounds();
+        const center = [
+          (bounds[0] + bounds[1]) / 2,
+          (bounds[2] + bounds[3]) / 2,
+          (bounds[4] + bounds[5]) / 2,
+        ];
 
-      // Get widget state from handle
-      const widgetState = handle.getWidgetState();
+        const diagonal = Math.sqrt(
+          Math.pow(bounds[1] - bounds[0], 2) +
+            Math.pow(bounds[3] - bounds[2], 2) +
+            Math.pow(bounds[5] - bounds[4], 2)
+        );
+        const offset = diagonal * 0.15;
 
-      // Configure handle appearance
-      const handle1 = widgetState.getHandle1();
-      const handle2 = widgetState.getHandle2();
-      const handle3 = widgetState.getHandle3();
+        widget.placeWidget(bounds);
 
-      if (handle1 && handle1.setScale1) handle1.setScale1(5);
-      if (handle2 && handle2.setScale1) handle2.setScale1(5);
-      if (handle3 && handle3.setScale1) handle3.setScale1(5);
+        // Set initial handle positions (3 handles for angle)
+        const widgetState = widget.getWidgetState();
+        const handles = widgetState.getMoveHandle();
+        const pointHandles = handles.filter((h) =>
+          h.isA("vtkSphereHandleRepresentation")
+        );
 
-      // Enable the widget
-      handle.setEnabled(true);
-
-      // Listen for measurements
-      handle.onEndInteractionEvent(() => {
-        const angle = widget.getAngle();
-
-        const measurement = {
-          type: "angle",
-          value: angle,
-          timestamp: Date.now(),
-        };
-
-        if (onMeasurement) {
-          onMeasurement(measurement);
+        if (pointHandles.length >= 3) {
+          pointHandles[0].setOrigin([center[0] - offset, center[1], center[2]]);
+          pointHandles[1].setOrigin([center[0], center[1] + offset, center[2]]);
+          pointHandles[2].setOrigin([center[0] + offset, center[1], center[2]]);
         }
+      }
 
+      // Add to widget manager
+      const handle = widgetManager.addWidget(widget);
+      handle.setEnabled(true);
+      handle.setVisibility(true);
+      handle.setHandleSize(15);
+      handle.setGlyphResolution(32);
+
+      // Update on interaction
+      handle.onInteractionEvent(() => {
+        // Angle is calculated automatically by the widget
+        console.log(`📐 Angle measurement updated`);
         sceneObjects.renderWindow.render();
       });
 
@@ -88,66 +79,46 @@ export class VTKAngleWidget {
         config,
       });
 
+      // Force initial render
+      sceneObjects.renderWindow.render();
+
       console.log(`✅ Angle widget created for ${instanceId}`);
     } catch (error) {
       console.error(`❌ Error initializing angle widget:`, error);
     }
   }
 
-  /**
-   * Check if widget is enabled for an instance
-   */
   isEnabled(instanceId) {
     return this.instances.has(instanceId);
   }
 
-  /**
-   * Get widget configuration
-   */
-  getConfig(instanceId) {
-    const widgetData = this.instances.get(instanceId);
-    return widgetData ? { ...widgetData.config } : null;
-  }
-
-  /**
-   * Clean up widget for a specific instance
-   */
   cleanup(instanceId) {
     const widgetData = this.instances.get(instanceId);
-
-    if (!widgetData) {
-      return;
-    }
+    if (!widgetData) return;
 
     console.log(`🧹 Cleaning up angle widget for ${instanceId}`);
 
-    const { widget, handle, widgetManager } = widgetData;
+    const { widget, handle, widgetManager, sceneObjects } = widgetData;
 
     if (handle) {
       handle.setEnabled(false);
       widgetManager.removeWidget(widget);
     }
 
+    sceneObjects.renderWindow.render();
     this.instances.delete(instanceId);
 
     console.log(`✅ Angle widget cleaned up for ${instanceId}`);
   }
 
-  /**
-   * Clean up all widgets (app shutdown)
-   */
   destroy() {
     console.log(`🧹 Destroying all angle widgets`);
-
     this.instances.forEach((widgetData, instanceId) => {
       this.cleanup(instanceId);
     });
-
     this.instances.clear();
-
-    console.log(`✅ All angle widgets destroyed`);
   }
 }
 
-// Export singleton instance
+// Export singleton
 export const vtkAngleWidget = new VTKAngleWidget();

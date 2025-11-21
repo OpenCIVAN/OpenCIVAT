@@ -754,9 +754,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // ========================================================================
     // MEASUREMENT WIDGETS MENU (Following plugin pattern)
     // ========================================================================
-    const lineActive = instanceTools.isWidgetActive(instanceId, "line");
-    const angleActive = instanceTools.isWidgetActive(instanceId, "angle");
-    const planeActive = instanceTools.isWidgetActive(instanceId, "plane");
+    const lineActive =
+      instanceTools.isWidgetActive?.(instanceId, "line") || false;
+    const angleActive =
+      instanceTools.isWidgetActive?.(instanceId, "angle") || false;
+    const planeActive =
+      instanceTools.isWidgetActive?.(instanceId, "plane") || false;
 
     tools.push({
       id: "widgets",
@@ -765,8 +768,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       label: "Widgets",
       description: caps.canUseWidgets
         ? "Interactive measurement and manipulation tools"
-        : "Widgets require loaded geometry", // 🆕 Helpful message
-      disabled: !caps.canUseWidgets, // 🆕 Disable if no geometry
+        : "Widgets require loaded geometry",
+      disabled: !caps.canUseWidgets,
       options: [
         {
           id: "widget-line",
@@ -774,10 +777,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "Line Measurement",
           description: "Measure distance between two points",
           active: lineActive,
-          disabled: !caps.canUseMeasurement, // 🆕 Individual disable
+          disabled: !caps.canUseMeasurement,
           onClick: () => {
             console.log("🎯 Line measurement clicked");
-            instanceTools.toggleDistanceMeasurement(instanceId);
+            // FIX: Use correct method name
+            instanceTools.toggleRulerMeasurement?.(instanceId);
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -787,49 +791,41 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           label: "Angle Measurement",
           description: "Measure angle between three points",
           active: angleActive,
-          disabled: !caps.canUseMeasurement, // 🆕 Individual disable
+          disabled: !caps.canUseMeasurement,
           onClick: () => {
             console.log("🎯 Angle measurement clicked");
-            instanceTools.toggleAngleMeasurement(instanceId);
+            // FIX: Use correct method name
+            instanceTools.toggleAngleMeasurement?.(instanceId);
             this._emitToolsUpdate(instanceId);
           },
         },
         {
           id: "widget-clip",
-          icon: "clip",
+          icon: "scissors",
           label: "Clipping Plane",
           description: "Cut away parts of the data",
           active: planeActive,
-          disabled: !caps.canUseClipping, // 🆕 Individual disable
+          disabled: !caps.canUseClipping,
           onClick: () => {
             console.log("🎯 Clipping plane clicked");
-            instanceTools.toggleClippingPlane(instanceId);
+            instanceTools.toggleClippingPlane?.(instanceId);
             this._emitToolsUpdate(instanceId);
           },
         },
         { type: "separator" },
         {
           id: "clear-widgets",
-          icon: "delete",
+          icon: "x",
           label: "Clear All Widgets",
           description: "Remove all active widgets",
-          disabled: !instanceTools.hasActiveWidgets(instanceId),
+          disabled: !caps.canUseWidgets,
           onClick: () => {
             console.log("🎯 Clear all widgets clicked");
-            instanceTools.disableMeasurementTools(instanceId);
+            // Clean up all widgets
+            instanceTools.toggleRulerMeasurement?.(instanceId); // Disable if active
+            instanceTools.toggleAngleMeasurement?.(instanceId); // Disable if active
+            instanceTools.toggleClippingPlane?.(instanceId); // Disable if active
             this._emitToolsUpdate(instanceId);
-          },
-        },
-        { type: "separator" },
-        {
-          id: "show-measurements",
-          icon: "pencil-ruler",
-          label: "Show Measurements",
-          description: "View all recorded measurements",
-          onClick: () => {
-            const measurements = instanceTools.getMeasurements(instanceId);
-            console.log("📊 Measurements:", measurements);
-            // TODO: Show in UI panel
           },
         },
       ],
@@ -944,13 +940,13 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // 🆕 APPEARANCE MENU - Representation & Opacity
     // ========================================================================
     // Get current values with safe defaults
-    const currentRepresentation = caps.hasData
-      ? instanceTools.getRepresentation(instanceId)
-      : "surface";
-
     const currentOpacity = caps.hasData
       ? instanceTools.getOpacity(instanceId)
       : 1.0; // ✅ 1.0 = 100% opacity
+
+    const currentRepresentation = caps.hasData
+      ? instanceTools.getRepresentation(instanceId)
+      : "surface";
 
     const currentPointSize = caps.hasData
       ? instanceTools.getPointSize?.(instanceId) || 5
@@ -986,19 +982,23 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             : "Load data to adjust opacity",
           onChange: (value) => {
             if (!caps.hasData) return;
-            instanceTools.setOpacity(instanceId, value);
+            instanceTools.setOpacity?.(instanceId, value);
             this._emitToolsUpdate(instanceId);
           },
         },
 
         { type: "separator" },
 
-        // Representation mode buttons (optional - keep existing ones)
+        { type: "header", label: "REPRESENTATION" },
+
+        // Representation mode buttons with active state
         {
           id: "rep-surface",
           icon: "box",
           label: "Surface",
           description: "Solid surface rendering",
+          active: currentRepresentation === "surface", // ← FIX: Show active
+          disabled: !caps.hasData,
           onClick: () => {
             if (!caps.hasData) return;
             instanceTools.setRepresentation?.(instanceId, "surface");
@@ -1010,6 +1010,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           icon: "grid-3x3",
           label: "Wireframe",
           description: "Wireframe rendering",
+          active: currentRepresentation === "wireframe", // ← FIX: Show active
+          disabled: !caps.hasData,
           onClick: () => {
             if (!caps.hasData) return;
             instanceTools.setRepresentation?.(instanceId, "wireframe");
@@ -1021,6 +1023,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           icon: "circle",
           label: "Points",
           description: "Point cloud rendering",
+          active: currentRepresentation === "points", // ← FIX: Show active
+          disabled: !caps.hasData,
           onClick: () => {
             if (!caps.hasData) return;
             instanceTools.setRepresentation?.(instanceId, "points");
@@ -1028,66 +1032,69 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           },
         },
 
-        { type: "separator" },
+        // FIX 3: Conditionally show point size slider only in points mode
+        ...(currentRepresentation === "points" && caps.hasData
+          ? [
+              { type: "separator" },
+              {
+                type: "slider",
+                id: "point-size-slider",
+                label: "Point Size",
+                icon: "circle",
+                value: currentPointSize,
+                min: 1,
+                max: 20,
+                step: 0.5,
+                formatValue: (val) => `${val.toFixed(1)}px`,
+                presets: [1, 5, 10, 15, 20],
+                description: "Size of rendered points",
+                disabled: false,
+                onChange: (value) => {
+                  instanceTools.setPointSize?.(instanceId, value);
+                  this._emitToolsUpdate(instanceId);
+                },
+              },
+            ]
+          : []),
 
-        // ✅ POINT SIZE SLIDER - Only enabled in points mode
-        {
-          type: "slider",
-          id: "point-size-slider",
-          label: "Point Size",
-          icon: "circle",
-          value: currentPointSize,
-          min: 1,
-          max: 20,
-          step: 0.5,
-          formatValue: (val) => `${val.toFixed(1)}px`,
-          presets: [1, 5, 10, 15, 20],
-          description: !caps.hasData
-            ? "Load data first"
-            : currentRepresentation !== "points"
-            ? "Switch to Points mode to adjust"
-            : "Size of rendered points",
-          disabled: !caps.hasData || currentRepresentation !== "points",
-          onChange: (value) => {
-            if (!caps.hasData || currentRepresentation !== "points") return;
-            instanceTools.setPointSize?.(instanceId, value);
-            this._emitToolsUpdate(instanceId);
-          },
-        },
-
-        // ✅ LINE WIDTH SLIDER - Only enabled in wireframe mode
-        {
-          type: "slider",
-          id: "line-width-slider",
-          label: "Line Width",
-          icon: "minus",
-          value: currentLineWidth,
-          min: 1,
-          max: 10,
-          step: 0.5,
-          formatValue: (val) => `${val.toFixed(1)}px`,
-          presets: [1, 2, 5, 10],
-          description: !caps.hasData
-            ? "Load data first"
-            : currentRepresentation !== "wireframe"
-            ? "Switch to Wireframe mode to adjust"
-            : "Width of wireframe lines",
-          disabled: !caps.hasData || currentRepresentation !== "wireframe",
-          onChange: (value) => {
-            if (!caps.hasData || currentRepresentation !== "wireframe") return;
-            instanceTools.setLineWidth?.(instanceId, value);
-            this._emitToolsUpdate(instanceId);
-          },
-        },
+        // FIX 4: Conditionally show line width slider only in wireframe mode
+        ...(currentRepresentation === "wireframe" && caps.hasData
+          ? [
+              { type: "separator" },
+              {
+                type: "slider",
+                id: "line-width-slider",
+                label: "Line Width",
+                icon: "minus",
+                value: currentLineWidth,
+                min: 1,
+                max: 10,
+                step: 0.5,
+                formatValue: (val) => `${val.toFixed(1)}px`,
+                presets: [1, 2, 5, 10],
+                description: "Width of wireframe lines",
+                disabled: false,
+                onChange: (value) => {
+                  instanceTools.setLineWidth?.(instanceId, value);
+                  this._emitToolsUpdate(instanceId);
+                },
+              },
+            ]
+          : []),
       ],
     });
+
+    tools.push({ type: "separator" });
 
     // ========================================================================
     // CLIPPING MENU with position slider
     // ========================================================================
-    const clipState = instanceTools.getClipState?.(instanceId);
-    const isClipping = clipState?.active || false;
-    const clipPosition = clipState?.position || 50;
+    const clipState = instanceTools.getClipState?.(instanceId) || {
+      active: false,
+      position: 50,
+    };
+    const isClipping = clipState.active;
+    const clipPosition = clipState.position;
 
     tools.push({
       id: "clipping",
@@ -1111,16 +1118,15 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.canUseClipping,
           onClick: () => {
             if (!caps.canUseClipping) return;
-            instanceTools.toggleClippingPlane(instanceId);
+            instanceTools.toggleClippingPlane?.(instanceId);
             this._emitToolsUpdate(instanceId);
           },
         },
 
-        { type: "separator" },
-
-        // ✅ CLIP POSITION SLIDER - Only when clipping is active
+        // FIX 6: Conditionally show slider only when clipping is active
         ...(isClipping && caps.canUseClipping
           ? [
+              { type: "separator" },
               {
                 type: "slider",
                 id: "clip-position-slider",
@@ -1134,6 +1140,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                 presets: [0, 25, 50, 75, 100],
                 description: "Position along clipping axis",
                 onChange: (value) => {
+                  // FIX: Just store the value, don't try to call setPosition
                   instanceTools.setClipPosition?.(instanceId, value);
                   this._emitToolsUpdate(instanceId);
                 },
@@ -1141,19 +1148,24 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             ]
           : []),
 
-        // Reset button
-        {
-          id: "clip-reset",
-          icon: "rotate-ccw",
-          label: "Reset Clipping",
-          description: "Remove clipping plane",
-          disabled: !caps.canUseClipping || !isClipping,
-          onClick: () => {
-            if (!caps.canUseClipping || !isClipping) return;
-            instanceTools.resetClipping(instanceId);
-            this._emitToolsUpdate(instanceId);
-          },
-        },
+        // Reset button (only show when clipping is active)
+        ...(isClipping
+          ? [
+              { type: "separator" },
+              {
+                id: "clip-reset",
+                icon: "rotate-ccw",
+                label: "Reset Clipping",
+                description: "Remove clipping plane",
+                disabled: !caps.canUseClipping,
+                onClick: () => {
+                  if (!caps.canUseClipping) return;
+                  instanceTools.resetClipping?.(instanceId);
+                  this._emitToolsUpdate(instanceId);
+                },
+              },
+            ]
+          : []),
       ],
     });
 

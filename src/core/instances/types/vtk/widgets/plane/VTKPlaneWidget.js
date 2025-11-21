@@ -55,13 +55,26 @@ export class VTKPlaneWidget {
       const handle = widgetManager.addWidget(widget);
       handle.setEnabled(true);
 
-      // Apply clipping when plane moves
+      // FIX: Apply clipping when plane moves
       handle.onInteractionEvent(() => {
-        const plane = widget.getPlane();
-        sceneObjects.mapper.removeAllClippingPlanes();
-        sceneObjects.mapper.addClippingPlane(plane);
-        sceneObjects.renderWindow.render();
+        // Get the widget state which contains the plane
+        const widgetState = widget.getWidgetState();
+        const planes = widgetState.getPlanes(); // ← CORRECT METHOD
+
+        if (planes && planes.length > 0) {
+          const plane = planes[0]; // Get first plane
+          sceneObjects.mapper.removeAllClippingPlanes();
+          sceneObjects.mapper.addClippingPlane(plane);
+          sceneObjects.renderWindow.render();
+        }
       });
+
+      // Apply initial clipping
+      const widgetState = widget.getWidgetState();
+      const planes = widgetState.getPlanes();
+      if (planes && planes.length > 0) {
+        sceneObjects.mapper.addClippingPlane(planes[0]);
+      }
 
       // Store widget data
       this.instances.set(instanceId, {

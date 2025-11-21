@@ -1,37 +1,16 @@
-// src/core/instances/types/vtk/widgets/line/VTKLineWidget.js
-// Line measurement widget following the plugin pattern
-
 import VtkJsLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
+import VtkJsSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 
 /**
  * VTKLineWidget
- *
- * Provides distance measurement between two points.
- *
- * CONTRIBUTOR PATTERN:
- * - Each instance has its own widget (no global state)
- * - Widget lifecycle tied to instance lifecycle
- * - Clean separation from core architecture
- * - Measurements passed via callback
+ * Line measurement widget following the plugin pattern
  */
 export class VTKLineWidget {
   constructor() {
-    // Per-instance widget storage
-    // Maps instanceId → { widget, handle, config }
     this.instances = new Map();
   }
 
-  /**
-   * Initialize widget for a specific instance
-   *
-   * @param {string} instanceId - Unique instance identifier
-   * @param {Object} config - Configuration
-   * @param {Object} config.widgetManager - VTK widget manager
-   * @param {Object} config.sceneObjects - VTK scene components
-   * @param {Function} config.onMeasurement - Callback for measurements
-   */
   initialize(instanceId, config) {
-    // Don't recreate if already exists
     if (this.instances.has(instanceId)) {
       console.warn(`⚠️ Line widget already exists for ${instanceId}`);
       return;
@@ -39,45 +18,69 @@ export class VTKLineWidget {
 
     console.log(`📏 Initializing line measurement for ${instanceId}`);
 
-    const { widgetManager, sceneObjects, onMeasurement } = config;
+    const { widgetManager, sceneObjects } = config;
 
     try {
       // Create VTK.js widget
       const widget = VtkJsLineWidget.newInstance();
 
-      // Add to widget manager and get handle
+      // Place widget at reasonable size
+      const inputData = sceneObjects.mapper.getInputData();
+      if (inputData) {
+        const bounds = inputData.getBounds();
+        const center = [
+          (bounds[0] + bounds[1]) / 2,
+          (bounds[2] + bounds[3]) / 2,
+          (bounds[4] + bounds[5]) / 2,
+        ];
+
+        // Place handles at 1/4 and 3/4 along x-axis
+        const diagonal = Math.sqrt(
+          Math.pow(bounds[1] - bounds[0], 2) +
+            Math.pow(bounds[3] - bounds[2], 2) +
+            Math.pow(bounds[5] - bounds[4], 2)
+        );
+        const offset = diagonal * 0.25;
+
+        widget.placeWidget(bounds);
+
+        // Set initial handle positions
+        const widgetState = widget.getWidgetState();
+        const handle1 = widgetState.getHandle1();
+        const handle2 = widgetState.getHandle2();
+
+        handle1.setOrigin([center[0] - offset, center[1], center[2]]);
+        handle2.setOrigin([center[0] + offset, center[1], center[2]]);
+      }
+
+      // Add to widget manager
       const handle = widgetManager.addWidget(widget);
 
-      // Get widget state from handle
-      const widgetState = handle.getWidgetState();
-
-      // Configure handle appearance
-      const handle1 = widgetState.getHandle1();
-      const handle2 = widgetState.getHandle2();
-
-      if (handle1 && handle1.setScale1) {
-        handle1.setScale1(5);
-      }
-      if (handle2 && handle2.setScale1) {
-        handle2.setScale1(5);
-      }
-
-      // Enable the widget
+      // Make visible and enabled
       handle.setEnabled(true);
+      handle.setVisibility(true);
 
-      // Listen for measurements
-      handle.onEndInteractionEvent(() => {
-        const distance = widget.getDistance();
+      // Set appearance
+      handle.setHandleSize(15); // Larger handles for visibility
+      handle.setGlyphResolution(32); // Smoother spheres
 
-        const measurement = {
-          type: "distance",
-          value: distance,
-          timestamp: Date.now(),
-        };
+      // Update on interaction
+      handle.onInteractionEvent(() => {
+        const widgetState = widget.getWidgetState();
+        const handle1 = widgetState.getHandle1();
+        const handle2 = widgetState.getHandle2();
 
-        if (onMeasurement) {
-          onMeasurement(measurement);
-        }
+        const p1 = handle1.getOrigin();
+        const p2 = handle2.getOrigin();
+
+        // Calculate distance
+        const distance = Math.sqrt(
+          Math.pow(p2[0] - p1[0], 2) +
+            Math.pow(p2[1] - p1[1], 2) +
+            Math.pow(p2[2] - p1[2], 2)
+        );
+
+        console.log(`📏 Line measurement: ${distance.toFixed(2)} units`);
 
         sceneObjects.renderWindow.render();
       });
@@ -91,54 +94,35 @@ export class VTKLineWidget {
         config,
       });
 
+      // Force initial render
+      sceneObjects.renderWindow.render();
+
       console.log(`✅ Line widget created for ${instanceId}`);
     } catch (error) {
       console.error(`❌ Error initializing line widget:`, error);
     }
   }
 
-  /**
-   * Check if widget is enabled for an instance
-   *
-   * @param {string} instanceId - Instance to check
-   * @returns {boolean} True if enabled
-   */
   isEnabled(instanceId) {
     return this.instances.has(instanceId);
   }
 
-  /**
-   * Get widget configuration
-   *
-   * @param {string} instanceId - Instance to query
-   * @returns {Object|null} Configuration or null
-   */
-  getConfig(instanceId) {
-    const widgetData = this.instances.get(instanceId);
-    return widgetData ? { ...widgetData.config } : null;
-  }
-
-  /**
-   * Clean up widget for a specific instance
-   *
-   * @param {string} instanceId - Instance to clean up
-   */
   cleanup(instanceId) {
     const widgetData = this.instances.get(instanceId);
-
-    if (!widgetData) {
-      return; // Already cleaned up or never created
-    }
+    if (!widgetData) return;
 
     console.log(`🧹 Cleaning up line widget for ${instanceId}`);
 
-    const { widget, handle, widgetManager } = widgetData;
+    const { widget, handle, widgetManager, sceneObjects } = widgetData;
 
-    // Disable and remove widget
+    // Disable and remove
     if (handle) {
       handle.setEnabled(false);
       widgetManager.removeWidget(widget);
     }
+
+    // Render
+    sceneObjects.renderWindow.render();
 
     // Remove from storage
     this.instances.delete(instanceId);
@@ -146,21 +130,14 @@ export class VTKLineWidget {
     console.log(`✅ Line widget cleaned up for ${instanceId}`);
   }
 
-  /**
-   * Clean up all widgets (app shutdown)
-   */
   destroy() {
     console.log(`🧹 Destroying all line widgets`);
-
     this.instances.forEach((widgetData, instanceId) => {
       this.cleanup(instanceId);
     });
-
     this.instances.clear();
-
-    console.log(`✅ All line widgets destroyed`);
   }
 }
 
-// Export singleton instance
+// Export singleton
 export const vtkLineWidget = new VTKLineWidget();
