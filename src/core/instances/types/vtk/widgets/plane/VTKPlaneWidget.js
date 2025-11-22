@@ -1,34 +1,25 @@
 // src/core/instances/types/vtk/widgets/plane/VTKPlaneWidget.js
-// Clipping plane widget following the plugin pattern
+// Clipping plane widget - FIXED for correct VTK.js API
 
 import vtkImplicitPlaneWidget from "@kitware/vtk.js/Widgets/Widgets3D/ImplicitPlaneWidget";
+import vtkPlane from "@kitware/vtk.js/Common/DataModel/Plane";
 
 /**
  * VTKPlaneWidget
  *
  * Provides interactive clipping plane for cutting through data.
  *
- * CONTRIBUTOR PATTERN:
- * - Each instance has its own widget (no global state)
- * - Widget lifecycle tied to instance lifecycle
- * - Clean separation from core architecture
- * - Automatically applies clipping when plane moves
+ * CRITICAL FIX: VTK.js ImplicitPlaneWidget doesn't have getPlanes() method!
+ * Instead, we need to manually create a vtkPlane from the widget state.
  */
 export class VTKPlaneWidget {
   constructor() {
     // Per-instance widget storage
-    // Maps instanceId → { widget, handle, config }
     this.instances = new Map();
   }
 
   /**
    * Initialize widget for a specific instance
-   *
-   * @param {string} instanceId - Unique instance identifier
-   * @param {Object} config - Configuration
-   * @param {Object} config.widgetManager - VTK widget manager
-   * @param {Object} config.sceneObjects - VTK scene components
-   * @param {number} config.placeFactor - Size multiplier (default 1.25)
    */
   initialize(instanceId, config) {
     if (this.instances.has(instanceId)) {
@@ -55,26 +46,36 @@ export class VTKPlaneWidget {
       const handle = widgetManager.addWidget(widget);
       handle.setEnabled(true);
 
-      // FIX: Apply clipping when plane moves
-      handle.onInteractionEvent(() => {
-        // Get the widget state which contains the plane
-        const widgetState = widget.getWidgetState();
-        const planes = widgetState.getPlanes(); // ← CORRECT METHOD
+      // Create a vtkPlane for clipping
+      const clipPlane = vtkPlane.newInstance();
 
-        if (planes && planes.length > 0) {
-          const plane = planes[0]; // Get first plane
+      // Helper function to update clipping plane from widget state
+      const updateClippingPlane = () => {
+        const widgetState = widget.getWidgetState();
+
+        // Get the plane's normal and origin from widget state
+        const normal = widgetState.getNormal();
+        const origin = widgetState.getOrigin();
+
+        if (normal && origin) {
+          // Update the clipping plane
+          clipPlane.setNormal(normal);
+          clipPlane.setOrigin(origin);
+
+          // Apply clipping
           sceneObjects.mapper.removeAllClippingPlanes();
-          sceneObjects.mapper.addClippingPlane(plane);
+          sceneObjects.mapper.addClippingPlane(clipPlane);
           sceneObjects.renderWindow.render();
         }
+      };
+
+      // Update clipping when plane moves
+      handle.onInteractionEvent(() => {
+        updateClippingPlane();
       });
 
       // Apply initial clipping
-      const widgetState = widget.getWidgetState();
-      const planes = widgetState.getPlanes();
-      if (planes && planes.length > 0) {
-        sceneObjects.mapper.addClippingPlane(planes[0]);
-      }
+      updateClippingPlane();
 
       // Store widget data
       this.instances.set(instanceId, {
@@ -82,12 +83,14 @@ export class VTKPlaneWidget {
         handle,
         widgetManager,
         sceneObjects,
+        clipPlane,
         config,
       });
 
       console.log(`✅ Clipping plane created for ${instanceId}`);
     } catch (error) {
       console.error(`❌ Error initializing clipping plane:`, error);
+      throw error;
     }
   }
 
@@ -113,7 +116,11 @@ export class VTKPlaneWidget {
     const widgetData = this.instances.get(instanceId);
     if (!widgetData) return null;
 
-    return widgetData.widget.getPlane();
+    const widgetState = widgetData.widget.getWidgetState();
+    return {
+      normal: widgetState.getNormal(),
+      origin: widgetState.getOrigin(),
+    };
   }
 
   /**
@@ -123,15 +130,28 @@ export class VTKPlaneWidget {
     const widgetData = this.instances.get(instanceId);
     if (!widgetData) return;
 
-    const { widget, sceneObjects } = widgetData;
+    const { widget, clipPlane, sceneObjects } = widgetData;
+    const widgetState = widget.getWidgetState();
 
-    // Update widget plane
-    widget.setPlane(planeData);
+    // Update widget state
+    if (planeData.normal) {
+      widgetState.setNormal(planeData.normal);
+    }
+    if (planeData.origin) {
+      widgetState.setOrigin(planeData.origin);
+    }
+
+    // Update clipping plane
+    if (planeData.normal) {
+      clipPlane.setNormal(planeData.normal);
+    }
+    if (planeData.origin) {
+      clipPlane.setOrigin(planeData.origin);
+    }
 
     // Apply clipping
-    const plane = widget.getPlane();
     sceneObjects.mapper.removeAllClippingPlanes();
-    sceneObjects.mapper.addClippingPlane(plane);
+    sceneObjects.mapper.addClippingPlane(clipPlane);
     sceneObjects.renderWindow.render();
   }
 

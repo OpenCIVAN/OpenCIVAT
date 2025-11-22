@@ -143,8 +143,9 @@
 
   .menu-indicator {
     position: absolute;
-    bottom: 2px;
-    right: 2px;
+    bottom: 4px;
+    right: 4px;
+    pointer-events: none;
   }
 }
 
@@ -204,7 +205,7 @@
 }
 
 // ============================================================================
-// DROPDOWN MENUS
+// DROPDOWN MENUS - Overlay Style
 // ============================================================================
 
 .toolbar-menu {
@@ -212,15 +213,15 @@
 }
 
 .toolbar-menu-dropdown {
-  @include frosted-glass;
-  border-radius: $radius-md;
-  padding: $spacing-xs;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
   animation: dropdown-appear $transition-fast $ease-out-back;
 
   // Default positioning (for non-portal dropdowns)
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 8px);
   left: 0;
   min-width: 220px;
   max-width: 320px;
@@ -229,7 +230,26 @@
   overflow-x: hidden;
   z-index: 200;
 
-  // Portal-specific styling - MUCH higher z-index to appear over canvas
+  // CRITICAL: Proper glassmorphism without blue tint
+  background: rgba(25, 25, 30, 0.92);
+  backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  // Remove any blue tint
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.02),
+      rgba(255, 255, 255, 0.005)
+    );
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  // Portal-specific styling - Appears over canvas as overlay
   &--portal {
     z-index: 99999; // Above everything including VTK canvas
     position: fixed; // Position is set via inline style
@@ -404,6 +424,97 @@
   50% {
     opacity: 1;
   }
+}
+
+// ============================================================================
+// RESPONSIVE
+// ============================================================================
+
+// ============================================================================
+// CAMERA VIEW GRID PICKER - Overlay Style
+// ============================================================================
+
+.camera-view-grid-container {
+  padding: $spacing-sm;
+}
+
+.camera-view-grid {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.camera-view-row {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.camera-view-cell {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+
+  // Subtle glass button without blue tint
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  position: relative;
+
+  &.empty {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &.special {
+    // Highlight for isometric and reset views - use subtle blue
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    background: rgba(100, 150, 255, 0.08);
+  }
+
+  &:hover:not(.empty) {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  &.hovered {
+    background: rgba(100, 150, 255, 0.12);
+    border-color: rgba(100, 150, 255, 0.4);
+  }
+
+  .camera-view-icon {
+    color: $color-text-secondary;
+    transition: color $transition-fast;
+  }
+
+  .camera-view-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    text-transform: capitalize;
+  }
+
+  &:hover .camera-view-icon {
+    color: rgba(100, 150, 255, 1);
+  }
+}
+
+.camera-view-hint {
+  margin-top: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(100, 150, 255, 0.08);
+  border: 1px solid rgba(100, 150, 255, 0.15);
+  border-radius: $radius-sm;
+  text-align: center;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
 }
 
 // ============================================================================

@@ -62,12 +62,44 @@ export function InstanceViewport({
             if (!buttonElement) return;
 
             const rect = buttonElement.getBoundingClientRect();
-
-            setDropdownPosition({
-                x: rect.left,
-                y: rect.bottom + 4, // 4px gap
-                buttonWidth: rect.width
-            });
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // Get toolbar bounds to avoid overlap
+            const toolbar = buttonElement.closest('.instance-viewport__toolbar');
+            const toolbarRect = toolbar?.getBoundingClientRect();
+            
+            // Estimate dropdown size (will be adjusted by actual element)
+            const dropdownWidth = 260;
+            const dropdownHeight = 240;
+            
+            let x, y;
+            
+            // STRATEGY 1: Try positioning to the LEFT of the toolbar
+            x = rect.left - dropdownWidth - 12; // 12px gap
+            y = toolbarRect ? toolbarRect.top : rect.top;
+            
+            // If no room on left, try RIGHT side
+            if (x < 10) {
+                x = rect.right + 12;
+            }
+            
+            // If STILL no room, position BELOW toolbar (fallback)
+            if (x + dropdownWidth > viewportWidth - 10) {
+                x = rect.left;
+                y = rect.bottom + 8;
+            }
+            
+            // Ensure dropdown stays within viewport vertically
+            if (y < 10) {
+                y = 10;
+            }
+            
+            if (y + dropdownHeight > viewportHeight - 10) {
+                y = viewportHeight - dropdownHeight - 10;
+            }
+            
+            setDropdownPosition({ x, y, buttonWidth: rect.width });
         };
 
         updatePosition();
@@ -80,7 +112,7 @@ export function InstanceViewport({
         const handleClickAway = (e) => {
             const buttonElement = menuButtonRefs.current.get(openMenuId);
             const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
-
+            
             // Don't close if clicking the button or inside the dropdown
             if (
                 buttonElement?.contains(e.target) ||
@@ -88,7 +120,7 @@ export function InstanceViewport({
             ) {
                 return;
             }
-
+            
             setOpenMenuId(null);
         };
 
@@ -408,7 +440,7 @@ export function InstanceViewport({
                         // Only close if not moving to the dropdown
                         const relatedTarget = e.relatedTarget;
                         const dropdownElement = document.querySelector('.toolbar-menu-dropdown--portal');
-
+                        
                         if (!dropdownElement || !dropdownElement.contains(relatedTarget)) {
                             // Small delay to allow mouse to reach dropdown
                             setTimeout(() => {
