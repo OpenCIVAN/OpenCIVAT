@@ -243,13 +243,14 @@ select {
 // Button variants
 .button-primary {
   @include glass-button;
-  background: rgba(76, 175, 80, 0.15);
+  background: $color-accent-primary-glow;
   color: $color-accent-primary;
   border-color: $color-accent-primary;
 
   &:hover:not(:disabled) {
-    background: rgba(76, 175, 80, 0.25);
-    @include accent-glow;
+    background: rgba(110, 182, 255, 0.25);
+    box-shadow: 0 0 20px rgba(110, 182, 255, 0.3),
+                0 0 40px rgba(110, 182, 255, 0.15);
     transform: translateY(-1px);
   }
 }

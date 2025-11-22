@@ -225,19 +225,37 @@
 }
 
 // ============================================================================
-// GLOW EFFECTS (Colorful)
+// GLOW EFFECTS - Multi-layer for depth
 // ============================================================================
 
 @mixin accent-glow($accent-color: $color-accent-primary) {
-  box-shadow: $shadow-glass, 0 0 20px rgba($accent-color, 0.25);
+  box-shadow: $shadow-glass, 
+              0 0 20px rgba($accent-color, 0.3),
+              0 0 40px rgba($accent-color, 0.15);
 }
 
 @mixin accent-glow-strong($accent-color: $color-accent-primary) {
-  box-shadow: $shadow-glass-lg, 0 0 30px rgba($accent-color, 0.4);
+  box-shadow: $shadow-glass-lg, 
+              0 0 30px rgba($accent-color, 0.4),
+              0 0 60px rgba($accent-color, 0.2);
 }
 
 @mixin error-glow {
-  @include accent-glow($color-error);
+  box-shadow: $shadow-glass,
+              0 0 20px rgba($color-error, 0.3),
+              0 0 40px rgba($color-error, 0.15);
+}
+
+@mixin success-glow {
+  box-shadow: $shadow-glass,
+              0 0 20px rgba($color-success, 0.3),
+              0 0 40px rgba($color-success, 0.15);
+}
+
+@mixin info-glow {
+  box-shadow: $shadow-glass,
+              0 0 20px rgba($color-info, 0.3),
+              0 0 40px rgba($color-info, 0.15);
 }
 
 // ============================================================================

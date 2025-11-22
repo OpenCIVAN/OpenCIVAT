@@ -44,6 +44,22 @@ $glow-accent-strong: 0 0 30px rgba(76, 175, 80, 0.5);
 $glow-error: 0 0 20px rgba(244, 67, 54, 0.3);
 $glow-info: 0 0 20px rgba(33, 150, 243, 0.3);
 
+// Multi-layer glows for enhanced depth
+$glow-primary: 0 0 20px rgba(110, 182, 255, 0.3),
+  0 0 40px rgba(110, 182, 255, 0.15);
+
+$glow-blue: 0 0 20px rgba(96, 165, 250, 0.3), 0 0 40px rgba(96, 165, 250, 0.15);
+
+$glow-purple: 0 0 20px rgba(192, 132, 252, 0.3),
+  0 0 40px rgba(192, 132, 252, 0.15);
+
+$glow-pink: 0 0 20px rgba(251, 113, 133, 0.3),
+  0 0 40px rgba(251, 113, 133, 0.15);
+
+$glow-green: 0 0 20px rgba(52, 211, 153, 0.3), 0 0 40px rgba(52, 211, 153, 0.15);
+
+$glow-amber: 0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.15);
+
 // Glassmorphism shadows (combination of shadow + border light)
 $shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37),
   inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
