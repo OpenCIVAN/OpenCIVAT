@@ -14,13 +14,11 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
-  
+
   background: $color-bg-secondary;
   border-radius: $radius-md;
-  
-  box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.2);
+
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 // ============================================================================
@@ -191,7 +189,7 @@
   font-size: $font-size-xs;
   color: $color-text-tertiary;
   margin-top: 4px;
-  font-family: 'Monaco', 'Courier New', monospace;
+  font-family: "Monaco", "Courier New", monospace;
 }
 
 // ============================================================================
@@ -305,11 +303,11 @@
 // ============================================================================
 
 .instance-viewport__content {
-  flex: 1;
-  position: relative;
-  background-color: #0a0a0a;
-  min-height: 0;
-  overflow: hidden;
+  flex: 1 !important;
+  position: relative !important;
+  background-color: #0a0a0a !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
 }
 
 // ============================================================================
@@ -362,7 +360,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
   }
   50% {
