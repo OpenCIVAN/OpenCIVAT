@@ -127,7 +127,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: $space-md 0;
+  padding: $spacing-md 0;
   background: var(--bg-secondary);
 }
 
@@ -136,7 +136,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: $space-sm;
+  gap: $spacing-sm;
   width: 100%;
 }
 
@@ -175,7 +175,7 @@
   align-items: center;
   justify-content: space-between;
   height: 40px;
-  padding: 0 $space-md;
+  padding: 0 $spacing-md;
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
   background: var(--bg-secondary);
@@ -185,7 +185,7 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: $space-md;
+  gap: $spacing-md;
 }
 
 .panel-header__title {

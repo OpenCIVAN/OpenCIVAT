@@ -1,0 +1,139 @@
+@use "@UI/react/styles/theme.scss" as *;
+
+// WorkspaceGrid - Main container
+.workspace-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+
+  // Toolbar
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-md $spacing-lg;
+    background-color: $color-bg-secondary;
+    border-bottom: 1px solid $color-border-subtle;
+    flex-shrink: 0;
+  }
+
+  &__toolbar-title {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__toolbar-status {
+    color: $color-success;
+    margin-left: $spacing-sm;
+    font-size: $font-size-sm;
+  }
+
+  &__add-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: $spacing-sm $spacing-md;
+    background-color: $color-bg-accent;
+    border: none;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    cursor: pointer;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    transition: all $transition-base;
+
+    &:hover:not(:disabled) {
+      background-color: lighten($color-bg-accent, 5%);
+    }
+
+    &:disabled {
+      background-color: $color-disabled-bg;
+      color: $color-disabled-text;
+      cursor: not-allowed;
+    }
+  }
+
+  // Empty state
+  &__empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: $color-bg-primary;
+    color: $color-text-muted;
+    gap: $spacing-lg;
+    padding: $spacing-4xl;
+  }
+
+  &__empty-icon {
+    font-size: 48px;
+    opacity: 0.3;
+  }
+
+  &__empty-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__empty-description {
+    font-size: $font-size-md;
+    color: $color-text-muted;
+    text-align: center;
+    max-width: 400px;
+    line-height: $line-height-normal;
+  }
+
+  &__empty-button {
+    margin-top: $spacing-lg;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: 10px $spacing-xl;
+    background-color: $color-bg-accent;
+    border: none;
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    cursor: pointer;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    transition: all $transition-base;
+
+    &:hover {
+      background-color: lighten($color-bg-accent, 5%);
+    }
+  }
+
+  // Grid container
+  &__grid {
+    gap: $spacing-md;
+    padding: $spacing-md;
+    height: 100%;
+    overflow: auto;
+  }
+}
+
+// Animations
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

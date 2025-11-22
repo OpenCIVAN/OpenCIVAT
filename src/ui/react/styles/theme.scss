@@ -1,0 +1,10 @@
+// Main theme file - imports all tokens using modern @use syntax
+// This is what components should import
+
+@forward "./tokens/colors";
+@forward "./tokens/spacing";
+@forward "./tokens/typography";
+@forward "./tokens/effects";
+
+// Export everything so components can use it
+// No need for explicit exports with @use - it handles that automatically

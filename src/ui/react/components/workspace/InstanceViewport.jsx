@@ -20,8 +20,6 @@ import "@UI/react/components/workspace/InstanceViewport.css";
 /**
  * InstanceViewport
  * 
- * ✅ UPDATED: Now uses ViewConfiguration layer AND calls instanceManager
- * 
  * Props:
  * - viewConfigId: ViewConfiguration ID (replaces datasetId)
  * - type: Instance type ('vtk', 'plotly', etc.)
@@ -57,7 +55,7 @@ export function InstanceViewport({
     const [activeDropdown, setActiveDropdown] = useState(null);
 
     // =========================================================================
-    // ✅ FIXED: INSTANCE INITIALIZATION - Now calls instanceManager
+    // INSTANCE INITIALIZATION
     // =========================================================================
 
     useEffect(() => {
@@ -67,27 +65,23 @@ export function InstanceViewport({
 
         const initialize = async () => {
             try {
-                if (isRemote) {
-                    console.log(`🔗 Remote instance already has ID: ${remoteInstanceId}`);
-                    setActualInstanceId(remoteInstanceId);
-                    setInitialized(true);
-                    return;
-                }
-
                 console.log(`🎨 Creating new local instance (type: ${type})`);
 
-                // ✅ CRITICAL FIX: Call instanceManager.createInstance() instead of workspaceManager
-                // This ensures Y.js sync happens BEFORE state subscriptions are set up
-                const instanceId = await instanceManager.createInstance(
-                    containerRef.current,
-                    type,
-                    { viewConfigId }  // Pass viewConfigId for 3-layer architecture
-                );
+                // Create view configuration first (Layer 2)
+                const viewConfig = viewConfigurationManager.createView(dataset.id, {
+                    name: "My Analysis",
+                });
+
+                // Then create instance window (Layer 3)
+                const instance = instanceManager.createInstance({
+                    viewConfigurationId: viewConfig.id,
+                    type: "vtk",
+                });
 
                 setActualInstanceId(instanceId);
                 setInitialized(true);
-
                 setActiveInstance(instanceId);
+
                 console.log(`✅ Instance created: ${instanceId}`);
 
             } catch (err) {
@@ -100,7 +94,7 @@ export function InstanceViewport({
         };
 
         initialize();
-    }, [isRemote, remoteInstanceId, type, viewConfigId]);
+    }, [type, viewConfigId]);
 
     // =========================================================================
     // TOOLS LOADING

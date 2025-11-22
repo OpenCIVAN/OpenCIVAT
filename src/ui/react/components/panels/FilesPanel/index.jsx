@@ -139,13 +139,13 @@ export function FilesPanel() {
 
                         <div className="files-panel__datasets-section">
                             <h4 className="files-panel__section-title">
-                                Loaded Datasets ({datasetsWithCounts.length})
+                                Loaded Datasets ({datasets.length})
                                 {isAnyLoading && (
                                     <Loader size={14} className="spinner" style={{ marginLeft: 8 }} />
                                 )}
                             </h4>
                             <DatasetList
-                                datasets={datasetsWithCounts}
+                                datasets={datasets}
                                 onSelectDataset={handleDatasetSelect}
                             />
                         </div>

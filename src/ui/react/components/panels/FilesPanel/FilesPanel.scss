@@ -10,12 +10,12 @@
 .files-panel__content {
   flex: 1;
   overflow-y: auto;
-  padding: $space-md;
+  padding: $spacing-md;
 }
 
 .files-panel__upload-btn {
   width: 100%;
-  padding: $space-sm $space-md;
+  padding: $spacing-sm ;
   background: var(--accent-primary);
   border: none;
   border-radius: $border-radius-sm;
@@ -30,5 +30,5 @@
 }
 
 .files-panel__list {
-  margin-top: $space-md;
+  margin-top: $spacing-md;
 }
