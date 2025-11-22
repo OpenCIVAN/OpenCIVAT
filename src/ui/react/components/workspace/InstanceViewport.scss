@@ -14,11 +14,15 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
-
   background: $color-bg-secondary;
   border-radius: $radius-md;
 
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  // Enhanced depth with multi-layer shadows
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  // Subtle border for definition
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 // ============================================================================
@@ -62,6 +66,9 @@
   @include glass-button;
   color: $color-text-secondary;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     @include glass-hover;
@@ -71,6 +78,7 @@
   svg {
     width: 14px;
     height: 14px;
+    flex-shrink: 0;
   }
 }
 
@@ -109,6 +117,11 @@
   cursor: pointer;
   position: relative;
 
+  // FIX: Ensure proper icon centering
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   &:hover {
     @include glass-hover;
     color: $color-text-primary;
@@ -128,6 +141,9 @@
   svg {
     width: 18px;
     height: 18px;
+    // FIX: Prevent icon distortion
+    flex-shrink: 0;
+    right: 2px;
   }
 
   .menu-indicator {
@@ -205,10 +221,14 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  min-width: 200px;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-radius: $radius-md;
   padding: $spacing-xs;
-  z-index: 200;
+  z-index: 10000;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   animation: dropdown-appear $transition-fast $ease-out-back;
 }
@@ -270,6 +290,10 @@
     width: 14px;
     height: 14px;
     color: $color-text-secondary;
+    // FIX: Ensure icon is properly centered
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .option-text {
@@ -306,8 +330,18 @@
   flex: 1;
   position: relative;
   background-color: #0a0a0a;
-  min-height: 0;
-  overflow: hidden;
+  // FIX: Add inset shadow to create "punched hole" depth effect
+  box-shadow:
+    // Deep inset shadow on top and left
+    inset 4px 4px 12px rgba(0, 0, 0, 0.8),
+    // Lighter inset shadow on bottom and right
+    inset -2px -2px 8px rgba(0, 0, 0, 0.5),
+    // Inner border highlight
+    inset 0 0 0 1px rgba(0, 0, 0, 0.9);
+
+  // Add subtle border to enhance the edge definition
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: $radius-sm;
 }
 
 // ============================================================================

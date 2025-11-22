@@ -1935,7 +1935,12 @@ console.log('Tools:', tools);
 
     // Create the renderer (manages the 3D scene)
     const renderer = vtkRenderer.newInstance();
-    renderer.setBackground(0.1, 0.1, 0.1);
+    renderer.setBackground(0.04, 0.04, 0.04);
+    // 0.0 = Pure black
+    // 0.04 = Very dark gray (current)
+    // 0.1 = Medium dark gray
+    // 0.5 = Medium gray
+    // 1.0 = White
 
     // Create the abstract render window (manages renderers and views)
     const renderWindow = vtkRenderWindow.newInstance();
@@ -1955,8 +1960,15 @@ console.log('Tools:', tools);
     renderWindow.addView(openGLRenderWindow);
 
     // Set the size based on container dimensions
-    const { width, height } = container.getBoundingClientRect();
-    openGLRenderWindow.setSize(width, height);
+    const rect = container.getBoundingClientRect();
+    const width = Math.floor(rect.width) || 800; // Fallback to reasonable default
+    const height = Math.floor(rect.height) || 600;
+    if (width > 0 && height > 0) {
+      openGLRenderWindow.setSize(width, height);
+    } else {
+      console.warn("Container has no size, using defaults");
+      openGLRenderWindow.setSize(800, 600);
+    }
 
     // =========================================================================
     // PHASE 3: Create and initialize the interactor (mouse/keyboard handling)
@@ -1988,59 +2000,68 @@ console.log('Tools:', tools);
 
     // Listen for camera modifications and publish through adapter
     camera.onModified(() => {
-      if (!this._isApplyingRemoteState && instanceData.viewConfigId) {
-        const cameraState = {
-          position: camera.getPosition(),
-          focalPoint: camera.getFocalPoint(),
-          viewUp: camera.getViewUp(),
-          parallelScale: camera.getParallelScale(),
-          clippingRange: camera.getClippingRange(),
-          viewAngle: camera.getViewAngle(),
-        };
+      try {
+        if (!this._isApplyingRemoteState && instanceData.viewConfigId) {
+          const cameraState = {
+            position: camera.getPosition(),
+            focalPoint: camera.getFocalPoint(),
+            viewUp: camera.getViewUp(),
+            parallelScale: camera.getParallelScale(),
+            clippingRange: camera.getClippingRange(),
+            viewAngle: camera.getViewAngle(),
+          };
 
-        viewConfigurationManager.updateCamera(
-          instanceData.viewConfigId,
-          cameraState
-        );
-      }
-      // Only publish if we're not applying remote state
-      if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
-        const cameraState = {
-          position: camera.getPosition(),
-          focalPoint: camera.getFocalPoint(),
-          viewUp: camera.getViewUp(),
-          parallelScale: camera.getParallelScale(),
-          clippingRange: camera.getClippingRange(),
-          viewAngle: camera.getViewAngle(),
-        };
+          viewConfigurationManager.updateCamera(
+            instanceData.viewConfigId,
+            cameraState
+          );
+        }
 
-        // Publish through adapter instead of directly to Y.js
-        instanceData.stateAdapter.updateState(
-          {
-            camera: cameraState,
-          },
-          "local"
-        );
-      } else if (!instanceData.stateAdapter) {
-        // This helps us debug if something went wrong
-        console.warn(
-          "⚠️ Camera modified but stateAdapter is missing - state not synced"
-        );
+        // Only publish if we're not applying remote state
+        if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
+          const cameraState = {
+            position: camera.getPosition(),
+            focalPoint: camera.getFocalPoint(),
+            viewUp: camera.getViewUp(),
+            parallelScale: camera.getParallelScale(),
+            clippingRange: camera.getClippingRange(),
+            viewAngle: camera.getViewAngle(),
+          };
+
+          // Publish through adapter instead of directly to Y.js
+          instanceData.stateAdapter.updateState(
+            {
+              camera: cameraState,
+            },
+            "local"
+          );
+        }
+      } catch (error) {
+        // Silently catch camera update errors to prevent error spam
+        // These can happen during rapid camera movements or cleanup
+        if (error) {
+          console.debug("Camera update error (non-critical):", error.message);
+        }
       }
     });
 
     // When user stops interacting, publish the final state
     const publishStateAfterInteraction = () => {
-      // CRITICAL: Add the same defensive checks here
-      if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
-        // Get complete state and publish it
-        const state = this._getCurrentVTKState(instanceData);
-        instanceData.stateAdapter.updateState(state, "local");
-      } else if (!instanceData.stateAdapter) {
-        // This should help us understand if something's still wrong
-        console.warn(
-          "⚠️ Interaction ended but stateAdapter is missing - state not synced"
-        );
+      try {
+        // CRITICAL: Add the same defensive checks here
+        if (!this._isApplyingRemoteState && instanceData.stateAdapter) {
+          // Get complete state and publish it
+          const state = this._getCurrentVTKState(instanceData);
+          instanceData.stateAdapter.updateState(state, "local");
+        }
+      } catch (error) {
+        // Silently catch interaction state errors
+        if (error) {
+          console.debug(
+            "Interaction state update error (non-critical):",
+            error.message
+          );
+        }
       }
     };
 
@@ -2060,14 +2081,41 @@ console.log('Tools:', tools);
     // PHASE 5: Set up responsive resizing
     // =========================================================================
 
-    // Handle container resize events
-    const resizeObserver = new ResizeObserver(() => {
-      // Safety check: only resize if objects still exist and aren't deleted
-      if (openGLRenderWindow && !openGLRenderWindow.isDeleted()) {
-        const { width, height } = container.getBoundingClientRect();
-        openGLRenderWindow.setSize(width, height);
-        renderWindow.render();
+    // Handle container resize events with debouncing to prevent loops
+    let lastWidth = width;
+    let lastHeight = height;
+    let resizeTimeout = null;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      // Cancel any pending resize
+      if (resizeTimeout) {
+        cancelAnimationFrame(resizeTimeout);
       }
+
+      // Schedule resize for next animation frame
+      resizeTimeout = requestAnimationFrame(() => {
+        // Safety check: only resize if objects still exist and aren't deleted
+        if (openGLRenderWindow && !openGLRenderWindow.isDeleted()) {
+          for (const entry of entries) {
+            const newWidth = Math.floor(entry.contentRect.width);
+            const newHeight = Math.floor(entry.contentRect.height);
+
+            // Only update if size actually changed by a meaningful amount
+            if (
+              newWidth > 0 &&
+              newHeight > 0 &&
+              (Math.abs(newWidth - lastWidth) > 2 ||
+                Math.abs(newHeight - lastHeight) > 2)
+            ) {
+              lastWidth = newWidth;
+              lastHeight = newHeight;
+              openGLRenderWindow.setSize(newWidth, newHeight);
+              renderWindow.render();
+            }
+          }
+        }
+        resizeTimeout = null;
+      });
     });
     resizeObserver.observe(container);
 
