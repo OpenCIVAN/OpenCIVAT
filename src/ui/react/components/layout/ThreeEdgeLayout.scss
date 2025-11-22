@@ -1,8 +1,8 @@
-// src/ui/react/components/layout/layout.scss
 // Styles for ThreeEdgeLayout and ResizablePanel components
 // Uses design tokens for consistency
 
-@use "@UI/react/styles/tokens" as *;
+@use "sass:color";
+@use "@UI/react/styles/theme.scss" as *;
 
 // =============================================================================
 // THREE EDGE LAYOUT
@@ -13,7 +13,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: $color-bg-primary;
   overflow: hidden;
 }
 
@@ -33,7 +33,7 @@
   flex: 1;
   min-width: 0; // Critical for flexbox children
   overflow: hidden;
-  background: var(--bg-primary);
+  background: $color-bg-primary;
 }
 
 .three-edge-layout__bottom {
@@ -49,15 +49,15 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  background: var(--bg-secondary);
+  background: $color-bg-secondary;
   transition: width var(--transition-smooth);
 
   &--left {
-    border-right: 1px solid var(--border-subtle);
+    border-right: 1px solid $color-border-subtle;
   }
 
   &--right {
-    border-left: 1px solid var(--border-subtle);
+    border-left: 1px solid $color-border-subtle;
   }
 }
 
@@ -95,7 +95,7 @@
   }
 
   &--active {
-    background: var(--accent-primary);
+    background: $color-accent-primary;
   }
 }
 
@@ -128,7 +128,7 @@
   flex-direction: column;
   align-items: center;
   padding: $spacing-md 0;
-  background: var(--bg-secondary);
+  background: $color-bg-secondary;
 }
 
 .activity-bar__content {
@@ -149,20 +149,20 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: $radius-sm;
-  color: var(--text-tertiary);
+  color: $color-text-tertiary;
   cursor: pointer;
   transition: all var(--transition-fast);
 
   &:hover {
-    background: var(--bg-tertiary);
+    background: $color-bg-tertiary;
     border-color: var(--border-medium);
-    color: var(--text-secondary);
+    color: $color-text-secondary;
   }
 
   &:active {
     background: var(--accent-primary-subtle);
-    border-color: var(--accent-primary);
-    color: var(--accent-primary);
+    border-color: $color-accent-primary;
+    color: $color-accent-primary;
   }
 }
 
@@ -176,9 +176,9 @@
   justify-content: space-between;
   height: 40px;
   padding: 0 $spacing-md;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid $color-border-subtle;
   flex-shrink: 0;
-  background: var(--bg-secondary);
+  background: $color-bg-secondary;
 }
 
 .panel-header__content {
@@ -192,7 +192,7 @@
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: $color-text-primary;
 }
 
 .panel-header__collapse {
@@ -204,14 +204,14 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: $radius-sm;
-  color: var(--text-tertiary);
+  color: $color-text-tertiary;
   cursor: pointer;
   transition: all var(--transition-fast);
 
   &:hover {
-    background: var(--bg-tertiary);
+    background: $color-bg-tertiary;
     border-color: var(--border-medium);
-    color: var(--text-secondary);
+    color: $color-text-secondary;
   }
 }
 
@@ -228,21 +228,21 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: $radius-sm;
-  color: var(--text-tertiary);
+  color: $color-text-tertiary;
   cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
 
   &:hover {
-    background: var(--bg-tertiary);
+    background: $color-bg-tertiary;
     border-color: var(--border-medium);
-    color: var(--text-secondary);
+    color: $color-text-secondary;
   }
 
   &--active {
-    background: var(--accent-primary);
-    border-color: var(--accent-primary);
-    color: var(--text-primary);
+    background: $color-accent-primary;
+    border-color: $color-accent-primary;
+    color: $color-text-primary;
 
     &:hover {
       background: var(--accent-hover);
@@ -263,11 +263,11 @@
   align-items: center;
   justify-content: center;
   background: var(--error);
-  color: var(--text-primary);
+  color: $color-text-primary;
   font-size: 9px;
   font-weight: 600;
   border-radius: 8px;
-  border: 2px solid var(--bg-secondary);
+  border: 2px solid $color-bg-secondary;
 }
 
 // =============================================================================
@@ -308,7 +308,7 @@
 .activity-bar__expand:focus-visible,
 .panel-header__collapse:focus-visible,
 .activity-bar-icon:focus-visible {
-  outline: 2px solid var(--accent-primary);
+  outline: 2px solid $color-accent-primary;
   outline-offset: 2px;
 }
 

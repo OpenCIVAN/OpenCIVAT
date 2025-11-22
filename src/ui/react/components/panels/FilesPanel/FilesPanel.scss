@@ -1,33 +1,619 @@
-@use "@UI/react/styles/tokens" as *;
+// Merged from FilesPanel.css + FilesPanel.scss
+@use "@UI/react/styles/theme.scss" as *;
+
+// ============================================================================
+// MAIN PANEL CONTAINER
+// ============================================================================
 
 .files-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-secondary);
+  background: $color-bg-primary;
+}
+
+// ============================================================================
+// PANEL HEADER
+// ============================================================================
+
+.files-panel__panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border-subtle;
+  @include glass-subtle;
+  flex-shrink: 0;
+}
+
+.files-panel__panel-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.files-panel__collapse-btn {
+  padding: $spacing-xs;
+  @include glass-button;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  transition: all $transition-fast;
+
+  &:hover {
+    @include glass-hover;
+    color: $color-text-primary;
+  }
+}
+
+// ============================================================================
+// MAIN TABS (Datasets / Files)
+// ============================================================================
+
+.files-panel__main-tabs {
+  display: flex;
+  gap: 2px;
+  padding: $spacing-xs;
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+}
+
+.files-panel__main-tab {
+  flex: 1;
+  padding: $spacing-sm $spacing-md;
+  @include glass-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+
+  &:hover:not(.active) {
+    color: $color-text-secondary;
+    @include glass-hover;
+  }
+
+  &.active {
+    background: $color-bg-tertiary;
+    color: $color-accent-primary;
+    border-color: $color-accent-primary;
+  }
+}
+
+// ============================================================================
+// MAIN CONTENT AREA
+// ============================================================================
+
+.files-panel__main-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: flex $transition-base;
+
+  &.full {
+    flex: 1 1 100%;
+  }
+
+  &.split {
+    flex: 1 1 50%;
+  }
 }
 
 .files-panel__content {
   flex: 1;
   overflow-y: auto;
   padding: $spacing-md;
+  @include glass-scrollable;
 }
+
+// ============================================================================
+// ERROR MESSAGE
+// ============================================================================
+
+.files-panel__error {
+  margin: $spacing-md $spacing-lg;
+  padding: $spacing-md;
+  background: $color-error-bg;
+  border: 1px solid $color-error-border;
+  border-radius: $radius-md;
+  color: $color-error;
+  font-size: $font-size-sm;
+}
+
+// ============================================================================
+// DATASETS VIEW
+// ============================================================================
+
+.files-panel__datasets-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding: $spacing-lg;
+  gap: $spacing-lg;
+}
+
+// Spawn toggle section
+.files-panel__spawn-toggle {
+  padding: $spacing-md;
+  @include glass-card;
+  flex-shrink: 0;
+  transition: all $transition-fast;
+
+  &:hover {
+    @include glass-hover;
+  }
+
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    cursor: pointer;
+  }
+
+  .toggle-hint {
+    display: block;
+    margin-top: $spacing-xs;
+    margin-left: 24px;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    font-style: italic;
+  }
+}
+
+.files-panel__datasets-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.files-panel__section-title {
+  margin: 0 0 $spacing-md 0;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+}
+
+// ============================================================================
+// DATASET LIST
+// ============================================================================
+
+.files-panel__datasets-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  @include glass-scrollable;
+}
+
+.files-panel__datasets-empty {
+  text-align: center;
+  padding: $spacing-xl;
+  color: $color-text-tertiary;
+
+  p {
+    margin: 0 0 $spacing-xs 0;
+    font-size: $font-size-base;
+  }
+}
+
+.files-panel__datasets-hint {
+  font-size: $font-size-sm;
+  font-style: italic;
+}
+
+.files-panel__dataset {
+  padding: $spacing-md;
+  @include glass-card;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+
+  &:hover:not(:disabled) {
+    @include glass-hover;
+    border-color: $color-accent-primary;
+  }
+
+  &.fetchable {
+    border-color: $color-accent-blue;
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+}
+
+.files-panel__dataset-info {
+  flex: 1;
+}
+
+.files-panel__dataset-name {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-base;
+  margin-bottom: $spacing-xs;
+  color: $color-text-primary;
+}
+
+.files-panel__dataset-meta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.files-panel__instance-badge {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 2px $spacing-sm;
+  background: $color-success-bg;
+  border: 1px solid $color-success-border;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  color: $color-success;
+  margin-left: $spacing-sm;
+}
+
+// Refetch button
+.files-panel__refetch-btn {
+  padding: $spacing-xs $spacing-sm;
+  @include glass-button;
+  background: $color-accent-blue-glow;
+  color: $color-accent-blue;
+  border-color: $color-accent-blue;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+  margin-left: $spacing-sm;
+
+  &:hover {
+    background: rgba(33, 150, 243, 0.25);
+    box-shadow: 0 0 20px $color-accent-blue-glow;
+  }
+}
+
+// Status icons
+.status-available {
+  color: $color-success;
+}
+.status-fetching {
+  color: $color-warning;
+}
+.status-fetchable {
+  color: $color-accent-blue;
+}
+.status-needs-upload {
+  color: $color-accent-orange;
+}
+.status-error {
+  color: $color-error;
+}
+
+// ============================================================================
+// FILES VIEW
+// ============================================================================
+
+.files-panel__files-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: $spacing-lg;
+  @include glass-scrollable;
+}
+
+.files-panel__upload-section {
+  @include glass-card;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.files-panel__tabs {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.files-panel__tab {
+  flex: 1;
+  padding: $spacing-sm $spacing-md;
+  @include glass-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-tertiary;
+
+  &.active {
+    background: $color-bg-tertiary;
+    color: $color-text-primary;
+    border-color: $color-accent-primary;
+  }
+
+  &:hover:not(.active):not(:disabled) {
+    @include glass-hover;
+    color: $color-text-secondary;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================================================
+// UPLOAD BUTTON
+// ============================================================================
 
 .files-panel__upload-btn {
   width: 100%;
-  padding: $spacing-sm ;
-  background: var(--accent-primary);
-  border: none;
-  border-radius: $radius-sm;
-  color: var(--text-primary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background var(--transition-fast);
+  padding: $spacing-sm $spacing-md;
+  @include glass-button;
+  background: $color-accent-primary-glow;
+  border: 1px solid $color-accent-primary;
+  color: $color-accent-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  transition: all $transition-fast;
 
-  &:hover {
-    background: var(--accent-hover);
+  &:hover:not(:disabled) {
+    background: rgba(76, 175, 80, 0.25);
+    @include accent-glow;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    background: $color-disabled-bg;
+    border-color: $color-disabled-border;
+    color: $color-disabled-text;
+    cursor: not-allowed;
+    transform: none;
   }
 }
+
+// ============================================================================
+// SAMPLE FILES
+// ============================================================================
+
+.files-panel__samples {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.files-panel__sample {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  @include glass-card;
+  color: $color-text-primary;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include glass-hover;
+    border-color: $color-accent-primary;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.files-panel__sample-info {
+  flex: 1;
+}
+
+.files-panel__sample-name {
+  font-size: $font-size-sm;
+  margin-bottom: 2px;
+}
+
+.files-panel__sample-size {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.files-panel__upload {
+  text-align: center;
+  padding: $spacing-lg 0;
+}
+
+// ============================================================================
+// QUICK ACCESS SECTION
+// ============================================================================
+
+.files-panel__quick-access {
+  flex: 1 1 50%;
+  display: flex;
+  flex-direction: column;
+  background: $color-bg-secondary;
+  border-top: 1px solid $color-border-subtle;
+  overflow: hidden;
+}
+
+.files-panel__quick-access-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border-subtle;
+  @include glass-subtle;
+  flex-shrink: 0;
+}
+
+.files-panel__quick-access-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.files-panel__quick-close-btn {
+  padding: $spacing-xs;
+  @include glass-button;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+
+  &:hover {
+    @include glass-hover;
+    color: $color-text-primary;
+  }
+}
+
+.files-panel__quick-tabs {
+  display: flex;
+  gap: 2px;
+  padding: $spacing-xs;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+}
+
+.files-panel__quick-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  @include glass-button;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+
+  &:hover:not(.active) {
+    @include glass-hover;
+  }
+
+  &.active {
+    background: $color-bg-primary;
+    color: $color-accent-primary;
+    border-color: $color-accent-primary;
+  }
+}
+
+.files-panel__quick-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-lg;
+  @include glass-scrollable;
+}
+
+.files-panel__quick-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-tertiary;
+  height: 100%;
+
+  p {
+    margin: 0;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  span {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+}
+
+// ============================================================================
+// QUICK ACCESS TOGGLE BUTTON
+// ============================================================================
+
+.files-panel__quick-toggle {
+  border-top: 1px solid $color-border-subtle;
+  padding: $spacing-md $spacing-lg;
+  @include glass-subtle;
+  flex-shrink: 0;
+}
+
+.files-panel__quick-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  @include glass-button;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+
+  &:hover {
+    @include glass-hover;
+    border-color: $color-accent-primary;
+    color: $color-accent-primary;
+  }
+}
+
+// ============================================================================
+// DATASET ACTIONS (Spawn button, etc.)
+// ============================================================================
+
+.files-panel__dataset-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.files-panel__spawn-btn {
+  padding: $spacing-xs;
+  @include glass-button;
+  background: $color-accent-primary-glow;
+  border: 1px solid $color-accent-primary;
+  color: $color-accent-primary;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(76, 175, 80, 0.25);
+    @include accent-glow;
+    transform: scale(1.1);
+  }
+}
+
+// ============================================================================
+// ANIMATIONS
+// ============================================================================
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+// ============================================================================
+// LIST COMPONENT (if exists)
+// ============================================================================
 
 .files-panel__list {
   margin-top: $spacing-md;

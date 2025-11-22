@@ -5,7 +5,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useResizeHandler, PANEL_CONSTRAINTS } from '@UI/react/components/layout/ThreeEdgeLayout.logic';
-import '@UI/react/components/layout/layout.scss';
+import '@UI/react/components/layout/ThreeEdgeLayout.scss';
 
 /**
  * ResizablePanel - Generic panel wrapper with resize and collapse functionality

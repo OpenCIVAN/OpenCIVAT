@@ -17,7 +17,7 @@ import { SampleFileList } from './SampleFileList.jsx';
 import { DatasetList } from './DatasetList.jsx';
 import { FileUploadButton } from './FileUploadButton.jsx';
 
-import './FilesPanel.css';
+import '@UI/react/components/panels/FilesPanel/FilesPanel.scss';
 
 const SAMPLE_FILES = [
     { name: 'Skull.vtp', path: '/vtp_files/Skull.vtp', size: '19.5 MB' },

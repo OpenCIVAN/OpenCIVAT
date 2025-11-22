@@ -13,9 +13,6 @@ import { TopBar } from "@UI/react/components/layout/TopBar.jsx";
 import { StatusBar } from "@UI/react/components/layout/StatusBar.jsx";
 import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel.jsx"
 
-// Import styles
-import "@UI/react/styles/panels.css";
-
 /**
  * Main Application Component
  * 

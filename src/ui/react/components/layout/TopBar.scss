@@ -1,0 +1,85 @@
+// TopBar.scss - Top application bar with glassmorphism
+@use "sass:color";
+@use "@UI/react/styles/theme.scss" as *;
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 50px;
+  @include glass-panel;
+  border-radius: 0; // Full width
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  padding: 0 $spacing-xl;
+
+  // Subtle bottom glow for separation
+  box-shadow: 0 1px 0 $color-border-subtle, 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  &__logo {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  &__center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+}
+
+// Logo text styles
+.logo-text {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-accent-primary;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px $color-accent-primary-glow;
+}
+
+.logo-subtitle {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// Room indicator
+.room-indicator {
+  padding: $spacing-sm $spacing-md;
+  @include glass-card;
+  border-radius: $radius-full;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+
+  strong {
+    color: $color-accent-primary;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+// User indicator
+.user-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  @include glass-card;
+  border-radius: $radius-full;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  transition: all $transition-fast;
+
+  &:hover {
+    @include glass-hover;
+  }
+}

@@ -1,0 +1,71 @@
+// StatusBar.scss - Bottom status bar with glassmorphism
+@use "@UI/react/styles/theme.scss" as *;
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  @include glass-panel;
+  border-radius: 0;  // Full width
+  border-bottom: none;
+  border-left: none;
+  border-right: none;
+  padding: 0 $spacing-lg;
+  font-size: $font-size-xs;
+  
+  // Subtle top glow for separation
+  box-shadow: 
+    0 -1px 0 $color-border-subtle,
+    0 -4px 12px rgba(0, 0, 0, 0.4);
+
+  &__left,
+  &__center,
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-lg;
+  }
+}
+
+.status-item {
+  color: $color-text-tertiary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 2px $spacing-sm;
+  border-radius: $radius-full;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  transition: all $transition-fast;
+
+  &.syncing {
+    background: $color-warning-bg;
+    color: $color-warning;
+    border: 1px solid $color-warning-border;
+    
+    // Pulse animation for syncing
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  &.synced {
+    background: $color-success-bg;
+    color: $color-success;
+    border: 1px solid $color-success-border;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}

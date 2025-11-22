@@ -1,6 +1,7 @@
 // src/ui/react/components/layout/TopBar.jsx
 import React from "react";
 import { sessionManager } from "@Core/session/sessionManager.js";
+import "@UI/react/components/layout/TopBar.scss";
 
 export function TopBar({ username }) {
     const roomId = sessionManager.getRoomId();
