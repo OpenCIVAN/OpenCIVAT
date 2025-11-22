@@ -48,7 +48,7 @@ export function InstanceViewport({
     const [openMenuId, setOpenMenuId] = useState(null);
 
     // =========================================================================
-    // INSTANCE INITIALIZATION
+    // INSTANCE INITIALIZATION - PRESERVE EXACT LOGIC
     // =========================================================================
 
     useEffect(() => {
@@ -204,13 +204,15 @@ export function InstanceViewport({
     };
 
     const handleFullscreen = () => {
-        if (containerRef.current?.requestFullscreen) {
-            containerRef.current.requestFullscreen();
+        if (containerRef.current) {
+            if (containerRef.current.requestFullscreen) {
+                containerRef.current.requestFullscreen();
+            }
         }
     };
 
     // =========================================================================
-    // RENDERING HELPERS
+    // TOOLBAR RENDERING
     // =========================================================================
 
     const renderMenuOption = (option, optIndex, menuId) => {
@@ -234,29 +236,13 @@ export function InstanceViewport({
             );
         }
 
-        if (option.type === 'slider') {
-            return (
-                <SliderMenuOption
-                    key={option.id || `slider-${menuId}-${optIndex}`}
-                    {...option}
-                />
-            );
-        }
-
-        if (option.type === 'slider-with-presets') {
-            return (
-                <SliderWithPresets
-                    key={option.id || `slider-preset-${menuId}-${optIndex}`}
-                    {...option}
-                />
-            );
-        }
-
-        if (option.type === 'camera-view-grid') {
+        if (option.type === 'camera-grid') {
             return (
                 <CameraViewGridPicker
-                    key={option.id || `camera-grid-${menuId}-${optIndex}`}
-                    {...option}
+                    key={option.id}
+                    views={option.views}
+                    disabled={option.disabled}
+                    onViewChange={option.onViewSelect}
                 />
             );
         }
@@ -264,8 +250,11 @@ export function InstanceViewport({
         if (option.type === 'position-grid') {
             return (
                 <PositionGridPicker
-                    key={option.id || `pos-grid-${menuId}-${optIndex}`}
-                    {...option}
+                    key={option.id}
+                    positions={option.positions}
+                    currentPosition={option.currentPosition}
+                    disabled={option.disabled}
+                    onPositionChange={option.onPositionChange}
                 />
             );
         }
@@ -273,26 +262,62 @@ export function InstanceViewport({
         if (option.type === 'color-swatch-grid') {
             return (
                 <ColorSwatchGrid
-                    key={option.id || `color-grid-${menuId}-${optIndex}`}
-                    {...option}
+                    key={option.id}
+                    colormaps={option.colormaps}
+                    currentColormap={option.currentColormap}
+                    disabled={option.disabled}
+                    onColormapChange={option.onColormapChange}
                 />
             );
         }
 
-        const OptionIcon = option.icon ? getToolIcon(option.id, option.icon) : null;
+        if (option.type === 'slider-with-presets') {
+            const IconComponent = getToolIcon(option.icon);
+
+            return (
+                <SliderWithPresets
+                    key={option.id}
+                    icon={IconComponent ? <IconComponent size={14} /> : null}
+                    label={option.label}
+                    min={option.min}
+                    max={option.max}
+                    step={option.step}
+                    value={option.value}
+                    presets={option.presets}
+                    unit={option.unit}
+                    disabled={option.disabled}
+                    onChange={option.onChange}
+                />
+            );
+        }
+
+        if (option.type === 'slider') {
+            return (
+                <SliderMenuOption
+                    key={option.id}
+                    label={option.label}
+                    min={option.min}
+                    max={option.max}
+                    step={option.step}
+                    value={option.value}
+                    unit={option.unit}
+                    disabled={option.disabled}
+                    onChange={option.onChange}
+                />
+            );
+        }
+
+        const OptionIcon = getToolIcon(option.id, option.icon);
 
         return (
             <button
                 key={option.id || `option-${menuId}-${optIndex}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    option.onClick?.();
-                }}
+                onClick={option.onClick}
                 className={`menu-option ${option.active ? 'active' : ''}`}
                 disabled={option.disabled}
                 aria-label={option.label}
             >
-                {OptionIcon && <OptionIcon size={14} className="option-icon" />}
+                <OptionIcon size={14} className="option-icon" />
                 <div className="option-text">
                     <span className="option-label">{option.label}</span>
                     {option.description && (
@@ -381,12 +406,11 @@ export function InstanceViewport({
     };
 
     // =========================================================================
-    // MAIN RENDER
+    // MAIN RENDER - NO INLINE STYLES
     // =========================================================================
 
     return (
         <div className="instance-viewport">
-            {/* Header */}
             <div className="instance-viewport__header">
                 <div className="instance-viewport__header-title">
                     {getDisplayName()}
@@ -411,14 +435,12 @@ export function InstanceViewport({
                 </div>
             </div>
 
-            {/* Toolbar */}
             {tools.length > 0 && (
                 <div className="instance-viewport__toolbar">
                     {tools.map((tool, index) => renderTool(tool, index))}
                 </div>
             )}
 
-            {/* Canvas Container - VTK renders here */}
             <div
                 ref={containerRef}
                 className="instance-viewport__content"
@@ -432,7 +454,7 @@ export function InstanceViewport({
                 {error && (
                     <div className="instance-viewport__error">
                         <AlertCircle size={24} />
-                        <div>{error}</div>
+                        <div className="error-message">{error}</div>
                     </div>
                 )}
             </div>

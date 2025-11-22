@@ -41,7 +41,6 @@ export function WorkspaceGrid() {
                 setInstances((prev) => [...prev, {
                     key: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                     viewConfigId: viewConfig.id,
-                    // ✅ NO TYPE - instance will infer it from dataset
                     isRemote: false,
                 }]);
 
@@ -65,8 +64,7 @@ export function WorkspaceGrid() {
 
         setInstances((prev) => [...prev, {
             key: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            viewConfigId: null,  // No view = empty instance
-            // ✅ NO TYPE - truly generic empty instance
+            viewConfigId: null,
             isRemote: false,
         }]);
     }, [instances.length]);
@@ -77,15 +75,15 @@ export function WorkspaceGrid() {
         setInstances((prev) => prev.filter((instance) => instance.key !== instanceKey));
     }, []);
 
-    // Calculate grid layout style
-    const getGridStyle = () => {
+    // Get CSS class for grid layout based on instance count
+    const getGridLayoutClass = () => {
         const count = instances.length;
-        if (count === 0) return {};
-        if (count === 1) return { gridTemplateColumns: '1fr', gridTemplateRows: '1fr' };
-        if (count === 2) return { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr' };
-        if (count <= 4) return { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' };
-        if (count <= 6) return { gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr' };
-        return { gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '1fr 1fr 1fr' };
+        if (count === 0) return '';
+        if (count === 1) return 'grid-layout-1';
+        if (count === 2) return 'grid-layout-2';
+        if (count <= 4) return 'grid-layout-4';
+        if (count <= 6) return 'grid-layout-6';
+        return 'grid-layout-9';
     };
 
     return (
@@ -127,15 +125,14 @@ export function WorkspaceGrid() {
                     </button>
                 </div>
             ) : (
-                <div ref={gridRef} className="workspace-grid__grid" style={getGridStyle()}>
+                <div ref={gridRef} className={`workspace-grid__grid ${getGridLayoutClass()}`}>
                     {instances.map((instance) => (
                         <InstanceViewport
                             key={instance.key}
                             viewConfigId={instance.viewConfigId}
-                            // ✅ NO TYPE PROP - instance determines its own type!
                             isRemote={instance.isRemote}
-                            remoteInstanceId={instance.remoteId}
-                            ownerUserName={instance.userName}
+                            remoteInstanceId={instance.remoteInstanceId}
+                            ownerUserName={instance.ownerUserName}
                             onDelete={() => handleDeleteInstance(instance.key)}
                         />
                     ))}

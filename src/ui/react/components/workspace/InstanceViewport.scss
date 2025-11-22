@@ -1,32 +1,30 @@
-// InstanceViewport.scss - "Hole punched through the app" design
+// src/ui/react/components/workspace/InstanceViewport.scss
 @use "sass:color";
 @use "@UI/react/styles/theme.scss" as *;
 
 // ============================================================================
-// ROOT VIEWPORT WRAPPER - The "frame" around the hole
+// ROOT VIEWPORT WRAPPER
 // ============================================================================
 
 .instance-viewport {
   display: flex;
-  flex-direction: column; // FIXED TYPO
+  flex-direction: column;
   height: 100%;
   width: 100%;
   min-height: 0;
   overflow: hidden;
   position: relative;
   
-  // Thin lighter frame - just enough to show edges
   background: $color-bg-secondary;
   border-radius: $radius-md;
   
-  // Subtle shadow - makes it look raised from app background
   box-shadow: 
     0 2px 4px rgba(0, 0, 0, 0.3),
     0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 // ============================================================================
-// HEADER - Sits on the frame
+// HEADER
 // ============================================================================
 
 .instance-viewport__header {
@@ -79,7 +77,7 @@
 }
 
 // ============================================================================
-// TOOLBAR - Sits on the frame
+// TOOLBAR
 // ============================================================================
 
 .instance-viewport__toolbar {
@@ -164,193 +162,67 @@
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: opacity $transition-fast;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  z-index: 10000;
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: rgba(30, 30, 30, 0.8);
-  }
+  visibility: hidden;
+  transition: opacity $transition-fast, visibility $transition-fast;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 
   .toolbar-icon-btn:hover &,
   .toolbar-menu-btn:hover & {
     opacity: 1;
+    visibility: visible;
   }
 }
 
 .tooltip-title {
+  font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  font-size: $font-size-sm;
   color: $color-text-primary;
-  line-height: $line-height-tight;
+  margin-bottom: 2px;
 }
 
 .tooltip-desc {
   font-size: $font-size-xs;
-  color: $color-text-tertiary;
-  line-height: $line-height-normal;
-  margin-top: $spacing-xs;
+  color: $color-text-muted;
+  margin-top: 2px;
 }
 
 .tooltip-shortcut {
-  display: inline-block;
-  margin-top: $spacing-sm;
-  padding: 2px $spacing-sm;
-  background: rgba($color-accent-pink, 0.15);
-  border: 1px solid rgba($color-accent-pink, 0.3);
-  border-radius: $radius-sm;
   font-size: $font-size-xs;
-  font-family: "Monaco", "Courier New", monospace;
-  color: $color-accent-pink;
+  color: $color-text-tertiary;
+  margin-top: 4px;
+  font-family: 'Monaco', 'Courier New', monospace;
 }
 
 // ============================================================================
-// CANVAS CONTAINER - THE PURE BLACK HOLE
-// This is like someone took a hole punch to the app background
-// ============================================================================
-
-.instance-viewport__content {
-  flex: 1 1 auto;
-  position: relative;
-  width: 100%;
-  min-height: 0;
-  overflow: hidden;
-  
-  // Small margin creates the thin frame around the hole
-  margin: $spacing-xs;
-
-  // PURE BLACK - the darkest possible void for maximum contrast
-  // The 3D content will glow against this like the annotation button
-  background: #000000; // Pure black, no gradient needed
-  
-  // DEEP INSET shadow - makes it look like a hole punched INTO the surface
-  box-shadow: 
-    inset 0 6px 16px rgba(0, 0, 0, 0.9),     // Strong top shadow
-    inset 0 2px 8px rgba(0, 0, 0, 0.8),      // Mid shadow
-    inset 0 0 60px rgba(0, 0, 0, 0.7),       // Ambient darkening
-    0 0 0 1px rgba(255, 255, 255, 0.02);     // Barely visible inner edge
-
-  // Defined edge - subtle highlight like you see on the annotation button
-  border: 1px solid rgba(0, 0, 0, 0.9);
-  border-radius: $radius-sm;
-
-  // VTK canvas fills the pure black hole
-  canvas {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-    z-index: 1;
-  }
-}
-
-// ============================================================================
-// DROPDOWN MENUS - Must float ABOVE the hole
+// DROPDOWN MENUS
 // ============================================================================
 
 .toolbar-menu {
   position: relative;
-  overflow: visible !important;
 }
 
 .toolbar-menu-dropdown {
-  display: none;
-  position: fixed;
+  @include frosted-glass;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
   min-width: 200px;
-  max-width: 260px;
-  z-index: 10000 !important;
-  @include glass-menu;
-  margin-top: $spacing-xs;
-  box-shadow: 
-    0 12px 48px rgba(0, 0, 0, 0.8),
-    0 4px 16px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  .toolbar-menu:hover &,
-  .toolbar-menu.open & {
-    display: block;
-    animation: menuSlideIn $transition-fast $ease-out-expo;
-  }
+  border-radius: $radius-md;
+  padding: $spacing-xs;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: dropdown-appear $transition-fast $ease-out-back;
 }
 
-@keyframes menuSlideIn {
+@keyframes dropdown-appear {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-.menu-option {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm $spacing-md;
-  border-radius: $radius-sm;
-  color: $color-text-primary;
-  font-size: $font-size-sm;
-  cursor: pointer;
-  transition: all $transition-fast;
-  border: 1px solid transparent;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-
-  &:hover:not(:disabled) {
-    @include glass-hover;
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  &.active {
-    background: rgba($color-accent-pink, 0.12);
-    border-color: rgba($color-accent-pink, 0.25);
-    color: $color-accent-pink;
-
-    .option-icon {
-      color: $color-accent-pink;
-    }
-  }
-
-  .option-icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-
-  .option-text {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .option-label {
-    font-weight: $font-weight-medium;
-    line-height: $line-height-tight;
-  }
-
-  .option-description {
-    font-size: $font-size-xs;
-    color: $color-text-tertiary;
-    line-height: $line-height-tight;
   }
 }
 
@@ -361,21 +233,87 @@
 }
 
 .menu-header {
-  padding: $spacing-xs $spacing-md;
+  padding: $spacing-xs $spacing-sm;
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
   color: $color-text-tertiary;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-top: $spacing-xs;
+}
 
-  &:first-child {
-    margin-top: 0;
+.menu-option {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm;
+  @include glass-button;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    @include glass-hover;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &.active {
+    background: rgba($color-accent-pink, 0.15);
+    border-color: rgba($color-accent-pink, 0.3);
+    color: $color-accent-pink;
+  }
+
+  .option-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: $color-text-secondary;
+  }
+
+  .option-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .option-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .option-description {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
 // ============================================================================
-// LOADING & ERROR STATES - Float above the hole
+// CONTENT AREA - The "hole punched through"
+// ============================================================================
+
+.instance-viewport__content {
+  flex: 1;
+  position: relative;
+  background-color: #0a0a0a;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// ============================================================================
+// LOADING & ERROR STATES
 // ============================================================================
 
 .instance-viewport__loading,
@@ -383,25 +321,78 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: $color-text-tertiary;
-  font-size: $font-size-sm;
   gap: $spacing-md;
-  z-index: 50;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
+  padding: $spacing-xl;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  z-index: 10;
+}
+
+.instance-viewport__loading {
+  animation: pulse 2s ease-in-out infinite;
 }
 
 .instance-viewport__error {
   color: $color-error;
 
   svg {
-    color: $color-error;
-    opacity: 0.8;
+    width: 24px;
+    height: 24px;
+  }
+
+  .error-message {
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  .error-detail {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    opacity: 0.7;
+    text-align: center;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+// ============================================================================
+// RESPONSIVE
+// ============================================================================
+
+@media (max-width: 768px) {
+  .instance-viewport__header {
+    padding: $spacing-xs $spacing-sm;
+    min-height: 36px;
+  }
+
+  .instance-viewport__toolbar {
+    padding: $spacing-xs $spacing-sm;
+    gap: 4px;
+  }
+
+  .toolbar-icon-btn,
+  .toolbar-menu-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+  }
+
+  .toolbar-menu-dropdown {
+    min-width: 180px;
   }
 }

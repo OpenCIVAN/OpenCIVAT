@@ -1,138 +1,217 @@
+// src/ui/react/components/workspace/WorkspaceGrid.scss
 @use "sass:color";
 @use "@UI/react/styles/theme.scss" as *;
 
-// WorkspaceGrid - Main container
+// ============================================================================
+// WORKSPACE GRID - Main container
+// ============================================================================
+
 .workspace-grid {
   display: flex;
   flex-direction: column;
   height: 100%;
-  position: relative;
-  background: $color-bg-primary; // Lighter background for contrast
+  width: 100%;
+  min-height: 0;
+  background: $color-bg-primary;
+  overflow: hidden;
+}
 
-  // Header/Toolbar
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: $spacing-md $spacing-lg;
-    background-color: $color-bg-secondary;
-    border-bottom: 1px solid $color-border-subtle;
-    flex-shrink: 0;
+// ============================================================================
+// HEADER
+// ============================================================================
+
+.workspace-grid__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  @include glass-subtle;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+  background: rgba($color-bg-secondary, 0.6);
+}
+
+.workspace-grid__title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.workspace-grid__count {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+}
+
+.workspace-grid__add-button {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  @include glass-button;
+  color: $color-accent-primary;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-md;
+
+  &:hover:not(:disabled) {
+    @include glass-hover;
+    background: rgba($color-accent-primary, 0.1);
+    border-color: $color-accent-primary;
   }
 
-  &__title {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    color: $color-text-primary;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
-  &__count {
-    color: $color-text-tertiary;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-normal;
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ============================================================================
+// EMPTY STATE
+// ============================================================================
+
+.workspace-grid__empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  text-align: center;
+  gap: $spacing-md;
+}
+
+.workspace-grid__empty-icon {
+  font-size: 64px;
+  margin-bottom: $spacing-md;
+  opacity: 0.6;
+}
+
+.workspace-grid__empty-title {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+}
+
+.workspace-grid__empty-description {
+  font-size: $font-size-md;
+  color: $color-text-muted;
+  text-align: center;
+  max-width: 400px;
+  line-height: $line-height-normal;
+}
+
+.workspace-grid__empty-button {
+  margin-top: $spacing-lg;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 10px $spacing-xl;
+  background-color: $color-accent-primary-glow;
+  border: 1px solid $color-accent-primary;
+  border-radius: $radius-md;
+  color: $color-accent-primary;
+  cursor: pointer;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  transition: all $transition-base;
+
+  &:hover {
+    background-color: color.adjust($color-accent-primary, $alpha: -0.75);
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+    transform: translateY(-2px);
   }
 
-  &__add-button {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// ============================================================================
+// GRID CONTAINER - Base styles
+// ============================================================================
+
+.workspace-grid__grid {
+  flex: 1;
+  display: grid;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  overflow: auto;
+  min-height: 0;
+}
+
+// ============================================================================
+// GRID LAYOUT CLASSES - Responsive grid templates
+// ============================================================================
+
+.workspace-grid__grid.grid-layout-1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.workspace-grid__grid.grid-layout-2 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+.workspace-grid__grid.grid-layout-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.workspace-grid__grid.grid-layout-6 {
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.workspace-grid__grid.grid-layout-9 {
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+}
+
+// ============================================================================
+// RESPONSIVE ADJUSTMENTS
+// ============================================================================
+
+@media (max-width: 1024px) {
+  .workspace-grid__grid.grid-layout-6,
+  .workspace-grid__grid.grid-layout-9 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace-grid__header {
     padding: $spacing-sm $spacing-md;
-    background-color: $color-accent-primary-glow;
-    border: 1px solid $color-accent-primary;
-    border-radius: $radius-sm;
-    color: $color-accent-primary;
-    cursor: pointer;
-    font-size: $font-size-md;
-    font-weight: $font-weight-semibold;
-    transition: all $transition-base;
-
-    &:hover:not(:disabled) {
-      background-color: color.adjust($color-accent-primary, $alpha: -0.75);
-      box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
-      transform: translateY(-1px);
-    }
-
-    &:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    &:disabled {
-      background-color: $color-disabled-bg;
-      border-color: $color-disabled-border;
-      color: $color-disabled-text;
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
   }
 
-  // Empty state
-  &__empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background-color: $color-bg-primary;
-    color: $color-text-muted;
-    gap: $spacing-lg;
-    padding: $spacing-4xl;
-  }
-
-  &__empty-icon {
-    font-size: 48px;
-    opacity: 0.3;
-  }
-
-  &__empty-title {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-  }
-
-  &__empty-description {
-    font-size: $font-size-md;
-    color: $color-text-muted;
-    text-align: center;
-    max-width: 400px;
-    line-height: $line-height-normal;
-  }
-
-  &__empty-button {
-    margin-top: $spacing-lg;
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: 10px $spacing-xl;
-    background-color: $color-accent-primary-glow;
-    border: 1px solid $color-accent-primary;
-    border-radius: $radius-md;
-    color: $color-accent-primary;
-    cursor: pointer;
+  .workspace-grid__title {
     font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    transition: all $transition-base;
-
-    &:hover {
-      background-color: color.adjust($color-accent-primary, $alpha: -0.75);
-      box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
-      transform: translateY(-2px);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
   }
 
-  // Grid container - CRITICAL FIX
-  &__grid {
-    flex: 1; // CHANGED from height: 100%
-    display: grid; // ADDED - was missing!
-    gap: $spacing-md;
-    padding: $spacing-md;
-    overflow: auto;
-    min-height: 0; // CRITICAL for flex child
+  .workspace-grid__add-button {
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-xs;
+  }
+
+  .workspace-grid__grid {
+    padding: $spacing-sm;
+    gap: $spacing-sm;
+  }
+
+  .workspace-grid__grid.grid-layout-2,
+  .workspace-grid__grid.grid-layout-4,
+  .workspace-grid__grid.grid-layout-6,
+  .workspace-grid__grid.grid-layout-9 {
+    grid-template-columns: 1fr;
   }
 }
