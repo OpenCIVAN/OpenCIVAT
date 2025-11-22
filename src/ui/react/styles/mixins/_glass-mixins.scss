@@ -229,33 +229,28 @@
 // ============================================================================
 
 @mixin accent-glow($accent-color: $color-accent-primary) {
-  box-shadow: $shadow-glass, 
-              0 0 20px rgba($accent-color, 0.3),
-              0 0 40px rgba($accent-color, 0.15);
+  box-shadow: $shadow-glass, 0 0 20px rgba($accent-color, 0.3),
+    0 0 40px rgba($accent-color, 0.15);
 }
 
 @mixin accent-glow-strong($accent-color: $color-accent-primary) {
-  box-shadow: $shadow-glass-lg, 
-              0 0 30px rgba($accent-color, 0.4),
-              0 0 60px rgba($accent-color, 0.2);
+  box-shadow: $shadow-glass-lg, 0 0 30px rgba($accent-color, 0.4),
+    0 0 60px rgba($accent-color, 0.2);
 }
 
 @mixin error-glow {
-  box-shadow: $shadow-glass,
-              0 0 20px rgba($color-error, 0.3),
-              0 0 40px rgba($color-error, 0.15);
+  box-shadow: $shadow-glass, 0 0 20px rgba($color-error, 0.3),
+    0 0 40px rgba($color-error, 0.15);
 }
 
 @mixin success-glow {
-  box-shadow: $shadow-glass,
-              0 0 20px rgba($color-success, 0.3),
-              0 0 40px rgba($color-success, 0.15);
+  box-shadow: $shadow-glass, 0 0 20px rgba($color-success, 0.3),
+    0 0 40px rgba($color-success, 0.15);
 }
 
 @mixin info-glow {
-  box-shadow: $shadow-glass,
-              0 0 20px rgba($color-info, 0.3),
-              0 0 40px rgba($color-info, 0.15);
+  box-shadow: $shadow-glass, 0 0 20px rgba($color-info, 0.3),
+    0 0 40px rgba($color-info, 0.15);
 }
 
 // ============================================================================
@@ -318,4 +313,349 @@
   border-radius: $radius-lg;
   padding: $spacing-xs;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+// ============================================================================
+// ENHANCED GLASS MIXINS - Glowing Edges and macOS-style Depth
+// ADD THESE TO THE END of src/ui/react/styles/mixins/_glass-mixins.scss
+// ============================================================================
+
+// ============================================================================
+// GLOWING BORDER EFFECTS (Inspired by CodePen examples)
+// ============================================================================
+
+// Animated glowing border that cycles through colors
+// Use sparingly - for focused/active states only
+@mixin border-glow-animated(
+  $colors: (
+    $color-accent-blue,
+    $color-accent-purple,
+    $color-accent-pink,
+  )
+) {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(
+      45deg,
+      nth($colors, 1),
+      nth($colors, 2),
+      nth($colors, 3),
+      nth($colors, 1)
+    );
+    background-size: 300% 300%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    animation: glow-rotate 4s ease infinite;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover::before,
+  &:focus::before,
+  &.active::before {
+    opacity: 0.6;
+  }
+}
+
+@keyframes glow-rotate {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+// Static glowing border (non-animated, more professional)
+// This picks up colors from the background behind it (macOS style)
+@mixin border-glow-static(
+  $accent-color: $color-accent-primary,
+  $intensity: 0.4
+) {
+  position: relative;
+
+  // Inner glow that makes edges colorful
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba($accent-color, $intensity),
+    0 0 20px rgba($accent-color, $intensity * 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+
+  // This creates the "edge picks up color from below" effect
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 50%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
+    pointer-events: none;
+  }
+}
+
+// Contextual glow - border color adapts to what's behind it
+// This is the macOS frosted glass effect
+@mixin border-glow-contextual {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  // The magic: border picks up saturation from background
+  backdrop-filter: blur(12px) saturate(180%) brightness(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(180%) brightness(1.1);
+
+  // Subtle inner highlight
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 8px 32px rgba(0, 0, 0, 0.3);
+
+  // Top edge catches light
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+}
+
+// ============================================================================
+// REALISTIC DEPTH WITH SHADOWS (3D button effect)
+// ============================================================================
+
+// Button with realistic depth and shadow
+@mixin glass-button-depth($accent-color: null) {
+  @include glass($color-glass-medium, $blur-medium, $color-border-default);
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  cursor: pointer;
+
+  // Multi-layer shadows for depth
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+
+  // Optional accent glow
+  @if $accent-color {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba($accent-color, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+    @if $accent-color {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba($accent-color, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    @if $accent-color {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3),
+        0 0 15px rgba($accent-color, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+// ============================================================================
+// GROUPED CONTROLS (Seamless tool groups)
+// ============================================================================
+
+// Container for grouped controls
+@mixin control-group-container {
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-md;
+  @include border-glow-contextual;
+}
+
+// Individual control button in a group
+@mixin control-group-button {
+  @include glass($color-glass-light, $blur-subtle, transparent);
+  padding: $spacing-sm;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  // Subtle inner shadow for depth
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+
+  &:hover:not(:disabled) {
+    background: $color-glass-medium;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1),
+      0 0 12px rgba(255, 255, 255, 0.08);
+  }
+
+  &.active {
+    background: $color-glass-strong;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25),
+      0 0 0 1px rgba(255, 255, 255, 0.15);
+  }
+}
+
+// ============================================================================
+// ENHANCED PANELS WITH DEPTH
+// ============================================================================
+
+// Panel with realistic depth and glowing edges
+@mixin glass-panel-enhanced($accent-color: null) {
+  @include glass($color-glass-medium, $blur-medium, $color-border-default);
+  border-radius: $radius-lg;
+
+  // Multi-layer shadows for depth
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+
+  @if $accent-color {
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3),
+      0 0 40px rgba($accent-color, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  // Border picks up color from background
+  @include border-glow-contextual;
+}
+
+// ============================================================================
+// TOOLBAR WITH INTEGRATED CONTROLS
+// ============================================================================
+
+// Toolbar container with depth
+@mixin toolbar-container {
+  @include glass($color-glass-subtle, $blur-medium, $color-border-subtle);
+  padding: $spacing-xs;
+  display: flex;
+  gap: $spacing-xs;
+  align-items: center;
+
+  // Subtle depth
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+// Toolbar button with glow on active
+@mixin toolbar-button($accent-color: $color-accent-primary) {
+  @include glass($color-glass-light, $blur-subtle, transparent);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  // Subtle depth
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.1);
+
+  &:hover:not(:disabled) {
+    background: $color-glass-medium;
+    @include border-glow-static($accent-color, 0.3);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    background: rgba($accent-color, 0.15);
+    border-color: rgba($accent-color, 0.4);
+    color: $accent-color;
+    @include border-glow-static($accent-color, 0.6);
+
+    box-shadow: 0 0 20px rgba($accent-color, 0.3),
+      0 0 40px rgba($accent-color, 0.15), inset 0 1px 0 rgba($accent-color, 0.2);
+  }
+}
+
+// ============================================================================
+// ADVANCED CONTROL COMPONENTS (Sliders, etc.)
+// ============================================================================
+
+// Track for range sliders with depth
+@mixin slider-track {
+  @include glass($color-glass-subtle, $blur-subtle, $color-border-subtle);
+  height: 4px;
+  border-radius: $radius-full;
+
+  // Inner shadow for depth
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+// Thumb for range sliders with glow
+@mixin slider-thumb($accent-color: $color-accent-primary) {
+  @include glass($color-glass-medium, $blur-medium, rgba($accent-color, 0.5));
+  width: 16px;
+  height: 16px;
+  border-radius: $radius-full;
+  cursor: grab;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 12px rgba($accent-color, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+  transition: all 0.15s ease;
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba($accent-color, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  &:active {
+    cursor: grabbing;
+    transform: scale(0.95);
+  }
+}
+
+// ============================================================================
+// UTILITY CLASSES FOR SPECIAL EFFECTS
+// ============================================================================
+
+// Add these to global.scss after importing this file
+
+.has-glow-border {
+  @include border-glow-static;
+}
+
+.has-depth {
+  @include glass-button-depth;
+}
+
+.control-group {
+  @include control-group-container;
+
+  > * {
+    @include control-group-button;
+  }
 }
