@@ -7,7 +7,7 @@
 // ============================================================================
 
 // Background layers (more transparent for real glassmorphism)
-$color-bg-base: #000000; // Deep black base
+$color-bg-base: #0a0a0a; // Deep black base
 $color-bg-primary: #0f0f0f; // Slightly lighter
 $color-bg-secondary: #1a1a1a; // Elevated surface
 $color-bg-tertiary: #222222; // More elevated
@@ -47,46 +47,37 @@ $color-text-muted: rgba(255, 255, 255, 0.3);
 $color-text-disabled: rgba(255, 255, 255, 0.2);
 
 // ============================================================================
-// ACCENT COLORS - Desaturated pastels with subtle glow
+// ACCENT COLORS - Subtle but colorful
 // ============================================================================
 
-// Primary accent - Cyan-blue (scientific, trustworthy)
-$color-accent-primary: #6eb6ff;
-$color-accent-primary-hover: #8ac5ff;
-$color-accent-primary-active: #5aa7f0;
-$color-accent-primary-glow: rgba(110, 182, 255, 0.15);
+// Primary accent - Teal (professional, scientific feel)
+$color-accent-primary: #5ac8fa;
+$color-accent-primary-hover: #70d6ff;
+$color-accent-primary-active: #32b5e8;
+$color-accent-primary-glow: rgba(90, 200, 250, 0.12);
 
-// Secondary accents - Moonlight palette
-$color-accent-blue: #60a5fa; // Electric blue - desaturated
-$color-accent-blue-glow: rgba(96, 165, 250, 0.2);
+// Secondary accents - For variety and context
+$color-accent-blue: #0a84ff; // blue
+$color-accent-blue-glow: rgba(10, 132, 255, 0.12);
 
-$color-accent-purple: #c084fc; // Soft purple - lavender shifted
-$color-accent-purple-glow: rgba(192, 132, 252, 0.18);
+$color-accent-purple: #af52de; // purple
+$color-accent-purple-glow: rgba(175, 82, 222, 0.12);
 
-$color-accent-pink: #fb7185; // Rose pink - sophisticated
-$color-accent-pink-glow: rgba(251, 113, 133, 0.18);
+$color-accent-pink: #ff375f; // pink
+$color-accent-pink-glow: rgba(255, 55, 95, 0.12);
 
-$color-accent-orange: #fbbf24; // Amber - warm but not harsh
-$color-accent-orange-glow: rgba(251, 191, 36, 0.18);
+$color-accent-orange: #ff9f0a; // orange
+$color-accent-orange-glow: rgba(255, 159, 10, 0.12);
 
-$color-accent-green: #34d399; // Emerald - scientific green
-$color-accent-green-glow: rgba(52, 211, 153, 0.18);
+$color-accent-green: #30d158; // green (use sparingly)
+$color-accent-green-glow: rgba(48, 209, 88, 0.12);
 
-$color-accent-indigo: #a78bfa; // Violet - deeper purple
-$color-accent-indigo-glow: rgba(167, 139, 250, 0.18);
+$color-accent-indigo: #5e5ce6; // indigo
+$color-accent-indigo-glow: rgba(94, 92, 230, 0.12);
 
-// Aliases for compatibility
-$color-accent-teal: #7dd3fc; // Sky blue
-$color-accent-teal-glow: rgba(125, 211, 252, 0.18);
-
-$color-accent-sky: $color-accent-teal;
-$color-accent-sky-glow: $color-accent-teal-glow;
-
-$color-accent-amber: $color-accent-orange;
-$color-accent-amber-glow: $color-accent-orange-glow;
-
-$color-accent-violet: $color-accent-indigo;
-$color-accent-violet-glow: $color-accent-indigo-glow;
+// Alias for teal (primary is teal)
+$color-accent-teal: $color-accent-primary; // Same as primary
+$color-accent-teal-glow: $color-accent-primary-glow;
 
 // ============================================================================
 // STATUS COLORS
