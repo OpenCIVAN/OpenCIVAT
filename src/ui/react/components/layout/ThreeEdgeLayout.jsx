@@ -5,7 +5,7 @@
 import React from 'react';
 import { ResizablePanel } from '@UI/react/components/layout/ResizablePanel';
 import { useLayoutState, usePanelPersistence } from '@UI/react/components/layout/ThreeEdgeLayout.logic';
-import '@UI/react/components/layout/layout.scss';
+import '@UI/react/components/layout/ThreeEdgeLayout.scss';
 
 /**
  * ThreeEdgeLayout - Main application layout container

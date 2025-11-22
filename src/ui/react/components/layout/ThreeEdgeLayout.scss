@@ -148,7 +148,7 @@
   justify-content: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: $border-radius-sm;
+  border-radius: $radius-sm;
   color: var(--text-tertiary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -203,7 +203,7 @@
   height: 32px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: $border-radius-sm;
+  border-radius: $radius-sm;
   color: var(--text-tertiary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -227,7 +227,7 @@
   justify-content: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: $border-radius-sm;
+  border-radius: $radius-sm;
   color: var(--text-tertiary);
   cursor: pointer;
   transition: all var(--transition-fast);
