@@ -29,7 +29,7 @@ export function CIAWebLayout({
       bottom: 0,
       display: "flex",
       flexDirection: "column",
-      backgroundColor: "#1a1a1a",
+      // backgroundColor: "#1a1a1a",
       color: "#e0e0e0",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       overflow: "hidden"

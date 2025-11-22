@@ -1,88 +1,26 @@
-// InstanceViewport.scss - visualization viewport
+// InstanceViewport.scss - visualization viewport with depth illusion
 @use "sass:color";
 @use "@UI/react/styles/theme.scss" as *;
 
 // ============================================================================
-// INSTANCE CONTAINER
+// ROOT VIEWPORT WRAPPER - CRITICAL: Must fill parent
 // ============================================================================
-
-.instance-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  @include glass-panel;
-  overflow: hidden;
-  border-top: 2px solid rgba($color-accent-pink, 0.4); // Visualization = Pink
-
-  &.focused {
-    @include accent-glow-strong($color-accent-pink);
-    border-color: rgba($color-accent-pink, 0.6);
-  }
-}
 
 .instance-viewport {
-  overflow: visible !important;
-}
-
-.vtk-container {
-  flex: 1;
-  position: relative;
-  width: 100%;
+  display: flex;
+  flexdirection: column;
   height: 100%;
+  width: 100%;
+  min-height: 0; // CRITICAL for flex
   overflow: hidden;
-
-  canvas {
-    width: 100% !important;
-    height: 100% !important;
-  }
-}
-
-.instance-content {
-  flex: 1;
   position: relative;
-  overflow: hidden;
-  background: $color-bg-secondary;
 }
 
 // ============================================================================
-// HEADER SECTION
+// HEADER SECTION - Floats above canvas
 // ============================================================================
 
-// Loading/Error States
-.instance-loading,
-.instance-error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  color: $color-text-tertiary;
-  font-size: $font-size-sm;
-}
-
-.instance-error {
-  color: $color-error;
-}
-
-// Placeholder for empty instances
-.vtk-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: $color-bg-secondary;
-  color: $color-text-muted;
-  font-family: $font-family-base;
-}
-
-// Menu separators
-.menu-separator {
-  height: 1px;
-  background: $color-border-subtle;
-  margin: $spacing-xs 0;
-}
-
-.instance-header {
+.instance-viewport__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -91,19 +29,17 @@
   border-bottom: 1px solid $color-border-subtle;
   flex-shrink: 0;
   min-height: 40px;
+
+  // Float above canvas
+  position: relative;
+  z-index: 100;
 }
 
+.instance-viewport__header-title,
 .instance-title-section {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
   flex: 1;
   min-width: 0;
-}
-
-.instance-title {
-  margin: 0;
-  font-size: $font-size-sm;
+  font-size: $spacing-sm;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
   overflow: hidden;
@@ -111,136 +47,158 @@
   white-space: nowrap;
 }
 
-.instance-stats {
-  display: flex;
-  gap: $spacing-md;
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
+.instance-title {
+  margin: 0;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
 }
 
-.stat {
+.instance-viewport__header-actions {
   display: flex;
   gap: $spacing-xs;
 }
 
-.stat-label {
-  color: $color-text-muted;
-}
-
-.stat-value {
+.instance-viewport__header-button {
+  width: 28px;
+  height: 28px;
+  padding: $spacing-xs;
+  @include glass-button;
   color: $color-text-secondary;
-  font-weight: $font-weight-medium;
-}
-
-.instance-indicators {
-  display: flex;
-  gap: $spacing-sm;
-  font-size: $font-size-xs;
-}
-
-.indicator {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: 2px $spacing-sm;
-  @include glass-card;
-  border-radius: $radius-sm;
-}
-
-.instance-actions {
-  display: flex;
-  gap: $spacing-xs;
-  flex-shrink: 0;
-}
-
-.action-btn {
-  padding: $spacing-sm;
-  @include glass-button;
-  border-radius: $radius-sm;
-  color: $color-text-tertiary;
-
-  &:hover {
-    color: $color-text-primary;
-    @include glass-hover;
-  }
-
-  &.danger:hover {
-    background: $color-error-bg;
-    color: $color-error;
-    border-color: $color-error-border;
-  }
-}
-
-// ============================================================================
-// TOOLBAR SECTION - Compact Icon-Only
-// ============================================================================
-
-.instance-toolbar {
-  display: flex;
-  gap: 2px;
-  padding: $spacing-xs;
-  @include glass-subtle;
-  padding: $spacing-xs;
-  background: $color-bg-tertiary; 
-  border-bottom: 1px solid $color-border-default;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  align-items: center;
-  min-height: 40px;
-  overflow: visible !important;
-}
-
-.toolbar-group {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-}
-
-// Toolbar buttons - Icon only, compact
-.toolbar-btn {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  @include glass-button;
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: $color-text-tertiary;
-  font-size: $font-size-lg;
-  transition: all $transition-fast;
   cursor: pointer;
 
   &:hover {
-    color: $color-text-primary;
     @include glass-hover;
+    color: $color-text-primary;
   }
 
-  &.active {
-    background: rgba($color-accent-pink, 0.15);
-    color: $color-accent-pink;
-    border-color: rgba($color-accent-pink, 0.3);
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+// ============================================================================
+// TOOLBAR - Floats above canvas
+// ============================================================================
+
+.instance-viewport__toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  @include glass-subtle;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+
+  // Float above canvas
+  position: relative;
+  z-index: 100;
+
+  // Hide scrollbar but keep functionality
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// ============================================================================
+// CONTENT / CANVAS CONTAINER - "Window into 3D space" effect
+// ============================================================================
+
+.instance-viewport__content {
+  flex: 1 1 auto; // CRITICAL: Grow and shrink
+  position: relative;
+  width: 100%;
+  min-height: 0; // CRITICAL: Allow flex child to shrink
+  overflow: hidden;
+
+  // Create depth illusion - dark void that draws you in
+  background: radial-gradient(
+    ellipse at center,
+    rgba(10, 10, 15, 1) 0%,
+    rgba(5, 5, 8, 1) 50%,
+    rgba(0, 0, 0, 1) 100%
+  );
+
+  // Subtle inner shadow for depth
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.8),
+    inset 0 0 40px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.4);
+
+  // Clear edge border for defined container
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: $radius-sm;
+
+  // VTK canvas fills the container
+  canvas {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+
+    // Canvas sits at base depth
+    z-index: 1;
+  }
+}
+
+// ============================================================================
+// TOOLBAR BUTTONS - Float on toolbar
+// ============================================================================
+
+.toolbar-icon-btn,
+.toolbar-menu-btn,
+.toolbar-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: $spacing-xs;
+  @include glass-button;
+  color: $color-text-secondary;
+  cursor: pointer;
+  position: relative;
+
+  &:hover {
+    @include glass-hover;
+    color: $color-text-primary;
   }
 
   &:disabled {
     opacity: 0.3;
     cursor: not-allowed;
-
-    &:hover {
-      background: transparent;
-      color: $color-text-tertiary;
-    }
   }
 
-  // Icon sizing
+  &.active {
+    background: rgba($color-accent-pink, 0.15);
+    border-color: rgba($color-accent-pink, 0.3);
+    color: $color-accent-pink;
+  }
+
   svg {
     width: 18px;
     height: 18px;
   }
+
+  .menu-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+  }
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: $color-border-default;
+  margin: 0 $spacing-xs;
+  flex-shrink: 0;
 }
 
 // ============================================================================
-// TOOLTIPS - Frosted Glass Style
+// TOOLTIPS - Float above everything
 // ============================================================================
 
 .toolbar-tooltip {
@@ -253,10 +211,12 @@
   border-radius: $radius-md;
   white-space: nowrap;
   pointer-events: none;
-  z-index: 10000;
   opacity: 0;
   transition: opacity $transition-fast;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+  // CRITICAL: Float above menus
+  z-index: 10000;
 
   // Arrow pointing down
   &::after {
@@ -270,21 +230,10 @@
   }
 
   // Show on hover
+  .toolbar-icon-btn:hover &,
+  .toolbar-menu-btn:hover &,
   .toolbar-btn:hover & {
     opacity: 1;
-  }
-
-  // Position below if would go off screen
-  &.below {
-    bottom: auto;
-    top: calc(100% + 8px);
-
-    &::after {
-      top: auto;
-      bottom: 100%;
-      border-top-color: transparent;
-      border-bottom-color: rgba(30, 30, 30, 0.8);
-    }
   }
 }
 
@@ -315,43 +264,34 @@
 }
 
 // ============================================================================
-// SEPARATORS
-// ============================================================================
-
-.toolbar-separator {
-  width: 1px;
-  height: 24px;
-  background: $color-border-default;
-  margin: 0 $spacing-xs;
-  flex-shrink: 0;
-}
-
-// ============================================================================
-// DROPDOWN MENUS - Frosted Glass
+// DROPDOWN MENUS - CRITICAL Z-INDEX FIX
 // ============================================================================
 
 .toolbar-menu {
   position: relative;
-  overflow: visible !important;
+  overflow: visible !important; // Allow dropdown to escape
 }
 
 .toolbar-menu-dropdown {
   display: none;
-  position: fixed; // Changed from absolute for better positioning
+  position: fixed; // CRITICAL: Use fixed instead of absolute
   min-width: 200px;
   max-width: 260px;
-  z-index: 999999;
+
+  // CRITICAL FIX: Extremely high z-index to float above canvas
+  z-index: 10000 !important;
 
   @include glass-menu;
   margin: $spacing-xs 0;
-
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05); // Subtle edge highlight
 
   max-height: calc(100vh - 120px);
   overflow-y: auto;
   overflow-x: hidden;
 
-  // Show when parent has .open class
+  // Show when parent has hover or .open class
+  .toolbar-menu:hover &,
   .toolbar-menu.open & {
     display: block;
     animation: menuSlideIn $transition-fast $ease-out-expo;
@@ -369,12 +309,9 @@
   }
 }
 
-.toolbar-menu:hover .toolbar-menu-dropdown {
-  display: block;
-}
-
-// Menu items
-.menu-item {
+// Menu items styling
+.menu-item,
+.menu-option {
   display: flex;
   align-items: center;
   gap: $spacing-sm;
@@ -385,6 +322,9 @@
   cursor: pointer;
   transition: all $transition-fast;
   border: 1px solid transparent;
+  background: transparent;
+  width: 100%;
+  text-align: left;
 
   &:hover:not(:disabled) {
     @include glass-hover;
@@ -399,179 +339,108 @@
     background: rgba($color-accent-pink, 0.12);
     border-color: rgba($color-accent-pink, 0.25);
     color: $color-accent-pink;
+
+    .option-icon {
+      color: $color-accent-pink;
+    }
   }
 
-  svg {
+  .option-icon {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
   }
-}
 
-.toolbar-icon-btn,
-.toolbar-menu-btn {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  padding: $spacing-xs;
-  @include glass-button;
-  color: $color-text-secondary;
-  cursor: pointer;
-
-  &:hover {
-    @include glass-hover;
-    color: $color-text-primary;
+  .option-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
-  &:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
+  .option-label {
+    font-weight: $font-weight-medium;
+    line-height: $line-height-tight;
   }
 
-  svg {
-    width: 18px;
-    height: 18px;
+  .option-description {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    line-height: $line-height-tight;
   }
 }
 
-// ============================================================================
-// COLOR SWATCH GRID (from global.scss - keep here for context)
-// ============================================================================
-
-.color-swatch-grid-container {
-  padding: $spacing-sm;
-  min-width: 200px;
+.menu-separator {
+  height: 1px;
+  background: $color-border-subtle;
+  margin: $spacing-xs 0;
 }
 
-.color-swatch-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-sm;
-}
-
-.color-swatch {
-  position: relative;
-  @include glass-card;
-  cursor: pointer;
-  overflow: hidden;
-  aspect-ratio: 1.5;
-  display: flex;
-  flex-direction: column;
-
-  &:hover {
-    border-color: $color-accent-pink;
-    transform: scale(1.05);
-    @include accent-glow($color-accent-pink);
-  }
-
-  &.active {
-    border-color: $color-accent-pink;
-    @include accent-glow-strong($color-accent-pink);
-  }
-}
-
-.swatch-gradient {
-  flex: 1;
-  border-radius: $radius-sm $radius-sm 0 0;
-}
-
-.swatch-label {
-  padding: $spacing-xs $spacing-sm;
-  @include frosted-glass;
+.menu-header {
+  padding: $spacing-xs $spacing-md;
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: $color-text-secondary;
-  text-align: center;
-  line-height: $line-height-tight;
-  border-radius: 0 0 $radius-sm $radius-sm;
+  color: $color-text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: $spacing-xs;
+
+  &:first-child {
+    margin-top: 0;
+  }
 }
 
-.color-swatch:hover .swatch-label {
-  background: $color-glass-strong;
-  color: $color-text-primary;
-}
+// ============================================================================
+// LOADING & ERROR STATES - Float above canvas
+// ============================================================================
 
-.swatch-check {
+.instance-viewport__loading,
+.instance-viewport__error {
   position: absolute;
-  top: $spacing-xs;
-  right: $spacing-xs;
-  width: 20px;
-  height: 20px;
-  background: $color-accent-pink;
-  border-radius: $radius-full;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  @include accent-glow($color-accent-pink);
-  animation: pop-in $transition-fast $ease-out-back;
-}
-
-@keyframes pop-in {
-  0% {
-    transform: scale(0);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.color-swatch-hint {
-  margin-top: $spacing-sm;
-  padding: $spacing-xs $spacing-sm;
-  background: $color-success-bg;
-  border: 1px solid $color-success-border;
-  border-radius: $radius-sm;
-  font-size: $font-size-xs;
-  text-align: center;
-  color: $color-success;
-}
-
-@media (max-width: 768px) {
-  .color-swatch-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-// ============================================================================
-// POSITION GRID
-// ============================================================================
-
-.position-grid-container {
-  padding: $spacing-sm;
-  min-width: 180px;
-}
-
-.position-grid {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-}
-
-.position-grid-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-sm;
-}
-
-.position-grid-cell {
-  position: relative;
-  aspect-ratio: 1.5;
-  @include glass-card;
-  cursor: pointer;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+  gap: $spacing-md;
 
-  &:hover {
-    border-color: $color-accent-pink;
-    @include glass-hover;
-  }
+  // Float above canvas
+  z-index: 50;
 
-  &.active {
-    background: rgba($color-accent-pink, 0.12);
-    border-color: rgba($color-accent-pink, 0.4);
-    color: $color-accent-pink;
+  // Subtle backdrop
+  background: rgba(10, 10, 15, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.instance-viewport__error {
+  color: $color-error;
+
+  svg {
+    color: $color-error;
+    opacity: 0.8;
   }
+}
+
+// Placeholder for empty instances
+.vtk-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: $color-text-muted;
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+
+  // Float above canvas background
+  z-index: 10;
 }
