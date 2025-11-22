@@ -1,0 +1,487 @@
+// InstanceViewport.scss - visualization viewport
+@use "sass:color";
+@use "@UI/react/styles/theme.scss" as *;
+
+// ============================================================================
+// INSTANCE CONTAINER
+// ============================================================================
+
+.instance-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  @include glass-panel;
+  overflow: hidden;
+  border-top: 2px solid rgba($color-accent-pink, 0.4); // Visualization = Pink
+
+  &.focused {
+    @include accent-glow-strong($color-accent-pink);
+    border-color: rgba($color-accent-pink, 0.6);
+  }
+}
+
+.instance-viewport {
+  overflow: visible !important;
+}
+
+// ============================================================================
+// HEADER SECTION
+// ============================================================================
+
+.instance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  @include glass-subtle;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+.instance-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  flex: 1;
+  min-width: 0;
+}
+
+.instance-title {
+  margin: 0;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instance-stats {
+  display: flex;
+  gap: $spacing-md;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.stat {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.stat-label {
+  color: $color-text-muted;
+}
+
+.stat-value {
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.instance-indicators {
+  display: flex;
+  gap: $spacing-sm;
+  font-size: $font-size-xs;
+}
+
+.indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 2px $spacing-sm;
+  @include glass-card;
+  border-radius: $radius-sm;
+}
+
+.instance-actions {
+  display: flex;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  padding: $spacing-sm;
+  @include glass-button;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+
+  &:hover {
+    color: $color-text-primary;
+    @include glass-hover;
+  }
+
+  &.danger:hover {
+    background: $color-error-bg;
+    color: $color-error;
+    border-color: $color-error-border;
+  }
+}
+
+// ============================================================================
+// TOOLBAR SECTION - Compact Icon-Only
+// ============================================================================
+
+.instance-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: $spacing-xs;
+  @include glass-subtle;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 40px;
+  overflow: visible !important;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+// Toolbar buttons - Icon only, compact
+.toolbar-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  @include glass-button;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-text-tertiary;
+  font-size: $font-size-lg;
+  transition: all $transition-fast;
+  cursor: pointer;
+
+  &:hover {
+    color: $color-text-primary;
+    @include glass-hover;
+  }
+
+  &.active {
+    background: rgba($color-accent-pink, 0.15);
+    color: $color-accent-pink;
+    border-color: rgba($color-accent-pink, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+
+    &:hover {
+      background: transparent;
+      color: $color-text-tertiary;
+    }
+  }
+
+  // Icon sizing
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ============================================================================
+// TOOLTIPS - Frosted Glass Style
+// ============================================================================
+
+.toolbar-tooltip {
+  @include frosted-glass;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity $transition-fast;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1);
+
+  // Arrow pointing down
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(30, 30, 30, 0.8);
+  }
+
+  // Show on hover
+  .toolbar-btn:hover & {
+    opacity: 1;
+  }
+
+  // Position below if would go off screen
+  &.below {
+    bottom: auto;
+    top: calc(100% + 8px);
+
+    &::after {
+      top: auto;
+      bottom: 100%;
+      border-top-color: transparent;
+      border-bottom-color: rgba(30, 30, 30, 0.8);
+    }
+  }
+}
+
+.tooltip-title {
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  line-height: $line-height-tight;
+}
+
+.tooltip-desc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: $line-height-normal;
+  margin-top: $spacing-xs;
+}
+
+.tooltip-shortcut {
+  display: inline-block;
+  margin-top: $spacing-sm;
+  padding: 2px $spacing-sm;
+  background: rgba($color-accent-pink, 0.15);
+  border: 1px solid rgba($color-accent-pink, 0.3);
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-family: "Monaco", "Courier New", monospace;
+  color: $color-accent-pink;
+}
+
+// ============================================================================
+// SEPARATORS
+// ============================================================================
+
+.toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: $color-border-default;
+  margin: 0 $spacing-xs;
+  flex-shrink: 0;
+}
+
+// ============================================================================
+// DROPDOWN MENUS - Frosted Glass
+// ============================================================================
+
+.toolbar-menu {
+  position: relative;
+  overflow: visible !important;
+}
+
+.toolbar-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  max-width: 260px;
+  z-index: 10000;
+
+  @include glass-menu;
+  margin-top: $spacing-xs;
+
+  // Show when parent has .open class
+  .toolbar-menu.open & {
+    display: block;
+    animation: menuSlideIn $transition-fast $ease-out-expo;
+  }
+}
+
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Menu items
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+  border: 1px solid transparent;
+
+  &:hover:not(:disabled) {
+    @include glass-hover;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &.active {
+    background: rgba($color-accent-pink, 0.12);
+    border-color: rgba($color-accent-pink, 0.25);
+    color: $color-accent-pink;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+}
+
+// ============================================================================
+// COLOR SWATCH GRID (from global.scss - keep here for context)
+// ============================================================================
+
+.color-swatch-grid-container {
+  padding: $spacing-sm;
+  min-width: 200px;
+}
+
+.color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.color-swatch {
+  position: relative;
+  @include glass-card;
+  cursor: pointer;
+  overflow: hidden;
+  aspect-ratio: 1.5;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    border-color: $color-accent-pink;
+    transform: scale(1.05);
+    @include accent-glow($color-accent-pink);
+  }
+
+  &.active {
+    border-color: $color-accent-pink;
+    @include accent-glow-strong($color-accent-pink);
+  }
+}
+
+.swatch-gradient {
+  flex: 1;
+  border-radius: $radius-sm $radius-sm 0 0;
+}
+
+.swatch-label {
+  padding: $spacing-xs $spacing-sm;
+  @include frosted-glass;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  text-align: center;
+  line-height: $line-height-tight;
+  border-radius: 0 0 $radius-sm $radius-sm;
+}
+
+.color-swatch:hover .swatch-label {
+  background: $color-glass-strong;
+  color: $color-text-primary;
+}
+
+.swatch-check {
+  position: absolute;
+  top: $spacing-xs;
+  right: $spacing-xs;
+  width: 20px;
+  height: 20px;
+  background: $color-accent-pink;
+  border-radius: $radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  @include accent-glow($color-accent-pink);
+  animation: pop-in $transition-fast $ease-out-back;
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.color-swatch-hint {
+  margin-top: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: $color-success-bg;
+  border: 1px solid $color-success-border;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  text-align: center;
+  color: $color-success;
+}
+
+@media (max-width: 768px) {
+  .color-swatch-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+// ============================================================================
+// POSITION GRID
+// ============================================================================
+
+.position-grid-container {
+  padding: $spacing-sm;
+  min-width: 180px;
+}
+
+.position-grid {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.position-grid-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-sm;
+}
+
+.position-grid-cell {
+  position: relative;
+  aspect-ratio: 1.5;
+  @include glass-card;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    border-color: $color-accent-pink;
+    @include glass-hover;
+  }
+
+  &.active {
+    background: rgba($color-accent-pink, 0.12);
+    border-color: rgba($color-accent-pink, 0.4);
+    color: $color-accent-pink;
+  }
+}

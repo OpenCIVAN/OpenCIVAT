@@ -1,0 +1,278 @@
+// RightCollaborationPanel.scss
+@use "@UI/react/styles/theme.scss" as *;
+
+// ============================================================================
+// MAIN PANEL CONTAINER
+// ============================================================================
+
+.collab-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: $color-bg-primary;
+}
+
+// ============================================================================
+// PANEL HEADER
+// ============================================================================
+
+.collab-panel__panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border-subtle;
+  @include glass-subtle;
+  border-top: 2px solid rgba($color-accent-blue, 0.4); // Collaboration = Blue
+  flex-shrink: 0;
+}
+
+.collab-panel__panel-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.collab-panel__collapse-btn {
+  padding: $spacing-xs;
+  @include glass-button;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+
+  &:hover {
+    @include glass-hover;
+    color: $color-text-primary;
+  }
+}
+
+// ============================================================================
+// MAIN TABS (People / Voice / Chat / Activity)
+// ============================================================================
+
+.collab-panel__main-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: $spacing-xs;
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+}
+
+.collab-panel__main-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-xs;
+  @include glass-button;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  transition: all $transition-fast;
+
+  span {
+    white-space: nowrap;
+  }
+
+  &:hover:not(.active) {
+    color: $color-text-secondary;
+    @include glass-hover;
+  }
+
+  &.active {
+    background: rgba($color-accent-blue, 0.12);
+    color: $color-accent-blue;
+    border-color: rgba($color-accent-blue, 0.3);
+  }
+}
+
+// ============================================================================
+// MAIN CONTENT AREA
+// ============================================================================
+
+.collab-panel__main-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: flex $transition-base;
+
+  &.full {
+    flex: 1 1 100%;
+  }
+
+  &.split {
+    flex: 1 1 50%;
+  }
+}
+
+.collab-panel__tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-md;
+  @include glass-scrollable;
+}
+
+.collab-panel__activity-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-tertiary;
+  height: 100%;
+
+  p {
+    margin: 0;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  span {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+}
+
+// ============================================================================
+// QUICK ACCESS SECTION
+// ============================================================================
+
+.collab-panel__quick-access {
+  flex: 1 1 50%;
+  display: flex;
+  flex-direction: column;
+  background: $color-bg-secondary;
+  border-top: 1px solid $color-border-subtle;
+  overflow: hidden;
+}
+
+.collab-panel__quick-access-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border-subtle;
+  @include glass-subtle;
+  flex-shrink: 0;
+}
+
+.collab-panel__quick-access-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.collab-panel__quick-close-btn {
+  padding: $spacing-xs;
+  @include glass-button;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+
+  &:hover {
+    @include glass-hover;
+    color: $color-text-primary;
+  }
+}
+
+.collab-panel__quick-tabs {
+  display: flex;
+  gap: 2px;
+  padding: $spacing-xs;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+}
+
+.collab-panel__quick-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  @include glass-button;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+
+  &:hover:not(.active) {
+    @include glass-hover;
+  }
+
+  &.active {
+    background: rgba($color-accent-blue, 0.12);
+    color: $color-accent-blue;
+    border-color: rgba($color-accent-blue, 0.3);
+  }
+}
+
+.collab-panel__quick-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-lg;
+  @include glass-scrollable;
+}
+
+.collab-panel__quick-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-tertiary;
+  height: 100%;
+
+  p {
+    margin: 0;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  span {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+}
+
+// ============================================================================
+// QUICK ACCESS TOGGLE BUTTON
+// ============================================================================
+
+.collab-panel__quick-toggle {
+  border-top: 1px solid $color-border-subtle;
+  padding: $spacing-md $spacing-lg;
+  @include glass-subtle;
+  flex-shrink: 0;
+}
+
+.collab-panel__quick-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  @include glass-button;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+
+  &:hover {
+    @include glass-hover;
+    border-color: $color-accent-blue;
+    color: $color-accent-blue;
+  }
+}

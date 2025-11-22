@@ -15,7 +15,7 @@ import { PositionGridPicker } from '@UI/react/components/workspace/PositionGridP
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 
-import "@UI/react/components/workspace/InstanceViewport.css";
+import "@UI/react/components/workspace/InstanceViewport.scss";
 
 /**
  * InstanceViewport

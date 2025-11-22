@@ -17,7 +17,7 @@ import { PeoplePanel } from "@UI/react/components/collaboration/PeoplePanel.jsx"
 import { TextChatPanel } from "@UI/react/components/collaboration/TextChatPanel.jsx";
 import { VoiceChatPanel } from "@UI/react/components/collaboration/VoiceChatPanel.jsx";
 
-import './RightCollaborationPanel.css';
+import './RightCollaborationPanel.scss';
 
 export function RightCollaborationPanel({ roomName }) {
   // Main panel state
