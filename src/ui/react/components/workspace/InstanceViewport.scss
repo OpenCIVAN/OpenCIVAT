@@ -1,23 +1,32 @@
-// InstanceViewport.scss - visualization viewport with depth illusion
+// InstanceViewport.scss - "Hole punched through the app" design
 @use "sass:color";
 @use "@UI/react/styles/theme.scss" as *;
 
 // ============================================================================
-// ROOT VIEWPORT WRAPPER - CRITICAL: Must fill parent
+// ROOT VIEWPORT WRAPPER - The "frame" around the hole
 // ============================================================================
 
 .instance-viewport {
   display: flex;
-  flexdirection: column;
+  flex-direction: column; // FIXED TYPO
   height: 100%;
   width: 100%;
-  min-height: 0; // CRITICAL for flex
+  min-height: 0;
   overflow: hidden;
   position: relative;
+  
+  // Thin lighter frame - just enough to show edges
+  background: $color-bg-secondary;
+  border-radius: $radius-md;
+  
+  // Subtle shadow - makes it look raised from app background
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 // ============================================================================
-// HEADER SECTION - Floats above canvas
+// HEADER - Sits on the frame
 // ============================================================================
 
 .instance-viewport__header {
@@ -29,29 +38,20 @@
   border-bottom: 1px solid $color-border-subtle;
   flex-shrink: 0;
   min-height: 40px;
-
-  // Float above canvas
   position: relative;
   z-index: 100;
+  background: rgba($color-bg-tertiary, 0.4);
 }
 
-.instance-viewport__header-title,
-.instance-title-section {
+.instance-viewport__header-title {
   flex: 1;
   min-width: 0;
-  font-size: $spacing-sm;
+  font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.instance-title {
-  margin: 0;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
 }
 
 .instance-viewport__header-actions {
@@ -79,7 +79,7 @@
 }
 
 // ============================================================================
-// TOOLBAR - Floats above canvas
+// TOOLBAR - Sits on the frame
 // ============================================================================
 
 .instance-viewport__toolbar {
@@ -92,66 +92,18 @@
   flex-shrink: 0;
   overflow-x: auto;
   overflow-y: visible;
-
-  // Float above canvas
   position: relative;
   z-index: 100;
+  background: rgba($color-bg-tertiary, 0.2);
 
-  // Hide scrollbar but keep functionality
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
   }
 }
 
-// ============================================================================
-// CONTENT / CANVAS CONTAINER - "Window into 3D space" effect
-// ============================================================================
-
-.instance-viewport__content {
-  flex: 1 1 auto; // CRITICAL: Grow and shrink
-  position: relative;
-  width: 100%;
-  min-height: 0; // CRITICAL: Allow flex child to shrink
-  overflow: hidden;
-
-  // Create depth illusion - dark void that draws you in
-  background: radial-gradient(
-    ellipse at center,
-    rgba(10, 10, 15, 1) 0%,
-    rgba(5, 5, 8, 1) 50%,
-    rgba(0, 0, 0, 1) 100%
-  );
-
-  // Subtle inner shadow for depth
-  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.8),
-    inset 0 0 40px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.4);
-
-  // Clear edge border for defined container
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: $radius-sm;
-
-  // VTK canvas fills the container
-  canvas {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-
-    // Canvas sits at base depth
-    z-index: 1;
-  }
-}
-
-// ============================================================================
-// TOOLBAR BUTTONS - Float on toolbar
-// ============================================================================
-
 .toolbar-icon-btn,
-.toolbar-menu-btn,
-.toolbar-btn {
+.toolbar-menu-btn {
   width: 32px;
   height: 32px;
   min-width: 32px;
@@ -198,7 +150,7 @@
 }
 
 // ============================================================================
-// TOOLTIPS - Float above everything
+// TOOLTIPS
 // ============================================================================
 
 .toolbar-tooltip {
@@ -214,11 +166,8 @@
   opacity: 0;
   transition: opacity $transition-fast;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-
-  // CRITICAL: Float above menus
   z-index: 10000;
 
-  // Arrow pointing down
   &::after {
     content: "";
     position: absolute;
@@ -229,10 +178,8 @@
     border-top-color: rgba(30, 30, 30, 0.8);
   }
 
-  // Show on hover
   .toolbar-icon-btn:hover &,
-  .toolbar-menu-btn:hover &,
-  .toolbar-btn:hover & {
+  .toolbar-menu-btn:hover & {
     opacity: 1;
   }
 }
@@ -264,33 +211,72 @@
 }
 
 // ============================================================================
-// DROPDOWN MENUS - CRITICAL Z-INDEX FIX
+// CANVAS CONTAINER - THE PURE BLACK HOLE
+// This is like someone took a hole punch to the app background
+// ============================================================================
+
+.instance-viewport__content {
+  flex: 1 1 auto;
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  
+  // Small margin creates the thin frame around the hole
+  margin: $spacing-xs;
+
+  // PURE BLACK - the darkest possible void for maximum contrast
+  // The 3D content will glow against this like the annotation button
+  background: #000000; // Pure black, no gradient needed
+  
+  // DEEP INSET shadow - makes it look like a hole punched INTO the surface
+  box-shadow: 
+    inset 0 6px 16px rgba(0, 0, 0, 0.9),     // Strong top shadow
+    inset 0 2px 8px rgba(0, 0, 0, 0.8),      // Mid shadow
+    inset 0 0 60px rgba(0, 0, 0, 0.7),       // Ambient darkening
+    0 0 0 1px rgba(255, 255, 255, 0.02);     // Barely visible inner edge
+
+  // Defined edge - subtle highlight like you see on the annotation button
+  border: 1px solid rgba(0, 0, 0, 0.9);
+  border-radius: $radius-sm;
+
+  // VTK canvas fills the pure black hole
+  canvas {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    z-index: 1;
+  }
+}
+
+// ============================================================================
+// DROPDOWN MENUS - Must float ABOVE the hole
 // ============================================================================
 
 .toolbar-menu {
   position: relative;
-  overflow: visible !important; // Allow dropdown to escape
+  overflow: visible !important;
 }
 
 .toolbar-menu-dropdown {
   display: none;
-  position: fixed; // CRITICAL: Use fixed instead of absolute
+  position: fixed;
   min-width: 200px;
   max-width: 260px;
-
-  // CRITICAL FIX: Extremely high z-index to float above canvas
   z-index: 10000 !important;
-
   @include glass-menu;
-  margin: $spacing-xs 0;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05); // Subtle edge highlight
-
+  margin-top: $spacing-xs;
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.8),
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
   max-height: calc(100vh - 120px);
   overflow-y: auto;
   overflow-x: hidden;
 
-  // Show when parent has hover or .open class
   .toolbar-menu:hover &,
   .toolbar-menu.open & {
     display: block;
@@ -309,8 +295,6 @@
   }
 }
 
-// Menu items styling
-.menu-item,
 .menu-option {
   display: flex;
   align-items: center;
@@ -391,7 +375,7 @@
 }
 
 // ============================================================================
-// LOADING & ERROR STATES - Float above canvas
+// LOADING & ERROR STATES - Float above the hole
 // ============================================================================
 
 .instance-viewport__loading,
@@ -408,12 +392,8 @@
   color: $color-text-tertiary;
   font-size: $font-size-sm;
   gap: $spacing-md;
-
-  // Float above canvas
   z-index: 50;
-
-  // Subtle backdrop
-  background: rgba(10, 10, 15, 0.6);
+  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(4px);
 }
 
@@ -424,23 +404,4 @@
     color: $color-error;
     opacity: 0.8;
   }
-}
-
-// Placeholder for empty instances
-.vtk-placeholder {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: $color-text-muted;
-  font-family: $font-family-base;
-  font-size: $font-size-sm;
-
-  // Float above canvas background
-  z-index: 10;
 }

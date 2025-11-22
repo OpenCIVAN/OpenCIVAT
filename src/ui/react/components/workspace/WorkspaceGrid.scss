@@ -7,9 +7,10 @@
   flex-direction: column;
   height: 100%;
   position: relative;
+  background: $color-bg-primary; // Lighter background for contrast
 
-  // Toolbar
-  &__toolbar {
+  // Header/Toolbar
+  &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -19,16 +20,19 @@
     flex-shrink: 0;
   }
 
-  &__toolbar-title {
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
     color: $color-text-primary;
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
   }
 
-  &__toolbar-status {
-    color: $color-success;
-    margin-left: $spacing-sm;
+  &__count {
+    color: $color-text-tertiary;
     font-size: $font-size-sm;
+    font-weight: $font-weight-normal;
   }
 
   &__add-button {
@@ -36,7 +40,7 @@
     align-items: center;
     gap: 6px;
     padding: $spacing-sm $spacing-md;
-    background-color: $color-accent-primary-glow; // Translucent green
+    background-color: $color-accent-primary-glow;
     border: 1px solid $color-accent-primary;
     border-radius: $radius-sm;
     color: $color-accent-primary;
@@ -46,7 +50,6 @@
     transition: all $transition-base;
 
     &:hover:not(:disabled) {
-      // Brighter on hover with glow
       background-color: color.adjust($color-accent-primary, $alpha: -0.75);
       box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
       transform: translateY(-1px);
@@ -103,7 +106,7 @@
     align-items: center;
     gap: $spacing-sm;
     padding: 10px $spacing-xl;
-    background-color: $color-accent-primary-glow; // Translucent green
+    background-color: $color-accent-primary-glow;
     border: 1px solid $color-accent-primary;
     border-radius: $radius-md;
     color: $color-accent-primary;
@@ -113,7 +116,6 @@
     transition: all $transition-base;
 
     &:hover {
-      // Brighter on hover with glow
       background-color: color.adjust($color-accent-primary, $alpha: -0.75);
       box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
       transform: translateY(-2px);
@@ -124,33 +126,13 @@
     }
   }
 
-  // Grid container
+  // Grid container - CRITICAL FIX
   &__grid {
+    flex: 1; // CHANGED from height: 100%
+    display: grid; // ADDED - was missing!
     gap: $spacing-md;
     padding: $spacing-md;
-    height: 100%;
     overflow: auto;
-  }
-}
-
-// Animations
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
+    min-height: 0; // CRITICAL for flex child
   }
 }
