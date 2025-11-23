@@ -1,12 +1,12 @@
-// =============================================================================
-// PRODUCTION TREE STRUCTURE STYLES
-// Complete replacement for tree section in FilesPanel.scss
-// =============================================================================
+// src/ui/react/components/panels/FilesPanel/FilesPanel.scss
+// Complete styling for FilesPanel with all states and components
+// Uses design tokens from theme.scss - no hard-coded values
+
 @use "sass:color";
 @use "@UI/react/styles/theme.scss" as *;
 
 // =============================================================================
-// PANEL STATES
+// PANEL CONTAINER
 // =============================================================================
 
 .files-panel {
@@ -24,7 +24,7 @@
 // ACTIVITY BAR (Collapsed State)
 // =============================================================================
 
-.activity-bar {
+.files-activity-bar {
   width: 48px;
   height: 100%;
   display: flex;
@@ -35,7 +35,7 @@
   border-right: 1px solid $color-border-subtle;
 }
 
-.activity-bar__content {
+.files-activity-bar__icons {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -44,7 +44,7 @@
   width: 100%;
 }
 
-.activity-bar-icon {
+.files-activity-bar__icon {
   position: relative;
   width: 40px;
   height: 40px;
@@ -63,24 +63,28 @@
     border-color: $color-border-medium;
     color: $color-text-secondary;
   }
+}
 
-  &__badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    background: $color-accent-primary;
-    color: white;
-    font-size: 10px;
-    font-weight: $font-weight-bold;
-    padding: 2px 5px;
-    border-radius: $radius-full;
-    min-width: 18px;
-    text-align: center;
-    box-shadow: 0 0 0 2px $color-bg-secondary;
+.files-activity-bar__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: $color-accent-primary;
+  color: white;
+  font-size: 10px;
+  font-weight: $font-weight-bold;
+  padding: 2px 5px;
+  border-radius: $radius-full;
+  min-width: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px $color-bg-secondary;
+
+  &--shared {
+    background: $color-accent-blue;
   }
 }
 
-.activity-bar__expand {
+.files-activity-bar__expand {
   width: 40px;
   height: 40px;
   display: flex;
@@ -124,10 +128,6 @@
   color: $color-text-primary;
 }
 
-.files-panel__title-icon {
-  color: $color-text-secondary;
-}
-
 .files-panel__collapse-btn {
   padding: $spacing-xs;
   @include glass-button;
@@ -142,34 +142,149 @@
 }
 
 // =============================================================================
-// MAIN TABS
+// UNIFIED SEARCH BAR
 // =============================================================================
 
-.files-panel__tabs {
+.files-panel__search {
   display: flex;
-  gap: 2px;
-  padding: $spacing-xs;
-  background: $color-bg-secondary;
-  border-bottom: 1px solid $color-border-subtle;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  margin: $spacing-sm $spacing-md 0;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+
+  &:focus-within {
+    border-color: $color-accent-primary;
+    box-shadow: 0 0 0 2px rgba($color-accent-primary, 0.15);
+  }
+}
+
+.files-panel__search-icon {
+  color: $color-text-tertiary;
   flex-shrink: 0;
 }
 
-.files-panel__tab {
+.files-panel__search-input {
   flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+
+  &::placeholder {
+    color: $color-text-tertiary;
+  }
+}
+
+.files-panel__search-clear {
+  padding: 2px;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-bg-elevated;
+    color: $color-text-primary;
+  }
+}
+
+// =============================================================================
+// TOGGLE TABS (Datasets / Load Files)
+// =============================================================================
+
+.files-panel__toggle-tabs {
+  display: flex;
+  gap: 2px;
   padding: $spacing-sm $spacing-md;
-  @include glass-button;
+  flex-shrink: 0;
+}
+
+.files-panel__toggle-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all $transition-fast;
 
   &:hover:not(.active) {
-    color: $color-text-secondary;
-    @include glass-hover;
+    background: $color-bg-elevated;
+    border-color: $color-border-medium;
+    color: $color-text-primary;
   }
 
   &.active {
-    background: $color-bg-tertiary;
-    color: $color-accent-primary;
+    background: rgba($color-accent-primary, 0.15);
     border-color: $color-accent-primary;
+    color: $color-accent-primary;
+  }
+}
+
+.files-panel__toggle-tab-count {
+  background: rgba($color-accent-primary, 0.2);
+  color: $color-accent-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  padding: 1px 6px;
+  border-radius: $radius-full;
+  min-width: 18px;
+  text-align: center;
+
+  .active & {
+    background: $color-accent-primary;
+    color: white;
+  }
+}
+
+// =============================================================================
+// ERROR MESSAGE
+// =============================================================================
+
+.files-panel__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  margin: $spacing-sm $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-error, 0.1);
+  border: 1px solid rgba($color-error, 0.3);
+  border-radius: $radius-sm;
+  color: $color-error;
+  font-size: $font-size-sm;
+
+  button {
+    padding: 2px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    color: $color-error;
+    cursor: pointer;
+    display: flex;
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+      background: rgba($color-error, 0.15);
+    }
   }
 }
 
@@ -203,7 +318,6 @@
   overflow: hidden;
 }
 
-// Tree container
 .files-panel__tree {
   display: flex;
   flex-direction: column;
@@ -214,15 +328,11 @@
   @include glass-scrollable;
 }
 
-// Hint at bottom
 .files-panel__hint {
   padding: $spacing-sm $spacing-md;
   background: rgba($color-accent-primary, 0.05);
   border-top: 1px solid rgba($color-accent-primary, 0.15);
   flex-shrink: 0;
-}
-
-.files-panel__hint-text {
   font-size: $font-size-xs;
   color: $color-text-tertiary;
 
@@ -329,6 +439,24 @@
 .tree-dataset {
   display: flex;
   flex-direction: column;
+
+  &--selected {
+    .tree-item--dataset {
+      background: rgba($color-accent-primary, 0.15);
+      border-color: $color-accent-primary;
+
+      &::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: $color-accent-primary;
+        border-radius: 0 2px 2px 0;
+      }
+    }
+  }
 }
 
 .tree-dataset__row {
@@ -368,6 +496,7 @@
 // =============================================================================
 
 .tree-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: $spacing-sm;
@@ -430,7 +559,12 @@
     }
 
     &.tree-item--no-chevron {
-      margin-left: 20px; // Align with items that have chevrons
+      margin-left: 20px;
+    }
+
+    &.tree-item--selected {
+      background: rgba($color-accent-primary, 0.15);
+      border-color: $color-accent-primary;
     }
   }
 
@@ -486,29 +620,373 @@
   color: $color-accent-primary;
 }
 
-.tree-item__action {
+// =============================================================================
+// FILES VIEW
+// =============================================================================
+
+.files-panel__files-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.files-panel__upload-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.files-panel__sub-tabs {
+  display: flex;
+  gap: 2px;
+  padding: $spacing-xs $spacing-md;
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border-subtle;
   flex-shrink: 0;
-  padding: 4px;
+}
+
+.files-panel__sub-tab {
+  flex: 1;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(.active):not(:disabled) {
+    background: $color-bg-tertiary;
+    color: $color-text-secondary;
+  }
+
+  &.active {
+    background: $color-bg-tertiary;
+    border-color: $color-border-medium;
+    color: $color-text-primary;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// =============================================================================
+// QUICK ACCESS PANEL
+// =============================================================================
+
+.files-panel__quick-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  background: $color-bg-secondary;
+  border: none;
+  border-top: 1px solid $color-border-subtle;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-bg-tertiary;
+    color: $color-text-secondary;
+  }
+}
+
+.files-panel__quick-access {
+  flex: 1 1 50%;
+  display: flex;
+  flex-direction: column;
+  background: $color-bg-secondary;
+  border-top: 1px solid $color-border-subtle;
+  overflow: hidden;
+}
+
+.quick-access__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $color-border-subtle;
+  @include glass-subtle;
+  flex-shrink: 0;
+}
+
+.quick-access__title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quick-access__close-btn {
+  padding: $spacing-xs;
+  @include glass-button;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+
+  &:hover {
+    @include glass-hover;
+    color: $color-text-primary;
+  }
+}
+
+.quick-access__tabs {
+  display: flex;
+  gap: 2px;
+  padding: $spacing-xs;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+}
+
+.quick-access__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(.active) {
+    background: $color-bg-elevated;
+    color: $color-text-secondary;
+  }
+
+  &.active {
+    background: $color-bg-primary;
+    border-color: $color-border-medium;
+    color: $color-text-primary;
+  }
+}
+
+.quick-access__content {
+  flex: 1;
+  overflow-y: auto;
+  @include glass-scrollable;
+}
+
+.quick-access__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $spacing-xl;
+  color: $color-text-tertiary;
+  text-align: center;
+  font-size: $font-size-sm;
+}
+
+// =============================================================================
+// SERVER FILE LIST
+// =============================================================================
+
+.server-file-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+
+  &--loading,
+  &--error,
+  &--empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+    padding: $spacing-xl;
+    color: $color-text-tertiary;
+    text-align: center;
+
+    p {
+      margin: 0;
+      font-weight: $font-weight-medium;
+      color: $color-text-secondary;
+    }
+
+    span {
+      font-size: $font-size-sm;
+    }
+  }
+
+  &--error {
+    color: $color-error;
+  }
+}
+
+.server-file-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+}
+
+.server-file-list__count {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.server-file-list__refresh-btn,
+.server-file-list__retry-btn {
+  padding: $spacing-xs;
   background: transparent;
   border: 1px solid transparent;
   border-radius: $radius-sm;
   color: $color-text-tertiary;
   cursor: pointer;
-  transition: all $transition-fast;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  transition: all $transition-fast;
 
-  .tree-item:hover & {
-    opacity: 1;
-  }
-
-  &:hover {
-    background: $color-bg-elevated;
+  &:hover:not(:disabled) {
+    background: $color-bg-tertiary;
     border-color: $color-border-subtle;
-    color: $color-text-primary;
+    color: $color-text-secondary;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.server-file-list__retry-btn {
+  padding: $spacing-sm $spacing-md;
+  margin-top: $spacing-sm;
+  font-size: $font-size-sm;
+}
+
+.server-file-list__items {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-sm;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  @include glass-scrollable;
+}
+
+// Individual file item
+.server-file-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+  width: 100%;
+
+  &:hover:not(:disabled) {
+    background: $color-bg-tertiary;
+    border-color: $color-border-subtle;
+    transform: translateX(2px);
+
+    .server-file-item__action {
+      opacity: 1;
+    }
+  }
+
+  &:active:not(:disabled) {
+    background: $color-bg-elevated;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+
+  // File is already loaded in client
+  &.loaded {
+    .server-file-item__icon {
+      color: $color-success;
+    }
+
+    .server-file-item__name {
+      color: $color-text-secondary;
+    }
+  }
+
+  // File is currently loading
+  &.loading {
+    .server-file-item__icon {
+      color: $color-accent-primary;
+    }
+  }
+}
+
+.server-file-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.server-file-item__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.server-file-item__name {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.server-file-item__meta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.server-file-item__size,
+.server-file-item__uploader,
+.server-file-item__date {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.server-file-item__action {
+  color: $color-text-tertiary;
+  opacity: 0;
+  transition: opacity $transition-fast;
+  flex-shrink: 0;
 }
 
 // =============================================================================
@@ -528,138 +1006,50 @@
   animation: spin 1s linear infinite;
 }
 
-// =============================================================================
-// FILES ACTIVITY BAR - Collapsed State (48px)
-// =============================================================================
-
-.files-activity-bar {
-  width: 48px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: $spacing-md 0;
-  background: $color-bg-secondary;
-}
-
-.files-activity-bar__icons {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $spacing-sm;
-  width: 100%;
-  padding-top: $spacing-md;
-}
-
-.files-activity-bar__icon {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: $radius-sm;
-  color: $color-text-tertiary;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-bg-tertiary;
-    border-color: $color-border-medium;
-    color: $color-text-secondary;
+// Selection highlight animation
+@keyframes highlight-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba($color-accent-primary, 0.4);
   }
-
-  &:active {
-    background: rgba($color-accent-primary, 0.1);
-    border-color: $color-accent-primary;
-    color: $color-accent-primary;
+  50% {
+    box-shadow: 0 0 0 4px rgba($color-accent-primary, 0.2);
   }
 }
 
-.files-activity-bar__badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: $color-accent-primary;
-  color: white;
-  font-size: 10px;
-  font-weight: $font-weight-bold;
-  padding: 2px 5px;
-  border-radius: $radius-full;
-  min-width: 18px;
-  text-align: center;
-  box-shadow: 0 0 0 2px $color-bg-secondary;
-
-  &--blue {
-    background: $color-accent-blue;
-  }
-
-  &--muted {
-    background: $color-text-tertiary;
-  }
-}
-
-.files-activity-bar__expand {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: $radius-sm;
-  color: $color-text-tertiary;
-  cursor: pointer;
-  transition: all $transition-fast;
-  margin-top: auto;
-
-  &:hover {
-    background: $color-bg-tertiary;
-    border-color: $color-border-medium;
-    color: $color-text-primary;
-  }
-
-  &:active {
-    background: rgba($color-accent-primary, 0.15);
-    border-color: $color-accent-primary;
-    color: $color-accent-primary;
-  }
+.tree-dataset--selected .tree-item--dataset {
+  animation: highlight-pulse 1s ease-in-out 2;
 }
 
 // =============================================================================
-// SUB-TABS (Files view - Sample Files / Upload VTP)
+// ACCESSIBILITY
 // =============================================================================
 
-.files-panel__sub-tabs {
-  display: flex;
-  gap: $spacing-xs;
-  margin-bottom: $spacing-md;
+.files-panel__collapse-btn:focus-visible,
+.files-panel__toggle-tab:focus-visible,
+.files-panel__search-clear:focus-visible,
+.files-activity-bar__icon:focus-visible,
+.files-activity-bar__expand:focus-visible,
+.tree-folder__header:focus-visible,
+.tree-item:focus-visible,
+.quick-access__tab:focus-visible {
+  outline: 2px solid $color-accent-primary;
+  outline-offset: 2px;
 }
 
-.files-panel__sub-tab {
-  flex: 1;
-  padding: $spacing-sm $spacing-md;
-  @include glass-button;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: $color-text-tertiary;
-
-  &.active {
-    background: $color-bg-tertiary;
-    color: $color-text-primary;
-    border-color: $color-accent-primary;
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
   }
 
-  &:hover:not(.active):not(:disabled) {
-    @include glass-hover;
-    color: $color-text-secondary;
+  .tree-dataset--selected .tree-item--dataset {
+    animation: none;
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .tree-item,
+  .tree-folder__header,
+  .files-panel__toggle-tab,
+  .files-panel__search {
+    transition: none;
   }
 }
