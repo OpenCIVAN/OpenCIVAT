@@ -20,6 +20,8 @@ export function FileUploadButton({ onFileSelect, disabled }) {
                 ref={fileInputRef}
                 type="file"
                 accept=".vtp"
+                // Change when add more type support:
+                // accept=".vtp,.csv,.json,.obj,.stl,.ply,.vtk,.png,.jpg,.jpeg"
                 onChange={handleChange}
                 style={{ display: 'none' }}
                 disabled={disabled}
@@ -30,7 +32,7 @@ export function FileUploadButton({ onFileSelect, disabled }) {
                 disabled={disabled}
             >
                 <Upload size={16} />
-                Choose VTP File
+                Upload File
             </button>
         </div>
     );

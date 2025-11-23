@@ -1103,3 +1103,383 @@
     transition: none;
   }
 }
+
+// =============================================================================
+// DATASET DELETE BUTTON
+// =============================================================================
+
+.tree-dataset__delete-btn {
+  padding: $spacing-xs;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  opacity: 0;
+  transition: all $transition-fast;
+  flex-shrink: 0;
+  margin-left: $spacing-xs;
+
+  &:hover {
+    background: rgba($color-error, 0.1);
+    border-color: rgba($color-error, 0.3);
+    color: $color-error;
+    opacity: 1 !important;
+  }
+
+  &:active {
+    background: rgba($color-error, 0.2);
+    transform: scale(0.95);
+  }
+
+  .tree-dataset:hover & {
+    opacity: 0.6;
+  }
+}
+
+// =============================================================================
+// DATASET VIEWS (shown under each dataset when expanded)
+// =============================================================================
+
+.tree-dataset__views {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $spacing-xs $spacing-md $spacing-xs $spacing-xl;
+  margin-left: $spacing-lg;
+  border-left: 2px solid $color-border-subtle;
+
+  // Vertical connecting line with gradient
+  &::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg,
+      $color-border-subtle 0%,
+      transparent 100%
+    );
+  }
+}
+
+.tree-view-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  padding-left: $spacing-md;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  transition: all $transition-fast;
+  cursor: pointer;
+
+  // Horizontal connecting line from parent
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 12px;
+    height: 1px;
+    background: $color-border-subtle;
+  }
+
+  &:hover {
+    background: linear-gradient(90deg,
+      rgba($color-accent-primary, 0.05) 0%,
+      transparent 100%
+    );
+    border-color: rgba($color-accent-primary, 0.2);
+    transform: translateX(2px);
+
+    .tree-view-item__name {
+      color: $color-text-primary;
+    }
+
+    .tree-view-item__badge {
+      opacity: 1;
+    }
+  }
+
+  &:active {
+    background: linear-gradient(90deg,
+      rgba($color-accent-primary, 0.08) 0%,
+      transparent 100%
+    );
+  }
+}
+
+.tree-view-item__icon {
+  color: $color-accent-green;
+  flex-shrink: 0;
+}
+
+.tree-view-item__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: $font-weight-medium;
+}
+
+.tree-view-item__status {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.tree-view-item__badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-radius: $radius-sm;
+
+  &--active {
+    background: rgba($color-success, 0.1);
+    color: $color-success;
+    border: 1px solid rgba($color-success, 0.3);
+  }
+
+  &--inactive {
+    background: rgba($color-text-tertiary, 0.1);
+    color: $color-text-tertiary;
+    border: 1px solid rgba($color-text-tertiary, 0.2);
+  }
+}
+
+// =============================================================================
+// QUICK ACCESS VIEWS
+// =============================================================================
+
+.quick-access__views {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-md;
+}
+
+.quick-access__dataset-group {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  background: $color-bg-elevated;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+}
+
+.quick-access__dataset-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  border-bottom: 1px solid $color-border-subtle;
+  padding-bottom: $spacing-sm;
+  margin-bottom: $spacing-xs;
+}
+
+.quick-access__view-count {
+  margin-left: auto;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  color: $color-text-tertiary;
+}
+
+.quick-access__view-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quick-access__view-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  transition: all $transition-fast;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-bg-tertiary;
+    border-color: $color-border-subtle;
+    color: $color-text-primary;
+  }
+}
+
+.quick-access__view-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-access__view-status {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  padding: 2px $spacing-xs;
+  background: $color-bg-tertiary;
+  border-radius: $radius-sm;
+}
+
+// =============================================================================
+// DATASET ADD VIEW BUTTON
+// =============================================================================
+
+.tree-dataset__add-view-btn {
+  padding: $spacing-xs;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  opacity: 0;
+  transition: all $transition-fast;
+  flex-shrink: 0;
+  margin-left: $spacing-xs;
+
+  &:hover {
+    background: rgba($color-accent-primary, 0.1);
+    border-color: rgba($color-accent-primary, 0.3);
+    color: $color-accent-primary;
+    opacity: 1 !important;
+  }
+
+  &:active {
+    background: rgba($color-accent-primary, 0.2);
+    transform: scale(0.95);
+  }
+
+  .tree-dataset:hover & {
+    opacity: 0.6;
+  }
+}
+
+// =============================================================================
+// VIEW ITEM ACTION BUTTONS
+// =============================================================================
+
+.tree-view-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: $spacing-xs;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  .tree-view-item:hover & {
+    opacity: 1;
+  }
+}
+
+.tree-view-item__action-btn {
+  padding: $spacing-xs;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: $color-bg-elevated;
+    border-color: $color-border-subtle;
+    color: $color-text-primary;
+  }
+
+  &:active {
+    background: $color-bg-tertiary;
+    transform: scale(0.95);
+  }
+
+  &[title*="Link"] {
+    &:hover {
+      color: $color-accent-green;
+    }
+  }
+
+  &--delete {
+    &:hover {
+      background: rgba($color-error, 0.1);
+      border-color: rgba($color-error, 0.3);
+      color: $color-error;
+    }
+
+    &:active {
+      background: rgba($color-error, 0.2);
+    }
+  }
+}
+
+// =============================================================================
+// NON-CLICKABLE DATASET PARENT
+// =============================================================================
+
+.tree-item--no-click {
+  cursor: default;
+
+  &:hover {
+    background: transparent;
+    border-color: transparent;
+    transform: none;
+  }
+}
+
+.tree-item__view-count {
+  color: $color-accent-primary;
+  font-weight: $font-weight-semibold;
+}
+
+// =============================================================================
+// CLEAR ALL VIEWS BUTTON
+// =============================================================================
+
+.tree-dataset__clear-views-btn {
+  padding: $spacing-xs;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  opacity: 0;
+  transition: all $transition-fast;
+  flex-shrink: 0;
+  margin-left: $spacing-xs;
+
+  &:hover {
+    background: rgba($color-warning, 0.1);
+    border-color: rgba($color-warning, 0.3);
+    color: $color-warning;
+    opacity: 1 !important;
+  }
+
+  &:active {
+    background: rgba($color-warning, 0.2);
+    transform: scale(0.95);
+  }
+
+  .tree-dataset:hover & {
+    opacity: 0.6;
+  }
+}

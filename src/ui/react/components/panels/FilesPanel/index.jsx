@@ -8,7 +8,7 @@
 // The server is the source of truth for what files exist.
 // The client DatasetManager tracks what's loaded for visualization.
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
     FolderOpen,
     Loader,
@@ -25,7 +25,11 @@ import {
     File,
     X,
     Upload,
-    Database
+    Database,
+    Trash2,
+    Plus,
+    Copy,
+    Link as LinkIcon
 } from 'lucide-react';
 
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
@@ -33,6 +37,7 @@ import { useProjectFiles } from '@UI/react/hooks/useProjectFiles.js';
 import { useFileOperations } from './useFileOperations.js';
 import { ServerFileList } from './ServerFileList.jsx';
 import { FileUploadButton } from './FileUploadButton.jsx';
+import { datasetManager, viewConfigurationManager } from '@Init/appInitializer.js';
 
 import './FilesPanel.scss';
 
@@ -302,6 +307,18 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
 
     const clearSearch = useCallback(() => setSearchQuery(''), []);
 
+    // Handle dataset deletion
+    const handleDeleteDataset = useCallback(async (datasetId) => {
+        setError(null);
+        try {
+            await datasetManager.removeDataset(datasetId);
+            console.log(`✅ Dataset ${datasetId} removed`);
+        } catch (err) {
+            console.error('Failed to remove dataset:', err);
+            setError(`Failed to remove dataset: ${err.message}`);
+        }
+    }, []);
+
     // Dynamic placeholder based on active tab
     const searchPlaceholder = activeTab === 'datasets'
         ? 'Filter datasets...'
@@ -402,6 +419,7 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
                         onToggleDataset={toggleDataset}
                         onDatasetClick={handleDatasetClick}
                         onSectionResize={handleSectionResize}
+                        onDeleteDataset={handleDeleteDataset}
                     />
                 ) : (
                     <FilesView
@@ -455,7 +473,8 @@ function DatasetsView({
     onToggleFolder,
     onToggleDataset,
     onDatasetClick,
-    onSectionResize
+    onSectionResize,
+    onDeleteDataset
 }) {
     const emptyMessage = searchQuery ? 'No matches' : 'No datasets';
 
@@ -493,6 +512,7 @@ function DatasetsView({
                                 expanded={expandedDatasets.has(dataset.id)}
                                 onToggle={() => onToggleDataset(dataset.id)}
                                 onClick={(e) => onDatasetClick(dataset, e)}
+                                onDelete={onDeleteDataset}
                             />
                         ))
                     )}
@@ -524,6 +544,7 @@ function DatasetsView({
                                 expanded={expandedDatasets.has(dataset.id)}
                                 onToggle={() => onToggleDataset(dataset.id)}
                                 onClick={(e) => onDatasetClick(dataset, e)}
+                                onDelete={onDeleteDataset}
                             />
                         ))
                     )}
@@ -551,6 +572,7 @@ function DatasetsView({
                                 expanded={expandedDatasets.has(dataset.id)}
                                 onToggle={() => onToggleDataset(dataset.id)}
                                 onClick={(e) => onDatasetClick(dataset, e)}
+                                onDelete={onDeleteDataset}
                             />
                         ))
                     )}
@@ -705,17 +727,90 @@ function TreeFolder({
     );
 }
 
-function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick }) {
-    // Future: instances will come from InstanceManager
-    const instances = [];
-    const hasInstances = instances.length > 0;
+function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onDelete }) {
+    // Get views for this dataset
+    const [datasetViews, setDatasetViews] = useState([]);
+
+    useEffect(() => {
+        const updateViews = () => {
+            const views = viewConfigurationManager.getViewsForDataset(dataset.id);
+            setDatasetViews(views.filter(v => v.status !== 'archived'));
+        };
+
+        updateViews();
+
+        // Listen for view changes
+        const handleViewUpdate = () => updateViews();
+        viewConfigurationManager.on('viewAdded', handleViewUpdate);
+        viewConfigurationManager.on('viewRemoved', handleViewUpdate);
+        viewConfigurationManager.on('viewUpdated', handleViewUpdate);
+
+        return () => {
+            viewConfigurationManager.off('viewAdded', handleViewUpdate);
+            viewConfigurationManager.off('viewRemoved', handleViewUpdate);
+            viewConfigurationManager.off('viewUpdated', handleViewUpdate);
+        };
+    }, [dataset.id]);
+
+    const hasViews = datasetViews.length > 0;
     const pointCount = dataset.pointCount || 0;
     const dataType = dataset.dataType || 'Unknown';
+
+    const handleDeleteDataset = (e) => {
+        e.stopPropagation();
+        if (window.confirm(`Remove "${dataset.name}" from loaded datasets?\n\nThis will remove the dataset and all its views.`)) {
+            onDelete(dataset.id);
+        }
+    };
+
+    const handleClearAllViews = (e) => {
+        e.stopPropagation();
+        if (window.confirm(`Clear all ${datasetViews.length} view(s) for "${dataset.name}"?`)) {
+            datasetViews.forEach(view => {
+                viewConfigurationManager.deleteView(view.id);
+            });
+        }
+    };
+
+    const handleDeleteView = (e, view) => {
+        e.stopPropagation();
+        viewConfigurationManager.deleteView(view.id);
+    };
+
+    const handleCreateNewView = (e) => {
+        e.stopPropagation();
+        // Request a new instance for this dataset
+        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+            detail: { datasetId: dataset.id, spawnNew: true }
+        }));
+    };
+
+    const handleDuplicateView = (e, view) => {
+        e.stopPropagation();
+        // Request a new instance with the same view configuration
+        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+            detail: { datasetId: dataset.id, spawnNew: true, duplicateViewId: view.id }
+        }));
+    };
+
+    const handleLinkView = (e, view) => {
+        e.stopPropagation();
+        // Future: implement view linking
+        console.log('Link view:', view.id);
+    };
+
+    const handleViewClick = (e, view) => {
+        e.stopPropagation();
+        // Open this specific view
+        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+            detail: { datasetId: dataset.id, viewConfigId: view.id }
+        }));
+    };
 
     return (
         <div className={`tree-dataset ${isSelected ? 'tree-dataset--selected' : ''}`}>
             <div className="tree-dataset__row">
-                {hasInstances && (
+                {hasViews && (
                     <button
                         className="tree-dataset__chevron"
                         onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -723,12 +818,8 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick }) {
                         {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </button>
                 )}
-                <button
-                    className={`tree-item tree-item--dataset ${dataset.isLoading ? 'loading' : ''} ${!hasInstances ? 'tree-item--no-chevron' : ''} ${isSelected ? 'tree-item--selected' : ''}`}
-                    onClick={onClick}
-                    disabled={dataset.isLoading}
-                    title={`${dataset.name}\nClick to replace • Shift+Click for new window`}
-                >
+
+                <div className={`tree-item tree-item--dataset tree-item--no-click ${!hasViews ? 'tree-item--no-chevron' : ''}`}>
                     <span className="tree-item__icon">
                         <File size={14} />
                     </span>
@@ -736,16 +827,79 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick }) {
                         <span className="tree-item__name">{dataset.name}</span>
                         <span className="tree-item__meta">
                             {pointCount.toLocaleString()} points • {dataType}
+                            {hasViews && <span className="tree-item__view-count"> • {datasetViews.length} view{datasetViews.length !== 1 ? 's' : ''}</span>}
                         </span>
                     </div>
                     {dataset.isLoading && (
                         <Loader size={12} className="spinner tree-item__spinner" />
                     )}
+                </div>
+                <button
+                    className="tree-dataset__add-view-btn"
+                    onClick={handleCreateNewView}
+                    title="Create new view"
+                >
+                    <Plus size={12} />
+                </button>
+                {hasViews && (
+                    <button
+                        className="tree-dataset__clear-views-btn"
+                        onClick={handleClearAllViews}
+                        title="Clear all views"
+                    >
+                        <X size={12} />
+                    </button>
+                )}
+                <button
+                    className="tree-dataset__delete-btn"
+                    onClick={handleDeleteDataset}
+                    title="Remove dataset and all views"
+                >
+                    <Trash2 size={12} />
                 </button>
             </div>
-            {expanded && hasInstances && (
-                <div className="tree-dataset__instances">
-                    {/* Future: render instance items here */}
+            {expanded && hasViews && (
+                <div className="tree-dataset__views">
+                    {datasetViews.map(view => (
+                        <div key={view.id} className="tree-view-item"
+                            onClick={(e) => handleViewClick(e, view)}
+                        >
+                            <BookmarkCheck size={12} className="tree-view-item__icon" />
+                            <span className="tree-view-item__name">{view.name || 'Untitled View'}</span>
+                            <span className="tree-view-item__status">
+                                {view.activeInstanceCount > 0 ? (
+                                    <span className="tree-view-item__badge tree-view-item__badge--active">
+                                        {view.activeInstanceCount} active
+                                    </span>
+                                ) : (
+                                    <span className="tree-view-item__badge tree-view-item__badge--inactive">inactive</span>
+                                )}
+                            </span>
+                            <div className="tree-view-item__actions">
+                                <button
+                                    className="tree-view-item__action-btn"
+                                    onClick={(e) => handleDuplicateView(e, view)}
+                                    title="Duplicate this view"
+                                >
+                                    <Copy size={12} />
+                                </button>
+                                <button
+                                    className="tree-view-item__action-btn"
+                                    onClick={(e) => handleLinkView(e, view)}
+                                    title="Link this view (coming soon)"
+                                >
+                                    <LinkIcon size={12} />
+                                </button>
+                                <button
+                                    className="tree-view-item__action-btn tree-view-item__action-btn--delete"
+                                    onClick={(e) => handleDeleteView(e, view)}
+                                    title="Delete this view"
+                                >
+                                    <Trash2 size={12} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
         </div>
@@ -757,6 +911,55 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick }) {
 // =============================================================================
 
 function QuickAccessPanel({ activeTab, onTabChange, onClose }) {
+    // Get saved views grouped by dataset
+    const [savedViewsByDataset, setSavedViewsByDataset] = useState({});
+
+    useEffect(() => {
+        if (activeTab !== 'views') return;
+
+        const updateSavedViews = () => {
+            const allViews = Array.from(viewConfigurationManager._viewConfigs.values());
+
+            // Only show saved views
+            const savedViews = allViews.filter(v => v.savedByUser && v.status !== 'archived');
+
+            // Group by dataset
+            const grouped = {};
+            savedViews.forEach(view => {
+                const datasetId = view.datasetId;
+                if (!grouped[datasetId]) {
+                    const dataset = datasetManager.getDataset(datasetId);
+                    grouped[datasetId] = {
+                        dataset: dataset,
+                        views: []
+                    };
+                }
+                grouped[datasetId].views.push(view);
+            });
+
+            // Sort views within each dataset by creation time
+            Object.values(grouped).forEach(group => {
+                group.views.sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+            });
+
+            setSavedViewsByDataset(grouped);
+        };
+
+        updateSavedViews();
+
+        // Listen for view changes
+        const handleViewUpdate = () => updateSavedViews();
+        viewConfigurationManager.on('viewAdded', handleViewUpdate);
+        viewConfigurationManager.on('viewRemoved', handleViewUpdate);
+        viewConfigurationManager.on('viewUpdated', handleViewUpdate);
+
+        return () => {
+            viewConfigurationManager.off('viewAdded', handleViewUpdate);
+            viewConfigurationManager.off('viewRemoved', handleViewUpdate);
+            viewConfigurationManager.off('viewUpdated', handleViewUpdate);
+        };
+    }, [activeTab]);
+
     return (
         <div className="files-panel__quick-access">
             <div className="quick-access__header">
@@ -789,30 +992,57 @@ function QuickAccessPanel({ activeTab, onTabChange, onClose }) {
                     onClick={() => onTabChange('views')}
                 >
                     <BookmarkCheck size={16} />
-                    <span>Views</span>
+                    <span>Saved Views</span>
                 </button>
             </div>
             <div className="quick-access__content">
-                <div className="quick-access__placeholder">
-                    {activeTab === 'annotations' && (
-                        <>
-                            <Search size={32} />
-                            <div>Search annotations across datasets</div>
-                        </>
-                    )}
-                    {activeTab === 'filters' && (
-                        <>
-                            <FilterIcon size={32} />
-                            <div>Saved filter configurations</div>
-                        </>
-                    )}
-                    {activeTab === 'views' && (
-                        <>
-                            <BookmarkCheck size={32} />
-                            <div>Saved view configurations</div>
-                        </>
-                    )}
-                </div>
+                {activeTab === 'annotations' && (
+                    <div className="quick-access__placeholder">
+                        <Search size={32} />
+                        <div>Search annotations across datasets</div>
+                    </div>
+                )}
+                {activeTab === 'filters' && (
+                    <div className="quick-access__placeholder">
+                        <FilterIcon size={32} />
+                        <div>Saved filter configurations</div>
+                    </div>
+                )}
+                {activeTab === 'views' && (
+                    <div className="quick-access__views">
+                        {Object.keys(savedViewsByDataset).length === 0 ? (
+                            <div className="quick-access__placeholder">
+                                <BookmarkCheck size={32} />
+                                <div>No saved views</div>
+                                <div style={{ fontSize: '12px', marginTop: '8px', color: 'var(--color-text-tertiary)' }}>
+                                    Save views from the context menu to see them here
+                                </div>
+                            </div>
+                        ) : (
+                            Object.entries(savedViewsByDataset).map(([datasetId, { dataset, views }]) => (
+                                <div key={datasetId} className="quick-access__dataset-group">
+                                    <div className="quick-access__dataset-header">
+                                        <File size={14} />
+                                        <span>{dataset?.filename || 'Unknown Dataset'}</span>
+                                        <span className="quick-access__view-count">({views.length})</span>
+                                    </div>
+
+                                    <div className="quick-access__view-list">
+                                        {views.map(view => (
+                                            <div key={view.id} className="quick-access__view-item">
+                                                <BookmarkCheck size={12} />
+                                                <span className="quick-access__view-name">{view.name || 'Untitled View'}</span>
+                                                <span className="quick-access__view-status">
+                                                    {view.activeInstanceCount > 0 ? `${view.activeInstanceCount} active` : 'inactive'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

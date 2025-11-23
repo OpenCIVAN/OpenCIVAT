@@ -391,6 +391,21 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       );
     }
 
+    // Initialize instance tools (needed for widgets and rendering controls)
+    instanceTools.initializeTools(instanceId, pipelineObjects);
+    console.log(`  ✅ Instance tools initialized`);
+
+    // Initialize orientation widget (always create it, but start enabled)
+    vtkOrientationWidget.initialize(instanceId, pipelineObjects, {
+      enabled: true,
+      corner: "BOTTOM_RIGHT",
+      viewportSize: 0.1,
+      minPixelSize: 100,
+      maxPixelSize: 300,
+    });
+
+    console.log(`  ✅ Orientation widget initialized`);
+
     // CRITICAL: Add safety check before using sceneObjects
     if (!instanceData.sceneObjects) {
       throw new Error(

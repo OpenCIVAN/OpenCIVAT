@@ -157,6 +157,11 @@ export function InstanceViewport({
                 setActualInstanceId(instanceId);
                 setInitialized(true);
                 setActiveInstance(instanceId);
+                
+                // Activate the view to mark it as in use
+                if (viewConfigId) {
+                    viewConfigurationManager.activateView(viewConfigId);
+                }
 
                 const instanceHeader = workspaceManager.getInstanceHeaderInfo(instanceId);
                 setHeaderInfo(instanceHeader);
@@ -179,7 +184,7 @@ export function InstanceViewport({
                 workspaceManager.deleteInstance(actualInstanceId);
             }
         };
-    }, [viewConfigId]);
+    }, [viewConfigId, actualInstanceId]);
 
     // =========================================================================
     // DATA LOADING

@@ -16,13 +16,15 @@ export function WorkspaceGrid() {
         const handleInstanceRequest = async (event) => {
             const datasetId = event.detail?.datasetId;
 
+            const spawnNew = event.detail?.spawnNew;
+
             if (!datasetId || typeof datasetId !== 'string') {
                 console.error('❌ Invalid dataset ID:', datasetId);
                 return;
             }
 
             try {
-                console.log('📬 Creating instance for dataset:', datasetId);
+                console.log('📬 Request for dataset:', datasetId, spawnNew ? '(new window)' : '(reuse/replace)');
 
                 const dataset = datasetManager.getDataset(datasetId);
                 if (!dataset) {
@@ -30,12 +32,22 @@ export function WorkspaceGrid() {
                     return;
                 }
 
-                // Create view configuration
-                const viewConfig = viewConfigurationManager.createView(datasetId, {
-                    name: `View of ${dataset.filename}`,
-                });
+                // Check if there's already an active view for this dataset
+                let viewConfig = null;
+                const existingViews = viewConfigurationManager.getViewsForDataset(datasetId);
+                const activeExistingView = existingViews.find(v => v.isActive() && v.status !== 'archived');
 
-                console.log(`📋 Created view ${viewConfig.id} for dataset ${datasetId}`);
+                if (!spawnNew && activeExistingView) {
+                    // Reuse existing active view
+                    viewConfig = activeExistingView;
+                    console.log(`📋 Reusing existing view ${viewConfig.id} for dataset ${datasetId}`);
+                } else {
+                    // Create new view configuration
+                    viewConfig = viewConfigurationManager.createView(datasetId, {
+                        name: `View of ${dataset.filename}`,
+                    });
+                    console.log(`📋 Created new view ${viewConfig.id} for dataset ${datasetId}`);
+                }
 
                 // Add instance with the view (type will be determined when data loads)
                 setInstances((prev) => [...prev, {

@@ -107,6 +107,168 @@ CREATE TRIGGER update_view_configs_updated_at BEFORE UPDATE ON view_configuratio
 
 -- Create the default development session
 -- This ensures the DEFAULT_SESSION_ID used by the React app exists in the database
-INSERT INTO sessions (id, name, settings) 
+INSERT INTO sessions (id, name, settings)
+
 VALUES ('00000000-0000-0000-0000-000000000001', 'Default Development Session', '{}')
+
 ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+
+-- MULTI-TENANT ARCHITECTURE (from migration 002)
+
+-- ============================================================================
+
+-- Organizations table
+CREATE TABLE IF NOT EXISTS organizations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    storage_quota_bytes BIGINT DEFAULT 10737418240,
+    storage_used_bytes BIGINT DEFAULT 0,
+    settings JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    external_id VARCHAR(255) UNIQUE,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    display_name VARCHAR(255),
+    avatar_url VARCHAR(500),
+    preferences JSONB DEFAULT '{}'::jsonb,
+    last_active_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Organization members table
+CREATE TABLE IF NOT EXISTS organization_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL DEFAULT 'member',
+    invited_by UUID REFERENCES users(id),
+    invited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    joined_at TIMESTAMP,
+    UNIQUE(organization_id, user_id)
+);
+
+-- Projects table (evolution of sessions)
+CREATE TABLE IF NOT EXISTS projects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) NOT NULL,
+    description TEXT,
+    parent_project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    visibility VARCHAR(20) DEFAULT 'private',
+    status VARCHAR(20) DEFAULT 'active',
+    settings JSONB DEFAULT '{}'::jsonb,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    archived_at TIMESTAMP,
+    UNIQUE(organization_id, slug)
+);
+
+-- Project members table
+CREATE TABLE IF NOT EXISTS project_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL DEFAULT 'member',
+    permissions JSONB DEFAULT '{}'::jsonb,
+    added_by UUID REFERENCES users(id),
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(project_id, user_id)
+);
+
+-- Extend datasets table with new columns
+ALTER TABLE datasets
+    ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id),
+    ADD COLUMN IF NOT EXISTS hash VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS public_path VARCHAR(500);
+
+-- File project access table
+CREATE TABLE IF NOT EXISTS file_project_access (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    file_id UUID NOT NULL REFERENCES datasets(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    access_level VARCHAR(20) NOT NULL DEFAULT 'read',
+    visibility VARCHAR(20) DEFAULT 'all_members',
+    visible_to_users UUID[] DEFAULT '{}',
+    added_by UUID REFERENCES users(id),
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(file_id, project_id)
+);
+
+-- Audit log table
+CREATE TABLE IF NOT EXISTS audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id UUID REFERENCES users(id),
+    user_email VARCHAR(255),
+    organization_id UUID REFERENCES organizations(id),
+    project_id UUID REFERENCES projects(id),
+    room_id UUID,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50),
+    entity_id UUID,
+    details JSONB DEFAULT '{}'::jsonb,
+    ip_address INET,
+    user_agent TEXT
+);
+
+-- Add project_id to view_configurations
+ALTER TABLE view_configurations
+    ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id);
+
+-- Create indexes for new tables
+CREATE INDEX IF NOT EXISTS idx_datasets_hash ON datasets(hash);
+CREATE INDEX IF NOT EXISTS idx_datasets_org ON datasets(organization_id);
+CREATE INDEX IF NOT EXISTS idx_file_access_project ON file_project_access(project_id);
+CREATE INDEX IF NOT EXISTS idx_file_access_file ON file_project_access(file_id);
+CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_org ON audit_log(organization_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_project ON audit_log(project_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
+
+-- Apply triggers to new tables
+CREATE TRIGGER IF NOT EXISTS update_organizations_updated_at BEFORE UPDATE ON organizations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER IF NOT EXISTS update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER IF NOT EXISTS update_projects_updated_at BEFORE UPDATE ON projects
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Insert demo organization and project
+INSERT INTO organizations (id, name, slug, storage_quota_bytes)
+VALUES ('00000000-0000-0000-0000-000000000000', 'CIA Web Demo', 'demo', 107374182400)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO projects (id, organization_id, name, slug, visibility, description)
+VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000000',
+    'Sample Files',
+    'samples',
+    'public',
+    'Demo datasets for exploring CIA Web features'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Create default organization for existing data
+INSERT INTO organizations (id, name, slug)
+VALUES ('00000000-0000-0000-0000-000000000002', 'Default Organization', 'default')
+ON CONFLICT (id) DO NOTHING;
+
+-- Update existing datasets to belong to default organization
+UPDATE datasets
+SET organization_id = '00000000-0000-0000-0000-000000000002'
+WHERE organization_id IS NULL;
