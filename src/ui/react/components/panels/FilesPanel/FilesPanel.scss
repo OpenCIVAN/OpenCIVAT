@@ -322,10 +322,9 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
-  overflow-y: auto;
+  overflow: hidden;
   flex: 1;
   padding: $spacing-md;
-  @include glass-scrollable;
 }
 
 .files-panel__hint {
@@ -347,8 +346,18 @@
 // =============================================================================
 
 .tree-folder {
+  display: flex;
+  flex-direction: column;
   border-radius: $radius-md;
   overflow: hidden;
+  min-height: 0;
+  flex: 0 0 auto; // Collapsed by default (just header)
+  position: relative;
+
+  &--expanded {
+    flex: 1 1 auto; // Expanded sections fill available space
+    min-height: 100px; // Minimum height when expanded
+  }
 
   &--highlighted {
     .tree-folder__header {
@@ -357,6 +366,42 @@
       &:hover {
         background: rgba($color-accent-blue, 0.1);
       }
+    }
+  }
+}
+
+// Resize handle between sections
+
+.tree-folder__resize-handle {
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 10;
+
+  &:hover,
+  &--dragging {
+    &::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 2px;
+      background: $color-accent-primary;
+      border-radius: $radius-full;
+    }
+  }
+
+  &--dragging {
+    cursor: ns-resize;
+
+    &::after {
+      background: $color-accent-primary;
+      box-shadow: 0 0 4px rgba($color-accent-primary, 0.5);
     }
   }
 }
@@ -376,6 +421,7 @@
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
   border-radius: $radius-sm;
+  flex-shrink: 0;
 
   &:hover {
     background: $color-bg-tertiary;
@@ -430,6 +476,10 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  @include glass-scrollable;
 }
 
 // =============================================================================

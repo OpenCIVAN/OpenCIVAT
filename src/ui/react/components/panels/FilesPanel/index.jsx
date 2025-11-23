@@ -170,6 +170,9 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
     });
     const [expandedDatasets, setExpandedDatasets] = useState(new Set());
 
+    // Section resize state
+    const [sectionHeights, setSectionHeights] = useState({});
+
     // Quick Access state
     const [quickAccessOpen, setQuickAccessOpen] = useState(false);
     const [quickAccessTab, setQuickAccessTab] = useState('annotations');
@@ -293,6 +296,10 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
         });
     }, []);
 
+    const handleSectionResize = useCallback((sectionId, height) => {
+        setSectionHeights(prev => ({ ...prev, [sectionId]: height }));
+    }, []);
+
     const clearSearch = useCallback(() => setSearchQuery(''), []);
 
     // Dynamic placeholder based on active tab
@@ -390,9 +397,11 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
                         selectedDatasetId={selectedDatasetId}
                         expandedFolders={expandedFolders}
                         expandedDatasets={expandedDatasets}
+                        sectionHeights={sectionHeights}
                         onToggleFolder={toggleFolder}
                         onToggleDataset={toggleDataset}
                         onDatasetClick={handleDatasetClick}
+                        onSectionResize={handleSectionResize}
                     />
                 ) : (
                     <FilesView
@@ -442,9 +451,11 @@ function DatasetsView({
     selectedDatasetId,
     expandedFolders,
     expandedDatasets,
+    sectionHeights,
     onToggleFolder,
     onToggleDataset,
-    onDatasetClick
+    onDatasetClick,
+    onSectionResize
 }) {
     const emptyMessage = searchQuery ? 'No matches' : 'No datasets';
 
@@ -459,6 +470,9 @@ function DatasetsView({
                     count={myDatasets.length}
                     expanded={expandedFolders.my}
                     onToggle={() => onToggleFolder('my')}
+                    onResize={onSectionResize}
+                    showResizeHandle={true}
+                    style={sectionHeights.my ? { flexBasis: sectionHeights.my + 'px' } : undefined}
                 >
                     {isAnyLoading && (
                         <div className="tree-item tree-item--loading">
@@ -492,6 +506,9 @@ function DatasetsView({
                     badge={sharedDatasets.length > 0 ? sharedDatasets.length : null}
                     expanded={expandedFolders.shared}
                     onToggle={() => onToggleFolder('shared')}
+                    onResize={onSectionResize}
+                    showResizeHandle={true}
+                    style={sectionHeights.shared ? { flexBasis: sectionHeights.shared + 'px' } : undefined}
                     highlighted
                 >
                     {sharedDatasets.length === 0 ? (
@@ -604,12 +621,65 @@ function TreeFolder({
     expanded,
     onToggle,
     highlighted,
-    children
+    children,
+    onResize,
+    showResizeHandle = false,
+    style
 }) {
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartY = React.useRef(0);
+    const startHeight = React.useRef(0);
+    const folderRef = React.useRef(null);
+
+    const handleResizeStart = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!folderRef.current) return;
+
+        setIsDragging(true);
+        dragStartY.current = e.clientY;
+        startHeight.current = folderRef.current.offsetHeight;
+
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+    }, []);
+
+    const handleResizeMove = useCallback((e) => {
+        if (!isDragging || !folderRef.current) return;
+
+        const deltaY = e.clientY - dragStartY.current;
+        const newHeight = Math.max(100, startHeight.current + deltaY);
+
+        if (onResize) {
+            onResize(id, newHeight);
+        }
+    }, [isDragging, id, onResize]);
+
+    const handleResizeEnd = useCallback(() => {
+        setIsDragging(false);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }, []);
+
+    React.useEffect(() => {
+        if (isDragging) {
+            window.addEventListener('mousemove', handleResizeMove);
+            window.addEventListener('mouseup', handleResizeEnd);
+
+            return () => {
+                window.removeEventListener('mousemove', handleResizeMove);
+                window.removeEventListener('mouseup', handleResizeEnd);
+            };
+        }
+    }, [isDragging, handleResizeMove, handleResizeEnd]);
+
     return (
         <div
-            className={`tree-folder ${highlighted ? 'tree-folder--highlighted' : ''}`}
+            ref={folderRef}
+            className={`tree-folder ${expanded ? 'tree-folder--expanded' : ''} ${highlighted ? 'tree-folder--highlighted' : ''}`}
             data-folder={id}
+            style={style}
         >
             <button className="tree-folder__header" onClick={onToggle}>
                 <span className="tree-folder__chevron">
@@ -624,6 +694,12 @@ function TreeFolder({
             </button>
             {expanded && (
                 <div className="tree-folder__children">{children}</div>
+            )}
+            {expanded && showResizeHandle && (
+                <div
+                    className={`tree-folder__resize-handle ${isDragging ? 'tree-folder__resize-handle--dragging' : ''}`}
+                    onMouseDown={handleResizeStart}
+                />
             )}
         </div>
     );
