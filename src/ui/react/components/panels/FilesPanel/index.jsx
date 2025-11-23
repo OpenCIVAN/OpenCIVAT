@@ -29,7 +29,8 @@ import {
     Trash2,
     Plus,
     Copy,
-    Link as LinkIcon
+    Link as LinkIcon,
+    Tag
 } from 'lucide-react';
 
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
@@ -37,6 +38,7 @@ import { useProjectFiles } from '@UI/react/hooks/useProjectFiles.js';
 import { useFileOperations } from './useFileOperations.js';
 import { ServerFileList } from './ServerFileList.jsx';
 import { FileUploadButton } from './FileUploadButton.jsx';
+import { getHandlerForFileType } from '@Core/instances/types/instanceTypesInit.js';
 import { datasetManager, viewConfigurationManager } from '@Init/appInitializer.js';
 
 import './FilesPanel.scss';
@@ -753,8 +755,27 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
     }, [dataset.id]);
 
     const hasViews = datasetViews.length > 0;
-    const pointCount = dataset.pointCount || 0;
-    const dataType = dataset.dataType || 'Unknown';
+
+    // Get metadata string from the appropriate handler
+    let metadataString = 'Unknown';
+    let handlerDisplayName = null;
+
+    if (dataset.fileType) {
+        try {
+            // Query the registry to find the best handler for this file type
+            const handler = getHandlerForFileType(dataset.fileType);
+            if (handler) {
+                metadataString = handler.getDatasetMetadataString(dataset);
+                handlerDisplayName = handler.getDisplayName();
+            } else {
+                // Fallback for unknown types
+                metadataString = dataset.fileType.toUpperCase();
+            }
+        } catch (error) {
+            console.warn('Failed to get handler metadata:', error);
+            metadataString = dataset.fileType ? dataset.fileType.toUpperCase() : 'Unknown';
+        }
+    }
 
     const handleDeleteDataset = (e) => {
         e.stopPropagation();
@@ -767,6 +788,7 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
         e.stopPropagation();
         if (window.confirm(`Clear all ${datasetViews.length} view(s) for "${dataset.name}"?`)) {
             datasetViews.forEach(view => {
+                // Notify workspace to close any instances using this view
                 window.dispatchEvent(new CustomEvent('cia:delete-view-instance', {
                     detail: { viewConfigId: view.id }
                 }));
@@ -817,6 +839,7 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
 
     const handleViewClick = (e, view) => {
         e.stopPropagation();
+
         if (e.shiftKey) {
             // Shift+click: duplicate this view instance
             if (window.confirm(`Duplicate instance of "${view.name || 'Untitled View'}"?`)) {
@@ -865,9 +888,17 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
                         <File size={14} />
                     </span>
                     <div className="tree-item__content">
-                        <span className="tree-item__name">{dataset.name}</span>
+                        <span className="tree-item__name">
+                            {dataset.name}
+                            {handlerDisplayName && (
+                                <span className="tree-item__type-badge" title={handlerDisplayName}>
+                                    <Tag size={10} />
+                                    {dataset.fileType?.toUpperCase()}
+                                </span>
+                            )}
+                        </span>
                         <span className="tree-item__meta">
-                            {pointCount.toLocaleString()} points • {dataType}
+                            {metadataString}
                             {hasViews && <span className="tree-item__view-count"> • {datasetViews.length} view{datasetViews.length !== 1 ? 's' : ''}</span>}
                         </span>
                     </div>
@@ -907,6 +938,11 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
                         >
                             <BookmarkCheck size={12} className="tree-view-item__icon" />
                             <span className="tree-view-item__name">{view.name || 'Untitled View'}</span>
+                            {view.activeInstanceCount > 0 && (
+                                <span className="tree-view-item__badge tree-view-item__badge--active">
+                                    {view.activeInstanceCount}
+                                </span>
+                            )}
                             <div className="tree-view-item__actions">
                                 <button
                                     className="tree-view-item__action-btn"
@@ -1058,7 +1094,6 @@ function QuickAccessPanel({ activeTab, onTabChange, onClose }) {
                                         <span>{dataset?.filename || 'Unknown Dataset'}</span>
                                         <span className="quick-access__view-count">({views.length})</span>
                                     </div>
-
                                     <div className="quick-access__view-list">
                                         {views.map(view => (
                                             <div key={view.id} className="quick-access__view-item">

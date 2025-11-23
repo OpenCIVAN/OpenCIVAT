@@ -650,11 +650,36 @@
 }
 
 .tree-item__name {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: $color-text-primary;
   font-weight: $font-weight-medium;
+}
+
+.tree-item__type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: rgba($color-accent-primary, 0.1);
+  border: 1px solid rgba($color-accent-primary, 0.2);
+  border-radius: $radius-sm;
+  color: $color-accent-primary;
+  font-size: 9px;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  line-height: 1;
+
+  svg {
+    width: 10px;
+    height: 10px;
+  }
 }
 
 .tree-item__meta {
@@ -1152,13 +1177,14 @@
 
   // Vertical connecting line with gradient
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     left: 6px;
     top: 0;
     bottom: 0;
     width: 1px;
-    background: linear-gradient(180deg,
+    background: linear-gradient(
+      180deg,
       $color-border-subtle 0%,
       transparent 100%
     );
@@ -1182,7 +1208,7 @@
 
   // Horizontal connecting line from parent
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     left: 0;
     top: 50%;
@@ -1192,7 +1218,8 @@
   }
 
   &:hover {
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba($color-accent-primary, 0.05) 0%,
       transparent 100%
     );
@@ -1209,7 +1236,8 @@
   }
 
   &:active {
-    background: linear-gradient(90deg,
+    background: linear-gradient(
+      90deg,
       rgba($color-accent-primary, 0.08) 0%,
       transparent 100%
     );

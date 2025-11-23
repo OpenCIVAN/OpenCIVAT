@@ -92,6 +92,20 @@ export function getHandlerForType(type) {
 }
 
 /**
+ * getHandlerForFileType
+ *
+ * Get the best handler for a specific file type.
+ * Queries all registered handlers and returns the one that can handle this file type.
+ * If multiple handlers support the same type, returns the one with highest priority.
+ *
+ * @param {string} fileType - File extension (e.g., 'vtp', 'csv', 'json')
+ * @returns {InstanceTypeHandler|null} Handler or null if no handler supports this type
+ */
+export function getHandlerForFileType(fileType) {
+  return instanceTypeRegistry.getHandlerForFileType(fileType);
+}
+
+/**
  * Example usage in application code:
  *
  * // During app initialization:

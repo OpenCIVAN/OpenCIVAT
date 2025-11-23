@@ -293,6 +293,29 @@ export class InstanceTypeHandler {
   }
 
   /**
+   * Get formatted metadata string for a dataset
+   *
+   * Returns a human-readable string describing the dataset's key properties.
+   * Used in the file tree to show dataset information before any instance is created.
+   * This is type-specific - VTK shows point counts, CSV shows row counts, etc.
+   *
+   * @param {Object} dataset - Dataset object with metadata
+   * @returns {string} Formatted metadata string (e.g., "142,573 points • VTK PolyData")
+   *
+   * Example return values:
+   * - VTK: "142,573 points • 284,001 cells"
+   * - CSV: "1,205 rows • 8 columns"
+   * - Image: "1920×1080 • PNG"
+   */
+  getDatasetMetadataString(dataset) {
+    // Default: just show file type
+    if (dataset.fileType) {
+      return dataset.fileType.toUpperCase();
+    }
+    return "Unknown";
+  }
+
+  /**
    * Get instance header information
    *
    * Returns data to display in the instance viewport header.

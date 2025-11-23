@@ -1,71 +1,137 @@
 // server/src/index.js
-const express = require('express');
-const cors = require('cors');
-const { Pool } = require('pg');
-require('dotenv').config();
+// Main API server for CIA Web
+
+const express = require("express");
+const cors = require("cors");
+const { Pool } = require("pg");
+const Minio = require("minio");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Database connection pool
-// We create this early and export it immediately so routes can use it
+// ============================================================================
+// DATABASE CONNECTION
+// ============================================================================
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  host: process.env.DB_HOST || "localhost",
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || "cia_analytics",
+  user: process.env.DB_USER || "cia_admin",
+  password: process.env.DB_PASSWORD || "cia_password",
 });
 
-// CRITICAL: Export pool immediately, before requiring routes
-// This breaks the circular dependency
-module.exports = { pool };
+pool.on("connect", () => {
+  console.log("✅ Connected to PostgreSQL database");
+});
 
-// Test database connection
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('❌ Database connection failed:', err);
-    process.exit(1);
+pool.on("error", (err) => {
+  console.error("❌ Unexpected error on PostgreSQL client", err);
+  process.exit(-1);
+});
+
+// ============================================================================
+// MINIO CONNECTION
+// ============================================================================
+
+const minioClient = new Minio.Client({
+  endPoint: process.env.MINIO_ENDPOINT || "localhost",
+  port: parseInt(process.env.MINIO_PORT || "9000"),
+  useSSL: process.env.MINIO_USE_SSL === "true",
+  accessKey: process.env.MINIO_ACCESS_KEY || "minioadmin",
+  secretKey: process.env.MINIO_SECRET_KEY || "minioadmin",
+});
+
+const BUCKET_NAME = process.env.MINIO_BUCKET || "cia-files";
+
+// Ensure bucket exists
+(async () => {
+  try {
+    const exists = await minioClient.bucketExists(BUCKET_NAME);
+    if (!exists) {
+      await minioClient.makeBucket(BUCKET_NAME, "us-east-1");
+      console.log(`✅ Created MinIO bucket: ${BUCKET_NAME}`);
+    } else {
+      console.log(`✅ Connected to MinIO bucket: ${BUCKET_NAME}`);
+    }
+  } catch (error) {
+    console.error("❌ MinIO initialization error:", error);
   }
-  console.log('✅ Database connected at:', res.rows[0].now);
+})();
+
+// ============================================================================
+// MIDDLEWARE
+// ============================================================================
+
+app.use(cors());
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+
+// Request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  next();
 });
 
-// Middleware
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000',
-  credentials: true
-}));
+// Make pool and minio client available to routes
+app.locals.pool = pool;
+app.locals.minioClient = minioClient;
+app.locals.bucketName = BUCKET_NAME;
 
-app.use(express.json());
+// ============================================================================
+// ROUTES
+// ============================================================================
+
+const projectsRouter = require("./routes/projects");
+app.use("/api/projects", projectsRouter);
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    database: 'connected'
-  });
+app.get("/api/health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({
+      status: "healthy",
+      database: "connected",
+      minio: "connected",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "unhealthy",
+      error: error.message,
+    });
+  }
 });
 
-// NOW we can safely import routes, because pool is already exported
-const datasetRoutes = require('./routes/datasets');
+// ============================================================================
+// ERROR HANDLING
+// ============================================================================
 
-// Mount routes
-app.use('/api/datasets', datasetRoutes);
-
-// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error("Error:", err);
   res.status(err.status || 500).json({
-    error: {
-      message: err.message || 'Internal server error',
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    }
+    error: err.message || "Internal server error",
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 });
 
-// Start server
+// ============================================================================
+// START SERVER
+// ============================================================================
+
 app.listen(PORT, () => {
   console.log(`🚀 CIA Web API server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🌐 CORS enabled for: ${process.env.ALLOWED_ORIGINS}`);
+  console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(
+    `   Database: ${process.env.DB_HOST || "localhost"}:${
+      process.env.DB_PORT || 5432
+    }`
+  );
+  console.log(
+    `   MinIO: ${process.env.MINIO_ENDPOINT || "localhost"}:${
+      process.env.MINIO_PORT || 9000
+    }`
+  );
 });
+
+module.exports = app;

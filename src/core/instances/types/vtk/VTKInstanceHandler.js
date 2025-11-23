@@ -1412,6 +1412,33 @@ console.log('Tools:', tools);
   }
 
   /**
+   * Get formatted metadata string for dataset display in file tree
+   */
+  getDatasetMetadataString(dataset) {
+    if (!dataset) {
+      return "Unknown";
+    }
+    const parts = [];
+    // Add point count if available
+    if (dataset.pointCount !== undefined && dataset.pointCount !== null) {
+      parts.push(`${dataset.pointCount.toLocaleString()} points`);
+    }
+
+    // Add file type info
+    if (dataset.fileType) {
+      const typeConfig = this.getSupportedFileTypes().find(
+        (t) => t.extension.toLowerCase() === dataset.fileType.toLowerCase()
+      );
+      if (typeConfig) {
+        parts.push(typeConfig.displayName);
+      } else {
+        parts.push(dataset.fileType.toUpperCase());
+      }
+    }
+    return parts.length > 0 ? parts.join(" • ") : "VTK Data";
+  }
+
+  /**
    * Get header info for display
    */
   getHeaderInfo(instanceData) {

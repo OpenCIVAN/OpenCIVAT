@@ -1,52 +1,27 @@
 // server/src/routes/projects.js
-// Projects API - War rooms / workspaces management
-//
-// Endpoints:
-//   GET    /api/projects              - List user's projects
-//   GET    /api/projects/:id          - Get project details
-//   POST   /api/projects              - Create new project
-//   PATCH  /api/projects/:id          - Update project
-//   DELETE /api/projects/:id          - Archive project
-//   GET    /api/projects/:id/files    - List files in project
-//   POST   /api/projects/:id/files    - Upload file to project
-//   POST   /api/projects/:id/files/:fileId/access - Add existing file to project
+// Project and file management endpoints
 
 const express = require("express");
 const router = express.Router();
-const { pool } = require("../db");
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs").promises;
 const crypto = require("crypto");
-const { v4: uuidv4 } = require("uuid");
+const { Readable } = require("stream");
 
-// File upload configuration
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
+// Configure multer for file uploads (memory storage)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500 MB max file size
+  },
 });
 
 // ============================================================================
-// MIDDLEWARE: Extract user from request (placeholder for auth)
+// UTILITY FUNCTIONS
 // ============================================================================
 
-// TODO: Replace with real auth middleware
-const extractUser = (req, res, next) => {
-  // For development, use header or default
-  req.userId = req.headers["x-user-id"] || "anonymous";
-  req.userEmail = req.headers["x-user-email"] || "anonymous@local";
-  req.organizationId =
-    req.headers["x-organization-id"] || "00000000-0000-0000-0000-000000000002";
-  next();
-};
-
-router.use(extractUser);
-
-// ============================================================================
-// HELPER: Audit logging
-// ============================================================================
-
+/**
+ * Log an audit event
+ */
 async function logAudit(
   client,
   {
@@ -61,74 +36,62 @@ async function logAudit(
     req,
   }
 ) {
-  try {
-    await client.query(
-      `
-            INSERT INTO audit_log 
-            (user_id, user_email, organization_id, project_id, action, entity_type, entity_id, details, ip_address, user_agent)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        `,
-      [
-        userId !== "anonymous" ? userId : null,
-        userEmail,
-        organizationId,
-        projectId,
-        action,
-        entityType,
-        entityId,
-        JSON.stringify(details),
-        req?.ip || null,
-        req?.headers?.["user-agent"] || null,
-      ]
-    );
-  } catch (error) {
-    // Don't fail the request if audit logging fails
-    console.error("Audit logging failed:", error);
-  }
+  await client.query(
+    `INSERT INTO audit_log (user_id, user_email, organization_id, project_id, action, entity_type, entity_id, details, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      userId,
+      userEmail,
+      organizationId,
+      projectId,
+      action,
+      entityType,
+      entityId,
+      details,
+      req.ip,
+      req.get("user-agent"),
+    ]
+  );
+}
+
+/**
+ * Get user ID from request headers (placeholder for now)
+ */
+function getUserId(req) {
+  // TODO: Replace with actual JWT token parsing
+  return req.get("x-user-id") || "00000000-0000-0000-0000-000000000001";
+}
+
+/**
+ * Get user email from request headers (placeholder for now)
+ */
+function getUserEmail(req) {
+  // TODO: Replace with actual JWT token parsing
+  return req.get("x-user-email") || "demo@cia-web.local";
 }
 
 // ============================================================================
-// GET /api/projects - List user's projects
+// PROJECT ENDPOINTS
 // ============================================================================
 
+/**
+ * GET /api/projects
+ * List all projects user has access to
+ */
 router.get("/", async (req, res, next) => {
   try {
-    const { organizationId } = req;
-    const { status = "active", include_archived = false } = req.query;
+    const userId = getUserId(req);
+    const { pool } = req.app.locals;
 
-    let query = `
-            SELECT 
-                p.id,
-                p.name,
-                p.slug,
-                p.description,
-                p.parent_project_id,
-                p.visibility,
-                p.status,
-                p.settings,
-                p.created_by,
-                p.created_at,
-                p.updated_at,
-                (SELECT COUNT(*) FROM file_project_access WHERE project_id = p.id) as file_count,
-                (SELECT COUNT(*) FROM project_members WHERE project_id = p.id) as member_count
-            FROM projects p
-            WHERE p.organization_id = $1
-        `;
-
-    const params = [organizationId];
-
-    if (!include_archived) {
-      query += ` AND p.status != 'archived'`;
-    }
-
-    if (status && status !== "all") {
-      query += ` AND p.status = $${params.length + 1}`;
-      params.push(status);
-    }
-
-    query += ` ORDER BY p.updated_at DESC`;
-
-    const result = await pool.query(query, params);
+    const result = await pool.query(
+      `SELECT p.*, o.name as organization_name
+             FROM projects p
+             JOIN organizations o ON p.organization_id = o.id
+             LEFT JOIN project_members pm ON p.id = pm.project_id
+             WHERE p.visibility = 'public' OR pm.user_id = $1
+             ORDER BY p.updated_at DESC`,
+      [userId]
+    );
 
     res.json({
       projects: result.rows,
@@ -139,271 +102,69 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// ============================================================================
-// GET /api/projects/:id - Get project details
-// ============================================================================
-
+/**
+ * GET /api/projects/:id
+ * Get project details
+ */
 router.get("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { organizationId } = req;
+    const userId = getUserId(req);
+    const { pool } = req.app.locals;
 
     const result = await pool.query(
-      `
-            SELECT 
-                p.*,
-                (SELECT COUNT(*) FROM file_project_access WHERE project_id = p.id) as file_count,
-                (SELECT COUNT(*) FROM project_members WHERE project_id = p.id) as member_count,
-                parent.name as parent_project_name
-            FROM projects p
-            LEFT JOIN projects parent ON p.parent_project_id = parent.id
-            WHERE p.id = $1 AND p.organization_id = $2
-        `,
-      [id, organizationId]
+      `SELECT p.*, o.name as organization_name
+             FROM projects p
+             JOIN organizations o ON p.organization_id = o.id
+             LEFT JOIN project_members pm ON p.id = pm.project_id
+             WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)`,
+      [id, userId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    res.json({ project: result.rows[0] });
+    res.json(result.rows[0]);
   } catch (error) {
     next(error);
   }
 });
 
 // ============================================================================
-// POST /api/projects - Create new project
+// FILE ENDPOINTS
 // ============================================================================
 
-router.post("/", async (req, res, next) => {
-  const client = await pool.connect();
-
-  try {
-    const { userId, userEmail, organizationId } = req;
-    const {
-      name,
-      description,
-      visibility = "private",
-      parent_project_id,
-      settings = {},
-    } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: "Project name is required" });
-    }
-
-    // Generate URL-friendly slug
-    const baseSlug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-
-    // Check for slug uniqueness, append number if needed
-    let slug = baseSlug;
-    let slugCounter = 1;
-    while (true) {
-      const existing = await client.query(
-        "SELECT id FROM projects WHERE organization_id = $1 AND slug = $2",
-        [organizationId, slug]
-      );
-      if (existing.rows.length === 0) break;
-      slug = `${baseSlug}-${slugCounter++}`;
-    }
-
-    await client.query("BEGIN");
-
-    // Create project
-    const projectId = uuidv4();
-    const result = await client.query(
-      `
-            INSERT INTO projects 
-            (id, organization_id, name, slug, description, visibility, parent_project_id, settings, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING *
-        `,
-      [
-        projectId,
-        organizationId,
-        name,
-        slug,
-        description,
-        visibility,
-        parent_project_id,
-        JSON.stringify(settings),
-        userId !== "anonymous" ? userId : null,
-      ]
-    );
-
-    // Add creator as owner
-    if (userId !== "anonymous") {
-      await client.query(
-        `
-                INSERT INTO project_members (project_id, user_id, role, added_by)
-                VALUES ($1, $2, 'owner', $2)
-            `,
-        [projectId, userId]
-      );
-    }
-
-    // If this is a branch, inherit files from parent
-    if (parent_project_id) {
-      await client.query(
-        `
-                INSERT INTO file_project_access (file_id, project_id, access_level, visibility, added_by)
-                SELECT file_id, $1, access_level, visibility, $2
-                FROM file_project_access
-                WHERE project_id = $3
-            `,
-        [projectId, userId !== "anonymous" ? userId : null, parent_project_id]
-      );
-    }
-
-    // Audit log
-    await logAudit(client, {
-      userId,
-      userEmail,
-      organizationId,
-      projectId,
-      action: "project.created",
-      entityType: "project",
-      entityId: projectId,
-      details: { name, slug, visibility, parent_project_id },
-      req,
-    });
-
-    await client.query("COMMIT");
-
-    res.status(201).json({ project: result.rows[0] });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    next(error);
-  } finally {
-    client.release();
-  }
-});
-
-// ============================================================================
-// PATCH /api/projects/:id - Update project
-// ============================================================================
-
-router.patch("/:id", async (req, res, next) => {
-  const client = await pool.connect();
-
-  try {
-    const { id } = req.params;
-    const { userId, userEmail, organizationId } = req;
-    const { name, description, visibility, status, settings } = req.body;
-
-    await client.query("BEGIN");
-
-    // Build dynamic update query
-    const updates = [];
-    const values = [];
-    let paramCount = 1;
-
-    if (name !== undefined) {
-      updates.push(`name = $${paramCount++}`);
-      values.push(name);
-    }
-    if (description !== undefined) {
-      updates.push(`description = $${paramCount++}`);
-      values.push(description);
-    }
-    if (visibility !== undefined) {
-      updates.push(`visibility = $${paramCount++}`);
-      values.push(visibility);
-    }
-    if (status !== undefined) {
-      updates.push(`status = $${paramCount++}`);
-      values.push(status);
-      if (status === "archived") {
-        updates.push(`archived_at = CURRENT_TIMESTAMP`);
-      }
-    }
-    if (settings !== undefined) {
-      updates.push(`settings = $${paramCount++}`);
-      values.push(JSON.stringify(settings));
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: "No updates provided" });
-    }
-
-    values.push(id, organizationId);
-
-    const result = await client.query(
-      `
-            UPDATE projects 
-            SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $${paramCount++} AND organization_id = $${paramCount}
-            RETURNING *
-        `,
-      values
-    );
-
-    if (result.rows.length === 0) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Project not found" });
-    }
-
-    // Audit log
-    await logAudit(client, {
-      userId,
-      userEmail,
-      organizationId,
-      projectId: id,
-      action: "project.updated",
-      entityType: "project",
-      entityId: id,
-      details: { name, description, visibility, status },
-      req,
-    });
-
-    await client.query("COMMIT");
-
-    res.json({ project: result.rows[0] });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    next(error);
-  } finally {
-    client.release();
-  }
-});
-
-// ============================================================================
-// GET /api/projects/:id/files - List files accessible in project
-// ============================================================================
-
+/**
+ * GET /api/projects/:id/files
+ * List files in a project
+ */
 router.get("/:id/files", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { userId, organizationId } = req;
+    const userId = getUserId(req);
+    const { pool } = req.app.locals;
 
-    // For now, return all files in project (will add permission filtering)
+    // Verify user has access to project
+    const projectCheck = await pool.query(
+      `SELECT 1 FROM projects p
+             LEFT JOIN project_members pm ON p.id = pm.project_id
+             WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)`,
+      [id, userId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Get files for this project
     const result = await pool.query(
-      `
-            SELECT 
-                d.id,
-                d.filename,
-                d.file_size,
-                d.file_type,
-                d.mime_type,
-                d.storage_key,
-                d.hash,
-                d.metadata,
-                d.uploaded_by,
-                d.uploaded_at,
-                fpa.access_level,
-                fpa.visibility,
-                fpa.added_at as added_to_project_at,
-                (d.uploaded_by = $3) as is_own_upload
-            FROM datasets d
-            JOIN file_project_access fpa ON d.id = fpa.file_id
-            WHERE fpa.project_id = $1
-            ORDER BY d.uploaded_at DESC
-        `,
-      [id, organizationId, userId]
+      `SELECT d.*, fpa.access_level, fpa.added_at
+             FROM datasets d
+             JOIN file_project_access fpa ON d.id = fpa.file_id
+             WHERE fpa.project_id = $1 AND d.status = 'active'
+             ORDER BY fpa.added_at DESC`,
+      [id]
     );
 
     res.json({
@@ -415,155 +176,135 @@ router.get("/:id/files", async (req, res, next) => {
   }
 });
 
-// ============================================================================
-// POST /api/projects/:id/files - Upload new file to project
-// ============================================================================
-
+/**
+ * POST /api/projects/:id/files
+ * Upload a new file to a project
+ */
 router.post("/:id/files", upload.single("file"), async (req, res, next) => {
-  const client = await pool.connect();
+  const client = await req.app.locals.pool.connect();
 
   try {
     const { id: projectId } = req.params;
-    const { userId, userEmail, organizationId } = req;
-    const { file } = req;
-    const { visibility = "all_members", access_level = "read" } = req.body;
+    const userId = getUserId(req);
+    const userEmail = getUserEmail(req);
+    const file = req.file;
 
     if (!file) {
-      return res.status(400).json({ error: "No file uploaded" });
+      return res.status(400).json({ error: "No file provided" });
     }
 
     await client.query("BEGIN");
 
-    // Verify project exists
+    // Verify user has edit access to project
     const projectCheck = await client.query(
-      "SELECT id FROM projects WHERE id = $1 AND organization_id = $2",
-      [projectId, organizationId]
+      `SELECT p.organization_id FROM projects p
+             JOIN project_members pm ON p.id = pm.project_id
+             WHERE p.id = $1 AND pm.user_id = $2 AND pm.role IN ('owner', 'admin', 'editor')`,
+      [projectId, userId]
     );
+
     if (projectCheck.rows.length === 0) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Project not found" });
+      return res.status(403).json({ error: "Access denied" });
     }
+
+    const organizationId = projectCheck.rows[0].organization_id;
 
     // Calculate file hash for deduplication
     const hash = crypto.createHash("sha256").update(file.buffer).digest("hex");
 
-    // Check for duplicate
+    // Check if file already exists for this organization
     const existingFile = await client.query(
-      "SELECT id, filename FROM datasets WHERE hash = $1 AND organization_id = $2",
+      "SELECT id FROM datasets WHERE hash = $1 AND organization_id = $2",
       [hash, organizationId]
     );
 
     let fileId;
-    let wasDeduped = false;
 
     if (existingFile.rows.length > 0) {
-      // File already exists, just add access
+      // File exists, reuse it
       fileId = existingFile.rows[0].id;
-      wasDeduped = true;
-      console.log(
-        `📦 Deduplication: ${file.originalname} matches existing file ${existingFile.rows[0].filename}`
-      );
+      console.log(`♻️  Reusing existing file: ${fileId}`);
     } else {
-      // New file - save to disk and database
-      fileId = uuidv4();
-      const storageKey = `${fileId}${path.extname(file.originalname)}`;
-      const filePath = path.join(UPLOAD_DIR, storageKey);
+      // Upload to MinIO
+      const { minioClient, bucketName } = req.app.locals;
+      const storageKey = `${organizationId}/${crypto.randomUUID()}/${
+        file.originalname
+      }`;
 
-      // Ensure upload directory exists
-      await fs.mkdir(UPLOAD_DIR, { recursive: true });
-      await fs.writeFile(filePath, file.buffer);
+      await minioClient.putObject(
+        bucketName,
+        storageKey,
+        file.buffer,
+        file.size,
+        {
+          "Content-Type": file.mimetype,
+          "Original-Filename": file.originalname,
+        }
+      );
 
-      // Determine file type
-      const ext = path.extname(file.originalname).toLowerCase();
-      const fileType =
-        ext === ".vtp"
-          ? "vtp"
-          : ext === ".vtk"
-          ? "vtk"
-          : ext === ".csv"
-          ? "csv"
-          : "unknown";
+      console.log(`📤 Uploaded to MinIO: ${storageKey}`);
 
-      // Insert file record
-      await client.query(
-        `
-                INSERT INTO datasets 
-                (id, organization_id, filename, file_size, file_type, mime_type, storage_key, hash, uploaded_by, metadata)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            `,
+      // Extract file type from extension
+      const fileType = file.originalname.split(".").pop().toLowerCase();
+
+      // Insert into database
+      const insertResult = await client.query(
+        `INSERT INTO datasets (organization_id, filename, file_size, file_type, hash, storage_key, uploaded_by)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                 RETURNING id`,
         [
-          fileId,
           organizationId,
           file.originalname,
           file.size,
           fileType,
-          file.mimetype,
-          storageKey,
           hash,
+          storageKey,
           userId,
-          JSON.stringify({}),
         ]
       );
+
+      fileId = insertResult.rows[0].id;
+
+      await logAudit(client, {
+        userId,
+        userEmail,
+        organizationId,
+        projectId,
+        action: "file.uploaded",
+        entityType: "file",
+        entityId: fileId,
+        details: { filename: file.originalname, size: file.size, hash },
+        req,
+      });
     }
 
-    // Add file access to project (skip if already exists)
+    // Add file to project (if not already added)
     await client.query(
-      `
-            INSERT INTO file_project_access 
-            (file_id, project_id, access_level, visibility, added_by)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (file_id, project_id) DO NOTHING
-        `,
-      [
-        fileId,
-        projectId,
-        access_level,
-        visibility,
-        userId !== "anonymous" ? userId : null,
-      ]
+      `INSERT INTO file_project_access (file_id, project_id, access_level, visibility, added_by)
+             VALUES ($1, $2, 'read', 'all_members', $3)
+             ON CONFLICT (file_id, project_id) DO NOTHING`,
+      [fileId, projectId, userId]
     );
 
-    // Update organization storage usage (only for new files)
-    if (!wasDeduped) {
-      await client.query(
-        `
-                UPDATE organizations 
-                SET storage_used_bytes = storage_used_bytes + $1
-                WHERE id = $2
-            `,
-        [file.size, organizationId]
-      );
-    }
-
-    // Audit log
     await logAudit(client, {
       userId,
       userEmail,
       organizationId,
       projectId,
-      action: "file.uploaded",
+      action: "file.added_to_project",
       entityType: "file",
       entityId: fileId,
-      details: {
-        filename: file.originalname,
-        size: file.size,
-        hash,
-        deduplicated: wasDeduped,
-      },
+      details: { filename: file.originalname },
       req,
     });
 
     await client.query("COMMIT");
 
-    // Fetch the complete file record to return
-    const fileResult = await pool.query(
-      "SELECT * FROM datasets WHERE id = $1",
-      [fileId]
-    );
-
-    res.status(201).json({
-      file: fileResult.rows[0],
-      deduplicated: wasDeduped,
+    res.json({
+      success: true,
+      fileId,
+      message: "File uploaded successfully",
     });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -573,84 +314,46 @@ router.post("/:id/files", upload.single("file"), async (req, res, next) => {
   }
 });
 
-// ============================================================================
-// POST /api/projects/:id/files/:fileId/access - Add existing file to project
-// ============================================================================
-
-router.post("/:id/files/:fileId/access", async (req, res, next) => {
-  const client = await pool.connect();
-
+/**
+ * GET /api/files/:id/download
+ * Download a file
+ */
+router.get("/files/:id/download", async (req, res, next) => {
   try {
-    const { id: projectId, fileId } = req.params;
-    const { userId, userEmail, organizationId } = req;
-    const { access_level = "read", visibility = "all_members" } = req.body;
+    const { id } = req.params;
+    const { pool, minioClient, bucketName } = req.app.locals;
 
-    await client.query("BEGIN");
+    // Get file metadata
+    const result = await pool.query("SELECT * FROM datasets WHERE id = $1", [
+      id,
+    ]);
 
-    // Verify file exists and belongs to organization
-    const fileCheck = await client.query(
-      "SELECT id, filename FROM datasets WHERE id = $1 AND organization_id = $2",
-      [fileId, organizationId]
-    );
-    if (fileCheck.rows.length === 0) {
-      await client.query("ROLLBACK");
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: "File not found" });
     }
 
-    // Verify project exists
-    const projectCheck = await client.query(
-      "SELECT id FROM projects WHERE id = $1 AND organization_id = $2",
-      [projectId, organizationId]
-    );
-    if (projectCheck.rows.length === 0) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Project not found" });
+    const file = result.rows[0];
+
+    // If it's a public sample file, serve from public directory
+    if (file.public_path) {
+      return res.sendFile(file.public_path, { root: process.cwd() });
     }
 
-    // Add access
-    const result = await client.query(
-      `
-            INSERT INTO file_project_access 
-            (file_id, project_id, access_level, visibility, added_by)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (file_id, project_id) 
-            DO UPDATE SET access_level = $3, visibility = $4
-            RETURNING *
-        `,
-      [
-        fileId,
-        projectId,
-        access_level,
-        visibility,
-        userId !== "anonymous" ? userId : null,
-      ]
+    // Otherwise, fetch from MinIO
+    const dataStream = await minioClient.getObject(
+      bucketName,
+      file.storage_key
     );
 
-    // Audit log
-    await logAudit(client, {
-      userId,
-      userEmail,
-      organizationId,
-      projectId,
-      action: "file.shared_to_project",
-      entityType: "file",
-      entityId: fileId,
-      details: {
-        filename: fileCheck.rows[0].filename,
-        access_level,
-        visibility,
-      },
-      req,
-    });
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${file.filename}"`
+    );
 
-    await client.query("COMMIT");
-
-    res.json({ access: result.rows[0] });
+    dataStream.pipe(res);
   } catch (error) {
-    await client.query("ROLLBACK");
     next(error);
-  } finally {
-    client.release();
   }
 });
 

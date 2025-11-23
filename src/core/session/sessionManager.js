@@ -1,6 +1,7 @@
 // src/core/session/sessionManager.js
 // Centralized management of session identity and routing
 // This is the single source of truth for "which room am I in?"
+import { config } from "@Core/config/clientConfig.js";
 
 class SessionManager {
   constructor() {
@@ -46,8 +47,9 @@ class SessionManager {
     }
 
     // 4. Default room (for development/testing)
-    this.roomId = "default-analytics-room";
-    this.roomName = "Default Analytics Room";
+    // Use demo project ID from config (server-compatible UUID)
+    this.roomId = config.defaultSessionId;
+    this.roomName = "Demo Project";
     console.log(`🏠 Session initialized with default room: ${this.roomId}`);
 
     return this.roomId;
@@ -110,6 +112,31 @@ class SessionManager {
     window.location.reload();
   }
 
+  /*
+   * Get current user ID
+   * Returns demo user ID if not set (for development)
+   */
+  getUserId() {
+    return this.userId || "00000000-0000-0000-0000-000000000001";
+  }
+
+  /**
+   * Get current user email
+   * Returns demo email if not set (for development)
+   */
+  getUserEmail() {
+    return this.userEmail || "demo@cia-web.local";
+  }
+
+  /**
+   * Set user info (called after authentication)
+   */
+  setUserInfo(userId, email) {
+    this.userId = userId;
+    this.userEmail = email;
+    console.log(`👤 User info set: ${email} (${userId})`);
+  }
+
   /**
    * Clear session (useful for logout or switching contexts)
    */
@@ -117,6 +144,7 @@ class SessionManager {
     this.roomId = null;
     this.roomName = null;
     this.userId = null;
+    this.userEmail = null;
     localStorage.removeItem("cia_last_room");
   }
 

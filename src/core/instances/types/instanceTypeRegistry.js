@@ -78,6 +78,43 @@ class InstanceTypeRegistry {
     return handler;
   }
 
+    /**
+   * Find the best handler for a specific file type
+   *
+   * Queries all registered handlers to find the one that can handle this file type.
+   * If multiple handlers support the same type, returns the one with highest priority.
+   *
+   * @param {string} fileType - File extension (e.g., 'vtp', 'csv', 'json')
+   * @returns {InstanceTypeHandler|null} Handler that can process this file type, or null
+   *
+   * @example
+   * const handler = registry.getHandlerForFileType('vtp');
+   * // Returns: vtkHandler (or null if no handler supports .vtp)
+   */
+  getHandlerForFileType(fileType) {
+    if (!fileType) return null;
+    const normalizedType = fileType.toLowerCase();
+    let bestHandler = null;
+    let bestPriority = -1;
+
+    for (const handler of this.handlers.values()) {
+      const supportedTypes = handler.getSupportedFileTypes();
+      const typeConfig = supportedTypes.find(
+        (t) => t.extension.toLowerCase() === normalizedType
+      );
+
+      if (typeConfig && typeConfig.capabilities.canRender) {
+        const priority = typeConfig.priority || 0;
+        if (priority > bestPriority) {
+          bestHandler = handler;
+          bestPriority = priority;
+        }
+      }
+    }
+
+    return bestHandler;
+  }
+
   /**
    * Check if a type is registered
    *

@@ -8,12 +8,11 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
-# Copy application code
-COPY . .
+# Copy server code
+COPY server ./server
 
-# Create uploads directory
-RUN mkdir -p /app/uploads
-
+# Expose API port
 EXPOSE 3001
 
-CMD ["npm", "start"]
+# Start the API server
+CMD ["node", "server/src/index.js"]
