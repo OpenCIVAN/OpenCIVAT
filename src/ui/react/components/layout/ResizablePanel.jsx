@@ -1,20 +1,16 @@
 // src/ui/react/components/layout/ResizablePanel.jsx
-// Generic resizable panel wrapper component
-// Handles collapse/expand, resize, and activity bar display
+// Updated: Passes isCollapsed and onToggle to children
+// Children are responsible for rendering both collapsed and expanded states
 
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useResizeHandler, PANEL_CONSTRAINTS } from '@UI/react/components/layout/ThreeEdgeLayout.logic';
 import '@UI/react/components/layout/ThreeEdgeLayout.scss';
 
 /**
- * ResizablePanel - Generic panel wrapper with resize and collapse functionality
+ * ResizablePanel - Generic panel wrapper with resize functionality
  * 
- * Features:
- * - Collapses to 48px activity bar
- * - Drag-to-resize from edge
- * - Smooth animations
- * - Visual feedback on hover/drag
+ * Key Change: Children receive isCollapsed and onToggle props
+ * and are responsible for rendering their own collapsed state.
  * 
  * @param {Object} props
  * @param {string} props.side - 'left' or 'right'
@@ -22,7 +18,7 @@ import '@UI/react/components/layout/ThreeEdgeLayout.scss';
  * @param {Function} props.onToggle - Toggle callback
  * @param {number} props.width - Current panel width
  * @param {Function} props.onWidthChange - Width change callback
- * @param {React.ReactNode} props.children - Panel content
+ * @param {React.ReactNode} props.children - Panel content (receives isCollapsed, onToggle)
  */
 export function ResizablePanel({
     side,
@@ -41,25 +37,19 @@ export function ResizablePanel({
 
     return (
         <div
-            className={`resizable-panel resizable-panel--${side}`}
+            className={`resizable-panel resizable-panel--${side} ${!isOpen ? 'resizable-panel--collapsed' : ''}`}
             style={{
                 width: `${currentWidth}px`,
                 flexShrink: 0
             }}
         >
-            {/* Panel Content */}
+            {/* Panel Content - Clone children with isCollapsed and onToggle props */}
             <div className="resizable-panel__content">
-                {isOpen ? (
-                    <>
-                        {/* Expanded: Show full content */}
-                        {children}
-                    </>
-                ) : (
-                    <>
-                        {/* Collapsed: Show activity bar */}
-                        <ActivityBar side={side} onExpand={onToggle} />
-                    </>
-                )}
+                {React.cloneElement(children, {
+                    isCollapsed: !isOpen,
+                    onToggle: onToggle,
+                    side: side
+                })}
             </div>
 
             {/* Resize Handle (only when expanded) */}
@@ -76,11 +66,6 @@ export function ResizablePanel({
 
 /**
  * PanelDivider - Draggable resize handle
- * 
- * @param {Object} props
- * @param {string} props.side - 'left' or 'right' (position of handle)
- * @param {boolean} props.isResizing - Currently resizing state
- * @param {Function} props.onMouseDown - Mouse down handler
  */
 function PanelDivider({ side, isResizing, onMouseDown }) {
     return (
@@ -88,67 +73,7 @@ function PanelDivider({ side, isResizing, onMouseDown }) {
             className={`panel-divider panel-divider--${side} ${isResizing ? 'panel-divider--active' : ''}`}
             onMouseDown={onMouseDown}
         >
-            {/* Visual indicator (optional) */}
             <div className="panel-divider__handle" />
-        </div>
-    );
-}
-
-/**
- * ActivityBar - Collapsed panel state with expand button
- * 
- * Shows when panel is collapsed. Displays icon and expand button.
- * Child components should provide their own activity bar content
- * via a prop or context.
- * 
- * @param {Object} props
- * @param {string} props.side - 'left' or 'right'
- * @param {Function} props.onExpand - Expand callback
- */
-function ActivityBar({ side, onExpand }) {
-    const ExpandIcon = side === 'left' ? ChevronRight : ChevronLeft;
-
-    return (
-        <div className="activity-bar">
-            <div className="activity-bar__content">
-                {/* Content provided by child components via context/props */}
-                {/* For now, just show expand button */}
-            </div>
-
-            <button
-                className="activity-bar__expand"
-                onClick={onExpand}
-                title={`Expand ${side} panel`}
-            >
-                <ExpandIcon size={20} />
-            </button>
-        </div>
-    );
-}
-
-/**
- * Helper component for panel headers with collapse button
- * Child components can use this for consistent header styling
- */
-export function PanelHeader({ title, side, onCollapse, children }) {
-    const CollapseIcon = side === 'left' ? ChevronLeft : ChevronRight;
-
-    return (
-        <div className="panel-header">
-            <div className="panel-header__content">
-                {title && <h3 className="panel-header__title">{title}</h3>}
-                {children}
-            </div>
-
-            {onCollapse && (
-                <button
-                    className="panel-header__collapse"
-                    onClick={onCollapse}
-                    title={`Collapse ${side} panel`}
-                >
-                    <CollapseIcon size={16} />
-                </button>
-            )}
         </div>
     );
 }

@@ -527,3 +527,139 @@
 .spinner {
   animation: spin 1s linear infinite;
 }
+
+// =============================================================================
+// FILES ACTIVITY BAR - Collapsed State (48px)
+// =============================================================================
+
+.files-activity-bar {
+  width: 48px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-md 0;
+  background: $color-bg-secondary;
+}
+
+.files-activity-bar__icons {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding-top: $spacing-md;
+}
+
+.files-activity-bar__icon {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-bg-tertiary;
+    border-color: $color-border-medium;
+    color: $color-text-secondary;
+  }
+
+  &:active {
+    background: rgba($color-accent-primary, 0.1);
+    border-color: $color-accent-primary;
+    color: $color-accent-primary;
+  }
+}
+
+.files-activity-bar__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: $color-accent-primary;
+  color: white;
+  font-size: 10px;
+  font-weight: $font-weight-bold;
+  padding: 2px 5px;
+  border-radius: $radius-full;
+  min-width: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px $color-bg-secondary;
+
+  &--blue {
+    background: $color-accent-blue;
+  }
+
+  &--muted {
+    background: $color-text-tertiary;
+  }
+}
+
+.files-activity-bar__expand {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+  margin-top: auto;
+
+  &:hover {
+    background: $color-bg-tertiary;
+    border-color: $color-border-medium;
+    color: $color-text-primary;
+  }
+
+  &:active {
+    background: rgba($color-accent-primary, 0.15);
+    border-color: $color-accent-primary;
+    color: $color-accent-primary;
+  }
+}
+
+// =============================================================================
+// SUB-TABS (Files view - Sample Files / Upload VTP)
+// =============================================================================
+
+.files-panel__sub-tabs {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.files-panel__sub-tab {
+  flex: 1;
+  padding: $spacing-sm $spacing-md;
+  @include glass-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-tertiary;
+
+  &.active {
+    background: $color-bg-tertiary;
+    color: $color-text-primary;
+    border-color: $color-accent-primary;
+  }
+
+  &:hover:not(.active):not(:disabled) {
+    @include glass-hover;
+    color: $color-text-secondary;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
