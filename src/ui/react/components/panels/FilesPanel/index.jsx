@@ -767,6 +767,11 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
         e.stopPropagation();
         if (window.confirm(`Clear all ${datasetViews.length} view(s) for "${dataset.name}"?`)) {
             datasetViews.forEach(view => {
+                window.dispatchEvent(new CustomEvent('cia:delete-view-instance', {
+                    detail: { viewConfigId: view.id }
+                }));
+
+                // Delete the view configuration
                 viewConfigurationManager.deleteView(view.id);
             });
         }
@@ -774,11 +779,22 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
 
     const handleDeleteView = (e, view) => {
         e.stopPropagation();
+
+        // Notify workspace to close any instances using this view
+        window.dispatchEvent(new CustomEvent('cia:delete-view-instance', {
+            detail: { viewConfigId: view.id }
+        }));
+
+        // Delete the view configuration
         viewConfigurationManager.deleteView(view.id);
     };
 
     const handleCreateNewView = (e) => {
         e.stopPropagation();
+        // Expand the tree to show the new view
+        if (!expanded) {
+            onToggle();
+        }
         // Request a new instance for this dataset
         window.dispatchEvent(new CustomEvent('cia:request-instance', {
             detail: { datasetId: dataset.id, spawnNew: true }
@@ -801,10 +817,31 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
 
     const handleViewClick = (e, view) => {
         e.stopPropagation();
-        // Open this specific view
-        window.dispatchEvent(new CustomEvent('cia:request-instance', {
-            detail: { datasetId: dataset.id, viewConfigId: view.id }
-        }));
+        if (e.shiftKey) {
+            // Shift+click: duplicate this view instance
+            if (window.confirm(`Duplicate instance of "${view.name || 'Untitled View'}"?`)) {
+                window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                    detail: {
+                        datasetId: dataset.id,
+                        spawnNew: true,
+                        duplicateViewId: view.id
+                    }
+                }));
+            }
+        } else {
+            // Normal click: open/highlight existing instance
+            window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                detail: { datasetId: dataset.id, viewConfigId: view.id }
+            }));
+        }
+    };
+
+    const handleParentClick = (e) => {
+        e.stopPropagation();
+        // Only create a new view if no views exist yet
+        if (datasetViews.length === 0) {
+            handleCreateNewView(e);
+        }
     };
 
     return (
@@ -819,7 +856,11 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
                     </button>
                 )}
 
-                <div className={`tree-item tree-item--dataset tree-item--no-click ${!hasViews ? 'tree-item--no-chevron' : ''}`}>
+                <div
+                    className={`tree-item tree-item--dataset ${!hasViews ? 'tree-item--no-chevron' : ''} ${hasViews ? 'tree-item--no-click' : ''}`}
+                    onClick={hasViews ? undefined : handleParentClick}
+                    title={hasViews ? undefined : 'Click to create first view'}
+                >
                     <span className="tree-item__icon">
                         <File size={14} />
                     </span>
@@ -866,15 +907,6 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
                         >
                             <BookmarkCheck size={12} className="tree-view-item__icon" />
                             <span className="tree-view-item__name">{view.name || 'Untitled View'}</span>
-                            <span className="tree-view-item__status">
-                                {view.activeInstanceCount > 0 ? (
-                                    <span className="tree-view-item__badge tree-view-item__badge--active">
-                                        {view.activeInstanceCount} active
-                                    </span>
-                                ) : (
-                                    <span className="tree-view-item__badge tree-view-item__badge--inactive">inactive</span>
-                                )}
-                            </span>
                             <div className="tree-view-item__actions">
                                 <button
                                     className="tree-view-item__action-btn"

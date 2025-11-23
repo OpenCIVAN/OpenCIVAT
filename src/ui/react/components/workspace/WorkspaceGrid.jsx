@@ -11,12 +11,16 @@ export function WorkspaceGrid() {
     const [instances, setInstances] = useState([]);
     const gridRef = useRef(null);
 
+    // Track highlighted instance for visual feedback
+    const [highlightedInstanceKey, setHighlightedInstanceKey] = useState(null);
+
     // Listen for dataset click events
     useEffect(() => {
         const handleInstanceRequest = async (event) => {
             const datasetId = event.detail?.datasetId;
-
+            const viewConfigId = event.detail?.viewConfigId;
             const spawnNew = event.detail?.spawnNew;
+            const duplicateViewId = event.detail?.duplicateViewId;
 
             if (!datasetId || typeof datasetId !== 'string') {
                 console.error('❌ Invalid dataset ID:', datasetId);
@@ -24,31 +28,63 @@ export function WorkspaceGrid() {
             }
 
             try {
-                console.log('📬 Request for dataset:', datasetId, spawnNew ? '(new window)' : '(reuse/replace)');
-
                 const dataset = datasetManager.getDataset(datasetId);
                 if (!dataset) {
                     console.error('❌ Dataset not found:', datasetId);
                     return;
                 }
 
+                // Check if we should reuse an existing instance
+
+                if (viewConfigId && !spawnNew) {
+                    // Find existing instance with this view
+                    const existingInstance = instances.find(inst => inst.viewConfigId === viewConfigId);
+                    if (existingInstance) {
+                        console.log(`✨ Highlighting existing instance for view ${viewConfigId}`);
+                        // Highlight the instance
+                        setHighlightedInstanceKey(existingInstance.key);
+
+                        // Scroll to it if needed
+                        setTimeout(() => {
+                            const element = document.querySelector(`[data-instance-key="${existingInstance.key}"]`);
+                            if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
+                        }, 100);
+
+                        // Remove highlight after animation
+                        setTimeout(() => setHighlightedInstanceKey(null), 2000);
+
+                        return; // Don't create a new instance
+                    }
+                }
+
                 // Check if there's already an active view for this dataset
                 let viewConfig = null;
-                const existingViews = viewConfigurationManager.getViewsForDataset(datasetId);
-                const activeExistingView = existingViews.find(v => v.isActive() && v.status !== 'archived');
-
-                if (!spawnNew && activeExistingView) {
-                    // Reuse existing active view
-                    viewConfig = activeExistingView;
-                    console.log(`📋 Reusing existing view ${viewConfig.id} for dataset ${datasetId}`);
+                if (viewConfigId) {
+                    // Use existing view
+                    viewConfig = viewConfigurationManager.getView(viewConfigId);
+                    if (!viewConfig) {
+                        console.error(`❌ View ${viewConfigId} not found`);
+                        return;
+                    }
+                    console.log(`📋 Using existing view ${viewConfigId}`);
+                } else if (duplicateViewId) {
+                    // Duplicate an existing view
+                    const sourceView = viewConfigurationManager.getView(duplicateViewId);
+                    if (!sourceView) {
+                        console.error(`❌ Source view ${duplicateViewId} not found for duplication`);
+                        return;
+                    }
+                    viewConfig = viewConfigurationManager.duplicateView(duplicateViewId);
+                    console.log(`📋 Duplicated view ${duplicateViewId} to ${viewConfig.id}`);
                 } else {
-                    // Create new view configuration
+                    // Create new view
                     viewConfig = viewConfigurationManager.createView(datasetId, {
                         name: `View of ${dataset.filename}`,
                     });
                     console.log(`📋 Created new view ${viewConfig.id} for dataset ${datasetId}`);
                 }
-
                 // Add instance with the view (type will be determined when data loads)
                 setInstances((prev) => [...prev, {
                     key: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -61,9 +97,36 @@ export function WorkspaceGrid() {
             }
         };
 
+
+
         window.addEventListener('cia:request-instance', handleInstanceRequest);
+
         return () => window.removeEventListener('cia:request-instance', handleInstanceRequest);
-    }, []);
+
+    }, [instances]);
+
+    // Listen for view deletion events to close corresponding instances
+    useEffect(() => {
+        const handleViewDeletion = (event) => {
+            const viewConfigId = event.detail?.viewConfigId;
+
+            if (!viewConfigId) {
+                console.error('❌ Invalid viewConfigId for deletion');
+                return;
+            }
+
+            // Find and remove instances with this viewConfigId
+            const instancesToRemove = instances.filter(inst => inst.viewConfigId === viewConfigId);
+
+            if (instancesToRemove.length > 0) {
+                console.log(`🗑️ Closing ${instancesToRemove.length} instance(s) for deleted view ${viewConfigId}`);
+                setInstances((prev) => prev.filter((instance) => instance.viewConfigId !== viewConfigId));
+            }
+        };
+
+        window.addEventListener('cia:delete-view-instance', handleViewDeletion);
+        return () => window.removeEventListener('cia:delete-view-instance', handleViewDeletion);
+    }, [instances]);
 
     // Create empty instance button handler
     const handleCreateEmptyInstance = useCallback(() => {
@@ -82,8 +145,18 @@ export function WorkspaceGrid() {
     }, [instances.length]);
 
     // Delete instance handler
-    const handleDeleteInstance = useCallback((instanceKey) => {
+    const handleDeleteInstance = useCallback((instanceKey, viewConfigId) => {
         console.log(`🗑️ Deleting instance: ${instanceKey}`);
+
+        // Deactivate the view before removing the instance
+        if (viewConfigId) {
+            try {
+                viewConfigurationManager.deactivateView(viewConfigId);
+                console.log(`📉 View ${viewConfigId} deactivated (moved to inactive)`);
+            } catch (error) {
+                console.error(`Failed to deactivate view ${viewConfigId}:`, error);
+            }
+        }
         setInstances((prev) => prev.filter((instance) => instance.key !== instanceKey));
     }, []);
 
@@ -139,14 +212,19 @@ export function WorkspaceGrid() {
             ) : (
                 <div ref={gridRef} className={`workspace-grid__grid ${getGridLayoutClass()}`}>
                     {instances.map((instance) => (
-                        <InstanceViewport
+                        <div
                             key={instance.key}
+                            data-instance-key={instance.key}
+                            className={highlightedInstanceKey === instance.key ? 'instance-highlight' : ''}
+                        >
+                        <InstanceViewport
                             viewConfigId={instance.viewConfigId}
                             isRemote={instance.isRemote}
                             remoteInstanceId={instance.remoteInstanceId}
                             ownerUserName={instance.ownerUserName}
-                            onDelete={() => handleDeleteInstance(instance.key)}
+                            onDelete={() => handleDeleteInstance(instance.key, instance.viewConfigId)}
                         />
+                        </div>
                     ))}
                 </div>
             )}

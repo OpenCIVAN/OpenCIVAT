@@ -215,3 +215,41 @@
     grid-template-columns: 1fr;
   }
 }
+
+// ============================================================================
+// INSTANCE HIGHLIGHT ANIMATION
+// ============================================================================
+.instance-highlight {
+  animation: highlight-pulse 2s ease-in-out;
+
+  @keyframes highlight-pulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba($color-accent-primary, 0);
+    }
+    15% {
+      transform: scale(1.02);
+      box-shadow: 0 0 0 8px rgba($color-accent-primary, 0.6),
+        0 0 30px rgba($color-accent-primary, 0.4);
+    }
+    30% {
+      transform: scale(1);
+      box-shadow: 0 0 0 12px rgba($color-accent-primary, 0.4),
+        0 0 40px rgba($color-accent-primary, 0.3);
+    }
+    50% {
+      transform: scale(1.01);
+      box-shadow: 0 0 0 8px rgba($color-accent-primary, 0.5),
+        0 0 30px rgba($color-accent-primary, 0.3);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 4px rgba($color-accent-primary, 0.3),
+        0 0 20px rgba($color-accent-primary, 0.2);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba($color-accent-primary, 0);
+    }
+  }
+}
