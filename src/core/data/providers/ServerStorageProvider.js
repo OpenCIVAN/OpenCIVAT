@@ -92,17 +92,33 @@ export class ServerStorageProvider {
       formData.append("file", file);
       formData.append("uploadedBy", this._getCurrentUser());
 
-      // FIXED: apiBaseUrl already includes /api, so we don't add it again
-      const response = await fetch(`${this.apiBaseUrl}/datasets/upload`, {
-        method: "POST",
-        body: formData,
-      });
+      // Upload to correct endpoint: /api/projects/:projectId/files
+      const response = await fetch(
+        `${this.apiBaseUrl}/projects/${this.sessionId}/files`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `❌ Upload failed with status ${response.status}:`,
+          errorText
+        );
         throw new Error(`Upload failed: ${response.statusText}`);
       }
 
-      const { dataset } = await response.json();
+      const responseData = await response.json();
+      console.log("📦 Server response:", responseData);
+
+      const { file: dataset } = responseData;
+
+      if (!dataset) {
+        console.error("❌ No file object in response:", responseData);
+        throw new Error("Server response missing 'file' object");
+      }
 
       this._hashToId.set(hash, dataset.id);
       this._metadata.set(dataset.id, {
@@ -133,9 +149,9 @@ export class ServerStorageProvider {
     console.log(`📡 ServerStorageProvider: Downloading file ${cacheKey}`);
 
     try {
-      // FIXED: apiBaseUrl already includes /api
+      // Use correct download endpoint: /api/files/:id/download
       const response = await fetch(
-        `${this.apiBaseUrl}/datasets/${cacheKey}/download`
+        `${this.apiBaseUrl}/files/${cacheKey}/download`
       );
 
       if (!response.ok) {
@@ -174,10 +190,13 @@ export class ServerStorageProvider {
    */
   async hasFile(cacheKey) {
     try {
-      // FIXED: apiBaseUrl already includes /api
-      const response = await fetch(`${this.apiBaseUrl}/datasets/${cacheKey}`, {
-        method: "HEAD",
-      });
+      // Use the correct file download endpoint with HEAD to check existence
+      const response = await fetch(
+        `${this.apiBaseUrl}/files/${cacheKey}/download`,
+        {
+          method: "HEAD",
+        }
+      );
       return response.ok;
     } catch (error) {
       console.error(
@@ -210,7 +229,7 @@ export class ServerStorageProvider {
       this._metadata.delete(cacheKey);
 
       // Note: We're not implementing server deletion yet
-      // In the future, this would call DELETE /api/datasets/:id
+      // In the future, this would call DELETE /api/files/:id
       // For now, files stay on server (which is safer during development)
 
       console.log(`✅ ServerStorageProvider: File removed from local tracking`);
@@ -247,9 +266,10 @@ export class ServerStorageProvider {
     console.log("📡 ServerStorageProvider: Listing datasets from server");
 
     try {
-      // FIXED: Server route is /api/datasets/session/:sessionId, not /sessions/...
+      // Use the correct server route: /api/projects/:projectId/files
+      // sessionId is actually the projectId in our case
       const response = await fetch(
-        `${this.apiBaseUrl}/datasets/session/${this.sessionId}`,
+        `${this.apiBaseUrl}/projects/${this.sessionId}/files`,
         {
           method: "GET",
           headers: {
@@ -264,9 +284,9 @@ export class ServerStorageProvider {
         );
       }
 
-      // Server returns { datasets: [...] }
+      // Server returns { files: [...] }
       const data = await response.json();
-      const datasets = data.datasets || [];
+      const datasets = data.files || [];
 
       console.log(`   ✓ Retrieved ${datasets.length} datasets from server`);
 

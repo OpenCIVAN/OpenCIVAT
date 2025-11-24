@@ -461,7 +461,7 @@ CIA_Web/
 **Reset Database (with confirmation):**
 
 ```bash
-./reset-database.sh
+./scripts/reset-database.sh
 ```
 
 This will:
@@ -474,7 +474,7 @@ This will:
 **Quick Reset (no confirmation, for rapid development):**
 
 ```bash
-./reset-database-quick.sh
+./scripts/reset-database-quick.sh
 ```
 
 **Sample Files Included:**

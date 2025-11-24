@@ -200,7 +200,9 @@ export class DatasetManager extends EventEmitter {
           cacheKey: serverDataset.id,
           fileStatus: "on-server",
           metadata: serverDataset.metadata || {},
-          publicPath: serverDataset.public_path || `${config.apiBaseUrl}/files/${serverDataset.id}/download`,
+          publicPath:
+            serverDataset.public_path ||
+            `${config.apiBaseUrl}/files/${serverDataset.id}/download`,
         });
 
         this._datasets.set(dataset.id, dataset);
@@ -635,13 +637,20 @@ export class DatasetManager extends EventEmitter {
           // Store it back in the dataset for future use
           dataset.setFileStatus("available", rawFile);
 
-          // Also store in cache so we don't fetch again
-          try {
-            await this.storageProvider.storeFile(rawFile);
-            console.log(`✅ File fetched and cached successfully`);
-          } catch (cacheError) {
-            console.warn(`⚠️ File fetched but caching failed:`, cacheError);
-            // Continue anyway - we have the file in memory
+          // Only cache if this file doesn't already have a cacheKey from the server
+          // Files loaded from the database already have a cacheKey and don't need re-uploading
+          if (!dataset.cacheKey) {
+            try {
+              await this.storageProvider.storeFile(rawFile);
+              console.log(`✅ File fetched and cached successfully`);
+            } catch (cacheError) {
+              console.warn(`⚠️ File fetched but caching failed:`, cacheError);
+              // Continue anyway - we have the file in memory
+            }
+          } else {
+            console.log(
+              `  ℹ️ File already has server cacheKey, skipping upload`
+            );
           }
 
           // Notify that dataset was updated

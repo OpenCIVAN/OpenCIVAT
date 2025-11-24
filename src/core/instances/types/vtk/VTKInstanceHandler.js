@@ -287,9 +287,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   // The issue: _initializeVTKPipeline returns sceneObjects, but assignment is missing or incorrect
 
   async loadData(instanceData, dataset) {
-    console.log(
-      `🎨 VTK Handler: Loading data into instance ${instanceData.instanceId}`
-    );
+    const instanceId = instanceData.instanceId;
+
+    console.log(`🎨 VTK Handler: Loading data into instance ${instanceId}`);
     console.log(`  📋 Dataset: ${dataset.filename}`);
 
     // Validate file type
@@ -392,11 +392,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     }
 
     // Initialize instance tools (needed for widgets and rendering controls)
-    instanceTools.initializeTools(instanceId, pipelineObjects);
+    // Use instanceData.sceneObjects which is now guaranteed to be set
+    instanceTools.initializeTools(instanceId, instanceData.sceneObjects);
     console.log(`  ✅ Instance tools initialized`);
 
     // Initialize orientation widget (always create it, but start enabled)
-    vtkOrientationWidget.initialize(instanceId, pipelineObjects, {
+    vtkOrientationWidget.initialize(instanceId, instanceData.sceneObjects, {
       enabled: true,
       corner: "BOTTOM_RIGHT",
       viewportSize: 0.1,
