@@ -154,7 +154,7 @@ export function PeoplePanel() {
 
         return (
             <div
-                key={user.clientId || user.odbc}
+                key={user.userId || user.odbc}
                 className={`people-panel__user-row ${isYou ? "people-panel__user-row--you" : ""}`}
                 onClick={() => !isYou && setSelectedUser(user)}
             >

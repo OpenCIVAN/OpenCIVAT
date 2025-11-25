@@ -126,6 +126,7 @@ class PresenceSystem {
 
   /**
    * Get all online users including yourself
+   * Deduplicates users by userId (handles multiple tabs from same user)
    */
   getOnlineUsers() {
     if (!this.awareness) {
@@ -133,19 +134,32 @@ class PresenceSystem {
       return [];
     }
 
-    const users = [];
     const currentUserId = getUserId();
+    // Use a Map to deduplicate by userId, keeping the most recent entry
+    const userMap = new Map();
 
     // awareness.getStates() returns a Map of clientId → state
     this.awareness.getStates().forEach((state, clientId) => {
       if (state && state.userId) {
-        users.push({
-          clientId,
-          ...state,
-          isYou: state.userId === currentUserId,
-        });
+        const existingUser = userMap.get(state.userId);
+
+        // Keep the entry with the most recent lastSeen timestamp
+        // This ensures we show the most active tab's state
+        if (
+          !existingUser ||
+          (state.lastSeen || 0) > (existingUser.lastSeen || 0)
+        ) {
+          userMap.set(state.userId, {
+            clientId,
+            ...state,
+            isYou: state.userId === currentUserId,
+          });
+        }
       }
     });
+
+    // Convert map to array
+    const users = Array.from(userMap.values());
 
     // Sort: current user first, then by join time
     users.sort((a, b) => {
