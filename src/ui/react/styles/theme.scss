@@ -1,6 +1,5 @@
 // Main theme file - imports all tokens and mixins using modern @use syntax
-// This is what components should import with: @use "@UI/react/styles/theme.scss" as *;
-// CORRECTION: Need to use relative import until I find fix for errors
+// This is what components should import with: @use "theme" as *;
 
 // ============================================================================
 // DESIGN TOKENS

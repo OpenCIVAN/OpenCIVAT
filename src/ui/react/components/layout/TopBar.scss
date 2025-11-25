@@ -1,6 +1,6 @@
 // TopBar.scss - Top application bar with glassmorphism
 @use "sass:color";
-@use "../../styles/theme.scss" as *;
+@use "theme" as *;
 
 .top-bar {
   display: flex;

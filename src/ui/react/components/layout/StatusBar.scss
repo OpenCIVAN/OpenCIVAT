@@ -1,5 +1,5 @@
 // StatusBar.scss - Bottom status bar with glassmorphism
-@use "../../styles/theme.scss" as *;
+@use "theme" as *;
 
 .status-bar {
   display: flex;

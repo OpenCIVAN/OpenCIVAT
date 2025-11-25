@@ -3,7 +3,7 @@
 // Uses design tokens from theme.scss - no hard-coded values
 
 @use "sass:color";
-@use "../../../styles/theme.scss" as *;
+@use "theme" as *;
 
 // =============================================================================
 // PANEL CONTAINER

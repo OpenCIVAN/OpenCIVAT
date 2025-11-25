@@ -17,6 +17,8 @@ export function isDismissed(datasetId) {
 export function clearDismissed(datasetId) {
   dismissedDatasetErrors.delete(datasetId);
   // Update localStorage
+  const dismissed = Array.from(dismissedDatasetErrors.entries());
+  localStorage.setItem("dismissedDatasetErrors", JSON.stringify(dismissed));
 }
 
 // When a dataset successfully loads, automatically clear its dismissal

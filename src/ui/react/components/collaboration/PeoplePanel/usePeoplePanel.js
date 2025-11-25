@@ -295,7 +295,7 @@ export function usePeoplePanel() {
     // TODO: Send invite request
     // - Create notification for room owner
     // - Show pending state in UI
-    alert(`Invite request sent for room ${roomId}. This is a stub!`);
+    console.warn(`Invite request sent for room ${roomId}. This is a stub!`);
   }, []);
 
   const createRoom = useCallback(

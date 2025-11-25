@@ -2,7 +2,7 @@
 // Uses design tokens for consistency
 
 @use "sass:color";
-@use "../../styles/theme.scss" as *;
+@use "theme" as *;
 
 // =============================================================================
 // THREE EDGE LAYOUT

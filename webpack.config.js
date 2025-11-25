@@ -48,13 +48,8 @@ module.exports = {
             loader: "sass-loader",
             options: {
               api: "modern",
-              webpackImporter: true,
               sassOptions: {
-                // Tell Sass where to look for imports
-                loadPaths: [
-                  path.resolve(__dirname, "src"),
-                  path.resolve(__dirname, "src/ui/react/styles"),
-                ],
+                loadPaths: [path.resolve(__dirname, "src/ui/react/styles")],
               },
             },
           },
