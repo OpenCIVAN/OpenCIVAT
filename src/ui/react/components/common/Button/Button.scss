@@ -1,0 +1,285 @@
+// src/ui/react/components/common/Button/Button.scss
+@use "theme" as *;
+
+// =============================================================================
+// BASE BUTTON
+// =============================================================================
+
+.btn {
+  @include glass-button;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  font-weight: $font-weight-medium;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+
+  // ---------------------------------------------------------------------
+  // SIZES
+  // ---------------------------------------------------------------------
+
+  &--sm {
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+    border-radius: $radius-sm;
+  }
+
+  &--md {
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-size-base;
+    border-radius: $radius-md;
+  }
+
+  &--lg {
+    padding: $spacing-md $spacing-lg;
+    font-size: $font-size-lg;
+    border-radius: $radius-md;
+  }
+
+  // ---------------------------------------------------------------------
+  // VARIANTS
+  // ---------------------------------------------------------------------
+
+  &--default {
+    background: $color-glass-light;
+    border-color: $color-border-default;
+    color: $color-text-primary;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-medium;
+      border-color: $color-border-medium;
+    }
+  }
+
+  &--primary {
+    @include glass-button-accent($color-accent-primary);
+  }
+
+  &--accent {
+    background: rgba($color-accent-blue, 0.15);
+    border-color: rgba($color-accent-blue, 0.4);
+    color: $color-accent-blue;
+
+    &:hover:not(:disabled) {
+      background: rgba($color-accent-blue, 0.25);
+      border-color: rgba($color-accent-blue, 0.6);
+      @include accent-glow($color-accent-blue);
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    border-color: transparent;
+    color: $color-text-secondary;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-subtle;
+      color: $color-text-primary;
+    }
+  }
+
+  &--danger {
+    background: rgba($color-error, 0.1);
+    border-color: rgba($color-error, 0.3);
+    color: $color-error;
+
+    &:hover:not(:disabled) {
+      background: rgba($color-error, 0.2);
+      border-color: rgba($color-error, 0.5);
+      @include error-glow;
+    }
+  }
+
+  &--success {
+    background: rgba($color-success, 0.1);
+    border-color: rgba($color-success, 0.3);
+    color: $color-success;
+
+    &:hover:not(:disabled) {
+      background: rgba($color-success, 0.2);
+      border-color: rgba($color-success, 0.5);
+      @include success-glow;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // STATES
+  // ---------------------------------------------------------------------
+
+  &--full-width {
+    width: 100%;
+  }
+
+  &--disabled,
+  &:disabled {
+    background: $color-disabled-bg;
+    border-color: $color-disabled-border;
+    color: $color-disabled-text;
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  // ---------------------------------------------------------------------
+  // ICON SLOTS
+  // ---------------------------------------------------------------------
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &--left {
+      margin-right: -$spacing-xs;
+    }
+
+    &--right {
+      margin-left: -$spacing-xs;
+    }
+  }
+
+  &__text {
+    flex: 1;
+  }
+}
+
+// =============================================================================
+// ICON BUTTON (Square toolbar buttons)
+// =============================================================================
+
+.icon-btn {
+  @include toolbar-button;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+
+  // ---------------------------------------------------------------------
+  // SIZES
+  // ---------------------------------------------------------------------
+
+  &--sm {
+    width: 28px;
+    height: 28px;
+    border-radius: $radius-sm;
+  }
+
+  &--md {
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-md;
+  }
+
+  &--lg {
+    width: 44px;
+    height: 44px;
+    border-radius: $radius-md;
+  }
+
+  // ---------------------------------------------------------------------
+  // VARIANTS
+  // ---------------------------------------------------------------------
+
+  &--default {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+    }
+  }
+
+  &--primary {
+    background: rgba($color-accent-primary, 0.1);
+    color: $color-accent-primary;
+
+    &:hover:not(:disabled) {
+      background: rgba($color-accent-primary, 0.2);
+      @include accent-glow($color-accent-primary);
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: $color-text-tertiary;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-subtle;
+      color: $color-text-primary;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // ACTIVE STATE
+  // ---------------------------------------------------------------------
+
+  &--active {
+    background: rgba($color-accent-primary, 0.15) !important;
+    border-color: rgba($color-accent-primary, 0.4);
+    color: $color-accent-primary;
+    @include border-glow-static($color-accent-primary, 0.5);
+  }
+
+  // ---------------------------------------------------------------------
+  // DISABLED
+  // ---------------------------------------------------------------------
+
+  &--disabled,
+  &:disabled {
+    background: $color-disabled-bg;
+    color: $color-disabled-text;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  // ---------------------------------------------------------------------
+  // TOOLTIP
+  // ---------------------------------------------------------------------
+
+  &__tooltip {
+    @include glass-tooltip;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all $transition-fast;
+    z-index: 1000;
+    pointer-events: none;
+  }
+
+  &:hover &__tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+// =============================================================================
+// BUTTON GROUP
+// =============================================================================
+
+.btn-group {
+  @include control-group-container;
+
+  > .btn,
+  > .icon-btn {
+    border-radius: $radius-sm;
+
+    &:first-child {
+      border-top-left-radius: $radius-md;
+      border-bottom-left-radius: $radius-md;
+    }
+
+    &:last-child {
+      border-top-right-radius: $radius-md;
+      border-bottom-right-radius: $radius-md;
+    }
+  }
+}

@@ -1,0 +1,214 @@
+// src/ui/react/components/common/Button/Button.stories.jsx
+import React from "react";
+import { Plus, Save, Trash2, Settings, Play, Pause, ChevronRight } from "lucide-react";
+import { Button, IconButton, ButtonGroup } from "./Button";
+
+export default {
+    title: "Atoms/Button",
+    component: Button,
+    parameters: {
+        layout: "centered",
+    },
+    argTypes: {
+        variant: {
+            control: "select",
+            options: ["default", "primary", "accent", "ghost", "danger", "success"],
+        },
+        size: {
+            control: "select",
+            options: ["sm", "md", "lg"],
+        },
+        onClick: { action: "clicked" },
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ padding: "40px", background: "#0a0a0f" }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+// =============================================================================
+// BUTTON STORIES
+// =============================================================================
+
+export const Default = {
+    args: {
+        children: "Button",
+        variant: "default",
+        size: "md",
+    },
+};
+
+export const Primary = {
+    args: {
+        children: "Primary Action",
+        variant: "primary",
+        size: "md",
+    },
+};
+
+export const Accent = {
+    args: {
+        children: "Accent Button",
+        variant: "accent",
+        size: "md",
+    },
+};
+
+export const Ghost = {
+    args: {
+        children: "Ghost Button",
+        variant: "ghost",
+        size: "md",
+    },
+};
+
+export const Danger = {
+    args: {
+        children: "Delete",
+        variant: "danger",
+        size: "md",
+        icon: <Trash2 size={16} />,
+    },
+};
+
+export const Success = {
+    args: {
+        children: "Save Changes",
+        variant: "success",
+        size: "md",
+        icon: <Save size={16} />,
+    },
+};
+
+export const WithIcon = {
+    args: {
+        children: "Add Item",
+        variant: "primary",
+        size: "md",
+        icon: <Plus size={16} />,
+    },
+};
+
+export const WithIconRight = {
+    args: {
+        children: "Continue",
+        variant: "primary",
+        size: "md",
+        iconRight: <ChevronRight size={16} />,
+    },
+};
+
+export const Disabled = {
+    args: {
+        children: "Disabled",
+        variant: "primary",
+        size: "md",
+        disabled: true,
+    },
+};
+
+export const FullWidth = {
+    args: {
+        children: "Full Width Button",
+        variant: "primary",
+        size: "md",
+        fullWidth: true,
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ width: "300px" }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+// Sizes showcase
+export const Sizes = {
+    render: () => (
+        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <Button variant="primary" size="sm">Small</Button>
+            <Button variant="primary" size="md">Medium</Button>
+            <Button variant="primary" size="lg">Large</Button>
+        </div>
+    ),
+};
+
+// All variants showcase
+export const AllVariants = {
+    render: () => (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <Button variant="default">Default</Button>
+            <Button variant="primary">Primary</Button>
+            <Button variant="accent">Accent</Button>
+            <Button variant="ghost">Ghost</Button>
+            <Button variant="danger">Danger</Button>
+            <Button variant="success">Success</Button>
+        </div>
+    ),
+};
+
+// =============================================================================
+// ICON BUTTON STORIES
+// =============================================================================
+
+export const IconButtonDefault = {
+    render: () => (
+        <IconButton variant="default" size="md" tooltip="Settings">
+            <Settings size={18} />
+        </IconButton>
+    ),
+};
+
+export const IconButtonPrimary = {
+    render: () => (
+        <IconButton variant="primary" size="md" tooltip="Add">
+            <Plus size={18} />
+        </IconButton>
+    ),
+};
+
+export const IconButtonActive = {
+    render: () => (
+        <IconButton variant="default" size="md" active tooltip="Playing">
+            <Play size={18} />
+        </IconButton>
+    ),
+};
+
+export const IconButtonSizes = {
+    render: () => (
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <IconButton size="sm"><Settings size={14} /></IconButton>
+            <IconButton size="md"><Settings size={18} /></IconButton>
+            <IconButton size="lg"><Settings size={22} /></IconButton>
+        </div>
+    ),
+};
+
+// =============================================================================
+// BUTTON GROUP STORIES
+// =============================================================================
+
+export const ButtonGroupExample = {
+    render: () => (
+        <ButtonGroup>
+            <IconButton><Play size={16} /></IconButton>
+            <IconButton><Pause size={16} /></IconButton>
+            <IconButton active><Settings size={16} /></IconButton>
+        </ButtonGroup>
+    ),
+};
+
+export const ButtonGroupWithLabels = {
+    render: () => (
+        <ButtonGroup>
+            <Button variant="ghost" size="sm">Left</Button>
+            <Button variant="ghost" size="sm">Center</Button>
+            <Button variant="ghost" size="sm">Right</Button>
+        </ButtonGroup>
+    ),
+};
