@@ -2,15 +2,7 @@
 // Reusable slider component for dropdown menus
 
 import React, { useState, useEffect, useRef } from 'react';
-
-/**
- * SliderMenuOption - Reusable slider for dropdown menus
- * 
- * FIXES:
- * 1. Real-time updates during drag (not just on mouseUp)
- * 2. Throttled updates to avoid performance issues
- * 3. Guaranteed final update on mouseUp
- */
+import './SliderMenuOption.scss';
 
 /**
  * SliderMenuOption - Reusable slider for dropdown menus
@@ -45,74 +37,72 @@ export function SliderMenuOption({
   disabled = false,
 }) {
   const [localValue, setLocalValue] = useState(value);
-  const [isDragging, setIsDragging] = useState(false);
-  const throttleTimerRef = useRef(null);
+  const isInteractingRef = useRef(false);
   const lastEmittedValueRef = useRef(value);
+  const syncTimeoutRef = useRef(null);
 
-  // Update local value when prop changes (for external updates)
+  // Update local value when prop changes (only when not interacting)
   useEffect(() => {
-    if (!isDragging) {
-      setLocalValue(value);
-      lastEmittedValueRef.current = value;
-    }
-  }, [value, isDragging]);
-
-  // Throttled onChange to avoid excessive updates during drag
-  const emitChange = (newValue) => {
-    if (!onChange) return;
-
-    // Clear any pending throttle
-    if (throttleTimerRef.current) {
-      clearTimeout(throttleTimerRef.current);
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
     }
 
-    // Emit immediately if not dragging, otherwise throttle
-    if (!isDragging) {
-      onChange(newValue);
-      lastEmittedValueRef.current = newValue;
-    } else {
-      // Throttle updates during drag (every 50ms)
-      throttleTimerRef.current = setTimeout(() => {
-        onChange(newValue);
-        lastEmittedValueRef.current = newValue;
-      }, 50);
+    if (isInteractingRef.current) {
+      return;
     }
-  };
+
+    // Only sync if this is truly an external change
+    const isExternalChange = Math.abs(value - lastEmittedValueRef.current) > step / 2;
+
+    if (isExternalChange || Math.abs(value - localValue) > step / 2) {
+      syncTimeoutRef.current = setTimeout(() => {
+        if (!isInteractingRef.current) {
+          setLocalValue(value);
+          lastEmittedValueRef.current = value;
+        }
+      }, 100);
+    }
+  }, [value, step, localValue]);
 
   const handleChange = (e) => {
+    if (disabled) return;
     const newValue = parseFloat(e.target.value);
     setLocalValue(newValue);
 
-    // ✅ FIX: Call onChange during drag, not just on mouseUp
-    emitChange(newValue);
+    if (onChange) {
+      onChange(newValue);
+      lastEmittedValueRef.current = newValue;
+    }
   };
 
   const handleMouseDown = () => {
-    setIsDragging(true);
+    if (disabled) return;
+    isInteractingRef.current = true;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
-
-    // ✅ FIX: Ensure final value is emitted on mouseUp
-    // Clear any pending throttled update
-    if (throttleTimerRef.current) {
-      clearTimeout(throttleTimerRef.current);
-      throttleTimerRef.current = null;
-    }
-
-    // Emit final value if it hasn't been emitted yet
-    if (onChange && localValue !== lastEmittedValueRef.current) {
+    // Emit final value
+    if (onChange && !disabled) {
       onChange(localValue);
       lastEmittedValueRef.current = localValue;
     }
+
+    // Delay clearing interaction flag
+    setTimeout(() => {
+      isInteractingRef.current = false;
+    }, 150);
   };
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (throttleTimerRef.current) {
-        clearTimeout(throttleTimerRef.current);
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
       }
     };
   }, []);

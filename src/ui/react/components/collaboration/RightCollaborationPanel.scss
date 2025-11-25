@@ -2,6 +2,91 @@
 @use "theme" as *;
 
 // ============================================================================
+// ACTIVITY BAR (Collapsed State)
+// ============================================================================
+
+.collab-activity-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  background: $color-bg-primary;
+  border-top: 2px solid rgba($color-accent-blue, 0.4); // Match expanded header accent
+  padding: $spacing-sm 0;
+}
+
+.collab-activity-bar__icons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 1;
+}
+
+.collab-activity-bar__icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  @include glass-button;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    @include glass-hover;
+    color: $color-text-primary;
+  }
+
+  &.active {
+    background: rgba($color-accent-blue, 0.15);
+    border-color: rgba($color-accent-blue, 0.3);
+    color: $color-accent-blue;
+  }
+}
+
+.collab-activity-bar__badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: $color-accent-blue;
+  color: white;
+  font-size: 10px;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collab-activity-bar__expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-top: auto;
+  @include glass-button;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    @include glass-hover;
+    color: $color-accent-blue;
+    border-color: rgba($color-accent-blue, 0.3);
+  }
+}
+
+// ============================================================================
 // MAIN PANEL CONTAINER
 // ============================================================================
 

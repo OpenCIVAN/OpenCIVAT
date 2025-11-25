@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Bell,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   ChevronUp,
   Settings,
@@ -19,7 +20,59 @@ import { VoiceChatPanel } from "@UI/react/components/collaboration/VoiceChatPane
 
 import './RightCollaborationPanel.scss';
 
-export function RightCollaborationPanel({ roomName }) {
+// =============================================================================
+// ACTIVITY BAR (Collapsed State)
+// =============================================================================
+
+function CollabActivityBar({ activeTab, setActiveTab, onExpand }) {
+  return (
+    <div className="collab-activity-bar">
+      <div className="collab-activity-bar__icons">
+        <button
+          className={`collab-activity-bar__icon ${activeTab === 'people' ? 'active' : ''}`}
+          title="People"
+          onClick={() => { setActiveTab('people'); onExpand(); }}
+        >
+          <Users size={20} />
+        </button>
+        <button
+          className={`collab-activity-bar__icon ${activeTab === 'voice' ? 'active' : ''}`}
+          title="Voice Chat"
+          onClick={() => { setActiveTab('voice'); onExpand(); }}
+        >
+          <Mic size={20} />
+        </button>
+        <button
+          className={`collab-activity-bar__icon ${activeTab === 'chat' ? 'active' : ''}`}
+          title="Text Chat"
+          onClick={() => { setActiveTab('chat'); onExpand(); }}
+        >
+          <MessageSquare size={20} />
+        </button>
+        <button
+          className={`collab-activity-bar__icon ${activeTab === 'activity' ? 'active' : ''}`}
+          title="Activity"
+          onClick={() => { setActiveTab('activity'); onExpand(); }}
+        >
+          <Bell size={20} />
+        </button>
+      </div>
+      <button
+        className="collab-activity-bar__expand"
+        onClick={onExpand}
+        title="Expand panel"
+      >
+        <ChevronLeft size={20} />
+      </button>
+    </div>
+  );
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
+export function RightCollaborationPanel({ roomName, isCollapsed = false, onToggle, side = 'right' }) {
   // Main panel state
   const [activeTab, setActiveTab] = useState('people'); // 'people', 'voice', 'chat', 'activity'
 
@@ -31,15 +84,34 @@ export function RightCollaborationPanel({ roomName }) {
   const [showMyCursor, setShowMyCursor] = useState(true);
   const [showAllCursors, setShowAllCursors] = useState(true);
 
+  // Render collapsed activity bar if collapsed
+  if (isCollapsed) {
+    return (
+      <CollabActivityBar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onExpand={onToggle}
+      />
+    );
+  }
+
   return (
     <div className="collab-panel">
-      {/* Panel Header - Remove collapse button for now since ThreeEdgeLayout doesn't exist */}
+      {/* Panel Header with collapse button */}
       <div className="collab-panel__panel-header">
         <div className="collab-panel__panel-title">
           <Users size={18} />
           <span>Collaboration</span>
         </div>
-        {/* TODO: Add collapse when ThreeEdgeLayout is implemented */}
+        {onToggle && (
+          <button
+            className="collab-panel__collapse-btn"
+            onClick={onToggle}
+            title="Collapse panel"
+          >
+            <ChevronRight size={16} />
+          </button>
+        )}
       </div>
 
       {/* Tabs for People/Voice/Chat/Activity */}

@@ -2,6 +2,7 @@
 // Enhanced slider with integrated presets directly underneath
 
 import React, { useState, useEffect, useRef } from 'react';
+import './SliderWithPresets.scss';
 
 /**
  * SliderWithPresets
@@ -30,74 +31,99 @@ export function SliderWithPresets({
     disabledReason = "Not available",
 }) {
     const [localValue, setLocalValue] = useState(value);
-    const [isDragging, setIsDragging] = useState(false);
-    const throttleTimerRef = useRef(null);
+    const isDraggingRef = useRef(false);
+    const isInteractingRef = useRef(false); // Tracks any user interaction
     const lastEmittedValueRef = useRef(value);
+    const syncTimeoutRef = useRef(null);
 
+    // Only sync external value when NOT interacting and value actually changed externally
     useEffect(() => {
-        if (!isDragging) {
-            setLocalValue(value);
-            lastEmittedValueRef.current = value;
+        // Clear any pending sync
+        if (syncTimeoutRef.current) {
+            clearTimeout(syncTimeoutRef.current);
         }
-    }, [value, isDragging]);
+
+        // Don't sync while user is interacting
+        if (isInteractingRef.current) {
+            return;
+        }
+
+        // Only sync if this is truly an external change (not our own emission bouncing back)
+        const isExternalChange = Math.abs(value - lastEmittedValueRef.current) > step / 2;
+
+        if (isExternalChange || Math.abs(value - localValue) > step / 2) {
+            // Small delay to avoid race conditions with throttled onChange
+            syncTimeoutRef.current = setTimeout(() => {
+                if (!isInteractingRef.current) {
+                    setLocalValue(value);
+                    lastEmittedValueRef.current = value;
+                }
+            }, 100);
+        }
+    }, [value, step, localValue]);
 
     const emitChange = (newValue) => {
         if (!onChange || disabled) return;
 
-        if (throttleTimerRef.current) {
-            clearTimeout(throttleTimerRef.current);
-        }
-
-        if (!isDragging) {
-            onChange(newValue);
-            lastEmittedValueRef.current = newValue;
-        } else {
-            throttleTimerRef.current = setTimeout(() => {
-                onChange(newValue);
-                lastEmittedValueRef.current = newValue;
-            }, 50);
-        }
+        // Emit immediately - no throttling during drag, just update
+        onChange(newValue);
+        lastEmittedValueRef.current = newValue;
     };
 
     const handleChange = (e) => {
         if (disabled) return;
         const newValue = parseFloat(e.target.value);
         setLocalValue(newValue);
+
+        // Only emit on change, not throttled - let React handle batching
         emitChange(newValue);
     };
 
     const handleMouseDown = () => {
         if (disabled) return;
-        setIsDragging(true);
+        isDraggingRef.current = true;
+        isInteractingRef.current = true;
+
+        // Clear any pending sync when starting interaction
+        if (syncTimeoutRef.current) {
+            clearTimeout(syncTimeoutRef.current);
+            syncTimeoutRef.current = null;
+        }
     };
 
     const handleMouseUp = () => {
-        setIsDragging(false);
+        isDraggingRef.current = false;
 
-        if (throttleTimerRef.current) {
-            clearTimeout(throttleTimerRef.current);
-            throttleTimerRef.current = null;
-        }
-
-        if (onChange && !disabled && localValue !== lastEmittedValueRef.current) {
+        // Emit final value
+        if (onChange && !disabled) {
             onChange(localValue);
             lastEmittedValueRef.current = localValue;
         }
+
+        // Delay clearing interaction flag to avoid sync race
+        setTimeout(() => {
+            isInteractingRef.current = false;
+        }, 150);
     };
 
     const handlePresetClick = (presetValue) => {
         if (disabled) return;
+        isInteractingRef.current = true;
         setLocalValue(presetValue);
         if (onChange) {
             onChange(presetValue);
             lastEmittedValueRef.current = presetValue;
         }
+        // Clear interaction flag after a delay
+        setTimeout(() => {
+            isInteractingRef.current = false;
+        }, 150);
     };
 
     useEffect(() => {
         return () => {
-            if (throttleTimerRef.current) {
-                clearTimeout(throttleTimerRef.current);
+            if (syncTimeoutRef.current) {
+                clearTimeout(syncTimeoutRef.current);
             }
         };
     }, []);

@@ -223,6 +223,7 @@
 .toolbar-menu-dropdown {
   border-radius: $radius-lg;
   padding: $spacing-md;
+  padding-bottom: $spacing-xl; // Extra padding at bottom to prevent bouncing on hover
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.08);
   animation: dropdown-appear $transition-fast $ease-out-back;
