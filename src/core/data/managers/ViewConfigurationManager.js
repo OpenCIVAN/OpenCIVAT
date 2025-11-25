@@ -141,6 +141,30 @@ export class ViewConfigurationManager {
   }
 
   /**
+   * Duplicate an existing view configuration
+   * Creates a new view for the same dataset (like clicking + on the parent)
+   *
+   * @param {string} sourceViewId - View ID to duplicate
+   * @returns {ViewConfiguration} - The new view
+   */
+  duplicateView(sourceViewId) {
+    const sourceView = this.getView(sourceViewId);
+
+    if (!sourceView) {
+      throw new Error(`Cannot duplicate view ${sourceViewId}: view not found`);
+    }
+
+    // Create a new view for the same dataset
+    const newView = this.createView(sourceView.datasetId, {
+      name: `${sourceView.name || "View"} (Copy)`,
+    });
+
+    console.log(`✅ Duplicated view ${sourceViewId} -> ${newView.id}`);
+
+    return newView;
+  }
+
+  /**
    * Get a view configuration by ID
    *
    * @param {string} viewId - View ID

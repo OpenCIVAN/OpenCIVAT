@@ -126,7 +126,7 @@
   transition: all $transition-base;
 
   &:hover {
-    background-color: color.adjust($color-accent-primary, $alpha: -0.75);
+    background-color: rgba($color-accent-primary, 0.25);
     box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
     transform: translateY(-2px);
   }
