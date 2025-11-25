@@ -98,6 +98,25 @@ export class DatasetManager extends EventEmitter {
         reject(new Error("Failed to open dataset metadata database"));
       request.onsuccess = (event) => {
         this._db = event.target.result;
+
+        // Check if the required object store exists
+        // If not, the database is corrupted/outdated - delete and recreate
+        if (!this._db.objectStoreNames.contains("datasets")) {
+          console.warn("⚠️ Database missing 'datasets' store, recreating...");
+          this._db.close();
+
+          const deleteRequest = indexedDB.deleteDatabase(this._dbName);
+          deleteRequest.onsuccess = () => {
+            console.log("🗑️ Deleted corrupted database, recreating...");
+            // Recursively call _openDatabase to recreate
+            this._openDatabase().then(resolve).catch(reject);
+          };
+          deleteRequest.onerror = () => {
+            reject(new Error("Failed to delete corrupted database"));
+          };
+          return;
+        }
+
         resolve();
       };
 

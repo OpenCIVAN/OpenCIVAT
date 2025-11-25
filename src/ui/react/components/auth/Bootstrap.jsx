@@ -168,10 +168,10 @@ export function Bootstrap() {
     }
 
     // RENDER: Different UI based on bootstrap state
+    let content = null;
 
-    // Error state
     if (bootstrapState === 'error') {
-        return (
+        content = (
             <div className="bootstrap-error">
                 <div className="error-card">
                     <h1>Initialization Error</h1>
@@ -185,11 +185,8 @@ export function Bootstrap() {
                 </div>
             </div>
         );
-    }
-
-    // Checking prerequisites
-    if (bootstrapState === 'checking') {
-        return (
+    } else if (bootstrapState === 'checking') {
+        content = (
             <div className="bootstrap-checking">
                 <div className="checking-card">
                     <h2>Initializing CIA Web</h2>
@@ -198,11 +195,8 @@ export function Bootstrap() {
                 </div>
             </div>
         );
-    }
-
-    // Username collection
-    if (bootstrapState === 'username') {
-        return (
+    } else if (bootstrapState === 'username') {
+        content = (
             <div className="bootstrap-username">
                 <div className="username-card">
                     <h1>Welcome to CIA Web</h1>
@@ -233,11 +227,8 @@ export function Bootstrap() {
                 </div>
             </div>
         );
-    }
-
-    // Initializing user services
-    if (bootstrapState === 'initializing') {
-        return (
+    } else if (bootstrapState === 'initializing') {
+        content = (
             <div className="bootstrap-initializing">
                 <div className="initializing-card">
                     <h2>Setting Up Your Workspace</h2>
@@ -252,45 +243,6 @@ export function Bootstrap() {
                         <li className="step-pending">Loading workspace</li>
                     </ul>
                 </div>
-            </div>
-        );
-    }
-
-    // FUTURE: Login state (when authentication is added)
-    // if (bootstrapState === 'login') {
-    //   return <LoginComponent onSuccess={checkPrerequisites} />;
-    // }
-
-    // FUTURE: License state (for enterprise features)
-    // if (bootstrapState === 'license') {
-    //   return <LicenseComponent onSuccess={checkPrerequisites} />;
-    // }
-
-    // Determine the content based on state
-    let content = null;
-
-    if (bootstrapState === 'error') {
-        content = (
-            <div className="bootstrap-error">
-                {/* ... error content ... */}
-            </div>
-        );
-    } else if (bootstrapState === 'checking') {
-        content = (
-            <div className="bootstrap-checking">
-                {/* ... checking content ... */}
-            </div>
-        );
-    } else if (bootstrapState === 'username') {
-        content = (
-            <div className="bootstrap-username">
-                {/* ... username content ... */}
-            </div>
-        );
-    } else if (bootstrapState === 'initializing') {
-        content = (
-            <div className="bootstrap-initializing">
-                {/* ... initializing content ... */}
             </div>
         );
     } else if (bootstrapState === 'ready') {
