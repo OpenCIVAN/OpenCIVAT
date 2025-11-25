@@ -6,6 +6,7 @@ import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 
 // Import UI components
+import { ToastContainer } from "@UI/react/components/common/Toast";
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
 import { FilesPanel } from "@UI/react/components/panels/FilesPanel";
 import { WorkspaceGrid } from "@UI/react/components/workspace/WorkspaceGrid.jsx";
@@ -50,15 +51,18 @@ export function CIAWebApp({ username }) {
   }, []);
 
   return (
-    <ThreeEdgeLayout
-      topBar={<TopBar username={username} />}
-      leftPanel={<FilesPanel
-        isCollapsed={leftPanelCollapsed}
-        onToggle={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
-      />}
-      centerPanel={<WorkspaceGrid />}
-      rightPanel={<RightCollaborationPanel roomName={sessionManager?.getRoomId() || 'default-analytics-room'} />}
-      bottomBar={<StatusBar username={username} phase3Status={phase3Status} />}
-    />
+    <>
+      <ThreeEdgeLayout
+        topBar={<TopBar username={username} />}
+        leftPanel={<FilesPanel
+          isCollapsed={leftPanelCollapsed}
+          onToggle={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
+        />}
+        centerPanel={<WorkspaceGrid />}
+        rightPanel={<RightCollaborationPanel roomName={sessionManager?.getRoomId() || 'default-analytics-room'} />}
+        bottomBar={<StatusBar username={username} phase3Status={phase3Status} />}
+      />
+      <ToastContainer />
+    </>
   );
 }

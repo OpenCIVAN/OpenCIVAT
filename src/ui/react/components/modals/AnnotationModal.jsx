@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { toast } from "@UI/react/store/toastStore.js";
 
 export function AnnotationModal({ isOpen, onClose, onSubmit, position }) {
   const [text, setText] = useState("");
@@ -16,7 +17,7 @@ export function AnnotationModal({ isOpen, onClose, onSubmit, position }) {
 
   const handleSubmit = () => {
     if (!text.trim()) {
-      alert("Please enter annotation text");
+      toast.info("Please enter annotation text");
       return;
     }
 

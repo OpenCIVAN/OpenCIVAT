@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { textChat } from "@Collaboration/communication/textChat.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { provider } from "@Collaboration/yjs/yjsSetup.js";
+import { toast } from "@UI/react/store/toastStore.js";
 
 export function TextChatPanel() {
   const [messages, setMessages] = useState([]);
@@ -87,7 +88,7 @@ export function TextChatPanel() {
         // No need to manually update state - the onMessage callback will handle it
       } catch (error) {
         console.error("Error sending message:", error);
-        alert("Failed to send message. Check console for details.");
+        toast.error("Failed to send message. Check console for details.");
       }
     }
   };

@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { hasUserName, getUserName, setUserName } from "@Collaboration/presence/userManagement.js";
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
+import { toast } from "@UI/react/store/toastStore.js";
 
 import "@UI/react/components/auth/Bootstrap.scss";
 
@@ -100,19 +101,19 @@ export function Bootstrap() {
 
         // Validate username
         if (!trimmedName) {
-            alert("Please enter a username");
+            toast.info("Please enter a username");
             return;
         }
 
         if (trimmedName.length > 20) {
-            alert("Username must be 20 characters or less");
+            toast.info("Username must be 20 characters or less");
             return;
         }
 
         // FUTURE: Check username against server for uniqueness
         // const isUnique = await checkUsernameUniqueness(trimmedName);
         // if (!isUnique) {
-        //   alert("Username already taken in this room");
+        //   toast.warning("Username already taken in this room");
         //   return;
         // }
 

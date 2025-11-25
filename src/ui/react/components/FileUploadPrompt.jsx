@@ -1,3 +1,5 @@
+import { toast } from "@UI/react/store/toastStore.js";
+
 export function FileUploadPrompt() {
     const [missingFiles, setMissingFiles] = useState([])
 
@@ -17,7 +19,7 @@ export function FileUploadPrompt() {
         const missing = missingFiles.find(f => f.datasetId === datasetId)
 
         if (hash !== missing.hash) {
-            alert("File hash mismatch! This is not the correct file.")
+            toast.info("File hash mismatch! This is not the correct file.")
             return
         }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 
 import { voiceChat } from "@Collaboration/communication/voiceChat.js";
 import { getUserName } from "@Collaboration/presence/userManagement.js";
+import { toast } from "@UI/react/store/toastStore.js";
 
 export function VoiceChatPanel({ roomName = "default-analytics-room" }) {
   const [isConnected, setIsConnected] = useState(false);
@@ -55,7 +56,7 @@ export function VoiceChatPanel({ roomName = "default-analytics-room" }) {
         console.log("✅ Voice chat connected");
       } catch (error) {
         console.error("❌ Failed to join voice chat:", error);
-        alert("Failed to connect to voice chat. Make sure LiveKit and token server are running.");
+        toast.error("Failed to connect to voice chat. Make sure LiveKit and token server are running.");
       } finally {
         setIsConnecting(false);
       }
