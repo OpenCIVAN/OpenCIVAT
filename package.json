@@ -8,7 +8,9 @@
     "build": "webpack --mode production",
     "server": "node server/src/index.js",
     "server:dev": "nodemon server/src/index.js",
-    "websocket": "node server.js"
+    "websocket": "node server.js",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
@@ -22,7 +24,12 @@
     "webpack": "^5.101.3",
     "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^4.15.2",
-    "webpack-glsl-loader": "^1.0.1"
+    "webpack-glsl-loader": "^1.0.1",
+    "storybook": "^10.0.8",
+    "@storybook/react-webpack5": "^10.0.8",
+    "@storybook/addon-webpack5-compiler-swc": "^4.0.2",
+    "@storybook/addon-docs": "^10.0.8",
+    "@storybook/addon-onboarding": "^10.0.8"
   },
   "dependencies": {
     "@kitware/vtk.js": "^32.13.0",

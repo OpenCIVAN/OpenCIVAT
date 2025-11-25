@@ -225,3 +225,5 @@ livekit.yaml
 # vtp_files/*.vtp
 server/uploads/*
 !server/uploads/.gitkeep
+*storybook.log
+storybook-static
