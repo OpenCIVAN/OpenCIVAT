@@ -44,7 +44,20 @@ module.exports = {
         use: [
           "style-loader", // Injects CSS into the DOM
           "css-loader", // Translates CSS into CommonJS modules
-          "sass-loader", // Compiles SCSS to CSS
+          {
+            loader: "sass-loader",
+            options: {
+              api: "modern",
+              webpackImporter: true,
+              sassOptions: {
+                // Tell Sass where to look for imports
+                loadPaths: [
+                  path.resolve(__dirname, "src"),
+                  path.resolve(__dirname, "src/ui/react/styles"),
+                ],
+              },
+            },
+          },
         ],
       },
       {

@@ -1,6 +1,6 @@
 // TopBar.scss - Top application bar with glassmorphism
 @use "sass:color";
-@use "@UI/react/styles/theme.scss" as *;
+@use "../../styles/theme.scss" as *;
 
 .top-bar {
   display: flex;
