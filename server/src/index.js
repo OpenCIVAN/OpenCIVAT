@@ -5,6 +5,8 @@ const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
 const Minio = require("minio");
+const { authenticate, optionalAuth } = require("./middleware/auth");
+const authRouter = require("./routes/auth");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -78,12 +80,16 @@ app.locals.pool = pool;
 app.locals.minioClient = minioClient;
 app.locals.bucketName = BUCKET_NAME;
 
+// Auth routes (no auth required for these)
+app.use("/api/auth", authRouter);
+
 // ============================================================================
 // ROUTES
 // ============================================================================
 
 const projectsRouter = require("./routes/projects");
-app.use("/api/projects", projectsRouter);
+// Projects routes - use optionalAuth for now (will require auth later)
+app.use("/api/projects", optionalAuth, projectsRouter);
 
 // Health check
 app.get("/api/health", async (req, res) => {
