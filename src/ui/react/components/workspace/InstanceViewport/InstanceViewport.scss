@@ -121,7 +121,7 @@
 
   // Backlit glow effect on hover
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: -3px;
     border-radius: inherit;
@@ -164,8 +164,7 @@
     background: rgba($color-accent-pink, 0.15);
     border-color: rgba($color-accent-pink, 0.4);
     color: $color-accent-pink;
-    box-shadow:
-      0 0 15px rgba($color-accent-pink, 0.3),
+    box-shadow: 0 0 15px rgba($color-accent-pink, 0.3),
       0 0 30px rgba($color-accent-pink, 0.15),
       inset 0 0 10px rgba($color-accent-pink, 0.1);
 
@@ -358,7 +357,7 @@
 
   // Glowing accent bar on hover
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     left: 0;
     top: 50%;
@@ -455,6 +454,7 @@
 
 .instance-viewport__content {
   flex: 1;
+  min-height: 0; // Critical for flex children to shrink properly
   position: relative;
   background-color: #0a0a0a;
   // FIX: Add inset shadow to create "punched hole" depth effect
@@ -666,4 +666,196 @@
   .toolbar-menu-dropdown {
     min-width: 180px;
   }
+}
+
+// ============================================================================
+// AUTO-HIDE TOOLBAR
+// ============================================================================
+
+.instance-viewport__toolbar--autohide {
+  position: absolute;
+  top: 40px; // Just below header
+  left: $spacing-sm;
+  right: $spacing-sm;
+  z-index: 100;
+
+  // Hidden state
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Add glass blur background
+  @include frosted-glass;
+  border-radius: $radius-lg;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+
+  // Visible state
+  &.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  // Pinned state - add subtle indicator
+  &.pinned {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba($color-accent-primary, 0.3),
+      0 0 15px rgba($color-accent-primary, 0.15);
+  }
+}
+
+// Pin button
+.toolbar-pin-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
+  margin-left: $spacing-xs;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: $color-text-secondary;
+  }
+
+  &.active {
+    background: rgba($color-accent-primary, 0.15);
+    border-color: rgba($color-accent-primary, 0.3);
+    color: $color-accent-primary;
+  }
+}
+
+// ============================================================================
+// STATUS BAR
+// ============================================================================
+
+.instance-viewport__statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 $spacing-sm;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  gap: $spacing-md;
+}
+
+.statusbar__section {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+
+  &--left {
+    flex: 1;
+    justify-content: flex-start;
+  }
+
+  &--center {
+    flex: 0 0 auto;
+  }
+
+  &--right {
+    flex: 1;
+    justify-content: flex-end;
+  }
+}
+
+.statusbar__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px $spacing-xs;
+  border-radius: $radius-sm;
+  font-size: 10px;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &--type {
+    background: rgba($color-accent-purple, 0.2);
+    color: $color-accent-purple;
+    border: 1px solid rgba($color-accent-purple, 0.3);
+  }
+}
+
+.statusbar__info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &--mode {
+    padding: 2px $spacing-xs;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-sm;
+    text-transform: capitalize;
+
+    svg {
+      opacity: 0.7;
+    }
+  }
+}
+
+.statusbar__label {
+  color: $color-text-tertiary;
+}
+
+.statusbar__value {
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  font-variant-numeric: tabular-nums;
+}
+
+.statusbar__controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: $radius-sm;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.statusbar__control-btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: $radius-xs;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-primary;
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.95);
+  }
+}
+
+.statusbar__zoom-level {
+  min-width: 36px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  font-variant-numeric: tabular-nums;
 }

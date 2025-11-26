@@ -24,6 +24,7 @@
 
 .three-edge-layout__main {
   flex: 1;
+  min-height: 0; // Critical for flex children to shrink properly
   display: flex;
   overflow: hidden;
   position: relative;
@@ -32,6 +33,7 @@
 .three-edge-layout__center {
   flex: 1;
   min-width: 0; // Critical for flexbox children
+  min-height: 0; // Critical for nested flex layouts
   overflow: hidden;
   background: $color-bg-primary;
 }

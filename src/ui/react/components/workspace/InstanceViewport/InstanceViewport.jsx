@@ -659,8 +659,7 @@ export function InstanceViewport({
             {/* Auto-hide toolbar - slides down from header */}
             {tools.length > 0 && (
                 <div
-                    className={`instance-viewport__toolbar instance-viewport__toolbar--autohide ${toolbarVisible || toolbarPinned ? 'visible' : ''
-                        } ${toolbarPinned ? 'pinned' : ''}`}
+                    className={`instance-viewport__toolbar instance-viewport__toolbar--autohide ${toolbarVisible || toolbarPinned ? 'visible' : ''} ${toolbarPinned ? 'pinned' : ''}`}
                     onMouseEnter={showToolbar}
                     onMouseLeave={hideToolbar}
                 >
