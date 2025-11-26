@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Plus } from "lucide-react";
 
+import { generateGridSlotId } from "@Utils/idGenerator.js";
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport";
 
@@ -87,7 +88,7 @@ export function WorkspaceGrid() {
                 }
                 // Add instance with the view (type will be determined when data loads)
                 setInstances((prev) => [...prev, {
-                    key: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    key: generateGridSlotId(),
                     viewConfigId: viewConfig.id,
                     isRemote: false,
                 }]);
@@ -138,7 +139,7 @@ export function WorkspaceGrid() {
         console.log('➕ Creating empty instance (no type, no view)');
 
         setInstances((prev) => [...prev, {
-            key: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            key: generateGridSlotId(),
             viewConfigId: null,
             isRemote: false,
         }]);

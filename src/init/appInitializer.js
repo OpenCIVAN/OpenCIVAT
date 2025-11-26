@@ -1,9 +1,11 @@
 // src/init/appInitializer.js
 // Application initialization - three-phase startup
 import {
-  yInstances,
+  yViews,
   yDatasets,
   yAnnotations,
+  yWorkspaceLayouts,
+  initializeYjsProvider,
 } from "@Collaboration/yjs/yjsSetup.js";
 import { initializeStorageProvider } from "@Core/config/storage.js";
 import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
@@ -12,7 +14,6 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { initializeTensorFlow } from "@Services/tensorflow/tensorflowSetup.js";
-import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import { textChat } from "@Collaboration/communication/textChat.js";
 import {
@@ -129,11 +130,12 @@ export async function initializePhase1() {
     throw error;
   }
 
-  // Make Y.js maps globally accessible
+  // Make Y.js maps globally accessible for debugging
   window.CIA = window.CIA || {};
-  window.CIA.yInstances = yInstances;
+  window.CIA.yViews = yViews;
   window.CIA.yDatasets = yDatasets;
   window.CIA.yAnnotations = yAnnotations;
+  window.CIA.yWorkspaceLayouts = yWorkspaceLayouts;
 }
 
 /**
@@ -347,31 +349,29 @@ function setupDebugHelpers() {
   }
 
   // Helper functions
-  window.CIA.help = function () {
+  window.CIA.help = () => {
     console.log(`
-=== CIA Web Debug Helpers ===
-
-Managers:
-  CIA.datasetManager          - Dataset management
-  CIA.viewConfigurationManager - View configuration management
-  CIA.workspaceManager        - Instance management
-  CIA.sessionManager          - Session management
-
-Commands:
-  CIA.help()                  - Show this help
-  CIA.info()                  - Show system info
-  CIA.listDatasets()          - List all datasets
-  CIA.listViews()             - List all view configurations
-  CIA.listInstances()         - List all instances
-  CIA.getDataset(id)          - Get dataset by ID
-  CIA.getView(id)             - Get view by ID
-  CIA.getInstance(id)         - Get instance by ID
-
-Examples:
-  CIA.info()
-  CIA.listDatasets()
-  CIA.getDataset('dataset_123')
-    `);
+╔════════════════════════════════════════════════════════════════╗
+║                    CIA Web Debug Commands                      ║
+╠════════════════════════════════════════════════════════════════╣
+║  CIA.status()                  - Show system status            ║
+║  CIA.listDatasets()            - List all datasets             ║
+║  CIA.listViews()               - List all view configurations  ║
+║  CIA.getDataset(id)            - Inspect a dataset             ║
+║  CIA.getView(id)               - Inspect a view configuration  ║
+║  CIA.getInstance(id)           - Inspect an instance window    ║
+║                                                                ║
+║  Direct Y.js Access:                                           ║
+║  CIA.yDatasets                 - Y.js datasets map             ║
+║  CIA.yViews                    - Y.js views map                ║
+║  CIA.yAnnotations              - Y.js annotations map          ║
+║                                                                ║
+║  Managers:                                                     ║
+║  CIA.datasetManager            - Dataset manager instance      ║
+║  CIA.viewConfigurationManager  - View configuration manager    ║
+║  CIA.instanceManager           - Instance manager              ║
+╚════════════════════════════════════════════════════════════════╝
+  `);
   };
 
   window.CIA.info = function () {
@@ -411,16 +411,38 @@ Examples:
     return views;
   };
 
-  window.CIA.listInstances = function () {
-    const instanceIds = workspaceManager?.getAllInstanceIds() || [];
-    console.log(`=== Instances (${instanceIds.length}) ===`);
-    instanceIds.forEach((id) => {
-      const instance = workspaceManager.getInstance(id);
-      console.log(`  ${id}:`);
-      console.log(`    Type: ${instance.type}`);
-      console.log(`    Dataset: ${instance.datasetId || "none"}`);
+  window.CIA.listViews = () => {
+    console.log("📋 Y.js Views:");
+    yViews.forEach((view, id) => {
+      console.log(`  ${id}:`, view);
     });
-    return instanceIds;
+  };
+
+  // Keep old name for backward compatibility during transition
+  window.CIA.listInstances = () => {
+    console.warn("⚠️ CIA.listInstances() is deprecated. Use CIA.listViews()");
+    window.CIA.listViews();
+  };
+
+  // Add new helper for viewing stats
+  window.CIA.status = () => {
+    console.log("📊 CIA Web Status:");
+    console.log(`  Datasets: ${yDatasets.size}`);
+    console.log(`  Views: ${yViews.size}`);
+    console.log(`  Annotations: ${yAnnotations.size}`);
+    console.log(`  Workspace Layouts: ${yWorkspaceLayouts.size}`);
+  };
+
+  // Add helper to inspect a specific view
+  window.CIA.getView = (viewId) => {
+    const view = yViews.get(viewId);
+    if (view) {
+      console.log(`📋 View ${viewId}:`, view);
+      return view;
+    } else {
+      console.log(`❌ View ${viewId} not found`);
+      return null;
+    }
   };
 
   window.CIA.getDataset = function (id) {

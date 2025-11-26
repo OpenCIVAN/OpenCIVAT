@@ -361,6 +361,33 @@ export class InstanceTypeHandler {
   // =========================================================================
 
   /**
+   * Get the default view state for this instance type
+   *
+   * This returns the type-specific defaults for visualization state.
+   * When a ViewConfiguration is created with null camera/colorMaps,
+   * the handler provides these defaults.
+   *
+   * This keeps ViewConfiguration completely TYPE-AGNOSTIC - it just
+   * stores whatever state it's given without understanding the structure.
+   *
+   * @returns {Object} Default view state
+   * @returns {Object|null} return.camera - Type-specific camera defaults
+   * @returns {Object|null} return.colorMaps - Type-specific colormap defaults
+   * @returns {Array} return.filters - Default filters (usually empty)
+   * @returns {Array} return.widgets - Default widgets (usually empty)
+   */
+  getDefaultViewState() {
+    // Default implementation returns nulls
+    // Each handler overrides with type-specific defaults
+    return {
+      camera: null,
+      colorMaps: null,
+      filters: [],
+      widgets: [],
+    };
+  }
+
+  /**
    * Get the current shared state for this instance
    *
    * This state will be synced to other collaborators via Y.js.
@@ -689,6 +716,7 @@ export class InstanceTypeHandler {
  * - initialize() - Set up rendering
  * - cleanup() - Dispose resources
  * - loadData() - Display data
+ * - getDefaultViewState() - View states for collaborative feature sync
  *
  * SHOULD OVERRIDE if applicable:
  * - extractMetadata() - Fast metadata extraction
@@ -702,3 +730,53 @@ export class InstanceTypeHandler {
  * - canExtractMetadata() - Queries getSupportedFileTypes()
  * - canHandleDataset() - Uses canHandle() internally
  */
+
+// ============================================================================
+// FUTURE: PlotlyInstanceHandler example (for reference)
+// ============================================================================
+
+/*
+// PlotlyInstanceHandler.getDefaultViewState()
+getDefaultViewState() {
+  return {
+    camera: {
+      // 2D pan/zoom, completely different from VTK
+      center: { x: 0.5, y: 0.5 },
+      zoom: 1.0,
+      pan: { x: 0, y: 0 },
+    },
+    colorMaps: {
+      colorscale: 'Viridis',
+      showscale: true,
+    },
+    filters: [],
+    widgets: [],
+  };
+}
+*/
+
+// ============================================================================
+// FUTURE: ImageInstanceHandler example (for reference)
+// ============================================================================
+
+/*
+// ImageInstanceHandler.getDefaultViewState()
+getDefaultViewState() {
+  return {
+    camera: {
+      zoom: 1.0,
+      pan: { x: 0, y: 0 },
+      rotation: 0,
+      flipHorizontal: false,
+      flipVertical: false,
+    },
+    colorMaps: {
+      brightness: 0,
+      contrast: 0,
+      saturation: 0,
+    },
+    filters: [],
+    widgets: [],
+  };
+}
+*/

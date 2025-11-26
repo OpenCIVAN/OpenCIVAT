@@ -1,20 +1,4 @@
-// src/collaboration/userManagement.js
-// Fixed to avoid race condition with React modal
-
-// Generate a cryptographically secure UUID v4
-function generateUserId() {
-  // Use the Web Crypto API for better randomness
-  if (crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-
-  // Fallback for older browsers
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { generateUserId } from "@Utils/idGenerator.js";
 
 // Initialize or retrieve user ID
 let userId = localStorage.getItem("cia_user_id");

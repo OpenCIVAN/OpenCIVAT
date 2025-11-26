@@ -1600,6 +1600,34 @@ console.log('Tools:', tools);
   // ===========================================================================
 
   /**
+   * Get VTK-specific default view state
+   *
+   * This provides the default camera configuration and colormap settings
+   * for VTK 3D visualization.
+   *
+   * @returns {Object} VTK default view state
+   */
+  getDefaultViewState() {
+    return {
+      camera: {
+        position: [0, 0, 100],
+        focalPoint: [0, 0, 0],
+        viewUp: [0, 1, 0],
+        parallelScale: 1,
+        parallelProjection: false,
+      },
+      colorMaps: {
+        active: "rainbow",
+        preset: null,
+        range: [0, 1],
+        opacity: 1.0,
+      },
+      filters: [],
+      widgets: [],
+    };
+  }
+
+  /**
    * Set cursor visibility for remote users
    */
   async setCursorVisibility(instanceData, visible, users = []) {

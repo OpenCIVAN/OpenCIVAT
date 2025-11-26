@@ -4,8 +4,33 @@
 import { generateInstanceId } from "@Utils/idGenerator.js";
 import { getHandlerForType } from "@Core/instances/types/instanceTypesInit.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
-import { yInstances } from "@Collaboration/yjs/yjsSetup.js";
 import { datasetManager } from "@Init/appInitializer.js";
+
+// ViewConfigurations (Layer 2) are the collaborative unit
+
+// ============================================================================
+// ARCHITECTURAL NOTE
+// ============================================================================
+//
+// WorkspaceManager manages InstanceWindows (Layer 3) which are EPHEMERAL.
+// They are local GPU renderers that:
+// - Can be created and destroyed freely
+// - Don't sync to other users
+// - Read their visualization state from ViewConfigurations
+//
+// The Three-Layer Model:
+//
+//   Layer 1: Dataset (owns raw data + annotations)
+//            ↓
+//   Layer 2: ViewConfiguration (owns camera, filters, widgets)
+//            ↓ syncs via Y.js
+//   Layer 3: InstanceWindow (ephemeral renderer, NO sync)
+//
+// When an instance renders, it reads from its ViewConfiguration.
+// When the camera moves, the ViewConfiguration updates (and syncs).
+// The instance itself never syncs - it's just a "projector".
+//
+// ============================================================================
 
 /**
  * WorkspaceManager
