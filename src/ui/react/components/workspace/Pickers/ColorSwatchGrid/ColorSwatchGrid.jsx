@@ -123,7 +123,7 @@ export function ColorSwatchGrid({
 
             {hoveredSwatch && (
                 <div className="color-swatch-hint">
-                    Click to apply {colormaps.find(c => c.id === hoveredSwatch)?.name} colormap
+                    Click to apply {colormaps.find(c => c.id === hoveredSwatch)?.name || hoveredSwatch} colormap
                 </div>
             )}
         </div>

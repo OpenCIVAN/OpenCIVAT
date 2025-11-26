@@ -1511,3 +1511,132 @@
     opacity: 0.6;
   }
 }
+
+// =============================================================================
+// LAYOUT VIEW
+// =============================================================================
+
+.files-panel__layout-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: $spacing-md;
+}
+
+.layout-view__header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+  margin-bottom: $spacing-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-base;
+
+  svg {
+    color: $color-accent-primary;
+  }
+}
+
+.layout-view__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.layout-view__section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.layout-view__section-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.layout-view__hint {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  line-height: $line-height-normal;
+}
+
+.layout-view__presets {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.layout-view__preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  min-width: 70px;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  span {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+}
+
+.preset-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preset-grid {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+
+  &.preset-1x1 {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+  }
+
+  &.preset-2x1 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+  }
+
+  &.preset-2x2 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+}
+
+.preset-cell {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+
+  &.active {
+    background: rgba(100, 150, 255, 0.4);
+  }
+}

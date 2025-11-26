@@ -171,6 +171,26 @@ export function WorkspaceGrid() {
         return 'grid-layout-9';
     };
 
+    // Get CSS class for bento cell span
+    const getSpanClass = (span) => {
+        const spanClasses = {
+            '1x1': '',
+            '2x1': 'grid-span-col-2',   // Wide
+            '1x2': 'grid-span-row-2',   // Tall
+            '2x2': 'grid-span-2x2',     // Large square
+        };
+        return spanClasses[span] || '';
+    };
+
+    // Change instance span size
+    const handleChangeSpan = useCallback((instanceKey, newSpan) => {
+        setInstances((prev) => prev.map((instance) =>
+            instance.key === instanceKey
+                ? { ...instance, span: newSpan }
+                : instance
+        ));
+    }, []);
+
     return (
         <div className="workspace-grid">
             {/* Header with Add Instance button */}
@@ -215,15 +235,17 @@ export function WorkspaceGrid() {
                         <div
                             key={instance.key}
                             data-instance-key={instance.key}
-                            className={highlightedInstanceKey === instance.key ? 'instance-highlight' : ''}
+                            className={`${highlightedInstanceKey === instance.key ? 'instance-highlight' : ''} ${getSpanClass(instance.span)}`}
                         >
-                        <InstanceViewport
-                            viewConfigId={instance.viewConfigId}
-                            isRemote={instance.isRemote}
-                            remoteInstanceId={instance.remoteInstanceId}
-                            ownerUserName={instance.ownerUserName}
-                            onDelete={() => handleDeleteInstance(instance.key, instance.viewConfigId)}
-                        />
+                            <InstanceViewport
+                                viewConfigId={instance.viewConfigId}
+                                isRemote={instance.isRemote}
+                                remoteInstanceId={instance.remoteInstanceId}
+                                ownerUserName={instance.ownerUserName}
+                                onDelete={() => handleDeleteInstance(instance.key, instance.viewConfigId)}
+                                onChangeSpan={(newSpan) => handleChangeSpan(instance.key, newSpan)}
+                                currentSpan={instance.span || '1x1'}
+                            />
                         </div>
                     ))}
                 </div>

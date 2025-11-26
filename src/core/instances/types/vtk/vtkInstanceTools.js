@@ -351,10 +351,7 @@ class InstanceToolsManager {
     const property = tools.sceneObjects.actor.getProperty();
     property.setRepresentation(representation);
 
-    // Auto-adjust point size for points mode
-    if (mode === "points") {
-      property.setPointSize(5);
-    }
+    // Preserve user's point/line size settings - don't auto-reset
 
     tools.sceneObjects.renderWindow.render();
 

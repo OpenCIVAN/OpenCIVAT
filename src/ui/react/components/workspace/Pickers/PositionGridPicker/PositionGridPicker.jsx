@@ -6,7 +6,8 @@ import {
     CornerDownLeft,
     CornerDownRight,
     CornerUpLeft,
-    CornerUpRight
+    CornerUpRight,
+    Check
 } from 'lucide-react';
 
 /**
@@ -89,8 +90,15 @@ export function PositionGridPicker({
                                     onMouseLeave={() => setHoveredCell(null)}
                                     title={position.label}
                                 >
-                                    <IconComponent size={20} className="position-grid-icon" />
+                                    <IconComponent size={16} className="position-grid-icon" />
                                     <span className="position-grid-label">{position.label}</span>
+
+                                    {/* Check mark for active */}
+                                    {isActive && (
+                                        <div className="position-grid-check">
+                                            <Check size={14} />
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
@@ -101,7 +109,7 @@ export function PositionGridPicker({
             {/* Show hint on hover */}
             {hoveredCell && (
                 <div className="position-grid-hint">
-                    Move to {hoveredCell.toLowerCase().replace('_', ' ')}
+                    {hoveredCell.toLowerCase().replace('_', ' ')}
                 </div>
             )}
         </div>

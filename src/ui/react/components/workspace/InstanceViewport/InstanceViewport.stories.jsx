@@ -14,7 +14,7 @@ import {
     Box,
     Layers,
 } from "lucide-react";
-import "@UI/react/components/workspace/InstanceViewport.scss";
+import "./InstanceViewport.scss";
 
 /**
  * MockInstanceViewport

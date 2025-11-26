@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Files, Users, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 import { ResizablePanel } from "./ResizablePanel";
-import "./ThreeEdgeLayout.scss";
+import '@UI/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.scss';
 
 export default {
     title: "Layout/ResizablePanel",

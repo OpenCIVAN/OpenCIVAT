@@ -1,7 +1,7 @@
 // src/ui/react/components/workspace/InstanceViewport.jsx
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from 'react-dom';
-import { ChevronDown, Maximize2, Trash2, AlertCircle, ZoomIn, ZoomOut, RotateCcw, Move } from 'lucide-react';
+import { ChevronDown, Maximize2, Trash2, AlertCircle, ZoomIn, ZoomOut, RotateCcw, Move, LayoutGrid } from 'lucide-react';
 
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
@@ -27,7 +27,9 @@ export function InstanceViewport({
     isRemote = false,
     remoteInstanceId = null,
     ownerUserName = null,
-    onDelete
+    onDelete,
+    onChangeSpan,
+    currentSpan = '1x1'
 }) {
     // =========================================================================
     // STATE
@@ -35,6 +37,7 @@ export function InstanceViewport({
 
     const containerRef = useRef(null);
     const initOnce = useRef(false);
+    const instanceIdRef = useRef(null); // Track instanceId for cleanup
     const menuButtonRefs = useRef(new Map()); // Track button positions for portal positioning
     const toolbarHideTimeout = useRef(null);
 
@@ -62,6 +65,10 @@ export function InstanceViewport({
         dataPoints: null,
         dimensions: null
     });
+
+    // Span picker state
+    const [showSpanPicker, setShowSpanPicker] = useState(false);
+    const spanPickerRef = useRef(null);
 
     // =========================================================================
     // DROPDOWN POSITIONING & CLICK AWAY
@@ -167,6 +174,8 @@ export function InstanceViewport({
                     { viewConfigId: viewConfigId }
                 );
 
+                // Store in ref for cleanup (avoids stale closure)
+                instanceIdRef.current = instanceId;
                 setActualInstanceId(instanceId);
                 setInitialized(true);
                 setActiveInstance(instanceId);
@@ -192,12 +201,13 @@ export function InstanceViewport({
         initialize();
 
         return () => {
-            if (actualInstanceId) {
-                console.log(`🧹 Cleaning up instance ${actualInstanceId}`);
-                workspaceManager.deleteInstance(actualInstanceId);
+            // Use ref instead of state to get the correct instanceId
+            if (instanceIdRef.current) {
+                console.log(`🧹 Cleaning up instance ${instanceIdRef.current}`);
+                workspaceManager.deleteInstance(instanceIdRef.current);
             }
         };
-    }, [viewConfigId, actualInstanceId]);
+    }, [viewConfigId]); // Removed actualInstanceId - not needed, initOnce guards re-init
 
     // =========================================================================
     // DATA LOADING
@@ -355,6 +365,20 @@ export function InstanceViewport({
             }
         };
     }, []);
+
+    // Close span picker on click outside
+    useEffect(() => {
+        if (!showSpanPicker) return;
+
+        const handleClickOutside = (e) => {
+            if (spanPickerRef.current && !spanPickerRef.current.contains(e.target)) {
+                setShowSpanPicker(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showSpanPicker]);
 
     // =========================================================================
     // STATUS BAR HELPERS
@@ -637,6 +661,60 @@ export function InstanceViewport({
                     {getDisplayName()}
                 </div>
                 <div className="instance-viewport__header-actions">
+                    {/* Span size picker */}
+                    {onChangeSpan && (
+                        <div className="span-picker-wrapper" ref={spanPickerRef}>
+                            <button
+                                onClick={() => setShowSpanPicker(!showSpanPicker)}
+                                className={`instance-viewport__header-button ${showSpanPicker ? 'active' : ''}`}
+                                title={`Window size: ${currentSpan}`}
+                            >
+                                <LayoutGrid size={14} />
+                            </button>
+                            {showSpanPicker && (
+                                <div className="span-picker-dropdown">
+                                    <div className="span-picker-grid">
+                                        {[
+                                            { id: '1x1', label: '1×1', cols: 1, rows: 1 },
+                                            { id: '2x1', label: '2×1', cols: 2, rows: 1 },
+                                            { id: '1x2', label: '1×2', cols: 1, rows: 2 },
+                                            { id: '2x2', label: '2×2', cols: 2, rows: 2 },
+                                        ].map((size) => (
+                                            <button
+                                                key={size.id}
+                                                className={`span-picker-option ${currentSpan === size.id ? 'active' : ''}`}
+                                                onClick={() => {
+                                                    onChangeSpan(size.id);
+                                                    setShowSpanPicker(false);
+                                                }}
+                                                title={size.label}
+                                            >
+                                                <div className="span-preview" style={{
+                                                    gridTemplateColumns: `repeat(2, 1fr)`,
+                                                    gridTemplateRows: `repeat(2, 1fr)`
+                                                }}>
+                                                    <div className={`span-cell active`} style={{
+                                                        gridColumn: `span ${size.cols}`,
+                                                        gridRow: `span ${size.rows}`
+                                                    }} />
+                                                    {size.id !== '2x2' && <div className="span-cell" />}
+                                                    {size.id === '1x1' && (
+                                                        <>
+                                                            <div className="span-cell" />
+                                                            <div className="span-cell" />
+                                                        </>
+                                                    )}
+                                                    {size.id === '2x1' && <div className="span-cell" style={{ gridColumn: 'span 2' }} />}
+                                                    {size.id === '1x2' && <div className="span-cell" />}
+                                                </div>
+                                                <span className="span-label">{size.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <button
                         onClick={handleFullscreen}
                         className="instance-viewport__header-button"

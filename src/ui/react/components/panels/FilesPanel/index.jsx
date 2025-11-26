@@ -30,7 +30,8 @@ import {
     Plus,
     Copy,
     Link as LinkIcon,
-    Tag
+    Tag,
+    LayoutGrid
 } from 'lucide-react';
 
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
@@ -157,7 +158,7 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
     const { loadServerFile, findLoadedDataset } = useFileOperations();
 
     // Tab state
-    const [activeTab, setActiveTab] = useState('datasets'); // 'datasets' | 'files'
+    const [activeTab, setActiveTab] = useState('datasets'); // 'datasets' | 'files' | 'layout'
     const [error, setError] = useState(null);
 
     // Unified search state - shared across tabs
@@ -392,6 +393,13 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
                         </span>
                     )}
                 </button>
+                <button
+                    className={`files-panel__toggle-tab ${activeTab === 'layout' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('layout')}
+                >
+                    <LayoutGrid size={14} />
+                    <span>Layout</span>
+                </button>
             </div>
 
             {/* Error Display */}
@@ -423,7 +431,7 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
                         onSectionResize={handleSectionResize}
                         onDeleteDataset={handleDeleteDataset}
                     />
-                ) : (
+                ) : activeTab === 'files' ? (
                     <FilesView
                         files={filteredProjectFiles}
                         isLoading={filesLoading}
@@ -435,6 +443,8 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
                         onRefresh={refetchFiles}
                         isFileLoaded={isFileLoaded}
                     />
+                ) : (
+                    <LayoutView />
                 )}
             </div>
 
@@ -627,6 +637,67 @@ function FilesView({
 
             <div className="files-panel__hint">
                 <span>💡 Files are stored in the project for team access</span>
+            </div>
+        </div>
+    );
+}
+
+// =============================================================================
+// LAYOUT VIEW (Workspace arrangement)
+// =============================================================================
+
+function LayoutView() {
+    return (
+        <div className="files-panel__layout-view">
+            <div className="layout-view__header">
+                <LayoutGrid size={20} />
+                <span>Workspace Layout</span>
+            </div>
+
+            <div className="layout-view__content">
+                <div className="layout-view__section">
+                    <div className="layout-view__section-title">Window Sizes</div>
+                    <div className="layout-view__hint">
+                        Use the grid icon in each window's header to change its size.
+                    </div>
+                </div>
+
+                <div className="layout-view__section">
+                    <div className="layout-view__section-title">Presets</div>
+                    <div className="layout-view__presets">
+                        <button className="layout-view__preset" disabled>
+                            <div className="preset-icon">
+                                <div className="preset-grid preset-1x1">
+                                    <div className="preset-cell active" />
+                                </div>
+                            </div>
+                            <span>Single</span>
+                        </button>
+                        <button className="layout-view__preset" disabled>
+                            <div className="preset-icon">
+                                <div className="preset-grid preset-2x1">
+                                    <div className="preset-cell active" />
+                                    <div className="preset-cell active" />
+                                </div>
+                            </div>
+                            <span>Side by Side</span>
+                        </button>
+                        <button className="layout-view__preset" disabled>
+                            <div className="preset-icon">
+                                <div className="preset-grid preset-2x2">
+                                    <div className="preset-cell active" />
+                                    <div className="preset-cell active" />
+                                    <div className="preset-cell active" />
+                                    <div className="preset-cell active" />
+                                </div>
+                            </div>
+                            <span>Grid 2×2</span>
+                        </button>
+                    </div>
+                    <div className="layout-view__hint">
+                        Layout presets coming soon.
+                    </div>
+                </div>
             </div>
         </div>
     );

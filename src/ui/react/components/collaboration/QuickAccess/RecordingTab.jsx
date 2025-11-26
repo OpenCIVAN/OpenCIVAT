@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 import { useRecordings } from "./useRecordings.js";
-import { UserAvatar, UserAvatarGroup } from "../PeoplePanel/UserAvatar.jsx";
+import { UserAvatar, UserAvatarGroup } from "../PeoplePanel/UserAvatar";
 
 import "./RecordingTab.scss";
 

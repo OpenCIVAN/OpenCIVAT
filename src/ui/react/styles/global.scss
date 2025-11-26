@@ -528,42 +528,115 @@ select {
 
 .position-grid-container {
   padding: $spacing-sm;
-  min-width: 180px;
+  min-width: 156px; // 2 * 72px + gap + padding
+  position: relative;
+  // Reserve space for hint to prevent layout shift
+  padding-bottom: calc($spacing-sm + 28px);
 }
 
 .position-grid {
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
+  gap: $spacing-xs;
 }
 
 .position-grid-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-sm;
+  display: flex;
+  gap: $spacing-xs;
 }
 
 .position-grid-cell {
   position: relative;
-  aspect-ratio: 1.5;
-  @include glass-card;
-  cursor: pointer;
+  width: 72px;
+  height: 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: $spacing-xs;
+
+  // Subtle glass button matching camera picker style
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-md;
+  cursor: pointer;
   transition: all $transition-fast;
 
-  &:hover {
-    border-color: $color-accent-primary;
-    @include glass-hover;
+  &.empty {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &:hover:not(.empty) {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  &.hovered {
+    background: rgba(100, 150, 255, 0.12);
+    border-color: rgba(100, 150, 255, 0.4);
   }
 
   &.active {
-    background: $color-accent-primary-glow;
-    border-color: $color-accent-primary;
-    color: $color-accent-primary;
+    border: 1px solid rgba(100, 150, 255, 0.5);
+    background: rgba(100, 150, 255, 0.15);
+    box-shadow: 0 0 12px rgba(100, 150, 255, 0.3);
   }
+
+  .position-grid-icon {
+    color: $color-text-secondary;
+    transition: color $transition-fast;
+  }
+
+  .position-grid-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    text-transform: capitalize;
+  }
+
+  &:hover .position-grid-icon {
+    color: rgba(100, 150, 255, 1);
+  }
+
+  &.active .position-grid-icon {
+    color: rgba(100, 150, 255, 1);
+  }
+}
+
+.position-grid-check {
+  position: absolute;
+  top: $spacing-xs;
+  right: $spacing-xs;
+  width: 18px;
+  height: 18px;
+  background: rgba(100, 150, 255, 0.9);
+  border-radius: $radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 0 8px rgba(100, 150, 255, 0.5);
+  animation: pop-in $transition-fast $ease-out-back;
+}
+
+.position-grid-hint {
+  // Absolute position to prevent layout shift
+  position: absolute;
+  bottom: $spacing-sm;
+  left: $spacing-sm;
+  right: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(100, 150, 255, 0.08);
+  border: 1px solid rgba(100, 150, 255, 0.15);
+  border-radius: $radius-sm;
+  text-align: center;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  // Fade in animation
+  animation: hint-fade-in 0.15s ease-out;
 }
 
 // ============================================================================

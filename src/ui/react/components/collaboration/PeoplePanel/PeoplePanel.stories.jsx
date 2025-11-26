@@ -19,7 +19,7 @@ import {
     Edit3,
     Crown,
 } from "lucide-react";
-import { UserAvatar } from "./UserAvatar.jsx";
+import { UserAvatar } from "./UserAvatar";
 import "./PeoplePanel.scss";
 
 export default {

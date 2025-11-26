@@ -859,3 +859,80 @@
   color: $color-text-primary;
   font-variant-numeric: tabular-nums;
 }
+
+// ============================================================================
+// SPAN SIZE PICKER
+// ============================================================================
+
+.span-picker-wrapper {
+  position: relative;
+}
+
+.span-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1000;
+  padding: $spacing-sm;
+  background: rgba(25, 25, 30, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-md;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: dropdown-appear $transition-fast ease-out;
+}
+
+.span-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-xs;
+}
+
+.span-picker-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  &.active {
+    background: rgba(100, 150, 255, 0.15);
+    border-color: rgba(100, 150, 255, 0.4);
+
+    .span-cell.active {
+      background: rgba(100, 150, 255, 0.8);
+    }
+  }
+}
+
+.span-preview {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  gap: 2px;
+}
+
+.span-cell {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+
+  &.active {
+    background: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.span-label {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
