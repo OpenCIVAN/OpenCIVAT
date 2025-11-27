@@ -11,6 +11,7 @@ const { authenticate, optionalAuth } = require("./middleware/auth");
 const authRouter = require("./routes/auth");
 const wsManager = require("./services/websocket");
 const { auditLogger, auditMiddleware } = require("./services/audit");
+const { server: log, db, http: httpLog } = require("./utils/logger");
 
 const app = express();
 const server = http.createServer(app);
@@ -29,11 +30,11 @@ const pool = new Pool({
 });
 
 pool.on("connect", () => {
-  console.log("✅ Connected to PostgreSQL database");
+  db.info("Connected to PostgreSQL database");
 });
 
 pool.on("error", (err) => {
-  console.error("❌ Unexpected error on PostgreSQL client", err);
+  db.error("Unexpected error on PostgreSQL client", err);
   process.exit(-1);
 });
 
@@ -57,12 +58,12 @@ const BUCKET_NAME = process.env.MINIO_BUCKET || "cia-files";
     const exists = await minioClient.bucketExists(BUCKET_NAME);
     if (!exists) {
       await minioClient.makeBucket(BUCKET_NAME, "us-east-1");
-      console.log(`✅ Created MinIO bucket: ${BUCKET_NAME}`);
+      log.info(`Created MinIO bucket: ${BUCKET_NAME}`);
     } else {
-      console.log(`✅ Connected to MinIO bucket: ${BUCKET_NAME}`);
+      log.info(`Connected to MinIO bucket: ${BUCKET_NAME}`);
     }
   } catch (error) {
-    console.error("❌ MinIO initialization error:", error);
+    log.error("MinIO initialization error:", error);
   }
 })();
 
@@ -84,9 +85,9 @@ app.use(cors());
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
-// Request logging
+// Request logging (only in debug mode via http category)
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  httpLog.debug(`${req.method} ${req.path}`);
   next();
 });
 
@@ -196,7 +197,8 @@ app.get("/api/status", optionalAuth, async (req, res) => {
 // ============================================================================
 
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
+  log.error("Unhandled error:", err.message);
+  log.debug("Stack trace:", err.stack);
 
   // Log errors to audit (for forensic level)
   if (req.audit && err.status !== 404) {
@@ -225,25 +227,25 @@ app.use((err, req, res, next) => {
 // ============================================================================
 
 async function shutdown(signal) {
-  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  log.info(`${signal} received. Starting graceful shutdown...`);
 
   // Stop accepting new connections
   server.close(() => {
-    console.log("HTTP server closed");
+    log.info("HTTP server closed");
   });
 
   // Shutdown WebSocket
   wsManager.shutdown();
-  console.log("WebSocket server closed");
+  log.info("WebSocket server closed");
 
   // Flush and shutdown audit logger
   await auditLogger.shutdown();
 
   // Close database pool
   await pool.end();
-  console.log("Database pool closed");
+  log.info("Database pool closed");
 
-  console.log("Graceful shutdown complete");
+  log.info("Graceful shutdown complete");
   process.exit(0);
 }
 
@@ -255,20 +257,25 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 // ============================================================================
 
 server.listen(PORT, () => {
-  console.log(`🚀 CIA Web API server v2.0 running on port ${PORT}`);
-  console.log(`   Architecture: Server-Authority`);
-  console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(
-    `   Database: ${process.env.DB_HOST || "localhost"}:${
+  log.info(`CIA Web API server v2.0 running on port ${PORT}`);
+  log.info(`Architecture: Server-Authority`);
+  log.info(`Environment: ${process.env.NODE_ENV || "development"}`);
+  log.debug(
+    `Database: ${process.env.DB_HOST || "localhost"}:${
       process.env.DB_PORT || 5432
     }`
   );
-  console.log(
-    `   MinIO: ${process.env.MINIO_ENDPOINT || "localhost"}:${
+  log.debug(
+    `MinIO: ${process.env.MINIO_ENDPOINT || "localhost"}:${
       process.env.MINIO_PORT || 9000
     }`
   );
-  console.log(`   WebSocket: ws://localhost:${PORT}/ws`);
+  log.debug(`WebSocket: ws://localhost:${PORT}/ws`);
+  log.debug(
+    `Log level: ${
+      process.env.LOG_LEVEL || "debug"
+    }, Categories: LOG_CATEGORIES env to filter`
+  );
 });
 
 module.exports = { app, server, pool };
