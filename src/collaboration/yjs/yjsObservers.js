@@ -87,7 +87,11 @@ async function processRemoteDataset(datasetId, metadata) {
   }
 
   // Use centralized method that checks for duplicates by ID AND hash
-  const dataset = await datasetManager._addDatasetFromYjs(metadata);
+  const dataset = await datasetManager._addDatasetFromYjs({
+    id: datasetId,
+    serverId: metadata.serverId, // Preserve server ID
+    ...metadata,
+  });
 
   if (!dataset) {
     console.log(`   ⏭️ Dataset already exists, skipping`);

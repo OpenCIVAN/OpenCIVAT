@@ -22,7 +22,8 @@ import { generateAnnotationId } from "@Utils/idGenerator.js";
 export class Annotation {
   constructor(config = {}) {
     // Core identification
-    this.id = config.id || this._generateId();
+    this.id = config.id || generateAnnotationId();
+    this.serverId = config.serverId || null;
     this.datasetId = config.datasetId; // Required: which dataset this belongs to
 
     // Spatial anchoring (coordinates in dataset's coordinate system)

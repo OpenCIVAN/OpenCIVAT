@@ -375,6 +375,7 @@ export class DatasetManager extends EventEmitter {
     // Only sync the metadata needed for fetching, not the entire dataset
     yDatasets.set(dataset.id, {
       id: dataset.id,
+      serverId: dataset.serverId,
       filename: dataset.filename,
       fileType: dataset.fileType,
       hash: dataset.hash,

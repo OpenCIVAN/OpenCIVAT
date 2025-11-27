@@ -14,7 +14,12 @@ import { generateDatasetId } from "@Utils/idGenerator.js";
  */
 export class Dataset {
   constructor(config = {}) {
+    // Local ID (for Y.js key, temporary operations)
     this.id = config.id;
+
+    // Server ID (for downloads, persistence, sharing)
+    // This is the UUID from the database
+    this.serverId = config.serverId || null;
     this.filename = config.filename;
     this.name = config.name || config.filename;
     this.fileType = config.fileType;
@@ -127,6 +132,7 @@ export class Dataset {
   toJSON() {
     return {
       id: this.id,
+      serverId: this.serverId,
       filename: this.filename,
       name: this.name,
       fileType: this.fileType,
