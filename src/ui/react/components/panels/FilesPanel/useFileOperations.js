@@ -33,8 +33,9 @@ export function useFileOperations() {
    * @returns {Promise<string|null>} Dataset ID if successful, null if already loading
    */
   const loadServerFile = useCallback(async (serverFile) => {
-    // Use serverId if available, fall back to id
-    const downloadId = serverFile.serverId || serverFile.id;
+    // Use serverId for downloads (falls back to id for backward compat)
+    const fileId = serverFile.serverId || serverFile.id;
+    const filename = serverFile.filename || serverFile.name;
 
     // Prevent duplicate loading
     if (loadingFilesRef.current.has(fileId)) {
@@ -45,7 +46,7 @@ export function useFileOperations() {
     loadingFilesRef.current.add(fileId);
 
     try {
-      console.log(`📂 Loading from server: ${serverFile.filename} (${downloadId})`);
+      console.log(`📂 Loading from server: ${filename} (${fileId})`);
 
       // Download file from server
       const response = await fetch(

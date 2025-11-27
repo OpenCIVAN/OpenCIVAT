@@ -271,6 +271,7 @@ export class DatasetManager extends EventEmitter {
 
     const dataset = new Dataset({
       id: serverData.id,
+      serverId: serverData.id,
       filename: serverData.filename,
       fileType:
         serverData.file_type ||
@@ -332,6 +333,7 @@ export class DatasetManager extends EventEmitter {
 
     const dataset = new Dataset({
       id: yData.id,
+      serverId: yData.serverId,
       filename: yData.filename,
       fileType: yData.fileType || this._extractFileType(yData.filename),
       hash: yData.hash,
@@ -436,9 +438,9 @@ export class DatasetManager extends EventEmitter {
       const dataset = new Dataset({
         id: generateDatasetId(),
         filename: file.name,
-        fileType: fileType, // ← THE KEY FIX
+        fileType: fileType,
         hash: hash,
-        storageKey: storageResult || hash, // storageResult IS the key, not storageResult.key
+        storageKey: storageResult || hash,
         userId: userId,
         metadata: {
           fileSize: file.size,

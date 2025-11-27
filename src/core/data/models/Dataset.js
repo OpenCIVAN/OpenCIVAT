@@ -186,6 +186,7 @@ export class Dataset {
 
     return new Dataset({
       id: json.id,
+      serverId: json.serverId,
       filename: json.filename,
       name: json.name,
       fileType: fileType, // Now guaranteed to have a value
