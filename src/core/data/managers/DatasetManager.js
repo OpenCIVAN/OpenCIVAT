@@ -783,8 +783,20 @@ export class DatasetManager extends EventEmitter {
           // Files loaded from the database already have a cacheKey and don't need re-uploading
           if (!dataset.cacheKey) {
             try {
-              await this.storageProvider.storeFile(rawFile);
+              const serverId = await this.storageProvider.storeFile(rawFile);
               console.log(`✅ File fetched and cached successfully`);
+
+              // CRITICAL: Update the dataset with the server ID so downloads work
+              if (serverId) {
+                dataset.serverId = serverId;
+                dataset.cacheKey = serverId;
+
+                // Persist the update so it survives page reload
+                await this._persistDataset(dataset);
+
+                // Sync to Y.js so other clients get the correct server ID
+                this._syncDatasetMetadataToYjs(dataset);
+              }
             } catch (cacheError) {
               console.warn(`⚠️ File fetched but caching failed:`, cacheError);
               // Continue anyway - we have the file in memory
