@@ -2,6 +2,8 @@
 
 **Collaborative Immersive Analysis on the Web**
 
+UNDER CONSTRUCTION -- Making server the central authority!
+
 A real-time collaborative platform for immersive scientific data visualization and analysis. CIA_Web combines **VTK.js**, **WebXR**, **TensorFlow.js**, and **LiveKit** to enable multi-user interaction, voice/text communication, and high-dimensional data exploration in both desktop and VR environments.
 
 ---
