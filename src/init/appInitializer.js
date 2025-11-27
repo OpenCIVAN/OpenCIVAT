@@ -73,6 +73,15 @@ export async function initializePhase1() {
     await datasetManager.initialize();
     console.log("  ✓ Dataset manager ready");
 
+    // Initialize server sync (WebSocket for real-time updates)
+    try {
+      const { serverSync } = await import("@Services/serverSync.js");
+      serverSync.initialize(datasetManager);
+      console.log("  ✓ Server sync connected");
+    } catch (syncError) {
+      console.warn("  ⚠️ Server sync failed:", syncError.message);
+    }
+
     // v2.0: Sync from server API (primary source of truth)
     if (storageMode === "server" || config.useServerStorage) {
       try {
