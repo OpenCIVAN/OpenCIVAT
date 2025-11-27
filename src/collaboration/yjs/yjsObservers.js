@@ -68,8 +68,61 @@ async function handleRemoteDataset(datasetId, metadata) {
 // src/collaboration/yjs/yjsObservers.js
 
 /**
+ * Validate that a serverId exists on the server
+ * Returns true if valid, false if the server returns 404
+ */
+async function validateServerIdExists(serverId, publicPath) {
+  if (!serverId && !publicPath) return false;
+
+  const checkUrl =
+    publicPath ||
+    `${window.CIA?.config?.apiBaseUrl || ""}/api/files/${serverId}/download`;
+
+  try {
+    // Use HEAD request to check existence without downloading
+    const response = await fetch(checkUrl, { method: "HEAD" });
+    return response.ok;
+  } catch (error) {
+    console.warn(`   ⚠️ Server validation failed:`, error.message);
+    return false;
+  }
+}
+
+/**
+ * Remove a stale dataset entry from Y.js
+ * This cleans up datasets that reference non-existent server resources
+ */
+function removeStaleYjsDataset(datasetId) {
+  console.log(`🗑️ Removing stale Y.js dataset: ${datasetId}`);
+  try {
+    yDatasets.delete(datasetId);
+    console.log(`   ✅ Stale dataset removed from Y.js`);
+  } catch (error) {
+    console.error(`   ❌ Failed to remove stale dataset:`, error);
+  }
+}
+
+/**
+ * Clear all datasets from Y.js (manual cleanup utility)
+ * Access via: window.CIA.clearYjsDatasets()
+ */
+export function clearAllYjsDatasets() {
+  console.log("🗑️ Clearing all Y.js datasets...");
+  const keys = Array.from(yDatasets.keys());
+  console.log(`   Found ${keys.length} dataset(s) to clear`);
+
+  keys.forEach((key) => {
+    yDatasets.delete(key);
+  });
+
+  console.log("✅ All Y.js datasets cleared");
+  return keys.length;
+}
+
+/**
  * Actually process a remote dataset
  * Now uses DatasetManager's centralized method to prevent duplicates
+ * UPDATED: Validates server resources exist before adding
  */
 async function processRemoteDataset(datasetId, metadata) {
   const myId = getUserId();
@@ -84,6 +137,23 @@ async function processRemoteDataset(datasetId, metadata) {
   if (metadata.userId === myId) {
     console.log(`   ⏭️ Skipping own dataset`);
     return;
+  }
+
+  // VALIDATION: Check if the server resource exists before adding
+  // This prevents adding datasets with stale/invalid serverIds
+  if (metadata.serverId || metadata.publicPath) {
+    const isValid = await validateServerIdExists(
+      metadata.serverId,
+      metadata.publicPath
+    );
+    if (!isValid) {
+      console.warn(
+        `   ⚠️ Dataset ${metadata.filename} references invalid server resource`
+      );
+      console.warn(`   🗑️ Removing stale entry from Y.js...`);
+      removeStaleYjsDataset(datasetId);
+      return;
+    }
   }
 
   // Use centralized method that checks for duplicates by ID AND hash
@@ -111,7 +181,17 @@ async function processRemoteDataset(datasetId, metadata) {
 
     try {
       const response = await fetch(metadata.publicPath);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        // If 404, the server resource was deleted - clean up Y.js
+        if (response.status === 404) {
+          console.warn(`   ⚠️ Server resource not found (404), cleaning up...`);
+          removeStaleYjsDataset(datasetId);
+          // Also remove from local DatasetManager
+          datasetManager._datasets.delete(datasetId);
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
 
       const blob = await response.blob();
       const file = new File([blob], metadata.filename, {
@@ -163,6 +243,22 @@ export async function initializeDatasetObserver() {
     if (remoteDataset.userId === currentUserId) {
       console.log(`   ⏭️ Skipping own dataset: ${remoteDataset.filename}`);
       continue;
+    }
+
+    // VALIDATION: Check if server resource exists before adding
+    if (remoteDataset.serverId || remoteDataset.publicPath) {
+      const isValid = await validateServerIdExists(
+        remoteDataset.serverId,
+        remoteDataset.publicPath
+      );
+      if (!isValid) {
+        console.warn(
+          `   ⚠️ Dataset ${remoteDataset.filename} references invalid server resource`
+        );
+        console.warn(`   🗑️ Removing stale entry from Y.js...`);
+        removeStaleYjsDataset(datasetId);
+        continue;
+      }
     }
 
     // Use centralized method that checks for duplicates

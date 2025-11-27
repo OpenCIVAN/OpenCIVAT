@@ -19,6 +19,7 @@ import { textChat } from "@Collaboration/communication/textChat.js";
 import {
   initializeAllObservers,
   markSystemReady,
+  clearAllYjsDatasets,
 } from "@Collaboration/yjs/yjsObservers.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 
@@ -136,6 +137,12 @@ export async function initializePhase1() {
   window.CIA.yDatasets = yDatasets;
   window.CIA.yAnnotations = yAnnotations;
   window.CIA.yWorkspaceLayouts = yWorkspaceLayouts;
+
+  // Utility functions for debugging/cleanup
+  window.CIA.clearYjsDatasets = clearAllYjsDatasets;
+  console.log(
+    "💡 Debug: Use window.CIA.clearYjsDatasets() to clear stale Y.js data"
+  );
 }
 
 /**
