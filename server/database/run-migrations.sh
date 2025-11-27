@@ -100,6 +100,16 @@ run_all_migrations() {
     if [ -f "${MIGRATIONS_DIR}/003_seed_sample_files.sql" ]; then
         run_sql_file "${MIGRATIONS_DIR}/003_seed_sample_files.sql"
     fi
+
+    # Migration 004 - Seed Sample Files
+    if [ -f "${MIGRATIONS_DIR}/004_v2_server_authority.sql" ]; then
+        run_sql_file "${MIGRATIONS_DIR}/004_v2_server_authority.sql"
+    fi
+
+    # Migration 005 - Seed Sample Files
+    if [ -f "${MIGRATIONS_DIR}/005_workspace_annotations.sql" ]; then
+        run_sql_file "${MIGRATIONS_DIR}/005_workspace_annotations.sql"
+    fi
     
     echo ""
     log_success "All migrations complete!"

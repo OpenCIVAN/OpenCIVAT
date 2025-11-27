@@ -242,65 +242,59 @@ export class DatasetManager extends EventEmitter {
   }
 
   /**
-   * Add dataset from server data (called by SyncManager or Y.js observers)
-   * Checks for duplicates by hash before adding
+   * Add a dataset from server sync (v2.0)
+   * Called when fetching existing datasets from server API
+   * Does NOT upload - the file already exists on server
    *
-   * @param {Object} serverData - Dataset info from server
-   * @returns {Dataset|null} - The created dataset, or null if duplicate
+   * @param {object} serverFile - Server file record
+   * @returns {Promise<Dataset>} The created dataset
    */
-  async _addDatasetFromServer(serverData) {
-    // Check if we already have this dataset by ID
-    if (this._datasets.has(serverData.id)) {
-      console.log(`   ⏭️ Dataset ${serverData.id} already exists, skipping`);
-      return null;
+  async _addDatasetFromServer(serverFile) {
+    console.log(
+      `📦 DatasetManager: Adding dataset from server: ${serverFile.filename}`
+    );
+
+    // Check if we already have this dataset
+    if (this._datasets.has(serverFile.id)) {
+      console.log(`  ⏭️ Dataset ${serverFile.id} already exists locally`);
+      return this._datasets.get(serverFile.id);
     }
 
-    // Check if we already have this dataset by hash (different ID, same file)
-    const hash = serverData.hash || serverData.metadata?.hash;
-    if (hash && this.hasDatasetWithHash(hash)) {
-      console.log(
-        `   ⏭️ Dataset with hash ${hash.substring(
-          0,
-          8
-        )}... already exists, skipping`
-      );
-      return null;
-    }
-
-    console.log(`   📥 Adding dataset from server: ${serverData.filename}`);
-
+    // Create dataset object with server-provided data
     const dataset = new Dataset({
-      id: serverData.id,
-      serverId: serverData.id,
-      filename: serverData.filename,
+      id: serverFile.id,
+      serverId: serverFile.id,
+      filename: serverFile.filename,
       fileType:
-        serverData.file_type ||
-        serverData.fileType ||
-        this._extractFileType(serverData.filename),
-      fileSize: serverData.file_size || serverData.fileSize,
-      hash: hash,
-      userId: serverData.uploaded_by || serverData.userId,
-      uploadedBy: serverData.uploaded_by || serverData.userId,
-      uploadedAt: serverData.uploaded_at || serverData.uploadedAt,
-      cacheKey: serverData.id,
-      storageKey: serverData.storage_key || serverData.storageKey,
-      fileStatus: "on-server",
-      metadata: serverData.metadata || {},
-      publicPath:
-        serverData.public_path ||
-        serverData.publicPath ||
-        `${config.apiBaseUrl}/files/${serverData.id}/download`,
+        serverFile.file_type || this._extractFileType(serverFile.filename),
+      hash: serverFile.hash,
+      storageKey: serverFile.storage_key,
+      publicPath: `${config.apiBaseUrl}/files/${serverFile.id}/download`,
+      userId: serverFile.uploaded_by,
+      metadata: {
+        fileSize: serverFile.file_size,
+        uploadedBy: serverFile.uploaded_by,
+        uploadedAt: serverFile.uploaded_at,
+        pointCount: serverFile.point_count,
+        cellCount: serverFile.cell_count,
+        bounds: serverFile.bounds,
+        dataArrays: serverFile.data_arrays,
+      },
     });
 
-    // Add to in-memory map
+    // Mark as needing file fetch (file is on server, not local yet)
+    dataset.setFileStatus("needs-fetch");
+
+    // Store in memory
     this._datasets.set(dataset.id, dataset);
 
     // Persist to IndexedDB
     await this._persistDataset(dataset);
 
-    // Emit event
+    // Notify listeners
     this._emit("datasetAdded", dataset);
 
+    console.log(`  ✅ Dataset added from server: ${dataset.id}`);
     return dataset;
   }
 

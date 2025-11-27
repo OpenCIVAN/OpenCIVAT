@@ -504,8 +504,10 @@ export function getAnnotationManager() {
 async function fetchDatasetsFromServer() {
   const projectId = sessionManager.getProjectId?.() || config.defaultSessionId;
 
+  // Use the projects route which is proven to work
+  // /api/projects/:id/files instead of /api/files?projectId=
   const response = await fetch(
-    `${config.apiBaseUrl}/files?projectId=${projectId}`
+    `${config.apiBaseUrl}/projects/${projectId}/files`
   );
 
   if (!response.ok) {
