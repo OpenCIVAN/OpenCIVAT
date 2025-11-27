@@ -538,23 +538,7 @@ INSERT INTO organization_members (organization_id, user_id, role)
 VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', 'admin')
 ON CONFLICT (organization_id, user_id) DO NOTHING;
 
--- Sample VTP files
-INSERT INTO datasets (id, organization_id, filename, file_size, file_type, public_path, uploaded_by, status)
-VALUES
-    ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'Bones.vtp', 27272740, 'vtp', '/vtp_files/Bones.vtp', 'system', 'active'),
-    ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'diskout.vtp', 483237, 'vtp', '/vtp_files/diskout.vtp', 'system', 'active'),
-    ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'earth.vtp', 1233227, 'vtp', '/vtp_files/earth.vtp', 'system', 'active'),
-    ('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'Lungs.vtp', 10750132, 'vtp', '/vtp_files/Lungs.vtp', 'system', 'active'),
-    ('10000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000000', 'LungVessels.vtp', 28826464, 'vtp', '/vtp_files/LungVessels.vtp', 'system', 'active'),
-    ('10000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000000', 'Skull.vtp', 19988316, 'vtp', '/vtp_files/Skull.vtp', 'system', 'active'),
-    ('10000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000000', 'Ventricles.vtp', 16487240, 'vtp', '/vtp_files/Ventricles.vtp', 'system', 'active')
-ON CONFLICT (id) DO NOTHING;
-
--- Link sample files to demo project
-INSERT INTO file_project_access (file_id, project_id, access_level, visibility, added_by)
-SELECT id, '00000000-0000-0000-0000-000000000001', 'read', 'all_members', '00000000-0000-0000-0000-000000000001'
-FROM datasets WHERE uploaded_by = 'system'
-ON CONFLICT (file_id, project_id) DO NOTHING;
+-- Demo files: Run ./scripts/load-demo-files.sh to upload VTP samples to MinIO
 
 -- ============================================================================
 -- DONE
