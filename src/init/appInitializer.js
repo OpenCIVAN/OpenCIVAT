@@ -149,6 +149,30 @@ export async function initializePhase1() {
     viewConfigurationManager.initialize();
     console.log("✅ View configuration manager ready");
 
+    // Wire up ViewConfigurationManager to receive WebSocket broadcasts
+    try {
+      const { serverSync } = await import("@Services/serverSync.js");
+      serverSync.setViewConfigurationManager(viewConfigurationManager);
+      console.log("  ✓ ViewConfigurationManager wired to server sync");
+    } catch (error) {
+      console.warn(
+        "  ⚠️ Failed to wire ViewConfigurationManager to server sync:",
+        error.message
+      );
+    }
+
+    // v2.0: Load views from server API (primary source of truth)
+    if (storageMode === "server" || config.useServerStorage) {
+      try {
+        console.log("  📡 Fetching views from server API...");
+        await viewConfigurationManager.loadFromServer();
+        console.log("  ✓ Synced views from server");
+      } catch (error) {
+        console.warn("  ⚠️ Failed to fetch views from server:", error.message);
+        console.warn("  Views will be created as needed");
+      }
+    }
+
     // STEP 8: Debug helpers
     setupDebugHelpers();
     console.log("✅ Debug helpers available");

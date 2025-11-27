@@ -165,23 +165,92 @@ CREATE TABLE file_project_access (
 
 -- ============================================================================
 -- VIEW CONFIGURATIONS
+-- Server-authoritative view state for v2.0 architecture
 -- ============================================================================
 
 CREATE TABLE view_configurations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    -- =========================================================================
+    -- RELATIONSHIPS
+    -- =========================================================================
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     branch_id UUID REFERENCES project_branches(id),
     file_version_id UUID REFERENCES file_versions(id),
-    dataset_ids UUID[],
+    dataset_id UUID REFERENCES datasets(id) ON DELETE CASCADE,
+    group_id UUID,  -- Future: FK to groups table
 
-    name VARCHAR(255),
-    camera JSONB,
-    widgets JSONB DEFAULT '[]',
-    settings JSONB DEFAULT '{}',
+    -- =========================================================================
+    -- IDENTIFICATION
+    -- =========================================================================
+    name VARCHAR(255) DEFAULT 'Untitled View',
+    description TEXT,
 
+    -- =========================================================================
+    -- OWNERSHIP & SHARING
+    -- =========================================================================
+    owner_user_id UUID REFERENCES users(id),
+    owner_user_name VARCHAR(255),
+    visibility VARCHAR(50) DEFAULT 'private',  -- private, group, specific, public
     is_shared BOOLEAN DEFAULT FALSE,
-    visibility VARCHAR(50) DEFAULT 'private',
+    shared_with JSONB DEFAULT '[]',  -- [{ userId, userName, role, canEdit, canDuplicate, addedAt }]
+    saved_by_user BOOLEAN DEFAULT FALSE,
 
+    -- =========================================================================
+    -- VISUALIZATION STATE (Type-agnostic - interpreted by InstanceTypeHandler)
+    -- =========================================================================
+    camera JSONB,
+    filters JSONB DEFAULT '[]',
+    widgets JSONB DEFAULT '[]',
+    color_maps JSONB,
+    cursor_config JSONB DEFAULT '{"showOtherUsers": true, "cursorStyle": "crosshair", "showCursorTrails": false}',
+    annotation_display JSONB DEFAULT '{"visible": true, "showLabels": true, "opacity": 1.0}',
+    annotations_visible BOOLEAN DEFAULT TRUE,
+
+    -- =========================================================================
+    -- SELECTIVE LINKING (Property-level links to other views)
+    -- =========================================================================
+    links JSONB DEFAULT '{}',  -- { camera: LinkConfiguration, filters: LinkConfiguration, ... }
+
+    -- =========================================================================
+    -- LINEAGE TRACKING (Audit Trail)
+    -- =========================================================================
+    forked_from JSONB,  -- { viewId, serverId, viewName, ownerUserId, ownerUserName, timestamp, reason }
+    fork_count INTEGER DEFAULT 0,
+    merged_from JSONB,  -- [{ viewId, viewName, ownerUserId, properties, timestamp }]
+
+    -- =========================================================================
+    -- BROADCAST CONFIGURATION (Source-side: one-to-many presentation mode)
+    -- =========================================================================
+    broadcast JSONB DEFAULT '{"state": "off", "startedAt": null, "followerCount": 0, "allowDuplication": false, "allowChat": true, "allowAnnotations": false}',
+
+    -- =========================================================================
+    -- FOLLOWING CONFIGURATION (Follower-side)
+    -- =========================================================================
+    following JSONB,  -- { sourceViewId, sourceServerId, sourceViewName, sourceOwnerName, startedAt, ... }
+
+    -- =========================================================================
+    -- SNAPSHOTS (Named save points)
+    -- =========================================================================
+    snapshots JSONB DEFAULT '[]',  -- [ViewSnapshot objects]
+    max_snapshots INTEGER DEFAULT 50,
+
+    -- =========================================================================
+    -- APPLIED PRESETS
+    -- =========================================================================
+    applied_presets JSONB DEFAULT '[]',  -- [{ presetId, presetName, appliedAt, appliedBy, properties }]
+
+    -- =========================================================================
+    -- LIFECYCLE
+    -- =========================================================================
+    status VARCHAR(50) DEFAULT 'active',  -- active, inactive, archived
+    active_instance_count INTEGER DEFAULT 0,
+    last_active_timestamp TIMESTAMPTZ DEFAULT NOW(),
+    server_version INTEGER DEFAULT 1,
+
+    -- =========================================================================
+    -- TIMESTAMPS
+    -- =========================================================================
     created_by VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -389,7 +458,12 @@ CREATE INDEX idx_workspace_ann_linked_datasets ON workspace_annotations USING GI
 
 -- View configurations
 CREATE INDEX idx_views_project ON view_configurations(project_id);
+CREATE INDEX idx_views_dataset ON view_configurations(dataset_id);
+CREATE INDEX idx_views_owner ON view_configurations(owner_user_id);
 CREATE INDEX idx_views_shared ON view_configurations(is_shared);
+CREATE INDEX idx_views_status ON view_configurations(status);
+CREATE INDEX idx_views_visibility ON view_configurations(visibility);
+CREATE INDEX idx_views_updated ON view_configurations(updated_at DESC);
 
 -- Computation
 CREATE INDEX idx_cache_key ON computation_cache(cache_key);

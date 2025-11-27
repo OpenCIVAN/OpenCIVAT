@@ -14,12 +14,22 @@ class ServerSyncService {
     this.reconnectDelay = 1000;
     this.handlers = new Map();
     this.datasetManager = null;
+    this.viewConfigurationManager = null;
   }
 
-  initialize(datasetManager) {
+  initialize(datasetManager, viewConfigurationManager = null) {
     this.datasetManager = datasetManager;
+    this.viewConfigurationManager = viewConfigurationManager;
     this._setupDefaultHandlers();
     this.connect();
+  }
+
+  /**
+   * Set the ViewConfigurationManager reference
+   * Called by appInitializer after ViewConfigurationManager is created
+   */
+  setViewConfigurationManager(viewConfigurationManager) {
+    this.viewConfigurationManager = viewConfigurationManager;
   }
 
   connect() {
@@ -105,12 +115,34 @@ class ServerSyncService {
       log.info(`Annotation deleted: ${msg.annotationId}`)
     );
 
-    // View events
-    this.on("view:created", (msg) =>
-      log.info(`View created: ${msg.view.name || msg.view.id}`)
-    );
-    this.on("view:updated", (msg) => log.info(`View updated: ${msg.view.id}`));
-    this.on("view:deleted", (msg) => log.info(`View deleted: ${msg.viewId}`));
+    // View events - forward to ViewConfigurationManager
+    this.on("view:created", (msg) => {
+      log.info(`View created: ${msg.view.name || msg.view.id}`);
+      if (this.viewConfigurationManager) {
+        this.viewConfigurationManager.handleServerBroadcast(
+          "view:created",
+          msg
+        );
+      }
+    });
+    this.on("view:updated", (msg) => {
+      log.info(`View updated: ${msg.view.id}`);
+      if (this.viewConfigurationManager) {
+        this.viewConfigurationManager.handleServerBroadcast(
+          "view:updated",
+          msg
+        );
+      }
+    });
+    this.on("view:deleted", (msg) => {
+      log.info(`View deleted: ${msg.viewId}`);
+      if (this.viewConfigurationManager) {
+        this.viewConfigurationManager.handleServerBroadcast(
+          "view:deleted",
+          msg
+        );
+      }
+    });
 
     // Member events
     this.on("member:joined", (msg) => log.debug(`User ${msg.userId} joined`));

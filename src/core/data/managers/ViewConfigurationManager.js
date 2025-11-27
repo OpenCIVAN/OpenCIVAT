@@ -1,9 +1,12 @@
 // src/core/data/managers/ViewConfigurationManager.js
 // Manages Layer 2 (ViewConfigurations) - the collaborative unit
 //
-// ARCHITECTURAL ROLE:
+// ARCHITECTURAL ROLE (v2.0 Server-Authority):
 // - Sits between DatasetManager (Layer 1) and InstanceManager (Layer 3)
-// - Owns all Y.js sync for view state
+// - Server is the source of truth for view state
+// - Uses REST API for CRUD operations
+// - Uses WebSocket broadcasts for real-time sync
+// - Y.js is only used for cursor/avatar presence (not view state)
 // - Handles linking, broadcasting, and presence
 // - Manages view lifecycle and cleanup
 
@@ -19,16 +22,25 @@ import {
 } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
-
-// Note: ID generation happens in ViewConfiguration using @Utils/idGenerator.js
+import { config } from "@Core/config/clientConfig.js";
+import { sessionManager } from "@Core/session/sessionManager.js";
 
 export class ViewConfigurationManager {
   constructor() {
     // In-memory cache of ViewConfiguration objects
     this._viewConfigs = new Map();
 
-    // Y.js map for syncing view configurations
+    // Server API configuration
+    this._apiBaseUrl = config.apiBaseUrl;
+    this._projectId = null; // Set during initialization
+
+    // @deprecated v2.0 - Y.js is for presence only, not view state
+    // Keeping for backward compatibility during transition
     this._yViews = ydoc.getMap("viewConfigurations");
+
+    // Throttle server sync to avoid excessive API calls
+    this._syncThrottleMs = 500;
+    this._pendingSyncs = new Map(); // viewId -> timeout
 
     // Event listeners
     this._listeners = {
@@ -61,77 +73,230 @@ export class ViewConfigurationManager {
   initialize() {
     console.log("📋 ViewConfigurationManager: Initializing...");
 
-    // Load existing view configurations from Y.js
-    this._loadFromYjs();
-
-    // Set up Y.js observer for remote changes
-    this._setupYjsObserver();
+    // Get project ID for API calls
+    this._projectId =
+      sessionManager.getProjectId?.() || config.defaultSessionId;
 
     // Start cleanup task
     this._startCleanupTask();
+
+    // Note: Views are loaded from server via loadFromServer() called by appInitializer
+    // This is async and happens after initialize() returns
 
     console.log(
       `📋 ViewConfigurationManager: Initialized with ${this._viewConfigs.size} views`
     );
   }
 
-  _loadFromYjs() {
-    this._yViews.forEach((viewData, viewId) => {
-      try {
-        const view = ViewConfiguration.fromJSON(viewData);
-        this._viewConfigs.set(viewId, view);
+  /**
+   * Load views from server API
+   * Called by appInitializer after WebSocket is connected
+   */
+  async loadFromServer() {
+    console.log("📋 ViewConfigurationManager: Loading views from server...");
 
-        // Set up link observers for any existing links
-        this._setupLinkObserversForView(view);
-      } catch (error) {
-        console.error(`Failed to load view ${viewId}:`, error);
+    try {
+      const response = await fetch(
+        `${this._apiBaseUrl}/views?projectId=${this._projectId}&status=active`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
       }
-    });
+
+      const data = await response.json();
+      const serverViews = data.views || [];
+
+      console.log(`   Found ${serverViews.length} view(s) on server`);
+
+      let addedCount = 0;
+      for (const serverView of serverViews) {
+        // Check if we already have this view
+        if (this._viewConfigs.has(serverView.id)) {
+          continue;
+        }
+
+        try {
+          // Convert snake_case from server to camelCase for client model
+          const viewData = this._serverToClientFormat(serverView);
+          const view = new ViewConfiguration(viewData);
+          this._viewConfigs.set(view.id, view);
+
+          // Set up link observers for any existing links
+          this._setupLinkObserversForView(view);
+
+          addedCount++;
+        } catch (error) {
+          console.error(`Failed to load view ${serverView.id}:`, error);
+        }
+      }
+
+      console.log(
+        `✅ ViewConfigurationManager: Loaded ${addedCount} view(s) from server`
+      );
+      return serverViews.length;
+    } catch (error) {
+      console.error(
+        "❌ ViewConfigurationManager: Failed to load from server:",
+        error
+      );
+      throw error;
+    }
   }
 
-  _setupYjsObserver() {
-    this._yViews.observe((event) => {
-      event.changes.keys.forEach((change, viewId) => {
-        if (change.action === "add" || change.action === "update") {
-          const viewData = this._yViews.get(viewId);
-          if (!viewData) return;
+  /**
+   * Handle view broadcast from server (via WebSocket)
+   * Called by serverSync when receiving view:created/updated/deleted events
+   */
+  handleServerBroadcast(type, data) {
+    switch (type) {
+      case "view:created":
+        this._handleRemoteViewCreated(data.view);
+        break;
+      case "view:updated":
+        this._handleRemoteViewUpdated(data.view);
+        break;
+      case "view:deleted":
+        this._handleRemoteViewDeleted(data.viewId);
+        break;
+      default:
+        console.warn(`Unknown view broadcast type: ${type}`);
+    }
+  }
 
-          const isOwnChange = viewData.ownerUserId === getUserId();
-          const existingView = this._viewConfigs.get(viewId);
+  _handleRemoteViewCreated(serverView) {
+    const viewId = serverView.id;
 
-          if (isOwnChange && existingView) {
-            // Our own change, already have it locally - skip
-            return;
-          }
+    // Skip if we already have it (we created it)
+    if (this._viewConfigs.has(viewId)) {
+      return;
+    }
 
-          console.log(`📥 Remote view ${change.action}: ${viewId}`);
+    console.log(`📥 Remote view created: ${viewId}`);
 
-          try {
-            const view = ViewConfiguration.fromJSON(viewData);
-            this._viewConfigs.set(viewId, view);
+    try {
+      const viewData = this._serverToClientFormat(serverView);
+      const view = new ViewConfiguration(viewData);
+      this._viewConfigs.set(viewId, view);
+      this._setupLinkObserversForView(view);
+      this._emit("viewAdded", view);
+    } catch (error) {
+      console.error(`Failed to add remote view ${viewId}:`, error);
+    }
+  }
 
-            // Set up link observers
-            this._setupLinkObserversForView(view);
+  _handleRemoteViewUpdated(serverView) {
+    const viewId = serverView.id;
 
-            // Emit event
-            this._emit("viewUpdated", view);
+    console.log(`📥 Remote view updated: ${viewId}`);
 
-            // Notify any views linked to this one
-            this._notifyLinkedViews(viewId, view);
-          } catch (error) {
-            console.error(`Failed to sync view ${viewId}:`, error);
-          }
-        } else if (change.action === "delete") {
-          console.log(`🗑️ Remote view deleted: ${viewId}`);
+    try {
+      const viewData = this._serverToClientFormat(serverView);
+      const view = new ViewConfiguration(viewData);
+      this._viewConfigs.set(viewId, view);
+      this._setupLinkObserversForView(view);
+      this._emit("viewUpdated", view);
+      this._notifyLinkedViews(viewId, view);
+    } catch (error) {
+      console.error(`Failed to update remote view ${viewId}:`, error);
+    }
+  }
 
-          // Notify views that were linked to this one
-          this._handleLinkTargetDeleted(viewId);
+  _handleRemoteViewDeleted(viewId) {
+    if (!this._viewConfigs.has(viewId)) {
+      return;
+    }
 
-          this._viewConfigs.delete(viewId);
-          this._emit("viewRemoved", viewId);
-        }
-      });
-    });
+    console.log(`📥 Remote view deleted: ${viewId}`);
+
+    this._handleLinkTargetDeleted(viewId);
+    this._viewConfigs.delete(viewId);
+    this._emit("viewRemoved", viewId);
+  }
+
+  /**
+   * Convert server response (snake_case) to client model (camelCase)
+   */
+  _serverToClientFormat(serverView) {
+    return {
+      id: serverView.id,
+      datasetId: serverView.dataset_id,
+      projectId: serverView.project_id,
+      name: serverView.name,
+      description: serverView.description,
+      ownerUserId: serverView.owner_user_id,
+      ownerUserName: serverView.owner_user_name,
+      visibility: serverView.visibility,
+      sharedWith: serverView.shared_with || [],
+      savedByUser: serverView.saved_by_user,
+      camera: serverView.camera,
+      filters: serverView.filters || [],
+      widgets: serverView.widgets || [],
+      colorMaps: serverView.color_maps,
+      cursorConfig: serverView.cursor_config,
+      annotationDisplay: serverView.annotation_display,
+      links: serverView.links || {},
+      forkedFrom: serverView.forked_from,
+      forkCount: serverView.fork_count || 0,
+      mergedFrom: serverView.merged_from,
+      broadcast: serverView.broadcast,
+      following: serverView.following,
+      snapshots: serverView.snapshots || [],
+      maxSnapshots: serverView.max_snapshots || 50,
+      appliedPresets: serverView.applied_presets || [],
+      status: serverView.status || "active",
+      activeInstanceCount: serverView.active_instance_count || 0,
+      lastActiveTimestamp: serverView.last_active_timestamp,
+      serverVersion: serverView.server_version || 1,
+      createdAt: serverView.created_at,
+      updatedAt: serverView.updated_at,
+    };
+  }
+
+  /**
+   * Convert client model (camelCase) to server format (snake_case)
+   */
+  _clientToServerFormat(view) {
+    return {
+      dataset_id: view.datasetId,
+      project_id: view.projectId || this._projectId,
+      name: view.name,
+      description: view.description,
+      owner_user_id: view.ownerUserId,
+      owner_user_name: view.ownerUserName,
+      visibility: view.visibility,
+      shared_with: view.sharedWith,
+      saved_by_user: view.savedByUser,
+      camera: view.camera,
+      filters: view.filters,
+      widgets: view.widgets,
+      color_maps: view.colorMaps,
+      cursor_config: view.cursorConfig,
+      annotation_display:
+        view.annotationDisplay?.toJSON?.() || view.annotationDisplay,
+      links: this._serializeLinks(view.links),
+      forked_from: view.forkedFrom,
+      fork_count: view.forkCount,
+      merged_from: view.mergedFrom?.map((m) => m.toJSON?.() || m),
+      broadcast: view.broadcast,
+      following: view.following,
+      snapshots: view.snapshots?.map((s) => s.toJSON?.() || s),
+      max_snapshots: view.maxSnapshots,
+      applied_presets: view.appliedPresets,
+      status: view.status,
+      active_instance_count: view.activeInstanceCount,
+    };
+  }
+
+  _serializeLinks(links) {
+    if (!links) return {};
+    const result = {};
+    for (const [prop, link] of Object.entries(links)) {
+      if (link) {
+        result[prop] = link.toJSON?.() || link;
+      }
+    }
+    return result;
   }
 
   // ===========================================================================
@@ -140,45 +305,91 @@ export class ViewConfigurationManager {
 
   /**
    * Create a new view configuration for a dataset
+   * v2.0: Creates on server first, then caches locally
+   *
+   * @param {string} datasetId - The dataset this view is for
+   * @param {Object} viewConfig - Optional configuration overrides
+   * @returns {Promise<ViewConfiguration>} The created view
    */
-  createView(datasetId, config = {}) {
+  async createView(datasetId, viewConfig = {}) {
     const userId = getUserId();
     const userName = getUserName();
 
-    const view = new ViewConfiguration({
-      ...config,
-      datasetId,
-      ownerUserId: userId,
-      ownerUserName: userName,
-      projectId: config.projectId || null,
-    });
+    // Get default visualization state from handler if not provided
+    let camera = viewConfig.camera || null;
+    let colorMaps = viewConfig.colorMaps || null;
 
-    // If camera/colorMaps are null, populate from handler defaults
-    if (view.camera === null || view.colorMaps === null) {
+    if (camera === null || colorMaps === null) {
       const handler =
-        config.handler ||
+        viewConfig.handler ||
         instanceTypeRegistry.getCompatibleHandlers({
-          fileType: config.fileType,
+          fileType: viewConfig.fileType,
         })?.[0]?.handler;
       if (handler) {
         const defaults = handler.getDefaultViewState();
-        if (view.camera === null) view.camera = defaults.camera;
-        if (view.colorMaps === null) view.colorMaps = defaults.colorMaps;
+        if (camera === null) camera = defaults.camera;
+        if (colorMaps === null) colorMaps = defaults.colorMaps;
       }
     }
 
-    // Store locally
-    this._viewConfigs.set(view.id, view);
+    // Prepare request body for server (using server's expected field names)
+    const requestBody = {
+      fileId: datasetId, // Server expects fileId, not datasetId
+      projectId: viewConfig.projectId || this._projectId,
+      name: viewConfig.name || "Untitled View",
+      description: viewConfig.description || "",
+      camera,
+      filters: viewConfig.filters || [],
+      widgets: viewConfig.widgets || [],
+      colorMaps,
+      annotationsVisible: viewConfig.annotationsVisible !== false,
+      visibility: viewConfig.visibility || "private",
+      isShared: viewConfig.isShared || false,
+    };
 
-    // Sync to Y.js for collaboration
-    this._syncToYjs(view);
+    try {
+      // Create on server first to get server-generated ID
+      const response = await fetch(`${this._apiBaseUrl}/views`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
 
-    // Emit event
-    this._emit("viewAdded", view);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `Server returned ${response.status}`
+        );
+      }
 
-    console.log(`✅ View created: ${view.id} for dataset ${datasetId}`);
+      const { view: serverView } = await response.json();
 
-    return view;
+      // Convert server response to client format and create ViewConfiguration
+      const viewData = this._serverToClientFormat(serverView);
+      viewData.ownerUserId = userId;
+      viewData.ownerUserName = userName;
+
+      const view = new ViewConfiguration(viewData);
+
+      // Store locally
+      this._viewConfigs.set(view.id, view);
+
+      // Set up link observers
+      this._setupLinkObserversForView(view);
+
+      // Emit event
+      this._emit("viewAdded", view);
+
+      console.log(`✅ View created: ${view.id} for dataset ${datasetId}`);
+
+      return view;
+    } catch (error) {
+      console.error(
+        `❌ Failed to create view for dataset ${datasetId}:`,
+        error
+      );
+      throw error;
+    }
   }
 
   /**
@@ -230,8 +441,12 @@ export class ViewConfigurationManager {
 
   /**
    * Delete a view configuration
+   * v2.0: Deletes on server (archives), then removes from local cache
+   *
+   * @param {string} viewId - The view ID to delete
+   * @returns {Promise<boolean>} Whether deletion succeeded
    */
-  deleteView(viewId) {
+  async deleteView(viewId) {
     const view = this._viewConfigs.get(viewId);
     if (!view) return false;
 
@@ -241,21 +456,35 @@ export class ViewConfigurationManager {
       return false;
     }
 
-    // Remove from Y.js
-    this._yViews.delete(viewId);
+    try {
+      // Delete on server (archives the view)
+      const response = await fetch(`${this._apiBaseUrl}/views/${viewId}`, {
+        method: "DELETE",
+      });
 
-    // Remove locally
-    this._viewConfigs.delete(viewId);
+      if (!response.ok && response.status !== 404) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `Server returned ${response.status}`
+        );
+      }
 
-    // Notify linked views
-    this._handleLinkTargetDeleted(viewId);
+      // Remove locally
+      this._viewConfigs.delete(viewId);
 
-    // Emit event
-    this._emit("viewRemoved", viewId);
+      // Notify linked views
+      this._handleLinkTargetDeleted(viewId);
 
-    console.log(`🗑️ View deleted: ${viewId}`);
+      // Emit event
+      this._emit("viewRemoved", viewId);
 
-    return true;
+      console.log(`🗑️ View deleted: ${viewId}`);
+
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to delete view ${viewId}:`, error);
+      throw error;
+    }
   }
 
   // ===========================================================================
@@ -827,12 +1056,61 @@ export class ViewConfigurationManager {
   // PRIVATE: Y.JS SYNC
   // ===========================================================================
 
-  _syncToYjs(view) {
-    try {
-      this._yViews.set(view.id, view.toJSON());
-    } catch (error) {
-      console.error(`Failed to sync view ${view.id} to Y.js:`, error);
+  /**
+   * Sync view state to server (throttled)
+   * v2.0: Server is source of truth, not Y.js
+   */
+  _syncToServer(view) {
+    // Cancel any pending sync for this view
+    if (this._pendingSyncs.has(view.id)) {
+      clearTimeout(this._pendingSyncs.get(view.id));
     }
+
+    // Throttle syncs to avoid excessive API calls
+    const timeout = setTimeout(async () => {
+      this._pendingSyncs.delete(view.id);
+
+      try {
+        const updateData = this._clientToServerFormat(view);
+
+        const response = await fetch(`${this._apiBaseUrl}/views/${view.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updateData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(
+            `Failed to sync view ${view.id}:`,
+            errorData.error || response.status
+          );
+          return;
+        }
+
+        // Update server version from response
+        const { view: serverView } = await response.json();
+        if (serverView?.server_version) {
+          view.serverVersion = serverView.server_version;
+        }
+        view.lastSyncedToServer = Date.now();
+        view.pendingServerSync = false;
+      } catch (error) {
+        console.error(`Failed to sync view ${view.id} to server:`, error);
+        view.pendingServerSync = true;
+      }
+    }, this._syncThrottleMs);
+
+    this._pendingSyncs.set(view.id, timeout);
+    view.pendingServerSync = true;
+  }
+
+  /**
+   * @deprecated v2.0 - Use _syncToServer instead
+   */
+  _syncToYjs(view) {
+    // Redirect to server sync for v2.0
+    this._syncToServer(view);
   }
 
   _syncPresenceToYjs(viewId, presence) {
