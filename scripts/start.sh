@@ -45,7 +45,7 @@ sleep 5
 
 # Check PostgreSQL
 echo -n "  PostgreSQL: "
-if docker exec cia-postgres pg_isready -U cia_admin -d cia_analytics > /dev/null 2>&1; then
+if docker exec cia-postgres pg_isready -U ciauser -d cia_analytics > /dev/null 2>&1; then
     print_status "Ready"
 else
     print_warning "Not ready yet, waiting..."
