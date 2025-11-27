@@ -18,6 +18,8 @@ import {
   getUserName,
 } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
+import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
+
 // Note: ID generation happens in ViewConfiguration using @Utils/idGenerator.js
 
 export class ViewConfigurationManager {
@@ -153,7 +155,11 @@ export class ViewConfigurationManager {
 
     // If camera/colorMaps are null, populate from handler defaults
     if (view.camera === null || view.colorMaps === null) {
-      const handler = config.handler || getHandlerForFileType(config.fileType);
+      const handler =
+        config.handler ||
+        instanceTypeRegistry.getCompatibleHandlers({
+          fileType: config.fileType,
+        })?.[0]?.handler;
       if (handler) {
         const defaults = handler.getDefaultViewState();
         if (view.camera === null) view.camera = defaults.camera;

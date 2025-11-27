@@ -91,6 +91,46 @@ const projectsRouter = require("./routes/projects");
 // Projects routes - use optionalAuth for now (will require auth later)
 app.use("/api/projects", optionalAuth, projectsRouter);
 
+// Standalone files route for downloads
+app.get("/api/files/:id/download", optionalAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { pool, minioClient, bucketName } = req.app.locals;
+
+    // Get file metadata
+    const result = await pool.query("SELECT * FROM datasets WHERE id = $1", [
+      id,
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    const file = result.rows[0];
+
+    // If it's a public sample file, serve from public directory
+    if (file.public_path) {
+      return res.sendFile(file.public_path, { root: process.cwd() });
+    }
+
+    // Otherwise, fetch from MinIO
+    const dataStream = await minioClient.getObject(
+      bucketName,
+      file.storage_key
+    );
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${file.filename}"`
+    );
+
+    dataStream.pipe(res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Health check
 app.get("/api/health", async (req, res) => {
   try {
