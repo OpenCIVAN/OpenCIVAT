@@ -90,6 +90,20 @@ export class DatasetManager extends EventEmitter {
     return null;
   }
 
+  /**
+   * Quick check if we have a dataset with a given hash
+   * @param {string} hash - The file hash to check
+   * @returns {boolean}
+   */
+  hasDatasetWithHash(hash) {
+    for (const dataset of this._datasets.values()) {
+      if (dataset.hash === hash) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   async _openDatabase() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this._dbName, this._dbVersion);
@@ -197,37 +211,17 @@ export class DatasetManager extends EventEmitter {
       let skippedCount = 0;
 
       for (const serverDataset of serverDatasets) {
-        const existingDataset = this.getDataset(serverDataset.id);
-
-        if (existingDataset) {
-          skippedCount++;
-          continue;
-        }
-
         console.log(
           `   📥 Creating dataset from server: ${serverDataset.filename}`
         );
 
-        const dataset = new Dataset({
-          id: serverDataset.id,
-          filename: serverDataset.filename,
-          fileType: serverDataset.file_type,
-          fileSize: serverDataset.file_size,
-          userId: serverDataset.uploaded_by, // CRITICAL: Set userId for Y.js filtering
-          uploadedBy: serverDataset.uploaded_by,
-          uploadedAt: serverDataset.uploaded_at,
-          cacheKey: serverDataset.id,
-          fileStatus: "on-server",
-          metadata: serverDataset.metadata || {},
-          publicPath:
-            serverDataset.public_path ||
-            `${config.apiBaseUrl}/files/${serverDataset.id}/download`,
-        });
+        const dataset = await this._addDatasetFromServer(serverDataset);
 
-        this._datasets.set(dataset.id, dataset);
-        this._emit("datasetAdded", dataset);
-
-        syncedCount++;
+        if (dataset) {
+          syncedCount++;
+        } else {
+          skippedCount++;
+        }
       }
 
       console.log(
@@ -245,6 +239,121 @@ export class DatasetManager extends EventEmitter {
       console.error("❌ DatasetManager: Server sync failed:", error);
       throw error;
     }
+  }
+
+  /**
+   * Add dataset from server data (called by SyncManager or Y.js observers)
+   * Checks for duplicates by hash before adding
+   *
+   * @param {Object} serverData - Dataset info from server
+   * @returns {Dataset|null} - The created dataset, or null if duplicate
+   */
+  async _addDatasetFromServer(serverData) {
+    // Check if we already have this dataset by ID
+    if (this._datasets.has(serverData.id)) {
+      console.log(`   ⏭️ Dataset ${serverData.id} already exists, skipping`);
+      return null;
+    }
+
+    // Check if we already have this dataset by hash (different ID, same file)
+    const hash = serverData.hash || serverData.metadata?.hash;
+    if (hash && this.hasDatasetWithHash(hash)) {
+      console.log(
+        `   ⏭️ Dataset with hash ${hash.substring(
+          0,
+          8
+        )}... already exists, skipping`
+      );
+      return null;
+    }
+
+    console.log(`   📥 Adding dataset from server: ${serverData.filename}`);
+
+    const dataset = new Dataset({
+      id: serverData.id,
+      filename: serverData.filename,
+      fileType:
+        serverData.file_type ||
+        serverData.fileType ||
+        this._extractFileType(serverData.filename),
+      fileSize: serverData.file_size || serverData.fileSize,
+      hash: hash,
+      userId: serverData.uploaded_by || serverData.userId,
+      uploadedBy: serverData.uploaded_by || serverData.userId,
+      uploadedAt: serverData.uploaded_at || serverData.uploadedAt,
+      cacheKey: serverData.id,
+      storageKey: serverData.storage_key || serverData.storageKey,
+      fileStatus: "on-server",
+      metadata: serverData.metadata || {},
+      publicPath:
+        serverData.public_path ||
+        serverData.publicPath ||
+        `${config.apiBaseUrl}/files/${serverData.id}/download`,
+    });
+
+    // Add to in-memory map
+    this._datasets.set(dataset.id, dataset);
+
+    // Persist to IndexedDB
+    await this._persistDataset(dataset);
+
+    // Emit event
+    this._emit("datasetAdded", dataset);
+
+    return dataset;
+  }
+
+  /**
+   * Add dataset from Y.js remote data
+   * Called by Y.js observers when a remote user adds a dataset
+   *
+   * @param {Object} yData - Dataset metadata from Y.js
+   * @returns {Dataset|null} - The created dataset, or null if duplicate
+   */
+  async _addDatasetFromYjs(yData) {
+    // Check if we already have this dataset by ID
+    if (this._datasets.has(yData.id)) {
+      console.log(`   ⏭️ Y.js dataset ${yData.id} already exists locally`);
+      return null;
+    }
+
+    // Check by hash
+    if (yData.hash && this.hasDatasetWithHash(yData.hash)) {
+      console.log(
+        `   ⏭️ Y.js dataset with hash ${yData.hash.substring(
+          0,
+          8
+        )}... already exists`
+      );
+      return null;
+    }
+
+    console.log(`   📥 Adding dataset from Y.js: ${yData.filename}`);
+
+    const dataset = new Dataset({
+      id: yData.id,
+      filename: yData.filename,
+      fileType: yData.fileType || this._extractFileType(yData.filename),
+      hash: yData.hash,
+      userId: yData.userId,
+      storageKey: yData.storageKey,
+      publicPath: yData.publicPath,
+      fileStatus: yData.publicPath ? "on-server" : "needs-fetch",
+      metadata: yData.metadata || {},
+    });
+
+    // Add to in-memory map
+    this._datasets.set(dataset.id, dataset);
+
+    // Persist to IndexedDB
+    await this._persistDataset(dataset);
+
+    // Emit event (but don't sync back to Y.js - it came FROM Y.js)
+    this._emit("datasetAdded", dataset);
+
+    console.log(`   ✅ Dataset from Y.js added: ${dataset.filename}`);
+
+    return dataset;
   }
 
   /**

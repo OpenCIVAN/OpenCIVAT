@@ -69,67 +69,30 @@ async function handleRemoteDataset(datasetId, metadata) {
 
 /**
  * Actually process a remote dataset
- *
- * This is called when Y.js notifies us that a dataset exists. This can happen in
- * several scenarios:
- *
- * 1. Initial page load - datasets sync from Y.js to us
- * 2. Another user loads a dataset - we see it appear in Y.js
- * 3. Our own dataset from another tab - we created it elsewhere
- * 4. Our own dataset we just created - we added it to Y.js and the observer fired
- *
- * The key insight: We only need to process datasets that DatasetManager doesn't
- * already have. If DatasetManager has it, we can skip because the local state
- * is already correct.
+ * Now uses DatasetManager's centralized method to prevent duplicates
  */
 async function processRemoteDataset(datasetId, metadata) {
   const myId = getUserId();
 
   console.log("📥 Remote dataset received:", metadata.filename);
-  console.log(`   Uploaded by: ${metadata.uploadedBy}`);
+  console.log(
+    `   Uploaded by: ${metadata.userId || metadata.metadata?.uploadedBy}`
+  );
   console.log(`   My ID: ${myId}`);
-  console.log(`   Am I the uploader? ${metadata.uploadedBy === myId}`);
 
-  // CRITICAL CHECK: Does DatasetManager already have this dataset?
-  const existingDataset = datasetManager.getDataset(datasetId);
-
-  if (existingDataset) {
-    console.log(`   ✓ Already have dataset in DatasetManager, skipping`);
-
-    // Emit event so React updates (datasetStore listens to this)
-    datasetManager._emit("datasetAdded", existingDataset);
-
+  // Skip own datasets
+  if (metadata.userId === myId) {
+    console.log(`   ⏭️ Skipping own dataset`);
     return;
   }
 
-  console.log(`   ℹ️ New dataset, adding to DatasetManager...`);
+  // Use centralized method that checks for duplicates by ID AND hash
+  const dataset = await datasetManager._addDatasetFromYjs(metadata);
 
-  // Import Dataset class
-  const { Dataset } = await import("@Core/data/models/Dataset.js");
-
-  // Create dataset from Y.js metadata
-  const dataset = Dataset.fromJSON({
-    id: datasetId,
-    filename: metadata.filename,
-    name: metadata.name || metadata.filename,
-    fileType: metadata.fileType,
-    hash: metadata.hash,
-    publicPath: metadata.publicPath,
-    storageKey: metadata.storageKey,
-    userId: metadata.userId,
-    metadata: metadata.metadata || {},
-  });
-
-  // Add to DatasetManager's internal map
-  datasetManager._datasets.set(datasetId, dataset);
-
-  // Persist to IndexedDB
-  await datasetManager._persistDataset(dataset);
-
-  // Emit event - datasetStore listens and triggers React re-render
-  datasetManager._emit("datasetAdded", dataset);
-
-  console.log(`   ✅ Dataset added to DatasetManager`);
+  if (!dataset) {
+    console.log(`   ⏭️ Dataset already exists, skipping`);
+    return;
+  }
 
   // Handle file fetching if needed
   const hasFile = await dataCache.hasDataset(metadata.hash);
@@ -153,10 +116,12 @@ async function processRemoteDataset(datasetId, metadata) {
 
       await dataCache.storeDataset(file);
       dataset.rawFile = file;
+      dataset.setFileStatus("available", file);
 
       console.log(`   ✅ File fetched and cached`);
     } catch (error) {
       console.error(`   ❌ Failed to fetch:`, error);
+      dataset.setFileStatus("fetch-failed");
     }
   }
 }
@@ -170,7 +135,7 @@ async function processRemoteDataset(datasetId, metadata) {
 // Dataset Observer
 // Watches for remote dataset changes
 // ----------------------------------------------------------------------------
-export function initializeDatasetObserver() {
+export async function initializeDatasetObserver() {
   // ← No parameter!
   console.log("🔍 Setting up dataset observer");
   // CRITICAL FIX: Check for existing datasets in Y.js before setting up observer
@@ -179,61 +144,37 @@ export function initializeDatasetObserver() {
   const existingDatasets = Array.from(yDatasets.keys());
   console.log(`   Found ${existingDatasets.length} existing dataset(s)`);
 
-  existingDatasets.forEach((datasetId) => {
+  for (const datasetId of existingDatasets) {
     const remoteDataset = yDatasets.get(datasetId);
 
     if (!remoteDataset) {
       console.log(`   ⚠️ Dataset ${datasetId} not found in Y.js map`);
-      return;
+      continue;
     }
 
     // Get current user ID
     const currentUserId = window.CIA?.sessionManager?.userId;
 
-    // FIX: Use userId field (top-level) instead of uploadedBy (nested in metadata)
+    // Skip own datasets
     if (remoteDataset.userId === currentUserId) {
       console.log(`   ⏭️ Skipping own dataset: ${remoteDataset.filename}`);
-      return;
+      continue;
     }
 
-    // Check if we already have this dataset
-    const existing = datasetManager.getDataset(datasetId);
-    if (existing) {
+    // Use centralized method that checks for duplicates
+    const dataset = await datasetManager._addDatasetFromYjs({
+      id: datasetId,
+      ...remoteDataset,
+    });
+
+    if (dataset) {
+      console.log(`   ✅ Added dataset from Y.js: ${remoteDataset.filename}`);
+    } else {
       console.log(
         `   ✓ Already have dataset ${remoteDataset.filename}, skipping`
       );
-      return;
     }
-
-    console.log(
-      `   📥 Processing existing remote dataset: ${remoteDataset.filename}`
-    );
-
-    // Create dataset from remote metadata (same logic as the observer)
-    const dataset = new Dataset({
-      id: datasetId,
-      filename: remoteDataset.filename,
-      fileType: remoteDataset.fileType,
-      hash: remoteDataset.hash,
-      publicPath: remoteDataset.publicPath,
-      storageKey: remoteDataset.storageKey,
-      userId: remoteDataset.userId,
-      fileStatus: remoteDataset.publicPath ? "fetchable" : "needs-upload",
-      metadata: {
-        fileSize: remoteDataset.metadata?.fileSize || 0,
-        uploadedAt: remoteDataset.metadata?.uploadedAt || Date.now(),
-        uploadedBy: remoteDataset.metadata?.uploadedBy,
-      },
-    });
-
-    // Add to DatasetManager
-    datasetManager._datasets.set(datasetId, dataset);
-    // Persist to IndexedDB so it survives page reload
-    datasetManager._persistDataset(dataset).catch((err) => {
-      console.error(`   ❌ Failed to persist dataset ${datasetId}:`, err);
-    });
-    datasetManager._emit("datasetAdded", dataset);
-  });
+  }
 
   // Now set up the observer for FUTURE changes
   yDatasets.observe((event) => {
@@ -275,30 +216,18 @@ export function initializeDatasetObserver() {
           return;
         }
 
-        console.log(`   📥 Creating dataset from remote metadata`);
+        console.log(`   📥 Adding dataset from Y.js...`);
 
-        // Create dataset using the imported Dataset class
-        const dataset = new Dataset({
+        const dataset = await datasetManager._addDatasetFromYjs({
           id: datasetId,
-          filename: remoteDataset.filename,
-          fileType: remoteDataset.fileType,
-          hash: remoteDataset.hash,
-          publicPath: remoteDataset.publicPath,
-          storageKey: remoteDataset.storageKey,
-          userId: remoteDataset.userId,
-          fileStatus: remoteDataset.publicPath ? "fetchable" : "needs-upload",
-          metadata: {
-            fileSize: remoteDataset.metadata?.fileSize || 0,
-            uploadedAt: remoteDataset.metadata?.uploadedAt || Date.now(),
-            uploadedBy: remoteDataset.metadata?.uploadedBy,
-          },
+          ...remoteDataset,
         });
 
-        // Add to DatasetManager using the imported datasetManager
-        datasetManager._datasets.set(datasetId, dataset);
-        // Persist to IndexedDB so it survives page reload
-        await datasetManager._persistDataset(dataset);
-        datasetManager._emit("datasetAdded", dataset);
+        if (dataset) {
+          console.log(`   ✅ Dataset added: ${remoteDataset.filename}`);
+        } else {
+          console.log(`   ⏭️ Dataset already exists, skipped`);
+        }
       } else if (change.action === "update") {
         console.log(`📝 Remote dataset updated: ${datasetId}`);
 
