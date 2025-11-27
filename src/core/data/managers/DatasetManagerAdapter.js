@@ -277,6 +277,7 @@ export class DatasetManagerAdapter {
         // The file itself stays on the server until someone actually needs to view it
         const dataset = new Dataset({
           id: serverDataset.id,
+          serverId: serverDataset.id,
           filename: serverDataset.filename,
           fileType: serverDataset.file_type,
           fileSize: serverDataset.file_size || 0,
