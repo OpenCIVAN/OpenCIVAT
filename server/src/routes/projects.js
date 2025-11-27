@@ -326,6 +326,12 @@ router.post("/:id/files", upload.single("file"), async (req, res, next) => {
       deduplicated: existingFile.rows.length > 0,
       message: "File uploaded successfully",
     });
+
+    // Broadcast to project members
+    const { wsManager } = req.app.locals;
+    if (wsManager) {
+      wsManager.fileAdded(projectId, fileData);
+    }
   } catch (error) {
     await client.query("ROLLBACK");
     next(error);

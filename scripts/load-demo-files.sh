@@ -6,7 +6,7 @@ set -e
 
 API_URL="${API_URL:-http://localhost:3001}"
 PROJECT_ID="00000000-0000-0000-0000-000000000001"
-VTP_DIR="./vtp_files"
+VTP_DIR="public/vtp_files"
 
 echo "📦 Loading demo files into CIA Web..."
 echo "   API: $API_URL"
