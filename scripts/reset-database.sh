@@ -40,11 +40,14 @@ if [ "$QUICK_MODE" = false ]; then
     echo ""
 fi
 
-echo "🔄 Resetting database..."
+echo "🔄 Resetting database and Y.js state..."
 
-# Stop and remove volumes
+# Stop and remove volumes (this clears postgres AND restarts y-websocket fresh)
 echo "🛑 Stopping containers and removing volumes..."
 docker compose down -v > /dev/null 2>&1
+
+# The Y.js server is in-memory, so restarting clears it.
+# But the BROWSER has Y.js data in IndexedDB that will re-sync!
 
 # Clean up dangling images if rebuilding
 if [ "$REBUILD_MODE" = true ]; then
@@ -89,6 +92,10 @@ if [ "$QUICK_MODE" = false ]; then
     echo "   • MinIO:    http://localhost:9000 (Console: localhost:9002)"
     echo "   • Y.js:     ws://localhost:9001"
     echo ""
-    echo "🧹 To clear browser data, run in DevTools console:"
-    echo "   indexedDB.deleteDatabase('cia-datasets'); location.reload();"
+    echo -e "${YELLOW}⚠️  IMPORTANT: Clear browser IndexedDB to remove stale Y.js data!${NC}"
+    echo "   The browser caches Y.js state locally. After a database reset,"
+    echo "   old datasets will re-appear unless you clear the browser storage."
+    echo ""
+    echo "   Run this in browser DevTools console (F12 → Console):"
+    echo -e "   ${GREEN}indexedDB.deleteDatabase('cia-datasets'); location.reload();${NC}"
 fi

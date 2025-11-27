@@ -280,6 +280,14 @@ class WebSocketManager {
    * Broadcast file added event
    */
   fileAdded(projectId, file) {
+    const room = this.rooms.get(projectId);
+    console.log(
+      `📢 Broadcasting file:added for ${file.filename} to project ${projectId}`
+    );
+    console.log(
+      `   Room exists: ${!!room}, clients in room: ${room ? room.size : 0}`
+    );
+
     this.broadcastToProject(projectId, {
       type: "file:added",
       projectId,
