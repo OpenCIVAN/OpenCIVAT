@@ -1,7 +1,7 @@
 // src/core/data/models/Dataset.js
+// v2.0: Server-authoritative - IDs must come from server
 
 import { Annotation } from "@Core/data/models/Annotation.js";
-import { generateDatasetId } from "@Utils/idGenerator.js";
 
 /**
  * Dataset - Represents a raw data file with associated metadata and annotations

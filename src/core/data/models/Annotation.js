@@ -1,4 +1,5 @@
 // src/core/data/models/Annotation.js
+// v2.0: Server-authoritative - IDs must come from server
 
 /**
  * Annotation - Represents user-created annotations on datasets
@@ -17,13 +18,13 @@
  * - Persistence: Annotations exist independent of views
  */
 
-import { generateAnnotationId } from "@Utils/idGenerator.js";
-
 export class Annotation {
   constructor(config = {}) {
-    // Core identification
-    this.id = config.id || generateAnnotationId();
-    this.serverId = config.serverId || null;
+    // Core identification - ID MUST come from server
+    if (!config.id) {
+      throw new Error("Annotation requires server-provided ID");
+    }
+    this.id = config.id; // Server-generated UUID
     this.datasetId = config.datasetId; // Required: which dataset this belongs to
 
     // Spatial anchoring (coordinates in dataset's coordinate system)
@@ -58,14 +59,6 @@ export class Annotation {
     if (!this.datasetId) {
       throw new Error("Annotation requires a datasetId");
     }
-  }
-
-  /**
-   * Generate a unique ID for this annotation
-   * In production, you might use a UUID library
-   */
-  _generateId() {
-    return generateAnnotationId();
   }
 
   /**

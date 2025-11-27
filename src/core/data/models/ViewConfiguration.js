@@ -1,5 +1,5 @@
 // src/core/data/models/ViewConfiguration.js
-// Complete Comprehensive ViewConfiguration with all features
+// v2.0: Server-authoritative - View IDs must come from server
 //
 // ARCHITECTURAL PRINCIPLES:
 // 1. Views are SERVER-AUTHORITATIVE - server generates IDs for auditing
@@ -15,7 +15,14 @@
 // FUTURE: WorkspaceLayout will have its own annotation layer for cross-view notes
 
 import { AnnotationDisplayConfig } from "@Core/data/models/Annotation.js";
-import { generateViewId, generateId } from "@Utils/idGenerator.js";
+
+// Ephemeral ID generator for view-local items (filters, widgets, snapshots)
+// These don't need server IDs as they're stored within the view config JSON
+function generateEphemeralId(prefix = "item") {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 11);
+  return `${prefix}_${timestamp}_${random}`;
+}
 
 // =============================================================================
 // ENUMS & CONSTANTS
@@ -202,7 +209,7 @@ export class ViewSnapshot {
   }
 
   static _generateId() {
-    return generateId("snapshot");
+    return generateEphemeralId("snapshot");
   }
 
   toJSON() {
@@ -261,12 +268,11 @@ export class ViewConfiguration {
     // IDENTIFICATION
     // =========================================================================
 
-    // Client-side ID (generated immediately, used for Y.js sync)
-    this.id = config.id || this._generateClientId();
-
-    // Server-assigned ID (null until first server persist)
-    // This is the PERMANENT ID for audit trails and cross-session references
-    this.serverId = config.serverId || null;
+    // ID MUST come from server (server-authoritative architecture)
+    if (!config.id) {
+      throw new Error("ViewConfiguration requires server-provided ID");
+    }
+    this.id = config.id; // Server-generated UUID
 
     this.datasetId = config.datasetId;
     this.name = config.name || "Untitled View";
@@ -1022,12 +1028,10 @@ export class ViewConfiguration {
   // PRIVATE HELPERS
   // ===========================================================================
 
-  _generateClientId() {
-    return generateViewId();
-  }
-
-  _generateId() {
-    return generateId("item");
+  // Generate ephemeral IDs for view-local items (filters, widgets)
+  // These are stored within the view config JSON, not as separate server entities
+  _generateId(prefix = "item") {
+    return generateEphemeralId(prefix);
   }
 
   // NOTE: No default camera/colorMaps here!
