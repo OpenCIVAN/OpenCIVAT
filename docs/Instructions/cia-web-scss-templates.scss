@@ -1,0 +1,729 @@
+// =============================================================================
+// CIA Web - SCSS Component Templates
+// Use these as starting points for new components
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// TEMPLATE 1: Basic Component
+// Use for: Simple UI elements, buttons, indicators
+// -----------------------------------------------------------------------------
+
+// File: src/ui/react/components/[category]/[ComponentName]/[ComponentName].scss
+
+@import '@UI/react/styles/theme';
+
+.component-name {
+  // Base styles
+  display: flex;
+  align-items: center;
+  padding: $spacing-md;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+
+  // Elements (BEM: block__element)
+  &__icon {
+    width: 20px;
+    height: 20px;
+    color: $color-text-secondary;
+    margin-right: $spacing-sm;
+  }
+
+  &__label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  &__badge {
+    margin-left: auto;
+    padding: $spacing-xs $spacing-sm;
+    background: $color-accent-primary;
+    border-radius: $radius-full;
+    font-size: $font-size-xs;
+    color: $color-text-inverse;
+  }
+
+  // Modifiers (BEM: block--modifier)
+  &--active {
+    background: rgba($color-accent-primary, 0.1);
+    border-color: $color-accent-primary;
+
+    .component-name__icon {
+      color: $color-accent-primary;
+    }
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  // Interactive states
+  &:hover:not(&--disabled) {
+    background: $color-bg-hover;
+    border-color: $color-border-default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-accent-primary;
+    outline-offset: 2px;
+  }
+}
+
+
+// -----------------------------------------------------------------------------
+// TEMPLATE 2: Panel Component (with glassmorphism)
+// Use for: Side panels, floating panels, dialogs
+// -----------------------------------------------------------------------------
+
+// File: src/ui/react/components/panels/[PanelName]/[PanelName].scss
+
+@import '@UI/react/styles/theme';
+
+.panel-name {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  @include glassmorphism;
+
+  // Accent border (colored edge)
+  border-left: 3px solid $color-accent-primary;
+
+  // Panel header
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border-subtle;
+    min-height: 40px;
+  }
+
+  &__title {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  // Panel tabs
+  &__tabs {
+    display: flex;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: $color-bg-hover;
+    }
+
+    &--active {
+      color: $color-accent-primary;
+      border-bottom-color: $color-accent-primary;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    span {
+      font-size: $font-size-xs;
+    }
+  }
+
+  // Panel content area
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-md;
+
+    // Custom scrollbar
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $color-border-default;
+      border-radius: $radius-full;
+
+      &:hover {
+        background: $color-border-strong;
+      }
+    }
+  }
+
+  // Collapsed state
+  &--collapsed {
+    width: 48px;
+
+    .panel-name__header,
+    .panel-name__tabs,
+    .panel-name__content {
+      display: none;
+    }
+  }
+}
+
+
+// -----------------------------------------------------------------------------
+// TEMPLATE 3: Canvas Cell Component
+// Use for: Grid items, view containers, placement cells
+// -----------------------------------------------------------------------------
+
+// File: src/ui/react/components/workspace/CanvasCell/CanvasCell.scss
+
+@import '@UI/react/styles/theme';
+
+.canvas-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  transition: all $transition-fast;
+
+  // Cell header
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-xs $spacing-sm;
+    background: $color-bg-elevated;
+    border-bottom: 1px solid $color-border-subtle;
+    min-height: 28px;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-width: 0; // Enable text truncation
+
+    span {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-medium;
+      color: $color-text-primary;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__meta {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-left: $spacing-xs;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xxs;
+    opacity: 0;
+    transition: opacity $transition-fast;
+  }
+
+  &:hover &__actions {
+    opacity: 1;
+  }
+
+  &__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-bg-hover;
+      color: $color-text-primary;
+    }
+
+    &--danger:hover {
+      background: rgba($color-error, 0.1);
+      color: $color-error;
+    }
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  // Cell content (where VTK/handler renders)
+  &__content {
+    flex: 1;
+    position: relative;
+    min-height: 0; // Important for flex children
+    background: $color-bg-canvas;
+  }
+
+  // Toolbar (rendered from handler config)
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    background: $color-bg-elevated;
+    border-top: 1px solid $color-border-subtle;
+    overflow-x: auto;
+
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+  }
+
+  // Presence indicators
+  &__presence {
+    position: absolute;
+    bottom: $spacing-sm;
+    left: $spacing-sm;
+    display: flex;
+    gap: -4px; // Overlap avatars
+  }
+
+  &__avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-full;
+    border: 2px solid $color-bg-secondary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-size-xs;
+  }
+
+  // Resize handle
+  &__resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: se-resize;
+    opacity: 0;
+    transition: opacity $transition-fast;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 8px;
+      height: 8px;
+      border-bottom: 2px solid $color-border-default;
+      border-right: 2px solid $color-border-default;
+    }
+  }
+
+  &:hover &__resize-handle {
+    opacity: 1;
+  }
+
+  // States
+  &--selected {
+    border-color: $color-accent-secondary;
+    box-shadow: 0 0 0 2px rgba($color-accent-secondary, 0.3);
+  }
+
+  &--empty {
+    border-style: dashed;
+    cursor: pointer;
+
+    &:hover {
+      background: $color-bg-hover;
+      border-color: $color-border-default;
+    }
+  }
+
+  &--spanning {
+    // Spanning cells get subtle indicator
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, $color-accent-primary, transparent);
+    }
+  }
+
+  // Content type variants
+  &--notes {
+    .canvas-cell__header {
+      background: rgba($color-warning, 0.1);
+    }
+
+    .canvas-cell__content {
+      background: rgba($color-warning, 0.05);
+    }
+  }
+
+  &--image {
+    .canvas-cell__header {
+      background: rgba($color-accent-tertiary, 0.1);
+    }
+  }
+}
+
+
+// -----------------------------------------------------------------------------
+// TEMPLATE 4: Mini-Map Component
+// Use for: Canvas overview, navigation aids
+// -----------------------------------------------------------------------------
+
+// File: src/ui/react/components/workspace/MiniMap/MiniMap.scss
+
+@import '@UI/react/styles/theme';
+
+.mini-map {
+  padding: $spacing-md;
+  background: $color-bg-elevated;
+  border-radius: $radius-md;
+  border: 1px solid $color-border-subtle;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__title {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__stats {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  // The grid of cells
+  &__grid {
+    display: grid;
+    gap: 2px;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__cell {
+    aspect-ratio: 4 / 3;
+    border-radius: $radius-xs;
+    border: 1px solid $color-border-subtle;
+    background: $color-bg-tertiary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      transform: scale(1.1);
+      z-index: 1;
+    }
+
+    // Cell has a view
+    &--has-view {
+      background: rgba($color-accent-primary, 0.3);
+      border-color: rgba($color-accent-primary, 0.5);
+    }
+
+    // Cell has notes
+    &--has-notes {
+      background: rgba($color-warning, 0.3);
+      border-color: rgba($color-warning, 0.5);
+    }
+
+    // Cell has image
+    &--has-image {
+      background: rgba($color-accent-tertiary, 0.3);
+      border-color: rgba($color-accent-tertiary, 0.5);
+    }
+
+    // Cell is in current viewport
+    &--in-viewport {
+      box-shadow: inset 0 0 0 2px $color-success;
+    }
+
+    // Cell is selected
+    &--selected {
+      box-shadow: inset 0 0 0 2px $color-warning;
+    }
+  }
+
+  // Legend
+  &__legend {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__legend-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: $radius-xs;
+
+    &--view {
+      background: rgba($color-accent-primary, 0.3);
+    }
+
+    &--viewport {
+      box-shadow: inset 0 0 0 2px $color-success;
+    }
+  }
+}
+
+
+// -----------------------------------------------------------------------------
+// TEMPLATE 5: Toolbar (Handler-Rendered)
+// Use for: Instance toolbars rendered from handler configs
+// -----------------------------------------------------------------------------
+
+// File: src/ui/react/components/workspace/InstanceToolbar/InstanceToolbar.scss
+
+@import '@UI/react/styles/theme';
+
+.instance-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg-elevated;
+  border-radius: $radius-md;
+
+  // Position variants
+  &--top {
+    border-bottom: 1px solid $color-border-subtle;
+    border-radius: 0;
+  }
+
+  &--bottom {
+    border-top: 1px solid $color-border-subtle;
+    border-radius: 0;
+  }
+
+  &--floating {
+    position: absolute;
+    top: $spacing-sm;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: $shadow-lg;
+  }
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &__label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-right: $spacing-xs;
+  }
+
+  // Separator between groups
+  & + & {
+    padding-left: $spacing-sm;
+    border-left: 1px solid $color-border-subtle;
+  }
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: $color-border-subtle;
+  margin: 0 $spacing-xs;
+}
+
+// Tool button (generic)
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: all $transition-fast;
+  white-space: nowrap;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover:not(:disabled) {
+    background: $color-bg-hover;
+    color: $color-text-primary;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  // Active state (for toggles)
+  &--active {
+    background: rgba($color-accent-primary, 0.1);
+    border-color: $color-accent-primary;
+    color: $color-accent-primary;
+  }
+
+  // Icon-only variant
+  &--icon-only {
+    padding: $spacing-xs;
+
+    .toolbar-button__label {
+      @include visually-hidden;
+    }
+  }
+}
+
+// Tool dropdown
+.toolbar-dropdown {
+  position: relative;
+
+  &__trigger {
+    @extend .toolbar-button;
+  }
+
+  &__menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 150px;
+    margin-top: $spacing-xs;
+    padding: $spacing-xs;
+    background: $color-bg-elevated;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    box-shadow: $shadow-lg;
+    z-index: $z-dropdown;
+  }
+
+  &__option {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-xs $spacing-sm;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    text-align: left;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: $color-bg-hover;
+    }
+
+    &--selected {
+      background: rgba($color-accent-primary, 0.1);
+      color: $color-accent-primary;
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+      color: $color-text-muted;
+    }
+  }
+}
+
+// Tool slider
+.toolbar-slider {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 120px;
+
+  &__label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+  }
+
+  &__input {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: $color-bg-tertiary;
+    border-radius: $radius-full;
+    cursor: pointer;
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      background: $color-accent-primary;
+      border-radius: $radius-full;
+      cursor: grab;
+      transition: transform $transition-fast;
+
+      &:hover {
+        transform: scale(1.2);
+      }
+    }
+  }
+
+  &__value {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    min-width: 32px;
+    text-align: right;
+  }
+}

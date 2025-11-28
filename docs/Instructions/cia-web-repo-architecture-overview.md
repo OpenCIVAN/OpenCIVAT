@@ -1,0 +1,219 @@
+# CIA Web Architecture Overview
+
+This document provides a high-level overview of CIA Web's architecture for contributors and researchers.
+
+## System Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              CLIENT LAYER                                    │
+│                                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐ │
+│  │  Desktop Client │  │    VR Client    │  │   Instance Type Handlers    │ │
+│  │                 │  │                 │  │                             │ │
+│  │  • React UI     │  │  • WebXR        │  │  ┌─────┐ ┌─────┐ ┌───────┐ │ │
+│  │  • VTK.js       │  │  • Video decode │  │  │ VTK │ │Molec│ │Plotly │ │ │
+│  │  • WebGL        │  │  • Controllers  │  │  └─────┘ └─────┘ └───────┘ │ │
+│  └─────────────────┘  └─────────────────┘  │  Each handler provides:     │ │
+│                                             │  • Toolbar config           │ │
+│                                             │  • VR support               │ │
+│                                             │  • Render modes             │ │
+│                                             └─────────────────────────────┘ │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │
+                    WebSocket + REST API + WebRTC
+                                    │
+┌───────────────────────────────────┴─────────────────────────────────────────┐
+│                               API LAYER                                      │
+│                                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │  REST API   │  │ Y.js Server │  │   LiveKit   │  │   Keycloak  │       │
+│  │             │  │             │  │   (Voice)   │  │   (Auth)    │       │
+│  │ • Projects  │  │ • Cursors   │  │             │  │             │       │
+│  │ • Datasets  │  │ • Avatars   │  │ • Spatial   │  │ • JWT       │       │
+│  │ • Views     │  │ • Presence  │  │   audio     │  │ • RBAC      │       │
+│  │ • Canvases  │  │             │  │ • Rooms     │  │ • Multi-    │       │
+│  └─────────────┘  └─────────────┘  └─────────────┘  │   tenant    │       │
+│                                                      └─────────────┘       │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────┴─────────────────────────────────────────┐
+│                          GPU RENDER LAYER (Future)                          │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      Render Worker Pool                              │   │
+│  │   ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐                   │   │
+│  │   │ GPU 1  │  │ GPU 2  │  │ GPU 3  │  │ GPU 4  │                   │   │
+│  │   │ T4/A10 │  │ T4/A10 │  │ T4/A10 │  │ T4/A10 │                   │   │
+│  │   └────────┘  └────────┘  └────────┘  └────────┘                   │   │
+│  │   • VTK Python server-side rendering                                │   │
+│  │   • NVENC hardware encoding                                         │   │
+│  │   • WebRTC streaming to clients                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────┴─────────────────────────────────────────┐
+│                              DATA LAYER                                      │
+│                                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │ PostgreSQL  │  │ S3 / MinIO  │  │    Redis    │  │  Audit Log  │       │
+│  │             │  │             │  │             │  │             │       │
+│  │ • Projects  │  │ • Dataset   │  │ • Sessions  │  │ • All state │       │
+│  │ • Datasets  │  │   files     │  │ • Cache     │  │   changes   │       │
+│  │ • Views     │  │ • Images    │  │ • Pub/sub   │  │ • User      │       │
+│  │ • Canvases  │  │ • Exports   │  │             │  │   actions   │       │
+│  │ • Users     │  │             │  │             │  │             │       │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## The Three-Layer Data Model
+
+CIA Web uses a three-layer separation for scientific visualization data:
+
+```
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│      DATASET        │     │  VIEW CONFIGURATION │     │   INSTANCE WINDOW   │
+│      (Layer 1)      │────▶│      (Layer 2)      │────▶│      (Layer 3)      │
+├─────────────────────┤     ├─────────────────────┤     ├─────────────────────┤
+│ • Raw scientific    │     │ • Camera position   │     │ • GPU renderer      │
+│   data files        │     │ • Filters applied   │     │ • WebGL context     │
+│ • Annotations       │     │ • Colormap          │     │ • Screen position   │
+│ • Immutable         │     │ • Widget states     │     │ • Ephemeral         │
+│ • Server ID         │     │ • Server ID         │     │ • Client ID         │
+│ • Auditable         │     │ • Collaborative     │     │ • Destroyable       │
+└─────────────────────┘     └─────────────────────┘     └─────────────────────┘
+```
+
+### Why This Matters
+
+- **Dataset**: Your data is sacred. It's uploaded once and never modified.
+- **ViewConfiguration**: How you're looking at the data. This is what syncs between collaborators.
+- **InstanceWindow**: Just a renderer. Can be destroyed and recreated without losing anything.
+
+**Key insight**: Closing a window doesn't lose your work. The ViewConfiguration persists.
+
+## Canvas & Workspace System
+
+Users work on an infinite canvas of views:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CANVAS (Infinite)                         │
+│                                                                  │
+│  ┌─────┬─────┬─────┬─────┬─────┬─────┐                         │
+│  │     │     │     │     │     │     │                         │
+│  ├─────┼─────┼─────╔═════════════════╗                         │
+│  │     │     │     ║    VIEWPORT     ║    ← User sees this     │
+│  ├─────┼─────┼─────║   (3x2 cells)   ║      (snaps to cells)   │
+│  │     │     │     ║                 ║                         │
+│  ├─────┼─────┼─────╚═════════════════╝                         │
+│  │     │     │     │     │     │     │                         │
+│  └─────┴─────┴─────┴─────┴─────┴─────┘                         │
+│                                                                  │
+│  Only views in viewport are rendered (GPU optimization)         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Workspace Hierarchy
+
+```
+Project Room (shared with all members)
+    │
+    ├── Breakout Room A (subset of team)
+    │
+    ├── Breakout Room B (subset of team)
+    │
+    └── Personal Workspace (private to each user)
+```
+
+## Plugin Architecture
+
+Visualization types are implemented as **handlers**. The core UI is completely agnostic to what's being visualized.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         CORE UI                                  │
+│        (Canvas, Panels, Layout - knows nothing about VTK)       │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                    Asks: "What toolbar do you need?"
+                    Asks: "Render yourself in this container"
+                                │
+┌───────────────────────────────┴─────────────────────────────────┐
+│                    INSTANCE TYPE HANDLERS                        │
+│                                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │   VTK    │  │ Molecule │  │  Plotly  │  │  Image   │        │
+│  │ Handler  │  │ Handler  │  │ Handler  │  │ Handler  │        │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        │
+│       │             │             │             │                │
+│    VTK.js       NGL/3Dmol     Plotly.js     Canvas             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+See [Plugin Architecture](PLUGIN_ARCHITECTURE.md) for how to add new visualization types.
+
+## VR Architecture
+
+CIA Web is designed VR-first, with two modes:
+
+### Grid Mode
+Views arranged in a curved arc around the user (like Fiesta):
+```
+         ┌─────┐   ┌─────┐   ┌─────┐
+        /       \ /       \ /       \
+       │  View  ││  View  ││  View  │
+       │   1    ││   2    ││   3    │
+        \       / \       / \       /
+         └─────┘   └─────┘   └─────┘
+              \       │       /
+               \      │      /
+                ───  👤  ───
+                    User
+```
+
+### Isolation Mode
+Pull a single view to room-scale and walk around it:
+```
+        ┌─────────────────────┐
+       /                       \
+      │      🧠 3D MODEL        │
+      │                         │
+      │    User can walk       │
+      │     around this        │
+      │                         │
+       \                       /
+        └─────────────────────┘
+
+   👤 VR User        👤 Other VR User
+   (you)             (avatar visible)
+         
+         ─────▶ Desktop cursor visible as floating ray
+```
+
+## Rendering Modes
+
+Each handler can support different rendering modes:
+
+| Mode | Where Rendered | Use Case |
+|------|----------------|----------|
+| **Client** | Browser GPU (VTK.js) | Desktop, good GPU |
+| **Server** | Remote GPU, video streamed | VR, large datasets |
+| **Hybrid** | Mix based on complexity | Progressive loading |
+
+## Key Design Decisions
+
+See [Architecture Decisions](DECISIONS.md) for the full list. Highlights:
+
+- **Server Authority**: All persistent state comes from REST API (for audit/compliance)
+- **Y.js for Presence Only**: Cursors and avatars, NOT view state
+- **Handlers Return Data**: Toolbar configs are plain objects, not React components
+- **VR Stubs Now**: Structure for VR even before implementation
+
+## Further Reading
+
+- [Plugin Architecture](PLUGIN_ARCHITECTURE.md) - Adding visualization types
+- [Architecture Decisions](DECISIONS.md) - Why things are the way they are
+- [Glossary](../GLOSSARY.md) - Terminology reference
+- [Contributing](../../CONTRIBUTING.md) - How to contribute
