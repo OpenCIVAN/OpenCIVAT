@@ -1,0 +1,56 @@
+// MiniMap.scss
+// Styles for the canvas mini-map
+
+.mini-map {
+  position: relative;
+  background: var(--color-bg-tertiary, #1f2937);
+  border: 1px solid var(--color-border, #4b5563);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--color-border-hover, #6b7280);
+  }
+
+  &--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-tertiary, #6b7280);
+    font-size: 12px;
+    cursor: default;
+  }
+
+  &--dragging {
+    cursor: grabbing;
+  }
+
+  // SVG grid
+  &__grid {
+    display: block;
+  }
+
+  // Viewport indicator
+  &__viewport {
+    cursor: grab;
+
+    .mini-map--dragging & {
+      cursor: grabbing;
+    }
+  }
+
+  // Position label
+  &__label {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: monospace;
+    color: var(--color-text-secondary, #9ca3af);
+    pointer-events: none;
+  }
+}

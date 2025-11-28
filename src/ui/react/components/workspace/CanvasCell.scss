@@ -1,0 +1,300 @@
+// CanvasCell.scss
+// Styles for individual canvas cells
+
+.canvas-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-secondary, #374151);
+  border: 1px solid var(--color-border, #4b5563);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-border-hover, #6b7280);
+  }
+
+  // Content types
+  &--view {
+    border-color: var(--color-accent-blue, #3b82f6);
+    border-width: 2px;
+  }
+
+  &--notes {
+    border-color: var(--color-accent-yellow, #eab308);
+    border-width: 2px;
+  }
+
+  &--image {
+    border-color: var(--color-accent-green, #22c55e);
+    border-width: 2px;
+  }
+
+  &--empty {
+    background: var(--color-bg-tertiary, #1f2937);
+    border-style: dashed;
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+      background: var(--color-bg-secondary, #374151);
+    }
+  }
+
+  // Selection states
+  &--selectable {
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  &--selected {
+    border-color: var(--color-accent-primary, #8b5cf6) !important;
+    border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+  }
+
+  // Spanning
+  &--row-span,
+  &--col-span {
+    // Visual indicator for spanning cells
+  }
+
+  // Selection indicator
+  &__selection-indicator {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--color-accent-primary, #8b5cf6);
+    }
+  }
+
+  // Main content area
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 8px;
+  }
+
+  // Empty content
+  &__empty-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--color-text-tertiary, #6b7280);
+  }
+
+  &__position {
+    font-size: 11px;
+    font-family: monospace;
+    opacity: 0.6;
+  }
+
+  &__drop-hint {
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+
+    .canvas-cell--empty:hover & {
+      opacity: 1;
+    }
+  }
+
+  // Resize handle
+  &__resize-handle {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-tertiary, #6b7280);
+    cursor: se-resize;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+
+    .canvas-cell:hover & {
+      opacity: 1;
+    }
+
+    &:hover {
+      color: var(--color-text-primary, #f3f4f6);
+    }
+  }
+
+  // Span badge
+  &__span-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    padding: 2px 6px;
+    background: var(--color-bg-tertiary, #1f2937);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #9ca3af);
+  }
+
+  // View placeholder
+  &__view-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__view-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border, #4b5563);
+    margin-bottom: 8px;
+  }
+
+  &__view-icon {
+    font-size: 14px;
+  }
+
+  &__view-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-primary, #f3f4f6);
+  }
+
+  &__view-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__view-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__preview-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 16px;
+    background: var(--color-bg-tertiary, #1f2937);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--color-text-secondary, #9ca3af);
+    font-family: monospace;
+  }
+
+  &__preview-size {
+    font-size: 10px;
+    opacity: 0.7;
+  }
+
+  // Notes placeholder
+  &__notes-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__notes-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border, #4b5563);
+    margin-bottom: 8px;
+  }
+
+  &__notes-icon {
+    font-size: 14px;
+  }
+
+  &__notes-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-primary, #f3f4f6);
+  }
+
+  &__notes-body {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  &__notes-preview {
+    font-size: 12px;
+    color: var(--color-text-secondary, #9ca3af);
+    line-height: 1.5;
+  }
+
+  // Image placeholder
+  &__image-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__image-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border, #4b5563);
+    margin-bottom: 8px;
+  }
+
+  &__image-icon {
+    font-size: 14px;
+  }
+
+  &__image-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-primary, #f3f4f6);
+  }
+
+  &__image-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__image-preview {
+    font-size: 11px;
+    color: var(--color-text-tertiary, #6b7280);
+    font-family: monospace;
+  }
+
+  // Unknown content
+  &__unknown {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-warning, #f59e0b);
+    font-size: 12px;
+  }
+}

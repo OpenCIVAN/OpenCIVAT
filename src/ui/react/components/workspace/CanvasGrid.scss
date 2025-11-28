@@ -1,0 +1,120 @@
+// CanvasGrid.scss
+// Styles for the main canvas grid component
+
+.canvas-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-primary, #1f2937);
+  border-radius: 8px;
+  overflow: hidden;
+
+  &:focus {
+    outline: 2px solid var(--color-accent-primary, #8b5cf6);
+    outline-offset: -2px;
+  }
+
+  // States
+  &--loading,
+  &--error,
+  &--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &--selection-mode {
+    .canvas-grid__cells {
+      cursor: crosshair;
+    }
+  }
+
+  &--focus-mode {
+    border: 2px solid var(--color-accent-primary, #8b5cf6);
+  }
+
+  // Loader
+  &__loader {
+    color: var(--color-text-secondary, #9ca3af);
+    font-size: 14px;
+  }
+
+  // Error
+  &__error {
+    text-align: center;
+    color: var(--color-error, #ef4444);
+
+    p {
+      margin: 0 0 8px;
+      font-weight: 500;
+    }
+
+    small {
+      color: var(--color-text-tertiary, #6b7280);
+    }
+  }
+
+  // Empty
+  &__empty {
+    color: var(--color-text-secondary, #9ca3af);
+    font-size: 14px;
+  }
+
+  // Focus mode banner
+  &__focus-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--color-accent-primary, #8b5cf6);
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  // Selection mode banner
+  &__selection-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--color-accent-blue, #3b82f6);
+    color: white;
+    font-size: 13px;
+  }
+
+  &__selection-count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  // Grid cells container
+  &__cells {
+    flex: 1;
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+    min-height: 0;
+  }
+
+  // Viewport info
+  &__viewport-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--color-bg-secondary, #374151);
+    border-top: 1px solid var(--color-border, #4b5563);
+    font-size: 11px;
+    color: var(--color-text-tertiary, #9ca3af);
+
+    span {
+      font-family: monospace;
+    }
+  }
+}
