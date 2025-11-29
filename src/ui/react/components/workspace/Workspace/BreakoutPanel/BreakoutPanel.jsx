@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { workspaceManager } from '@Core/data/managers/WorkspaceManager.js';
-import { BreakoutTimer, WorkspaceTypeBadge } from './WorkspaceTypeIndicator.jsx';
+import { BreakoutTimer, WorkspaceTypeBadge } from '@UI/react/components/workspace';
 import { WorkspaceType } from '@Core/data/models/Workspace.js';
 import './BreakoutPanel.scss';
 

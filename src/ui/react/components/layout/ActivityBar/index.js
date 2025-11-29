@@ -1,4 +1,4 @@
 // =============================================================================
-// src/ui/react/components/layout/TopBar/index.js
+// src/ui/react/components/layout/ActivityBar/index.js
 // =============================================================================
-export { TopBar } from "./TopBar.jsx";
+export { ActivityBar } from "./ActivityBar.jsx";

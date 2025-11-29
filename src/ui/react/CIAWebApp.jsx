@@ -8,11 +8,14 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 // Import UI components
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
 import { FilesPanel } from "@UI/react/components/panels/FilesPanel";
-import { WorkspaceGrid } from "@UI/react/components/workspace/WorkspaceGrid";
-import { CanvasWorkspace } from "@UI/react/components/workspace/CanvasWorkspace.jsx";
+import { WorkspaceGrid } from "@UI/react/components/workspace/Workspace/WorkspaceGrid";
+import { CanvasWorkspace } from "@UI/react/components/workspace/";
 import { TopBar } from "@UI/react/components/layout/TopBar";
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
 import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel"
+import { SecondaryTopBar } from '@UI/react/components/layout/SecondaryTopBar';
+import { SecondaryBottomBar } from '@UI/react/components/layout/SecondaryBottomBar';
+import { useWorkspaces } from '@UI/react/hooks/useWorkspaces.js';
 
 /**
  * Main Application Component
@@ -25,6 +28,7 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
   const [phase3Status, setPhase3Status] = useState('pending');
   const phase3Started = useRef(false);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspaces({ userId });
 
   // Feature flag for new canvas system (can be toggled via props or query param)
   const [canvasMode, setCanvasMode] = useState(() => {
@@ -76,13 +80,12 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
   return (
     <ThreeEdgeLayout
       topBar={<TopBar username={username} canvasMode={canvasMode} onToggleCanvasMode={() => setCanvasMode(!canvasMode)} />}
-      leftPanel={<FilesPanel
-        isCollapsed={leftPanelCollapsed}
-        onToggle={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
-      />}
-      centerPanel={renderCenterPanel()}
-      rightPanel={<RightCollaborationPanel roomName={sessionManager?.getRoomId() || 'default-analytics-room'} />}
-      bottomBar={<StatusBar username={username} phase3Status={phase3Status} canvasMode={canvasMode} />}
+      secondaryTopBar={<SecondaryTopBar workspaces={workspaces} />}
+      leftPanel={<FilesPanel />}
+      centerPanel={<WorkspaceGrid />}
+      rightPanel={<CollaborationPanel />}
+      secondaryBottomBar={<SecondaryBottomBar currentWorkspace={currentWorkspace} />}
+      bottomBar={<StatusBar />}
     />
   );
 }

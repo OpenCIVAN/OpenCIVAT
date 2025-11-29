@@ -1,20 +1,22 @@
 // src/ui/react/components/workspace/index.js
 // Workspace component exports
 
+export { WorkspaceGrid } from "./Workspace";
+
 // Canvas components
-export { CanvasGrid } from "./CanvasGrid.jsx";
-export { CanvasCell } from "./CanvasCell.jsx";
-export { MiniMap } from "./MiniMap.jsx";
-export { ViewportNavigator } from "./ViewportNavigator.jsx";
+export { CanvasGrid } from "./Canvas";
+export { CanvasCell } from "./Canvas";
+export { MiniMap } from "./Canvas";
+export { ViewportNavigator } from "./Canvas";
 
 // Workspace hierarchy components
-export { WorkspaceSelector } from "./WorkspaceSelector.jsx";
+export { WorkspaceSelector } from "./Workspace";
 export {
   WorkspaceTypeIndicator,
   WorkspaceTypeBadge,
   BreakoutTimer,
-} from "./WorkspaceTypeIndicator.jsx";
-export { BreakoutPanel } from "./BreakoutPanel.jsx";
+} from "./Workspace";
+export { BreakoutPanel } from "./Workspace";
 
 // Full canvas workspace integration
-export { CanvasWorkspace } from "./CanvasWorkspace.jsx";
+export { CanvasWorkspace } from "./Canvas";

@@ -1,4 +1,5 @@
-// Styles for ThreeEdgeLayout and ResizablePanel components
+// src/ui/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.scss
+// Updated: Added secondary bar slots
 // Uses design tokens for consistency
 
 @use "sass:color";
@@ -17,11 +18,18 @@
   overflow: hidden;
 }
 
+// Top bars (primary + secondary)
 .three-edge-layout__top {
   flex-shrink: 0;
   z-index: 100;
 }
 
+.three-edge-layout__secondary-top {
+  flex-shrink: 0;
+  z-index: 99;
+}
+
+// Main content area with panels
 .three-edge-layout__main {
   flex: 1;
   min-height: 0; // Critical for flex children to shrink properly
@@ -30,12 +38,19 @@
   position: relative;
 }
 
+// Center panel (workspace)
 .three-edge-layout__center {
   flex: 1;
   min-width: 0; // Critical for flexbox children
   min-height: 0; // Critical for nested flex layouts
   overflow: hidden;
-  background: $color-bg-primary;
+  background: $color-bg-base;
+}
+
+// Bottom bars (secondary + primary)
+.three-edge-layout__secondary-bottom {
+  flex-shrink: 0;
+  z-index: 99;
 }
 
 .three-edge-layout__bottom {
@@ -53,6 +68,7 @@
   position: relative;
   background: $color-bg-secondary;
   transition: width var(--transition-smooth);
+  flex-shrink: 0;
 
   &--left {
     border-right: 1px solid $color-border-subtle;
@@ -60,6 +76,10 @@
 
   &--right {
     border-left: 1px solid $color-border-subtle;
+  }
+
+  &--collapsed {
+    // When collapsed, panel shows only activity bar
   }
 }
 
@@ -81,211 +101,59 @@
   height: 100%;
   cursor: col-resize;
   z-index: 1000;
-  background: transparent;
-  transition: background var(--transition-fast);
+  transition: background $transition-fast;
 
   &--left {
-    left: -2px;
-  }
-
-  &--right {
     right: -2px;
   }
 
-  &:hover {
-    background: var(--accent-primary-subtle);
+  &--right {
+    left: -2px;
   }
 
+  &:hover,
   &--active {
-    background: $color-accent-primary;
+    background: rgba($color-accent-primary, 0.4);
   }
-}
 
-.panel-divider__handle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 2px;
-  height: 40px;
-  background: var(--border-medium);
-  border-radius: 2px;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
+  // Visual handle indicator
+  &__handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: $color-border-medium;
+    border-radius: $radius-sm;
+    opacity: 0;
+    transition: opacity $transition-fast;
+  }
 
-  .panel-divider:hover &,
-  .panel-divider--active & {
+  &:hover &__handle,
+  &--active &__handle {
     opacity: 1;
-  }
-}
-
-// =============================================================================
-// ACTIVITY BAR (Collapsed State)
-// =============================================================================
-
-.activity-bar {
-  width: 48px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: $spacing-md 0;
-  background: $color-bg-secondary;
-}
-
-.activity-bar__content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $spacing-sm;
-  width: 100%;
-}
-
-.activity-bar__expand {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: $radius-sm;
-  color: $color-text-tertiary;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-
-  &:hover {
-    background: $color-bg-tertiary;
-    border-color: var(--border-medium);
-    color: $color-text-secondary;
-  }
-
-  &:active {
-    background: var(--accent-primary-subtle);
-    border-color: $color-accent-primary;
-    color: $color-accent-primary;
-  }
-}
-
-// =============================================================================
-// PANEL HEADER (For child components)
-// =============================================================================
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 40px;
-  padding: 0 $spacing-md;
-  border-bottom: 1px solid $color-border-subtle;
-  flex-shrink: 0;
-  background: $color-bg-secondary;
-}
-
-.panel-header__content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-}
-
-.panel-header__title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: $color-text-primary;
-}
-
-.panel-header__collapse {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: $radius-sm;
-  color: $color-text-tertiary;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-
-  &:hover {
-    background: $color-bg-tertiary;
-    border-color: var(--border-medium);
-    color: $color-text-secondary;
-  }
-}
-
-// =============================================================================
-// ACTIVITY BAR ICON BUTTON (For child components to use)
-// =============================================================================
-
-.activity-bar-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: $radius-sm;
-  color: $color-text-tertiary;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  position: relative;
-
-  &:hover {
-    background: $color-bg-tertiary;
-    border-color: var(--border-medium);
-    color: $color-text-secondary;
-  }
-
-  &--active {
     background: $color-accent-primary;
-    border-color: $color-accent-primary;
-    color: $color-text-primary;
-
-    &:hover {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-    }
   }
-}
-
-// Badge for activity bar icons (notifications, counts, etc.)
-.activity-bar-icon__badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--error);
-  color: $color-text-primary;
-  font-size: 9px;
-  font-weight: 600;
-  border-radius: 8px;
-  border: 2px solid $color-bg-secondary;
 }
 
 // =============================================================================
 // RESPONSIVE ADJUSTMENTS
 // =============================================================================
 
+@media (max-width: 1024px) {
+  .three-edge-layout__main {
+    // Stack panels on smaller screens if needed
+  }
+}
+
 @media (max-width: 768px) {
+  // Mobile: panels become overlays or drawers
   .resizable-panel {
-    // On mobile, panels become full-screen overlays when open
-    &--left,
-    &--right {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      z-index: 200;
-    }
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 200;
 
     &--left {
       left: 0;
@@ -294,33 +162,13 @@
     &--right {
       right: 0;
     }
-  }
 
-  // Disable resize on mobile
-  .panel-divider {
-    display: none;
-  }
-}
+    &--collapsed {
+      transform: translateX(-100%);
 
-// =============================================================================
-// ACCESSIBILITY
-// =============================================================================
-
-// Focus indicators
-.activity-bar__expand:focus-visible,
-.panel-header__collapse:focus-visible,
-.activity-bar-icon:focus-visible {
-  outline: 2px solid $color-accent-primary;
-  outline-offset: 2px;
-}
-
-// Reduced motion
-@media (prefers-reduced-motion: reduce) {
-  .resizable-panel,
-  .panel-divider,
-  .activity-bar__expand,
-  .panel-header__collapse,
-  .activity-bar-icon {
-    transition: none;
+      &.resizable-panel--right {
+        transform: translateX(100%);
+      }
+    }
   }
 }

@@ -8,7 +8,7 @@
 // - Integrates with selection mode for subset creation
 
 import React, { useCallback, useEffect, useRef } from 'react';
-import { CanvasCell } from './CanvasCell.jsx';
+import { CanvasCell } from '@UI/react/components/workspace';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import './CanvasGrid.scss';
 

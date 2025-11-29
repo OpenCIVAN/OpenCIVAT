@@ -1,0 +1,268 @@
+// src/ui/react/components/layout/SecondaryBottomBar/SecondaryBottomBar.scss
+// Secondary bottom bar styling with canvas position, workspace info, and voice controls
+// Uses design tokens - no hard-coded values
+
+@use "sass:color";
+@use "theme" as *;
+
+// =============================================================================
+// SECONDARY BOTTOM BAR CONTAINER
+// =============================================================================
+
+.secondary-bottom-bar {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  background: $color-bg-tertiary;
+  border-top: 1px solid $color-border-default;
+  flex-shrink: 0;
+
+  // Zone styles
+  &__zone {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    transition: width var(--transition-smooth);
+
+    &--left {
+      padding: 0 $spacing-md;
+      border-right: 1px solid $color-border-default;
+      flex-shrink: 0;
+    }
+
+    &--center {
+      flex: 1;
+      justify-content: center;
+      gap: $spacing-lg;
+      padding: 0 $spacing-lg;
+    }
+
+    &--right {
+      padding: 0 $spacing-md;
+      border-left: 1px solid $color-border-default;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 12px;
+    background: $color-border-default;
+  }
+
+  &__panel-label {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+}
+
+// =============================================================================
+// CANVAS MINIMAP
+// =============================================================================
+
+.canvas-minimap {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  cursor: pointer;
+  position: relative;
+
+  &__icon {
+    color: $color-text-tertiary;
+  }
+
+  &__position {
+    font-size: $font-size-xs;
+    color: $color-text-primary;
+  }
+
+  &__size {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  // Hover tooltip
+  &__tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: $spacing-sm;
+    background: $color-bg-elevated;
+    border: 1px solid $color-border-medium;
+    border-radius: $radius-md;
+    padding: $spacing-md;
+    z-index: 200;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  &__tooltip-header {
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__grid {
+    display: grid;
+    gap: 2px;
+  }
+
+  &__cell {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    border: 1px solid transparent;
+    transition: all $transition-fast;
+
+    &.in-viewport {
+      background: $color-success;
+      border-color: $color-success;
+    }
+  }
+
+  &__tooltip-footer {
+    font-size: 9px;
+    color: $color-success;
+    margin-top: $spacing-sm;
+    text-align: center;
+  }
+}
+
+// =============================================================================
+// WORKSPACE INDICATOR
+// =============================================================================
+
+.workspace-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &__icon {
+    color: var(--workspace-color, $color-accent-blue);
+  }
+
+  &__name {
+    font-size: $font-size-xs;
+    color: var(--workspace-color, $color-accent-blue);
+  }
+}
+
+// =============================================================================
+// INSTANCE COUNTER
+// =============================================================================
+
+.instance-counter {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &__icon {
+    color: $color-text-tertiary;
+  }
+
+  &__count {
+    font-size: $font-size-xs;
+    color: $color-text-primary;
+  }
+}
+
+// =============================================================================
+// VOICE CONTROLS
+// =============================================================================
+
+.voice-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  // Disconnected state - Join button
+  &--disconnected {
+    padding: $spacing-xs $spacing-sm;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+
+    &:hover {
+      background: $color-glass-light;
+      border-color: $color-border-medium;
+      color: $color-text-secondary;
+    }
+  }
+
+  // Connected state - Control strip
+  &--connected {
+    padding: 3px $spacing-sm;
+    background: rgba($color-success, 0.1);
+    border: 1px solid rgba($color-success, 0.3);
+    border-radius: $radius-sm;
+  }
+
+  &__room {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  &__room-icon {
+    color: $color-success;
+  }
+
+  &__room-name {
+    font-size: $font-size-xs;
+    color: $color-success;
+  }
+
+  &__room-chevron {
+    color: $color-success;
+  }
+
+  &__divider {
+    width: 1px;
+    height: 12px;
+    background: $color-border-default;
+    margin: 0 2px;
+  }
+
+  &__btn {
+    background: transparent;
+    border: none;
+    color: $color-text-secondary;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.active {
+      background: rgba($color-error, 0.2);
+      color: $color-error;
+    }
+
+    &--leave {
+      color: $color-text-muted;
+
+      &:hover {
+        color: $color-text-secondary;
+      }
+    }
+  }
+}

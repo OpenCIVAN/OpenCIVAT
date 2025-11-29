@@ -4,14 +4,14 @@
 // This wraps CanvasGrid with workspace selection and subset management
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CanvasGrid } from './CanvasGrid.jsx';
-import { MiniMap } from './MiniMap.jsx';
-import { ViewportNavigator } from './ViewportNavigator.jsx';
-import { WorkspaceSelector } from './WorkspaceSelector.jsx';
-import { SubsetPanel } from '../panels/SubsetPanel.jsx';
-import { FocusModeOverlay } from '../panels/FocusModeOverlay.jsx';
+import { CanvasGrid } from '@UI/react/components/workspace';
+import { MiniMap } from '@UI/react/components/workspace';
+import { ViewportNavigator } from '@UI/react/components/workspace';
+import { WorkspaceSelector } from '@UI/react/components/workspace';
+import { SubsetPanel } from '@UI/react/components/panels/SubsetPanel.jsx';
+import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay.jsx';
 
-import { useCanvas } from '@UI/react/hooks/useCanvas.js';
+import { useCanvas } from '@UI/react/hooks/';
 import { useSubsets } from '@UI/react/hooks/';
 import { workspaceManager } from '@Core/data/managers/WorkspaceManager.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
