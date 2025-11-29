@@ -31,13 +31,12 @@ import {
 // Tab content components
 import { FilesPanelContent } from './tabs/FilesTab';
 import { DatasetsPanelContent } from './tabs/DatasetsTab';
-// Placeholder imports - these will be implemented later
-// import { InstanceToolsContent } from './tabs/InstanceToolsTab';
-// import { LayoutContent } from './tabs/LayoutTab';
-// import { AnnotationsContent } from './tabs/AnnotationsTab';
-// import { CursorsContent } from './tabs/CursorsTab';
-// import { SavedFiltersContent } from './tabs/SavedFiltersTab';
-// import { BookmarksContent } from './tabs/BookmarksTab';
+import { InstanceToolsPanelContent } from './tabs/InstanceToolsTab';
+import { LayoutPanelContent } from './tabs/LayoutTab';
+import { AnnotationsPanelContent } from './tabs/AnnotationsTab';
+import { CursorsPanelContent } from './tabs/CursorsTab';
+import { SavedFiltersPanelContent } from './tabs/SavedFiltersTab';
+import { BookmarksPanelContent } from './tabs/BookmarksTab';
 
 import './LeftPanel.scss';
 
@@ -57,12 +56,12 @@ import './LeftPanel.scss';
 const TABS = [
     { id: 'files', icon: FolderOpen, label: 'Files', color: 'blue', implemented: true },
     { id: 'datasets', icon: Database, label: 'Datasets', color: 'teal', implemented: true },
-    { id: 'instance-tools', icon: Wrench, label: 'Instance Tools', color: 'orange', implemented: false },
-    { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: false },
-    { id: 'annotations', icon: MessageSquare, label: 'Annotations', color: 'pink', implemented: false },
-    { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: false },
-    { id: 'filters', icon: Filter, label: 'Saved Filters', color: 'indigo', implemented: false },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', color: 'purple', implemented: false },
+    { id: 'instance-tools', icon: Wrench, label: 'Instance Tools', color: 'orange', implemented: true },
+    { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
+    { id: 'annotations', icon: MessageSquare, label: 'Annotations', color: 'pink', implemented: true },
+    { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: true },
+    { id: 'filters', icon: Filter, label: 'Saved Filters', color: 'indigo', implemented: true },
+    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', color: 'purple', implemented: true },
 ];
 
 // =============================================================================
@@ -183,6 +182,14 @@ export function LeftPanel({
         setActiveTab(tabId);
     }, []);
 
+    // Handle navigation between panels (for cross-panel links)
+    const handleNavigateToPanel = useCallback((panelId) => {
+        const tab = TABS.find(t => t.id === panelId);
+        if (tab) {
+            setActiveTab(panelId);
+        }
+    }, []);
+
     // Render tab content based on active tab
     const renderContent = useCallback(() => {
         switch (activeTab) {
@@ -191,16 +198,21 @@ export function LeftPanel({
             case 'datasets':
                 return <DatasetsPanelContent workspaceId={workspaceId} />;
             case 'instance-tools':
+                return <InstanceToolsPanelContent workspaceId={workspaceId} />;
             case 'layout':
+                return <LayoutPanelContent workspaceId={workspaceId} />;
             case 'annotations':
+                return <AnnotationsPanelContent workspaceId={workspaceId} />;
             case 'cursors':
+                return <CursorsPanelContent workspaceId={workspaceId} onNavigateToPanel={handleNavigateToPanel} />;
             case 'filters':
+                return <SavedFiltersPanelContent workspaceId={workspaceId} />;
             case 'bookmarks':
-                return <PlaceholderContent tab={currentTab} />;
+                return <BookmarksPanelContent workspaceId={workspaceId} />;
             default:
                 return <PlaceholderContent tab={TABS[0]} />;
         }
-    }, [activeTab, workspaceId, currentTab]);
+    }, [activeTab, workspaceId, currentTab, handleNavigateToPanel]);
 
     return (
         <div className="left-panel" data-collapsed={isCollapsed}>

@@ -473,3 +473,1923 @@
 .file-icon--visualizable {
   color: $color-accent-blue;
 }
+
+// =============================================================================
+// FILE ICON COLORS
+// =============================================================================
+
+.file-icon--pink {
+  color: $color-accent-pink;
+}
+
+.file-icon--amber {
+  color: $color-accent-amber;
+}
+
+.file-icon--indigo {
+  color: $color-accent-indigo;
+}
+
+// =============================================================================
+// COMMON TAB CONTAINER STYLES
+// =============================================================================
+
+.annotations-tab,
+.instance-tools-tab,
+.layout-tab,
+.cursors-tab,
+.saved-filters-tab,
+.bookmarks-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  &__section {
+    padding: 0;
+    border-bottom: 1px solid $color-border-subtle;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__section-header {
+    font-size: 10px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: $font-weight-semibold;
+    padding: $spacing-sm $spacing-md;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__empty {
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+
+  &__intro {
+    padding: $spacing-sm $spacing-md;
+    font-size: 11px;
+    color: $color-text-muted;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+}
+
+// =============================================================================
+// TREE ITEM EXTENSIONS FOR ANNOTATIONS
+// =============================================================================
+
+.tree-item {
+  &__visibility-btn {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $color-text-muted;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+
+  &__type-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &--blue {
+      background: rgba($color-accent-blue, 0.15);
+      color: $color-accent-blue;
+    }
+
+    &--green {
+      background: rgba($color-accent-green, 0.15);
+      color: $color-accent-green;
+    }
+
+    &--purple {
+      background: rgba($color-accent-purple, 0.15);
+      color: $color-accent-purple;
+    }
+
+    &--amber {
+      background: rgba($color-accent-amber, 0.15);
+      color: $color-accent-amber;
+    }
+
+    &--pink {
+      background: rgba($color-accent-pink, 0.15);
+      color: $color-accent-pink;
+    }
+  }
+
+  &__action-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+
+  &__expanded-actions {
+    display: flex;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    padding-left: 56px;
+    border-top: 1px solid $color-border-subtle;
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  &__expanded-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 8px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &[data-color="blue"]:hover {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &[data-color="pink"]:hover {
+      background: rgba($color-accent-pink, 0.15);
+      border-color: rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
+    }
+  }
+
+  &__color-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &--blue {
+      background: $color-accent-blue;
+    }
+
+    &--teal {
+      background: $color-accent-teal;
+    }
+
+    &--pink {
+      background: $color-accent-pink;
+    }
+
+    &--amber {
+      background: $color-accent-amber;
+    }
+
+    &--green {
+      background: $color-accent-green;
+    }
+  }
+}
+
+.tree-group__children {
+  padding-left: 12px;
+}
+
+.item-value {
+  font-size: 10px;
+  color: $color-accent-green;
+  font-weight: $font-weight-semibold;
+}
+
+.item-meta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: 9px;
+  color: $color-text-muted;
+
+  svg {
+    opacity: 0.6;
+  }
+}
+
+.item-linked-instances {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.linked-instance-badge {
+  font-size: 8px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: $radius-xs;
+  color: $color-text-tertiary;
+}
+
+// =============================================================================
+// INSTANCE TOOLS TAB STYLES
+// =============================================================================
+
+.instance-tools-tab {
+  &__instance-header {
+    padding: $spacing-sm $spacing-md;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    border-bottom: 1px solid $color-border-default;
+    background: rgba(var(--instance-color-rgb), 0.05);
+    border-left: 2px solid var(--instance-color);
+  }
+
+  &__instance-info {
+    flex: 1;
+  }
+
+  &__instance-name {
+    display: block;
+    font-size: 12px;
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__instance-dataset {
+    display: block;
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__instance-type {
+    font-size: 8px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 4px;
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: $spacing-sm;
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &--active {
+      background: rgba($color-accent-purple, 0.15);
+      border-color: rgba($color-accent-purple, 0.4);
+      color: $color-accent-purple;
+    }
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+.tool-section {
+  border-bottom: 1px solid $color-border-subtle;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: $spacing-sm $spacing-md;
+    cursor: pointer;
+    color: $color-text-muted;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: $font-weight-semibold;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  }
+
+  &__label {
+    flex: 1;
+  }
+
+  &__note {
+    font-size: 9px;
+    color: $color-text-muted;
+    font-weight: normal;
+    text-transform: none;
+  }
+
+  &__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: $spacing-sm $spacing-md;
+    padding-top: 0;
+  }
+}
+
+.tool-button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  position: relative;
+
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  color: $color-text-tertiary;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  &:hover:not(&--active) {
+    color: $color-text-secondary;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.25) 0%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
+  }
+
+  &--active {
+    background: rgba($color-accent-purple, 0.15);
+    border: 1px solid rgba($color-accent-purple, 0.4);
+    color: $color-accent-purple;
+    box-shadow: 0 0 10px rgba($color-accent-purple, 0.2);
+  }
+
+  &__dropdown-indicator {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    color: inherit;
+    opacity: 0.5;
+  }
+}
+
+.active-widgets-section {
+  padding: $spacing-sm $spacing-md;
+  background: rgba(0, 0, 0, 0.1);
+
+  &__header {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+  }
+}
+
+.widget-list-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  margin-bottom: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &--selected {
+    background: rgba($color-accent-purple, 0.1);
+    border-color: rgba($color-accent-purple, 0.3);
+  }
+
+  &__visibility {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $color-text-muted;
+  }
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $color-text-muted;
+
+    &--active {
+      background: $color-accent-green;
+    }
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 11px;
+    color: $color-text-secondary;
+  }
+
+  &__arrow {
+    color: $color-text-muted;
+  }
+}
+
+.widget-config {
+  margin-top: $spacing-sm;
+  padding: $spacing-md;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-md;
+  border: 1px solid $color-border-default;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  &__title {
+    flex: 1;
+    font-size: 12px;
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__delete {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: $color-text-muted;
+
+    &:hover {
+      color: $color-accent-pink;
+    }
+  }
+
+  &__section {
+    margin-bottom: $spacing-md;
+  }
+
+  &__section-label {
+    display: block;
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__position-inputs {
+    display: flex;
+    gap: $spacing-sm;
+  }
+
+  &__input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__input-label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-align: center;
+  }
+
+  &__input {
+    width: 100%;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    font-size: 11px;
+    text-align: center;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-blue;
+    }
+  }
+
+  &__direction-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__dir-btn {
+    flex: 1;
+    min-width: 40px;
+    padding: 6px;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: $spacing-xs;
+  }
+
+  &__action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &[data-color="blue"]:hover {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &[data-color="amber"]:hover {
+      background: rgba($color-accent-amber, 0.15);
+      border-color: rgba($color-accent-amber, 0.4);
+      color: $color-accent-amber;
+    }
+
+    &[data-color="green"]:hover {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+}
+
+.presets-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  padding: 0 $spacing-md $spacing-sm;
+}
+
+.preset-btn {
+  padding: 6px 10px;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-primary;
+  }
+
+  &--save {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: $color-accent-green;
+    border-color: rgba($color-accent-green, 0.3);
+
+    &:hover {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+    }
+  }
+}
+
+.layers-tab__info {
+  padding: $spacing-sm $spacing-md;
+  font-size: 10px;
+  color: $color-text-muted;
+  line-height: 1.4;
+}
+
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+
+  &__btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+
+  &__info {
+    flex: 1;
+  }
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 11px;
+    color: $color-text-primary;
+  }
+
+  &__count {
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+
+  &__count-inline {
+    font-size: 9px;
+    color: $color-text-muted;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+  }
+
+  &__opacity {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 9px;
+    color: $color-text-muted;
+
+    input[type="range"] {
+      width: 60px;
+      height: 4px;
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 10px;
+        height: 10px;
+        background: $color-accent-blue;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+    }
+  }
+
+  &__manage {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: $color-text-muted;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+}
+
+.widgets-quick-list {
+  padding: 0 $spacing-md $spacing-sm;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: 6px $spacing-sm;
+    margin-bottom: 2px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: $radius-sm;
+  }
+
+  &__visibility {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $color-text-muted;
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 10px;
+    color: $color-text-secondary;
+
+    &--hidden {
+      opacity: 0.5;
+    }
+  }
+
+  &__config {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $color-text-muted;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+}
+
+// =============================================================================
+// LAYOUT TAB STYLES
+// =============================================================================
+
+.layout-tab {
+  &__workspace-indicator {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background: rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid $color-border-subtle;
+    color: var(--workspace-color);
+  }
+
+  &__workspace-name {
+    flex: 1;
+    font-size: 11px;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__workspace-count {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  &__section-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    margin-left: auto;
+  }
+
+  &__grid-actions {
+    display: flex;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+  }
+
+  &__action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &[data-color="green"]:hover {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+
+    &[data-color="blue"]:hover {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+  }
+}
+
+.layout-minimap {
+  display: flex;
+  justify-content: center;
+  padding: $spacing-md;
+
+  &__grid {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 6px;
+    border-radius: $radius-md;
+    border: 1px solid $color-border-default;
+  }
+
+  &__cell {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:not(&--empty) {
+      background: linear-gradient(
+        135deg,
+        rgba(var(--cell-color-rgb), 0.2) 0%,
+        rgba(var(--cell-color-rgb), 0.1) 100%
+      );
+      border-color: rgba(var(--cell-color-rgb), 0.3);
+    }
+
+    &--empty {
+      color: $color-text-muted;
+      border-style: dashed;
+    }
+
+    &--selected {
+      box-shadow: 0 0 0 2px $color-accent-blue;
+    }
+
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+}
+
+.cell-list {
+  padding: 0 $spacing-md $spacing-sm;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    &--selected {
+      background: rgba($color-accent-blue, 0.1);
+      border-color: rgba($color-accent-blue, 0.3);
+    }
+  }
+
+  &__color {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--cell-color);
+
+    &--empty {
+      background: $color-text-muted;
+      opacity: 0.3;
+    }
+  }
+
+  &__info {
+    flex: 1;
+  }
+
+  &__name {
+    display: block;
+    font-size: 11px;
+    color: $color-text-primary;
+  }
+
+  &__dataset {
+    display: block;
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  &__size {
+    font-size: 9px;
+    color: $color-text-muted;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+  }
+
+  &__more {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $color-text-muted;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+}
+
+.view-mode-section {
+  padding: $spacing-sm $spacing-md;
+
+  &__buttons {
+    display: flex;
+    gap: 6px;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__description {
+    font-size: 10px;
+    color: $color-text-muted;
+    line-height: 1.4;
+  }
+}
+
+.view-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font-size: 10px;
+  transition: all $transition-fast;
+
+  &:hover:not(&--active) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &--active {
+    &[data-color="green"] {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+
+    &[data-color="purple"] {
+      background: rgba($color-accent-purple, 0.15);
+      border-color: rgba($color-accent-purple, 0.4);
+      color: $color-accent-purple;
+    }
+
+    &[data-color="teal"] {
+      background: rgba($color-accent-teal, 0.15);
+      border-color: rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+    }
+  }
+}
+
+.layout-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+}
+
+.layout-preset-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &--save {
+    color: $color-accent-green;
+    border-color: rgba($color-accent-green, 0.3);
+
+    &:hover {
+      background: rgba($color-accent-green, 0.15);
+    }
+  }
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+
+  &--me {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  &__status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $color-text-muted;
+
+    &--active {
+      background: $color-accent-green;
+    }
+  }
+
+  &__info {
+    flex: 1;
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 11px;
+    color: $color-text-primary;
+  }
+
+  &__you-badge {
+    font-size: 8px;
+    padding: 1px 4px;
+    background: rgba($color-accent-green, 0.15);
+    color: $color-accent-green;
+    border-radius: $radius-xs;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__activity {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  &__btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+}
+
+.members-actions {
+  display: flex;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+}
+
+.members-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px;
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &[data-color="green"]:hover {
+    background: rgba($color-accent-green, 0.15);
+    border-color: rgba($color-accent-green, 0.4);
+    color: $color-accent-green;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.advanced-cursors-link {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: none;
+  border: none;
+  color: $color-accent-pink;
+  font-size: 10px;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// =============================================================================
+// CURSORS TAB STYLES
+// =============================================================================
+
+.cursor-setting-row {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+
+  &__icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--icon-color);
+    flex-shrink: 0;
+  }
+
+  &__info {
+    flex: 1;
+  }
+
+  &__title {
+    display: block;
+    font-size: 12px;
+    color: $color-text-primary;
+    margin-bottom: 2px;
+  }
+
+  &__description {
+    display: block;
+    font-size: 10px;
+    color: $color-text-muted;
+    line-height: 1.4;
+  }
+
+  &__control {
+    flex-shrink: 0;
+  }
+}
+
+.cursor-setting-card {
+  margin: 0 $spacing-md $spacing-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: $radius-md;
+  border: 1px solid $color-border-default;
+  overflow: hidden;
+}
+
+.toggle-switch {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  background: $color-bg-tertiary;
+  position: relative;
+  transition: background 0.2s ease;
+
+  &--active {
+    background: $color-accent-green;
+  }
+
+  &__thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: left 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  &--active &__thumb {
+    left: 22px;
+  }
+}
+
+.cursor-color-button {
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-sm;
+  background: var(--current-color);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: transform $transition-fast;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.cursor-color-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: $spacing-sm $spacing-md;
+  border-top: 1px solid $color-border-subtle;
+
+  &__swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-sm;
+    background: var(--swatch-color);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $transition-fast;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    &--selected {
+      border: 3px solid white;
+    }
+  }
+}
+
+.follow-mode-buttons {
+  display: flex;
+  gap: 6px;
+  padding: $spacing-sm $spacing-md;
+  padding-top: 0;
+}
+
+.follow-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(&--active) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &--active {
+    background: rgba($color-accent-blue, 0.15);
+    border-color: rgba($color-accent-blue, 0.4);
+    color: $color-accent-blue;
+  }
+}
+
+.cursor-link-card {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--link-color);
+  }
+
+  &__content {
+    flex: 1;
+  }
+
+  &__title {
+    display: block;
+    font-size: 12px;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__description {
+    display: block;
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+
+  &__arrow {
+    color: $color-text-muted;
+  }
+}
+
+.panel-footer--info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  font-size: 10px;
+  color: $color-text-muted;
+}
+
+// =============================================================================
+// SAVED FILTERS TAB STYLES
+// =============================================================================
+
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+
+  &__btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px;
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--active {
+      background: rgba($color-accent-amber, 0.15);
+      border-color: rgba($color-accent-amber, 0.4);
+      color: $color-accent-amber;
+    }
+  }
+}
+
+.filter-item {
+  margin: 0 $spacing-sm 4px;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &--selected {
+    background: rgba($color-accent-amber, 0.08);
+    border-color: rgba($color-accent-amber, 0.3);
+  }
+
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__star {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $color-text-muted;
+    transition: color $transition-fast;
+
+    &--active {
+      color: $color-accent-amber;
+    }
+
+    &:hover {
+      color: $color-accent-amber;
+    }
+  }
+
+  &__type-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: $radius-sm;
+    background: rgba($color-accent-amber, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-accent-amber;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__shared-icon {
+    color: $color-accent-pink;
+  }
+
+  &__description {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__apply-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+
+  &__expanded {
+    margin-top: $spacing-sm;
+    padding-top: $spacing-sm;
+    border-top: 1px solid $color-border-subtle;
+  }
+
+  &__components {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__component {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+    font-size: 9px;
+    color: $color-text-tertiary;
+  }
+
+  &__meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  &__action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &[data-color="blue"]:hover {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &[data-color="pink"]:hover {
+      background: rgba($color-accent-pink, 0.15);
+      border-color: rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
+    }
+
+    &--icon {
+      flex: none;
+      padding: 6px 10px;
+    }
+  }
+}
+
+// =============================================================================
+// BOOKMARKS TAB STYLES
+// =============================================================================
+
+.bookmark-thumbnail {
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--thumbnail-color-rgb), 0.2) 0%,
+    rgba(var(--thumbnail-color-rgb), 0.08) 100%
+  );
+  border: 1px solid rgba(var(--thumbnail-color-rgb), 0.3);
+  color: var(--thumbnail-color);
+  opacity: 0.6;
+
+  &--small {
+    width: 48px;
+    height: 48px;
+  }
+
+  &--large {
+    width: 100%;
+    height: 70px;
+    margin-bottom: $spacing-sm;
+  }
+}
+
+.bookmark-group {
+  border-bottom: 1px solid $color-border-subtle;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: $spacing-sm $spacing-md;
+    cursor: pointer;
+    color: $color-text-muted;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  }
+
+  &__title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__count {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+  }
+
+  &__list {
+    padding: 0 $spacing-sm $spacing-sm;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-sm;
+    padding: 0 $spacing-sm $spacing-sm;
+  }
+}
+
+.bookmark-list-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  margin-bottom: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &--selected {
+    background: rgba($color-accent-blue, 0.08);
+    border-color: rgba($color-accent-blue, 0.3);
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__shared-icon {
+    color: $color-accent-pink;
+  }
+
+  &__dataset {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    display: flex;
+    gap: $spacing-sm;
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 4px;
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+  }
+
+  &__go-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+}
+
+.bookmark-grid-item {
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: $color-border-medium;
+  }
+
+  &__name {
+    font-size: 11px;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__timestamp {
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+}
+
+.bookmark-details {
+  padding: $spacing-md;
+  border-top: 1px solid $color-border-default;
+  background: rgba(255, 255, 255, 0.02);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__name {
+    flex: 1;
+    font-size: 12px;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $color-text-muted;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+
+  &__tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__tag {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: $radius-xs;
+    font-size: 9px;
+    color: $color-text-tertiary;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  &__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &--primary {
+      flex: 1;
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+
+      &:hover {
+        background: rgba($color-accent-green, 0.25);
+      }
+    }
+
+    &[data-color="blue"]:hover {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &[data-color="pink"]:hover {
+      background: rgba($color-accent-pink, 0.15);
+      border-color: rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+}
