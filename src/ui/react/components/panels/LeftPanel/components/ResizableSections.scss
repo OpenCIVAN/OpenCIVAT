@@ -213,15 +213,3 @@
   color: $color-text-muted;
   font-size: $font-size-xs;
 }
-
-.resizable-sections-container {
-  border: 2px solid red; // Should fill space between toolbar and footer
-}
-
-.resizable-section--expanded {
-  border: 2px solid blue; // Should share the red container space
-}
-
-.panel-footer {
-  border: 2px solid green; // Should be at very bottom
-}

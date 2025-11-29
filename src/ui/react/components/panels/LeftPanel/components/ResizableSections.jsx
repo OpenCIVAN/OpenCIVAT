@@ -201,9 +201,13 @@ export function ResizableSectionsContainer({
         const isLastExpanded = expandedSections.indexOf(sectionId) === expandedSections.length - 1;
         const sectionIndex = expandedSections.indexOf(sectionId);
 
+        // When only one section is expanded, it should fill all available space
+        // regardless of any previously set flexGrow ratio
+        const effectiveFlexGrow = expandedSections.length === 1 ? 1 : state.flexGrow;
+
         return React.cloneElement(child, {
             isExpanded: state.expanded,
-            flexGrow: state.flexGrow,
+            flexGrow: effectiveFlexGrow,
             onToggle: () => onSectionToggle?.(sectionId),
             showDivider: state.expanded && !isLastExpanded && expandedSections.length > 1,
             onDividerDrag: (e) => handleDragStart(e, sectionIndex),

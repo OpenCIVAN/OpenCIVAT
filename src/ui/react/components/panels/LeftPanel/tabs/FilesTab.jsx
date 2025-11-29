@@ -333,7 +333,7 @@ export function FilesPanelContent({ workspaceId }) {
     return (
         <div className="files-tab">
             {/* Header */}
-            <div className="panel-header">panel class 
+            <div className="panel-header">panel class
                 <FolderOpen size={14} className="panel-header__icon file-icon--nifti" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__actions">
@@ -427,16 +427,20 @@ export function FilesPanelContent({ workspaceId }) {
                 </ResizableSection>
 
                 <ResizableSection id="all" icon={Folder} iconColorClass="icon-blue" label="All Files" count={files.length}>
-                    {viewMode === 'grid' ? (
-                        <div className="files-grid">
-                            {files.filter(f => f.type !== 'folder').map(file => (
-                                <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} />
-                            ))}
-                        </div>
+                    {files.length > 0 ? (
+                        viewMode === 'grid' ? (
+                            <div className="files-grid">
+                                {files.filter(f => f.type !== 'folder').map(file => (
+                                    <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} />
+                                ))}
+                            </div>
+                        ) : (
+                            files.map(file => (
+                                <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
+                            ))
+                        )
                     ) : (
-                        files.map(file => (
-                            <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
-                        ))
+                        <div className="resizable-section__empty">No files uploaded</div>
                     )}
                 </ResizableSection>
             </ResizableSectionsContainer>
