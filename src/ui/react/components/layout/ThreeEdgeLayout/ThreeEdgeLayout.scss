@@ -1,5 +1,5 @@
 // src/ui/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.scss
-// Updated: Added secondary bar slots
+// Updated: Added secondary bar slots with zone-aligned layout
 // Uses design tokens for consistency
 
 @use "sass:color";
@@ -18,18 +18,28 @@
   overflow: hidden;
 }
 
-// Top bars (primary + secondary)
+// =============================================================================
+// TOP BARS
+// =============================================================================
+
+// Primary top bar (header)
 .three-edge-layout__top {
   flex-shrink: 0;
-  z-index: 100;
+  z-index: $z-fixed;
 }
 
+// Secondary top bar (workspace selector, controls)
 .three-edge-layout__secondary-top {
   flex-shrink: 0;
-  z-index: 99;
+  z-index: $z-sticky;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border-default;
 }
 
-// Main content area with panels
+// =============================================================================
+// MAIN CONTENT AREA
+// =============================================================================
+
 .three-edge-layout__main {
   flex: 1;
   min-height: 0; // Critical for flex children to shrink properly
@@ -47,15 +57,22 @@
   background: $color-bg-base;
 }
 
-// Bottom bars (secondary + primary)
+// =============================================================================
+// BOTTOM BARS
+// =============================================================================
+
+// Secondary bottom bar (canvas position, voice controls)
 .three-edge-layout__secondary-bottom {
   flex-shrink: 0;
-  z-index: 99;
+  z-index: $z-sticky;
+  background: $color-bg-tertiary;
+  border-top: 1px solid $color-border-default;
 }
 
+// Primary bottom bar (status)
 .three-edge-layout__bottom {
   flex-shrink: 0;
-  z-index: 100;
+  z-index: $z-fixed;
 }
 
 // =============================================================================
@@ -67,7 +84,7 @@
   flex-direction: column;
   position: relative;
   background: $color-bg-secondary;
-  transition: width var(--transition-smooth);
+  transition: width $transition-base;
   flex-shrink: 0;
 
   &--left {
@@ -100,7 +117,7 @@
   width: 4px;
   height: 100%;
   cursor: col-resize;
-  z-index: 1000;
+  z-index: $z-dropdown;
   transition: background $transition-fast;
 
   &--left {
@@ -138,12 +155,68 @@
 }
 
 // =============================================================================
+// SECONDARY BAR SHARED STYLES
+// =============================================================================
+// These styles are shared between SecondaryTopBar and SecondaryBottomBar
+// Individual bar components should import their own SCSS files
+
+.secondary-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+
+  // Zone system - left/center/right zones that align with panels
+  &__zone {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    transition: width $transition-base;
+
+    &--left {
+      flex-shrink: 0;
+      border-right: 1px solid $color-border-default;
+      padding: 0 $spacing-sm;
+    }
+
+    &--center {
+      flex: 1;
+      min-width: 0;
+      padding: 0 $spacing-md;
+      justify-content: center;
+    }
+
+    &--right {
+      flex-shrink: 0;
+      border-left: 1px solid $color-border-default;
+      padding: 0 $spacing-sm;
+      justify-content: flex-end;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 16px;
+    background: $color-border-default;
+    margin: 0 $spacing-sm;
+    flex-shrink: 0;
+  }
+}
+
+// =============================================================================
 // RESPONSIVE ADJUSTMENTS
 // =============================================================================
 
 @media (max-width: 1024px) {
   .three-edge-layout__main {
     // Stack panels on smaller screens if needed
+  }
+
+  // Reduce secondary bar zone minimum widths on tablets
+  .secondary-bar__zone {
+    &--left,
+    &--right {
+      min-width: 120px;
+    }
   }
 }
 
@@ -153,7 +226,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    z-index: 200;
+    z-index: $z-modal;
 
     &--left {
       left: 0;
@@ -168,6 +241,20 @@
 
       &.resizable-panel--right {
         transform: translateX(100%);
+      }
+    }
+  }
+
+  // Secondary bars become simpler on mobile
+  .secondary-bar {
+    &__zone {
+      &--left,
+      &--right {
+        display: none; // Hide zone controls on mobile
+      }
+
+      &--center {
+        padding: 0 $spacing-sm;
       }
     }
   }

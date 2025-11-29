@@ -1,5 +1,6 @@
 // src/ui/react/components/layout/SecondaryTopBar/SecondaryTopBar.jsx
 // Secondary bar below main TopBar with workspace selector, controls, and presence
+// Refactored: Uses SecondaryBar and SecondaryBarZone for consistent layout
 
 import React from 'react';
 import {
@@ -16,11 +17,21 @@ import {
     Briefcase,
     User,
     Check,
-    Radio,
+    X,
 } from 'lucide-react';
 
 import { useSecondaryTopBar, VIEW_MODES, WORKSPACE_TYPES } from './SecondaryTopBar.logic.js';
+import {
+    SecondaryBar,
+    SecondaryBarZone,
+    SecondaryBarDivider,
+    SecondaryBarSpacer,
+} from '../SecondaryBarZone';
 import './SecondaryTopBar.scss';
+
+// =============================================================================
+// HELPER COMPONENTS
+// =============================================================================
 
 /**
  * Get icon component for workspace type
@@ -46,6 +57,7 @@ function WorkspaceSelector({
     onSelect,
     onSearchChange,
     onClose,
+    compact = false,
 }) {
     if (!currentWorkspace) return null;
 
@@ -54,23 +66,29 @@ function WorkspaceSelector({
     return (
         <div className="workspace-selector">
             <button
-                className="workspace-selector__trigger"
+                className={`workspace-selector__trigger ${compact ? 'workspace-selector__trigger--compact' : ''}`}
                 onClick={onToggle}
                 style={{ '--workspace-color': currentWorkspace.color }}
             >
                 <Icon size={14} className="workspace-selector__icon" />
-                <div className="workspace-selector__info">
-                    <span className="workspace-selector__name">{currentWorkspace.name}</span>
-                </div>
+                {!compact && (
+                    <div className="workspace-selector__info">
+                        <span className="workspace-selector__name">{currentWorkspace.name}</span>
+                    </div>
+                )}
                 <ChevronDown
                     size={12}
-                    className={`workspace-selector__chevron ${isOpen ? 'open' : ''}`}
+                    className={`workspace-selector__chevron ${isOpen ? 'workspace-selector__chevron--open' : ''}`}
                 />
             </button>
 
+            {/* Dropdown */}
             {isOpen && (
                 <>
+                    {/* Backdrop */}
                     <div className="workspace-selector__backdrop" onClick={onClose} />
+
+                    {/* Dropdown Panel */}
                     <div className="workspace-selector__dropdown">
                         {/* Search */}
                         <div className="workspace-selector__search">
@@ -80,40 +98,51 @@ function WorkspaceSelector({
                                 placeholder="Search workspaces..."
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
+                                className="workspace-selector__search-input"
                                 autoFocus
                             />
+                            {searchQuery && (
+                                <button
+                                    className="workspace-selector__search-clear"
+                                    onClick={() => onSearchChange('')}
+                                >
+                                    <X size={10} />
+                                </button>
+                            )}
                         </div>
 
-                        {/* Grouped workspaces */}
-                        {Object.entries(groupedWorkspaces).map(([type, workspaces]) => (
-                            workspaces.length > 0 && (
-                                <div key={type} className="workspace-selector__group">
-                                    <div className="workspace-selector__group-label">
-                                        {type === 'project' && 'Project Rooms'}
-                                        {type === 'breakout' && 'Breakout Rooms'}
-                                        {type === 'personal' && 'Personal'}
-                                    </div>
-                                    {workspaces.map(ws => {
-                                        const WsIcon = getWorkspaceIcon(ws.type);
-                                        const isSelected = ws.id === currentWorkspace.id;
-                                        return (
-                                            <button
-                                                key={ws.id}
-                                                className={`workspace-selector__item ${isSelected ? 'selected' : ''}`}
-                                                onClick={() => onSelect(ws.id)}
-                                                style={{ '--workspace-color': ws.color }}
-                                            >
-                                                <WsIcon size={12} className="workspace-selector__item-icon" />
-                                                <span className="workspace-selector__item-name">{ws.name}</span>
-                                                {isSelected && (
-                                                    <span className="workspace-selector__item-badge">CURRENT</span>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )
-                        ))}
+                        {/* Workspace Groups */}
+                        <div className="workspace-selector__groups">
+                            {/* Project Workspaces */}
+                            {groupedWorkspaces.project?.length > 0 && (
+                                <WorkspaceGroup
+                                    label="Project Workspaces"
+                                    workspaces={groupedWorkspaces.project}
+                                    currentId={currentWorkspace.id}
+                                    onSelect={onSelect}
+                                />
+                            )}
+
+                            {/* Breakout Rooms */}
+                            {groupedWorkspaces.breakout?.length > 0 && (
+                                <WorkspaceGroup
+                                    label="Breakout Rooms"
+                                    workspaces={groupedWorkspaces.breakout}
+                                    currentId={currentWorkspace.id}
+                                    onSelect={onSelect}
+                                />
+                            )}
+
+                            {/* Personal Workspaces */}
+                            {groupedWorkspaces.personal?.length > 0 && (
+                                <WorkspaceGroup
+                                    label="Personal"
+                                    workspaces={groupedWorkspaces.personal}
+                                    currentId={currentWorkspace.id}
+                                    onSelect={onSelect}
+                                />
+                            )}
+                        </div>
                     </div>
                 </>
             )}
@@ -122,120 +151,154 @@ function WorkspaceSelector({
 }
 
 /**
- * ViewModeButtons - Toggle between view modes
+ * WorkspaceGroup - A group of workspaces in the dropdown
  */
-function ViewModeButtons({ viewMode, onModeChange }) {
-    const modes = [
-        { id: VIEW_MODES.NORMAL, icon: Grid3X3, label: 'Normal' },
-        { id: VIEW_MODES.ISOLATION, icon: Maximize2, label: 'Isolation', color: 'var(--color-accent-purple)' },
-        { id: VIEW_MODES.SUBSET, icon: Layers, label: 'Subset', color: 'var(--color-accent-green)' },
-    ];
-
+function WorkspaceGroup({ label, workspaces, currentId, onSelect }) {
     return (
-        <div className="view-mode-buttons">
-            {modes.map(mode => (
-                <button
-                    key={mode.id}
-                    className={`view-mode-button ${viewMode === mode.id ? 'active' : ''}`}
-                    onClick={() => onModeChange(mode.id)}
-                    style={mode.color ? { '--mode-color': mode.color } : undefined}
-                >
-                    <mode.icon size={12} />
-                    <span>{mode.label}</span>
-                </button>
-            ))}
+        <div className="workspace-group">
+            <div className="workspace-group__label">{label}</div>
+            {workspaces.map((ws) => {
+                const Icon = getWorkspaceIcon(ws.type);
+                const isSelected = ws.id === currentId;
+
+                return (
+                    <button
+                        key={ws.id}
+                        className={`workspace-group__item ${isSelected ? 'workspace-group__item--selected' : ''}`}
+                        onClick={() => onSelect(ws.id)}
+                        style={{ '--workspace-color': ws.color }}
+                    >
+                        <Icon size={14} className="workspace-group__item-icon" />
+                        <span className="workspace-group__item-name">{ws.name}</span>
+                        {isSelected && <Check size={12} className="workspace-group__item-check" />}
+                    </button>
+                );
+            })}
         </div>
     );
 }
 
 /**
- * WorkspacePresence - Avatar stack showing users in workspace
+ * ViewModeButtons - Toggle between Normal, Isolation, and Subset views
+ */
+function ViewModeButtons({ viewMode, onModeChange }) {
+    return (
+        <div className="view-mode-buttons">
+            <button
+                className={`view-mode-buttons__btn ${viewMode === VIEW_MODES.NORMAL ? 'view-mode-buttons__btn--active' : ''}`}
+                onClick={() => onModeChange(VIEW_MODES.NORMAL)}
+                title="Normal View"
+            >
+                <Grid3X3 size={12} />
+                <span>Normal</span>
+            </button>
+            <button
+                className={`view-mode-buttons__btn ${viewMode === VIEW_MODES.ISOLATION ? 'view-mode-buttons__btn--active' : ''}`}
+                onClick={() => onModeChange(VIEW_MODES.ISOLATION)}
+                title="Isolation Mode"
+            >
+                <Maximize2 size={12} />
+                <span>Isolation</span>
+            </button>
+            <button
+                className={`view-mode-buttons__btn ${viewMode === VIEW_MODES.SUBSET ? 'view-mode-buttons__btn--active' : ''}`}
+                onClick={() => onModeChange(VIEW_MODES.SUBSET)}
+                title="Subset Mode"
+            >
+                <Layers size={12} />
+                <span>Subset</span>
+            </button>
+        </div>
+    );
+}
+
+/**
+ * WorkspacePresence - Shows users in current workspace
  */
 function WorkspacePresence({
     visibleUsers,
     overflowCount,
     totalCount,
-    currentWorkspace,
     isHovering,
     onHoverChange,
 }) {
+    if (totalCount === 0) return null;
+
     return (
         <div
             className="workspace-presence"
             onMouseEnter={() => onHoverChange(true)}
             onMouseLeave={() => onHoverChange(false)}
         >
-            <span className="workspace-presence__count">
-                {totalCount} in workspace
-            </span>
-
             <div className="workspace-presence__avatars">
-                {visibleUsers.map((user, idx) => (
+                {visibleUsers.map((user, index) => (
                     <div
-                        key={user.userId || idx}
-                        className={`workspace-presence__avatar ${user.inVoice ? 'in-voice' : ''}`}
+                        key={user.userId}
+                        className="workspace-presence__avatar"
                         style={{
-                            '--user-color': user.userColor || '#666',
-                            '--stack-index': visibleUsers.length - idx,
+                            '--user-color': user.userColor,
+                            '--avatar-offset': `${index * -8}px`,
                         }}
+                        title={user.userName}
                     >
-                        {(user.userName || 'U')[0].toUpperCase()}
+                        {user.userName.charAt(0).toUpperCase()}
                     </div>
                 ))}
-                {overflowCount > 0 && (
-                    <div className="workspace-presence__overflow">
-                        +{overflowCount}
-                    </div>
-                )}
             </div>
+            {overflowCount > 0 && (
+                <span className="workspace-presence__overflow">+{overflowCount}</span>
+            )}
 
-            {/* Hover tooltip */}
-            {isHovering && (
+            {/* Hover tooltip with full user list */}
+            {isHovering && totalCount > 0 && (
                 <div className="workspace-presence__tooltip">
                     <div className="workspace-presence__tooltip-header">
-                        IN "{currentWorkspace?.name?.toUpperCase()}"
+                        {totalCount} {totalCount === 1 ? 'user' : 'users'} in workspace
                     </div>
-                    {visibleUsers.map((user, idx) => (
-                        <div key={user.userId || idx} className="workspace-presence__tooltip-user">
-                            <div
-                                className="workspace-presence__tooltip-avatar"
-                                style={{ '--user-color': user.userColor || '#666' }}
-                            >
-                                {(user.userName || 'U')[0].toUpperCase()}
-                            </div>
-                            <span className="workspace-presence__tooltip-name">
-                                {user.userName || 'Unknown'}
-                                {user.isYou && ' (you)'}
-                            </span>
-                            {user.inVoice && <Radio size={10} className="workspace-presence__tooltip-voice" />}
-                        </div>
-                    ))}
-                    <div className="workspace-presence__tooltip-footer">
-                        → View all {totalCount} online
-                    </div>
+                    {/* Could add full user list here */}
                 </div>
             )}
         </div>
     );
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 /**
  * SecondaryTopBar - Main component
+ *
+ * Layout:
+ * - Left Zone: Workspace selector dropdown
+ * - Center Zone: View mode buttons, layout actions, sharing
+ * - Right Zone: Workspace presence (users in this workspace)
  */
 export function SecondaryTopBar({
+    // Workspace data
     workspaces = [],
     initialWorkspaceId,
-    initialViewMode,
-    leftPanelWidth = 280,
-    rightPanelWidth = 280,
-    leftPanelOpen = true,
-    rightPanelOpen = true,
     onWorkspaceChange,
+
+    // Controlled workspace selector state (for keyboard shortcuts)
+    workspaceSelectorOpen,
+    onWorkspaceSelectorOpenChange,
+
+    // View mode
+    initialViewMode = VIEW_MODES.NORMAL,
     onViewModeChange,
+
+    // Actions
     onAddCell,
     onResetLayout,
     onLinkViews,
     onShare,
+
+    // Panel dimensions (passed from ThreeEdgeLayout)
+    leftPanelWidth = 280,
+    rightPanelWidth = 280,
+    leftPanelOpen = true,
+    rightPanelOpen = true,
 }) {
     const {
         workspace,
@@ -248,97 +311,119 @@ export function SecondaryTopBar({
         initialViewMode,
         onWorkspaceChange,
         onViewModeChange,
-        onAddCell,
-        onResetLayout,
-        onLinkViews,
-        onShare,
+        onAddCell: onAddCell,
+        onResetLayout: onResetLayout,
+        onLinkViews: onLinkViews,
+        onShare: onShare,
     });
 
-    // Calculate zone widths based on panel states
-    const leftZoneWidth = leftPanelOpen ? leftPanelWidth : 180;
-    const rightZoneWidth = rightPanelOpen ? rightPanelWidth : 180;
+    // Use controlled state if provided, otherwise use internal state
+    const isOpen = workspaceSelectorOpen !== undefined
+        ? workspaceSelectorOpen
+        : workspace.isOpen;
+
+    const handleToggle = () => {
+        if (onWorkspaceSelectorOpenChange) {
+            onWorkspaceSelectorOpenChange(!isOpen);
+        } else {
+            workspace.toggleDropdown();
+        }
+    };
+
+    const handleClose = () => {
+        if (onWorkspaceSelectorOpenChange) {
+            onWorkspaceSelectorOpenChange(false);
+        } else {
+            workspace.closeDropdown();
+        }
+    };
 
     return (
-        <div className="secondary-top-bar">
+        <SecondaryBar position="top" height={36}>
             {/* Left Zone - Workspace Selector */}
-            <div
-                className="secondary-top-bar__zone secondary-top-bar__zone--left"
-                style={{ width: leftZoneWidth }}
+            <SecondaryBarZone
+                position="left"
+                panelWidth={leftPanelWidth}
+                panelOpen={leftPanelOpen}
             >
                 <WorkspaceSelector
                     currentWorkspace={workspace.currentWorkspace}
-                    isOpen={workspace.isOpen}
+                    isOpen={isOpen}
                     searchQuery={workspace.searchQuery}
                     groupedWorkspaces={workspace.groupedWorkspaces}
-                    onToggle={workspace.toggleDropdown}
-                    onSelect={workspace.selectWorkspace}
+                    onToggle={handleToggle}
+                    onSelect={(id) => {
+                        workspace.selectWorkspace(id);
+                        handleClose();
+                    }}
                     onSearchChange={workspace.setSearchQuery}
-                    onClose={workspace.closeDropdown}
+                    onClose={handleClose}
+                    compact={!leftPanelOpen}
                 />
-            </div>
+            </SecondaryBarZone>
 
             {/* Center Zone - Workspace Controls */}
-            <div className="secondary-top-bar__zone secondary-top-bar__zone--center">
+            <SecondaryBarZone position="center">
                 {/* View Mode Toggle */}
                 <ViewModeButtons
                     viewMode={viewMode.viewMode}
                     onModeChange={viewMode.setViewMode}
                 />
 
-                <div className="secondary-top-bar__divider" />
+                <SecondaryBarDivider />
 
                 {/* Layout Actions */}
                 <button
-                    className="secondary-top-bar__action"
+                    className="secondary-bar-action"
                     onClick={actions.addCell}
                 >
                     <Plus size={10} />
-                    Add Cell
+                    <span>Add Cell</span>
                 </button>
 
                 <button
-                    className="secondary-top-bar__action secondary-top-bar__action--icon"
+                    className="secondary-bar-action secondary-bar-action--icon"
                     onClick={actions.resetLayout}
                     title="Reset Layout"
                 >
                     <RotateCcw size={12} />
                 </button>
 
-                <div className="secondary-top-bar__spacer" />
+                <SecondaryBarSpacer />
 
                 {/* Sharing Actions */}
                 <button
-                    className="secondary-top-bar__action"
+                    className="secondary-bar-action"
                     onClick={actions.linkViews}
                 >
                     <Link2 size={12} />
-                    Link Views
+                    <span>Link Views</span>
                 </button>
 
                 <button
-                    className="secondary-top-bar__action secondary-top-bar__action--primary"
+                    className="secondary-bar-action secondary-bar-action--primary"
                     onClick={actions.share}
                 >
                     <Share2 size={12} />
-                    Share
+                    <span>Share</span>
                 </button>
-            </div>
+            </SecondaryBarZone>
 
             {/* Right Zone - Workspace Presence */}
-            <div
-                className="secondary-top-bar__zone secondary-top-bar__zone--right"
-                style={{ width: rightZoneWidth }}
+            <SecondaryBarZone
+                position="right"
+                panelWidth={rightPanelWidth}
+                panelOpen={rightPanelOpen}
             >
                 <WorkspacePresence
                     visibleUsers={presence.visibleUsers}
                     overflowCount={presence.overflowCount}
                     totalCount={presence.totalCount}
-                    currentWorkspace={workspace.currentWorkspace}
                     isHovering={presence.isHovering}
                     onHoverChange={presence.setIsHovering}
                 />
-            </div>
-        </div>
+            </SecondaryBarZone>
+        </SecondaryBar>
     );
 }
 

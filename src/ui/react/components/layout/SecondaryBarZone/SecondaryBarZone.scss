@@ -1,0 +1,230 @@
+// src/ui/react/components/layout/SecondaryBarZone/SecondaryBarZone.scss
+// Styles for the reusable SecondaryBar zone system
+// Uses design tokens for consistency
+
+@use "sass:color";
+@use "theme" as *;
+
+// =============================================================================
+// SECONDARY BAR CONTAINER
+// =============================================================================
+
+.secondary-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: $color-bg-tertiary;
+  flex-shrink: 0;
+
+  &--top {
+    border-bottom: 1px solid $color-border-default;
+  }
+
+  &--bottom {
+    border-top: 1px solid $color-border-default;
+  }
+}
+
+// =============================================================================
+// SECONDARY BAR ZONE
+// =============================================================================
+
+.secondary-bar-zone {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  transition: width $transition-base;
+
+  // Left zone - aligns with left panel
+  &--left {
+    flex-shrink: 0;
+    padding: 0 $spacing-sm;
+    border-right: 1px solid $color-border-default;
+    justify-content: flex-start;
+    gap: $spacing-xs;
+  }
+
+  // Center zone - flexible, fills remaining space
+  &--center {
+    flex: 1;
+    min-width: 0; // Allow shrinking
+    padding: 0 $spacing-md;
+    justify-content: center;
+    gap: $spacing-sm;
+    overflow: hidden;
+
+    // Enable container queries for responsive content
+    container-type: inline-size;
+    container-name: center-zone;
+  }
+
+  // Right zone - aligns with right panel
+  &--right {
+    flex-shrink: 0;
+    padding: 0 $spacing-sm;
+    border-left: 1px solid $color-border-default;
+    justify-content: flex-end;
+    gap: $spacing-xs;
+  }
+
+  // No border modifier
+  &--no-border {
+    border: none !important;
+  }
+}
+
+// =============================================================================
+// SECONDARY BAR UTILITIES
+// =============================================================================
+
+.secondary-bar-divider {
+  width: 1px;
+  background: $color-border-default;
+  flex-shrink: 0;
+  margin: 0 $spacing-xs;
+}
+
+.secondary-bar-spacer {
+  flex: 1;
+  min-width: $spacing-sm;
+}
+
+// =============================================================================
+// ZONE CONTENT HELPERS
+// =============================================================================
+
+// Common button style for secondary bar actions
+.secondary-bar-action {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: all $transition-fast;
+  white-space: nowrap;
+
+  &:hover {
+    background: $color-glass-light;
+    border-color: $color-border-medium;
+    color: $color-text-secondary;
+  }
+
+  &:active {
+    background: $color-glass-medium;
+  }
+
+  &--icon {
+    padding: $spacing-xs;
+  }
+
+  &--primary {
+    background: rgba($color-accent-primary, 0.15);
+    border-color: rgba($color-accent-primary, 0.3);
+    color: $color-accent-primary;
+
+    &:hover {
+      background: rgba($color-accent-primary, 0.25);
+      border-color: rgba($color-accent-primary, 0.5);
+    }
+  }
+
+  &--active {
+    background: $color-glass-medium;
+    border-color: $color-border-medium;
+    color: $color-text-primary;
+  }
+}
+
+// Toggle button group (e.g., VR/Desktop toggle)
+.secondary-bar-toggle-group {
+  display: flex;
+  background: $color-bg-primary;
+  border-radius: $radius-sm;
+  padding: 2px;
+  border: 1px solid $color-border-default;
+}
+
+.secondary-bar-toggle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 3px $spacing-sm;
+  background: transparent;
+  border: none;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(&--active) {
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: $color-bg-tertiary;
+    color: $color-text-primary;
+  }
+}
+
+// Indicator (read-only display, e.g., workspace name)
+.secondary-bar-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+
+  &__icon {
+    color: $color-text-tertiary;
+  }
+
+  &__label {
+    color: $color-text-tertiary;
+  }
+
+  &__value {
+    color: $color-text-primary;
+  }
+}
+
+// =============================================================================
+// RESPONSIVE
+// =============================================================================
+
+@media (max-width: 768px) {
+  .secondary-bar-zone {
+    &--left,
+    &--right {
+      // On mobile, hide side zones or show minimal content
+      min-width: auto;
+      padding: 0 $spacing-xs;
+    }
+
+    &--center {
+      padding: 0 $spacing-sm;
+    }
+  }
+
+  // Hide text labels on mobile, show only icons
+  .secondary-bar-action {
+    span:not(.sr-only) {
+      display: none;
+    }
+
+    &--icon {
+      padding: $spacing-xs;
+    }
+  }
+
+  .secondary-bar-toggle {
+    span {
+      display: none;
+    }
+  }
+}

@@ -1,4 +1,4 @@
-// src/ui/react/components/layout/ThreeEdgeLayout.logic.js
+// src/ui/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.logic.js
 // Pure logic hooks for layout state management
 // Separates business logic from presentation (headless pattern)
 
@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from "react";
  * Panel dimension constraints
  * Ensures panels don't get too small or too large
  */
-const PANEL_CONSTRAINTS = {
+export const PANEL_CONSTRAINTS = {
   left: {
     min: 240,
     max: 600,
@@ -21,6 +21,15 @@ const PANEL_CONSTRAINTS = {
     default: 340,
     collapsed: 48,
   },
+};
+
+/**
+ * Minimum widths for secondary bar zones
+ * Ensures controls remain usable even when panels are collapsed
+ */
+export const SECONDARY_BAR_MIN_WIDTHS = {
+  left: 180, // Workspace dropdown needs space
+  right: 180, // Voice controls need space
 };
 
 /**
@@ -38,10 +47,10 @@ export function useLayoutState() {
   useEffect(() => {
     const savedState = loadLayoutState();
     if (savedState) {
-      setLeftOpen(savedState.leftOpen);
-      setRightOpen(savedState.rightOpen);
-      setLeftWidth(savedState.leftWidth);
-      setRightWidth(savedState.rightWidth);
+      setLeftOpen(savedState.leftOpen ?? true);
+      setRightOpen(savedState.rightOpen ?? true);
+      setLeftWidth(savedState.leftWidth ?? PANEL_CONSTRAINTS.left.default);
+      setRightWidth(savedState.rightWidth ?? PANEL_CONSTRAINTS.right.default);
     }
   }, []);
 
@@ -128,6 +137,45 @@ export function usePanelPersistence(state) {
 }
 
 /**
+ * useSecondaryBarZoneWidths - Calculates zone widths for secondary bars
+ * Ensures minimum widths are maintained even when panels are collapsed
+ *
+ * @param {Object} options
+ * @param {number} options.leftPanelWidth - Current left panel width
+ * @param {number} options.rightPanelWidth - Current right panel width
+ * @param {boolean} options.leftPanelOpen - Is left panel expanded
+ * @param {boolean} options.rightPanelOpen - Is right panel expanded
+ * @returns {Object} Calculated zone widths
+ */
+export function useSecondaryBarZoneWidths({
+  leftPanelWidth,
+  rightPanelWidth,
+  leftPanelOpen,
+  rightPanelOpen,
+}) {
+  // Left zone: use panel width when open, minimum when collapsed
+  const leftZoneWidth = leftPanelOpen
+    ? leftPanelWidth
+    : Math.max(PANEL_CONSTRAINTS.left.collapsed, SECONDARY_BAR_MIN_WIDTHS.left);
+
+  // Right zone: use panel width when open, minimum when collapsed
+  const rightZoneWidth = rightPanelOpen
+    ? rightPanelWidth
+    : Math.max(
+        PANEL_CONSTRAINTS.right.collapsed,
+        SECONDARY_BAR_MIN_WIDTHS.right
+      );
+
+  return {
+    leftZoneWidth,
+    rightZoneWidth,
+    // For components that need to know if they should show compact vs full UI
+    leftZoneCompact: !leftPanelOpen,
+    rightZoneCompact: !rightPanelOpen,
+  };
+}
+
+/**
  * Constrain width to min/max values
  *
  * @param {number} width - Proposed width
@@ -166,8 +214,3 @@ function saveLayoutState(state) {
     console.error("Failed to save layout state:", error);
   }
 }
-
-/**
- * Export constraints for use in other components
- */
-export { PANEL_CONSTRAINTS };

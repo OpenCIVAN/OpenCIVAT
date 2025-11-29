@@ -1,94 +1,45 @@
 // src/ui/react/components/layout/SecondaryTopBar/SecondaryTopBar.scss
 // Secondary top bar styling with workspace selector, controls, and presence
+// Updated: Added compact mode for workspace selector when panel is collapsed
 // Uses design tokens - no hard-coded values
 
 @use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
-// SECONDARY TOP BAR CONTAINER
+// VIEW MODE BUTTONS
 // =============================================================================
 
-.secondary-top-bar {
-  height: 36px;
+.view-mode-buttons {
   display: flex;
-  align-items: center;
-  background: $color-bg-tertiary;
-  border-bottom: 1px solid $color-border-default;
-  flex-shrink: 0;
+  background: $color-bg-primary;
+  border-radius: $radius-sm;
+  padding: 2px;
+  border: 1px solid $color-border-default;
+  gap: 2px;
 
-  // Zone styles
-  &__zone {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    transition: width var(--transition-smooth);
-
-    &--left {
-      padding: 0 $spacing-md;
-      border-right: 1px solid $color-border-default;
-      flex-shrink: 0;
-    }
-
-    &--center {
-      flex: 1;
-      padding: 0 $spacing-md;
-      gap: $spacing-sm;
-      justify-content: flex-start;
-    }
-
-    &--right {
-      padding: 0 $spacing-md;
-      border-left: 1px solid $color-border-default;
-      justify-content: flex-end;
-      flex-shrink: 0;
-    }
-  }
-
-  &__divider {
-    width: 1px;
-    height: 20px;
-    background: $color-border-default;
-    margin: 0 $spacing-xs;
-  }
-
-  &__spacer {
-    flex: 1;
-  }
-
-  // Action buttons
-  &__action {
+  &__btn {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
+    padding: 3px $spacing-sm;
     background: transparent;
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
+    border: none;
+    border-radius: $radius-xs;
     color: $color-text-muted;
     font-size: $font-size-xs;
     cursor: pointer;
     transition: all $transition-fast;
+    white-space: nowrap;
 
-    &:hover {
-      background: $color-glass-light;
-      border-color: $color-border-medium;
+    &:hover:not(&--active) {
       color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
     }
 
-    &--icon {
-      padding: $spacing-xs;
-    }
-
-    &--primary {
-      background: rgba($color-accent-blue, 0.15);
-      border-color: rgba($color-accent-blue, 0.3);
-      color: $color-accent-blue;
-
-      &:hover {
-        background: rgba($color-accent-blue, 0.25);
-        border-color: rgba($color-accent-blue, 0.5);
-      }
+    &--active {
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
     }
   }
 }
@@ -100,24 +51,47 @@
 .workspace-selector {
   position: relative;
   flex: 1;
+  min-width: 0;
 
+  // -------------------------------------------------------------------------
+  // Trigger Button
+  // -------------------------------------------------------------------------
   &__trigger {
     width: 100%;
     display: flex;
     align-items: center;
     gap: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
+    padding: $spacing-xs $spacing-sm;
     background: rgba(var(--workspace-color-rgb, 96, 165, 250), 0.1);
     border: 1px solid rgba(var(--workspace-color-rgb, 96, 165, 250), 0.3);
     border-radius: $radius-sm;
     cursor: pointer;
     transition: all $transition-fast;
 
-    // Use CSS custom property for workspace color
-    --workspace-color-rgb: 96, 165, 250; // Default blue
-
     &:hover {
-      background: rgba(var(--workspace-color-rgb), 0.15);
+      background: rgba(var(--workspace-color-rgb, 96, 165, 250), 0.15);
+      border-color: rgba(var(--workspace-color-rgb, 96, 165, 250), 0.4);
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-primary;
+      outline-offset: 1px;
+    }
+
+    // Compact mode - icon only
+    &--compact {
+      width: auto;
+      min-width: 36px;
+      padding: $spacing-xs;
+      justify-content: center;
+
+      .workspace-selector__info {
+        display: none;
+      }
+
+      .workspace-selector__chevron {
+        display: none;
+      }
     }
   }
 
@@ -147,52 +121,60 @@
     transition: transform $transition-fast;
     flex-shrink: 0;
 
-    &.open {
+    &--open {
       transform: rotate(180deg);
     }
   }
 
-  // Backdrop for closing dropdown
+  // -------------------------------------------------------------------------
+  // Backdrop
+  // -------------------------------------------------------------------------
   &__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 99;
+    z-index: $z-modal-backdrop;
   }
 
-  // Dropdown panel
+  // -------------------------------------------------------------------------
+  // Dropdown Panel
+  // -------------------------------------------------------------------------
   &__dropdown {
     position: absolute;
     top: 100%;
     left: 0;
-    right: 0;
     margin-top: $spacing-xs;
-    min-width: 200px;
+    min-width: 240px;
+    max-width: 320px;
     background: $color-bg-elevated;
     border: 1px solid $color-border-medium;
     border-radius: $radius-md;
-    padding: $spacing-sm;
-    z-index: 100;
+    z-index: $z-modal;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
   }
 
-  // Search input
+  // -------------------------------------------------------------------------
+  // Search
+  // -------------------------------------------------------------------------
   &__search {
     position: relative;
-    margin-bottom: $spacing-sm;
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border-default;
   }
 
   &__search-icon {
     position: absolute;
-    left: $spacing-sm;
+    left: $spacing-md;
     top: 50%;
     transform: translateY(-50%);
     color: $color-text-muted;
     pointer-events: none;
   }
 
-  &__search input {
+  &__search-input {
     width: 100%;
-    padding: $spacing-sm $spacing-sm $spacing-sm $spacing-xl;
+    padding: $spacing-sm $spacing-xl;
+    padding-right: $spacing-xl;
     background: $color-glass-light;
     border: 1px solid $color-border-default;
     border-radius: $radius-sm;
@@ -209,44 +191,78 @@
     }
   }
 
-  // Workspace groups
-  &__group {
-    margin-bottom: $spacing-sm;
+  &__search-clear {
+    position: absolute;
+    right: $spacing-md;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 2px;
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    &:last-child {
-      margin-bottom: 0;
+    &:hover {
+      color: $color-text-primary;
+      background: $color-glass-light;
     }
   }
 
-  &__group-label {
+  // -------------------------------------------------------------------------
+  // Groups
+  // -------------------------------------------------------------------------
+  &__groups {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: $spacing-xs 0;
+  }
+}
+
+// =============================================================================
+// WORKSPACE GROUP
+// =============================================================================
+
+.workspace-group {
+  padding: $spacing-xs 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__label {
     font-size: 9px;
     color: $color-text-muted;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: $spacing-xs $spacing-sm;
+    padding: $spacing-xs $spacing-md;
+    font-weight: $font-weight-medium;
   }
 
-  // Individual workspace items
   &__item {
     width: 100%;
     display: flex;
     align-items: center;
     gap: $spacing-sm;
-    padding: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
     background: transparent;
     border: none;
-    border-radius: $radius-sm;
     cursor: pointer;
     color: $color-text-secondary;
     font-size: $font-size-xs;
     transition: all $transition-fast;
+    text-align: left;
 
     &:hover {
       background: rgba(var(--workspace-color-rgb, 96, 165, 250), 0.1);
     }
 
-    &.selected {
+    &--selected {
       background: rgba(var(--workspace-color-rgb, 96, 165, 250), 0.15);
+      color: $color-text-primary;
     }
   }
 
@@ -257,47 +273,14 @@
 
   &__item-name {
     flex: 1;
-    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  &__item-badge {
-    font-size: 9px;
-    color: $color-success;
-    text-transform: uppercase;
-  }
-}
-
-// =============================================================================
-// VIEW MODE BUTTONS
-// =============================================================================
-
-.view-mode-buttons {
-  display: flex;
-  gap: $spacing-xs;
-}
-
-.view-mode-button {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-xs $spacing-sm;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: $radius-sm;
-  color: $color-text-muted;
-  font-size: $font-size-xs;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover:not(.active) {
-    background: $color-glass-light;
-    color: $color-text-secondary;
-  }
-
-  &.active {
-    background: rgba(var(--mode-color-rgb, 96, 165, 250), 0.15);
-    border-color: rgba(var(--mode-color-rgb, 96, 165, 250), 0.3);
-    color: var(--mode-color, $color-accent-blue);
+  &__item-check {
+    color: var(--workspace-color, $color-accent-blue);
+    flex-shrink: 0;
   }
 }
 
@@ -308,18 +291,11 @@
 .workspace-presence {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-  cursor: pointer;
   position: relative;
-
-  &__count {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-  }
 
   &__avatars {
     display: flex;
-    flex-direction: row-reverse; // For overlapping effect
+    align-items: center;
   }
 
   &__avatar {
@@ -331,98 +307,73 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: $font-weight-bold;
-    color: white;
-    margin-left: -6px;
-    z-index: var(--stack-index, 1);
+    color: $color-bg-base;
+    margin-left: var(--avatar-offset, 0);
+    cursor: pointer;
+    transition: transform $transition-fast;
 
-    &:last-child {
+    &:first-child {
       margin-left: 0;
     }
 
-    &.in-voice {
-      border-color: $color-success;
+    &:hover {
+      transform: scale(1.1);
+      z-index: 1;
     }
   }
 
   &__overflow {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: $color-bg-elevated;
-    border: 2px solid $color-bg-tertiary;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
+    font-size: $font-size-xs;
     color: $color-text-muted;
-    margin-left: -6px;
+    margin-left: $spacing-xs;
   }
 
-  // Hover tooltip
+  // Tooltip
   &__tooltip {
     position: absolute;
-    top: 100%;
+    bottom: 100%;
     right: 0;
-    margin-top: $spacing-sm;
-    min-width: 180px;
+    margin-bottom: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
     background: $color-bg-elevated;
     border: 1px solid $color-border-medium;
-    border-radius: $radius-md;
-    padding: $spacing-md;
-    z-index: 200;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    border-radius: $radius-sm;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+    z-index: $z-tooltip;
   }
 
   &__tooltip-header {
     font-size: $font-size-xs;
-    color: $color-text-muted;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__tooltip-user {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm 0;
-  }
-
-  &__tooltip-avatar {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--user-color, $color-accent-blue);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    font-weight: $font-weight-bold;
-    color: white;
-    flex-shrink: 0;
-  }
-
-  &__tooltip-name {
-    flex: 1;
-    font-size: $font-size-xs;
     color: $color-text-secondary;
   }
+}
 
-  &__tooltip-voice {
-    color: $color-success;
-    flex-shrink: 0;
+// =============================================================================
+// RESPONSIVE
+// =============================================================================
+
+@media (max-width: 768px) {
+  .view-mode-buttons {
+    &__btn {
+      span {
+        display: none;
+      }
+    }
   }
 
-  &__tooltip-footer {
-    font-size: $font-size-xs;
-    color: $color-accent-blue;
-    margin-top: $spacing-sm;
-    padding-top: $spacing-sm;
-    border-top: 1px solid $color-border-default;
-    cursor: pointer;
+  .workspace-selector {
+    &__trigger {
+      // Force compact on mobile
+      padding: $spacing-xs;
+      min-width: 36px;
 
-    &:hover {
-      text-decoration: underline;
+      .workspace-selector__info,
+      .workspace-selector__chevron {
+        display: none;
+      }
     }
   }
 }

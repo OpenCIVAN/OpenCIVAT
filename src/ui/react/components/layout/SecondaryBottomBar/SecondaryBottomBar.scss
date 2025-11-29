@@ -1,59 +1,45 @@
 // src/ui/react/components/layout/SecondaryBottomBar/SecondaryBottomBar.scss
 // Secondary bottom bar styling with canvas position, workspace info, and voice controls
+// Updated: Better overflow handling and responsive center zone
 // Uses design tokens - no hard-coded values
 
 @use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
-// SECONDARY BOTTOM BAR CONTAINER
+// SECONDARY BOTTOM BAR CENTER CONTENT
 // =============================================================================
 
-.secondary-bottom-bar {
-  height: 28px;
+.secondary-bottom-bar__center-content {
   display: flex;
   align-items: center;
-  background: $color-bg-tertiary;
-  border-top: 1px solid $color-border-default;
-  flex-shrink: 0;
+  justify-content: center;
+  gap: $spacing-sm;
+  min-width: 0; // Allow shrinking
+  overflow: hidden;
 
-  // Zone styles
-  &__zone {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    transition: width var(--transition-smooth);
-
-    &--left {
-      padding: 0 $spacing-md;
-      border-right: 1px solid $color-border-default;
-      flex-shrink: 0;
-    }
-
-    &--center {
-      flex: 1;
-      justify-content: center;
-      gap: $spacing-lg;
-      padding: 0 $spacing-lg;
-    }
-
-    &--right {
-      padding: 0 $spacing-md;
-      border-left: 1px solid $color-border-default;
-      justify-content: flex-end;
-      flex-shrink: 0;
+  // Hide elements progressively as space shrinks
+  @container (max-width: 400px) {
+    .canvas-minimap__size {
+      display: none;
     }
   }
 
-  &__divider {
-    width: 1px;
-    height: 12px;
-    background: $color-border-default;
+  @container (max-width: 300px) {
+    .canvas-minimap {
+      display: none;
+    }
+
+    // Also hide the divider after canvas
+    .canvas-minimap + .secondary-bar-divider {
+      display: none;
+    }
   }
 
-  &__panel-label {
-    font-size: $font-size-xs;
-    color: $color-text-tertiary;
+  @container (max-width: 200px) {
+    .workspace-indicator__name {
+      display: none;
+    }
   }
 }
 
@@ -67,42 +53,56 @@
   gap: $spacing-xs;
   cursor: pointer;
   position: relative;
+  flex-shrink: 0;
+  white-space: nowrap;
 
   &__icon {
     color: $color-text-tertiary;
+    flex-shrink: 0;
   }
 
   &__position {
     font-size: $font-size-xs;
     color: $color-text-primary;
+    font-family: monospace;
+    font-size: 10px;
   }
 
   &__size {
-    font-size: $font-size-xs;
+    font-size: 10px;
     color: $color-text-tertiary;
+    margin-left: 2px;
   }
 
   // Hover tooltip
   &__tooltip {
     position: absolute;
-    bottom: 100%;
+    bottom: calc(100% + 8px);
     left: 50%;
     transform: translateX(-50%);
-    margin-bottom: $spacing-sm;
+    padding: $spacing-sm;
     background: $color-bg-elevated;
     border: 1px solid $color-border-medium;
-    border-radius: $radius-md;
-    padding: $spacing-md;
-    z-index: 200;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
+    border-radius: $radius-sm;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    z-index: $z-tooltip;
+    white-space: nowrap;
   }
 
   &__tooltip-header {
     font-size: 9px;
     color: $color-text-muted;
-    margin-bottom: $spacing-sm;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: $spacing-xs;
+    text-align: center;
+  }
+
+  &__tooltip-footer {
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: $spacing-xs;
+    text-align: center;
   }
 
   &__grid {
@@ -111,22 +111,12 @@
   }
 
   &__cell {
-    background: rgba(255, 255, 255, 0.1);
+    background: $color-bg-tertiary;
     border-radius: 2px;
-    border: 1px solid transparent;
-    transition: all $transition-fast;
 
-    &.in-viewport {
-      background: $color-success;
-      border-color: $color-success;
+    &--in-viewport {
+      background: $color-accent-primary;
     }
-  }
-
-  &__tooltip-footer {
-    font-size: 9px;
-    color: $color-success;
-    margin-top: $spacing-sm;
-    text-align: center;
   }
 }
 
@@ -138,14 +128,20 @@
   display: flex;
   align-items: center;
   gap: $spacing-xs;
+  min-width: 0; // Allow shrinking
+  max-width: 150px;
 
   &__icon {
     color: var(--workspace-color, $color-accent-blue);
+    flex-shrink: 0;
   }
 
   &__name {
-    font-size: $font-size-xs;
-    color: var(--workspace-color, $color-accent-blue);
+    font-size: 10px;
+    color: $color-text-secondary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -157,14 +153,16 @@
   display: flex;
   align-items: center;
   gap: $spacing-xs;
+  flex-shrink: 0;
+  white-space: nowrap;
 
   &__icon {
     color: $color-text-tertiary;
   }
 
   &__count {
-    font-size: $font-size-xs;
-    color: $color-text-primary;
+    font-size: 10px;
+    color: $color-text-secondary;
   }
 }
 
@@ -177,56 +175,78 @@
   align-items: center;
   gap: $spacing-xs;
 
-  // Disconnected state - Join button
+  // Disconnected state (Join button)
   &--disconnected {
-    padding: $spacing-xs $spacing-sm;
-    background: transparent;
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    color: $color-text-muted;
-    font-size: $font-size-xs;
-    cursor: pointer;
-    transition: all $transition-fast;
     display: flex;
     align-items: center;
     gap: $spacing-xs;
+    padding: 3px $spacing-sm;
+    background: rgba($color-accent-green, 0.1);
+    border: 1px solid rgba($color-accent-green, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-green;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all $transition-fast;
+    white-space: nowrap;
 
     &:hover {
-      background: $color-glass-light;
-      border-color: $color-border-medium;
-      color: $color-text-secondary;
+      background: rgba($color-accent-green, 0.2);
+      border-color: rgba($color-accent-green, 0.5);
     }
   }
 
-  // Connected state - Control strip
+  // Connected state
   &--connected {
-    padding: 3px $spacing-sm;
-    background: rgba($color-success, 0.1);
-    border: 1px solid rgba($color-success, 0.3);
-    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
   }
 
+  // Compact mode
+  &--compact {
+    &.voice-controls--disconnected {
+      padding: 3px $spacing-xs;
+
+      span {
+        display: none;
+      }
+    }
+  }
+
+  // Room indicator
   &__room {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
-    background: transparent;
-    border: none;
+    padding: 2px $spacing-xs;
+    background: rgba($color-accent-green, 0.1);
+    border: 1px solid rgba($color-accent-green, 0.2);
+    border-radius: $radius-xs;
+    color: $color-accent-green;
+    font-size: 10px;
     cursor: pointer;
-    padding: 0;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-green, 0.15);
+    }
   }
 
   &__room-icon {
-    color: $color-success;
+    flex-shrink: 0;
   }
 
   &__room-name {
-    font-size: $font-size-xs;
-    color: $color-success;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__room-chevron {
-    color: $color-success;
+    flex-shrink: 0;
+    opacity: 0.7;
   }
 
   &__divider {
@@ -236,33 +256,63 @@
     margin: 0 2px;
   }
 
+  // Control buttons
   &__btn {
-    background: transparent;
-    border: none;
-    color: $color-text-secondary;
-    cursor: pointer;
-    padding: 2px;
-    border-radius: $radius-sm;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: $color-glass-light;
+      border-color: $color-border-medium;
+      color: $color-text-secondary;
     }
 
-    &.active {
-      background: rgba($color-error, 0.2);
-      color: $color-error;
+    &--active {
+      background: rgba($color-warning, 0.15);
+      border-color: rgba($color-warning, 0.3);
+      color: $color-warning;
     }
 
     &--leave {
-      color: $color-text-muted;
-
       &:hover {
-        color: $color-text-secondary;
+        background: rgba($color-error, 0.15);
+        border-color: rgba($color-error, 0.3);
+        color: $color-error;
       }
+    }
+  }
+}
+
+// =============================================================================
+// FALLBACK: CSS-ONLY RESPONSIVE (if container queries not supported)
+// =============================================================================
+
+@supports not (container-type: inline-size) {
+  // Use media queries as fallback
+  @media (max-width: 800px) {
+    .canvas-minimap__size {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .canvas-minimap {
+      display: none;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .workspace-indicator__name {
+      display: none;
     }
   }
 }

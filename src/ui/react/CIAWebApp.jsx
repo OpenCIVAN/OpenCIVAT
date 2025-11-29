@@ -1,7 +1,8 @@
 // src/ui/react/CIAWebApp.jsx
-// FIXED: Proper flex layout so status bar doesn't overlay content
+// Main Application Component
+// Updated: Added view mode (Desktop/VR) state management
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 
@@ -12,27 +13,46 @@ import { WorkspaceGrid } from "@UI/react/components/workspace/Workspace/Workspac
 import { CanvasWorkspace } from "@UI/react/components/workspace/";
 import { TopBar } from "@UI/react/components/layout/TopBar";
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
-import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel"
-import { SecondaryTopBar } from '@UI/react/components/layout/SecondaryTopBar';
-import { SecondaryBottomBar } from '@UI/react/components/layout/SecondaryBottomBar';
-import { useWorkspaces } from '@UI/react/hooks/useWorkspaces.js';
+import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel";
+import { SecondaryTopBar } from "@UI/react/components/layout/SecondaryTopBar";
+import { SecondaryBottomBar, VIEW_MODES } from "@UI/react/components/layout/SecondaryBottomBar";
+import { useWorkspaces } from "@UI/react/hooks/useWorkspaces.js";
+import {
+  useWebXRAvailability,
+  useViewModeKeyboardShortcut,
+  useGlobalKeyboardShortcuts,
+} from "@UI/react/components/controls/ViewModeToggle";
 
 /**
  * Main Application Component
  *
- * LAYOUT FIX: The entire app uses flexbox with proper sizing
- * so that the status bar is part of the layout flow rather than
- * floating above everything with position: fixed
+ * Manages:
+ * - Layout with resizable panels
+ * - Workspace selection and navigation
+ * - View mode (Desktop/VR) switching
+ * - Canvas mode toggle
+ * - Phase 3 initialization
  */
 export function CIAWebApp({ username, userId, projectId, useNewCanvas = false }) {
+  // =========================================================================
+  // STATE
+  // =========================================================================
+
   const [phase3Status, setPhase3Status] = useState('pending');
   const phase3Started = useRef(false);
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+
+  // Workspace state
   const { workspaces, currentWorkspace, selectWorkspace } = useWorkspaces({ userId });
 
-  // Feature flag for new canvas system (can be toggled via props or query param)
+  // View mode state (Desktop/VR)
+  const [viewMode, setViewMode] = useState(VIEW_MODES.DESKTOP);
+  const { vrAvailable, vrUnavailableReason } = useWebXRAvailability();
+
+  // Workspace selector state (for keyboard shortcut)
+  const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
+
+  // Canvas mode (old grid vs new canvas system)
   const [canvasMode, setCanvasMode] = useState(() => {
-    // Check URL for ?canvas=new
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       return params.get('canvas') === 'new' || useNewCanvas;
@@ -40,7 +60,76 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
     return useNewCanvas;
   });
 
-  // Run Phase 3 after the UI has mounted
+  // =========================================================================
+  // KEYBOARD SHORTCUTS
+  // =========================================================================
+
+  // Toggle view mode: Ctrl/Cmd + Shift + V
+  useViewModeKeyboardShortcut({
+    onToggle: () => {
+      if (vrAvailable) {
+        handleViewModeChange(
+          viewMode === VIEW_MODES.DESKTOP ? VIEW_MODES.VR : VIEW_MODES.DESKTOP
+        );
+      }
+    },
+    enabled: true,
+  });
+
+  // Register global keyboard shortcuts
+  const registeredShortcuts = useGlobalKeyboardShortcuts([
+    {
+      key: 'w',
+      ctrl: true,
+      action: () => setWorkspaceSelectorOpen(prev => !prev),
+      label: 'Toggle Workspace Selector',
+    },
+    {
+      key: 'b',
+      ctrl: true,
+      action: () => setCanvasMode(prev => !prev),
+      label: 'Toggle Canvas Mode',
+    },
+  ]);
+
+  // =========================================================================
+  // VIEW MODE HANDLING
+  // =========================================================================
+
+  /**
+   * Handle view mode change (Desktop <-> VR)
+   * This will eventually trigger WebXR session management
+   */
+  const handleViewModeChange = useCallback((newMode) => {
+    console.log(`🎮 View mode changing: ${viewMode} → ${newMode}`);
+
+    if (newMode === VIEW_MODES.VR) {
+      // TODO: In future, this will:
+      // 1. Request WebXR session
+      // 2. Transition instances to VR rendering
+      // 3. Update collaboration presence to show VR mode
+      console.log('🥽 Entering VR mode...');
+
+      // For now, just update state
+      setViewMode(newMode);
+
+      // Notify presence system (when implemented)
+      // presenceSystem.updateLocalPresence({ mode: 'vr' });
+    } else {
+      // Exiting VR
+      console.log('🖥️ Returning to Desktop mode...');
+
+      // TODO: End WebXR session if active
+      setViewMode(newMode);
+
+      // presenceSystem.updateLocalPresence({ mode: 'desktop' });
+    }
+  }, [viewMode]);
+
+  // =========================================================================
+  // PHASE 3 INITIALIZATION
+  // =========================================================================
+
   useEffect(() => {
     if (phase3Started.current) return;
 
@@ -64,7 +153,13 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
     return () => clearTimeout(timer);
   }, []);
 
-  // Render center panel based on canvas mode
+  // =========================================================================
+  // RENDER HELPERS
+  // =========================================================================
+
+  /**
+   * Render center panel based on canvas mode
+   */
   const renderCenterPanel = () => {
     if (canvasMode) {
       return (
@@ -77,15 +172,46 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
     return <WorkspaceGrid />;
   };
 
+  // =========================================================================
+  // RENDER
+  // =========================================================================
+
   return (
     <ThreeEdgeLayout
-      topBar={<TopBar username={username} canvasMode={canvasMode} onToggleCanvasMode={() => setCanvasMode(!canvasMode)} />}
-      secondaryTopBar={<SecondaryTopBar workspaces={workspaces} />}
+      // Top bars
+      topBar={
+        <TopBar
+          username={username}
+          canvasMode={canvasMode}
+          onToggleCanvasMode={() => setCanvasMode(!canvasMode)}
+        />
+      }
+      secondaryTopBar={
+        <SecondaryTopBar
+          workspaces={workspaces}
+          onWorkspaceChange={selectWorkspace}
+          workspaceSelectorOpen={workspaceSelectorOpen}
+          onWorkspaceSelectorOpenChange={setWorkspaceSelectorOpen}
+        />
+      }
+
+      // Main panels
       leftPanel={<FilesPanel />}
-      centerPanel={<WorkspaceGrid />}
-      rightPanel={<CollaborationPanel />}
-      secondaryBottomBar={<SecondaryBottomBar currentWorkspace={currentWorkspace} />}
+      centerPanel={renderCenterPanel()}
+      rightPanel={<RightCollaborationPanel />}
+
+      // Bottom bars
+      secondaryBottomBar={
+        <SecondaryBottomBar
+          currentWorkspace={currentWorkspace}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          vrAvailable={vrAvailable}
+        />
+      }
       bottomBar={<StatusBar />}
     />
   );
 }
+
+export default CIAWebApp;

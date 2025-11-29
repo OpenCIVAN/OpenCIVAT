@@ -1,5 +1,6 @@
 // src/ui/react/components/layout/SecondaryBottomBar/SecondaryBottomBar.jsx
-// Secondary bar above StatusBar with canvas position, workspace info, and voice controls
+// Secondary bar above StatusBar with view mode toggle, canvas position, and voice controls
+// Refactored: Uses SecondaryBar and SecondaryBarZone for consistent layout
 
 import React from 'react';
 import {
@@ -18,7 +19,17 @@ import {
 
 import { useSecondaryBottomBar } from './SecondaryBottomBar.logic.js';
 import { WORKSPACE_TYPES } from '../SecondaryTopBar/SecondaryTopBar.logic.js';
+import { ViewModeToggle, VIEW_MODES as VIEW_MODE_OPTIONS } from '../../controls/ViewModeToggle';
+import {
+    SecondaryBar,
+    SecondaryBarZone,
+    SecondaryBarDivider,
+} from '../SecondaryBarZone';
 import './SecondaryBottomBar.scss';
+
+// =============================================================================
+// HELPER COMPONENTS
+// =============================================================================
 
 /**
  * Get icon component for workspace type
@@ -34,6 +45,7 @@ const getWorkspaceIcon = (type) => {
 
 /**
  * CanvasMinimap - Hover minimap showing viewport position
+ * Only renders when canvas data is available
  */
 function CanvasMinimap({
     positionString,
@@ -42,7 +54,13 @@ function CanvasMinimap({
     canvasSize,
     isHovering,
     onHoverChange,
+    show = true,
 }) {
+    // Don't render if no canvas or explicitly hidden
+    if (!show || !canvasSize || !positionString) {
+        return null;
+    }
+
     return (
         <div
             className="canvas-minimap"
@@ -54,7 +72,7 @@ function CanvasMinimap({
             <span className="canvas-minimap__size">of {sizeString}</span>
 
             {/* Hover tooltip with visual minimap */}
-            {isHovering && (
+            {isHovering && minimapCells?.length > 0 && (
                 <div className="canvas-minimap__tooltip">
                     <div className="canvas-minimap__tooltip-header">CANVAS POSITION</div>
                     <div
@@ -67,7 +85,7 @@ function CanvasMinimap({
                         {minimapCells.map((cell, idx) => (
                             <div
                                 key={idx}
-                                className={`canvas-minimap__cell ${cell.inViewport ? 'in-viewport' : ''}`}
+                                className={`canvas-minimap__cell ${cell.inViewport ? 'canvas-minimap__cell--in-viewport' : ''}`}
                             />
                         ))}
                     </div>
@@ -118,33 +136,39 @@ function VoiceControls({
     onToggleMute,
     onToggleDeafen,
     onToggleRoomDropdown,
+    compact = false,
 }) {
     if (!inVoice) {
         return (
-            <button className="voice-controls voice-controls--disconnected" onClick={onJoin}>
+            <button
+                className={`voice-controls voice-controls--disconnected ${compact ? 'voice-controls--compact' : ''}`}
+                onClick={onJoin}
+            >
                 <Radio size={12} className="voice-controls__icon" />
-                <span>Join Voice</span>
+                {!compact && <span>Join Voice</span>}
             </button>
         );
     }
 
     return (
-        <div className="voice-controls voice-controls--connected">
+        <div className={`voice-controls voice-controls--connected ${compact ? 'voice-controls--compact' : ''}`}>
             {/* Room indicator */}
-            <button
-                className="voice-controls__room"
-                onClick={onToggleRoomDropdown}
-            >
-                <Radio size={12} className="voice-controls__room-icon" />
-                <span className="voice-controls__room-name">{currentRoom}</span>
-                <ChevronDown size={10} className="voice-controls__room-chevron" />
-            </button>
+            {!compact && (
+                <button
+                    className="voice-controls__room"
+                    onClick={onToggleRoomDropdown}
+                >
+                    <Radio size={12} className="voice-controls__room-icon" />
+                    <span className="voice-controls__room-name">{currentRoom}</span>
+                    <ChevronDown size={10} className="voice-controls__room-chevron" />
+                </button>
+            )}
 
-            <div className="voice-controls__divider" />
+            {!compact && <div className="voice-controls__divider" />}
 
             {/* Mute button */}
             <button
-                className={`voice-controls__btn ${muted ? 'active' : ''}`}
+                className={`voice-controls__btn ${muted ? 'voice-controls__btn--active' : ''}`}
                 onClick={onToggleMute}
                 title={muted ? 'Unmute' : 'Mute'}
             >
@@ -153,7 +177,7 @@ function VoiceControls({
 
             {/* Deafen button */}
             <button
-                className={`voice-controls__btn ${deafened ? 'active' : ''}`}
+                className={`voice-controls__btn ${deafened ? 'voice-controls__btn--active' : ''}`}
                 onClick={onToggleDeafen}
                 title={deafened ? 'Undeafen' : 'Deafen'}
             >
@@ -172,8 +196,17 @@ function VoiceControls({
     );
 }
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 /**
  * SecondaryBottomBar - Main component
+ *
+ * Layout:
+ * - Left Zone: ViewModeToggle (Desktop/VR)
+ * - Center Zone: Canvas position, workspace indicator, instance count
+ * - Right Zone: Voice controls
  */
 export function SecondaryBottomBar({
     // Canvas props
@@ -197,14 +230,16 @@ export function SecondaryBottomBar({
     // Stats
     instanceCount = 0,
 
-    // Panel dimensions for zone alignment
+    // Panel dimensions (passed from ThreeEdgeLayout)
     leftPanelWidth = 280,
     rightPanelWidth = 280,
     leftPanelOpen = true,
     rightPanelOpen = true,
 
-    // Left zone label (from left panel)
-    leftPanelLabel = '',
+    // View mode props
+    viewMode = VIEW_MODE_OPTIONS.DESKTOP,
+    onViewModeChange,
+    vrAvailable = true,
 }) {
     const {
         canvas,
@@ -226,50 +261,63 @@ export function SecondaryBottomBar({
         instanceCount,
     });
 
-    // Calculate zone widths based on panel states
-    const leftZoneWidth = leftPanelOpen ? leftPanelWidth : 48;
-    const rightZoneWidth = rightPanelOpen ? rightPanelWidth : 180;
-
     return (
-        <div className="secondary-bottom-bar">
-            {/* Left Zone - Panel label */}
-            <div
-                className="secondary-bottom-bar__zone secondary-bottom-bar__zone--left"
-                style={{ width: leftZoneWidth }}
+        <SecondaryBar position="bottom" height={28}>
+            {/* Left Zone - View Mode Toggle */}
+            <SecondaryBarZone
+                position="left"
+                panelWidth={leftPanelWidth}
+                panelOpen={leftPanelOpen}
             >
-                {leftPanelOpen && leftPanelLabel && (
-                    <span className="secondary-bottom-bar__panel-label">{leftPanelLabel}</span>
-                )}
-            </div>
+                <ViewModeToggle
+                    mode={viewMode}
+                    onModeChange={onViewModeChange}
+                    vrAvailable={vrAvailable}
+                    compact={!leftPanelOpen}
+                />
+            </SecondaryBarZone>
 
             {/* Center Zone - Canvas position, workspace, instances */}
-            <div className="secondary-bottom-bar__zone secondary-bottom-bar__zone--center">
-                <CanvasMinimap
-                    positionString={canvas.positionString}
-                    sizeString={canvas.sizeString}
-                    minimapCells={canvas.minimapCells}
-                    canvasSize={canvas.canvasSize}
-                    isHovering={canvas.isHovering}
-                    onHoverChange={canvas.setIsHovering}
-                />
+            <SecondaryBarZone position="center">
+                <div className="secondary-bottom-bar__center-content">
+                    {/* Canvas minimap - only show when canvas mode is active */}
+                    {canvasSize && (
+                        <>
+                            <CanvasMinimap
+                                positionString={canvas.positionString}
+                                sizeString={canvas.sizeString}
+                                minimapCells={canvas.minimapCells}
+                                canvasSize={canvas.canvasSize}
+                                isHovering={canvas.isHovering}
+                                onHoverChange={canvas.setIsHovering}
+                                show={!!canvasSize}
+                            />
+                            <SecondaryBarDivider height={12} />
+                        </>
+                    )}
 
-                <div className="secondary-bottom-bar__divider" />
+                    {/* Workspace indicator - always show if workspace exists */}
+                    {currentWorkspace && (
+                        <>
+                            <WorkspaceIndicator
+                                name={workspace.name}
+                                color={workspace.color}
+                                type={workspace.type}
+                            />
+                            <SecondaryBarDivider height={12} />
+                        </>
+                    )}
 
-                <WorkspaceIndicator
-                    name={workspace.name}
-                    color={workspace.color}
-                    type={workspace.type}
-                />
-
-                <div className="secondary-bottom-bar__divider" />
-
-                <InstanceCounter count={instanceCount} />
-            </div>
+                    {/* Instance counter - always show */}
+                    <InstanceCounter count={instanceCount} />
+                </div>
+            </SecondaryBarZone>
 
             {/* Right Zone - Voice controls */}
-            <div
-                className="secondary-bottom-bar__zone secondary-bottom-bar__zone--right"
-                style={{ width: rightZoneWidth }}
+            <SecondaryBarZone
+                position="right"
+                panelWidth={rightPanelWidth}
+                panelOpen={rightPanelOpen}
             >
                 <VoiceControls
                     inVoice={voice.inVoice}
@@ -282,9 +330,10 @@ export function SecondaryBottomBar({
                     onToggleMute={voice.toggleMute}
                     onToggleDeafen={voice.toggleDeafen}
                     onToggleRoomDropdown={voice.toggleRoomDropdown}
+                    compact={!rightPanelOpen}
                 />
-            </div>
-        </div>
+            </SecondaryBarZone>
+        </SecondaryBar>
     );
 }
 

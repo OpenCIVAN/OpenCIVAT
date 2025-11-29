@@ -1,95 +1,209 @@
-// TopBar.scss - Top application bar with glassmorphism
+// src/ui/react/components/layout/TopBar/TopBar.scss
+// Enhanced TopBar styling with mode toggle and improved layout
+// Uses design tokens - no hard-coded values
+
 @use "sass:color";
 @use "theme" as *;
+
+// =============================================================================
+// TOP BAR CONTAINER
+// =============================================================================
 
 .top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 50px;
-  @include glass-panel;
-  border-radius: 0; // Full width
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  padding: 0 $spacing-xl;
+  height: 48px;
+  background: $color-bg-primary;
+  border-bottom: 1px solid $color-border-default;
+  padding: 0 $spacing-md;
+  gap: $spacing-md;
+  flex-shrink: 0;
+  z-index: 50;
 
-  // Subtle bottom glow for separation
-  box-shadow: 0 1px 0 $color-border-subtle, 0 4px 12px rgba(0, 0, 0, 0.4);
-
-  &__logo {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-  }
-
-  &__center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-  }
-
-  &__user {
+  &__left,
+  &__center,
+  &__right {
     display: flex;
     align-items: center;
     gap: $spacing-md;
   }
-}
 
-// Logo text styles
-.logo-text {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-bold;
-  color: $color-accent-primary;
-  letter-spacing: 1px;
-  text-shadow: 0 0 10px $color-accent-primary-glow;
-}
+  &__left {
+    flex: 0 0 auto;
+  }
 
-.logo-subtitle {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+  &__center {
+    flex: 1;
+    justify-content: center;
+  }
 
-// Room indicator
-.room-indicator {
-  padding: $spacing-sm $spacing-md;
-  @include glass-card;
-  border-radius: $radius-full;
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-
-  strong {
-    color: $color-accent-primary;
-    font-weight: $font-weight-semibold;
+  &__right {
+    flex: 0 0 auto;
+    gap: $spacing-sm;
   }
 }
 
-// User indicator
-.user-indicator {
+// =============================================================================
+// LOGO
+// =============================================================================
+
+.top-bar__logo {
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: $spacing-sm $spacing-md;
-  @include glass-card;
-  border-radius: $radius-full;
-  font-size: $font-size-sm;
-  color: $color-text-primary;
-  transition: all $transition-fast;
+}
 
-  &:hover {
-    @include glass-hover;
+.top-bar__logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, $color-accent-blue, $color-accent-purple);
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: $font-weight-bold;
+  font-size: 12px;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+// =============================================================================
+// MODE TOGGLE (Desktop/VR)
+// =============================================================================
+
+.mode-toggle {
+  display: flex;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: $radius-sm;
+  overflow: hidden;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 5px 10px;
+    background: transparent;
+    border: none;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:not(:last-child) {
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    &:hover:not(.active) {
+      color: $color-text-secondary;
+    }
+
+    &.active {
+      background: rgba($color-accent-blue, 0.2);
+      color: $color-accent-blue;
+    }
+
+    // VR mode uses purple accent
+    &:last-child.active {
+      background: rgba($color-accent-purple, 0.2);
+      color: $color-accent-purple;
+    }
   }
 }
 
-// Canvas mode toggle
+// =============================================================================
+// ROOM INDICATOR
+// =============================================================================
+
+.room-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 5px $spacing-md;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+
+  &__name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  &__lock {
+    color: $color-text-muted;
+
+    &--unlocked {
+      color: $color-warning;
+    }
+  }
+}
+
+// =============================================================================
+// ICON BUTTONS
+// =============================================================================
+
+.top-bar__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-primary;
+  }
+}
+
+// =============================================================================
+// USER AVATAR
+// =============================================================================
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--user-color, $color-accent-teal);
+  border: 2px solid $color-bg-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  color: white;
+  margin-left: $spacing-xs;
+  cursor: pointer;
+  transition: border-color $transition-fast;
+
+  &.in-voice {
+    border-color: $color-success;
+  }
+}
+
+// =============================================================================
+// CANVAS MODE TOGGLE (Dev Feature)
+// =============================================================================
+
 .top-bar__canvas-toggle {
   margin-left: $spacing-md;
-  padding: $spacing-sm $spacing-md;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: $spacing-xs $spacing-md;
+  background: rgba($color-accent-indigo, 0.15);
+  border: 1px solid rgba($color-accent-indigo, 0.3);
   border-radius: $radius-full;
   font-size: $font-size-xs;
   color: $color-accent-primary;
@@ -100,14 +214,14 @@
   font-weight: $font-weight-medium;
 
   &:hover {
-    background: rgba(99, 102, 241, 0.25);
-    border-color: rgba(99, 102, 241, 0.5);
+    background: rgba($color-accent-indigo, 0.25);
+    border-color: rgba($color-accent-indigo, 0.5);
   }
 
   &.active {
     background: $color-accent-primary;
-    color: #fff;
+    color: white;
     border-color: $color-accent-primary;
-    box-shadow: 0 0 12px $color-accent-primary-glow;
+    box-shadow: 0 0 12px rgba($color-accent-primary, 0.3);
   }
 }
