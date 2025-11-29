@@ -36,7 +36,7 @@ import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
-} from '../../LeftPanel/components/ResizableSections';
+} from "@UI/react/components/common/ResizableSections";
 
 // =============================================================================
 // SAMPLE DATA

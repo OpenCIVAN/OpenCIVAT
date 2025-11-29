@@ -32,7 +32,7 @@ import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
-} from '../components/ResizableSections';
+} from "@UI/react/components/common/ResizableSections";
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 

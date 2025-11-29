@@ -1,71 +1,155 @@
-// StatusBar.scss - Bottom status bar with glassmorphism
+// StatusBar.scss - Bottom status bar with sync, online, cursors, recording, FPS
+// Matches artifact design tokens - no hardcoded values
 @use "theme" as *;
 
 .status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 30px;
-  @include glass-panel;
-  border-radius: 0;  // Full width
-  border-bottom: none;
-  border-left: none;
-  border-right: none;
-  padding: 0 $spacing-lg;
-  font-size: $font-size-xs;
-  
-  // Subtle top glow for separation
-  box-shadow: 
-    0 -1px 0 $color-border-subtle,
-    0 -4px 12px rgba(0, 0, 0, 0.4);
+  height: 28px;
+  background: $color-bg-primary;
+  border-top: 1px solid $color-border-default;
+  padding: 0 $spacing-md;
+  font-size: 10px;
+  color: $color-text-muted;
+  flex-shrink: 0;
+  gap: $spacing-md;
+  z-index: 50;
 
   &__left,
   &__center,
   &__right {
     display: flex;
     align-items: center;
-    gap: $spacing-lg;
+    gap: $spacing-sm;
+  }
+
+  &__left {
+    flex: 0 0 auto;
+  }
+
+  &__center {
+    flex: 1;
+    justify-content: center;
+  }
+
+  &__right {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+
+  // -------------------------------------------------------------------------
+  // Divider
+  // -------------------------------------------------------------------------
+  &__divider {
+    width: 1px;
+    height: 12px;
+    background: $color-border-default;
+  }
+
+  // -------------------------------------------------------------------------
+  // Status Items
+  // -------------------------------------------------------------------------
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    color: $color-text-muted;
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    &--success {
+      color: $color-accent-green;
+
+      svg {
+        color: $color-accent-green;
+      }
+    }
+
+    &--warning {
+      color: $color-accent-amber;
+
+      svg {
+        color: $color-accent-amber;
+      }
+    }
+
+    &--error {
+      color: $color-accent-red;
+
+      svg {
+        color: $color-accent-red;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Toggle Button (Cursors)
+  // -------------------------------------------------------------------------
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 2px $spacing-sm;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.3);
+      color: $color-accent-blue;
+
+      &:hover {
+        background: rgba($color-accent-blue, 0.2);
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Recording Indicator
+  // -------------------------------------------------------------------------
+  &__recording {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 2px $spacing-sm;
+    background: rgba($color-accent-red, 0.15);
+    border-radius: $radius-sm;
+    color: $color-accent-red;
+  }
+
+  &__recording-dot {
+    fill: $color-accent-red;
+    animation: pulse 1.5s infinite;
+  }
+
+  &__recording-mode {
+    color: rgba($color-accent-red, 0.7);
   }
 }
 
-.status-item {
-  color: $color-text-tertiary;
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-}
-
-.sync-indicator {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: 2px $spacing-sm;
-  border-radius: $radius-full;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-  transition: all $transition-fast;
-
-  &.syncing {
-    background: $color-warning-bg;
-    color: $color-warning;
-    border: 1px solid $color-warning-border;
-    
-    // Pulse animation for syncing
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-
-  &.synced {
-    background: $color-success-bg;
-    color: $color-success;
-    border: 1px solid $color-success-border;
-  }
-}
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.6;
+    opacity: 0.4;
   }
 }

@@ -1,5 +1,5 @@
-// src/ui/react/components/panels/LeftPanel/tabs/RecordingsTab.jsx
-// Recordings tab content for the unified left panel
+// src/ui/react/components/panels/RightPanel/tabs/RecordingsTab.jsx
+// Recordings tab content for the unified right panel
 //
 // Features:
 // - Start/stop recording with mode selection

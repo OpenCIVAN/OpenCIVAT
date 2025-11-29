@@ -22,11 +22,12 @@ import {
     Database,
     Wrench,
     LayoutGrid,
-    MessageSquare,
+    MapPin,
     MousePointer2,
     Filter,
     Bookmark,
-    Video,
+    PanelLeftClose,
+    ChevronRight,
 } from 'lucide-react';
 
 // Tab content components
@@ -38,7 +39,6 @@ import { AnnotationsPanelContent } from './tabs/AnnotationsTab';
 import { CursorsPanelContent } from './tabs/CursorsTab';
 import { SavedFiltersPanelContent } from './tabs/SavedFiltersTab';
 import { BookmarksPanelContent } from './tabs/BookmarksTab';
-import { RecordingsPanelContent } from './tabs/RecordingsTab';
 
 import './LeftPanel.scss';
 
@@ -60,8 +60,7 @@ const TABS = [
     { id: 'datasets', icon: Database, label: 'Datasets', color: 'teal', implemented: true },
     { id: 'instance-tools', icon: Wrench, label: 'Instance Tools', color: 'orange', implemented: true },
     { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
-    { id: 'annotations', icon: MessageSquare, label: 'Annotations', color: 'pink', implemented: true },
-    { id: 'recordings', icon: Video, label: 'Recordings', color: 'red', implemented: true },
+    { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'pink', implemented: true },
     { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: true },
     { id: 'filters', icon: Filter, label: 'Saved Filters', color: 'indigo', implemented: true },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', color: 'purple', implemented: true },
@@ -120,6 +119,16 @@ function ActivityBar({ tabs, activeTab, onTabChange, onTogglePanel, isPanelOpen 
 
             {/* Spacer */}
             <div className="left-panel__activity-spacer" />
+
+            {/* Toggle panel button at bottom */}
+            <button
+                className="left-panel__activity-btn left-panel__toggle-btn"
+                onClick={onTogglePanel}
+                title={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
+                aria-label={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
+            >
+                {isPanelOpen ? <PanelLeftClose size={18} /> : <ChevronRight size={18} />}
+            </button>
         </div>
     );
 }
@@ -206,8 +215,6 @@ export function LeftPanel({
                 return <LayoutPanelContent workspaceId={workspaceId} />;
             case 'annotations':
                 return <AnnotationsPanelContent workspaceId={workspaceId} />;
-            case 'recordings':
-                return <RecordingsPanelContent workspaceId={workspaceId} />;
             case 'cursors':
                 return <CursorsPanelContent workspaceId={workspaceId} onNavigateToPanel={handleNavigateToPanel} />;
             case 'filters':

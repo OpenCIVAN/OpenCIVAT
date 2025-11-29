@@ -1,4 +1,3 @@
-// src/ui/react/components/panels/LeftPanel/components/ResizableSections.jsx
 // Resizable and collapsible sections
 //
 // Features:

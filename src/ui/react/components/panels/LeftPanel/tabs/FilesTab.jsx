@@ -44,7 +44,7 @@ import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
-} from '../components/ResizableSections';
+} from "@UI/react/components/common/ResizableSections";
 import { useProjectFiles } from '@UI/react/hooks/useProjectFiles.js';
 import { instanceTypeRegistry } from '@Core/instances/types/instanceTypeRegistry.js';
 import { getHandlerForFileType, getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';

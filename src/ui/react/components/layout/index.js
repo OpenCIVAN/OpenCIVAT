@@ -16,7 +16,7 @@ export {
   PANEL_CONSTRAINTS,
   SECONDARY_BAR_MIN_WIDTHS,
 } from "./ThreeEdgeLayout";
-export { ResizablePanel } from "./ResizablePanel";
+export { ResizablePanel } from "@UI/react/common/ResizablePanel";
 export {
   SecondaryBar,
   SecondaryBarZone,
