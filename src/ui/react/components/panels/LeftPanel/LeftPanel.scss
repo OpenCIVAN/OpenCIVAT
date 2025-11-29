@@ -8,6 +8,7 @@
 // - When collapsed: ResizablePanel sets total width to 48px, only activity bar shows
 
 @use "theme" as *;
+@use "./tabs/tabs" as *;
 
 // =============================================================================
 // PANEL CONTAINER

@@ -333,7 +333,7 @@ export function FilesPanelContent({ workspaceId }) {
     return (
         <div className="files-tab">
             {/* Header */}
-            <div className="panel-header">
+            <div className="panel-header">panel class 
                 <FolderOpen size={14} className="panel-header__icon file-icon--nifti" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__actions">
@@ -410,14 +410,20 @@ export function FilesPanelContent({ workspaceId }) {
                 onSectionToggle={toggleSection}
                 onSectionResize={resizeSection}
             >
-                {starredFiles.length > 0 && (
-                    <ResizableSection id="starred" icon={Star} iconColorClass="icon-amber" label="Starred" count={starredFiles.length}>
-                        {renderFileItems(starredFiles)}
-                    </ResizableSection>
-                )}
+                <ResizableSection id="starred" icon={Star} iconColorClass="icon-amber" label="Starred" count={starredFiles.length}>
+                    {starredFiles.length > 0 ? (
+                        renderFileItems(starredFiles)
+                    ) : (
+                        <div className="resizable-section__empty">No starred items</div>
+                    )}
+                </ResizableSection>
 
                 <ResizableSection id="recent" icon={Clock} iconColorClass="icon-teal" label="Recent" count={recentFiles.length}>
-                    {renderFileItems(recentFiles)}
+                    {recentFiles.length > 0 ? (
+                        renderFileItems(recentFiles)
+                    ) : (
+                        <div className="resizable-section__empty">No recent files</div>
+                    )}
                 </ResizableSection>
 
                 <ResizableSection id="all" icon={Folder} iconColorClass="icon-blue" label="All Files" count={files.length}>
