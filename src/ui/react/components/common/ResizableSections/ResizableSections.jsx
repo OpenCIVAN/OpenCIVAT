@@ -1,3 +1,4 @@
+// src/ui/react/components/common/ResizableSections/ResizableSections.jsx
 // Resizable and collapsible sections
 //
 // Features:
@@ -22,6 +23,7 @@ function SectionHeader({
     badge,
     isExpanded,
     onToggle,
+    headerActions,
 }) {
     return (
         <div
@@ -36,7 +38,12 @@ function SectionHeader({
             {badge > 0 && (
                 <span className="resizable-section__badge">{badge}</span>
             )}
-            <span className="resizable-section__count">{count}</span>
+            {count !== undefined && <span className="resizable-section__count">{count}</span>}
+            {headerActions && (
+                <div className="resizable-section__header-actions" onClick={e => e.stopPropagation()}>
+                    {headerActions}
+                </div>
+            )}
         </div>
     );
 }
@@ -65,7 +72,7 @@ export function ResizableSection({
     icon,
     iconColorClass,
     label,
-    count = 0,
+    count,
     badge = 0,
     isExpanded,
     onToggle,
@@ -75,6 +82,7 @@ export function ResizableSection({
     showDivider = false,
     onDividerDrag,
     isDividerActive = false,
+    headerActions,
 }) {
     return (
         <div
@@ -95,6 +103,7 @@ export function ResizableSection({
                 badge={badge}
                 isExpanded={isExpanded}
                 onToggle={onToggle}
+                headerActions={headerActions}
             />
 
             {isExpanded && (
@@ -225,6 +234,45 @@ export function ResizableSectionsContainer({
 }
 
 // =============================================================================
+// SIMPLE SECTIONS WRAPPER - For array-based section definitions
+// =============================================================================
+
+export function ResizableSections({ sections }) {
+    // Initialize state from sections
+    const initialStates = {};
+    sections.forEach((section, index) => {
+        initialStates[section.id] = {
+            expanded: section.defaultExpanded !== false, // Default to expanded
+            flexGrow: section.flexGrow || 1,
+        };
+    });
+
+    const { states, toggleSection, resizeSection } = useSectionStates(initialStates);
+
+    return (
+        <ResizableSectionsContainer
+            sectionStates={states}
+            onSectionToggle={toggleSection}
+            onSectionResize={resizeSection}
+        >
+            {sections.map(section => (
+                <ResizableSection
+                    key={section.id}
+                    id={section.id}
+                    label={section.title}
+                    icon={section.icon}
+                    iconColorClass={section.iconColorClass}
+                    minHeight={section.minHeight || 60}
+                    headerActions={section.headerActions}
+                >
+                    {section.content}
+                </ResizableSection>
+            ))}
+        </ResizableSectionsContainer>
+    );
+}
+
+// =============================================================================
 // HOOK FOR MANAGING SECTION STATE
 // =============================================================================
 
@@ -270,4 +318,4 @@ export function useSectionStates(initialStates) {
     };
 }
 
-export default ResizableSectionsContainer;
+export default ResizableSections;

@@ -26,7 +26,7 @@ import {
     Briefcase,
     User as UserIcon,
 } from 'lucide-react';
-import { ResizableSectionsContainer } from "@UI/react/components/common/ResizableSections";
+import { ResizableSections } from '@UI/react/components/common/ResizableSections';
 
 // =============================================================================
 // SAMPLE DATA
@@ -572,7 +572,7 @@ export function RoomsPanelContent({ workspaceId }) {
 
     return (
         <div className="rooms-panel">
-            <ResizableSectionContainer sections={sections} />
+            <ResizableSections sections={sections} />
         </div>
     );
 }

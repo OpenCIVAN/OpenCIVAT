@@ -19,72 +19,12 @@ import {
     ChevronDown,
     Circle,
 } from 'lucide-react';
-import { ResizableSectionsContainer } from "@UI/react/components/common/ResizableSections";
+import { ResizableSections } from '@UI/react/components/common/ResizableSections';
 
-// =============================================================================
-// SAMPLE DATA
-// =============================================================================
+// Default empty data (components receive real data via props)
+const DEFAULT_ACTIVITIES = [];
 
-const SAMPLE_ACTIVITIES = [
-    {
-        id: 'a1',
-        type: 'view',
-        user: { name: 'Dr. Smith', color: '#fb7185' },
-        action: 'created a new view',
-        target: 'Brain MRI - Sagittal',
-        timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 min ago
-    },
-    {
-        id: 'a2',
-        type: 'dataset',
-        user: { name: 'Alice Chen', color: '#2dd4bf' },
-        action: 'loaded dataset',
-        target: 'patient_scan_001.nii',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 min ago
-    },
-    {
-        id: 'a3',
-        type: 'annotation',
-        user: { name: 'Dr. Jones', color: '#fbbf24' },
-        action: 'added annotation',
-        target: 'Tumor ROI marker',
-        timestamp: new Date(Date.now() - 12 * 60 * 1000), // 12 min ago
-    },
-    {
-        id: 'a4',
-        type: 'share',
-        user: { name: 'Dr. Smith', color: '#fb7185' },
-        action: 'shared view with',
-        target: 'Team',
-        timestamp: new Date(Date.now() - 25 * 60 * 1000), // 25 min ago
-    },
-    {
-        id: 'a5',
-        type: 'edit',
-        user: { name: 'Alice Chen', color: '#2dd4bf' },
-        action: 'modified filter',
-        target: 'High contrast preset',
-        timestamp: new Date(Date.now() - 45 * 60 * 1000), // 45 min ago
-    },
-    {
-        id: 'a6',
-        type: 'system',
-        user: null,
-        action: 'Auto-saved workspace',
-        target: null,
-        timestamp: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
-    },
-    {
-        id: 'a7',
-        type: 'join',
-        user: { name: 'Dr. Jones', color: '#fbbf24' },
-        action: 'joined the session',
-        target: null,
-        timestamp: new Date(Date.now() - 90 * 60 * 1000), // 1.5 hours ago
-    },
-];
-
-const ACTIVITY_FILTERS = [
+const DEFAULT_FILTERS = [
     { id: 'all', label: 'All Activity' },
     { id: 'views', label: 'Views' },
     { id: 'datasets', label: 'Datasets' },
@@ -245,9 +185,12 @@ function ActivityStats({ activities }) {
 // MAIN COMPONENT
 // =============================================================================
 
-export function ActivityPanelContent({ workspaceId }) {
+export function ActivityPanelContent({
+    workspaceId,
+    activities = DEFAULT_ACTIVITIES,
+    filters = DEFAULT_FILTERS,
+}) {
     const [activeFilter, setActiveFilter] = useState('all');
-    const [activities] = useState(SAMPLE_ACTIVITIES);
 
     // Filter activities
     const filteredActivities = activities.filter(activity => {
@@ -275,7 +218,7 @@ export function ActivityPanelContent({ workspaceId }) {
             minHeight: 200,
             headerActions: (
                 <ActivityFilter
-                    filters={ACTIVITY_FILTERS}
+                    filters={filters}
                     activeFilter={activeFilter}
                     onFilterChange={setActiveFilter}
                 />
@@ -299,7 +242,7 @@ export function ActivityPanelContent({ workspaceId }) {
 
     return (
         <div className="activity-panel">
-            <ResizableSectionsContainer sections={sections} />
+            <ResizableSections sections={sections} />
         </div>
     );
 }

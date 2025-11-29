@@ -1,5 +1,8 @@
+// src/ui/react/components/common/ResizableSections/index.js
 export {
-  ResizableSection,
+  ResizableSections,
   ResizableSectionsContainer,
+  ResizableSection,
   useSectionStates,
-} from "./ResizableSections.jsx";
+} from "./ResizableSections";
+export { default } from "./ResizableSections";

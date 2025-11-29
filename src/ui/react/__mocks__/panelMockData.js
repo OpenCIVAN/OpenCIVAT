@@ -1,6 +1,6 @@
-// src/ui/react/components/panels/__mocks__/panelMockData.js
-// Centralized mock data for panel components and Storybook stories
-// This data was extracted from the component files for reuse in stories
+// src/ui/react/__mocks__/mockData.js
+// Centralized mock data for UI components and Storybook stories
+// Components should accept data via props - this mock data is for Storybook only
 
 // =============================================================================
 // COMMON / SHARED

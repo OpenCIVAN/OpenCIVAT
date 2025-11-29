@@ -40,7 +40,7 @@ import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
-} from "@UI/react/components/common/ResizableSections";
+} from '@UI/react/components/common/ResizableSections';
 
 // =============================================================================
 // RECORDING MODES

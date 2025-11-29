@@ -16,23 +16,11 @@ import {
     ChevronDown,
     Circle,
 } from 'lucide-react';
-import { ResizableSectionsContainer } from "@UI/react/components/common/ResizableSections";
+import { ResizableSections } from '@UI/react/components/common/ResizableSections';
 
-// =============================================================================
-// SAMPLE DATA
-// =============================================================================
-
-const SAMPLE_VOICE_CHANNELS = [
-    { id: 'main', name: 'Main Room', participants: 3, active: true },
-    { id: 'breakout-1', name: 'Breakout 1', participants: 2, active: false },
-    { id: 'breakout-2', name: 'Breakout 2', participants: 0, active: false },
-];
-
-const SAMPLE_PARTICIPANTS = [
-    { id: 'u1', name: 'Dr. Smith', color: '#fb7185', speaking: true, muted: false, deafened: false },
-    { id: 'u2', name: 'Dr. Jones', color: '#fbbf24', speaking: false, muted: true, deafened: false },
-    { id: 'u3', name: 'Alice Chen', color: '#2dd4bf', speaking: false, muted: false, deafened: false },
-];
+// Default empty data (components receive real data via props)
+const DEFAULT_CHANNELS = [];
+const DEFAULT_PARTICIPANTS = [];
 
 // =============================================================================
 // SUB-COMPONENTS
@@ -177,12 +165,16 @@ function ParticipantCard({ participant, onAdjustVolume, onMute }) {
 // MAIN COMPONENT
 // =============================================================================
 
-export function VoicePanelContent({ workspaceId }) {
+export function VoicePanelContent({
+    workspaceId,
+    channels = DEFAULT_CHANNELS,
+    participants = DEFAULT_PARTICIPANTS,
+}) {
     // Voice state
-    const [inVoice, setInVoice] = useState(true);
+    const [inVoice, setInVoice] = useState(channels.length > 0);
     const [muted, setMuted] = useState(false);
     const [deafened, setDeafened] = useState(false);
-    const [currentChannel, setCurrentChannel] = useState('main');
+    const [currentChannel, setCurrentChannel] = useState(channels[0]?.id || 'main');
 
     // Handlers
     const handleJoin = useCallback(() => {
@@ -211,7 +203,7 @@ export function VoicePanelContent({ workspaceId }) {
             content: (
                 <div className="voice-section">
                     <ChannelSelector
-                        channels={SAMPLE_VOICE_CHANNELS}
+                        channels={channels}
                         currentChannel={currentChannel}
                         onSelect={setCurrentChannel}
                     />
@@ -229,17 +221,21 @@ export function VoicePanelContent({ workspaceId }) {
         },
         {
             id: 'participants',
-            title: `Participants (${SAMPLE_PARTICIPANTS.length})`,
+            title: `Participants (${participants.length})`,
             defaultHeight: 300,
             minHeight: 150,
             content: (
                 <div className="participants-list">
-                    {SAMPLE_PARTICIPANTS.map(participant => (
-                        <ParticipantCard
-                            key={participant.id}
-                            participant={participant}
-                        />
-                    ))}
+                    {participants.length === 0 ? (
+                        <div className="voice-panel__empty">No participants in voice</div>
+                    ) : (
+                        participants.map(participant => (
+                            <ParticipantCard
+                                key={participant.id}
+                                participant={participant}
+                            />
+                        ))
+                    )}
                 </div>
             ),
         },
@@ -247,7 +243,7 @@ export function VoicePanelContent({ workspaceId }) {
 
     return (
         <div className="voice-panel">
-            <ResizableSectionsContainer sections={sections} />
+            <ResizableSections sections={sections} />
         </div>
     );
 }

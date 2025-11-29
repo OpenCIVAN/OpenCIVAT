@@ -1,3 +1,4 @@
+// src/ui/react/components/common/ResizableSections/ResizableSections.scss
 // Resizable sections
 // Sections can expand/collapse and resize when multiple are open
 
@@ -137,6 +138,10 @@
   color: $color-text-muted;
   font-weight: $font-weight-normal;
   font-size: 9px;
+}
+
+.resizable-section__header-actions {
+  margin-left: auto;
 }
 
 // =============================================================================
