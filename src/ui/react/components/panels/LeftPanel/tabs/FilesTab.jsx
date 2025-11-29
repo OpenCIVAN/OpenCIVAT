@@ -333,7 +333,7 @@ export function FilesPanelContent({ workspaceId }) {
     return (
         <div className="files-tab">
             {/* Header */}
-            <div className="panel-header">panel class
+            <div className="panel-header">
                 <FolderOpen size={14} className="panel-header__icon file-icon--nifti" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__actions">
