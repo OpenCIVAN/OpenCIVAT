@@ -3,7 +3,7 @@
 // This component ensures all prerequisites are met before rendering the main application
 
 import React, { useState, useEffect, useRef } from "react";
-import { hasUserName, getUserName, setUserName } from "@Collaboration/presence/userManagement.js";
+import { hasUserName, getUserName, setUserName, getUserId } from "@Collaboration/presence/userManagement.js";
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 import { toast } from "@UI/react/store/toastStore.js";
@@ -246,7 +246,7 @@ export function Bootstrap() {
             </div>
         );
     } else if (bootstrapState === 'ready') {
-        content = <CIAWebApp username={username} />;
+        content = <CIAWebApp username={username} userId={getUserId()} />;
     }
 
     return (

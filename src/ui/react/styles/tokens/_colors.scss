@@ -1,8 +1,8 @@
 // Design Tokens: Colors - CIA Web Moonlight Theme
 // =============================================================================
-// 
+//
 // This is the primary color palette for CIA Web.
-// 
+//
 // Design principles:
 // - True black backgrounds for OLED optimization and visual depth
 // - Vibrant moonlight pastel accents - saturated but easy on eyes
@@ -18,18 +18,18 @@
 // ============================================================================
 
 // Background layers (darkest to lightest)
-$color-bg-base: #000000;      // True black - deepest layer
-$color-bg-primary: #0f0f0f;   // Primary surfaces
+$color-bg-base: #000000; // True black - deepest layer
+$color-bg-primary: #0f0f0f; // Primary surfaces
 $color-bg-secondary: #1a1a1a; // Elevated surfaces
-$color-bg-tertiary: #222222;  // More elevated
-$color-bg-elevated: #2a2a2a;  // Highest elevation (modals, dropdowns)
+$color-bg-tertiary: #222222; // More elevated
+$color-bg-elevated: #2a2a2a; // Highest elevation (modals, dropdowns)
 
 // Glassmorphism surfaces (translucent layers)
 $color-glass-subtle: rgba(255, 255, 255, 0.02);
 $color-glass-light: rgba(255, 255, 255, 0.04);
 $color-glass-medium: rgba(255, 255, 255, 0.06);
-$color-glass-strong: rgba(255, 255, 255, 0.10);
-$color-glass-panel: rgba(30, 30, 30, 0.85);  // Panel backgrounds with blur
+$color-glass-strong: rgba(255, 255, 255, 0.1);
+$color-glass-panel: rgba(30, 30, 30, 0.85); // Panel backgrounds with blur
 
 // ============================================================================
 // BORDERS - Subtle White Overlays
@@ -38,18 +38,18 @@ $color-glass-panel: rgba(30, 30, 30, 0.85);  // Panel backgrounds with blur
 $color-border-subtle: rgba(255, 255, 255, 0.04);
 $color-border-default: rgba(255, 255, 255, 0.08);
 $color-border-medium: rgba(255, 255, 255, 0.12);
-$color-border-strong: rgba(255, 255, 255, 0.20);
-$color-border-accent: rgba(96, 165, 250, 0.4);  // For focused/selected elements
+$color-border-strong: rgba(255, 255, 255, 0.2);
+$color-border-accent: rgba(96, 165, 250, 0.4); // For focused/selected elements
 
 // ============================================================================
 // TEXT - High Contrast Hierarchy
 // ============================================================================
 
-$color-text-primary: rgba(255, 255, 255, 0.95);   // Headings, important text
-$color-text-secondary: rgba(255, 255, 255, 0.70); // Body text
-$color-text-tertiary: rgba(255, 255, 255, 0.50);  // Labels, hints
-$color-text-muted: rgba(255, 255, 255, 0.30);     // Disabled, metadata
-$color-text-disabled: rgba(255, 255, 255, 0.20);  // Disabled controls
+$color-text-primary: rgba(255, 255, 255, 0.95); // Headings, important text
+$color-text-secondary: rgba(255, 255, 255, 0.7); // Body text
+$color-text-tertiary: rgba(255, 255, 255, 0.5); // Labels, hints
+$color-text-muted: rgba(255, 255, 255, 0.3); // Disabled, metadata
+$color-text-disabled: rgba(255, 255, 255, 0.2); // Disabled controls
 
 // ============================================================================
 // ACCENT COLORS - Moonlight Pastels
@@ -63,7 +63,7 @@ $color-accent-primary-glow: rgba(96, 165, 250, 0.15);
 
 // Blue - Electric blue (files, navigation, links)
 $color-accent-blue: #60a5fa;
-$color-accent-blue-glow: rgba(96, 165, 250, 0.20);
+$color-accent-blue-glow: rgba(96, 165, 250, 0.2);
 
 // Purple - Soft lavender (filters, analysis, VTK)
 $color-accent-purple: #c084fc;
@@ -101,6 +101,10 @@ $color-accent-violet-glow: $color-accent-indigo-glow;
 $color-accent-cyan: $color-accent-teal;
 $color-accent-cyan-glow: $color-accent-teal-glow;
 
+// Red - Recording, stop, urgent actions
+$color-accent-red: #f87171;
+$color-accent-red-glow: rgba(248, 113, 113, 0.18);
+
 // ============================================================================
 // STATUS COLORS - Apple-Inspired
 // ============================================================================
@@ -129,7 +133,7 @@ $color-hover-bg: rgba(255, 255, 255, 0.04);
 $color-hover-border: rgba(255, 255, 255, 0.15);
 
 $color-active-bg: rgba(255, 255, 255, 0.08);
-$color-active-border: rgba(255, 255, 255, 0.20);
+$color-active-border: rgba(255, 255, 255, 0.2);
 
 $color-focus-ring: rgba(96, 165, 250, 0.4);
 $color-focus-glow: rgba(96, 165, 250, 0.2);
@@ -167,6 +171,7 @@ $color-tool-annotations: $color-accent-pink;
 $color-tool-cursors: $color-accent-amber;
 $color-tool-filters: $color-accent-indigo;
 $color-tool-bookmarks: $color-accent-purple;
+$color-tool-recordings: $color-accent-red;
 
 // Legacy aliases
 $color-tool-files: $color-accent-blue;
@@ -243,6 +248,7 @@ $color-instance-amber: $color-accent-amber;
     --color-accent-green: #{$color-accent-green};
     --color-accent-teal: #{$color-accent-teal};
     --color-accent-indigo: #{$color-accent-indigo};
+    --color-accent-red: #{$color-accent-red};
 
     // Accents (RGB for rgba() usage with CSS variables)
     --color-accent-blue-rgb: 96, 165, 250;
@@ -252,6 +258,7 @@ $color-instance-amber: $color-accent-amber;
     --color-accent-green-rgb: 52, 211, 153;
     --color-accent-teal-rgb: 125, 211, 252;
     --color-accent-indigo-rgb: 167, 139, 250;
+    --color-accent-red-rgb: 248, 113, 113;
 
     // Status
     --color-success: #{$color-success};

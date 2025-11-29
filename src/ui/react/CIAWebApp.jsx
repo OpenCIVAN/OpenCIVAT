@@ -14,7 +14,7 @@ import { WorkspaceGrid } from "@UI/react/components/workspace/Workspace/Workspac
 import { CanvasWorkspace } from "@UI/react/components/workspace/";
 import { TopBar } from "@UI/react/components/layout/TopBar";
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
-import { RightCollaborationPanel } from "@UI/react/components/collaboration/RightCollaborationPanel";
+import { RightPanel } from "@UI/react/components/panels/RightPanel";
 import { SecondaryTopBar } from "@UI/react/components/layout/SecondaryTopBar";
 import { SecondaryBottomBar, VIEW_MODES } from "@UI/react/components/layout/SecondaryBottomBar";
 import { useWorkspaces } from "@UI/react/hooks/useWorkspaces.js";
@@ -200,7 +200,7 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
       // Main panels
       leftPanel={<LeftPanel workspaceId={workspaceId} />}
       centerPanel={renderCenterPanel()}
-      rightPanel={<RightCollaborationPanel />}
+      rightPanel={<RightPanel workspaceId={workspaceId} />}
 
       // Bottom bars
       secondaryBottomBar={

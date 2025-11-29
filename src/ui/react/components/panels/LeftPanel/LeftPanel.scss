@@ -137,6 +137,13 @@
       border: 1px solid rgba($color-accent-purple, 0.4);
       color: $color-accent-purple;
     }
+
+    &[data-color="red"] {
+      --glow-color: #{rgba($color-accent-red, 0.2)};
+      background: rgba($color-accent-red, 0.15);
+      border: 1px solid rgba($color-accent-red, 0.4);
+      color: $color-accent-red;
+    }
   }
 }
 
@@ -205,6 +212,10 @@
   &[data-color="purple"] {
     border-left: 2px solid rgba($color-accent-purple, 0.4);
   }
+
+  &[data-color="red"] {
+    border-left: 2px solid rgba($color-accent-red, 0.4);
+  }
 }
 
 // =============================================================================
@@ -250,6 +261,9 @@
   }
   &[data-color="purple"] {
     color: $color-accent-purple;
+  }
+  &[data-color="red"] {
+    color: $color-accent-red;
   }
 }
 

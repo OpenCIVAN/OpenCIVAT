@@ -2393,3 +2393,884 @@
     }
   }
 }
+
+// =============================================================================
+// FILE ICON - Red color
+// =============================================================================
+
+.file-icon--red {
+  color: $color-accent-red;
+}
+
+.file-icon--green {
+  color: $color-accent-green;
+}
+
+.icon-red {
+  color: $color-accent-red;
+}
+
+.icon-green {
+  color: $color-accent-green;
+}
+
+.icon-purple {
+  color: $color-accent-purple;
+}
+
+// =============================================================================
+// RECORDINGS TAB STYLES
+// =============================================================================
+
+.recordings-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+
+  &__search {
+    position: relative;
+    padding: $spacing-sm $spacing-md;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__search-icon {
+    color: $color-text-muted;
+  }
+
+  &__search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &__search-clear {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $color-text-muted;
+  }
+
+  &__list {
+    padding: 0 $spacing-sm;
+  }
+}
+
+// Recording controls
+.recording-controls {
+  padding: $spacing-md;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: $radius-md;
+  margin: $spacing-sm $spacing-md;
+  border: 1px solid $color-border-default;
+
+  &--active {
+    background: rgba($color-accent-red, 0.1);
+    border-color: rgba($color-accent-red, 0.3);
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: $color-accent-red;
+
+    &--pulse {
+      animation: pulse 1.5s infinite;
+      box-shadow: 0 0 12px $color-accent-red;
+    }
+  }
+
+  &__label {
+    font-size: $font-size-sm;
+    color: $color-accent-red;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__time {
+    margin-left: auto;
+    font-size: 18px;
+    color: $color-text-primary;
+    font-family: monospace;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    font-size: 11px;
+    color: $color-text-muted;
+    margin-bottom: $spacing-md;
+  }
+
+  &__info-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: $spacing-sm;
+  }
+
+  &__stop-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    background: rgba($color-accent-red, 0.15);
+    border: 1px solid rgba($color-accent-red, 0.4);
+    border-radius: $radius-md;
+    color: $color-accent-red;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-red, 0.25);
+    }
+
+    svg {
+      fill: $color-accent-red;
+    }
+  }
+
+  &__pause-btn {
+    padding: $spacing-md;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    color: $color-text-muted;
+    cursor: pointer;
+  }
+
+  &__mode-section {
+    margin-bottom: $spacing-md;
+  }
+
+  &__mode-label {
+    font-size: 10px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__mode-buttons {
+    display: flex;
+    gap: 6px;
+  }
+
+  &__mode-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: $spacing-sm $spacing-xs;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    color: $color-text-tertiary;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--active {
+      background: rgba($color-accent-purple, 0.15);
+      border-color: rgba($color-accent-purple, 0.4);
+      color: $color-accent-purple;
+    }
+  }
+
+  &__audio-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-md;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: $radius-md;
+    margin-bottom: $spacing-md;
+  }
+
+  &__audio-info {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__start-btn {
+    width: 100%;
+    padding: $spacing-md;
+    background: linear-gradient(
+      135deg,
+      $color-accent-red 0%,
+      $color-accent-pink 100%
+    );
+    border: none;
+    border-radius: $radius-md;
+    color: white;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    box-shadow: 0 4px 20px rgba($color-accent-red, 0.3);
+    transition: all $transition-fast;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 25px rgba($color-accent-red, 0.4);
+    }
+
+    svg {
+      fill: white;
+    }
+  }
+}
+
+// Recording card
+.recording-card {
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &--selected {
+    background: rgba($color-accent-purple, 0.1);
+    border-color: rgba($color-accent-purple, 0.3);
+  }
+
+  &__main {
+    display: flex;
+    gap: $spacing-md;
+  }
+
+  &__thumbnail {
+    width: 80px;
+    height: 50px;
+    border-radius: $radius-sm;
+    background: linear-gradient(
+      135deg,
+      $color-bg-tertiary 0%,
+      $color-bg-secondary 100%
+    );
+    border: 1px solid $color-border-default;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: $color-text-muted;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: $font-size-xs;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    margin-bottom: 4px;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-bottom: 4px;
+  }
+
+  &__duration,
+  &__mode {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  &__date {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  &__expanded {
+    margin-top: $spacing-md;
+    padding-top: $spacing-md;
+    border-top: 1px solid $color-border-default;
+  }
+
+  &__participants {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__playback {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__playback-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: $color-text-muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &--play {
+      padding: $spacing-sm;
+      background: rgba($color-accent-green, 0.15);
+      border: 1px solid rgba($color-accent-green, 0.4);
+      border-radius: 50%;
+      color: $color-accent-green;
+
+      svg {
+        fill: $color-accent-green;
+      }
+    }
+  }
+
+  &__progress {
+    flex: 1;
+    height: 4px;
+    background: $color-bg-tertiary;
+    border-radius: 2px;
+    margin: 0 $spacing-sm;
+  }
+
+  &__progress-bar {
+    width: 30%;
+    height: 100%;
+    background: $color-accent-purple;
+    border-radius: 2px;
+  }
+
+  &__progress-time {
+    font-size: 10px;
+    color: $color-text-muted;
+    font-family: monospace;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  &__action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &[data-color="blue"]:hover {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &[data-color="green"]:hover {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+
+    &[data-color="pink"]:hover {
+      background: rgba($color-accent-pink, 0.15);
+      border-color: rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
+    }
+  }
+}
+
+// Panel header extensions for recordings
+.panel-header__live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba($color-accent-red, 0.2);
+  border-radius: $radius-xs;
+  margin-left: auto;
+}
+
+.panel-header__live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $color-accent-red;
+  animation: pulse 1.5s infinite;
+}
+
+.panel-header__badge {
+  font-size: 10px;
+  color: $color-text-muted;
+  background: $color-bg-tertiary;
+  padding: 2px 8px;
+  border-radius: $radius-xs;
+  margin-left: auto;
+}
+
+.panel-footer--with-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-footer__storage {
+  font-size: 10px;
+  color: $color-text-muted;
+}
+
+.panel-footer__settings-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+// Pulse animation
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// =============================================================================
+// LAYOUT TAB - CANVAS NAVIGATOR
+// =============================================================================
+
+.canvas-navigator {
+  display: flex;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  align-items: flex-start;
+
+  &__map-container {
+    position: relative;
+  }
+
+  &__grid {
+    display: grid;
+    background: rgba(0, 0, 0, 0.4);
+    padding: $spacing-sm;
+    border-radius: $radius-md;
+  }
+
+  &__cell {
+    background: rgba(var(--cell-color-rgb, 255, 255, 255), 0.3);
+    border: 1px solid var(--cell-color, $color-border-default);
+    border-radius: 2px;
+    cursor: pointer;
+    min-width: 16px;
+    min-height: 16px;
+    transition: all $transition-fast;
+
+    &--empty {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: $color-border-default;
+    }
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  &__viewport {
+    position: absolute;
+    border: 2px solid $color-accent-green;
+    border-radius: $radius-xs;
+    pointer-events: none;
+    box-shadow: 0 0 8px rgba($color-accent-green, 0.4);
+  }
+
+  &__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  &__dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 28px);
+    gap: 2px;
+  }
+
+  &__nav-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-secondary;
+    }
+
+    &--center {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.3);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__position {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-align: center;
+    margin-top: $spacing-sm;
+  }
+}
+
+// =============================================================================
+// LAYOUT TAB - CANVAS SIZE CONTROLS
+// =============================================================================
+
+.canvas-size-controls {
+  display: flex;
+  gap: $spacing-sm;
+  margin: $spacing-sm $spacing-md;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-sm;
+
+  &__group {
+    flex: 1;
+  }
+
+  &__label {
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-bottom: 4px;
+  }
+
+  &__buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-secondary;
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    &--add {
+      color: $color-accent-green;
+      border-color: rgba($color-accent-green, 0.3);
+
+      &:hover {
+        background: rgba($color-accent-green, 0.15);
+        color: $color-accent-green;
+      }
+    }
+  }
+
+  &__value {
+    flex: 1;
+    text-align: center;
+    font-size: $font-size-xs;
+    color: $color-text-primary;
+    line-height: 28px;
+  }
+
+  &__divider {
+    width: 1px;
+    background: $color-border-default;
+  }
+}
+
+// =============================================================================
+// LAYOUT TAB - ARRANGEMENT GRID
+// =============================================================================
+
+.layout-tab__arrange-container {
+  display: flex;
+  justify-content: center;
+  padding: $spacing-md;
+}
+
+.arrangement-grid {
+  display: grid;
+  background: rgba(0, 0, 0, 0.3);
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  width: fit-content;
+
+  &__cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    background: rgba(var(--cell-color-rgb, 255, 255, 255), 0.2);
+    border: 1px solid var(--cell-color, rgba(255, 255, 255, 0.1));
+    border-radius: $radius-sm;
+    cursor: pointer;
+    position: relative;
+    min-width: 48px;
+    min-height: 48px;
+    transition: all $transition-fast;
+
+    &--empty {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: $color-border-default;
+      color: $color-text-muted;
+    }
+
+    &--selected {
+      border: 2px solid $color-accent-blue;
+      box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+    }
+
+    &--drag-over {
+      background: rgba($color-accent-green, 0.3);
+      border: 2px dashed $color-accent-green;
+    }
+
+    &:hover {
+      transform: scale(1.02);
+    }
+  }
+
+  &__cell-color {
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-xs;
+    margin-bottom: 2px;
+  }
+
+  &__cell-name {
+    font-size: 8px;
+    color: $color-text-secondary;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__cell-clear {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background: $color-accent-red;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+}
+
+// =============================================================================
+// LAYOUT TAB - RESIZE CONTROLS
+// =============================================================================
+
+.resize-controls {
+  margin: $spacing-sm $spacing-md;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: $radius-md;
+  border: 1px solid $color-accent-blue;
+
+  &__label {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__options {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  &__btn {
+    padding: 4px 8px;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-primary;
+    }
+  }
+}
+
+// =============================================================================
+// LAYOUT TAB - DATASET DRAG SOURCE
+// =============================================================================
+
+.dataset-drag-source {
+  margin: $spacing-sm $spacing-md;
+
+  &__label {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-bottom: 6px;
+  }
+
+  &__items {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(var(--dataset-color-rgb, 255, 255, 255), 0.15);
+    border: 1px solid var(--dataset-color, $color-border-default);
+    border-radius: $radius-sm;
+    cursor: grab;
+    font-size: 11px;
+    color: $color-text-secondary;
+    transition: all $transition-fast;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &:hover {
+      transform: scale(1.02);
+    }
+
+    svg {
+      color: var(--dataset-color);
+    }
+  }
+}
+
+// =============================================================================
+// LAYOUT TAB - EDIT TOGGLE
+// =============================================================================
+
+.layout-tab__edit-toggle {
+  margin-left: auto;
+  padding: 4px 8px;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &--active {
+    background: rgba($color-accent-amber, 0.15);
+    border-color: rgba($color-accent-amber, 0.4);
+    color: $color-accent-amber;
+  }
+}

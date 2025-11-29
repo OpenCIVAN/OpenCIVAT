@@ -26,6 +26,7 @@ import {
     MousePointer2,
     Filter,
     Bookmark,
+    Video,
 } from 'lucide-react';
 
 // Tab content components
@@ -37,6 +38,7 @@ import { AnnotationsPanelContent } from './tabs/AnnotationsTab';
 import { CursorsPanelContent } from './tabs/CursorsTab';
 import { SavedFiltersPanelContent } from './tabs/SavedFiltersTab';
 import { BookmarksPanelContent } from './tabs/BookmarksTab';
+import { RecordingsPanelContent } from './tabs/RecordingsTab';
 
 import './LeftPanel.scss';
 
@@ -59,6 +61,7 @@ const TABS = [
     { id: 'instance-tools', icon: Wrench, label: 'Instance Tools', color: 'orange', implemented: true },
     { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
     { id: 'annotations', icon: MessageSquare, label: 'Annotations', color: 'pink', implemented: true },
+    { id: 'recordings', icon: Video, label: 'Recordings', color: 'red', implemented: true },
     { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: true },
     { id: 'filters', icon: Filter, label: 'Saved Filters', color: 'indigo', implemented: true },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', color: 'purple', implemented: true },
@@ -203,6 +206,8 @@ export function LeftPanel({
                 return <LayoutPanelContent workspaceId={workspaceId} />;
             case 'annotations':
                 return <AnnotationsPanelContent workspaceId={workspaceId} />;
+            case 'recordings':
+                return <RecordingsPanelContent workspaceId={workspaceId} />;
             case 'cursors':
                 return <CursorsPanelContent workspaceId={workspaceId} onNavigateToPanel={handleNavigateToPanel} />;
             case 'filters':

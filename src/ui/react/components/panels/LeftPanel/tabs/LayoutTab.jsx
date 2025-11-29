@@ -2,13 +2,16 @@
 // Layout tab content for the unified left panel
 //
 // Features:
+// - Infinite canvas navigator with viewport control
 // - Grid layout minimap with cell selection
+// - Canvas size controls (add/remove rows/columns)
 // - View mode toggle (Normal, Isolation, Subset)
+// - Cell resize and arrangement
 // - Quick layout presets
 // - Workspace members visibility
 // - VS Code-style collapsible sections
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
     LayoutGrid,
     Grid3X3,
@@ -20,6 +23,8 @@ import {
     Move,
     ChevronDown,
     ChevronRight,
+    ChevronUp,
+    ChevronLeft,
     Eye,
     EyeOff,
     Users,
@@ -39,6 +44,11 @@ import {
     PanelLeft,
     Save,
     UserCircle,
+    Navigation,
+    Crosshair,
+    Database,
+    X,
+    GripVertical,
 } from 'lucide-react';
 import {
     ResizableSectionsContainer,
@@ -57,25 +67,41 @@ const CURRENT_WORKSPACE = {
     color: 'green',
 };
 
-const GRID_CELLS = [
-    { id: 'c1', row: 0, col: 0, rowSpan: 2, colSpan: 2, instance: { name: 'Main Analysis', dataset: 'Brain_Scan_001.nii', color: 'blue' } },
-    { id: 'c2', row: 0, col: 2, rowSpan: 1, colSpan: 1, instance: { name: 'CT Overlay', dataset: 'CT_Overlay.dcm', color: 'teal' } },
-    { id: 'c3', row: 1, col: 2, rowSpan: 1, colSpan: 1, instance: { name: 'Segmentation', dataset: 'Tumor_Region.vtk', color: 'pink' } },
-    { id: 'c4', row: 2, col: 0, rowSpan: 1, colSpan: 2, instance: null },
-    { id: 'c5', row: 2, col: 2, rowSpan: 1, colSpan: 1, instance: { name: 'Reference', dataset: 'Reference_Atlas.nii', color: 'amber' } },
+// Initial canvas and viewport configuration
+const INITIAL_CANVAS_SIZE = { rows: 4, cols: 5 };
+const INITIAL_VIEWPORT = { row: 0, col: 0, rows: 2, cols: 3 };
+
+const INITIAL_CELLS = [
+    { id: 'c1', row: 0, col: 0, rowSpan: 1, colSpan: 2, instance: { id: 'i1', name: 'Brain MRI - Axial', dataset: 'Brain_Scan_001.nii', color: 'blue' } },
+    { id: 'c2', row: 0, col: 2, rowSpan: 2, colSpan: 1, instance: { id: 'i2', name: 'Spine CT', dataset: 'CT_Overlay.dcm', color: 'purple' } },
+    { id: 'c3', row: 1, col: 0, rowSpan: 1, colSpan: 1, instance: { id: 'i3', name: 'PCA Plot', dataset: 'Analysis.vtk', color: 'green' } },
+    { id: 'c4', row: 1, col: 1, rowSpan: 1, colSpan: 1, instance: null },
+    { id: 'c5', row: 2, col: 0, rowSpan: 1, colSpan: 3, instance: { id: 'i4', name: 'Timeline', dataset: 'Timeline.csv', color: 'amber' } },
+    { id: 'c6', row: 3, col: 0, rowSpan: 1, colSpan: 2, instance: null },
+    { id: 'c7', row: 3, col: 2, rowSpan: 1, colSpan: 1, instance: { id: 'i5', name: 'Comparison View', dataset: 'Reference.nii', color: 'pink' } },
+    { id: 'c8', row: 0, col: 3, rowSpan: 2, colSpan: 2, instance: { id: 'i6', name: 'Full Scan', dataset: 'FullBody.dcm', color: 'teal' } },
+    { id: 'c9', row: 2, col: 3, rowSpan: 2, colSpan: 2, instance: null },
+];
+
+const AVAILABLE_DATASETS = [
+    { id: 'd1', name: 'Brain MRI', color: 'blue' },
+    { id: 'd2', name: 'Spine CT', color: 'purple' },
+    { id: 'd3', name: 'PCA Results', color: 'green' },
+    { id: 'd7', name: 'Knee X-Ray', color: 'amber' },
+    { id: 'd8', name: 'Heart Echo', color: 'pink' },
 ];
 
 const WORKSPACE_MEMBERS = [
-    { id: 'me', name: 'You', color: 'green', isMe: true, status: 'active', cursorVisible: true },
+    { id: 'me', name: 'You', color: 'teal', isMe: true, status: 'active', cursorVisible: true },
     { id: 'u1', name: 'Dr. Smith', color: 'pink', isMe: false, status: 'active', cursorVisible: true },
     { id: 'u2', name: 'Dr. Jones', color: 'amber', isMe: false, status: 'idle', cursorVisible: true },
 ];
 
 const LAYOUT_PRESETS = [
-    { id: 'single', name: 'Single', icon: Square, grid: '1�1' },
-    { id: 'split-h', name: 'Split H', icon: Columns, grid: '1�2' },
-    { id: 'split-v', name: 'Split V', icon: Rows, grid: '2�1' },
-    { id: 'quad', name: 'Quad', icon: Grid3X3, grid: '2�2' },
+    { id: 'single', name: 'Single', icon: Square, grid: '1×1' },
+    { id: 'split-h', name: 'Split H', icon: Columns, grid: '1×2' },
+    { id: 'split-v', name: 'Split V', icon: Rows, grid: '2×1' },
+    { id: 'quad', name: 'Quad', icon: Grid3X3, grid: '2×2' },
     { id: 'focus', name: 'Focus', icon: PanelLeft, grid: '1+2' },
 ];
 
@@ -84,6 +110,8 @@ const VIEW_MODES = [
     { id: 'isolation', label: 'Isolation', icon: Maximize, color: 'purple', description: 'Focus on a single instance. Click an instance or select from list.' },
     { id: 'subset', label: 'Subset', icon: Layers, color: 'teal', description: 'Select multiple instances to view together. Others are hidden.' },
 ];
+
+const RESIZE_OPTIONS = ['1×1', '1×2', '2×1', '2×2', '1×3', '3×1'];
 
 // =============================================================================
 // WORKSPACE ICON HELPER
@@ -99,69 +127,316 @@ function getWorkspaceIcon(type) {
 }
 
 // =============================================================================
-// MINI MAP
+// CANVAS NAVIGATOR (Mini-map with viewport)
 // =============================================================================
 
-function MiniMap({ cells, selectedCell, onSelectCell }) {
-    const gridSize = 3;
-    const cellSize = 28;
-    const gap = 3;
+function CanvasNavigator({ canvasSize, viewport, cells, onCellClick, onViewportMove, onCanvasSizeChange }) {
+    const cellSize = 16;
+    const gap = 2;
+
+    // Get cell at position
+    const getCellAt = useCallback((row, col) => {
+        return cells.find(c =>
+            row >= c.row && row < c.row + c.rowSpan &&
+            col >= c.col && col < c.col + c.colSpan
+        );
+    }, [cells]);
+
+    // Check if position is in viewport
+    const isInViewport = useCallback((row, col) => {
+        return row >= viewport.row && row < viewport.row + viewport.rows &&
+            col >= viewport.col && col < viewport.col + viewport.cols;
+    }, [viewport]);
 
     return (
-        <div className="layout-minimap">
-            <div
-                className="layout-minimap__grid"
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${gridSize}, ${cellSize}px)`,
-                    gridTemplateRows: `repeat(${gridSize}, ${cellSize}px)`,
-                    gap: `${gap}px`,
-                }}
-            >
-                {cells.map(cell => (
-                    <div
-                        key={cell.id}
-                        className={`layout-minimap__cell ${selectedCell === cell.id ? 'layout-minimap__cell--selected' : ''} ${cell.instance ? '' : 'layout-minimap__cell--empty'}`}
-                        style={{
-                            gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
-                            gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
-                            '--cell-color': cell.instance ? `var(--color-accent-${cell.instance.color})` : undefined,
-                        }}
-                        onClick={() => onSelectCell(cell.id)}
+        <div className="canvas-navigator">
+            <div className="canvas-navigator__map-container">
+                {/* Grid */}
+                <div
+                    className="canvas-navigator__grid"
+                    style={{
+                        gridTemplateColumns: `repeat(${canvasSize.cols}, ${cellSize}px)`,
+                        gridTemplateRows: `repeat(${canvasSize.rows}, ${cellSize}px)`,
+                        gap: `${gap}px`,
+                    }}
+                >
+                    {Array.from({ length: canvasSize.rows * canvasSize.cols }).map((_, idx) => {
+                        const row = Math.floor(idx / canvasSize.cols);
+                        const col = idx % canvasSize.cols;
+                        const cell = getCellAt(row, col);
+                        const inVP = isInViewport(row, col);
+
+                        // Skip if covered by spanning cell
+                        if (cell && (cell.row !== row || cell.col !== col)) return null;
+
+                        return (
+                            <div
+                                key={idx}
+                                className={`canvas-navigator__cell ${cell?.instance ? '' : 'canvas-navigator__cell--empty'}`}
+                                style={{
+                                    gridRow: cell ? `${cell.row + 1} / span ${cell.rowSpan}` : 'auto',
+                                    gridColumn: cell ? `${cell.col + 1} / span ${cell.colSpan}` : 'auto',
+                                    '--cell-color': cell?.instance ? `var(--color-accent-${cell.instance.color})` : undefined,
+                                    opacity: inVP ? 1 : 0.5,
+                                }}
+                                onClick={() => onCellClick(row, col)}
+                                title={cell?.instance?.name || 'Empty'}
+                            />
+                        );
+                    })}
+                </div>
+
+                {/* Viewport indicator */}
+                <div
+                    className="canvas-navigator__viewport"
+                    style={{
+                        top: `${8 + viewport.row * (cellSize + gap)}px`,
+                        left: `${8 + viewport.col * (cellSize + gap)}px`,
+                        width: `${viewport.cols * cellSize + (viewport.cols - 1) * gap}px`,
+                        height: `${viewport.rows * cellSize + (viewport.rows - 1) * gap}px`,
+                    }}
+                />
+            </div>
+
+            {/* D-pad navigation */}
+            <div className="canvas-navigator__controls">
+                <div className="canvas-navigator__dpad">
+                    <div />
+                    <button
+                        className="canvas-navigator__nav-btn"
+                        onClick={() => onViewportMove('up')}
+                        title="Pan up"
                     >
-                        {!cell.instance && <Plus size={10} />}
-                    </div>
-                ))}
+                        <ChevronUp size={12} />
+                    </button>
+                    <div />
+                    <button
+                        className="canvas-navigator__nav-btn"
+                        onClick={() => onViewportMove('left')}
+                        title="Pan left"
+                    >
+                        <ChevronLeft size={12} />
+                    </button>
+                    <button
+                        className="canvas-navigator__nav-btn canvas-navigator__nav-btn--center"
+                        onClick={() => onViewportMove('reset')}
+                        title="Reset"
+                    >
+                        <Crosshair size={12} />
+                    </button>
+                    <button
+                        className="canvas-navigator__nav-btn"
+                        onClick={() => onViewportMove('right')}
+                        title="Pan right"
+                    >
+                        <ChevronRight size={12} />
+                    </button>
+                    <div />
+                    <button
+                        className="canvas-navigator__nav-btn"
+                        onClick={() => onViewportMove('down')}
+                        title="Pan down"
+                    >
+                        <ChevronDown size={12} />
+                    </button>
+                    <div />
+                </div>
+                <div className="canvas-navigator__position">
+                    Viewport: ({viewport.col},{viewport.row})
+                </div>
             </div>
         </div>
     );
 }
 
 // =============================================================================
-// CELL LIST
+// CANVAS SIZE CONTROLS
 // =============================================================================
 
-function CellList({ cells, selectedCell, onSelectCell }) {
+function CanvasSizeControls({ canvasSize, viewport, onAddRow, onRemoveRow, onAddCol, onRemoveCol }) {
+    const canRemoveRow = canvasSize.rows > viewport.rows;
+    const canRemoveCol = canvasSize.cols > viewport.cols;
+
     return (
-        <div className="cell-list">
-            {cells.map(cell => (
-                <div
-                    key={cell.id}
-                    className={`cell-list__item ${selectedCell === cell.id ? 'cell-list__item--selected' : ''}`}
-                    onClick={() => onSelectCell(cell.id)}
-                    style={{ '--cell-color': cell.instance ? `var(--color-accent-${cell.instance.color})` : undefined }}
-                >
-                    <span className={`cell-list__color ${cell.instance ? '' : 'cell-list__color--empty'}`} />
-                    <div className="cell-list__info">
-                        <span className="cell-list__name">{cell.instance?.name || 'Empty Cell'}</span>
-                        {cell.instance && <span className="cell-list__dataset">{cell.instance.dataset}</span>}
-                    </div>
-                    <span className="cell-list__size">{cell.rowSpan}�{cell.colSpan}</span>
-                    <button className="cell-list__more">
-                        <MoreHorizontal size={12} />
+        <div className="canvas-size-controls">
+            <div className="canvas-size-controls__group">
+                <div className="canvas-size-controls__label">Rows</div>
+                <div className="canvas-size-controls__buttons">
+                    <button
+                        className="canvas-size-controls__btn"
+                        onClick={onRemoveRow}
+                        disabled={!canRemoveRow}
+                    >
+                        <Minus size={12} />
+                    </button>
+                    <span className="canvas-size-controls__value">{canvasSize.rows}</span>
+                    <button
+                        className="canvas-size-controls__btn canvas-size-controls__btn--add"
+                        onClick={onAddRow}
+                    >
+                        <Plus size={12} />
                     </button>
                 </div>
-            ))}
+            </div>
+            <div className="canvas-size-controls__divider" />
+            <div className="canvas-size-controls__group">
+                <div className="canvas-size-controls__label">Columns</div>
+                <div className="canvas-size-controls__buttons">
+                    <button
+                        className="canvas-size-controls__btn"
+                        onClick={onRemoveCol}
+                        disabled={!canRemoveCol}
+                    >
+                        <Minus size={12} />
+                    </button>
+                    <span className="canvas-size-controls__value">{canvasSize.cols}</span>
+                    <button
+                        className="canvas-size-controls__btn canvas-size-controls__btn--add"
+                        onClick={onAddCol}
+                    >
+                        <Plus size={12} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// =============================================================================
+// ARRANGEMENT GRID
+// =============================================================================
+
+function ArrangementGrid({ cells, viewport, canvasSize, selectedCell, editMode, dragOverCell, onSelectCell, onClearCell, onDragOver, onDrop }) {
+    const cellSize = 48;
+    const gap = 4;
+
+    // Get cell at global position
+    const getCellAt = useCallback((row, col) => {
+        return cells.find(c =>
+            row >= c.row && row < c.row + c.rowSpan &&
+            col >= c.col && col < c.col + c.colSpan
+        );
+    }, [cells]);
+
+    return (
+        <div
+            className="arrangement-grid"
+            style={{
+                gridTemplateColumns: `repeat(${viewport.cols}, ${cellSize}px)`,
+                gridTemplateRows: `repeat(${viewport.rows}, ${cellSize}px)`,
+                gap: `${gap}px`,
+            }}
+        >
+            {Array.from({ length: viewport.rows * viewport.cols }).map((_, idx) => {
+                const localRow = Math.floor(idx / viewport.cols);
+                const localCol = idx % viewport.cols;
+                const globalRow = viewport.row + localRow;
+                const globalCol = viewport.col + localCol;
+                const cell = getCellAt(globalRow, globalCol);
+
+                // Skip if covered by spanning cell
+                if (cell && (cell.row !== globalRow || cell.col !== globalCol)) return null;
+
+                const isSelected = selectedCell === cell?.id;
+                const isDragOver = dragOverCell === cell?.id;
+
+                return (
+                    <div
+                        key={idx}
+                        className={`arrangement-grid__cell ${cell?.instance ? '' : 'arrangement-grid__cell--empty'} ${isSelected ? 'arrangement-grid__cell--selected' : ''} ${isDragOver ? 'arrangement-grid__cell--drag-over' : ''}`}
+                        style={{
+                            gridRow: cell ? `${cell.row - viewport.row + 1} / span ${Math.min(cell.rowSpan, viewport.rows - (cell.row - viewport.row))}` : 'auto',
+                            gridColumn: cell ? `${cell.col - viewport.col + 1} / span ${Math.min(cell.colSpan, viewport.cols - (cell.col - viewport.col))}` : 'auto',
+                            '--cell-color': cell?.instance ? `var(--color-accent-${cell.instance.color})` : undefined,
+                        }}
+                        onClick={() => cell && onSelectCell(isSelected ? null : cell.id)}
+                        onDragOver={(e) => cell && onDragOver(cell.id, e)}
+                        onDrop={() => cell && onDrop(cell)}
+                    >
+                        {cell?.instance ? (
+                            <>
+                                <div
+                                    className="arrangement-grid__cell-color"
+                                    style={{ background: `var(--color-accent-${cell.instance.color})` }}
+                                />
+                                <span className="arrangement-grid__cell-name">
+                                    {cell.instance.name.split(' ')[0]}
+                                </span>
+                                {editMode && (
+                                    <button
+                                        className="arrangement-grid__cell-clear"
+                                        onClick={(e) => { e.stopPropagation(); onClearCell(cell.id); }}
+                                    >
+                                        <X size={8} />
+                                    </button>
+                                )}
+                            </>
+                        ) : (
+                            <Plus size={16} />
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+// =============================================================================
+// RESIZE CONTROLS
+// =============================================================================
+
+function ResizeControls({ selectedCell, cells, onResize }) {
+    const cell = cells.find(c => c.id === selectedCell);
+    if (!cell?.instance) return null;
+
+    return (
+        <div className="resize-controls">
+            <div className="resize-controls__label">
+                Resize: {cell.instance.name}
+            </div>
+            <div className="resize-controls__options">
+                {RESIZE_OPTIONS.map(size => {
+                    const [cols, rows] = size.split('×').map(Number);
+                    return (
+                        <button
+                            key={size}
+                            className="resize-controls__btn"
+                            onClick={() => onResize(selectedCell, { rowSpan: rows, colSpan: cols })}
+                        >
+                            {size}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+// =============================================================================
+// DATASET DRAG SOURCE
+// =============================================================================
+
+function DatasetDragSource({ datasets, onDragStart, onDragEnd }) {
+    return (
+        <div className="dataset-drag-source">
+            <div className="dataset-drag-source__label">
+                Drag datasets to empty cells:
+            </div>
+            <div className="dataset-drag-source__items">
+                {datasets.map(dataset => (
+                    <div
+                        key={dataset.id}
+                        className="dataset-drag-source__item"
+                        style={{ '--dataset-color': `var(--color-accent-${dataset.color})` }}
+                        draggable
+                        onDragStart={() => onDragStart(dataset)}
+                        onDragEnd={onDragEnd}
+                    >
+                        <Database size={12} />
+                        {dataset.name}
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
@@ -245,7 +520,13 @@ function MemberItem({ member, cursorVisible, onToggleCursor }) {
 export function LayoutPanelContent({ workspaceId }) {
     // State
     const [viewMode, setViewMode] = useState('normal');
-    const [selectedCell, setSelectedCell] = useState('c1');
+    const [canvasSize, setCanvasSize] = useState(INITIAL_CANVAS_SIZE);
+    const [viewport, setViewport] = useState(INITIAL_VIEWPORT);
+    const [cells, setCells] = useState(INITIAL_CELLS);
+    const [selectedCell, setSelectedCell] = useState(null);
+    const [editMode, setEditMode] = useState(false);
+    const [draggedDataset, setDraggedDataset] = useState(null);
+    const [dragOverCell, setDragOverCell] = useState(null);
     const [memberCursors, setMemberCursors] = useState(
         Object.fromEntries(WORKSPACE_MEMBERS.map(m => [m.id, m.cursorVisible]))
     );
@@ -253,10 +534,90 @@ export function LayoutPanelContent({ workspaceId }) {
     // Section states
     const { states: sectionStates, toggleSection } = useSectionStates({
         modes: { expanded: true, flexGrow: 0 },
-        grid: { expanded: true, flexGrow: 2 },
+        canvas: { expanded: true, flexGrow: 1 },
+        arrange: { expanded: true, flexGrow: 2 },
         presets: { expanded: false, flexGrow: 0 },
-        members: { expanded: true, flexGrow: 1 },
+        members: { expanded: false, flexGrow: 1 },
     });
+
+    // Canvas navigation
+    const moveViewport = useCallback((direction) => {
+        setViewport(prev => {
+            const newViewport = { ...prev };
+            switch (direction) {
+                case 'up': newViewport.row = Math.max(0, prev.row - 1); break;
+                case 'down': newViewport.row = Math.min(canvasSize.rows - prev.rows, prev.row + 1); break;
+                case 'left': newViewport.col = Math.max(0, prev.col - 1); break;
+                case 'right': newViewport.col = Math.min(canvasSize.cols - prev.cols, prev.col + 1); break;
+                case 'reset': return { ...prev, row: 0, col: 0 };
+            }
+            return newViewport;
+        });
+    }, [canvasSize]);
+
+    // Canvas size controls
+    const addRow = useCallback(() => setCanvasSize(prev => ({ ...prev, rows: prev.rows + 1 })), []);
+    const removeRow = useCallback(() => {
+        if (canvasSize.rows > viewport.rows) {
+            setCanvasSize(prev => ({ ...prev, rows: prev.rows - 1 }));
+        }
+    }, [canvasSize.rows, viewport.rows]);
+    const addCol = useCallback(() => setCanvasSize(prev => ({ ...prev, cols: prev.cols + 1 })), []);
+    const removeCol = useCallback(() => {
+        if (canvasSize.cols > viewport.cols) {
+            setCanvasSize(prev => ({ ...prev, cols: prev.cols - 1 }));
+        }
+    }, [canvasSize.cols, viewport.cols]);
+
+    // Mini-map cell click
+    const handleMinimapClick = useCallback((row, col) => {
+        setViewport(prev => ({
+            ...prev,
+            row: Math.min(row, canvasSize.rows - prev.rows),
+            col: Math.min(col, canvasSize.cols - prev.cols),
+        }));
+    }, [canvasSize]);
+
+    // Cell operations
+    const clearCell = useCallback((cellId) => {
+        setCells(prev => prev.map(c =>
+            c.id === cellId ? { ...c, instance: null } : c
+        ));
+    }, []);
+
+    const resizeCell = useCallback((cellId, newSpan) => {
+        setCells(prev => prev.map(c =>
+            c.id === cellId ? { ...c, ...newSpan } : c
+        ));
+        setSelectedCell(null);
+    }, []);
+
+    // Drag & drop
+    const handleDragStart = useCallback((dataset) => {
+        setDraggedDataset(dataset);
+    }, []);
+
+    const handleDragEnd = useCallback(() => {
+        setDraggedDataset(null);
+        setDragOverCell(null);
+    }, []);
+
+    const handleDragOver = useCallback((cellId, e) => {
+        e.preventDefault();
+        setDragOverCell(cellId);
+    }, []);
+
+    const handleDrop = useCallback((cell) => {
+        if (draggedDataset && cell && !cell.instance) {
+            setCells(prev => prev.map(c =>
+                c.id === cell.id
+                    ? { ...c, instance: { id: `i-new-${Date.now()}`, name: draggedDataset.name, dataset: `${draggedDataset.name}.dcm`, color: draggedDataset.color } }
+                    : c
+            ));
+        }
+        setDraggedDataset(null);
+        setDragOverCell(null);
+    }, [draggedDataset]);
 
     // Toggle member cursor
     const toggleMemberCursor = useCallback((memberId) => {
@@ -265,14 +626,15 @@ export function LayoutPanelContent({ workspaceId }) {
 
     const WorkspaceIcon = getWorkspaceIcon(CURRENT_WORKSPACE.type);
     const activeMembers = WORKSPACE_MEMBERS.filter(m => m.status === 'active').length;
-    const filledCells = GRID_CELLS.filter(c => c.instance).length;
+    const filledCells = cells.filter(c => c.instance).length;
 
     return (
         <div className="layout-tab">
             {/* Header */}
             <div className="panel-header">
-                <LayoutGrid size={14} className="panel-header__icon file-icon--amber" />
+                <LayoutGrid size={14} className="panel-header__icon file-icon--green" />
                 <span className="panel-header__title">Layout</span>
+                <span className="panel-header__badge">{canvasSize.cols}×{canvasSize.rows} canvas</span>
             </div>
 
             {/* Workspace indicator */}
@@ -298,35 +660,81 @@ export function LayoutPanelContent({ workspaceId }) {
                     )}
                 </div>
 
-                {/* Grid Layout */}
+                {/* Canvas Navigator */}
                 <div className="layout-tab__section">
                     <div
                         className="layout-tab__section-header"
-                        onClick={() => toggleSection('grid')}
+                        onClick={() => toggleSection('canvas')}
                     >
-                        {sectionStates.grid?.expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                        <span>Grid Layout</span>
-                        <span className="layout-tab__section-badge">3�3</span>
+                        {sectionStates.canvas?.expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                        <Navigation size={12} />
+                        <span>Canvas Navigator</span>
                     </div>
-                    {sectionStates.grid?.expanded && (
+                    {sectionStates.canvas?.expanded && (
                         <>
-                            <MiniMap
-                                cells={GRID_CELLS}
-                                selectedCell={selectedCell}
-                                onSelectCell={setSelectedCell}
+                            <CanvasNavigator
+                                canvasSize={canvasSize}
+                                viewport={viewport}
+                                cells={cells}
+                                onCellClick={handleMinimapClick}
+                                onViewportMove={moveViewport}
+                                onCanvasSizeChange={setCanvasSize}
                             />
-                            <div className="layout-tab__grid-actions">
-                                <button className="layout-tab__action-btn" data-color="green">
-                                    <Plus size={10} /> Add Cell
-                                </button>
-                                <button className="layout-tab__action-btn" data-color="blue">
-                                    <Move size={10} /> Resize
-                                </button>
+                            <CanvasSizeControls
+                                canvasSize={canvasSize}
+                                viewport={viewport}
+                                onAddRow={addRow}
+                                onRemoveRow={removeRow}
+                                onAddCol={addCol}
+                                onRemoveCol={removeCol}
+                            />
+                        </>
+                    )}
+                </div>
+
+                {/* Arrange Views */}
+                <div className="layout-tab__section">
+                    <div
+                        className="layout-tab__section-header"
+                        onClick={() => toggleSection('arrange')}
+                    >
+                        {sectionStates.arrange?.expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                        <Move size={12} />
+                        <span>Arrange Views</span>
+                        <button
+                            className={`layout-tab__edit-toggle ${editMode ? 'layout-tab__edit-toggle--active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); setEditMode(!editMode); }}
+                        >
+                            {editMode ? 'Done' : 'Edit'}
+                        </button>
+                    </div>
+                    {sectionStates.arrange?.expanded && (
+                        <>
+                            <div className="layout-tab__arrange-container">
+                                <ArrangementGrid
+                                    cells={cells}
+                                    viewport={viewport}
+                                    canvasSize={canvasSize}
+                                    selectedCell={selectedCell}
+                                    editMode={editMode}
+                                    dragOverCell={dragOverCell}
+                                    onSelectCell={setSelectedCell}
+                                    onClearCell={clearCell}
+                                    onDragOver={handleDragOver}
+                                    onDrop={handleDrop}
+                                />
                             </div>
-                            <CellList
-                                cells={GRID_CELLS}
-                                selectedCell={selectedCell}
-                                onSelectCell={setSelectedCell}
+                            {selectedCell && (
+                                <ResizeControls
+                                    selectedCell={selectedCell}
+                                    cells={cells}
+                                    onResize={resizeCell}
+                                />
+                            )}
+                            <DatasetDragSource
+                                datasets={AVAILABLE_DATASETS}
+                                onDragStart={handleDragStart}
+                                onDragEnd={handleDragEnd}
                             />
                         </>
                     )}
@@ -367,6 +775,7 @@ export function LayoutPanelContent({ workspaceId }) {
                         onClick={() => toggleSection('members')}
                     >
                         {sectionStates.members?.expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                        <Users size={12} />
                         <span>Workspace Members</span>
                         <span className="layout-tab__section-badge">{activeMembers} active</span>
                     </div>
@@ -390,7 +799,7 @@ export function LayoutPanelContent({ workspaceId }) {
                             </div>
                             <button className="advanced-cursors-link">
                                 <MousePointer2 size={10} />
-                                Advanced cursor settings �
+                                Advanced cursor settings →
                             </button>
                         </>
                     )}
