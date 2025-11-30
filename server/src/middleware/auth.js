@@ -3,6 +3,9 @@
 
 const jwt = require("jsonwebtoken");
 const jwksRsa = require("jwks-rsa");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("auth");
 
 // Keycloak configuration
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL || "http://localhost:8080";
@@ -49,7 +52,7 @@ function getKey(header, callback) {
 async function authenticate(req, res, next) {
   // Development bypass
   if (DEV_BYPASS_AUTH) {
-    console.log("🔓 Auth: Dev bypass mode - using mock user");
+    log.debug("Dev bypass mode - using mock user");
     req.user = DEV_USER;
     return next();
   }
@@ -92,7 +95,7 @@ async function authenticate(req, res, next) {
 
     next();
   } catch (error) {
-    console.error("Authentication failed:", error.message);
+    log.error("Authentication failed:", error.message);
     return res.status(401).json({
       error: "Invalid or expired token",
       details:
@@ -150,11 +153,11 @@ function requireRole(role) {
 
 // Log auth mode on startup
 if (DEV_BYPASS_AUTH) {
-  console.log("🔓 Auth: Development bypass mode ENABLED");
+  log.info("Development bypass mode ENABLED");
 } else {
-  console.log("🔐 Auth: Keycloak authentication enabled");
-  console.log(`   Keycloak URL: ${KEYCLOAK_URL}`);
-  console.log(`   Realm: ${KEYCLOAK_REALM}`);
+  log.info("Keycloak authentication enabled");
+  log.debug("Keycloak URL:", KEYCLOAK_URL);
+  log.debug("Realm:", KEYCLOAK_REALM);
 }
 
 module.exports = { authenticate, optionalAuth, requireRole, DEV_BYPASS_AUTH };

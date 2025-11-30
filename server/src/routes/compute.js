@@ -482,7 +482,7 @@ router.delete("/cache/:id", async (req, res, next) => {
       try {
         await minioClient.removeObject(bucketName, cache.result_storage_key);
       } catch (err) {
-        console.warn("Failed to delete cache object from MinIO:", err.message);
+        log.warn("Failed to delete cache object from MinIO:", err.message);
       }
     }
 

@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { workspaceManager } from '@Core/data/managers/WorkspaceManager.js';
 import { WorkspaceType } from '@Core/data/models/Workspace.js';
+import { workspace as log } from '@Utils/logger.js';
 import './WorkspaceSelector.scss';
 
 /**
@@ -112,9 +113,9 @@ export function WorkspaceSelector({ userId, onWorkspaceChange }) {
                             <div className="workspace-selector__section-header">Personal</div>
                             <button
                                 className={`workspace-selector__item ${activeWorkspace?.getEffectiveId() ===
-                                        workspaces.personal.getEffectiveId()
-                                        ? 'active'
-                                        : ''
+                                    workspaces.personal.getEffectiveId()
+                                    ? 'active'
+                                    : ''
                                     }`}
                                 onClick={() => handleSelect(workspaces.personal)}
                             >
@@ -134,8 +135,8 @@ export function WorkspaceSelector({ userId, onWorkspaceChange }) {
                                 <button
                                     key={project.getEffectiveId()}
                                     className={`workspace-selector__item ${activeWorkspace?.getEffectiveId() === project.getEffectiveId()
-                                            ? 'active'
-                                            : ''
+                                        ? 'active'
+                                        : ''
                                         }`}
                                     onClick={() => handleSelect(project)}
                                 >
@@ -206,7 +207,7 @@ function CreateWorkspaceDialog({ userId, onClose, onCreated }) {
             }
             onCreated(workspace);
         } catch (err) {
-            console.error('Failed to create workspace:', err);
+            log.error('Failed to create workspace:', err);
         } finally {
             setIsCreating(false);
         }

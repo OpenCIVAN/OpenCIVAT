@@ -7,6 +7,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { workspaceManager } from '@Core/data/managers/WorkspaceManager.js';
 import { BreakoutTimer, WorkspaceTypeBadge } from '@UI/react/components/workspace';
 import { WorkspaceType } from '@Core/data/models/Workspace.js';
+import { workspace as log } from '@Utils/logger.js';
 import './BreakoutPanel.scss';
 
 /**
@@ -61,7 +62,7 @@ export function BreakoutPanel({ projectId, userId, onJoinBreakout }) {
                 onJoinBreakout(breakout);
             }
         } catch (err) {
-            console.error('Failed to create breakout:', err);
+            log.error('Failed to create breakout:', err);
         } finally {
             setIsCreating(false);
         }
@@ -83,7 +84,7 @@ export function BreakoutPanel({ projectId, userId, onJoinBreakout }) {
         try {
             await workspaceManager.mergeBreakoutToProject(breakoutId);
         } catch (err) {
-            console.error('Failed to merge breakout:', err);
+            log.error('Failed to merge breakout:', err);
         }
     }, []);
 

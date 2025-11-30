@@ -4,6 +4,9 @@
 
 const fs = require("fs");
 const path = require("path");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("files");
 
 /**
  * Magic byte signatures for supported file types
@@ -414,7 +417,7 @@ function fileTypeMiddleware(options = {}) {
       req.fileValidation = validation;
       next();
     } catch (error) {
-      console.error("File validation error:", error);
+      log.error("File validation error:", error);
       return res.status(500).json({
         error: "File validation failed",
         message: "Could not validate file type",

@@ -26,6 +26,7 @@ import {
     List,
     Grid3X3,
 } from 'lucide-react';
+import { ui as log } from '@Utils/logger.js';
 
 // =============================================================================
 // SAMPLE DATA
@@ -273,7 +274,7 @@ export function BookmarksPanelContent({ workspaceId }) {
 
     // Navigate to bookmark
     const navigateToBookmark = useCallback((bookmarkId) => {
-        console.log('Navigate to bookmark:', bookmarkId);
+        log.debug('Navigate to bookmark:', bookmarkId);
         // TODO: Navigate to the bookmarked view
     }, []);
 

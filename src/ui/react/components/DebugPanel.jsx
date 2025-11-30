@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { yDatasets } from "@Collaboration/yjs/yjsSetup.js";
+import { ui as log } from "@Utils/logger.js";
 
 export function DebugPanel() {
     const [debugInfo, setDebugInfo] = useState({
@@ -39,12 +40,9 @@ export function DebugPanel() {
             instances,
         });
 
-        // Console logging
-        console.group("🔍 Debug Panel Update");
-        console.log("Datasets in memory:", datasetsInMemory);
-        console.log("Datasets in Y.js:", datasetsInYjs);
-        console.log("Instances:", instances);
-        console.groupEnd();
+        // Debug logging
+        log.trace("Debug Panel Update - Datasets in memory:", datasetsInMemory,
+            "Y.js:", datasetsInYjs, "Instances:", instances);
     };
 
     useEffect(() => {

@@ -15,6 +15,7 @@ import { useCanvas } from '@UI/react/hooks/';
 import { useSubsets } from '@UI/react/hooks/';
 import { workspaceManager } from '@Core/data/managers/WorkspaceManager.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
+import { workspace as log } from '@Utils/logger.js';
 
 import './CanvasWorkspace.scss';
 
@@ -88,13 +89,13 @@ export function CanvasWorkspace({ userId, projectId }) {
 
     // Handle placement click
     const handlePlacementClick = useCallback((placement) => {
-        console.log('Placement clicked:', placement);
+        log.debug('Placement clicked:', placement);
         // TODO: Open content or navigate
     }, []);
 
     // Handle cell double-click (add content)
     const handleCellDoubleClick = useCallback((row, col) => {
-        console.log('Add content at:', row, col);
+        log.debug('Add content at:', row, col);
         // TODO: Show add content dialog
     }, []);
 

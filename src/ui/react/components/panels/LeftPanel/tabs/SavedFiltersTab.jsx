@@ -30,6 +30,7 @@ import {
     Filter,
     Users,
 } from 'lucide-react';
+import { ui as log } from '@Utils/logger.js';
 
 // =============================================================================
 // FILTER TYPE ICONS
@@ -242,7 +243,7 @@ export function SavedFiltersPanelContent({ workspaceId }) {
 
     // Apply filter
     const applyFilter = useCallback((filterId) => {
-        console.log('Applying filter:', filterId);
+        log.debug('Applying filter:', filterId);
         // TODO: Apply filter to current instance
     }, []);
 

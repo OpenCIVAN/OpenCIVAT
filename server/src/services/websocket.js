@@ -3,6 +3,10 @@
 // Server-authoritative: all state changes are broadcast from server to clients
 
 const WebSocket = require("ws");
+const { createLogger } = require("../utils/logger");
+
+const ws = createLogger("ws");
+const auth = createLogger("auth");
 
 class WebSocketManager {
   constructor() {
@@ -18,40 +22,40 @@ class WebSocketManager {
   initialize(server) {
     this.wss = new WebSocket.Server({ server, path: "/ws" });
 
-    this.wss.on("connection", (ws, req) => {
-      console.log("🔌 WebSocket client connected");
+    this.wss.on("connection", (wsClient, req) => {
+      ws.info("WebSocket client connected");
 
       // Parse token from query string
       const url = new URL(req.url, `http://${req.headers.host}`);
       const token = url.searchParams.get("token");
 
       // Store connection metadata
-      ws.isAlive = true;
-      ws.userId = null;
-      ws.projectId = null;
+      wsClient.isAlive = true;
+      wsClient.userId = null;
+      wsClient.projectId = null;
 
       // Handle pong responses
-      ws.on("pong", () => {
-        ws.isAlive = true;
+      wsClient.on("pong", () => {
+        wsClient.isAlive = true;
       });
 
       // Handle incoming messages
-      ws.on("message", (data) => {
-        this._handleMessage(ws, data);
+      wsClient.on("message", (data) => {
+        this._handleMessage(wsClient, data);
       });
 
       // Handle disconnection
-      ws.on("close", () => {
-        this._handleDisconnect(ws);
+      wsClient.on("close", () => {
+        this._handleDisconnect(wsClient);
       });
 
       // Handle errors
-      ws.on("error", (error) => {
-        console.error("WebSocket error:", error);
+      wsClient.on("error", (error) => {
+        ws.error("WebSocket error:", error);
       });
 
       // Send welcome message
-      this._send(ws, {
+      this._send(wsClient, {
         type: "connected",
         serverTime: new Date().toISOString(),
       });
@@ -59,94 +63,94 @@ class WebSocketManager {
 
     // Heartbeat interval to detect dead connections
     this.heartbeatInterval = setInterval(() => {
-      this.wss.clients.forEach((ws) => {
-        if (!ws.isAlive) {
-          console.log("💔 Terminating dead WebSocket connection");
-          return ws.terminate();
+      this.wss.clients.forEach((client) => {
+        if (!client.isAlive) {
+          ws.warn("Terminating dead WebSocket connection");
+          return client.terminate();
         }
-        ws.isAlive = false;
-        ws.ping();
+        client.isAlive = false;
+        client.ping();
       });
     }, 30000);
 
-    console.log("✅ WebSocket server initialized");
+    ws.info("WebSocket server initialized");
   }
 
   /**
    * Handle incoming WebSocket messages
    */
-  _handleMessage(ws, data) {
+  _handleMessage(socket, data) {
     try {
       const message = JSON.parse(data.toString());
 
       switch (message.type) {
         case "ping":
-          this._send(ws, {
+          this._send(socket, {
             type: "pong",
             serverTime: new Date().toISOString(),
           });
           break;
 
         case "auth":
-          this._handleAuth(ws, message);
+          this._handleAuth(socket, message);
           break;
 
         case "join:project":
-          this._handleJoinProject(ws, message.projectId);
+          this._handleJoinProject(socket, message.projectId);
           break;
 
         case "leave:project":
-          this._handleLeaveProject(ws);
+          this._handleLeaveProject(socket);
           break;
 
         default:
-          console.log("Unknown message type:", message.type);
+          ws.warn("Unknown message type:", message.type);
       }
     } catch (error) {
-      console.error("Failed to parse WebSocket message:", error);
+      ws.error("Failed to parse WebSocket message:", error);
     }
   }
 
   /**
    * Handle authentication
    */
-  _handleAuth(ws, message) {
+  _handleAuth(socket, message) {
     // TODO: Validate JWT token with Keycloak
     // For now, trust the userId in the message
-    ws.userId = message.userId;
+    socket.userId = message.userId;
 
     // Add to clients map
-    if (!this.clients.has(ws.userId)) {
-      this.clients.set(ws.userId, new Set());
+    if (!this.clients.has(socket.userId)) {
+      this.clients.set(socket.userId, new Set());
     }
-    this.clients.get(ws.userId).add(ws);
+    this.clients.get(socket.userId).add(socket);
 
-    this._send(ws, {
+    this._send(socket, {
       type: "auth:success",
-      userId: ws.userId,
+      userId: socket.userId,
     });
 
-    console.log(`👤 User ${ws.userId} authenticated via WebSocket`);
+    auth.info("User authenticated via WebSocket:", socket.userId);
   }
 
   /**
    * Handle joining a project room
    */
-  _handleJoinProject(ws, projectId) {
+  _handleJoinProject(socket, projectId) {
     // Leave previous room if any
-    if (ws.projectId) {
-      this._handleLeaveProject(ws);
+    if (socket.projectId) {
+      this._handleLeaveProject(socket);
     }
 
-    ws.projectId = projectId;
+    socket.projectId = projectId;
 
     // Add to room
     if (!this.rooms.has(projectId)) {
       this.rooms.set(projectId, new Set());
     }
-    this.rooms.get(projectId).add(ws);
+    this.rooms.get(projectId).add(socket);
 
-    console.log(`📁 User ${ws.userId} joined project ${projectId}`);
+    ws.info("User joined project:", socket.userId, projectId);
 
     // Notify room members
     this.broadcastToProject(
@@ -154,14 +158,14 @@ class WebSocketManager {
       {
         type: "member:joined",
         projectId,
-        userId: ws.userId,
+        userId: socket.userId,
         timestamp: new Date().toISOString(),
       },
-      ws
+      socket
     );
 
     // Send confirmation
-    this._send(ws, {
+    this._send(socket, {
       type: "project:joined",
       projectId,
     });
@@ -170,14 +174,14 @@ class WebSocketManager {
   /**
    * Handle leaving a project room
    */
-  _handleLeaveProject(ws) {
-    if (!ws.projectId) return;
+  _handleLeaveProject(socket) {
+    if (!socket.projectId) return;
 
-    const projectId = ws.projectId;
+    const projectId = socket.projectId;
     const room = this.rooms.get(projectId);
 
     if (room) {
-      room.delete(ws);
+      room.delete(socket);
       if (room.size === 0) {
         this.rooms.delete(projectId);
       }
@@ -187,38 +191,38 @@ class WebSocketManager {
     this.broadcastToProject(projectId, {
       type: "member:left",
       projectId,
-      userId: ws.userId,
+      userId: socket.userId,
       timestamp: new Date().toISOString(),
     });
 
-    ws.projectId = null;
-    console.log(`📁 User ${ws.userId} left project ${projectId}`);
+    socket.projectId = null;
+    ws.info("User left project:", socket.userId, projectId);
   }
 
   /**
    * Handle client disconnection
    */
-  _handleDisconnect(ws) {
+  _handleDisconnect(socket) {
     // Leave project room
-    this._handleLeaveProject(ws);
+    this._handleLeaveProject(socket);
 
     // Remove from clients map
-    if (ws.userId && this.clients.has(ws.userId)) {
-      this.clients.get(ws.userId).delete(ws);
-      if (this.clients.get(ws.userId).size === 0) {
-        this.clients.delete(ws.userId);
+    if (socket.userId && this.clients.has(socket.userId)) {
+      this.clients.get(socket.userId).delete(socket);
+      if (this.clients.get(socket.userId).size === 0) {
+        this.clients.delete(socket.userId);
       }
     }
 
-    console.log("🔌 WebSocket client disconnected");
+    ws.info("WebSocket client disconnected");
   }
 
   /**
    * Send message to a single client
    */
-  _send(ws, message) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(message));
+  _send(socket, message) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
     }
   }
 
@@ -281,12 +285,13 @@ class WebSocketManager {
    */
   fileAdded(projectId, file) {
     const room = this.rooms.get(projectId);
-    console.log(
-      `📢 Broadcasting file:added for ${file.filename} to project ${projectId}`
+    ws.debug(
+      "Broadcasting file:added:",
+      file.filename,
+      "to project:",
+      projectId
     );
-    console.log(
-      `   Room exists: ${!!room}, clients in room: ${room ? room.size : 0}`
-    );
+    ws.debug("Room exists:", !!room, "clients in room:", room ? room.size : 0);
 
     this.broadcastToProject(projectId, {
       type: "file:added",

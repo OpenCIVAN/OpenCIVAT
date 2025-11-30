@@ -2,6 +2,9 @@
 // Audit logging service for compliance and tracking
 // Supports configurable audit levels per organization
 
+const { createLogger } = require("../utils/logger");
+const log = createLogger("audit");
+
 /**
  * Audit levels and what they capture
  */
@@ -99,11 +102,11 @@ class AuditLogger {
     // Flush buffer every second
     this.flushInterval = setInterval(() => {
       this.flush().catch((err) => {
-        console.error("Audit flush error:", err);
+        log.error("Audit flush error:", err);
       });
     }, 1000);
 
-    console.log("✅ Audit logger initialized");
+    log.info("Audit logger initialized");
   }
 
   /**
@@ -133,7 +136,7 @@ class AuditLogger {
         return levelConfig;
       }
     } catch (error) {
-      console.error("Failed to fetch org audit config:", error);
+      log.error("Failed to fetch org audit config:", error);
     }
 
     return AUDIT_LEVELS.standard;
@@ -263,7 +266,7 @@ class AuditLogger {
         values
       );
     } catch (error) {
-      console.error("Failed to flush audit logs:", error);
+      log.error("Failed to flush audit logs:", error);
       // Put records back in buffer for retry
       this.buffer.unshift(...records);
     }
@@ -346,7 +349,7 @@ class AuditLogger {
       clearInterval(this.flushInterval);
     }
     await this.flush(); // Final flush
-    console.log("Audit logger shut down");
+    log.info("Audit logger shut down");
   }
 }
 

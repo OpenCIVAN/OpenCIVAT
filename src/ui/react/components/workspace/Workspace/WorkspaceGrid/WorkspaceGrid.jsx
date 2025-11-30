@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { generateGridSlotId } from "@Utils/idGenerator.js";
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 import { InstanceViewport } from "@UI/react/components/workspace/InstanceViewport";
+import { workspace as log } from "@Utils/logger.js";
 
 import './WorkspaceGrid.scss';
 
@@ -24,14 +25,14 @@ export function WorkspaceGrid() {
             const duplicateViewId = event.detail?.duplicateViewId;
 
             if (!datasetId || typeof datasetId !== 'string') {
-                console.error('❌ Invalid dataset ID:', datasetId);
+                log.error('Invalid dataset ID:', datasetId);
                 return;
             }
 
             try {
                 const dataset = datasetManager.getDataset(datasetId);
                 if (!dataset) {
-                    console.error('❌ Dataset not found:', datasetId);
+                    log.error('Dataset not found:', datasetId);
                     return;
                 }
 
@@ -41,7 +42,7 @@ export function WorkspaceGrid() {
                     // Find existing instance with this view
                     const existingInstance = instances.find(inst => inst.viewConfigId === viewConfigId);
                     if (existingInstance) {
-                        console.log(`✨ Highlighting existing instance for view ${viewConfigId}`);
+                        log.debug(`Highlighting existing instance for view ${viewConfigId}`);
                         // Highlight the instance
                         setHighlightedInstanceKey(existingInstance.key);
 
@@ -66,25 +67,25 @@ export function WorkspaceGrid() {
                     // Use existing view
                     viewConfig = viewConfigurationManager.getView(viewConfigId);
                     if (!viewConfig) {
-                        console.error(`❌ View ${viewConfigId} not found`);
+                        log.error(`View ${viewConfigId} not found`);
                         return;
                     }
-                    console.log(`📋 Using existing view ${viewConfigId}`);
+                    log.debug(`Using existing view ${viewConfigId}`);
                 } else if (duplicateViewId) {
                     // Duplicate an existing view (async - server creates it first)
                     const sourceView = viewConfigurationManager.getView(duplicateViewId);
                     if (!sourceView) {
-                        console.error(`❌ Source view ${duplicateViewId} not found for duplication`);
+                        log.error(`Source view ${duplicateViewId} not found for duplication`);
                         return;
                     }
                     viewConfig = await viewConfigurationManager.duplicateView(duplicateViewId);
-                    console.log(`📋 Duplicated view ${duplicateViewId} to ${viewConfig.id}`);
+                    log.debug(`Duplicated view ${duplicateViewId} to ${viewConfig.id}`);
                 } else {
                     // Create new view (async - server creates it first)
                     viewConfig = await viewConfigurationManager.createView(datasetId, {
                         name: `View of ${dataset.filename}`,
                     });
-                    console.log(`📋 Created new view ${viewConfig.id} for dataset ${datasetId}`);
+                    log.debug(`Created new view ${viewConfig.id} for dataset ${datasetId}`);
                 }
                 // Add instance with the view (type will be determined when data loads)
                 setInstances((prev) => [...prev, {
@@ -94,7 +95,7 @@ export function WorkspaceGrid() {
                 }]);
 
             } catch (error) {
-                console.error('❌ Failed to create instance:', error);
+                log.error('Failed to create instance:', error);
             }
         };
 
@@ -112,7 +113,7 @@ export function WorkspaceGrid() {
             const viewConfigId = event.detail?.viewConfigId;
 
             if (!viewConfigId) {
-                console.error('❌ Invalid viewConfigId for deletion');
+                log.error('Invalid viewConfigId for deletion');
                 return;
             }
 
@@ -120,7 +121,7 @@ export function WorkspaceGrid() {
             const instancesToRemove = instances.filter(inst => inst.viewConfigId === viewConfigId);
 
             if (instancesToRemove.length > 0) {
-                console.log(`🗑️ Closing ${instancesToRemove.length} instance(s) for deleted view ${viewConfigId}`);
+                log.debug(`Closing ${instancesToRemove.length} instance(s) for deleted view ${viewConfigId}`);
                 setInstances((prev) => prev.filter((instance) => instance.viewConfigId !== viewConfigId));
             }
         };
@@ -132,11 +133,11 @@ export function WorkspaceGrid() {
     // Create empty instance button handler
     const handleCreateEmptyInstance = useCallback(() => {
         if (instances.length >= 9) {
-            console.log('⚠️ Grid full - max 9 instances');
+            log.warn('Grid full - max 9 instances');
             return;
         }
 
-        console.log('➕ Creating empty instance (no type, no view)');
+        log.debug('Creating empty instance (no type, no view)');
 
         setInstances((prev) => [...prev, {
             key: generateGridSlotId(),
@@ -147,15 +148,15 @@ export function WorkspaceGrid() {
 
     // Delete instance handler
     const handleDeleteInstance = useCallback((instanceKey, viewConfigId) => {
-        console.log(`🗑️ Deleting instance: ${instanceKey}`);
+        log.debug(`Deleting instance: ${instanceKey}`);
 
         // Deactivate the view before removing the instance
         if (viewConfigId) {
             try {
                 viewConfigurationManager.deactivateView(viewConfigId);
-                console.log(`📉 View ${viewConfigId} deactivated (moved to inactive)`);
+                log.debug(`View ${viewConfigId} deactivated (moved to inactive)`);
             } catch (error) {
-                console.error(`Failed to deactivate view ${viewConfigId}:`, error);
+                log.error(`Failed to deactivate view ${viewConfigId}:`, error);
             }
         }
         setInstances((prev) => prev.filter((instance) => instance.key !== instanceKey));

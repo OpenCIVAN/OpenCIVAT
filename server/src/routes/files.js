@@ -12,6 +12,9 @@ const {
   isTypeAllowed,
   getSupportedExtensions,
 } = require("../services/fileTypeValidator");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("files");
 
 // Configure multer for file uploads (memory storage)
 const upload = multer({
@@ -194,8 +197,11 @@ router.post("/", upload.single("file"), async (req, res, next) => {
     }
 
     if (validation.mismatch) {
-      console.warn(
-        `⚠️ File extension mismatch: claimed ${validation.claimedType}, actual ${validation.detectedType}`
+      log.warn(
+        "File extension mismatch: claimed",
+        validation.claimedType,
+        "actual",
+        validation.detectedType
       );
     }
 

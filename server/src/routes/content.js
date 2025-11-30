@@ -5,6 +5,9 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const crypto = require("crypto");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("files");
 
 // Configure multer for image uploads
 const upload = multer({
@@ -460,7 +463,7 @@ router.delete("/images/:id", async (req, res, next) => {
         imageResult.rows[0].storage_key
       );
     } catch (minioError) {
-      console.error("Failed to delete from MinIO:", minioError);
+      log.error("Failed to delete from MinIO:", minioError);
       // Continue with database deletion even if MinIO fails
     }
 

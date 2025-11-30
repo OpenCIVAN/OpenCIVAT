@@ -41,6 +41,7 @@ import {
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { viewConfigurationManager } from '@Init/appInitializer.js';
+import { dataset as log } from '@Utils/logger.js';
 
 // =============================================================================
 // DATASET TYPE UTILITIES (Handler-based)
@@ -88,7 +89,7 @@ function ViewItem({ view, datasetId, isInSharedSection = false }) {
 
         if (e.shiftKey) {
             // Shift+click - spawn new instance for this view
-            console.log(`🔲 Spawning new instance for view ${view.id}`);
+            log.debug(`Spawning new instance for view ${view.id}`);
             window.dispatchEvent(new CustomEvent('cia:request-instance', {
                 detail: {
                     viewId: view.id,
@@ -98,7 +99,7 @@ function ViewItem({ view, datasetId, isInSharedSection = false }) {
             }));
         } else {
             // Normal click - open view (creates instance if none, focuses if exists)
-            console.log(`👁️ Opening view ${view.id}`);
+            log.debug(`Opening view ${view.id}`);
             window.dispatchEvent(new CustomEvent('cia:request-instance', {
                 detail: {
                     viewId: view.id,
@@ -184,7 +185,7 @@ function DatasetItem({ dataset, views, isExpanded, onToggle, isInSharedSection =
     const handleDatasetClick = useCallback((e) => {
         // If no views exist yet, create first view on click
         if (views.length === 0) {
-            console.log(`📊 Creating first view for dataset ${dataset.id}`);
+            log.debug(`Creating first view for dataset ${dataset.id}`);
             window.dispatchEvent(new CustomEvent('cia:request-instance', {
                 detail: {
                     datasetId: dataset.id,
@@ -193,7 +194,7 @@ function DatasetItem({ dataset, views, isExpanded, onToggle, isInSharedSection =
             }));
         } else if (e.shiftKey) {
             // Shift+click on dataset - create new view
-            console.log(`📊 Creating new view for dataset ${dataset.id}`);
+            log.debug(`Creating new view for dataset ${dataset.id}`);
             window.dispatchEvent(new CustomEvent('cia:request-instance', {
                 detail: {
                     datasetId: dataset.id,
@@ -331,7 +332,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                     lastActive: v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : null,
                 }));
         } catch (e) {
-            console.warn('Failed to get views:', e);
+            log.warn('Failed to get views:', e);
             return [];
         }
     }, []);

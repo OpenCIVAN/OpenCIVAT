@@ -4,6 +4,9 @@
 const express = require("express");
 const router = express.Router();
 const { authenticate } = require("../middleware/auth");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("auth");
 
 /**
  * GET /api/auth/me
@@ -19,7 +22,7 @@ router.get("/me", authenticate, async (req, res) => {
       roles: req.user.roles,
     });
   } catch (error) {
-    console.error("Error fetching user:", error);
+    log.error("Error fetching user:", error);
     res.status(500).json({ error: "Failed to fetch user profile" });
   }
 });

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { voiceChat } from "@Collaboration/communication/voiceChat.js";
 import { getUserName } from "@Collaboration/presence/userManagement.js";
 import { toast } from "@UI/react/store/toastStore.js";
+import { presence as log } from "@Utils/logger.js";
 
 export function VoiceChatPanel({ roomName = "default-analytics-room" }) {
   const [isConnected, setIsConnected] = useState(false);
@@ -34,7 +35,7 @@ export function VoiceChatPanel({ roomName = "default-analytics-room" }) {
           e.preventDefault();
           voiceChat.toggleMute();
           setIsMuted(voiceChat.isMuted);
-          console.log("🎤 Mute toggled via keyboard (M)");
+          log.debug("Mute toggled via keyboard (M)");
         }
       }
     };
@@ -53,9 +54,9 @@ export function VoiceChatPanel({ roomName = "default-analytics-room" }) {
         await voiceChat.connect(roomName, userName);
 
         setIsConnected(true);
-        console.log("✅ Voice chat connected");
+        log.info("Voice chat connected");
       } catch (error) {
-        console.error("❌ Failed to join voice chat:", error);
+        log.error("Failed to join voice chat:", error);
         toast.error("Failed to connect to voice chat. Make sure LiveKit and token server are running.");
       } finally {
         setIsConnecting(false);
@@ -64,7 +65,7 @@ export function VoiceChatPanel({ roomName = "default-analytics-room" }) {
       // Disconnect from voice chat
       voiceChat.disconnect();
       setIsConnected(false);
-      console.log("✅ Voice chat disconnected");
+      log.info("Voice chat disconnected");
     }
   };
 

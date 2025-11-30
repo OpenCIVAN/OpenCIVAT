@@ -1,3 +1,6 @@
+const { createLogger } = require("../utils/logger");
+const log = createLogger("files");
+
 // GET /api/datasets - List all datasets
 router.get("/", async (req, res) => {
   try {
@@ -19,7 +22,7 @@ router.get("/", async (req, res) => {
 
     res.json(result.rows);
   } catch (error) {
-    console.error("Error listing datasets:", error);
+    log.error("Error listing datasets:", error);
     res.status(500).json({ error: "Failed to list datasets" });
   }
 });

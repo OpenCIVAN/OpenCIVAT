@@ -41,6 +41,7 @@ import { ServerFileList } from './ServerFileList.jsx';
 import { FileUploadButton } from './FileUploadButton.jsx';
 import { getHandlerForFileType } from '@Core/instances/types/instanceTypesInit.js';
 import { datasetManager, viewConfigurationManager } from '@Init/appInitializer.js';
+import { dataset as log } from '@Utils/logger.js';
 
 import './FilesPanel.scss';
 
@@ -315,9 +316,9 @@ function FilesPanelExpanded({ datasets, onCollapse }) {
         setError(null);
         try {
             await datasetManager.removeDataset(datasetId);
-            console.log(`✅ Dataset ${datasetId} removed`);
+            log.debug(`Dataset ${datasetId} removed`);
         } catch (err) {
-            console.error('Failed to remove dataset:', err);
+            log.error('Failed to remove dataset:', err);
             setError(`Failed to remove dataset: ${err.message}`);
         }
     }, []);
@@ -843,7 +844,7 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
                 metadataString = dataset.fileType.toUpperCase();
             }
         } catch (error) {
-            console.warn('Failed to get handler metadata:', error);
+            log.warn('Failed to get handler metadata:', error);
             metadataString = dataset.fileType ? dataset.fileType.toUpperCase() : 'Unknown';
         }
     }
@@ -905,7 +906,7 @@ function DatasetTreeItem({ dataset, isSelected, expanded, onToggle, onClick, onD
     const handleLinkView = (e, view) => {
         e.stopPropagation();
         // Future: implement view linking
-        console.log('Link view:', view.id);
+        log.debug('Link view:', view.id);
     };
 
     const handleViewClick = (e, view) => {

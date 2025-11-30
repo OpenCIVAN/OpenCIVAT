@@ -6,6 +6,9 @@ const router = express.Router();
 const multer = require("multer");
 const crypto = require("crypto");
 const { Readable } = require("stream");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("files");
 
 // Configure multer for file uploads (memory storage)
 const upload = multer({
@@ -256,7 +259,7 @@ router.post("/:id/files", upload.single("file"), async (req, res, next) => {
     if (existingFile.rows.length > 0) {
       // File exists, reuse it
       fileId = existingFile.rows[0].id;
-      console.log(`♻️  Reusing existing file: ${fileId}`);
+      log.debug("Reusing existing file:", fileId);
     } else {
       // Upload to MinIO
       const { minioClient, bucketName } = req.app.locals;
@@ -275,7 +278,7 @@ router.post("/:id/files", upload.single("file"), async (req, res, next) => {
         }
       );
 
-      console.log(`📤 Uploaded to MinIO: ${storageKey}`);
+      log.info("Uploaded to MinIO:", storageKey);
 
       // Extract file type from extension
       const fileType = file.originalname.split(".").pop().toLowerCase();

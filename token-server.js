@@ -1,6 +1,9 @@
 const express = require("express");
 const { AccessToken } = require("livekit-server-sdk");
 const cors = require("cors");
+const { createLogger } = require("./server/src/utils/logger");
+
+const log = createLogger("server");
 
 const app = express();
 
@@ -25,8 +28,8 @@ app.post("/token", async (req, res) => {
   try {
     const { roomName, userName } = req.body;
 
-    console.log(`🎫 Generating token for ${userName} in room ${roomName}`);
-    console.log(`   Using API Key: ${LIVEKIT_API_KEY}`);
+    log.info("Generating token for user:", userName, "in room:", roomName);
+    log.debug("Using API Key:", LIVEKIT_API_KEY);
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
       identity: userName,
@@ -40,19 +43,18 @@ app.post("/token", async (req, res) => {
     });
 
     const token = await at.toJwt();
-    console.log("🐛 DEBUG: typeof token =", typeof token);
-    console.log("🐛 DEBUG: token value =", token);
-    console.log("🐛 DEBUG: token is string?", typeof token === "string");
+    log.trace("Token typeof:", typeof token);
+    log.trace("Token is string:", typeof token === "string");
 
     if (typeof token === "string") {
-      console.log("✅ Token generated successfully");
+      log.info("Token generated successfully");
       res.json({ token });
     } else {
-      console.error("❌ Token is not a string! Type:", typeof token);
+      log.error("Token is not a string! Type:", typeof token);
       res.status(500).json({ error: "Token generation failed" });
     }
   } catch (error) {
-    console.error("❌ Error generating token:", error);
+    log.error("Error generating token:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -63,7 +65,7 @@ app.get("/health", (req, res) => {
 
 const PORT = 3002;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Token server running on http://localhost:${PORT}`);
-  console.log(`   API Key: ${LIVEKIT_API_KEY}`);
-  console.log(`   API Secret: ${LIVEKIT_API_SECRET ? "[SET]" : "[NOT SET]"}`);
+  log.info("Token server running on port:", PORT);
+  log.debug("API Key:", LIVEKIT_API_KEY);
+  log.debug("API Secret:", LIVEKIT_API_SECRET ? "[SET]" : "[NOT SET]");
 });

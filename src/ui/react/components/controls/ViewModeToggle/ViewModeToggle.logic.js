@@ -3,6 +3,7 @@
 // Handles Desktop/VR mode switching with WebXR detection
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { view as log } from "@Utils/logger.js";
 
 /**
  * View mode constants
@@ -129,13 +130,13 @@ export function useViewModeToggle({
     (newMode) => {
       // Validate mode
       if (!Object.values(VIEW_MODES).includes(newMode)) {
-        console.warn(`Invalid view mode: ${newMode}`);
+        log.warn(`Invalid view mode: ${newMode}`);
         return;
       }
 
       // Don't allow VR if unavailable
       if (newMode === VIEW_MODES.VR && !vrAvailable) {
-        console.warn("Cannot enter VR mode: VR not available");
+        log.warn("Cannot enter VR mode: VR not available");
         return;
       }
 

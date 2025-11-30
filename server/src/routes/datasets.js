@@ -6,6 +6,9 @@ const { pool } = require("../index");
 const { v4: uuidv4 } = require("uuid");
 const fs = require("fs").promises;
 const path = require("path");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("files");
 
 // Configure multer for file uploads
 const upload = multer({
@@ -24,12 +27,12 @@ const UPLOAD_DIR = path.join(__dirname, "../../uploads");
  * @returns {string} - The lowercase file extension without the dot
  */
 function extractFileType(filename) {
-  if (!filename || typeof filename !== 'string') {
-    return 'unknown';
+  if (!filename || typeof filename !== "string") {
+    return "unknown";
   }
-  const parts = filename.split('.');
+  const parts = filename.split(".");
   if (parts.length < 2) {
-    return 'unknown';
+    return "unknown";
   }
   return parts[parts.length - 1].toLowerCase();
 }
@@ -48,8 +51,11 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
     const crypto = require("crypto");
     const hash = crypto.createHash("sha256").update(buffer).digest("hex");
 
-    console.log(
-      `📁 Received upload: ${originalname} (hash: ${hash.substring(0, 16)}...)`
+    log.info(
+      "Received upload:",
+      originalname,
+      "(hash:",
+      hash.substring(0, 16) + "...)"
     );
 
     // Use the fixed session ID for development
@@ -64,7 +70,7 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
 
     if (existingDataset.rows.length > 0) {
       const existing = existingDataset.rows[0];
-      console.log(`✓ File already exists: ${existing.id} (deduplicating)`);
+      log.debug("File already exists (deduplicating):", existing.id);
 
       // Return the existing dataset instead of creating a new one
       return res.status(200).json({
@@ -112,11 +118,11 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
       ]
     );
 
-    console.log("✅ Dataset uploaded:", datasetId, originalname);
+    log.info("Dataset uploaded:", datasetId, originalname);
 
     res.status(201).json({ dataset: result.rows[0] });
   } catch (error) {
-    console.error("Upload error:", error);
+    log.error("Upload error:", error);
     next(error);
   }
 });

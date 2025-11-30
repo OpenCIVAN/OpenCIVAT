@@ -328,10 +328,114 @@ class VRManager {
 
 ---
 
+## Server-Side Logging
+
+The server uses a similar structured logger located at `server/src/utils/logger.js`.
+
+### Quick Start (Server)
+
+```javascript
+// Import and create a category-specific logger
+const { createLogger } = require("../utils/logger");
+const log = createLogger("files");
+
+// Use the same log levels as client
+log.info("File uploaded:", filename);
+log.debug("Processing file:", fileId);
+log.warn("File extension mismatch:", claimed, actual);
+log.error("Upload failed:", error);
+```
+
+### Server Categories
+
+| Category  | Use For                  | Default |
+| --------- | ------------------------ | ------- |
+| `server`  | Server startup, shutdown | ON      |
+| `db`      | Database operations      | ON      |
+| `auth`    | Authentication, JWT      | ON      |
+| `ws`      | WebSocket events         | ON      |
+| `http`    | HTTP request logging     | off     |
+| `files`   | File upload/download     | ON      |
+| `compute` | Computation jobs         | ON      |
+| `audit`   | Audit logging internals  | off     |
+| `sync`    | Y.js persistence         | off     |
+| `cache`   | Cache operations         | off     |
+
+### Environment Variable Control
+
+```bash
+# Set log level (error, warn, info, debug, trace)
+LOG_LEVEL=debug npm start
+
+# Enable only specific categories
+LOG_CATEGORIES=ws,files npm start
+
+# Disable noisy categories (prefix with -)
+LOG_CATEGORIES=-http,-sync npm start
+```
+
+### Server Logger Usage by File
+
+| File/Directory                             | Logger Category |
+| ------------------------------------------ | --------------- |
+| `server.js` (Yjs relay)                    | `ws`, `server`  |
+| `server/src/routes/files.js`               | `files`         |
+| `server/src/routes/datasets.js`            | `files`         |
+| `server/src/routes/projects.js`            | `files`         |
+| `server/src/routes/content.js`             | `files`         |
+| `server/src/routes/auth.js`                | `auth`          |
+| `server/src/routes/compute.js`             | `compute`       |
+| `server/src/middleware/auth.js`            | `auth`          |
+| `server/src/services/websocket.js`         | `ws`, `auth`    |
+| `server/src/services/audit.js`             | `audit`         |
+| `server/src/services/fileTypeValidator.js` | `files`         |
+| `token-server.js`                          | `server`        |
+
+### Server Migration Example
+
+```javascript
+// Before
+console.log(`📁 File uploaded: ${filename}`);
+console.error("Upload failed:", error);
+
+// After
+const { createLogger } = require("../utils/logger");
+const log = createLogger("files");
+
+log.info("File uploaded:", filename);
+log.error("Upload failed:", error);
+```
+
+### Production vs Development
+
+The server logger automatically adjusts behavior based on `NODE_ENV`:
+
+- **Development**: Colorized ANSI output, default level `debug`
+- **Production**: Plain text prefixes, default level `info`
+
+```javascript
+// Development output (colorized):
+[DEBUG] [files] Processing upload: report.csv
+
+// Production output (plain):
+[DEBUG] [files] Processing upload: report.csv
+```
+
+---
+
 ## Summary
+
+### Client
 
 1. **Import** the appropriate category aliased as `log`
 2. **Choose** the correct log level for each message
 3. **Remove** emojis and include context
 4. **Use** `trace` for high-frequency events
 5. **Control** logging at runtime via `window.log`
+
+### Server
+
+1. **Import** with `const { createLogger } = require("../utils/logger")`
+2. **Create** logger with appropriate category: `const log = createLogger("files")`
+3. **Use** same log levels: `error`, `warn`, `info`, `debug`, `trace`
+4. **Control** via environment variables: `LOG_LEVEL`, `LOG_CATEGORIES`
