@@ -13,6 +13,14 @@ import { SavedFiltersPanelContent } from './tabs/SavedFiltersTab';
 import { BookmarksPanelContent } from './tabs/BookmarksTab';
 import './LeftPanel.scss';
 
+// Import mock data for Storybook stories
+import {
+    MOCK_FILES_UI,
+    MOCK_FOLDERS_TREE,
+    MOCK_STARRED_IDS,
+    MOCK_DATASETS_WITH_VIEWS,
+} from '@UI/react/__mocks__';
+
 export default {
     title: 'Panels/LeftPanel',
     component: LeftPanel,
@@ -73,12 +81,77 @@ const TabDecorator = (Story) => (
 );
 
 export const FilesTab = {
-    render: () => <FilesPanelContent workspaceId="ws-1" />,
+    render: () => (
+        <FilesPanelContent
+            workspaceId="ws-1"
+            mockFiles={MOCK_FILES_UI}
+            mockFolders={MOCK_FOLDERS_TREE}
+            mockStarredIds={MOCK_STARRED_IDS}
+            mockIsLoading={false}
+            mockError={null}
+        />
+    ),
     decorators: [TabDecorator],
     parameters: {
         docs: {
             description: {
                 story: 'Files tab showing project files with starred, recent, and all files sections. Supports list and grid view modes.',
+            },
+        },
+    },
+};
+
+export const FilesTabLoading = {
+    render: () => (
+        <FilesPanelContent
+            workspaceId="ws-1"
+            mockFiles={[]}
+            mockIsLoading={true}
+        />
+    ),
+    decorators: [TabDecorator],
+    parameters: {
+        docs: {
+            description: {
+                story: 'Files tab in loading state.',
+            },
+        },
+    },
+};
+
+export const FilesTabEmpty = {
+    render: () => (
+        <FilesPanelContent
+            workspaceId="ws-1"
+            mockFiles={[]}
+            mockFolders={[]}
+            mockIsLoading={false}
+        />
+    ),
+    decorators: [TabDecorator],
+    parameters: {
+        docs: {
+            description: {
+                story: 'Files tab with no files uploaded.',
+            },
+        },
+    },
+};
+
+export const FilesTabError = {
+    render: () => (
+        <FilesPanelContent
+            workspaceId="ws-1"
+            mockFiles={[]}
+            mockIsLoading={false}
+            mockError="Failed to connect to server"
+        />
+    ),
+    decorators: [TabDecorator],
+    parameters: {
+        docs: {
+            description: {
+                story: 'Files tab showing an error state.',
             },
         },
     },

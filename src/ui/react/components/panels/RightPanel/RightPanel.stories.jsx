@@ -13,7 +13,7 @@ import { ActivityPanelContent } from './tabs/ActivityTab';
 import {
     VOICE_MOCK,
     ACTIVITY_MOCK,
-} from '@UI/react/__mocks__/mockData';
+} from '@UI/react/__mocks__';
 import './RightPanel.scss';
 
 export default {

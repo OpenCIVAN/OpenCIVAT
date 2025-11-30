@@ -214,7 +214,15 @@ function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onConte
 // MAIN FILES TAB CONTENT
 // =============================================================================
 
-export function FilesPanelContent({ workspaceId }) {
+export function FilesPanelContent({
+    workspaceId,
+    // Optional mock data injection (for Storybook)
+    mockFiles = null,
+    mockFolders = null,
+    mockStarredIds = null,
+    mockIsLoading = null,
+    mockError = null,
+}) {
     // View state
     const [viewMode, setViewMode] = useState('list');
     const [searchQuery, setSearchQuery] = useState('');
@@ -236,8 +244,13 @@ export function FilesPanelContent({ workspaceId }) {
     const [contextMenu, setContextMenu] = useState(null);
     const [isDragOver, setIsDragOver] = useState(false);
 
-    // Fetch files from server
-    const { files: serverFiles, isLoading, error, refetch, uploadFile } = useProjectFiles();
+    // Fetch files from server (hook call)
+    const { files: hookFiles, isLoading: hookLoading, error: hookError, refetch, uploadFile } = useProjectFiles();
+
+    // Use mock data if provided, otherwise use hook data
+    const serverFiles = mockFiles ?? hookFiles;
+    const isLoading = mockIsLoading ?? hookLoading;
+    const error = mockError ?? hookError;
 
     // Transform server files to UI format
     const files = useMemo(() => {
@@ -247,14 +260,14 @@ export function FilesPanelContent({ workspaceId }) {
             id: file.id,
             name: file.name || file.filename,
             fileType: file.fileType,  // Pass through server-provided type
-            size: formatFileSize(file.size),
-            starred: false,
-            loaded: false,
-            thumbnail: canVisualize(file.fileType),
+            size: typeof file.size === 'string' ? file.size : formatFileSize(file.size),
+            starred: mockStarredIds ? mockStarredIds.has(file.id) : (file.starred ?? false),
+            loaded: file.loaded ?? false,
+            thumbnail: file.thumbnail ?? canVisualize(file.fileType),
             date: file.uploadedAt,
             isFolder: false,
         }));
-    }, [serverFiles]);
+    }, [serverFiles, mockStarredIds]);
 
     const starredFiles = useMemo(() => {
         return files.filter(f => f.starred);
