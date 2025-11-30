@@ -1,0 +1,117 @@
+@use "theme" as *;
+
+// =============================================================================
+// ACTIVITY STATS (Session Summary)
+// =============================================================================
+
+.activity-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: $spacing-sm $spacing-xs;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: $color-border-default;
+    }
+  }
+
+  &__value {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.2;
+  }
+
+  &__label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+}
+
+// =============================================================================
+// ACTIVITY FEED
+// =============================================================================
+
+.activity-feed {
+  padding: $spacing-sm;
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-2xl;
+    text-align: center;
+    color: $color-text-tertiary;
+
+    svg {
+      opacity: 0.4;
+    }
+
+    span {
+      font-size: $font-size-sm;
+    }
+  }
+}
+
+// =============================================================================
+// ACTIVITY FILTER
+// =============================================================================
+
+.activity-filter {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px $spacing-sm;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-light;
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.3);
+      color: $color-accent-blue;
+    }
+  }
+}
+
+// =============================================================================
+// ACTIVITY PANEL CONTAINER
+// =============================================================================
+
+.activity-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}

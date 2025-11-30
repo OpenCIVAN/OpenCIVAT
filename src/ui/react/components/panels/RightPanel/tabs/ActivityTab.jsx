@@ -20,6 +20,7 @@ import {
     Circle,
 } from 'lucide-react';
 import { ResizableSections } from '@UI/react/components/common/ResizableSections';
+import './ActivityTab.scss';
 
 // Default empty data (components receive real data via props)
 const DEFAULT_ACTIVITIES = [];
