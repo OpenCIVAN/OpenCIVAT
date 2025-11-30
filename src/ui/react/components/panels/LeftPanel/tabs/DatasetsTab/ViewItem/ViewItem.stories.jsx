@@ -22,18 +22,28 @@ export default {
     ],
 };
 
-// Sample view data
+// Sample view data (v3 design)
 const sampleView = {
     id: '1',
     name: 'Sales Data 2024',
     color: '#60a5fa',
-    isWorkspace: true,
-    isPreset: false,
+    starredWorkspace: false,
+    starredPersonal: false,
+    hasSavedState: false,
     isShared: false,
-    isPersonal: false,
     isLocked: false,
     position: { row: 0, col: 1 },
     size: { rows: 1, cols: 1 },
+};
+
+// Sample link properties with status format
+const sampleLinkProperties = {
+    camera: { status: 'active' },
+    filters: { status: 'active' },
+    widgets: { status: null },
+    cursors: { status: 'active' },
+    colorMaps: { status: 'active' },
+    annotationDisplay: { status: null },
 };
 
 // Basic view
@@ -55,49 +65,44 @@ export const Active = {
     },
 };
 
-// With linked views
-export const WithLinkedViews = {
+// Saved to Workspace (purple folder icon)
+export const StarredWorkspace = {
     args: {
         view: {
             ...sampleView,
-            name: 'Revenue Analysis',
+            name: 'Project Dashboard',
+            starredWorkspace: true,
+            color: '#c084fc',
         },
-        linkedCount: 3,
         isActive: true,
     },
 };
 
-// With filters
-export const WithFilters = {
+// Saved to Personal (gold globe icon)
+export const StarredPersonal = {
     args: {
         view: {
             ...sampleView,
-            name: 'Filtered View',
-            color: '#a78bfa',
+            name: 'My Global View',
+            starredPersonal: true,
+            color: '#fbbf24',
         },
-        filterCount: 5,
     },
 };
 
-// Multiple status badges
-export const WithAllBadges = {
+// Has Saved State (amber save icon)
+export const HasSavedState = {
     args: {
         view: {
             ...sampleView,
-            name: 'Complex View',
-            isWorkspace: true,
-            isPreset: true,
-            isShared: true,
-            isLocked: true,
-            color: '#fb7185',
+            name: 'View with Preset',
+            hasSavedState: true,
+            color: '#fbbf24',
         },
-        linkedCount: 2,
-        filterCount: 3,
-        isActive: true,
     },
 };
 
-// Shared view
+// Shared with collaborators (pink users icon)
 export const SharedView = {
     args: {
         view: {
@@ -109,16 +114,65 @@ export const SharedView = {
     },
 };
 
-// Personal view
-export const PersonalView = {
+// With linked views (teal link icon)
+export const WithLinkedViews = {
     args: {
         view: {
             ...sampleView,
-            name: 'My Analysis',
-            isPersonal: true,
-            isWorkspace: false,
+            name: 'Revenue Analysis',
+        },
+        linkedCount: 3,
+        isActive: true,
+        linkProperties: sampleLinkProperties,
+        linkTarget: { id: '2', name: 'Parent View' },
+    },
+};
+
+// With linked parent
+export const WithLinkedParent = {
+    args: {
+        view: {
+            ...sampleView,
+            name: 'Spawned View',
             color: '#7dd3fc',
         },
+        linkedParent: { id: '0', name: 'Master View' },
+        linkTarget: { id: '0', name: 'Master View' },
+        linkProperties: sampleLinkProperties,
+        linkedCount: 4,
+        isActive: true,
+    },
+};
+
+// With filters (purple filter icon)
+export const WithFilters = {
+    args: {
+        view: {
+            ...sampleView,
+            name: 'Filtered View',
+            color: '#a78bfa',
+        },
+        filterCount: 5,
+    },
+};
+
+// Multiple status badges (v3 design)
+export const WithAllBadges = {
+    args: {
+        view: {
+            ...sampleView,
+            name: 'Complex View',
+            starredWorkspace: true,
+            hasSavedState: true,
+            isShared: true,
+            isLocked: true,
+            color: '#fb7185',
+        },
+        linkedCount: 2,
+        filterCount: 3,
+        isActive: true,
+        linkProperties: sampleLinkProperties,
+        linkTarget: { id: '2', name: 'Other View' },
     },
 };
 
@@ -146,14 +200,60 @@ export const LargeView = {
     },
 };
 
+// Link properties disabled (no link target)
+export const LinkPropertiesDisabled = {
+    args: {
+        view: {
+            ...sampleView,
+            name: 'Unlinked View',
+            color: '#7dd3fc',
+        },
+        linkTarget: null, // No link target = disabled link row
+        linkProperties: {},
+        isActive: true,
+    },
+};
+
+// With broken link
+export const WithBrokenLink = {
+    args: {
+        view: {
+            ...sampleView,
+            name: 'View with Issues',
+            color: '#fbbf24',
+        },
+        linkTarget: { id: '2', name: 'Deleted View' },
+        linkProperties: {
+            camera: { status: 'active' },
+            filters: { status: 'broken' },
+            widgets: { status: 'active' },
+            cursors: { status: null },
+            colorMaps: { status: 'broken' },
+            annotationDisplay: { status: null },
+        },
+        linkedCount: 2,
+        isActive: true,
+    },
+};
+
 // Interactive with hover
 export const Interactive = () => {
     const [views, setViews] = useState([
-        { ...sampleView, id: '1', name: 'Sales 2024', color: '#60a5fa' },
-        { ...sampleView, id: '2', name: 'Revenue', color: '#34d399', position: { row: 0, col: 2 } },
+        { ...sampleView, id: '1', name: 'Sales 2024', color: '#60a5fa', starredWorkspace: true },
+        { ...sampleView, id: '2', name: 'Revenue', color: '#34d399', hasSavedState: true, position: { row: 0, col: 2 } },
         { ...sampleView, id: '3', name: 'Customers', color: '#fb7185', isShared: true, position: { row: 1, col: 0 } },
     ]);
     const [activeId, setActiveId] = useState('1');
+
+    const linkTarget = { id: '0', name: 'Master' };
+    const linkProps = {
+        camera: { status: 'active' },
+        filters: { status: 'active' },
+        widgets: { status: null },
+        cursors: { status: 'active' },
+        colorMaps: { status: 'active' },
+        annotationDisplay: { status: null },
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -162,25 +262,37 @@ export const Interactive = () => {
                     key={view.id}
                     view={view}
                     isActive={view.id === activeId}
+                    linkedCount={4}
+                    linkTarget={linkTarget}
+                    linkProperties={linkProps}
                     onSelect={setActiveId}
                     onClose={(id) => setViews(views.filter(v => v.id !== id))}
                     onRename={(id, name) => {
                         setViews(views.map(v => v.id === id ? { ...v, name } : v));
                     }}
                     onNavigate={(pos) => console.log('Navigate to:', pos)}
-                    onSaveView={(id) => console.log('Save view:', id)}
-                    onShareView={(id) => console.log('Share view:', id)}
-                    onSpawnLink={(id) => console.log('Spawn link:', id)}
+                    onStarWorkspace={(id) => {
+                        console.log('Star workspace:', id);
+                        setViews(views.map(v => v.id === id ? { ...v, starredWorkspace: !v.starredWorkspace } : v));
+                    }}
+                    onStarPersonal={(id) => {
+                        console.log('Star personal:', id);
+                        setViews(views.map(v => v.id === id ? { ...v, starredPersonal: !v.starredPersonal } : v));
+                    }}
+                    onSaveState={(id) => {
+                        console.log('Save state:', id);
+                        setViews(views.map(v => v.id === id ? { ...v, hasSavedState: true } : v));
+                    }}
+                    onLoadState={(id) => console.log('Load state:', id)}
+                    onShareView={(id) => {
+                        console.log('Share view:', id);
+                        setViews(views.map(v => v.id === id ? { ...v, isShared: !v.isShared } : v));
+                    }}
+                    onSpawn={(id) => console.log('Spawn:', id)}
+                    onConfigureLinks={(id) => console.log('Configure links:', id)}
+                    onToggleAllLinks={(id, linked) => console.log('Toggle all links:', id, linked)}
                     onSizeChange={(id, size) => console.log('Size change:', id, size)}
                     onLinkPropertyChange={(id, prop, value) => console.log('Link property:', id, prop, value)}
-                    linkProperties={{
-                        camera: true,
-                        filters: true,
-                        widgets: false,
-                        cursors: true,
-                        colors: true,
-                        annotations: false,
-                    }}
                 />
             ))}
             <div style={{
@@ -188,13 +300,17 @@ export const Interactive = () => {
                 padding: '12px',
                 background: '#0f0f0f',
                 borderRadius: '6px',
-                fontSize: '12px',
-                color: 'rgba(255,255,255,0.5)'
+                fontSize: '11px',
+                color: 'rgba(255,255,255,0.5)',
+                lineHeight: 1.6,
             }}>
-                <p>• Hover to see sliding panel</p>
+                <p><strong>v3 Design Features:</strong></p>
+                <p>• Hover to see glassmorphism sliding panel</p>
+                <p>• Tooltip area shows action descriptions on hover</p>
+                <p>• Button groups: Workspace/Personal, Save/Load, Share, Spawn/Link</p>
+                <p>• Link properties with Toggle All button</p>
                 <p>• Double-click name to edit</p>
-                <p>• Click position badge to navigate</p>
-                <p>• Drag handle to reorder</p>
+                <p>• Actions are logged to console</p>
             </div>
         </div>
     );
@@ -213,38 +329,70 @@ Interactive.decorators = [
     ),
 ];
 
-// Hovering state demo
+// Hovering state demo - shows glassmorphism panel
 export const HoverStateDemo = () => {
+    const linkProps = {
+        camera: { status: 'active' },
+        filters: { status: 'active' },
+        widgets: { status: null },
+        cursors: { status: 'active' },
+        colorMaps: { status: null },
+        annotationDisplay: { status: null },
+    };
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '50px' }}>
             <div>
                 <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>
-                    Normal state
+                    Normal state (no link target - link row disabled)
                 </p>
                 <ViewItem
                     view={sampleView}
                     isActive={false}
+                    linkTarget={null}
                 />
             </div>
             <div>
                 <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>
-                    Hover over the item below to see the sliding panel
+                    Hover to see the glassmorphism sliding panel with enabled links
                 </p>
                 <ViewItem
                     view={{
                         ...sampleView,
                         name: 'Hoverable View',
                         color: '#34d399',
+                        starredWorkspace: true,
+                        hasSavedState: true,
                     }}
                     isActive={true}
-                    linkProperties={{
-                        camera: true,
-                        filters: true,
-                        widgets: false,
-                        cursors: true,
-                        colors: true,
-                        annotations: false,
+                    linkedCount={4}
+                    linkTarget={{ id: '2', name: 'Parent View' }}
+                    linkProperties={linkProps}
+                    onStarWorkspace={() => console.log('Star workspace')}
+                    onStarPersonal={() => console.log('Star personal')}
+                    onSaveState={() => console.log('Save state')}
+                    onLoadState={() => console.log('Load state')}
+                    onShareView={() => console.log('Share')}
+                    onSpawn={() => console.log('Spawn')}
+                    onConfigureLinks={() => console.log('Configure links')}
+                    onToggleAllLinks={(linked) => console.log('Toggle all:', linked)}
+                />
+            </div>
+            <div>
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>
+                    With linked parent row visible
+                </p>
+                <ViewItem
+                    view={{
+                        ...sampleView,
+                        name: 'Child View',
+                        color: '#7dd3fc',
                     }}
+                    isActive={true}
+                    linkedParent={{ id: '0', name: 'Master Dashboard' }}
+                    linkTarget={{ id: '0', name: 'Master Dashboard' }}
+                    linkProperties={linkProps}
+                    linkedCount={4}
                 />
             </div>
         </div>
@@ -254,7 +402,131 @@ export const HoverStateDemo = () => {
 HoverStateDemo.decorators = [
     (Story) => (
         <div style={{
+            width: '320px',
+            background: '#1a1a1a',
+            borderRadius: '8px',
+            padding: '16px'
+        }}>
+            <Story />
+        </div>
+    ),
+];
+
+// Status icons showcase
+export const StatusIconsShowcase = () => {
+    const views = [
+        { ...sampleView, id: '1', name: 'Workspace View', starredWorkspace: true, color: '#c084fc' },
+        { ...sampleView, id: '2', name: 'Personal View', starredPersonal: true, color: '#fbbf24' },
+        { ...sampleView, id: '3', name: 'Has Preset', hasSavedState: true, color: '#fbbf24' },
+        { ...sampleView, id: '4', name: 'Shared View', isShared: true, color: '#fb7185' },
+        { ...sampleView, id: '5', name: 'Locked View', isLocked: true, color: '#fbbf24' },
+    ];
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
+                v3 Status Icons with updated colors
+            </p>
+            {views.map((view) => (
+                <ViewItem
+                    key={view.id}
+                    view={view}
+                    isActive={view.id === '1'}
+                />
+            ))}
+            <ViewItem
+                view={{ ...sampleView, id: '6', name: 'Linked View', color: '#7dd3fc' }}
+                linkedCount={3}
+            />
+            <ViewItem
+                view={{ ...sampleView, id: '7', name: 'Filtered View', color: '#c084fc' }}
+                filterCount={5}
+            />
+        </div>
+    );
+};
+
+StatusIconsShowcase.decorators = [
+    (Story) => (
+        <div style={{
             width: '300px',
+            background: '#1a1a1a',
+            borderRadius: '8px',
+            padding: '12px'
+        }}>
+            <Story />
+        </div>
+    ),
+];
+
+// Link Properties Demo
+export const LinkPropertiesDemo = () => {
+    const [linkProps, setLinkProps] = useState({
+        camera: { status: 'active' },
+        filters: { status: 'active' },
+        widgets: { status: null },
+        cursors: { status: 'active' },
+        colorMaps: { status: null },
+        annotationDisplay: { status: null },
+    });
+
+    const handleLinkChange = (id, prop, value) => {
+        setLinkProps(prev => ({
+            ...prev,
+            [prop]: { status: value ? 'active' : null }
+        }));
+    };
+
+    const handleToggleAll = (id, linked) => {
+        const newStatus = linked ? 'active' : null;
+        setLinkProps({
+            camera: { status: newStatus },
+            filters: { status: newStatus },
+            widgets: { status: newStatus },
+            cursors: { status: newStatus },
+            colorMaps: { status: newStatus },
+            annotationDisplay: { status: newStatus },
+        });
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
+                Hover over view and interact with link toggles. Try the Toggle All button!
+            </p>
+            <ViewItem
+                view={{
+                    ...sampleView,
+                    name: 'Interactive Links',
+                    color: '#7dd3fc',
+                }}
+                isActive={true}
+                linkedCount={Object.values(linkProps).filter(l => l?.status === 'active').length}
+                linkTarget={{ id: '0', name: 'Master View' }}
+                linkProperties={linkProps}
+                onLinkPropertyChange={handleLinkChange}
+                onToggleAllLinks={handleToggleAll}
+            />
+            <div style={{
+                padding: '12px',
+                background: '#0f0f0f',
+                borderRadius: '6px',
+                fontSize: '10px',
+                color: 'rgba(255,255,255,0.4)',
+            }}>
+                <p>Current link states:</p>
+                {Object.entries(linkProps).map(([key, value]) => (
+                    <p key={key}>• {key}: {value?.status || 'unlinked'}</p>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+LinkPropertiesDemo.decorators = [
+    (Story) => (
+        <div style={{
+            width: '320px',
             background: '#1a1a1a',
             borderRadius: '8px',
             padding: '16px'

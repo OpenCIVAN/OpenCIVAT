@@ -5,22 +5,22 @@
   display: flex;
   flex-direction: column;
   background: transparent;
-  border-radius: $radius-md;
+  border-radius: 0 $radius-md $radius-md 0;
   transition: all $transition-fast;
   overflow: visible;
+
+  // Left color border - continuous with sliding panel
+  border-left: 3px solid transparent;
 
   &:hover,
   &--hovered {
     background: $color-glass-subtle;
+    border-left-color: var(--view-color, $color-accent-blue);
   }
 
   &--active {
     background: rgba(var(--view-color-rgb, 96, 165, 250), 0.08);
-
-    .view-item__status-dot--active {
-      background: var(--view-color, $color-accent-green);
-      box-shadow: 0 0 6px var(--view-color, $color-accent-green);
-    }
+    border-left-color: var(--view-color, $color-accent-blue);
   }
 
   &--selected {
@@ -69,7 +69,7 @@
     }
   }
 
-  // Status dot
+  // Status dot - uses view color when active
   &__status-dot {
     width: 8px;
     height: 8px;
@@ -79,8 +79,9 @@
     transition: all $transition-fast;
 
     &--active {
-      background: $color-accent-green;
-      border-color: $color-accent-green;
+      background: var(--view-color, $color-accent-blue);
+      border-color: var(--view-color, $color-accent-blue);
+      box-shadow: 0 0 6px var(--view-color, $color-accent-blue);
     }
   }
 
@@ -131,6 +132,7 @@
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
+    max-width: 80px; // Limit width to prevent overflow
   }
 
   &__status-icon {
@@ -154,6 +156,9 @@
     &[data-color="amber"] {
       color: $color-accent-amber;
     }
+    &[data-color="gold"] {
+      color: $color-accent-amber;
+    }
     &[data-color="teal"] {
       color: $color-accent-teal;
     }
@@ -172,6 +177,25 @@
   &__status-count {
     font-size: 9px;
     font-weight: $font-weight-medium;
+  }
+
+  // Overflow indicator for truncated badges
+  &__status-overflow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    font-size: 9px;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    background: $color-glass-subtle;
+    border-radius: $radius-xs;
+    cursor: help;
+
+    &:hover {
+      background: $color-glass-light;
+      color: $color-text-tertiary;
+    }
   }
 
   // Grid position

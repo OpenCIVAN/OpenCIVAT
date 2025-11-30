@@ -3,31 +3,25 @@
 .sliding-panel {
   position: absolute;
   top: 100%;
-  left: 0;
+  left: -3px; // Align with ViewItem's 3px left border
   right: 0;
   display: flex;
   flex-direction: column;
-  gap: $spacing-xs;
-  padding: $spacing-sm;
-  background: rgba($color-bg-secondary, 0.85);
-  backdrop-filter: $blur-medium;
-  border: 1px solid $color-border-default;
-  border-top: none;
-  border-radius: 0 0 $radius-md $radius-md;
-  box-shadow: $shadow-lg;
+  gap: 4px;
+  padding: 6px 8px;
   z-index: $z-dropdown;
 
-  // Colored accent border on left
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--view-color, $color-accent-blue);
-    border-radius: 0 0 0 $radius-md;
-  }
+  // Left border continuous with ViewItem
+  border-left: 3px solid var(--view-color);
+
+  // Glassmorphism
+  background: rgba(18, 18, 24, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0 0 6px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 
   // Animation
   animation: slide-panel-in 0.15s ease-out;
@@ -43,65 +37,375 @@
     }
   }
 
-  // Tooltip row
+  // Row 0: Tooltip Area - compact
   &__tooltip {
-    min-height: 18px;
-    font-size: 10px;
-    color: $color-text-muted;
-    padding-left: $spacing-xs;
-    transition: color $transition-fast;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
   }
 
-  // Actions row
+  &__tooltip-label {
+    font-size: 9px;
+    color: $color-text-secondary;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__tooltip-desc {
+    font-size: 9px;
+    color: $color-text-tertiary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__tooltip-hint {
+    font-size: 9px;
+    color: $color-text-muted;
+    font-style: italic;
+  }
+
+  // Row 1: Actions row - compact
   &__actions {
     display: flex;
     align-items: center;
-    gap: $spacing-xs;
-    padding-left: $spacing-xs;
+    gap: 2px;
+    flex-wrap: nowrap;
   }
 
-  // Linked parent info
-  &__linked-parent {
+  &__spacer {
+    flex: 1;
+    min-width: 4px;
+  }
+
+  // Icon button styling - smaller
+  &__icon-btn {
     display: flex;
     align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs;
-    padding-left: calc($spacing-xs + $spacing-sm);
-    background: $color-glass-subtle;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: $color-text-tertiary;
     border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+    flex-shrink: 0;
+
+    &:hover {
+      background: $color-glass-light;
+      color: $color-text-secondary;
+    }
+
+    &:active {
+      background: $color-glass-medium;
+      transform: scale(0.95);
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.15);
+      color: $color-accent-blue;
+
+      &[data-active-color="purple"] {
+        background: rgba($color-accent-purple, 0.15);
+        color: $color-accent-purple;
+      }
+
+      &[data-active-color="gold"],
+      &[data-active-color="amber"] {
+        background: rgba($color-accent-amber, 0.15);
+        color: $color-accent-amber;
+      }
+
+      &[data-active-color="pink"] {
+        background: rgba($color-accent-pink, 0.15);
+        color: $color-accent-pink;
+      }
+
+      &[data-active-color="teal"] {
+        background: rgba($color-accent-teal, 0.15);
+        color: $color-accent-teal;
+      }
+
+      &[data-active-color="green"] {
+        background: rgba($color-accent-green, 0.15);
+        color: $color-accent-green;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   }
 
-  &__linked-label {
+  // Compact Size Picker
+  &__size-picker {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &__size-btn {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 6px;
+    border: none;
+    background: $color-glass-subtle;
+    color: $color-text-tertiary;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+    font-size: 9px;
+    font-family: $font-family-mono;
+
+    &:hover {
+      background: $color-glass-light;
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.15);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__size-label {
+    font-size: 9px;
+  }
+
+  &__size-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: $color-bg-elevated;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    box-shadow: $shadow-lg;
+    z-index: 10;
+    min-width: 120px;
+  }
+
+  &__size-presets {
+    display: flex;
+    gap: 2px;
+  }
+
+  &__size-option {
+    padding: 4px 8px;
+    border: none;
+    background: transparent;
+    color: $color-text-tertiary;
+    font-size: 9px;
+    font-family: $font-family-mono;
+    border-radius: $radius-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+    white-space: nowrap;
+
+    &:hover {
+      background: $color-glass-light;
+      color: $color-text-secondary;
+    }
+
+    &--selected {
+      background: rgba($color-accent-blue, 0.15);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__size-custom-toggle {
+    padding: 4px 8px;
+    border: none;
+    background: transparent;
+    color: $color-text-tertiary;
+    font-size: 9px;
+    cursor: pointer;
+    transition: all $transition-fast;
+    text-align: left;
+    border-top: 1px solid $color-border-subtle;
+    margin-top: 2px;
+    padding-top: 6px;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      color: $color-accent-blue;
+    }
+  }
+
+  &__size-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 4px;
+  }
+
+  &__size-custom-inputs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__size-input {
+    width: 36px;
+    padding: 4px;
+    background: $color-bg-primary;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    font-size: 10px;
+    font-family: $font-family-mono;
+    color: $color-text-primary;
+    text-align: center;
+    outline: none;
+
+    &:focus {
+      border-color: $color-accent-blue;
+      box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+    }
+
+    // Hide number input spinners
+    -moz-appearance: textfield;
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  &__size-x {
     font-size: 10px;
     color: $color-text-muted;
   }
 
-  &__linked-name {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    font-weight: $font-weight-medium;
+  &__size-apply {
+    padding: 4px 8px;
+    background: rgba($color-accent-blue, 0.15);
+    border: 1px solid rgba($color-accent-blue, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-blue;
+    font-size: 9px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.25);
+    }
   }
 
-  // Link properties
-  &__link-properties {
+  // Row 2: Linked parent info - compact
+  &__linked-parent {
     display: flex;
-    flex-direction: column;
-    gap: $spacing-xs;
-    padding-left: $spacing-xs;
-    padding-top: $spacing-xs;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+
+    svg {
+      color: $color-accent-teal;
+      flex-shrink: 0;
+    }
+  }
+
+  &__linked-parent-label {
+    font-size: 9px;
+    color: $color-text-tertiary;
+  }
+
+  &__linked-parent-name {
+    font-size: 9px;
+    color: $color-accent-teal;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Row 3: Link properties row - compact
+  &__link-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding-top: 4px;
     border-top: 1px solid $color-border-subtle;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &--disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
   }
 
   &__link-label {
-    font-size: 9px;
+    font-size: 8px;
     color: $color-text-muted;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
   }
 
-  &__toggles {
+  // Toggle All button - compact
+  &__toggle-all {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid transparent;
+    background: $color-glass-subtle;
+    color: $color-text-muted;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+    flex-shrink: 0;
+
+    &:hover {
+      background: $color-glass-light;
+      border-color: $color-border-default;
+      color: $color-text-tertiary;
+    }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.1);
+      border-color: rgba($color-accent-teal, 0.3);
+      color: $color-accent-teal;
+
+      &:hover {
+        background: rgba($color-accent-teal, 0.2);
+        border-color: rgba($color-accent-teal, 0.4);
+      }
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &__link-divider {
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
   }
 }

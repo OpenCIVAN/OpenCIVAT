@@ -18,7 +18,7 @@
  * - Link property toggles
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react';
+import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
     GripVertical,
     X,
@@ -29,24 +29,20 @@ import {
     Link2,
     Lock,
     Filter,
-    Camera,
-    Palette,
-    MessageSquare,
-    MousePointer,
-    Layers,
+    MoreHorizontal,
 } from 'lucide-react';
 import { SlidingPanel } from './components/SlidingPanel';
 import './ViewItem.scss';
 
-// Status icon configuration
+// Status icon configuration (v3 design)
 const STATUS_ICONS = {
-    workspace: { icon: Folder, color: 'blue', tooltip: 'In workspace' },
-    personal: { icon: Globe, color: 'teal', tooltip: 'Personal view' },
-    preset: { icon: Save, color: 'green', tooltip: 'Saved preset' },
-    shared: { icon: Users, color: 'pink', tooltip: 'Shared with team' },
-    linked: { icon: Link2, color: 'purple', tooltip: 'Linked views' },
+    starredWorkspace: { icon: Folder, color: 'purple', tooltip: 'Saved to Workspace' },
+    starredPersonal: { icon: Globe, color: 'gold', tooltip: 'Saved to Personal' },
+    hasSavedState: { icon: Save, color: 'amber', tooltip: 'Has saved state preset' },
+    shared: { icon: Users, color: 'pink', tooltip: 'Shared with collaborators' },
+    linked: { icon: Link2, color: 'teal', tooltip: 'Linked properties' },
     locked: { icon: Lock, color: 'amber', tooltip: 'Locked' },
-    filtered: { icon: Filter, color: 'indigo', tooltip: 'Has filters' },
+    filtered: { icon: Filter, color: 'purple', tooltip: 'Active filters' },
 };
 
 export const ViewItem = memo(function ViewItem({
@@ -57,15 +53,22 @@ export const ViewItem = memo(function ViewItem({
     linkedCount = 0,
     filterCount = 0,
     linkProperties = {},
+    linkedParent = null, // { id, name } - parent view if spawned from another
+    linkTarget = null, // { id, name } - current link target
     onSelect,
     onClose,
     onRename,
     onDragStart,
     onDragEnd,
     onNavigate,
-    onSaveView,
+    onStarWorkspace,
+    onStarPersonal,
+    onSaveState,
+    onLoadState,
     onShareView,
-    onSpawnLink,
+    onSpawn, // Creates independent linked copy
+    onConfigureLinks,
+    onToggleAllLinks,
     onSizeChange,
     onLinkPropertyChange,
     className = '',
@@ -109,26 +112,35 @@ export const ViewItem = memo(function ViewItem({
         }
     }, [isEditing]);
 
-    // Show panel with delay on hover
+    // Show panel with delay on hover (hide when editing or dragging)
     useEffect(() => {
         let timeout;
-        if (isHovered && !isEditing) {
+        if (isHovered && !isEditing && !isDragging) {
             timeout = setTimeout(() => setShowPanel(true), 200);
         } else {
             setShowPanel(false);
         }
         return () => clearTimeout(timeout);
-    }, [isHovered, isEditing]);
+    }, [isHovered, isEditing, isDragging]);
 
-    // Build status badges
-    const statusBadges = [];
-    if (view.isWorkspace) statusBadges.push({ key: 'workspace', ...STATUS_ICONS.workspace });
-    if (view.isPersonal) statusBadges.push({ key: 'personal', ...STATUS_ICONS.personal });
-    if (view.isPreset) statusBadges.push({ key: 'preset', ...STATUS_ICONS.preset });
-    if (view.isShared) statusBadges.push({ key: 'shared', ...STATUS_ICONS.shared });
-    if (linkedCount > 0) statusBadges.push({ key: 'linked', ...STATUS_ICONS.linked, count: linkedCount });
-    if (view.isLocked) statusBadges.push({ key: 'locked', ...STATUS_ICONS.locked });
-    if (filterCount > 0) statusBadges.push({ key: 'filtered', ...STATUS_ICONS.filtered, count: filterCount });
+    // Build status badges (v3 design) - max 3 visible, rest shown as overflow
+    const MAX_VISIBLE_BADGES = 3;
+
+    const allBadges = useMemo(() => {
+        const badges = [];
+        if (view.starredWorkspace) badges.push({ key: 'starredWorkspace', ...STATUS_ICONS.starredWorkspace });
+        if (view.starredPersonal) badges.push({ key: 'starredPersonal', ...STATUS_ICONS.starredPersonal });
+        if (view.hasSavedState) badges.push({ key: 'hasSavedState', ...STATUS_ICONS.hasSavedState });
+        if (view.isShared) badges.push({ key: 'shared', ...STATUS_ICONS.shared });
+        if (linkedCount > 0) badges.push({ key: 'linked', ...STATUS_ICONS.linked, count: linkedCount });
+        if (view.isLocked) badges.push({ key: 'locked', ...STATUS_ICONS.locked });
+        if (filterCount > 0) badges.push({ key: 'filtered', ...STATUS_ICONS.filtered, count: filterCount });
+        return badges;
+    }, [view.starredWorkspace, view.starredPersonal, view.hasSavedState, view.isShared, view.isLocked, linkedCount, filterCount]);
+
+    const visibleBadges = allBadges.slice(0, MAX_VISIBLE_BADGES);
+    const overflowCount = allBadges.length - MAX_VISIBLE_BADGES;
+    const overflowBadges = allBadges.slice(MAX_VISIBLE_BADGES);
 
     const classNames = [
         'view-item',
@@ -192,9 +204,9 @@ export const ViewItem = memo(function ViewItem({
                     )}
                 </div>
 
-                {/* Status Icons */}
+                {/* Status Icons - truncated with overflow indicator */}
                 <div className="view-item__status-icons">
-                    {statusBadges.map(({ key, icon: Icon, color, count, tooltip }) => (
+                    {visibleBadges.map(({ key, icon: Icon, color, count, tooltip }) => (
                         <span
                             key={key}
                             className="view-item__status-icon"
@@ -205,6 +217,14 @@ export const ViewItem = memo(function ViewItem({
                             {count && <span className="view-item__status-count">{count}</span>}
                         </span>
                     ))}
+                    {overflowCount > 0 && (
+                        <span
+                            className="view-item__status-overflow"
+                            title={overflowBadges.map(b => b.tooltip).join(', ')}
+                        >
+                            +{overflowCount}
+                        </span>
+                    )}
                 </div>
 
                 {/* Grid Position */}
@@ -235,9 +255,17 @@ export const ViewItem = memo(function ViewItem({
                 isVisible={showPanel}
                 view={view}
                 linkProperties={linkProperties}
-                onSaveView={() => onSaveView?.(view.id)}
+                linkedParent={linkedParent}
+                linkTarget={linkTarget}
+                linkedCount={linkedCount}
+                onStarWorkspace={() => onStarWorkspace?.(view.id)}
+                onStarPersonal={() => onStarPersonal?.(view.id)}
+                onSaveState={() => onSaveState?.(view.id)}
+                onLoadState={() => onLoadState?.(view.id)}
                 onShareView={() => onShareView?.(view.id)}
-                onSpawnLink={() => onSpawnLink?.(view.id)}
+                onSpawn={() => onSpawn?.(view.id)}
+                onConfigureLinks={() => onConfigureLinks?.(view.id)}
+                onToggleAllLinks={(linked) => onToggleAllLinks?.(view.id, linked)}
                 onSizeChange={(size) => onSizeChange?.(view.id, size)}
                 onLinkPropertyChange={(prop, value) => onLinkPropertyChange?.(view.id, prop, value)}
             />

@@ -1,47 +1,34 @@
 /**
- * LinkPropertyToggle Component
+ * LinkPropertyToggle Component (v3 Design)
  *
- * Toggle button for link properties (Camera, Filters, Widgets, etc.)
+ * Compact toggle button for link properties (Camera, Filters, Widgets, etc.)
+ * Icon only - label shown in tooltip. Supports disabled and broken states.
  */
 
 import { memo } from 'react';
-import {
-    Camera,
-    Filter,
-    Layers,
-    MousePointer,
-    Palette,
-    MessageSquare,
-} from 'lucide-react';
 import './LinkPropertyToggle.scss';
-
-// Icon mapping
-const ICONS = {
-    Camera,
-    Filter,
-    Layers,
-    MousePointer,
-    Palette,
-    MessageSquare,
-};
 
 export const LinkPropertyToggle = memo(function LinkPropertyToggle({
     property,
-    isActive = true,
-    onChange,
+    link,
+    onToggle,
     onHover,
+    disabled = false,
 }) {
-    const Icon = ICONS[property.icon] || Layers;
+    const Icon = property.icon;
+    const isLinked = link?.status === 'active';
+    const isBroken = link?.status === 'broken';
 
     return (
         <button
-            className={`link-property-toggle ${isActive ? 'link-property-toggle--active' : ''}`}
-            onClick={() => onChange?.(!isActive)}
-            onMouseEnter={() => onHover?.(`${property.label}: ${isActive ? 'Linked' : 'Unlinked'}`)}
+            className={`link-property-toggle ${isLinked ? 'link-property-toggle--active' : ''} ${isBroken ? 'link-property-toggle--broken' : ''}`}
+            onClick={() => !disabled && onToggle?.(property.id)}
+            onMouseEnter={() => onHover?.(property, link)}
             onMouseLeave={() => onHover?.(null)}
-            title={`${property.label}: ${isActive ? 'Linked' : 'Unlinked'}`}
+            disabled={disabled}
+            title={property.label}
         >
-            <Icon size={12} />
+            <Icon size={10} />
         </button>
     );
 });

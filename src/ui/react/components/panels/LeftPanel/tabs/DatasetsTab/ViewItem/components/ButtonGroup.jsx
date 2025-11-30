@@ -1,13 +1,15 @@
 /**
- * ButtonGroup Component
+ * ButtonGroup Component (v3 Design)
  *
  * Group of icon buttons with optional divider.
+ * Supports both children pattern and buttons array for backwards compatibility.
  */
 
 import { memo } from 'react';
 import './ButtonGroup.scss';
 
 export const ButtonGroup = memo(function ButtonGroup({
+    children,
     buttons = [],
     onHover,
     showDivider = false,
@@ -15,7 +17,7 @@ export const ButtonGroup = memo(function ButtonGroup({
     return (
         <>
             <div className="button-group">
-                {buttons.map((button) => {
+                {children || buttons.map((button) => {
                     const Icon = button.icon;
                     return (
                         <button

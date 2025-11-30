@@ -1,176 +1,236 @@
 @use "theme" as *;
 
-.size-picker {
+.sliding-panel {
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
+  gap: $spacing-xs;
   padding: $spacing-sm;
-  background: $color-bg-secondary;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-md;
-  box-shadow: $shadow-lg;
-  z-index: $z-popover;
-  min-width: 160px;
+  z-index: $z-dropdown;
+
+  // Align border with parent
+  margin-left: 0;
+  border-left: 3px solid var(--view-color);
+
+  // Glassmorphism
+  background: rgba(18, 18, 24, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 
   // Animation
-  animation: size-picker-in 0.15s ease-out;
+  animation: slide-panel-in 0.15s ease-out;
 
-  @keyframes size-picker-in {
+  @keyframes slide-panel-in {
     from {
       opacity: 0;
-      transform: translateX(-50%) translateY(-4px);
+      transform: translateY(-4px);
     }
     to {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
+      transform: translateY(0);
     }
   }
 
-  // Presets grid
-  &__presets {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: $spacing-xs;
+  // Row 0: Tooltip Area
+  &__tooltip {
+    height: 20px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: $spacing-xs;
   }
 
-  &__preset {
+  &__tooltip-label {
+    font-size: 10px;
+    color: $color-text-secondary;
+    font-weight: 500;
+  }
+
+  &__tooltip-desc {
+    font-size: 9px;
+    color: $color-text-tertiary;
+  }
+
+  &__tooltip-hint {
+    font-size: 9px;
+    color: $color-text-tertiary;
+    font-style: italic;
+  }
+
+  // Row 1: Actions row
+  &__actions {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: $spacing-xs;
-    border: 1px solid transparent;
-    background: $color-glass-subtle;
+    gap: $spacing-xs;
+    padding-left: $spacing-xs;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  // Icon button styling
+  &__icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: $color-text-tertiary;
     border-radius: $radius-sm;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
       background: $color-glass-light;
-      border-color: $color-border-default;
-    }
-
-    &--selected {
-      background: rgba($color-accent-blue, 0.15);
-      border-color: rgba($color-accent-blue, 0.4);
-    }
-  }
-
-  &__preset-grid {
-    display: grid;
-    grid-template-columns: repeat(var(--cols, 1), 8px);
-    grid-template-rows: repeat(var(--rows, 1), 8px);
-    gap: 2px;
-  }
-
-  &__preset-cell {
-    background: $color-text-muted;
-    border-radius: 1px;
-    opacity: 0.5;
-
-    .size-picker__preset--selected & {
-      background: $color-accent-blue;
-      opacity: 1;
-    }
-  }
-
-  &__preset-label {
-    font-size: 10px;
-    color: $color-text-tertiary;
-    font-family: $font-family-mono;
-
-    .size-picker__preset--selected & {
-      color: $color-accent-blue;
-    }
-  }
-
-  // Custom toggle
-  &__custom-toggle {
-    padding: $spacing-xs $spacing-sm;
-    border: none;
-    background: transparent;
-    color: $color-text-tertiary;
-    font-size: $font-size-xs;
-    cursor: pointer;
-    transition: all $transition-fast;
-    text-align: left;
-
-    &:hover {
       color: $color-text-secondary;
     }
 
+    &:active {
+      background: $color-glass-medium;
+      transform: scale(0.95);
+    }
+
     &--active {
+      background: rgba($color-accent-blue, 0.15);
       color: $color-accent-blue;
-    }
-  }
 
-  // Custom inputs
-  &__custom {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-xs;
-    padding-top: $spacing-xs;
-    border-top: 1px solid $color-border-subtle;
-  }
+      &[data-active-color="purple"] {
+        background: rgba($color-accent-purple, 0.15);
+        color: $color-accent-purple;
+      }
 
-  &__custom-inputs {
-    display: flex;
-    align-items: flex-end;
-    gap: $spacing-xs;
-  }
+      &[data-active-color="gold"],
+      &[data-active-color="amber"] {
+        background: rgba($color-accent-amber, 0.15);
+        color: $color-accent-amber;
+      }
 
-  &__custom-field {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+      &[data-active-color="pink"] {
+        background: rgba($color-accent-pink, 0.15);
+        color: $color-accent-pink;
+      }
 
-    span {
-      font-size: 9px;
-      color: $color-text-muted;
-    }
+      &[data-active-color="teal"] {
+        background: rgba($color-accent-teal, 0.15);
+        color: $color-accent-teal;
+      }
 
-    input {
-      width: 48px;
-      padding: $spacing-xs;
-      background: $color-bg-primary;
-      border: 1px solid $color-border-default;
-      border-radius: $radius-sm;
-      font-size: $font-size-sm;
-      font-family: $font-family-mono;
-      color: $color-text-primary;
-      text-align: center;
-      outline: none;
-
-      &:focus {
-        border-color: $color-accent-blue;
-        box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+      &[data-active-color="green"] {
+        background: rgba($color-accent-green, 0.15);
+        color: $color-accent-green;
       }
     }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   }
 
-  &__custom-x {
-    font-size: $font-size-sm;
+  // Row 2: Linked parent info
+  &__linked-parent {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+
+    svg {
+      color: $color-accent-teal;
+    }
+  }
+
+  &__linked-parent-label {
+    font-size: 9px;
+    color: $color-text-tertiary;
+  }
+
+  &__linked-parent-name {
+    font-size: 9px;
+    color: $color-accent-teal;
+    font-weight: 500;
+  }
+
+  // Row 3: Link properties row
+  &__link-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: $spacing-xs;
+    padding-top: $spacing-xs;
+    border-top: 1px solid $color-border-subtle;
+
+    &--disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+  }
+
+  &__link-label {
+    font-size: 9px;
     color: $color-text-muted;
-    padding-bottom: $spacing-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
   }
 
-  &__apply {
-    padding: $spacing-xs $spacing-sm;
-    background: rgba($color-accent-blue, 0.15);
-    border: 1px solid rgba($color-accent-blue, 0.3);
+  // Toggle All button
+  &__toggle-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid transparent;
+    background: $color-glass-subtle;
+    color: $color-text-muted;
     border-radius: $radius-sm;
-    color: $color-accent-blue;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
     cursor: pointer;
     transition: all $transition-fast;
+    flex-shrink: 0;
 
     &:hover {
-      background: rgba($color-accent-blue, 0.25);
+      background: $color-glass-light;
+      border-color: $color-border-default;
+      color: $color-text-tertiary;
     }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.1);
+      border-color: rgba($color-accent-teal, 0.3);
+      color: $color-accent-teal;
+
+      &:hover {
+        background: rgba($color-accent-teal, 0.2);
+        border-color: rgba($color-accent-teal, 0.4);
+      }
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &__link-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 0 2px;
+    flex-shrink: 0;
   }
 }
