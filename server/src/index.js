@@ -125,6 +125,9 @@ const workspacesRouter = require("./routes/workspaces");
 const subsetsRouter = require("./routes/subsets");
 const contentRouter = require("./routes/content");
 
+const folderRoutes = require("./routes/folders");
+const starRoutes = require("./routes/stars");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
@@ -139,6 +142,9 @@ app.use("/api/content", optionalAuth, contentRouter);
 app.use("/api/placements", optionalAuth, canvasesRouter);
 
 // Note: /api/files/:id/download is now handled by filesRouter
+
+app.use("/api/projects", optionalAuth, folderRoutes);
+app.use("/api/projects", optionalAuth, starRoutes);
 
 // ============================================================================
 // HEALTH & STATUS ENDPOINTS

@@ -145,11 +145,10 @@ router.get("/:id/files", async (req, res, next) => {
     const userId = getUserId(req);
     const { pool } = req.app.locals;
 
-    // Verify user has access to project
     const projectCheck = await pool.query(
       `SELECT 1 FROM projects p
-             LEFT JOIN project_members pm ON p.id = pm.project_id
-             WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)`,
+       LEFT JOIN project_members pm ON p.id = pm.project_id
+       WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)`,
       [id, userId]
     );
 
@@ -157,20 +156,53 @@ router.get("/:id/files", async (req, res, next) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    // Get files for this project
     const result = await pool.query(
-      `SELECT d.*, fpa.access_level, fpa.added_at
-             FROM datasets d
-             JOIN file_project_access fpa ON d.id = fpa.file_id
-             WHERE fpa.project_id = $1 AND d.status = 'active'
-             ORDER BY fpa.added_at DESC`,
+      `SELECT d.*, 
+              fpa.access_level, fpa.added_at, fpa.folder_id,
+              COALESCE(get_folder_path(fpa.folder_id), '/') as folder_path,
+              f.name as folder_name
+       FROM datasets d
+       JOIN file_project_access fpa ON d.id = fpa.file_id
+       LEFT JOIN folders f ON fpa.folder_id = f.id
+       WHERE fpa.project_id = $1 AND d.status = 'active'
+       ORDER BY fpa.added_at DESC`,
       [id]
     );
 
-    res.json({
-      files: result.rows,
-      count: result.rows.length,
-    });
+    res.json({ files: result.rows, count: result.rows.length });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/:id/files/:fileId", async (req, res, next) => {
+  try {
+    const { id: projectId, fileId } = req.params;
+    const { folderId } = req.body;
+    const userId = getUserId(req);
+    const { pool } = req.app.locals;
+
+    if (folderId) {
+      const folderCheck = await pool.query(
+        "SELECT id FROM folders WHERE id = $1 AND project_id = $2",
+        [folderId, projectId]
+      );
+      if (folderCheck.rows.length === 0) {
+        return res.status(400).json({ error: "Folder not found" });
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE file_project_access SET folder_id = $1
+       WHERE file_id = $2 AND project_id = $3 RETURNING *`,
+      [folderId || null, fileId, projectId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "File not found in project" });
+    }
+
+    res.json({ success: true, folderId: folderId || null });
   } catch (error) {
     next(error);
   }
