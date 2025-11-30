@@ -10,7 +10,6 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 // Import UI components
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
 import { LeftPanel } from '@UI/react/components/panels/LeftPanel';
-import { FilesPanel } from "@UI/react/components/panels/FilesPanel";
 import { WorkspaceGrid } from "@UI/react/components/workspace/Workspace/WorkspaceGrid";
 import { CanvasWorkspace } from "@UI/react/components/workspace/";
 import { TopBar } from "@UI/react/components/layout/TopBar";

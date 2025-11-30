@@ -3,7 +3,7 @@
 //
 // v2.0 ARCHITECTURE: Y.js for PRESENCE ONLY
 // ============================================================================
-// In v2.0, Y.js is used ONLY for ephemeral presence data:
+// Y.js is used ONLY for ephemeral presence data:
 // - Cursor positions
 // - VR avatars and controller poses
 // - Active users in views
@@ -39,39 +39,26 @@ export const awareness = new Awareness(ydoc);
 // These are the only Y.js maps that should be actively used
 // ============================================================================
 
-// ---------------------------------------------------------------------------
-// CURSOR PRESENCE
-// ---------------------------------------------------------------------------
+// Cursor presence: userId -> { position, color, name, viewId, lastUpdate }
 export const yCursors = ydoc.getMap("cursors");
-// Structure: userId -> { position, color, name, viewId, lastUpdate }
-// High-frequency updates for real-time cursor tracking
 
-// ---------------------------------------------------------------------------
-// VIEW PRESENCE
-// ---------------------------------------------------------------------------
+// View presence: viewId -> { viewers: [userId, ...], lastUpdate }
 export const yViewPresence = ydoc.getMap("viewPresence");
-// Structure: viewId -> { viewers: [userId, ...], lastUpdate }
-// Tracks who is viewing which view configuration
 
-// ---------------------------------------------------------------------------
-// VR COLLABORATION
-// ---------------------------------------------------------------------------
+// VR avatars: userId -> { position, rotation, headPose, handPoses, ... }
 export const yAvatars = ydoc.getMap("avatars");
-// Structure: userId -> { position, rotation, headPose, handPoses, ... }
-export const yVRControllers = ydoc.getMap("vrControllers");
-// Structure: `${userId}_${hand}` -> { position, rotation, buttons, ... }
 
-// ---------------------------------------------------------------------------
-// TEXT CHAT (Legacy - will migrate to Matrix-CRDT)
-// ---------------------------------------------------------------------------
-export const yText = ydoc.getArray("chatMessages");
-// Structure: Array of { userId, message, timestamp }
+// VR controllers: `${userId}_${hand}` -> { position, rotation, buttons, ... }
+export const yVRControllers = ydoc.getMap("vrControllers");
+
+// Text chat: Array of { userId, message, timestamp }
 // NOTE: Planning migration to Matrix-CRDT for federation and E2EE
+export const yText = ydoc.getArray("chatMessages");
 
 // ============================================================================
-// DEPRECATED STATE MAPS (v2.0)
-// These are kept for backward compatibility but NO LONGER ACTIVELY SYNCED
-// Server is now the source of truth for all persistent state
+// LEGACY STATE MAPS (Deprecated but kept for cleanup utilities)
+// These are NOT actively synced - server is source of truth
+// Kept for: sessionCleanup.js, dataCleanup.js, DebugPanel.jsx
 // ============================================================================
 
 // @deprecated v2.0 - Use server API: GET/POST /api/files
@@ -127,7 +114,7 @@ export function initializeYjsProvider() {
     if (synced) {
       log.info("Y.js synchronized with server");
 
-      // Initialize observers when sync is complete
+      // Initialize presence observers when sync is complete
       import("@Collaboration/yjs/yjsObservers.js").then(
         ({ initializeAllObservers }) => {
           initializeAllObservers();
@@ -160,7 +147,6 @@ export const provider = new Proxy(
 
 // ============================================================================
 // PRESENCE SYNC FUNCTIONS (Active in v2.0)
-// These are the only sync functions that should be actively used
 // ============================================================================
 
 /**
@@ -238,130 +224,6 @@ export function removeUserPresenceFromYjs(userId) {
   yVRControllers.delete(`${userId}_left`);
   yVRControllers.delete(`${userId}_right`);
   log.info(`User presence removed from Y.js: ${userId}`);
-}
-
-// ============================================================================
-// DEPRECATED SYNC FUNCTIONS (v2.0)
-// These are kept for backward compatibility but should NOT be used
-// State should be synced via server API + WebSocket broadcast
-// ============================================================================
-
-/**
- * @deprecated v2.0 - Use server API: POST /api/files
- * Dataset state should come from server, not Y.js
- */
-export function syncDatasetToYjs(datasetId, metadata) {
-  log.warn(
-    "DEPRECATED v2.0: syncDatasetToYjs() - Use server API instead. " +
-      "This function is kept for backward compatibility only."
-  );
-  try {
-    yDatasets.set(datasetId, {
-      id: metadata.id || datasetId,
-      name: metadata.name,
-      hash: metadata.hash,
-      publicPath: metadata.publicPath,
-      userId: metadata.uploadedBy,
-      metadata: {
-        fileSize: metadata.sizeBytes,
-        uploadedAt: metadata.uploadedAt,
-        uploadedBy: metadata.uploadedBy,
-      },
-    });
-  } catch (error) {
-    log.error("Failed to sync dataset to Y.js:", error);
-  }
-}
-
-/**
- * @deprecated v2.0 - Use server API: POST /api/views
- */
-export function syncViewToYjs(viewId, viewConfig) {
-  log.warn("DEPRECATED v2.0: syncViewToYjs() - Use server API instead.");
-  try {
-    yViews.set(viewId, viewConfig);
-  } catch (error) {
-    log.error("Failed to sync view to Y.js:", error);
-  }
-}
-
-/**
- * @deprecated v2.0 - Use server API: POST /api/annotations
- */
-export function syncAnnotationsToYjs(datasetId, annotations) {
-  log.warn(
-    "DEPRECATED v2.0: syncAnnotationsToYjs() - Use server API instead."
-  );
-  try {
-    yAnnotations.set(datasetId, annotations);
-  } catch (error) {
-    log.error("Failed to sync annotations to Y.js:", error);
-  }
-}
-
-/**
- * @deprecated v2.0 - Use server API for workspace layouts
- */
-export function syncWorkspaceLayoutToYjs(layoutId, layout) {
-  log.warn(
-    "DEPRECATED v2.0: syncWorkspaceLayoutToYjs() - Use server API instead."
-  );
-  try {
-    yWorkspaceLayouts.set(layoutId, layout);
-  } catch (error) {
-    log.error("Failed to sync workspace layout to Y.js:", error);
-  }
-}
-
-/**
- * @deprecated v2.0 - Use server API: DELETE /api/files/:id
- */
-export function removeDatasetFromYjs(datasetId) {
-  log.warn(
-    "DEPRECATED v2.0: removeDatasetFromYjs() - Use server API instead."
-  );
-  yDatasets.delete(datasetId);
-  yAnnotations.delete(datasetId);
-}
-
-/**
- * @deprecated v2.0 - Use server API: DELETE /api/views/:id
- */
-export function removeViewFromYjs(viewId) {
-  log.warn(
-    "DEPRECATED v2.0: removeViewFromYjs() - Use server API instead."
-  );
-  yViews.delete(viewId);
-  yViewPresence.delete(viewId);
-}
-
-/**
- * @deprecated v2.0 - Use server API
- */
-export function removeWorkspaceLayoutFromYjs(layoutId) {
-  log.warn(
-    "DEPRECATED v2.0: removeWorkspaceLayoutFromYjs() - Use server API instead."
-  );
-  yWorkspaceLayouts.delete(layoutId);
-}
-
-/**
- * @deprecated - Instances are ephemeral and should not sync
- */
-export function syncInstanceToYjs(instanceId, instance) {
-  log.warn(
-    "DEPRECATED: syncInstanceToYjs() - Instances are ephemeral and should not sync."
-  );
-}
-
-/**
- * @deprecated - Instances are ephemeral and should not sync
- */
-export function removeInstanceFromYjs(instanceId) {
-  log.warn(
-    "DEPRECATED: removeInstanceFromYjs() - Instances are ephemeral."
-  );
-  yInstances.delete(instanceId);
 }
 
 log.info("Y.js core initialized (v2.0 - presence only architecture)");
