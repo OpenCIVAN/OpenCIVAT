@@ -5,13 +5,7 @@
 // - Server is source of truth for datasets, views, annotations
 // - Y.js is used only for presence (cursors, avatars, view presence)
 // - WebSocket broadcasts keep clients in sync without polling
-import {
-  yViews,
-  yDatasets,
-  yAnnotations,
-  yWorkspaceLayouts,
-  initializeYjsProvider,
-} from "@Collaboration/yjs/yjsSetup.js";
+import { initializeYjsProvider } from "@Collaboration/yjs/yjsSetup.js";
 import { initializeStorageProvider } from "@Core/config/storage.js";
 import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
 import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
@@ -136,15 +130,6 @@ export async function initializePhase1() {
       throw new Error("Y.js provider is required for presence");
     }
 
-    // DEPRECATED v2.0: Y.js state sync
-    // State comes from server now, not Y.js
-    // Keeping this for backward compatibility during migration
-    log.debug(
-      "DEPRECATED: Syncing datasets to Y.js (for backward compatibility)..."
-    );
-    datasetManager.syncAllDatasetsToYjs();
-    log.debug("Note: In v2.0, state should come from server API");
-
     // STEP 7: Initialize ViewConfigurationManager AFTER Y.js is ready
     log.debug("Initializing view configuration manager...");
     viewConfigurationManager.initialize();
@@ -184,14 +169,10 @@ export async function initializePhase1() {
     throw error;
   }
 
-  // Make Y.js maps globally accessible for debugging
+  // Initialize global debugging namespace
   window.CIA = window.CIA || {};
-  window.CIA.yViews = yViews;
-  window.CIA.yDatasets = yDatasets;
-  window.CIA.yAnnotations = yAnnotations;
-  window.CIA.yWorkspaceLayouts = yWorkspaceLayouts;
 
-  // Utility functions for debugging/cleanup
+  // Legacy Y.js cleanup utility (kept for migration)
   window.CIA.clearYjsDatasets = clearAllYjsDatasets;
   log.debug(
     "Debug: Use window.CIA.clearYjsDatasets() to clear stale Y.js data"
@@ -410,21 +391,20 @@ function setupDebugHelpers() {
 ║                    CIA Web Debug Commands                      ║
 ╠════════════════════════════════════════════════════════════════╣
 ║  CIA.status()                  - Show system status            ║
+║  CIA.info()                    - Show system info              ║
 ║  CIA.listDatasets()            - List all datasets             ║
 ║  CIA.listViews()               - List all view configurations  ║
 ║  CIA.getDataset(id)            - Inspect a dataset             ║
 ║  CIA.getView(id)               - Inspect a view configuration  ║
 ║  CIA.getInstance(id)           - Inspect an instance window    ║
 ║                                                                ║
-║  Direct Y.js Access:                                           ║
-║  CIA.yDatasets                 - Y.js datasets map             ║
-║  CIA.yViews                    - Y.js views map                ║
-║  CIA.yAnnotations              - Y.js annotations map          ║
-║                                                                ║
 ║  Managers:                                                     ║
 ║  CIA.datasetManager            - Dataset manager instance      ║
 ║  CIA.viewConfigurationManager  - View configuration manager    ║
 ║  CIA.instanceManager           - Instance manager              ║
+║                                                                ║
+║  Legacy Cleanup:                                               ║
+║  CIA.clearYjsDatasets()        - Clear stale Y.js data         ║
 ╚════════════════════════════════════════════════════════════════╝
   `);
   };
@@ -466,38 +446,14 @@ function setupDebugHelpers() {
     return views;
   };
 
-  window.CIA.listViews = () => {
-    log.info("Y.js Views:");
-    yViews.forEach((view, id) => {
-      log.info(`${id}:`, view);
-    });
-  };
-
-  // Keep old name for backward compatibility during transition
-  window.CIA.listInstances = () => {
-    log.warn("CIA.listInstances() is deprecated. Use CIA.listViews()");
-    window.CIA.listViews();
-  };
-
-  // Add new helper for viewing stats
-  window.CIA.status = () => {
+  window.CIA.status = function () {
+    const datasets = datasetManager?.getAllDatasets() || [];
+    const views = viewConfigurationManager?.getActiveViews() || [];
+    const instances = workspaceManager?.getInstanceCount() || 0;
     log.info("CIA Web Status:");
-    log.info(`Datasets: ${yDatasets.size}`);
-    log.info(`Views: ${yViews.size}`);
-    log.info(`Annotations: ${yAnnotations.size}`);
-    log.info(`Workspace Layouts: ${yWorkspaceLayouts.size}`);
-  };
-
-  // Add helper to inspect a specific view
-  window.CIA.getView = (viewId) => {
-    const view = yViews.get(viewId);
-    if (view) {
-      log.info(`View ${viewId}:`, view);
-      return view;
-    } else {
-      log.info(`View ${viewId} not found`);
-      return null;
-    }
+    log.info(`Datasets: ${datasets.length}`);
+    log.info(`Views: ${views.length}`);
+    log.info(`Instances: ${instances}`);
   };
 
   window.CIA.getDataset = function (id) {
@@ -582,9 +538,6 @@ async function fetchDatasetsFromServer() {
         try {
           await datasetManager._deleteDataset(oldId);
           await datasetManager._persistDataset(existingByHash);
-
-          // Re-sync to Y.js with correct ID
-          datasetManager._syncDatasetMetadataToYjs(existingByHash);
 
           log.debug(
             `Dataset ID migration complete: ${existingByHash.filename}`

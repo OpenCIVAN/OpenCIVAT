@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { api as log } from "@Utils/logger.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { config } from "@Core/config/clientConfig.js";
+import { formatFileSize } from "@Utils/formatters.js";
 
 /**
  * Hook to fetch and manage project files, folders, and stars
@@ -473,16 +474,6 @@ export function useProjectFiles(options = {}) {
     toggleStar,
     isStarred,
   };
-}
-
-// ==========================================================================
-// HELPERS
-// ==========================================================================
-
-function formatFileSize(bytes) {
-  if (!bytes) return "";
-  const mb = bytes / (1024 * 1024);
-  return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
 }
 
 /**

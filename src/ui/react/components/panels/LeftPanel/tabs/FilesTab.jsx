@@ -49,18 +49,13 @@ import {
 import { useProjectFiles } from '@UI/react/hooks/useProjectFiles.js';
 import { instanceTypeRegistry } from '@Core/instances/types/instanceTypeRegistry.js';
 import { getHandlerForFileType, getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
+import { formatFileSize } from '@Utils/formatters.js';
 import * as LucideIcons from 'lucide-react';
 
 
 // =============================================================================
 // FILE UTILITIES (Type-agnostic) - MUST BE HERE, BEFORE COMPONENTS
 // =============================================================================
-
-const formatFileSize = (bytes) => {
-    if (!bytes) return '';
-    const mb = bytes / (1024 * 1024);
-    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
-};
 
 const canVisualize = (fileType) => {
     if (!fileType) return false;

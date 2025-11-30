@@ -1,8 +1,10 @@
 // src/core/data/managers/DatasetManager.js
 // v2.0: Server-authoritative - IDs must come from server
+//
+// NOTE: Y.js sync removed in v2.0 cleanup. Server is source of truth.
+// Real-time updates come via WebSocket (serverSync.js), not Y.js.
 import { EventEmitter } from "events"; // Node.js events
 
-import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { Dataset } from "@Core/data/models/Dataset.js";
 import { Annotation } from "@Core/data/models/Annotation.js";
 import { config } from "@Core/config/clientConfig.js";
@@ -48,23 +50,6 @@ export class DatasetManager extends EventEmitter {
     log.info(
       `DatasetManager: Initialized with ${this._datasets.size} datasets`
     );
-  }
-
-  /**
-   * Sync all datasets to Y.js
-   * Call this after Y.js becomes available to ensure collaboration
-   */
-  syncAllDatasetsToYjs() {
-    log.debug("DatasetManager: Syncing all datasets to Y.js...");
-
-    let syncedCount = 0;
-    this._datasets.forEach((dataset) => {
-      this._syncDatasetMetadataToYjs(dataset);
-      syncedCount++;
-    });
-
-    log.debug(`DatasetManager: Synced ${syncedCount} dataset(s) to Y.js`);
-    return syncedCount;
   }
 
   async generateFileHash(file) {
@@ -171,10 +156,6 @@ export class DatasetManager extends EventEmitter {
           try {
             const dataset = Dataset.fromJSON(data);
             this._datasets.set(dataset.id, dataset);
-
-            // IMPORTANT: Sync metadata to Y.js for collaboration
-            // This ensures other users can see what datasets we have
-            this._syncDatasetMetadataToYjs(dataset);
           } catch (error) {
             log.error(`Failed to load dataset ${data.id}:`, error);
             log.error(`Dataset: ${data.filename || "unknown"}`);
@@ -182,7 +163,7 @@ export class DatasetManager extends EventEmitter {
           }
         });
 
-        log.debug(`Synced ${storedDatasets.length} datasets to Y.js`);
+        log.debug(`Loaded ${storedDatasets.length} datasets from IndexedDB`);
         resolve();
       };
       request.onerror = () =>
@@ -226,8 +207,6 @@ export class DatasetManager extends EventEmitter {
       log.debug(
         `Synced ${syncedCount} new dataset(s), skipped ${skippedCount} existing`
       );
-
-      this.syncAllDatasetsToYjs();
 
       return {
         total: serverDatasets.length,
@@ -295,93 +274,6 @@ export class DatasetManager extends EventEmitter {
 
     log.debug(`Dataset added from server: ${dataset.id}`);
     return dataset;
-  }
-
-  /**
-   * Add dataset from Y.js remote data
-   * Called by Y.js observers when a remote user adds a dataset
-   *
-   * @param {Object} yData - Dataset metadata from Y.js
-   * @returns {Dataset|null} - The created dataset, or null if duplicate
-   */
-  async _addDatasetFromYjs(yData) {
-    // Check if we already have this dataset by ID
-    if (this._datasets.has(yData.id)) {
-      log.debug(`Y.js dataset ${yData.id} already exists locally`);
-      return null;
-    }
-
-    // Check by hash
-    if (yData.hash && this.hasDatasetWithHash(yData.hash)) {
-      log.debug(
-        `Y.js dataset with hash ${yData.hash.substring(0, 8)}... already exists`
-      );
-      return null;
-    }
-
-    log.debug(`Adding dataset from Y.js: ${yData.filename}`);
-
-    const dataset = new Dataset({
-      id: yData.id,
-      serverId: yData.serverId,
-      filename: yData.filename,
-      fileType: yData.fileType || this._extractFileType(yData.filename),
-      hash: yData.hash,
-      userId: yData.userId,
-      storageKey: yData.storageKey,
-      publicPath: yData.publicPath,
-      fileStatus: yData.publicPath ? "on-server" : "needs-fetch",
-      metadata: yData.metadata || {},
-    });
-
-    // Add to in-memory map
-    this._datasets.set(dataset.id, dataset);
-
-    // Persist to IndexedDB
-    await this._persistDataset(dataset);
-
-    // Emit event (but don't sync back to Y.js - it came FROM Y.js)
-    this._emit("datasetAdded", dataset);
-
-    log.debug(`Dataset from Y.js added: ${dataset.filename}`);
-
-    return dataset;
-  }
-
-  /**
-   * Sync dataset metadata to Y.js so other clients can see it
-   * This should only be called after Y.js is connected
-   */
-  _syncDatasetMetadataToYjs(dataset) {
-    // Use direct import instead of global variable
-    // This ensures we get the ydoc as soon as the module is loaded
-    if (!ydoc) {
-      log.error(
-        `Cannot sync dataset ${dataset.filename}: Y.js not initialized`
-      );
-      return;
-    }
-
-    const yDatasets = ydoc.getMap("datasets");
-
-    // Only sync the metadata needed for fetching, not the entire dataset
-    yDatasets.set(dataset.id, {
-      id: dataset.id,
-      serverId: dataset.serverId,
-      filename: dataset.filename,
-      fileType: dataset.fileType,
-      hash: dataset.hash,
-      publicPath: dataset.publicPath, // Critical for fetching
-      storageKey: dataset.storageKey, // For server-stored files
-      userId: dataset.userId,
-      metadata: {
-        fileSize: dataset.metadata.fileSize,
-        uploadedAt: dataset.metadata.uploadedAt,
-        uploadedBy: dataset.metadata.uploadedBy,
-      },
-    });
-
-    log.debug(`Dataset metadata synced to Y.js: ${dataset.filename}`);
   }
 
   // ==================== DATASET MANAGEMENT ====================
@@ -475,10 +367,7 @@ export class DatasetManager extends EventEmitter {
       // STEP 9: Persist to IndexedDB
       await this._persistDataset(dataset);
 
-      // STEP 10: Sync to Y.js (for presence/awareness, not state)
-      this._syncDatasetMetadataToYjs(dataset);
-
-      // STEP 11: Notify listeners
+      // STEP 10: Notify listeners
       this._emit("datasetAdded", dataset);
 
       log.debug(
@@ -656,7 +545,6 @@ export class DatasetManager extends EventEmitter {
 
           // Emit events so UI updates
           this._emit("datasetUpdated", existing);
-          this._syncDatasetMetadataToYjs(existing);
 
           // Emit datasetLoaded event so instances can load it
           this._emit("datasetLoaded", {
@@ -750,10 +638,9 @@ export class DatasetManager extends EventEmitter {
         log.warn(`Could not extract quick metadata:`, error.message);
       }
 
-      // STEP 9: Store and sync
+      // STEP 9: Store and persist
       this._datasets.set(dataset.id, dataset);
       await this._persistDataset(dataset);
-      this._syncDatasetMetadataToYjs(dataset);
 
       // STEP 10: Notify listeners
       this._emit("datasetAdded", dataset);
@@ -883,9 +770,6 @@ export class DatasetManager extends EventEmitter {
 
                 // Persist the update so it survives page reload
                 await this._persistDataset(dataset);
-
-                // Sync to Y.js so other clients get the correct server ID
-                this._syncDatasetMetadataToYjs(dataset);
               }
             } catch (cacheError) {
               log.warn(`File fetched but caching failed:`, cacheError);

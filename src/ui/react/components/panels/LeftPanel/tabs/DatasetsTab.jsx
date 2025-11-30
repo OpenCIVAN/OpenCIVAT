@@ -317,20 +317,19 @@ export function DatasetsPanelContent({ workspaceId }) {
     // Get real views from ViewConfigurationManager
     const getViewsForDataset = useCallback((datasetId) => {
         try {
-            const allViews = viewConfigurationManager?.getAllViews?.() || [];
-            return allViews
-                .filter(v => v.datasetId === datasetId)
-                .map(v => ({
-                    id: v.id,
-                    name: v.name || 'Untitled View',
-                    workspace: v.workspaceId || 'personal',
-                    status: v.activeInstanceCount > 0 ? 'active' : 'inactive',
-                    instanceColor: v.camera?.color || '#60a5fa',
-                    filters: v.filters || [],
-                    isShared: v.scope === 'shared' || v.scope === 'project',
-                    sharedBy: v.createdBy,
-                    lastActive: v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : null,
-                }));
+            // Use the correct method from ViewConfigurationManager
+            const views = viewConfigurationManager?.getViewsForDataset?.(datasetId) || [];
+            return views.map(v => ({
+                id: v.id,
+                name: v.name || 'Untitled View',
+                workspace: v.workspaceId || 'personal',
+                status: v.activeInstanceCount > 0 ? 'active' : 'inactive',
+                instanceColor: v.camera?.color || '#60a5fa',
+                filters: v.filters || [],
+                isShared: v.scope === 'shared' || v.scope === 'project',
+                sharedBy: v.createdBy,
+                lastActive: v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : null,
+            }));
         } catch (e) {
             log.warn('Failed to get views:', e);
             return [];

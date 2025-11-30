@@ -305,9 +305,6 @@ export class DatasetManagerAdapter {
         `Synced ${syncedCount} new dataset(s), skipped ${skippedCount} existing`
       );
 
-      // After syncing from server, sync the metadata to Y.js so other users see it
-      this.syncAllDatasetsToYjs();
-
       return {
         total: serverDatasets.length,
         synced: syncedCount,

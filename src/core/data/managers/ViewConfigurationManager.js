@@ -1,14 +1,11 @@
 // src/core/data/managers/ViewConfigurationManager.js
 // Manages Layer 2 (ViewConfigurations) - the collaborative unit
 //
-// ARCHITECTURAL ROLE (v2.0 Server-Authority):
-// - Sits between DatasetManager (Layer 1) and InstanceManager (Layer 3)
+// v2.0 SERVER-AUTHORITY ARCHITECTURE:
 // - Server is the source of truth for view state
-// - Uses REST API for CRUD operations
-// - Uses WebSocket broadcasts for real-time sync
-// - Y.js is only used for cursor/avatar presence (not view state)
-// - Handles linking, broadcasting, and presence
-// - Manages view lifecycle and cleanup
+// - REST API for CRUD operations, WebSocket for real-time sync
+// - Y.js used ONLY for presence (viewPresence map)
+// - Handles linking, broadcasting, and view lifecycle
 
 import { view as log } from "@Utils/logger.js";
 import {
@@ -34,10 +31,6 @@ export class ViewConfigurationManager {
     // Server API configuration
     this._apiBaseUrl = config.apiBaseUrl;
     this._projectId = null; // Set during initialization
-
-    // @deprecated v2.0 - Y.js is for presence only, not view state
-    // Keeping for backward compatibility during transition
-    this._yViews = ydoc.getMap("viewConfigurations");
 
     // Throttle server sync to avoid excessive API calls
     this._syncThrottleMs = 500;
@@ -1356,7 +1349,6 @@ export class ViewConfigurationManager {
 
     for (const viewId of toRemove) {
       log.debug(`Auto-cleaning inactive view: ${viewId}`);
-      this._yViews.delete(viewId);
       this._viewConfigs.delete(viewId);
       this._emit("viewRemoved", viewId);
     }
