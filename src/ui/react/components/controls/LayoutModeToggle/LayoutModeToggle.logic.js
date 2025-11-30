@@ -3,6 +3,7 @@
 // Handles Normal/Isolation/Subset mode switching
 
 import { useState, useEffect, useCallback } from "react";
+import { view as log } from "@Utils/logger.js";
 
 /**
  * Layout mode constants
@@ -59,16 +60,17 @@ export function useLayoutModeToggle({
     (newMode) => {
       // Validate mode
       if (!Object.values(LAYOUT_MODES).includes(newMode)) {
-        console.warn(`Invalid layout mode: ${newMode}`);
+        log.warn("Invalid layout mode:", newMode);
         return;
       }
 
       // Check if mode is disabled
       if (disabledModes.includes(newMode)) {
-        console.warn(`Layout mode is disabled: ${newMode}`);
+        log.warn("Layout mode is disabled:", newMode);
         return;
       }
 
+      log.debug("Layout mode changed:", newMode);
       setModeInternal(newMode);
       onModeChange?.(newMode);
     },
@@ -162,6 +164,7 @@ export function useLayoutModeKeyboardShortcut({
       const targetMode = keyModeMap[event.key];
       if (targetMode) {
         event.preventDefault();
+        log.debug("Keyboard shortcut triggered:", event.key, "→", targetMode);
         setMode(targetMode);
       }
     };

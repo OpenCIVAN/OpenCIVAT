@@ -255,8 +255,9 @@ export function FilesPanelContent({
         return serverFiles.map(file => ({
             id: file.id,
             name: file.name || file.filename,
-            fileType: file.fileType,  // Pass through server-provided type
-            size: typeof file.size === 'string' ? file.size : formatFileSize(file.size),
+            fileType: file.fileType,
+            // Use sizeFormatted from hook, fall back to formatting size, fall back to raw
+            size: file.sizeFormatted || (typeof file.size === 'number' ? formatFileSize(file.size) : file.size) || '',
             starred: mockStarredIds ? mockStarredIds.has(file.id) : (file.starred ?? false),
             loaded: file.loaded ?? false,
             thumbnail: file.thumbnail ?? canVisualize(file.fileType),
@@ -264,6 +265,15 @@ export function FilesPanelContent({
             isFolder: false,
         }));
     }, [serverFiles, mockStarredIds]);
+
+    // The key change is:
+    // OLD: size: typeof file.size === 'string' ? file.size : formatFileSize(file.size)
+    // NEW: size: file.sizeFormatted || (typeof file.size === 'number' ? formatFileSize(file.size) : file.size) || ''
+
+    // This handles three cases:
+    // 1. Hook already formatted it → use sizeFormatted
+    // 2. Raw number from server → format it
+    // 3. Already a string → use as-is
 
     const starredFiles = useMemo(() => {
         return files.filter(f => f.starred);

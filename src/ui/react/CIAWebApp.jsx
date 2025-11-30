@@ -1,6 +1,6 @@
 // src/ui/react/CIAWebApp.jsx
 // Main Application Component
-// Updated: Added view mode (Desktop/VR) and layout mode state management
+// UPDATED: Removed canvasMode state and toggle (layout mode is in SecondaryBottomBar now)
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ui as log } from "@Utils/logger.js";
@@ -33,7 +33,7 @@ import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
  * - Layout with resizable panels
  * - Workspace selection and navigation
  * - View mode (Desktop/VR) switching
- * - Canvas mode toggle
+ * - Layout mode (Normal/Isolation/Subset)
  * - Phase 3 initialization
  */
 export function CIAWebApp({ username, userId, projectId, useNewCanvas = false }) {
@@ -50,88 +50,13 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
 
   // View mode state (Desktop/VR)
   const [viewMode, setViewMode] = useState(VIEW_MODES.DESKTOP);
-  const { vrAvailable, vrUnavailableReason } = useWebXRAvailability();
+  const vrAvailable = useWebXRAvailability();
 
-  // Layout mode state (Normal/Isolation/Subset)
+  // Layout mode state (Normal/Isolation/Subset) - controlled in SecondaryBottomBar
   const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.NORMAL);
 
-  // Workspace selector state (for keyboard shortcut)
+  // Workspace selector dropdown state
   const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
-
-  // Canvas mode (old grid vs new canvas system)
-  const [canvasMode, setCanvasMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('canvas') === 'new' || useNewCanvas;
-    }
-    return useNewCanvas;
-  });
-
-  // =========================================================================
-  // KEYBOARD SHORTCUTS
-  // =========================================================================
-
-  // Toggle view mode: Ctrl/Cmd + Shift + V
-  useViewModeKeyboardShortcut({
-    onToggle: () => {
-      if (vrAvailable) {
-        handleViewModeChange(
-          viewMode === VIEW_MODES.DESKTOP ? VIEW_MODES.VR : VIEW_MODES.DESKTOP
-        );
-      }
-    },
-    enabled: true,
-  });
-
-  // Register global keyboard shortcuts
-  const registeredShortcuts = useGlobalKeyboardShortcuts([
-    {
-      key: 'w',
-      ctrl: true,
-      action: () => setWorkspaceSelectorOpen(prev => !prev),
-      label: 'Toggle Workspace Selector',
-    },
-    {
-      key: 'b',
-      ctrl: true,
-      action: () => setCanvasMode(prev => !prev),
-      label: 'Toggle Canvas Mode',
-    },
-  ]);
-
-  // =========================================================================
-  // VIEW MODE HANDLING
-  // =========================================================================
-
-  /**
-   * Handle view mode change (Desktop <-> VR)
-   * This will eventually trigger WebXR session management
-   */
-  const handleViewModeChange = useCallback((newMode) => {
-    log.info(`View mode changing: ${viewMode} → ${newMode}`);
-
-    if (newMode === VIEW_MODES.VR) {
-      // TODO: In future, this will:
-      // 1. Request WebXR session
-      // 2. Transition instances to VR rendering
-      // 3. Update collaboration presence to show VR mode
-      log.debug("Entering VR mode...");
-
-      // For now, just update state
-      setViewMode(newMode);
-
-      // Notify presence system (when implemented)
-      // presenceSystem.updateLocalPresence({ mode: 'vr' });
-    } else {
-      // Exiting VR
-      log.debug("Returning to Desktop mode...");
-
-      // TODO: End WebXR session if active
-      setViewMode(newMode);
-
-      // presenceSystem.updateLocalPresence({ mode: 'desktop' });
-    }
-  }, [viewMode]);
 
   // =========================================================================
   // PHASE 3 INITIALIZATION
@@ -139,44 +64,86 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
 
   useEffect(() => {
     if (phase3Started.current) return;
+    phase3Started.current = true;
 
-    const timer = setTimeout(() => {
-      phase3Started.current = true;
-      log.debug("CIAWebApp: Starting Phase 3 (optional enhancements)...");
-      setPhase3Status('running');
+    const runPhase3 = async () => {
+      try {
+        setPhase3Status('loading');
+        log.info('Starting Phase 3 initialization...');
 
-      initializePhase3()
-        .then(() => {
-          log.info("CIAWebApp: Phase 3 complete");
-          setPhase3Status('complete');
-        })
-        .catch(error => {
-          log.warn("CIAWebApp: Some enhancements couldn't be loaded:", error.message);
-          log.debug("Continuing with basic features...");
-          setPhase3Status('failed');
-        });
-    }, 100);
+        await initializePhase3();
 
-    return () => clearTimeout(timer);
+        setPhase3Status('ready');
+        log.info('Phase 3 initialization complete');
+      } catch (error) {
+        log.error('Phase 3 initialization failed:', error);
+        setPhase3Status('error');
+      }
+    };
+
+    runPhase3();
   }, []);
+
+  // =========================================================================
+  // VIEW MODE HANDLING
+  // =========================================================================
+
+  const handleViewModeChange = useCallback((mode) => {
+    log.info('View mode changed:', mode);
+    setViewMode(mode);
+
+    if (mode === VIEW_MODES.VR) {
+      // VR mode activation logic here
+      log.debug('Activating VR mode...');
+    } else {
+      // Desktop mode activation logic here
+      log.debug('Activating Desktop mode...');
+    }
+  }, []);
+
+  // Keyboard shortcut for view mode toggle
+  useViewModeKeyboardShortcut({
+    viewMode,
+    onViewModeChange: handleViewModeChange,
+    vrAvailable,
+    enabled: true,
+  });
+
+  // Global keyboard shortcuts
+  useGlobalKeyboardShortcuts();
 
   // =========================================================================
   // RENDER HELPERS
   // =========================================================================
 
-  /**
-   * Render center panel based on canvas mode
-   */
   const renderCenterPanel = () => {
-    if (canvasMode) {
+    if (phase3Status !== 'ready') {
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          color: '#666',
+        }}>
+          {phase3Status === 'loading' ? 'Initializing...' : 'Initialization failed'}
+        </div>
+      );
+    }
+
+    // Always use the new canvas-based workspace
+    // Layout mode (Normal/Isolation/Subset) is handled inside CanvasWorkspace
+    if (useNewCanvas) {
       return (
         <CanvasWorkspace
-          userId={userId || sessionManager?.getCurrentUserId?.() || 'anonymous'}
+          workspaceId={workspaceId}
+          userId={userId || sessionManager.getUserId?.() || 'anonymous'}
           projectId={projectId}
+          layoutMode={layoutMode}
         />
       );
     }
-    return <WorkspaceGrid />;
+    return <WorkspaceGrid layoutMode={layoutMode} />;
   };
 
   // =========================================================================
@@ -189,8 +156,7 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
       topBar={
         <TopBar
           username={username}
-          canvasMode={canvasMode}
-          onToggleCanvasMode={() => setCanvasMode(!canvasMode)}
+          projectName={projectId ? `Project ${projectId}` : null}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
           vrAvailable={vrAvailable}
