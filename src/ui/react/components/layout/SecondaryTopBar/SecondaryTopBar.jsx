@@ -2,7 +2,7 @@
 // Secondary bar below main TopBar with workspace selector, controls, and presence
 // Refactored: Uses SecondaryBar and SecondaryBarZone for consistent layout
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
     ChevronDown,
     Search,
@@ -18,6 +18,7 @@ import {
     User,
     Check,
     X,
+    Mic,
 } from 'lucide-react';
 
 import { useSecondaryTopBar, VIEW_MODES, WORKSPACE_TYPES } from './SecondaryTopBar.logic.js';
@@ -27,6 +28,7 @@ import {
     SecondaryBarDivider,
     SecondaryBarSpacer,
 } from '../SecondaryBarZone';
+import { PortalPopover } from '../../common/PortalPopover';
 import './SecondaryTopBar.scss';
 
 // =============================================================================
@@ -213,23 +215,33 @@ function ViewModeButtons({ viewMode, onModeChange }) {
 }
 
 /**
- * WorkspacePresence - Shows users in current workspace
+ * WorkspacePresence - Shows users in current workspace with Portal popover
+ * Uses PortalPopover to render popover at document.body level, escaping overflow constraints
  */
 function WorkspacePresence({
     visibleUsers,
+    allUsers = [],
     overflowCount,
     totalCount,
     isHovering,
     onHoverChange,
+    maxVisible = 3,
 }) {
+    const anchorRef = useRef(null);
+
     if (totalCount === 0) return null;
+
+    // Use allUsers if provided, otherwise just use visibleUsers for the full list
+    const usersForPopover = allUsers.length > 0 ? allUsers : visibleUsers;
 
     return (
         <div
+            ref={anchorRef}
             className="workspace-presence"
             onMouseEnter={() => onHoverChange(true)}
             onMouseLeave={() => onHoverChange(false)}
         >
+            {/* Avatar stack */}
             <div className="workspace-presence__avatars">
                 {visibleUsers.map((user, index) => (
                     <div
@@ -237,27 +249,58 @@ function WorkspacePresence({
                         className="workspace-presence__avatar"
                         style={{
                             '--user-color': user.userColor,
-                            '--avatar-offset': `${index * -8}px`,
+                            zIndex: visibleUsers.length - index,
                         }}
                         title={user.userName}
                     >
-                        {user.userName.charAt(0).toUpperCase()}
+                        {user.avatar ? (
+                            <img src={user.avatar} alt={user.userName} />
+                        ) : (
+                            <span>{user.userName.charAt(0).toUpperCase()}</span>
+                        )}
                     </div>
                 ))}
-            </div>
-            {overflowCount > 0 && (
-                <span className="workspace-presence__overflow">+{overflowCount}</span>
-            )}
-
-            {/* Hover tooltip with full user list */}
-            {isHovering && totalCount > 0 && (
-                <div className="workspace-presence__tooltip">
-                    <div className="workspace-presence__tooltip-header">
-                        {totalCount} {totalCount === 1 ? 'user' : 'users'} in workspace
+                {overflowCount > 0 && (
+                    <div className="workspace-presence__overflow">
+                        +{overflowCount}
                     </div>
-                    {/* Could add full user list here */}
+                )}
+            </div>
+
+            {/* Portal Popover - escapes container overflow */}
+            <PortalPopover
+                anchorRef={anchorRef}
+                isOpen={isHovering}
+                position="below"
+                align="end"
+            >
+                <div className="presence-popover">
+                    <div className="presence-popover__header">
+                        In This Workspace ({totalCount})
+                    </div>
+                    <div className="presence-popover__list">
+                        {usersForPopover.map(user => (
+                            <div key={user.userId} className="presence-popover__user">
+                                <div
+                                    className="presence-popover__avatar"
+                                    style={{ '--user-color': user.userColor }}
+                                >
+                                    {user.userName.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="presence-popover__info">
+                                    <span className="presence-popover__name">{user.userName}</span>
+                                    <span className="presence-popover__status">
+                                        {user.isInVoice && (
+                                            <Mic size={10} className="presence-popover__voice-icon" />
+                                        )}
+                                        {user.currentView || 'Viewing workspace'}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            )}
+            </PortalPopover>
         </div>
     );
 }

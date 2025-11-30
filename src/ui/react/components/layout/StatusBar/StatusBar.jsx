@@ -52,13 +52,58 @@ function SyncStatus({ isConnected, isSyncing }) {
 }
 
 /**
- * OnlineUsers - Shows count of online users
+ * OnlineUsersIndicator - Shows count of online users with hover popover
  */
-function OnlineUsers({ count }) {
+function OnlineUsersIndicator({ count }) {
+    const [showPopover, setShowPopover] = useState(false);
+    const [users, setUsers] = useState([]);
+
+    const handleMouseEnter = () => {
+        // Get current online users from presence system
+        const onlineUsers = presenceSystem.getOnlineUsers?.() || [];
+        setUsers(onlineUsers);
+        setShowPopover(true);
+    };
+
     return (
-        <div className="status-bar__item">
+        <div
+            className="status-bar__item status-bar__item--interactive"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={() => setShowPopover(false)}
+        >
             <Users size={10} />
             <span>{count} online</span>
+
+            {showPopover && users.length > 0 && (
+                <div className="online-popover">
+                    <div className="online-popover__header">Currently Online</div>
+                    <div className="online-popover__list">
+                        {users.map(user => (
+                            <div key={user.userId} className="online-popover__user">
+                                <Circle
+                                    size={8}
+                                    fill={user.status === 'active' ? '#34d399' : '#fbbf24'}
+                                    stroke={user.status === 'active' ? '#34d399' : '#fbbf24'}
+                                    className="online-popover__status"
+                                />
+                                <span
+                                    className="online-popover__name"
+                                    style={{ color: user.userColor }}
+                                >
+                                    {user.userName}
+                                    {user.isYou && ' (you)'}
+                                </span>
+                                {user.status === 'idle' && (
+                                    <span className="online-popover__idle">(idle)</span>
+                                )}
+                                {user.status === 'away' && (
+                                    <span className="online-popover__idle">(away)</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -253,7 +298,7 @@ export function StatusBar() {
 
                 <div className="status-bar__divider" />
 
-                <OnlineUsers count={onlineCount} />
+                <OnlineUsersIndicator count={onlineCount} />
 
                 {warningCount > 0 && (
                     <>

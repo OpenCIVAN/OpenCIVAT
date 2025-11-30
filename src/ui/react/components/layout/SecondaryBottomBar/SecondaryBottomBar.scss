@@ -155,14 +155,124 @@
   gap: $spacing-xs;
   flex-shrink: 0;
   white-space: nowrap;
+  font-size: 10px;
+  color: $color-text-muted;
+
+  &--interactive {
+    position: relative;
+    cursor: pointer;
+    padding: 2px $spacing-xs;
+    border-radius: $radius-xs;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: $color-glass-light;
+      color: $color-text-secondary;
+    }
+  }
 
   &__icon {
     color: $color-text-tertiary;
   }
 
   &__count {
-    font-size: 10px;
     color: $color-text-secondary;
+  }
+
+  &__breakdown {
+    color: $color-text-muted;
+  }
+}
+
+// =============================================================================
+// INSTANCE POPOVER
+// =============================================================================
+
+.instance-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  z-index: $z-popover;
+
+  // Glassmorphism
+  background: rgba($color-bg-secondary, 0.95);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: instance-popover-appear 0.15s ease-out;
+
+  // Pointer
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid $color-border-default;
+  }
+
+  &__header {
+    padding: $spacing-xs $spacing-sm;
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__list {
+    padding: $spacing-xs;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-xs;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: $color-glass-light;
+    }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+
+    &--shared {
+      color: $color-accent-blue;
+    }
+
+    &--private {
+      color: $color-text-muted;
+    }
+  }
+
+  &__name {
+    font-size: $font-size-xs;
+    color: var(--instance-color, $color-text-secondary);
+    font-weight: $font-weight-medium;
+  }
+}
+
+@keyframes instance-popover-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
 

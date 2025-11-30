@@ -285,13 +285,13 @@
 }
 
 // =============================================================================
-// WORKSPACE PRESENCE
+// WORKSPACE PRESENCE AVATARS
 // =============================================================================
 
 .workspace-presence {
   display: flex;
   align-items: center;
-  position: relative;
+  cursor: pointer;
 
   &__avatars {
     display: flex;
@@ -303,15 +303,14 @@
     height: 24px;
     border-radius: 50%;
     background: var(--user-color, $color-accent-blue);
-    border: 2px solid $color-bg-tertiary;
+    border: 2px solid $color-bg-secondary;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 10px;
-    font-weight: $font-weight-bold;
-    color: $color-bg-base;
-    margin-left: var(--avatar-offset, 0);
-    cursor: pointer;
+    font-weight: $font-weight-semibold;
+    color: white;
+    margin-left: -8px;
     transition: transform $transition-fast;
 
     &:first-child {
@@ -319,35 +318,110 @@
     }
 
     &:hover {
-      transform: scale(1.1);
-      z-index: 1;
+      transform: translateY(-2px);
+      z-index: 10 !important;
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
     }
   }
 
   &__overflow {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    margin-left: $spacing-xs;
-  }
-
-  // Tooltip
-  &__tooltip {
-    position: absolute;
-    bottom: 100%;
-    right: 0;
-    margin-bottom: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    background: $color-bg-elevated;
-    border: 1px solid $color-border-medium;
-    border-radius: $radius-sm;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    white-space: nowrap;
-    z-index: $z-tooltip;
-  }
-
-  &__tooltip-header {
-    font-size: $font-size-xs;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: $color-bg-tertiary;
+    border: 2px solid $color-bg-secondary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: $font-weight-semibold;
     color: $color-text-secondary;
+    margin-left: -8px;
+  }
+}
+
+// =============================================================================
+// PRESENCE POPOVER CONTENT (rendered via Portal)
+// =============================================================================
+
+.presence-popover {
+  min-width: 220px;
+
+  &__header {
+    padding: $spacing-sm $spacing-md;
+    font-size: 11px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__list {
+    padding: $spacing-xs;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    border-radius: $radius-sm;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: $color-glass-light;
+    }
+  }
+
+  &__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--user-color, $color-accent-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: $font-weight-semibold;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 10px;
+    color: $color-text-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__voice-icon {
+    color: $color-accent-green;
+    flex-shrink: 0;
   }
 }
 

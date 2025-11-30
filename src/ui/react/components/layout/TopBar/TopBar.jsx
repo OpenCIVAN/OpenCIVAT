@@ -3,8 +3,6 @@
 
 import React, { useState } from 'react';
 import {
-    Monitor,
-    Glasses,
     Lock,
     Unlock,
     Bell,
@@ -13,31 +11,9 @@ import {
 } from 'lucide-react';
 
 import { sessionManager } from '@Core/session/sessionManager.js';
+import { ViewModeToggle } from '@UI/react/components/controls/ViewModeToggle';
 import './TopBar.scss';
 
-/**
- * ModeToggle - Switch between Desktop and VR modes
- */
-function ModeToggle({ mode, onModeChange }) {
-    return (
-        <div className="mode-toggle">
-            <button
-                className={`mode-toggle__btn ${mode === 'desktop' ? 'active' : ''}`}
-                onClick={() => onModeChange('desktop')}
-            >
-                <Monitor size={12} />
-                <span>Desktop</span>
-            </button>
-            <button
-                className={`mode-toggle__btn ${mode === 'vr' ? 'active' : ''}`}
-                onClick={() => onModeChange('vr')}
-            >
-                <Glasses size={12} />
-                <span>VR</span>
-            </button>
-        </div>
-    );
-}
 
 /**
  * RoomIndicator - Shows current room with lock status
@@ -81,22 +57,22 @@ export function TopBar({
     inVoice = false,
     roomName,
     isRoomLocked = true,
-    mode = 'desktop',
-    onModeChange,
     canvasMode,
     onToggleCanvasMode,
+    // View mode props (Desktop/VR toggle)
+    viewMode = 'desktop',
+    onViewModeChange,
+    vrAvailable = true,
 }) {
     const roomId = roomName || sessionManager.getRoomId?.() || 'Brain Study Room';
 
     return (
         <div className="top-bar">
-            {/* Left: Logo + Mode Toggle */}
+            {/* Left: Logo */}
             <div className="top-bar__left">
                 <div className="top-bar__logo">
                     <div className="top-bar__logo-icon">CIA</div>
                 </div>
-
-                <ModeToggle mode={mode} onModeChange={onModeChange} />
             </div>
 
             {/* Center: Room Name */}
@@ -115,8 +91,18 @@ export function TopBar({
                 )}
             </div>
 
-            {/* Right: Notifications + Settings + User Avatar */}
+            {/* Right: View Mode Toggle + Notifications + Settings + User Avatar */}
             <div className="top-bar__right">
+                {/* View Mode Toggle (Desktop/VR) */}
+                <ViewModeToggle
+                    mode={viewMode}
+                    onModeChange={onViewModeChange}
+                    vrAvailable={vrAvailable}
+                    compact={false}
+                />
+
+                <div className="top-bar__divider" />
+
                 <button className="top-bar__icon-btn" title="Notifications">
                     <Bell size={16} />
                 </button>

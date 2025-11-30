@@ -83,6 +83,19 @@
         color: $color-accent-red;
       }
     }
+
+    // Interactive status item (hoverable)
+    &--interactive {
+      position: relative;
+      cursor: pointer;
+      padding: 2px $spacing-xs;
+      border-radius: $radius-xs;
+      transition: background $transition-fast;
+
+      &:hover {
+        background: $color-glass-light;
+      }
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -151,5 +164,94 @@
   }
   50% {
     opacity: 0.4;
+  }
+}
+
+// =============================================================================
+// ONLINE USERS POPOVER
+// =============================================================================
+
+.online-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 160px;
+  z-index: $z-popover;
+
+  // Glassmorphism
+  background: rgba($color-bg-secondary, 0.95);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  // Animation
+  animation: popover-appear 0.15s ease-out;
+
+  // Pointer triangle
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid $color-border-default;
+  }
+
+  &__header {
+    padding: $spacing-xs $spacing-sm;
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__list {
+    padding: $spacing-xs;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-xs;
+
+    &:hover {
+      background: $color-glass-light;
+    }
+  }
+
+  &__status {
+    flex-shrink: 0;
+  }
+
+  &__name {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+  }
+
+  &__idle {
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-left: auto;
+  }
+}
+
+@keyframes popover-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }

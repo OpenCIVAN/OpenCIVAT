@@ -1,8 +1,9 @@
 // src/ui/react/components/layout/SecondaryBottomBar/SecondaryBottomBar.jsx
-// Secondary bar above StatusBar with view mode toggle, canvas position, and voice controls
+// Secondary bar above StatusBar with canvas position, workspace info, and voice controls
+// Note: ViewModeToggle has been moved to TopBar
 // Refactored: Uses SecondaryBar and SecondaryBarZone for consistent layout
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Navigation,
     Layers,
@@ -15,11 +16,11 @@ import {
     Globe,
     Briefcase,
     User,
+    Lock,
 } from 'lucide-react';
 
 import { useSecondaryBottomBar } from './SecondaryBottomBar.logic.js';
 import { WORKSPACE_TYPES } from '../SecondaryTopBar/SecondaryTopBar.logic.js';
-import { ViewModeToggle, VIEW_MODES as VIEW_MODE_OPTIONS } from '../../controls/ViewModeToggle';
 import {
     SecondaryBar,
     SecondaryBarZone,
@@ -111,13 +112,63 @@ function WorkspaceIndicator({ name, color, type }) {
 }
 
 /**
- * InstanceCounter - Shows number of active instances
+ * InstanceCounter - Shows number of active instances with hover popover
  */
-function InstanceCounter({ count }) {
+function InstanceCounter({ count, instances = [] }) {
+    const [showPopover, setShowPopover] = useState(false);
+
+    const sharedCount = instances.filter(i => i.isShared).length;
+    const privateCount = instances.length - sharedCount;
+
+    // Use provided instances or show basic count
+    const hasInstances = instances.length > 0;
+
+    if (count === 0 && !hasInstances) {
+        return (
+            <div className="instance-counter">
+                <Layers size={10} className="instance-counter__icon" />
+                <span className="instance-counter__count">No instances</span>
+            </div>
+        );
+    }
+
     return (
-        <div className="instance-counter">
+        <div
+            className={`instance-counter ${hasInstances ? 'instance-counter--interactive' : ''}`}
+            onMouseEnter={() => hasInstances && setShowPopover(true)}
+            onMouseLeave={() => setShowPopover(false)}
+        >
             <Layers size={10} className="instance-counter__icon" />
-            <span className="instance-counter__count">{count} instances</span>
+            <span className="instance-counter__count">
+                {hasInstances ? instances.length : count} instances
+            </span>
+            {hasInstances && (
+                <span className="instance-counter__breakdown">
+                    ({sharedCount} shared, {privateCount} private)
+                </span>
+            )}
+
+            {showPopover && hasInstances && (
+                <div className="instance-popover">
+                    <div className="instance-popover__header">Open Instances</div>
+                    <div className="instance-popover__list">
+                        {instances.map(inst => (
+                            <div
+                                key={inst.id}
+                                className="instance-popover__item"
+                                style={{ '--instance-color': inst.color }}
+                            >
+                                {inst.isShared ? (
+                                    <Globe size={10} className="instance-popover__icon instance-popover__icon--shared" />
+                                ) : (
+                                    <Lock size={10} className="instance-popover__icon instance-popover__icon--private" />
+                                )}
+                                <span className="instance-popover__name">{inst.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -204,7 +255,7 @@ function VoiceControls({
  * SecondaryBottomBar - Main component
  *
  * Layout:
- * - Left Zone: ViewModeToggle (Desktop/VR)
+ * - Left Zone: (Reserved - ViewModeToggle moved to TopBar)
  * - Center Zone: Canvas position, workspace indicator, instance count
  * - Right Zone: Voice controls
  */
@@ -229,17 +280,13 @@ export function SecondaryBottomBar({
 
     // Stats
     instanceCount = 0,
+    instances = [],
 
     // Panel dimensions (passed from ThreeEdgeLayout)
     leftPanelWidth = 280,
     rightPanelWidth = 280,
     leftPanelOpen = true,
     rightPanelOpen = true,
-
-    // View mode props
-    viewMode = VIEW_MODE_OPTIONS.DESKTOP,
-    onViewModeChange,
-    vrAvailable = true,
 }) {
     const {
         canvas,
@@ -263,18 +310,13 @@ export function SecondaryBottomBar({
 
     return (
         <SecondaryBar position="bottom" height={28}>
-            {/* Left Zone - View Mode Toggle */}
+            {/* Left Zone - Reserved for future use */}
             <SecondaryBarZone
                 position="left"
                 panelWidth={leftPanelWidth}
                 panelOpen={leftPanelOpen}
             >
-                <ViewModeToggle
-                    mode={viewMode}
-                    onModeChange={onViewModeChange}
-                    vrAvailable={vrAvailable}
-                    compact={!leftPanelOpen}
-                />
+                {/* ViewModeToggle moved to TopBar */}
             </SecondaryBarZone>
 
             {/* Center Zone - Canvas position, workspace, instances */}
@@ -308,8 +350,11 @@ export function SecondaryBottomBar({
                         </>
                     )}
 
-                    {/* Instance counter - always show */}
-                    <InstanceCounter count={instanceCount} />
+                    {/* Instance counter with hover popover */}
+                    <InstanceCounter
+                        count={instanceCount}
+                        instances={instances}
+                    />
                 </div>
             </SecondaryBarZone>
 
