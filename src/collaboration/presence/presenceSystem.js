@@ -9,6 +9,7 @@ import {
   getUserColor,
 } from "@Collaboration/presence/userManagement.js";
 import { awareness } from "@Collaboration/yjs/yjsSetup.js";
+import { presence as log } from "@Utils/logger.js";
 
 class PresenceSystem {
   constructor() {
@@ -30,7 +31,7 @@ class PresenceSystem {
    */
   async initialize() {
     if (this._initialized) {
-      console.warn("⚠️ Presence system already initialized");
+      log.warn("Presence system already initialized");
       return;
     }
 
@@ -38,7 +39,7 @@ class PresenceSystem {
     const userName = getUserName();
 
     if (!userId || !userName) {
-      console.error("❌ Cannot initialize presence without user ID and name");
+      log.error("Cannot initialize presence without user ID and name");
       return;
     }
 
@@ -76,21 +77,21 @@ class PresenceSystem {
     window.addEventListener("beforeunload", this.beforeUnloadHandler);
 
     this._initialized = true;
-    console.log("✅ Presence system initialized");
-    console.log("👤 My presence:", this.localPresence);
+    log.info("Presence system initialized");
+    log.debug("My presence:", this.localPresence);
   }
 
   /**
    * Update my presence information
    */
   async updateMyPresence(updates) {
-    console.log("👤 Updating my presence:", {
+    log.info("Updating my presence:", {
       userId: getUserId(),
       userName: getUserName(),
       sessionId: this.sessionId, // If you track sessions
     });
     if (!this.localPresence || !this.awareness) {
-      console.warn("⚠️ Cannot update presence - not initialized");
+      log.warn("Cannot update presence - not initialized");
       return;
     }
 
@@ -105,7 +106,7 @@ class PresenceSystem {
     // Notify local listeners so React components can update
     this.notifyPresenceListeners();
 
-    console.log("👤 Presence updated:", this.localPresence);
+    log.info("Presence updated:", this.localPresence);
   }
 
   /**
@@ -119,7 +120,7 @@ class PresenceSystem {
    * Update user status (active, idle, away)
    */
   updateStatus(status) {
-    console.log("📊 Status update:", status);
+    log.debug("Status update:", status);
     this.setPresence({ status, lastSeen: Date.now() });
     this.notifyStatusListeners(status);
   }
@@ -130,7 +131,7 @@ class PresenceSystem {
    */
   getOnlineUsers() {
     if (!this.awareness) {
-      console.warn("⚠️ Cannot get users - presence not initialized");
+      log.warn("Cannot get users - presence not initialized");
       return [];
     }
 
@@ -190,19 +191,19 @@ class PresenceSystem {
       const names = added.map(
         (id) => this.awareness.getStates().get(id)?.userName || "Unknown"
       );
-      console.log("👋 Users joined:", names);
+      log.debug("Users joined:", names);
     }
     if (removed.length > 0) {
-      console.log("👋 Users left:", removed.length, "users");
+      log.debug("Users left:", removed.length, "users");
     }
     if (updated.length > 0) {
-      console.log("🔄 Users updated:", updated.length, "users");
+      log.debug("Users updated:", updated.length, "users");
     }
 
     // CRITICAL: Always get fresh user list and notify ALL listeners
     const users = this.getOnlineUsers();
-    console.log(
-      "👥 Broadcasting to",
+    log.debug(
+      "Broadcasting to",
       this.presenceListeners.length,
       "listeners with",
       users.length,
@@ -223,7 +224,7 @@ class PresenceSystem {
       }
     }, 10000);
 
-    console.log("💓 Heartbeat started");
+    log.info("Heartbeat started");
   }
 
   /**
@@ -233,7 +234,7 @@ class PresenceSystem {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
-      console.log("💓 Heartbeat stopped");
+      log.info("Heartbeat stopped");
     }
   }
 
@@ -282,7 +283,7 @@ class PresenceSystem {
     // Mark as active immediately on setup
     markActive();
 
-    console.log("🎯 Activity tracking enabled");
+    log.info("Activity tracking enabled");
   }
 
   /**
@@ -330,7 +331,7 @@ class PresenceSystem {
       try {
         callback(userList);
       } catch (error) {
-        console.error("Error in presence listener:", error);
+        log.error("Error in presence listener:", error);
       }
     });
   }
@@ -343,7 +344,7 @@ class PresenceSystem {
       try {
         callback(status);
       } catch (error) {
-        console.error("Error in status listener:", error);
+        log.error("Error in status listener:", error);
       }
     });
   }
@@ -353,7 +354,7 @@ class PresenceSystem {
    * Called when user closes tab or disconnects
    */
   destroy() {
-    console.log("👋 Destroying presence system");
+    log.info("Destroying presence system");
 
     // Stop heartbeat
     this.stopHeartbeat();

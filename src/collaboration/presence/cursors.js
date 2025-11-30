@@ -16,6 +16,7 @@ import {
 } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { NETWORK_CONFIG } from "@Core/config/constants.js";
+import { cursor as log } from "@Utils/logger.js";
 
 // Separate Y.js maps for position and preferences
 const yCursors = ydoc.getMap("cursors"); // Position data only
@@ -49,7 +50,7 @@ export function getActiveInstance() {
 // ----------------------------------------------------------------------------
 
 export function initializeCursorTracking() {
-  console.log("🖱️ Initializing cursor tracking");
+  log.info("Initializing cursor tracking");
 
   document.addEventListener("mousemove", (event) => {
     const now = Date.now();
@@ -80,7 +81,7 @@ export function initializeCursorTracking() {
     }
   });
 
-  console.log("✅ Cursor tracking initialized");
+  log.info("Cursor tracking initialized");
 }
 
 // ----------------------------------------------------------------------------
@@ -123,7 +124,7 @@ export function setMyCursorVisible(visible) {
   // Update current position with new visibility
   broadcastCursorPosition();
 
-  console.log(`🖱️ My cursor visibility: ${visible}`);
+  log.info(`My cursor visibility: ${visible}`);
 }
 
 export function getMyCursorVisible() {
@@ -183,7 +184,7 @@ yCursors.observe((event) => {
           try {
             callback({ userId, cursorData });
           } catch (error) {
-            console.error("Error in cursor update listener:", error);
+            log.error("Error in cursor update listener:", error);
           }
         });
       } else {
@@ -192,7 +193,7 @@ yCursors.observe((event) => {
           try {
             callback({ userId });
           } catch (error) {
-            console.error("Error in cursor remove listener:", error);
+            log.error("Error in cursor remove listener:", error);
           }
         });
       }
@@ -202,11 +203,11 @@ yCursors.observe((event) => {
         try {
           callback({ userId });
         } catch (error) {
-          console.error("Error in cursor remove listener:", error);
+          log.error("Error in cursor remove listener:", error);
         }
       });
     }
   });
 });
 
-console.log("✅ Cursor coordination system initialized");
+log.info("Cursor coordination system initialized");

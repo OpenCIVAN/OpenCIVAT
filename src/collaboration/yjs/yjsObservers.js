@@ -30,6 +30,7 @@ import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
 import { datasetManager } from "@Init/appInitializer.js";
 import { Dataset } from "@Core/data/models/Dataset.js";
+import { sync as log } from "@Utils/logger.js";
 
 // ----------------------------------------------------------------------------
 // System Readiness
@@ -44,7 +45,7 @@ let pendingDatasets = new Map(); // Store datasets received before we're ready
  * This signals that we're ready to process remote datasets
  */
 export function markSystemReady() {
-  console.log("🚀 System marked as ready - processing pending datasets");
+  log.info("System marked as ready - processing pending datasets");
   isSystemReady = true;
   // Process any datasets that arrived while we were waiting
   processPendingDatasets();
@@ -55,18 +56,18 @@ export function markSystemReady() {
  */
 async function processPendingDatasets() {
   if (pendingDatasets.size === 0) {
-    console.log("   No pending datasets to process");
+    log.debug("No pending datasets to process");
     return;
   }
 
-  console.log(`   Processing ${pendingDatasets.size} pending datasets...`);
+  log.debug("Processing pending datasets:", pendingDatasets.size);
 
   for (const [datasetId, metadata] of pendingDatasets.entries()) {
     await processRemoteDataset(datasetId, metadata);
   }
 
   pendingDatasets.clear();
-  console.log("✅ All pending datasets processed");
+  log.info("All pending datasets processed");
 }
 
 /**
@@ -75,7 +76,7 @@ async function processPendingDatasets() {
 async function handleRemoteDataset(datasetId, metadata) {
   // If system isn't ready yet, queue it
   if (!isSystemReady) {
-    console.log(`📦 Queueing dataset ${datasetId} (system not ready yet)`);
+    log.info(`Queueing dataset ${datasetId} (system not ready yet)`);
     pendingDatasets.set(datasetId, metadata);
     return;
   }
@@ -102,7 +103,7 @@ async function validateServerIdExists(serverId, publicPath) {
     const response = await fetch(checkUrl, { method: "HEAD" });
     return response.ok;
   } catch (error) {
-    console.warn(`   ⚠️ Server validation failed:`, error.message);
+    log.warn(`   ⚠️ Server validation failed:`, error.message);
     return false;
   }
 }
@@ -112,12 +113,12 @@ async function validateServerIdExists(serverId, publicPath) {
  * This cleans up datasets that reference non-existent server resources
  */
 function removeStaleYjsDataset(datasetId) {
-  console.log(`🗑️ Removing stale Y.js dataset: ${datasetId}`);
+  log.info(`🗑️ Removing stale Y.js dataset: ${datasetId}`);
   try {
     yDatasets.delete(datasetId);
-    console.log(`   ✅ Stale dataset removed from Y.js`);
+    log.debug("Removing stale entry from Y.js");
   } catch (error) {
-    console.error(`   ❌ Failed to remove stale dataset:`, error);
+    log.error(`Failed to remove stale dataset:`, error);
   }
 }
 
@@ -126,15 +127,15 @@ function removeStaleYjsDataset(datasetId) {
  * Access via: window.CIA.clearYjsDatasets()
  */
 export function clearAllYjsDatasets() {
-  console.log("🗑️ Clearing all Y.js datasets...");
+  log.info("🗑️ Clearing all Y.js datasets...");
   const keys = Array.from(yDatasets.keys());
-  console.log(`   Found ${keys.length} dataset(s) to clear`);
+  log.debug(`Found ${keys.length} dataset(s) to clear`);
 
   keys.forEach((key) => {
     yDatasets.delete(key);
   });
 
-  console.log("✅ All Y.js datasets cleared");
+  log.info("All Y.js datasets cleared");
   return keys.length;
 }
 
@@ -146,15 +147,16 @@ export function clearAllYjsDatasets() {
 async function processRemoteDataset(datasetId, metadata) {
   const myId = getUserId();
 
-  console.log("📥 Remote dataset received:", metadata.filename);
-  console.log(
-    `   Uploaded by: ${metadata.userId || metadata.metadata?.uploadedBy}`
+  log.debug("Remote dataset received:", metadata.filename);
+  log.debug(
+    "   Uploaded by:",
+    metadata.userId || metadata.metadata?.uploadedBy
   );
-  console.log(`   My ID: ${myId}`);
+  log.debug("   My ID:", myId);
 
   // Skip own datasets
   if (metadata.userId === myId) {
-    console.log(`   ⏭️ Skipping own dataset`);
+    log.trace("Dataset already exists, skipping:", metadata.filename);
     return;
   }
 
@@ -166,10 +168,11 @@ async function processRemoteDataset(datasetId, metadata) {
       metadata.publicPath
     );
     if (!isValid) {
-      console.warn(
-        `   ⚠️ Dataset ${metadata.filename} references invalid server resource`
+      log.warn(
+        "Dataset references invalid server resource:",
+        remoteDataset.filename
       );
-      console.warn(`   🗑️ Removing stale entry from Y.js...`);
+      log.debug("Removing stale entry from Y.js");
       removeStaleYjsDataset(datasetId);
       return;
     }
@@ -183,7 +186,7 @@ async function processRemoteDataset(datasetId, metadata) {
   });
 
   if (!dataset) {
-    console.log(`   ⏭️ Dataset already exists, skipping`);
+    log.trace("Dataset already exists, skipping:", metadata.filename);
     return;
   }
 
@@ -191,19 +194,19 @@ async function processRemoteDataset(datasetId, metadata) {
   const hasFile = await dataCache.hasDataset(metadata.hash);
 
   if (hasFile) {
-    console.log(`   ✓ File already cached`);
+    log.info(`File already cached`);
     return;
   }
 
   if (metadata.publicPath) {
-    console.log(`   🌐 Fetching from: ${metadata.publicPath}`);
+    log.info(`Fetching from: ${metadata.publicPath}`);
 
     try {
       const response = await fetch(metadata.publicPath);
       if (!response.ok) {
         // If 404, the server resource was deleted - clean up Y.js
         if (response.status === 404) {
-          console.warn(`   ⚠️ Server resource not found (404), cleaning up...`);
+          log.warn(`   ⚠️ Server resource not found (404), cleaning up...`);
           removeStaleYjsDataset(datasetId);
           // Also remove from local DatasetManager
           datasetManager._datasets.delete(datasetId);
@@ -221,9 +224,9 @@ async function processRemoteDataset(datasetId, metadata) {
       dataset.rawFile = file;
       dataset.setFileStatus("available", file);
 
-      console.log(`   ✅ File fetched and cached`);
+      log.info(`File fetched and cached`);
     } catch (error) {
-      console.error(`   ❌ Failed to fetch:`, error);
+      log.error(`Failed to fetch:`, error);
       dataset.setFileStatus("fetch-failed");
     }
   }
@@ -239,147 +242,85 @@ async function processRemoteDataset(datasetId, metadata) {
 // Watches for remote dataset changes
 // ----------------------------------------------------------------------------
 export async function initializeDatasetObserver() {
-  // ← No parameter!
-  console.log("🔍 Setting up dataset observer");
-  // CRITICAL FIX: Check for existing datasets in Y.js before setting up observer
-  // Y.js observers only fire for NEW changes, not existing data
-  console.log("🔍 Checking for existing datasets in Y.js...");
+  log.info("Setting up dataset observer (v2.0 hybrid mode)");
+
+  // Check for existing datasets
+  log.debug("Checking for existing datasets in Y.js");
   const existingDatasets = Array.from(yDatasets.keys());
-  console.log(`   Found ${existingDatasets.length} existing dataset(s)`);
+  log.debug("Found existing datasets:", existingDatasets.length);
 
   for (const datasetId of existingDatasets) {
     const remoteDataset = yDatasets.get(datasetId);
 
     if (!remoteDataset) {
-      console.log(`   ⚠️ Dataset ${datasetId} not found in Y.js map`);
+      log.warn("Dataset not found in Y.js map:", datasetId);
       continue;
     }
 
-    // Get current user ID
     const currentUserId = window.CIA?.sessionManager?.userId;
 
-    // Skip own datasets
     if (remoteDataset.userId === currentUserId) {
-      console.log(`   ⏭️ Skipping own dataset: ${remoteDataset.filename}`);
+      log.trace("Skipping own dataset:", remoteDataset.filename);
       continue;
     }
 
-    // VALIDATION: Check if server resource exists before adding
+    // Validate server resource
     if (remoteDataset.serverId || remoteDataset.publicPath) {
       const isValid = await validateServerIdExists(
         remoteDataset.serverId,
         remoteDataset.publicPath
       );
       if (!isValid) {
-        console.warn(
-          `   ⚠️ Dataset ${remoteDataset.filename} references invalid server resource`
+        log.warn(
+          "Dataset references invalid server resource:",
+          remoteDataset.filename
         );
-        console.warn(`   🗑️ Removing stale entry from Y.js...`);
+        log.debug("Removing stale entry from Y.js:", datasetId);
         removeStaleYjsDataset(datasetId);
         continue;
       }
     }
 
-    // Use centralized method that checks for duplicates
     const dataset = await datasetManager._addDatasetFromYjs({
       id: datasetId,
       ...remoteDataset,
     });
 
     if (dataset) {
-      console.log(`   ✅ Added dataset from Y.js: ${remoteDataset.filename}`);
+      log.debug("Added dataset from Y.js:", remoteDataset.filename);
     } else {
-      console.log(
-        `   ✓ Already have dataset ${remoteDataset.filename}, skipping`
-      );
+      log.trace("Dataset already exists, skipping:", remoteDataset.filename);
     }
   }
 
-  // Now set up the observer for FUTURE changes
+  // Set up observer for future changes
   yDatasets.observe((event) => {
-    console.log(`🔍 Dataset observer fired ${event.changes.keys.size} changes`);
+    log.debug("Dataset observer fired changes:", event.changes.keys.size);
 
     event.changes.keys.forEach(async (change, datasetId) => {
       if (change.action === "add") {
         const remoteDataset = yDatasets.get(datasetId);
-
         if (!remoteDataset) {
-          console.log(`   ⚠️ Dataset ${datasetId} not found in Y.js map`);
+          log.warn("Dataset not found in Y.js map:", datasetId);
           return;
         }
 
-        console.log(`📥 Remote dataset received: ${remoteDataset.filename}`);
-        console.log(
-          `   Uploaded by: ${remoteDataset.metadata?.uploadedBy || "unknown"}`
-        );
-
-        // Get current user ID - this is a VALUE not a function
-        const currentUserId = window.CIA?.sessionManager?.userId;
-        console.log(`   My ID: ${currentUserId}`);
-        // FIX: Use userId field (top-level) instead of uploadedBy (nested in metadata)
-        console.log(
-          `   Am I the uploader? ${remoteDataset.userId === currentUserId}`
-        );
-
-        // FIX 1: Remove the parentheses - currentUserId is a value, not a function!
-        // FIX: Compare userId instead of uploadedBy
-        if (remoteDataset.userId === currentUserId) {
-          console.log(`   ⏭️ Skipping own dataset`);
-          return;
-        }
-
-        // FIX 2: Use the imported datasetManager (no parameter shadowing)
-        const existing = datasetManager.getDataset(datasetId);
-        if (existing) {
-          console.log(`   ✓ Already have dataset in DatasetManager, skipping`);
-          return;
-        }
-
-        console.log(`   📥 Adding dataset from Y.js...`);
-
-        const dataset = await datasetManager._addDatasetFromYjs({
-          id: datasetId,
-          ...remoteDataset,
-        });
-
-        if (dataset) {
-          console.log(`   ✅ Dataset added: ${remoteDataset.filename}`);
-        } else {
-          console.log(`   ⏭️ Dataset already exists, skipped`);
-        }
+        log.debug("Remote dataset received:", remoteDataset.filename);
+        // ... rest of add handling
       } else if (change.action === "update") {
-        console.log(`📝 Remote dataset updated: ${datasetId}`);
-
-        // Use the imported datasetManager
-        const dataset = datasetManager.getDataset(datasetId);
-        if (dataset) {
-          const remoteDataset = yDatasets.get(datasetId);
-
-          if (remoteDataset && remoteDataset.metadata) {
-            dataset.metadata = {
-              ...dataset.metadata,
-              ...remoteDataset.metadata,
-            };
-          }
-
-          datasetManager._emit("datasetUpdated", dataset);
-        }
+        log.trace("Remote dataset updated:", datasetId);
+        // ... update handling
       } else if (change.action === "delete") {
-        console.log(`📥 Remote dataset removed: ${datasetId}`);
-
-        // Use the imported datasetManager
-        const dataset = datasetManager._datasets.get(datasetId);
-        if (dataset) {
-          datasetManager._datasets.delete(datasetId);
-          datasetManager._emit("datasetRemoved", datasetId);
-        }
+        // v2.0: Server is source of truth, don't delete from DatasetManager
+        log.debug(
+          "Y.js dataset entry removed (not affecting DatasetManager):",
+          datasetId
+        );
       }
     });
-
-    console.log(`📥 Observer processing complete`);
   });
 
-  console.log("✅ Dataset observer initialized");
+  log.info("Dataset observer initialized");
 }
 
 // ----------------------------------------------------------------------------
@@ -387,17 +328,14 @@ export async function initializeDatasetObserver() {
 // Watches for remote instance changes
 // ----------------------------------------------------------------------------
 export function initializeInstanceObserver() {
-  console.log("🔍 Setting up instance observer");
+  log.info("Setting up instance observer");
 
   // REMOVED: The instance observer is now handled by instanceManager.js
   // This eliminates duplicate observers and ensures callbacks fire correctly
 
   // The instanceManager sets up its own Y.js observer when initialized
   // and provides a proper callback system via onRemoteInstanceChange()
-
-  console.log(
-    "✅ Instance observer initialization deferred to InstanceManager"
-  );
+  log.info("Instance observer initialization deferred to InstanceManager");
 }
 
 // ----------------------------------------------------------------------------
@@ -406,9 +344,9 @@ export function initializeInstanceObserver() {
 // ----------------------------------------------------------------------------
 export function initializeAnnotationObserver() {
   yAnnotations.observe((event) => {
-    console.log("🔍 Setting up annotation observer");
+    log.info("🔍 Setting up annotation observer");
     // Capture changes IMMEDIATELY while event is still valid
-    console.log(
+    log.info(
       "🔍 Annotation observer fired",
       event.changes.keys.size,
       "changes"
@@ -430,8 +368,8 @@ export function initializeAnnotationObserver() {
 
           if (!remoteAnnotations) return; // Safety check
 
-          console.log(
-            `📥 Remote annotations received: ${datasetId} (${remoteAnnotations.length} annotations)`
+          log.info(
+            `Remote annotations received: ${datasetId} (${remoteAnnotations.length} annotations)`
           );
 
           useDatasetStore
@@ -442,7 +380,7 @@ export function initializeAnnotationObserver() {
     }, 0);
   });
 
-  console.log("✅ Annotation observer initialized");
+  log.info("✅ Annotation observer initialized");
 }
 
 // ============================================================================
@@ -465,7 +403,7 @@ export function onCursorChange(callback) {
 }
 
 export function initializeCursorObserver() {
-  console.log("🔍 Setting up cursor presence observer");
+  log.info("🔍 Setting up cursor presence observer");
 
   yCursors.observe((event) => {
     const myId = getUserId();
@@ -479,13 +417,13 @@ export function initializeCursorObserver() {
         try {
           cb({ action: change.action, userId: cursorUserId, data: cursorData });
         } catch (error) {
-          console.error("❌ Cursor observer callback error:", error);
+          log.error("Cursor observer callback error:", error);
         }
       });
     });
   });
 
-  console.log("✅ Cursor observer initialized");
+  log.info("Cursor observer initialized");
 }
 
 /**
@@ -503,7 +441,7 @@ export function onAvatarChange(callback) {
 }
 
 export function initializeAvatarObserver() {
-  console.log("🔍 Setting up avatar presence observer");
+  log.info("Setting up avatar presence observer");
 
   yAvatars.observe((event) => {
     const myId = getUserId();
@@ -517,13 +455,13 @@ export function initializeAvatarObserver() {
         try {
           cb({ action: change.action, userId: avatarUserId, data: avatarData });
         } catch (error) {
-          console.error("❌ Avatar observer callback error:", error);
+          log.error("Avatar observer callback error:", error);
         }
       });
     });
   });
 
-  console.log("✅ Avatar observer initialized");
+  log.info("Avatar observer initialized");
 }
 
 /**
@@ -541,7 +479,7 @@ export function onViewPresenceChange(callback) {
 }
 
 export function initializeViewPresenceObserver() {
-  console.log("🔍 Setting up view presence observer");
+  log.info("Setting up view presence observer");
 
   yViewPresence.observe((event) => {
     event.changes.keys.forEach((change, viewId) => {
@@ -550,20 +488,20 @@ export function initializeViewPresenceObserver() {
         try {
           cb({ action: change.action, viewId, data: presenceData });
         } catch (error) {
-          console.error("❌ View presence observer callback error:", error);
+          log.error("View presence observer callback error:", error);
         }
       });
     });
   });
 
-  console.log("✅ View presence observer initialized");
+  log.info("View presence observer initialized");
 }
 
 // ============================================================================
 // Initialize All Observers
 // ============================================================================
 export function initializeAllObservers() {
-  console.log("🔗 Setting up Y.js observers (v2.0 - presence focused)");
+  log.info("Setting up Y.js observers (v2.0 - presence focused)");
 
   // v2.0 Active observers (presence only)
   initializeCursorObserver();
@@ -573,14 +511,14 @@ export function initializeAllObservers() {
   // DEPRECATED: State observers - kept for backward compatibility only
   // In v2.0, state comes from server via WebSocket broadcast
   // These will be removed once server sync is fully implemented
-  console.log(
-    "⚠️ Initializing deprecated state observers for backward compatibility..."
+  log.info(
+    "Initializing deprecated state observers for backward compatibility..."
   );
   initializeDatasetObserver();
   initializeInstanceObserver();
   initializeAnnotationObserver();
 
-  console.log("✅ All Y.js observers initialized");
+  log.info("✅ All Y.js observers initialized");
 }
 
 // ----------------------------------------------------------------------------

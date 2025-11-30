@@ -26,6 +26,7 @@ import { WebsocketProvider } from "y-websocket";
 
 import { NETWORK_CONFIG } from "@Core/config/constants.js";
 import { sessionManager } from "@Core/session/sessionManager";
+import { sync as log } from "@Utils/logger.js";
 
 // ============================================================================
 // Core Y.js Document and Awareness
@@ -103,7 +104,7 @@ let _provider = null;
  */
 export function initializeYjsProvider() {
   if (_provider) {
-    console.warn("⚠️ Y.js provider already initialized");
+    log.warn("Y.js provider already initialized");
     return _provider;
   }
 
@@ -116,15 +117,15 @@ export function initializeYjsProvider() {
     { awareness }
   );
 
-  console.log(`📡 Y.js connecting to room: ${roomId}`);
+  log.info(`Y.js connecting to room: ${roomId}`);
 
   _provider.on("status", (event) => {
-    console.log(`📡 Y.js connection status: ${event.status}`);
+    log.info(`Y.js connection status: ${event.status}`);
   });
 
   _provider.on("sync", (synced) => {
     if (synced) {
-      console.log("✅ Y.js synchronized with server");
+      log.info("Y.js synchronized with server");
 
       // Initialize observers when sync is complete
       import("@Collaboration/yjs/yjsObservers.js").then(
@@ -148,8 +149,8 @@ export const provider = new Proxy(
           `Y.js provider not initialized - call initializeYjsProvider() first.\n` +
             `Attempted to access provider.${String(prop)}`
         );
-        console.error("🔍 Provider access stack trace:");
-        console.error(error.stack);
+        log.error("Provider access stack trace:");
+        log.error(error.stack);
         throw error;
       }
       return _provider[prop];
@@ -174,7 +175,7 @@ export function syncCursorToYjs(userId, cursorData) {
       lastUpdate: Date.now(),
     });
   } catch (error) {
-    console.error("❌ Failed to sync cursor to Y.js:", error);
+    log.error("Failed to sync cursor to Y.js:", error);
   }
 }
 
@@ -190,7 +191,7 @@ export function syncAvatarToYjs(userId, avatarData) {
       lastUpdate: Date.now(),
     });
   } catch (error) {
-    console.error("❌ Failed to sync avatar to Y.js:", error);
+    log.error("Failed to sync avatar to Y.js:", error);
   }
 }
 
@@ -206,7 +207,7 @@ export function syncVRControllerToYjs(controllerId, controllerData) {
       lastUpdate: Date.now(),
     });
   } catch (error) {
-    console.error("❌ Failed to sync VR controller to Y.js:", error);
+    log.error("Failed to sync VR controller to Y.js:", error);
   }
 }
 
@@ -222,7 +223,7 @@ export function syncViewPresenceToYjs(viewId, viewers) {
       lastUpdate: Date.now(),
     });
   } catch (error) {
-    console.error("❌ Failed to sync view presence to Y.js:", error);
+    log.error("Failed to sync view presence to Y.js:", error);
   }
 }
 
@@ -236,7 +237,7 @@ export function removeUserPresenceFromYjs(userId) {
   // Remove both hand controllers
   yVRControllers.delete(`${userId}_left`);
   yVRControllers.delete(`${userId}_right`);
-  console.log(`🚪 User presence removed from Y.js: ${userId}`);
+  log.info(`User presence removed from Y.js: ${userId}`);
 }
 
 // ============================================================================
@@ -250,8 +251,8 @@ export function removeUserPresenceFromYjs(userId) {
  * Dataset state should come from server, not Y.js
  */
 export function syncDatasetToYjs(datasetId, metadata) {
-  console.warn(
-    "⚠️ DEPRECATED v2.0: syncDatasetToYjs() - Use server API instead. " +
+  log.warn(
+    "DEPRECATED v2.0: syncDatasetToYjs() - Use server API instead. " +
       "This function is kept for backward compatibility only."
   );
   try {
@@ -268,7 +269,7 @@ export function syncDatasetToYjs(datasetId, metadata) {
       },
     });
   } catch (error) {
-    console.error("❌ Failed to sync dataset to Y.js:", error);
+    log.error("Failed to sync dataset to Y.js:", error);
   }
 }
 
@@ -276,11 +277,11 @@ export function syncDatasetToYjs(datasetId, metadata) {
  * @deprecated v2.0 - Use server API: POST /api/views
  */
 export function syncViewToYjs(viewId, viewConfig) {
-  console.warn("⚠️ DEPRECATED v2.0: syncViewToYjs() - Use server API instead.");
+  log.warn("DEPRECATED v2.0: syncViewToYjs() - Use server API instead.");
   try {
     yViews.set(viewId, viewConfig);
   } catch (error) {
-    console.error("❌ Failed to sync view to Y.js:", error);
+    log.error("Failed to sync view to Y.js:", error);
   }
 }
 
@@ -288,13 +289,13 @@ export function syncViewToYjs(viewId, viewConfig) {
  * @deprecated v2.0 - Use server API: POST /api/annotations
  */
 export function syncAnnotationsToYjs(datasetId, annotations) {
-  console.warn(
-    "⚠️ DEPRECATED v2.0: syncAnnotationsToYjs() - Use server API instead."
+  log.warn(
+    "DEPRECATED v2.0: syncAnnotationsToYjs() - Use server API instead."
   );
   try {
     yAnnotations.set(datasetId, annotations);
   } catch (error) {
-    console.error("❌ Failed to sync annotations to Y.js:", error);
+    log.error("Failed to sync annotations to Y.js:", error);
   }
 }
 
@@ -302,13 +303,13 @@ export function syncAnnotationsToYjs(datasetId, annotations) {
  * @deprecated v2.0 - Use server API for workspace layouts
  */
 export function syncWorkspaceLayoutToYjs(layoutId, layout) {
-  console.warn(
-    "⚠️ DEPRECATED v2.0: syncWorkspaceLayoutToYjs() - Use server API instead."
+  log.warn(
+    "DEPRECATED v2.0: syncWorkspaceLayoutToYjs() - Use server API instead."
   );
   try {
     yWorkspaceLayouts.set(layoutId, layout);
   } catch (error) {
-    console.error("❌ Failed to sync workspace layout to Y.js:", error);
+    log.error("Failed to sync workspace layout to Y.js:", error);
   }
 }
 
@@ -316,8 +317,8 @@ export function syncWorkspaceLayoutToYjs(layoutId, layout) {
  * @deprecated v2.0 - Use server API: DELETE /api/files/:id
  */
 export function removeDatasetFromYjs(datasetId) {
-  console.warn(
-    "⚠️ DEPRECATED v2.0: removeDatasetFromYjs() - Use server API instead."
+  log.warn(
+    "DEPRECATED v2.0: removeDatasetFromYjs() - Use server API instead."
   );
   yDatasets.delete(datasetId);
   yAnnotations.delete(datasetId);
@@ -327,8 +328,8 @@ export function removeDatasetFromYjs(datasetId) {
  * @deprecated v2.0 - Use server API: DELETE /api/views/:id
  */
 export function removeViewFromYjs(viewId) {
-  console.warn(
-    "⚠️ DEPRECATED v2.0: removeViewFromYjs() - Use server API instead."
+  log.warn(
+    "DEPRECATED v2.0: removeViewFromYjs() - Use server API instead."
   );
   yViews.delete(viewId);
   yViewPresence.delete(viewId);
@@ -338,8 +339,8 @@ export function removeViewFromYjs(viewId) {
  * @deprecated v2.0 - Use server API
  */
 export function removeWorkspaceLayoutFromYjs(layoutId) {
-  console.warn(
-    "⚠️ DEPRECATED v2.0: removeWorkspaceLayoutFromYjs() - Use server API instead."
+  log.warn(
+    "DEPRECATED v2.0: removeWorkspaceLayoutFromYjs() - Use server API instead."
   );
   yWorkspaceLayouts.delete(layoutId);
 }
@@ -348,8 +349,8 @@ export function removeWorkspaceLayoutFromYjs(layoutId) {
  * @deprecated - Instances are ephemeral and should not sync
  */
 export function syncInstanceToYjs(instanceId, instance) {
-  console.warn(
-    "⚠️ DEPRECATED: syncInstanceToYjs() - Instances are ephemeral and should not sync."
+  log.warn(
+    "DEPRECATED: syncInstanceToYjs() - Instances are ephemeral and should not sync."
   );
 }
 
@@ -357,10 +358,10 @@ export function syncInstanceToYjs(instanceId, instance) {
  * @deprecated - Instances are ephemeral and should not sync
  */
 export function removeInstanceFromYjs(instanceId) {
-  console.warn(
-    "⚠️ DEPRECATED: removeInstanceFromYjs() - Instances are ephemeral."
+  log.warn(
+    "DEPRECATED: removeInstanceFromYjs() - Instances are ephemeral."
   );
   yInstances.delete(instanceId);
 }
 
-console.log("✅ Y.js core initialized (v2.0 - presence only architecture)");
+log.info("Y.js core initialized (v2.0 - presence only architecture)");

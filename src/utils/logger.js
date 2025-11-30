@@ -1,6 +1,21 @@
 // src/utils/logger.js
 // Client-side structured logging with levels and categories
-// Control verbosity via localStorage or URL params
+// Control verbosity via localStorage, URL params, or runtime API
+//
+// Usage:
+//   import { dataset, workspace } from '@Utils/logger.js';
+//   dataset.info('Loaded:', count);
+//   workspace.debug('Camera updated:', position);
+//
+// Runtime control (browser console):
+//   log.status()              - Show current config
+//   log.setLevel('debug')     - Set level
+//   log.setCategory('sync', false) - Toggle category
+//   log.only('ws', 'dataset') - Enable only specific categories
+//   log.all()                 - Enable all
+//
+// URL params:
+//   ?log=debug&logcat=ws,dataset
 
 const LOG_LEVELS = {
   error: 0,
@@ -10,58 +25,81 @@ const LOG_LEVELS = {
   trace: 4,
 };
 
-// Default category states (can be overridden at runtime)
+// Default category states
+// true = enabled by default, false = disabled (too noisy for normal use)
 const DEFAULT_CATEGORIES = {
-  app: true, // App lifecycle
-  ui: false, // UI events (noisy)
-  store: false, // Store updates (noisy)
-  api: true, // API calls
+  // Core app
+  app: true, // App lifecycle, initialization phases
+  ui: false, // UI component events (noisy)
+  store: false, // Zustand/state updates (noisy)
+
+  // Network & sync
+  api: true, // HTTP API calls
   ws: true, // WebSocket events
-  sync: false, // Y.js sync (very noisy)
-  vr: true, // VR/XR events
+  sync: false, // Y.js sync operations (very noisy)
+
+  // Data layer
+  dataset: true, // DatasetManager operations
+  view: true, // ViewConfigurationManager operations
+  annotation: true, // AnnotationManager operations
+
+  // Instance layer
+  workspace: true, // WorkspaceCanvas, layout
+  instance: true, // Instance lifecycle, handler calls
   render: false, // Render loop (extremely noisy)
+
+  // Collaboration
+  presence: false, // User presence updates (noisy)
+  cursor: false, // Cursor position updates (very noisy)
+
+  // Features
+  vr: true, // VR/XR events
   files: true, // File operations
   auth: true, // Authentication
 };
 
 // Parse configuration from localStorage or URL
 function getConfig() {
-  // Check URL params first: ?log=debug&logcat=ws,api
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(window.location?.search || "");
 
   // Level from URL, localStorage, or default based on hostname
   const isLocalhost =
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1";
+    typeof window !== "undefined" &&
+    (window.location?.hostname === "localhost" ||
+      window.location?.hostname === "127.0.0.1");
   const defaultLevel = isLocalhost ? "debug" : "warn";
 
   const level =
-    urlParams.get("log") || localStorage.getItem("LOG_LEVEL") || defaultLevel;
+    urlParams.get("log") ||
+    (typeof localStorage !== "undefined" &&
+      localStorage.getItem("LOG_LEVEL")) ||
+    defaultLevel;
 
   // Categories from URL or localStorage
   const categoryConfig =
-    urlParams.get("logcat") || localStorage.getItem("LOG_CATEGORIES") || "";
+    urlParams.get("logcat") ||
+    (typeof localStorage !== "undefined" &&
+      localStorage.getItem("LOG_CATEGORIES")) ||
+    "";
 
   const categories = { ...DEFAULT_CATEGORIES };
 
   if (categoryConfig) {
     if (categoryConfig.startsWith("-")) {
-      // Disable mode: "-ui,-sync" disables those
+      // Disable mode: "-sync,-cursor" disables those
       categoryConfig.split(",").forEach((cat) => {
         const name = cat.replace("-", "").trim();
         if (name in categories) categories[name] = false;
       });
-    } else if (categoryConfig === "*") {
+    } else if (categoryConfig === "*" || categoryConfig === "all") {
       // Enable all
       Object.keys(categories).forEach((k) => (categories[k] = true));
     } else {
-      // Enable only specified: "ws,api"
+      // Enable only specified: "ws,dataset"
       Object.keys(categories).forEach((k) => (categories[k] = false));
       categoryConfig.split(",").forEach((cat) => {
         const name = cat.trim();
         if (name in categories) categories[name] = true;
-        if (name === "all")
-          Object.keys(categories).forEach((k) => (categories[k] = true));
       });
     }
   }
@@ -84,17 +122,31 @@ const STYLES = {
   trace: "color: #707070; font-size: 0.9em",
 };
 
+// Category colors (consistent, distinct)
 const CATEGORY_COLORS = {
+  // Core
   app: "#48dbfb",
   ui: "#ff9ff3",
   store: "#feca57",
+  // Network
   api: "#1dd1a1",
   ws: "#5f27cd",
   sync: "#ee5a24",
-  vr: "#00d2d3",
+  // Data layer
+  dataset: "#0984e3",
+  view: "#6c5ce7",
+  annotation: "#e17055",
+  // Instance layer
+  workspace: "#00cec9",
+  instance: "#fdcb6e",
   render: "#636e72",
-  files: "#0984e3",
-  auth: "#6c5ce7",
+  // Collaboration
+  presence: "#fd79a8",
+  cursor: "#a29bfe",
+  // Features
+  vr: "#00d2d3",
+  files: "#74b9ff",
+  auth: "#b2bec3",
 };
 
 /**
@@ -143,25 +195,37 @@ function createLogger(category) {
   };
 }
 
-// Pre-created loggers
+// Pre-created loggers for all categories
 const loggers = {
+  // Core
   app: createLogger("app"),
   ui: createLogger("ui"),
   store: createLogger("store"),
+  // Network
   api: createLogger("api"),
   ws: createLogger("ws"),
   sync: createLogger("sync"),
-  vr: createLogger("vr"),
+  // Data layer
+  dataset: createLogger("dataset"),
+  view: createLogger("view"),
+  annotation: createLogger("annotation"),
+  // Instance layer
+  workspace: createLogger("workspace"),
+  instance: createLogger("instance"),
   render: createLogger("render"),
+  // Collaboration
+  presence: createLogger("presence"),
+  cursor: createLogger("cursor"),
+  // Features
+  vr: createLogger("vr"),
   files: createLogger("files"),
   auth: createLogger("auth"),
 };
 
-// Runtime configuration API
+// Runtime configuration API (exposed on window.log)
 const logConfig = {
   /**
    * Set log level at runtime
-   * @param {string} level - 'error', 'warn', 'info', 'debug', 'trace'
    */
   setLevel(level) {
     if (level in LOG_LEVELS) {
@@ -169,24 +233,28 @@ const logConfig = {
       config.levelName = level;
       localStorage.setItem("LOG_LEVEL", level);
       console.log(`Log level set to: ${level}`);
+    } else {
+      console.warn(
+        `Invalid level: ${level}. Use: error, warn, info, debug, trace`
+      );
     }
   },
 
   /**
    * Enable/disable a category
-   * @param {string} category - Category name
-   * @param {boolean} enabled - Whether to enable
    */
   setCategory(category, enabled) {
     if (category in config.categories) {
       config.categories[category] = enabled;
       console.log(`Category '${category}' ${enabled ? "enabled" : "disabled"}`);
+    } else {
+      console.warn(`Unknown category: ${category}`);
+      console.log("Available:", Object.keys(config.categories).join(", "));
     }
   },
 
   /**
-   * Enable multiple categories (disables others)
-   * @param {string[]} categories - Categories to enable
+   * Enable only specific categories (disables all others)
    */
   only(...categories) {
     Object.keys(config.categories).forEach((k) => {
@@ -206,15 +274,33 @@ const logConfig = {
   },
 
   /**
+   * Disable all categories except errors
+   */
+  quiet() {
+    Object.keys(config.categories).forEach(
+      (k) => (config.categories[k] = false)
+    );
+    config.level = LOG_LEVELS.error;
+    console.log("Quiet mode: errors only");
+  },
+
+  /**
    * Show current configuration
    */
   status() {
-    console.table({
-      level: config.levelName,
-      ...Object.fromEntries(
-        Object.entries(config.categories).map(([k, v]) => [k, v ? "ON" : "off"])
-      ),
+    console.log("\n📊 Logger Configuration:");
+    console.log(`   Level: ${config.levelName}`);
+    console.log("\n   Categories:");
+    Object.entries(config.categories).forEach(([cat, enabled]) => {
+      const color = CATEGORY_COLORS[cat] || "#888";
+      console.log(
+        `   %c● ${cat}: ${enabled ? "ON" : "off"}`,
+        `color: ${enabled ? color : "#555"}`
+      );
     });
+    console.log(
+      "\n   Commands: log.setLevel(), log.setCategory(), log.only(), log.all(), log.quiet()"
+    );
   },
 
   /**
@@ -234,9 +320,27 @@ if (typeof window !== "undefined") {
   window.loggers = loggers;
 }
 
+// Named exports for each category
 export { createLogger, logConfig };
-export const { app, ui, store, api, ws, sync, vr, render, files, auth } =
-  loggers;
+export const {
+  app,
+  ui,
+  store,
+  api,
+  ws,
+  sync,
+  dataset,
+  view,
+  annotation,
+  workspace,
+  instance,
+  render,
+  presence,
+  cursor,
+  vr,
+  files,
+  auth,
+} = loggers;
 
 // Default export for simple usage
 export default loggers.app;

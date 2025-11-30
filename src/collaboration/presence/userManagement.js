@@ -1,13 +1,14 @@
 import { generateUserId } from "@Utils/idGenerator.js";
+import { presence as log } from "@Utils/logger.js";
 
 // Initialize or retrieve user ID
 let userId = localStorage.getItem("cia_user_id");
 if (!userId) {
   userId = generateUserId();
   localStorage.setItem("cia_user_id", userId);
-  console.log("🆔 Generated new user ID:", userId);
+  log.info("Generated new user ID:", userId);
 } else {
-  console.log("🆔 Retrieved existing user ID:", userId);
+  log.info("Retrieved existing user ID:", userId);
 }
 
 // Display name (can be changed)
@@ -33,7 +34,7 @@ export function setUserName(name) {
   userName = name;
   userColor = getUserColor();
 
-  console.log(`👤 Username set: ${userName}`);
+  log.info(`Username set: ${userName}`);
 
   // Store for next time
   localStorage.setItem("cia_username", userName);
@@ -46,12 +47,12 @@ export async function setupUserName() {
   if (stored) {
     userName = stored;
     userColor = getUserColor();
-    console.log(`👤 Username loaded from storage: ${userName}`);
+    log.info(`Username loaded from storage: ${userName}`);
     return true; // Username ready
   }
 
   // No username yet - React modal will handle it
-  console.log(`👤 No username in storage - modal will prompt`);
+  log.info(`No username in storage - modal will prompt`);
   return false; // Username not ready (but don't block)
 }
 
@@ -66,7 +67,7 @@ export function changeUserName() {
 export function clearUserName() {
   userName = null;
   localStorage.removeItem("cia_username");
-  console.log("🗑️ Username cleared from localStorage");
+  log.info("Username cleared from localStorage");
 }
 
 export function getUserColor(uid = null) {

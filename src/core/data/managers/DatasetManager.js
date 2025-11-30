@@ -6,6 +6,7 @@ import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { Dataset } from "@Core/data/models/Dataset.js";
 import { Annotation } from "@Core/data/models/Annotation.js";
 import { config } from "@Core/config/clientConfig.js";
+import { dataset as log } from "@Utils/logger.js";
 
 /**
  * DatasetManager - Format-agnostic dataset management
@@ -25,7 +26,7 @@ export class DatasetManager extends EventEmitter {
     this._dbVersion = config.dbVersion || 1;
     this._db = null;
 
-    console.log("📦 DatasetManager: Initializing...");
+    log.info("DatasetManager: Initializing...");
 
     this._listeners = {
       datasetAdded: [],
@@ -41,11 +42,11 @@ export class DatasetManager extends EventEmitter {
   // ==================== INITIALIZATION ====================
 
   async initialize() {
-    console.log("📦 DatasetManager: Initializing...");
+    log.info("DatasetManager: Initializing...");
     await this._openDatabase();
     await this._loadExistingDatasets();
-    console.log(
-      `📦 DatasetManager: Initialized with ${this._datasets.size} datasets`
+    log.info(
+      `DatasetManager: Initialized with ${this._datasets.size} datasets`
     );
   }
 
@@ -54,7 +55,7 @@ export class DatasetManager extends EventEmitter {
    * Call this after Y.js becomes available to ensure collaboration
    */
   syncAllDatasetsToYjs() {
-    console.log("🔄 DatasetManager: Syncing all datasets to Y.js...");
+    log.info("DatasetManager: Syncing all datasets to Y.js...");
 
     let syncedCount = 0;
     this._datasets.forEach((dataset) => {
@@ -62,7 +63,7 @@ export class DatasetManager extends EventEmitter {
       syncedCount++;
     });
 
-    console.log(`✅ DatasetManager: Synced ${syncedCount} dataset(s) to Y.js`);
+    log.info(`DatasetManager: Synced ${syncedCount} dataset(s) to Y.js`);
     return syncedCount;
   }
 
@@ -76,7 +77,7 @@ export class DatasetManager extends EventEmitter {
         .join("");
       return hashHex;
     } catch (error) {
-      console.error("📦 DatasetManager: Failed to generate file hash:", error);
+      log.error("DatasetManager: Failed to generate file hash:", error);
       return `fallback_${file.name}_${file.size}_${file.lastModified}`;
     }
   }
@@ -116,12 +117,12 @@ export class DatasetManager extends EventEmitter {
         // Check if the required object store exists
         // If not, the database is corrupted/outdated - delete and recreate
         if (!this._db.objectStoreNames.contains("datasets")) {
-          console.warn("⚠️ Database missing 'datasets' store, recreating...");
+          log.warn("Database missing 'datasets' store, recreating...");
           this._db.close();
 
           const deleteRequest = indexedDB.deleteDatabase(this._dbName);
           deleteRequest.onsuccess = () => {
-            console.log("🗑️ Deleted corrupted database, recreating...");
+            log.info("Deleted corrupted database, recreating...");
             // Recursively call _openDatabase to recreate
             this._openDatabase().then(resolve).catch(reject);
           };
@@ -160,10 +161,10 @@ export class DatasetManager extends EventEmitter {
         const storedDatasets = request.result;
         storedDatasets.forEach((data) => {
           if (!data.id) {
-            console.warn(
-              `⚠️ Skipping dataset without ID: ${data.filename || "unknown"}`
+            log.warn(
+              `Skipping dataset without ID: ${data.filename || "unknown"}`
             );
-            console.warn(`   This dataset is corrupted and will be ignored`);
+            log.warn(`This dataset is corrupted and will be ignored`);
             return; // Skip this dataset
           }
 
@@ -175,13 +176,13 @@ export class DatasetManager extends EventEmitter {
             // This ensures other users can see what datasets we have
             this._syncDatasetMetadataToYjs(dataset);
           } catch (error) {
-            console.error(`❌ Failed to load dataset ${data.id}:`, error);
-            console.error(`   Dataset: ${data.filename || "unknown"}`);
+            log.error(`Failed to load dataset ${data.id}:`, error);
+            log.error(`Dataset: ${data.filename || "unknown"}`);
             // Skip corrupted datasets instead of crashing
           }
         });
 
-        console.log(`📦 Synced ${storedDatasets.length} datasets to Y.js`);
+        log.info(`Synced ${storedDatasets.length} datasets to Y.js`);
         resolve();
       };
       request.onerror = () =>
@@ -194,25 +195,25 @@ export class DatasetManager extends EventEmitter {
    * Called during Phase 1 initialization to populate from server
    */
   async syncDatasetsFromServer() {
-    console.log("📡 DatasetManager: Syncing datasets from server...");
+    log.info("DatasetManager: Syncing datasets from server...");
 
     // Check if we're using server storage
     if (!this.storageProvider || !this.storageProvider.listDatasets) {
-      console.log("   ℹ️ Not using server storage, skipping sync");
+      log.info("Not using server storage, skipping sync");
       return;
     }
 
     try {
       const serverDatasets = await this.storageProvider.listDatasets();
 
-      console.log(`   Found ${serverDatasets.length} dataset(s) on server`);
+      log.info(`Found ${serverDatasets.length} dataset(s) on server`);
 
       let syncedCount = 0;
       let skippedCount = 0;
 
       for (const serverDataset of serverDatasets) {
-        console.log(
-          `   📥 Creating dataset from server: ${serverDataset.filename}`
+        log.info(
+          `Creating dataset from server: ${serverDataset.filename}`
         );
 
         const dataset = await this._addDatasetFromServer(serverDataset);
@@ -224,8 +225,8 @@ export class DatasetManager extends EventEmitter {
         }
       }
 
-      console.log(
-        `   ✅ Synced ${syncedCount} new dataset(s), skipped ${skippedCount} existing`
+      log.info(
+        `Synced ${syncedCount} new dataset(s), skipped ${skippedCount} existing`
       );
 
       this.syncAllDatasetsToYjs();
@@ -236,7 +237,7 @@ export class DatasetManager extends EventEmitter {
         skipped: skippedCount,
       };
     } catch (error) {
-      console.error("❌ DatasetManager: Server sync failed:", error);
+      log.error("DatasetManager: Server sync failed:", error);
       throw error;
     }
   }
@@ -250,13 +251,13 @@ export class DatasetManager extends EventEmitter {
    * @returns {Promise<Dataset>} The created dataset
    */
   async _addDatasetFromServer(serverFile) {
-    console.log(
-      `📦 DatasetManager: Adding dataset from server: ${serverFile.filename}`
+    log.info(
+      `DatasetManager: Adding dataset from server: ${serverFile.filename}`
     );
 
     // Check if we already have this dataset
     if (this._datasets.has(serverFile.id)) {
-      console.log(`  ⏭️ Dataset ${serverFile.id} already exists locally`);
+      log.info(`Dataset ${serverFile.id} already exists locally`);
       return this._datasets.get(serverFile.id);
     }
 
@@ -294,7 +295,7 @@ export class DatasetManager extends EventEmitter {
     // Notify listeners
     this._emit("datasetAdded", dataset);
 
-    console.log(`  ✅ Dataset added from server: ${dataset.id}`);
+    log.info(`Dataset added from server: ${dataset.id}`);
     return dataset;
   }
 
@@ -308,14 +309,14 @@ export class DatasetManager extends EventEmitter {
   async _addDatasetFromYjs(yData) {
     // Check if we already have this dataset by ID
     if (this._datasets.has(yData.id)) {
-      console.log(`   ⏭️ Y.js dataset ${yData.id} already exists locally`);
+      log.info(`Y.js dataset ${yData.id} already exists locally`);
       return null;
     }
 
     // Check by hash
     if (yData.hash && this.hasDatasetWithHash(yData.hash)) {
-      console.log(
-        `   ⏭️ Y.js dataset with hash ${yData.hash.substring(
+      log.info(
+        `Y.js dataset with hash ${yData.hash.substring(
           0,
           8
         )}... already exists`
@@ -323,7 +324,7 @@ export class DatasetManager extends EventEmitter {
       return null;
     }
 
-    console.log(`   📥 Adding dataset from Y.js: ${yData.filename}`);
+    log.info(`Adding dataset from Y.js: ${yData.filename}`);
 
     const dataset = new Dataset({
       id: yData.id,
@@ -347,7 +348,7 @@ export class DatasetManager extends EventEmitter {
     // Emit event (but don't sync back to Y.js - it came FROM Y.js)
     this._emit("datasetAdded", dataset);
 
-    console.log(`   ✅ Dataset from Y.js added: ${dataset.filename}`);
+    log.info(`Dataset from Y.js added: ${dataset.filename}`);
 
     return dataset;
   }
@@ -360,8 +361,8 @@ export class DatasetManager extends EventEmitter {
     // Use direct import instead of global variable
     // This ensures we get the ydoc as soon as the module is loaded
     if (!ydoc) {
-      console.error(
-        `❌ Cannot sync dataset ${dataset.filename}: Y.js not initialized`
+      log.error(
+        `Cannot sync dataset ${dataset.filename}: Y.js not initialized`
       );
       return;
     }
@@ -385,7 +386,7 @@ export class DatasetManager extends EventEmitter {
       },
     });
 
-    console.log(`🔄 Dataset metadata synced to Y.js: ${dataset.filename}`);
+    log.info(`Dataset metadata synced to Y.js: ${dataset.filename}`);
   }
 
   // ==================== DATASET MANAGEMENT ====================
@@ -410,30 +411,30 @@ export class DatasetManager extends EventEmitter {
    * @returns {Promise<Dataset>} - The created dataset
    */
   async addDataset(file, userId, options = {}) {
-    console.log(`📦 DatasetManager: Adding dataset "${file.name}"`);
+    log.info(`DatasetManager: Adding dataset "${file.name}"`);
 
     try {
       // STEP 1: Extract file type from filename
       const fileType = this._extractFileType(file.name);
-      console.log(`  📋 File type: ${fileType}`);
+      log.info(`File type: ${fileType}`);
 
       // STEP 2: Validate file type is supported (optional but helpful)
       const isSupported = await this._isFileTypeSupported(fileType);
       if (!isSupported) {
-        console.warn(
-          `  ⚠️ Warning: File type "${fileType}" may not be supported`
+        log.warn(
+          `Warning: File type "${fileType}" may not be supported`
         );
       }
 
       // STEP 3: Generate hash for duplicate detection
       const hash = await this.generateFileHash(file);
-      console.log(`  ✓ Hash: ${hash.substring(0, 16)}...`);
+      log.info(`Hash: ${hash.substring(0, 16)}...`);
 
       // STEP 4: Check for existing dataset with same hash locally
       const existingLocal = await this.findDatasetByHash(hash);
       if (existingLocal) {
-        console.log(
-          `  📋 Found existing local dataset with same hash: ${existingLocal.id}`
+        log.info(
+          `Found existing local dataset with same hash: ${existingLocal.id}`
         );
         // Update with new file reference
         existingLocal.rawFile = file;
@@ -443,7 +444,7 @@ export class DatasetManager extends EventEmitter {
       }
 
       // STEP 5: Upload to server to get server-generated ID
-      console.log(`  📤 Uploading to server...`);
+      log.info(`Uploading to server...`);
       const serverResponse = await this._uploadFileToServer(file, options);
 
       if (!serverResponse || !serverResponse.file || !serverResponse.file.id) {
@@ -451,11 +452,11 @@ export class DatasetManager extends EventEmitter {
       }
 
       const serverFile = serverResponse.file;
-      console.log(`  ✓ Server assigned ID: ${serverFile.id}`);
+      log.info(`Server assigned ID: ${serverFile.id}`);
 
       // STEP 6: Store file locally for immediate use
       const storageResult = await this.storageProvider.storeFile(file);
-      console.log(`  ✓ File stored locally`);
+      log.info(`File stored locally`);
 
       // STEP 7: Create the Dataset object with server-provided ID
       const dataset = new Dataset({
@@ -487,14 +488,14 @@ export class DatasetManager extends EventEmitter {
       // STEP 11: Notify listeners
       this._emit("datasetAdded", dataset);
 
-      console.log(
+      log.info(
         `✅ DatasetManager: Dataset "${file.name}" added with ID ${dataset.id}`
       );
-      console.log(`   File type: ${fileType}`);
+      log.info(`File type: ${fileType}`);
 
       return dataset;
     } catch (error) {
-      console.error("📦 DatasetManager: Failed to add dataset:", error);
+      log.error("DatasetManager: Failed to add dataset:", error);
       throw error;
     }
   }
@@ -528,8 +529,8 @@ export class DatasetManager extends EventEmitter {
 
       // Handle duplicate file case
       if (response.status === 409 && errorData.existingFile) {
-        console.log(
-          `  📋 Server found duplicate: ${errorData.existingFile.id}`
+        log.info(
+          `Server found duplicate: ${errorData.existingFile.id}`
         );
         // Return the existing file info as if it was just uploaded
         return {
@@ -562,11 +563,11 @@ export class DatasetManager extends EventEmitter {
   }
 
   async removeDataset(datasetId) {
-    console.log(`📦 DatasetManager: Removing dataset ${datasetId}`);
+    log.info(`DatasetManager: Removing dataset ${datasetId}`);
 
     const dataset = this.getDataset(datasetId);
     if (!dataset) {
-      console.warn(`📦 DatasetManager: Dataset ${datasetId} not found`);
+      log.warn(`DatasetManager: Dataset ${datasetId} not found`);
       return;
     }
 
@@ -574,9 +575,9 @@ export class DatasetManager extends EventEmitter {
       this._datasets.delete(datasetId);
       await this._deleteDataset(datasetId);
       this._emit("datasetRemoved", datasetId);
-      console.log(`📦 DatasetManager: Dataset ${datasetId} removed`);
+      log.info(`DatasetManager: Dataset ${datasetId} removed`);
     } catch (error) {
-      console.error("📦 DatasetManager: Failed to remove dataset:", error);
+      log.error("DatasetManager: Failed to remove dataset:", error);
       throw error;
     }
   }
@@ -604,7 +605,7 @@ export class DatasetManager extends EventEmitter {
    * @returns {Promise<string>} - The dataset ID
    */
   async loadDataset(file, publicPath = null, options = {}) {
-    console.log(`📦 DatasetManager: Loading dataset "${file.name}"`);
+    log.info(`DatasetManager: Loading dataset "${file.name}"`);
 
     // Extract options
     const {
@@ -626,26 +627,26 @@ export class DatasetManager extends EventEmitter {
     try {
       // STEP 1: Extract file type
       const fileType = this._extractFileType(file.name);
-      console.log(`  📋 File type: ${fileType}`);
+      log.info(`File type: ${fileType}`);
 
       // STEP 2: Calculate hash
       const hash = await this.generateFileHash(file);
-      console.log(`  ✓ Hash: ${hash.substring(0, 16)}...`);
+      log.info(`Hash: ${hash.substring(0, 16)}...`);
 
       // STEP 3: Check if we already have this dataset metadata
       const existing = await this.findDatasetByHash(hash);
 
       if (existing) {
-        console.log(`  📋 Found existing dataset: ${existing.id}`);
+        log.info(`Found existing dataset: ${existing.id}`);
 
         // CRITICAL: Even though we have metadata, we might not have the file!
         // Store the file so it's available for visualization
-        console.log(`  💾 Updating file data for existing dataset...`);
+        log.info(`Updating file data for existing dataset...`);
 
         // Store the file in cache
         try {
           const storageResult = await this.storageProvider.storeFile(file);
-          console.log(`  ✓ File stored successfully`);
+          log.info(`File stored successfully`);
 
           // Update the dataset object with the new file reference
           existing.rawFile = file;
@@ -672,14 +673,14 @@ export class DatasetManager extends EventEmitter {
             dataset: existing,
           });
 
-          console.log(
-            `✅ DatasetManager: Existing dataset updated with new file`
+          log.info(
+            `DatasetManager: Existing dataset updated with new file`
           );
-          console.log(`   ID: ${existing.id}`);
+          log.info(`ID: ${existing.id}`);
 
           return existing.id;
         } catch (storageError) {
-          console.error(`  ❌ Failed to store file:`, storageError);
+          log.error(`Failed to store file:`, storageError);
           throw new Error(
             `Failed to update file for ${file.name}: ${storageError.message}`
           );
@@ -703,7 +704,7 @@ export class DatasetManager extends EventEmitter {
 
       if (!datasetId) {
         // Upload to server to get server-generated ID
-        console.log(`  📤 Uploading to server...`);
+        log.info(`Uploading to server...`);
         const serverResponse = await this._uploadFileToServer(file, {
           projectId,
           orgId,
@@ -719,7 +720,7 @@ export class DatasetManager extends EventEmitter {
 
         serverFile = serverResponse.file;
         datasetId = serverFile.id;
-        console.log(`  ✓ Server assigned ID: ${datasetId}`);
+        log.info(`Server assigned ID: ${datasetId}`);
       }
 
       // STEP 6: Store the raw file locally
@@ -754,10 +755,10 @@ export class DatasetManager extends EventEmitter {
         if (quickMetadata) {
           dataset.quickMetadata = quickMetadata;
           dataset.updateMetadata(quickMetadata);
-          console.log(`  ✓ Quick metadata extracted`);
+          log.info(`Quick metadata extracted`);
         }
       } catch (error) {
-        console.warn(`  ⚠️ Could not extract quick metadata:`, error.message);
+        log.warn(`Could not extract quick metadata:`, error.message);
       }
 
       // STEP 9: Store and sync
@@ -774,14 +775,14 @@ export class DatasetManager extends EventEmitter {
         dataset: dataset,
       });
 
-      console.log(`✅ DatasetManager: Dataset "${file.name}" ready`);
-      console.log(`   ID: ${dataset.id}`);
-      console.log(`   Type: ${fileType}`);
+      log.info(`DatasetManager: Dataset "${file.name}" ready`);
+      log.info(`ID: ${dataset.id}`);
+      log.info(`Type: ${fileType}`);
 
       return dataset.id;
     } catch (error) {
-      console.error(
-        `❌ DatasetManager: Failed to load dataset "${file.name}":`,
+      log.error(
+        `DatasetManager: Failed to load dataset "${file.name}":`,
         error
       );
       throw error;
@@ -796,23 +797,23 @@ export class DatasetManager extends EventEmitter {
 
     for (const { handler } of handlers) {
       if (handler.canExtractMetadata && handler.canExtractMetadata(fileType)) {
-        console.log(
-          `  📋 Using ${handler.getDisplayName()} to extract metadata`
+        log.info(
+          `Using ${handler.getDisplayName()} to extract metadata`
         );
         try {
           const metadata = await handler.extractMetadata(file, fileType);
           if (metadata) return metadata;
         } catch (error) {
-          console.warn(
-            `  ⚠️ Handler failed to extract metadata:`,
+          log.warn(
+            `Handler failed to extract metadata:`,
             error.message
           );
         }
       }
     }
 
-    console.log(
-      `  ℹ️ No handler available for ${fileType} metadata extraction`
+    log.info(
+      `No handler available for ${fileType} metadata extraction`
     );
     return null;
   }
@@ -857,13 +858,13 @@ export class DatasetManager extends EventEmitter {
 
     // If we don't have it, try to fetch it
     if (!rawFile) {
-      console.log(
-        `📥 File not in memory for ${dataset.filename}, attempting fetch...`
+      log.info(
+        `File not in memory for ${dataset.filename}, attempting fetch...`
       );
 
       // If dataset has a public path, we can fetch it
       if (dataset.publicPath) {
-        console.log(`🌐 Fetching from: ${dataset.publicPath}`);
+        log.info(`Fetching from: ${dataset.publicPath}`);
 
         try {
           // Update status to show we're fetching
@@ -891,7 +892,7 @@ export class DatasetManager extends EventEmitter {
           if (!dataset.cacheKey) {
             try {
               const serverId = await this.storageProvider.storeFile(rawFile);
-              console.log(`✅ File fetched and cached successfully`);
+              log.info(`File fetched and cached successfully`);
 
               // CRITICAL: Update the dataset with the server ID so downloads work
               if (serverId) {
@@ -905,12 +906,12 @@ export class DatasetManager extends EventEmitter {
                 this._syncDatasetMetadataToYjs(dataset);
               }
             } catch (cacheError) {
-              console.warn(`⚠️ File fetched but caching failed:`, cacheError);
+              log.warn(`File fetched but caching failed:`, cacheError);
               // Continue anyway - we have the file in memory
             }
           } else {
-            console.log(
-              `  ℹ️ File already has server cacheKey, skipping upload`
+            log.info(
+              `File already has server cacheKey, skipping upload`
             );
           }
 
@@ -941,7 +942,7 @@ export class DatasetManager extends EventEmitter {
       throw new Error(`Failed to obtain file for ${dataset.filename}`);
     }
 
-    console.log(`✅ loadPolydata: File ready for ${dataset.filename}`);
+    log.info(`loadPolydata: File ready for ${dataset.filename}`);
     return rawFile;
   }
 
@@ -957,8 +958,8 @@ export class DatasetManager extends EventEmitter {
       parsedAt: Date.now(),
     };
 
-    console.log(
-      `📦 Cached parsed data for ${datasetId} (handler: ${handlerType})`
+    log.info(
+      `Cached parsed data for ${datasetId} (handler: ${handlerType})`
     );
   }
 
@@ -1050,7 +1051,7 @@ export class DatasetManager extends EventEmitter {
       return compatibleHandlers.length > 0;
     } catch (error) {
       // If we can't check (registry not available), be permissive
-      console.warn("Could not validate file type support:", error);
+      log.warn("Could not validate file type support:", error);
       return true;
     }
   }
@@ -1079,10 +1080,10 @@ export class DatasetManager extends EventEmitter {
         dataset.fileType = this._extractFileType(dataset.filename);
         // Persist the update so we don't have to extract again
         this._persistDataset(dataset).catch((err) => {
-          console.warn("Failed to persist fileType update:", err);
+          log.warn("Failed to persist fileType update:", err);
         });
       } catch (error) {
-        console.warn(
+        log.warn(
           `Could not extract file type for ${dataset.filename}:`,
           error
         );
@@ -1114,7 +1115,7 @@ export class DatasetManager extends EventEmitter {
     }
 
     // Create annotation on server first to get ID
-    console.log(`📦 DatasetManager: Creating annotation on server...`);
+    log.info(`DatasetManager: Creating annotation on server...`);
     const serverAnnotation = await this._createAnnotationOnServer(
       datasetId,
       annotationConfig,
@@ -1125,7 +1126,7 @@ export class DatasetManager extends EventEmitter {
       throw new Error("Server did not return a valid annotation ID");
     }
 
-    console.log(`  ✓ Server assigned annotation ID: ${serverAnnotation.id}`);
+    log.info(`Server assigned annotation ID: ${serverAnnotation.id}`);
 
     // Create local Annotation with server-provided ID
     const annotation = new Annotation({
@@ -1140,8 +1141,8 @@ export class DatasetManager extends EventEmitter {
     await this._persistDataset(dataset);
     this._emit("annotationAdded", { datasetId, annotation });
 
-    console.log(
-      `📦 DatasetManager: Added annotation ${annotation.id} to dataset ${datasetId}`
+    log.info(
+      `DatasetManager: Added annotation ${annotation.id} to dataset ${datasetId}`
     );
     return annotation;
   }
@@ -1196,14 +1197,14 @@ export class DatasetManager extends EventEmitter {
 
     const removed = dataset.removeAnnotation(annotationId);
     if (!removed) {
-      console.warn(`📦 DatasetManager: Annotation ${annotationId} not found`);
+      log.warn(`DatasetManager: Annotation ${annotationId} not found`);
       return;
     }
 
     await this._persistDataset(dataset);
     this._emit("annotationRemoved", { datasetId, annotationId });
-    console.log(
-      `📦 DatasetManager: Removed annotation ${annotationId} from dataset ${datasetId}`
+    log.info(
+      `DatasetManager: Removed annotation ${annotationId} from dataset ${datasetId}`
     );
   }
 
@@ -1221,7 +1222,7 @@ export class DatasetManager extends EventEmitter {
     annotation.update(updates, userId);
     await this._persistDataset(dataset);
     this._emit("annotationUpdated", { datasetId, annotation });
-    console.log(`📦 DatasetManager: Updated annotation ${annotationId}`);
+    log.info(`DatasetManager: Updated annotation ${annotationId}`);
   }
 
   getAnnotations(datasetId, filter = null, userId = null) {
@@ -1237,7 +1238,7 @@ export class DatasetManager extends EventEmitter {
   async _persistDataset(dataset) {
     // Validate dataset has required id field before persisting
     if (!dataset.id) {
-      console.error("❌ Cannot persist dataset without ID:", dataset);
+      log.error("Cannot persist dataset without ID:", dataset);
       throw new Error(
         `Dataset ${dataset.filename} is missing required 'id' field`
       );
@@ -1249,7 +1250,7 @@ export class DatasetManager extends EventEmitter {
 
     // Double-check the JSON has the id
     if (!data.id) {
-      console.error("❌ Dataset.toJSON() did not include 'id':", data);
+      log.error("Dataset.toJSON() did not include 'id':", data);
       throw new Error(
         `Dataset ${dataset.filename} toJSON() missing 'id' field`
       );
@@ -1259,8 +1260,8 @@ export class DatasetManager extends EventEmitter {
       const request = store.put(data);
       request.onsuccess = () => resolve();
       request.onerror = () => {
-        console.error("❌ IndexedDB put failed:", request.error);
-        console.error("   Dataset:", data);
+        log.error("IndexedDB put failed:", request.error);
+        log.error("Dataset:", data);
         reject(
           new Error(`Failed to persist dataset: ${request.error.message}`)
         );
@@ -1283,7 +1284,7 @@ export class DatasetManager extends EventEmitter {
 
   on(event, callback) {
     if (!this._listeners[event]) {
-      console.warn(`📦 DatasetManager: Unknown event "${event}"`);
+      log.warn(`DatasetManager: Unknown event "${event}"`);
       return;
     }
     this._listeners[event].push(callback);
@@ -1302,8 +1303,8 @@ export class DatasetManager extends EventEmitter {
       try {
         callback(data);
       } catch (error) {
-        console.error(
-          `📦 DatasetManager: Error in event listener for "${event}":`,
+        log.error(
+          `DatasetManager: Error in event listener for "${event}":`,
           error
         );
       }
@@ -1313,17 +1314,17 @@ export class DatasetManager extends EventEmitter {
   // ==================== CLEANUP ====================
 
   async cleanup() {
-    console.log("📦 DatasetManager: Cleaning up...");
+    log.info("DatasetManager: Cleaning up...");
     this._datasets.clear();
     if (this._db) {
       this._db.close();
       this._db = null;
     }
-    console.log("📦 DatasetManager: Cleanup complete");
+    log.info("DatasetManager: Cleanup complete");
   }
 
   async clearCorruptedData() {
-    console.log("🗑️ Clearing potentially corrupted IndexedDB data...");
+    log.info("Clearing potentially corrupted IndexedDB data...");
 
     try {
       const transaction = this._db.transaction(["datasets"], "readwrite");
@@ -1332,17 +1333,17 @@ export class DatasetManager extends EventEmitter {
       return new Promise((resolve, reject) => {
         const request = store.clear();
         request.onsuccess = () => {
-          console.log("✅ IndexedDB cleared successfully");
-          console.log("   Please refresh the page to start fresh");
+          log.info("IndexedDB cleared successfully");
+          log.info("Please refresh the page to start fresh");
           resolve();
         };
         request.onerror = () => {
-          console.error("❌ Failed to clear IndexedDB:", request.error);
+          log.error("Failed to clear IndexedDB:", request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-      console.error("❌ Error clearing IndexedDB:", error);
+      log.error("Error clearing IndexedDB:", error);
     }
   }
 }
@@ -1407,12 +1408,12 @@ export class DatasetManager extends EventEmitter {
  *
  * // Listen for dataset changes
  * datasetManager.on('datasetAdded', (dataset) => {
- *   console.log('New dataset added:', dataset.filename);
+ *   log.info('New dataset added:', dataset.filename);
  *   // Update UI to show the new dataset
  * });
  *
  * datasetManager.on('annotationAdded', ({ datasetId, annotation }) => {
- *   console.log('New annotation on dataset:', datasetId);
+ *   log.info('New annotation on dataset:', datasetId);
  *   // Trigger re-render if this dataset is currently visible
  * });
  */

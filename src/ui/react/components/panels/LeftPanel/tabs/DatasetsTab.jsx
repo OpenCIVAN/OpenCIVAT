@@ -1,6 +1,11 @@
 // src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab.jsx
 // Datasets tab content for the unified left panel
 //
+// FIXES:
+// - Defensive handling for useSectionStates to prevent "can't convert undefined to object"
+// - Added click handlers to dispatch cia:request-instance events
+// - Connected to ViewConfigurationManager for real views
+//
 // Features:
 // - Shows loaded datasets from DatasetManager
 // - Active/Inactive/Shared view filtering
@@ -35,16 +40,23 @@ import {
 } from "@UI/react/components/common/ResizableSections";
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
+import { viewConfigurationManager } from '@Init/appInitializer.js';
 
 // =============================================================================
 // DATASET TYPE UTILITIES (Handler-based)
 // =============================================================================
 
+/**
+ * Get display configuration for a dataset based on its file type.
+ * The fileType comes from the server (validated via magic bytes), not extracted here.
+ * 
+ * @param {string} fileType - Server-validated file type (e.g., 'vtp', 'nii')
+ * @returns {{ icon: Component, color: string|null, colorClass: string|null }}
+ */
 const getDatasetTypeConfig = (fileType) => {
     const displayInfo = getFileTypeDisplayInfo(fileType);
 
     if (displayInfo) {
-        // Get icon component from Lucide by name
         const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
         const IconComponent = LucideIcons[iconName] || LucideIcons.Box;
 
@@ -58,26 +70,44 @@ const getDatasetTypeConfig = (fileType) => {
     return { icon: LucideIcons.Database, colorClass: 'file-icon--default', color: null };
 };
 
-// Helper to extract file type from filename
-const getFileTypeFromName = (filename) => {
-    if (!filename) return null;
-    const parts = filename.split('.');
-    if (parts.length < 2) return null;
-    // Handle .nii.gz style extensions
-    if (parts.length >= 3 && parts[parts.length - 1] === 'gz') {
-        return parts[parts.length - 2];
-    }
-    return parts[parts.length - 1].toLowerCase();
-};
+// NOTE: File type extraction removed - server validates and stores fileType
+// via magic bytes during upload. Never trust client-side extension parsing.
 
 // =============================================================================
 // VIEW ITEM
 // =============================================================================
 
-function ViewItem({ view, isInSharedSection = false }) {
+function ViewItem({ view, datasetId, isInSharedSection = false }) {
     const [isHovered, setIsHovered] = useState(false);
     const isActive = view.status === 'active';
     const inDifferentWorkspace = view.workspace && view.workspace !== 'personal';
+
+    // Handle click on view - open in instance or focus existing
+    const handleViewClick = useCallback((e) => {
+        e.stopPropagation();
+
+        if (e.shiftKey) {
+            // Shift+click - spawn new instance for this view
+            console.log(`🔲 Spawning new instance for view ${view.id}`);
+            window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                detail: {
+                    viewId: view.id,
+                    datasetId: datasetId,
+                    spawnNew: true
+                }
+            }));
+        } else {
+            // Normal click - open view (creates instance if none, focuses if exists)
+            console.log(`👁️ Opening view ${view.id}`);
+            window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                detail: {
+                    viewId: view.id,
+                    datasetId: datasetId,
+                    spawnNew: false
+                }
+            }));
+        }
+    }, [view.id, datasetId]);
 
     return (
         <div
@@ -86,78 +116,95 @@ function ViewItem({ view, isInSharedSection = false }) {
                 background: isActive
                     ? `rgba(var(--view-color-rgb, 96,165,250), 0.08)`
                     : isHovered ? 'rgba(255,255,255,0.02)' : 'transparent',
-                borderLeftColor: isActive ? view.instanceColor : 'transparent',
-                opacity: inDifferentWorkspace && isInSharedSection ? 0.7 : 1,
-                '--view-color': view.instanceColor,
+                borderLeftColor: isActive ? view.instanceColor || '#60a5fa' : 'transparent',
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={handleViewClick}
+            title={`Click to open, Shift+Click for new instance`}
         >
-            {/* Status dot */}
+            {/* Indent spacer */}
+            <span className="indent" />
+
+            {/* Status indicator */}
             <Circle
-                size={8}
-                fill={isActive ? view.instanceColor : 'none'}
-                style={{ color: isActive ? view.instanceColor : 'var(--color-text-muted)' }}
+                size={6}
+                fill={isActive ? 'var(--color-accent-green)' : 'transparent'}
+                stroke={isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)'}
             />
 
             {/* View name */}
-            <span className="item-name">
-                {view.name}
-                {view.sharedBy && (
-                    <span className="view-shared-by"> • from {view.sharedBy}</span>
-                )}
-            </span>
+            <span className="item-name">{view.name}</span>
 
-            {/* Badges and indicators */}
-            <div className="view-indicators">
-                {/* Shared badge (in Active section) */}
-                {view.isShared && !isInSharedSection && (
-                    <Users
-                        size={9}
-                        className="indicator-icon indicator-icon--shared"
-                        title={view.sharedBy ? `From ${view.sharedBy}` : `Shared with ${view.sharedWith?.length}`}
-                    />
-                )}
+            {/* Filter badges */}
+            {view.filters?.length > 0 && (
+                <span className="badge badge--filters" title={`${view.filters.length} active filters`}>
+                    <Filter size={8} />
+                    {view.filters.length}
+                </span>
+            )}
 
-                {/* Saved indicator */}
-                {view.savedByUser && (
-                    <Save size={9} className="indicator-icon indicator-icon--saved" />
-                )}
+            {/* Shared indicator */}
+            {(view.isShared || isInSharedSection) && (
+                <Users size={10} className="icon-muted" title={`Shared by ${view.sharedBy || 'teammate'}`} />
+            )}
 
-                {/* Filter count badge */}
-                {view.filters?.length > 0 && (
-                    <span className="badge badge--count">{view.filters.length}</span>
-                )}
+            {/* Workspace indicator */}
+            {inDifferentWorkspace && (
+                <span className="badge badge--workspace" title={`In workspace: ${view.workspace}`}>
+                    {view.workspace}
+                </span>
+            )}
 
-                {/* Last active time (for inactive views) */}
-                {!isActive && view.lastActive && (
-                    <span className="item-meta">{view.lastActive}</span>
-                )}
-
-                {/* Workspace badge (in shared section) */}
-                {inDifferentWorkspace && isInSharedSection && (
-                    <span className="badge badge--workspace">{view.workspaceName}</span>
-                )}
-            </div>
-
-            {/* More actions button */}
+            {/* Hover actions */}
             {isHovered && (
-                <button className="tree-item__more-btn">
-                    <MoreHorizontal size={12} />
-                </button>
+                <div className="tree-item__actions">
+                    <button className="tree-item__action" title="Save view">
+                        <Save size={10} />
+                    </button>
+                    <button className="tree-item__action" title="More options">
+                        <MoreHorizontal size={10} />
+                    </button>
+                </div>
             )}
         </div>
     );
 }
 
 // =============================================================================
-// DATASET ITEM
+// DATASET ITEM (with expandable views)
 // =============================================================================
 
 function DatasetItem({ dataset, views, isExpanded, onToggle, isInSharedSection = false }) {
     const [isHovered, setIsHovered] = useState(false);
-    const { icon: TypeIcon, colorClass, color } = getDatasetTypeConfig(dataset.fileType);
+    const { icon: TypeIcon, color, colorClass } = getDatasetTypeConfig(dataset.fileType);
     const activeCount = views.filter(v => v.status === 'active').length;
+
+    // Handle click on dataset row
+    const handleDatasetClick = useCallback((e) => {
+        // If no views exist yet, create first view on click
+        if (views.length === 0) {
+            console.log(`📊 Creating first view for dataset ${dataset.id}`);
+            window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                detail: {
+                    datasetId: dataset.id,
+                    spawnNew: true
+                }
+            }));
+        } else if (e.shiftKey) {
+            // Shift+click on dataset - create new view
+            console.log(`📊 Creating new view for dataset ${dataset.id}`);
+            window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                detail: {
+                    datasetId: dataset.id,
+                    spawnNew: true
+                }
+            }));
+        } else {
+            // Normal click - just toggle expansion
+            onToggle();
+        }
+    }, [dataset.id, views.length, onToggle]);
 
     if (views.length === 0) return null;
 
@@ -168,10 +215,12 @@ function DatasetItem({ dataset, views, isExpanded, onToggle, isInSharedSection =
                 className="tree-item tree-item--folder"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                onClick={onToggle}
+                onClick={handleDatasetClick}
+                style={{ cursor: 'pointer' }}
+                title={views.length === 0 ? 'Click to create first view' : 'Click to expand, Shift+Click for new view'}
             >
                 {/* Expand/collapse chevron */}
-                <span className="chevron">
+                <span className="chevron" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
                     {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                 </span>
 
@@ -202,13 +251,13 @@ function DatasetItem({ dataset, views, isExpanded, onToggle, isInSharedSection =
                 <ViewItem
                     key={view.id}
                     view={view}
+                    datasetId={dataset.id}
                     isInSharedSection={isInSharedSection}
                 />
             ))}
         </>
     );
 }
-
 
 // =============================================================================
 // FILTER TOGGLE BUTTON
@@ -228,6 +277,16 @@ function FilterToggle({ icon: Icon, label, color, active, count, onClick }) {
 }
 
 // =============================================================================
+// DEFAULT SECTION STATES (for fallback)
+// =============================================================================
+
+const DEFAULT_SECTION_STATES = {
+    active: { expanded: true, flexGrow: 2 },
+    inactive: { expanded: false, flexGrow: 1 },
+    shared: { expanded: true, flexGrow: 1 },
+};
+
+// =============================================================================
 // MAIN DATASETS TAB CONTENT
 // =============================================================================
 
@@ -241,11 +300,12 @@ export function DatasetsPanelContent({ workspaceId }) {
     });
 
     // Section states (VS Code-style resizable)
-    const { states: sectionStates, toggleSection } = useSectionStates({
-        active: { expanded: true, flexGrow: 2 },
-        inactive: { expanded: false, flexGrow: 1 },
-        shared: { expanded: true, flexGrow: 1 },
-    });
+    // DEFENSIVE: Handle case where useSectionStates might return undefined
+    const sectionStateHook = useSectionStates(DEFAULT_SECTION_STATES);
+
+    // Ensure we always have valid state objects
+    const sectionStates = sectionStateHook?.states || DEFAULT_SECTION_STATES;
+    const toggleSection = sectionStateHook?.toggleSection || (() => { });
 
     // Dataset expansion state
     const [expandedDatasets, setExpandedDatasets] = useState(new Set());
@@ -253,101 +313,120 @@ export function DatasetsPanelContent({ workspaceId }) {
     // Get datasets from DatasetManager
     const loadedDatasets = useDatasets();
 
-    // Transform to UI format with views
-    const datasets = useMemo(() => {
-        return loadedDatasets.map(ds => ({
-            id: ds.id,
-            name: ds.name,
-            fileType: getFileTypeFromName(ds.name),
-            annotations: ds.annotations?.length || 0,
-            pointCount: ds.pointCount,
-            cellCount: ds.cellCount,
-            uploadedByName: ds.uploadedByName,
-            views: [
-                // For now, create a default view per dataset
-                // TODO: Connect to ViewConfigurationManager for real views
-                {
-                    id: `view-${ds.id}`,
-                    name: 'Default View',
-                    workspace: workspaceId || 'personal',
-                    status: ds.hasPolydata || ds.isAnalyzed ? 'active' : 'inactive',
-                    instanceColor: '#60a5fa',
-                    filters: [],
-                    isShared: false,
-                }
-            ],
-        }));
-    }, [loadedDatasets, workspaceId]);
-
-    // Auto-expand datasets when they load
-    useMemo(() => {
-        if (datasets.length > 0 && expandedDatasets.size === 0) {
-            setExpandedDatasets(new Set(datasets.map(ds => ds.id)));
+    // Get real views from ViewConfigurationManager
+    const getViewsForDataset = useCallback((datasetId) => {
+        try {
+            const allViews = viewConfigurationManager?.getAllViews?.() || [];
+            return allViews
+                .filter(v => v.datasetId === datasetId)
+                .map(v => ({
+                    id: v.id,
+                    name: v.name || 'Untitled View',
+                    workspace: v.workspaceId || 'personal',
+                    status: v.activeInstanceCount > 0 ? 'active' : 'inactive',
+                    instanceColor: v.camera?.color || '#60a5fa',
+                    filters: v.filters || [],
+                    isShared: v.scope === 'shared' || v.scope === 'project',
+                    sharedBy: v.createdBy,
+                    lastActive: v.updatedAt ? new Date(v.updatedAt).toLocaleDateString() : null,
+                }));
+        } catch (e) {
+            console.warn('Failed to get views:', e);
+            return [];
         }
-    }, [datasets.length]);
-
-    // View filtering functions
-    const getActiveViews = useCallback((ds) =>
-        ds.views.filter(v => v.status === 'active'),
-        []);
-
-    const getInactiveViews = useCallback((ds) =>
-        ds.views.filter(v => v.status === 'inactive'),
-        []);
-
-    const getSharedViews = useCallback((ds) =>
-        ds.views.filter(v => v.isShared && v.sharedBy),
-        []);
-
-    // Count totals
-    const counts = useMemo(() => ({
-        active: datasets.reduce((sum, ds) => sum + getActiveViews(ds).length, 0),
-        inactive: datasets.reduce((sum, ds) => sum + getInactiveViews(ds).length, 0),
-        shared: datasets.reduce((sum, ds) => sum + getSharedViews(ds).length, 0),
-        total: datasets.length,
-    }), [datasets, getActiveViews, getInactiveViews, getSharedViews]);
-
-    // Handlers
-    const toggleFilter = useCallback((key) => {
-        setFilters(prev => ({ ...prev, [key]: !prev[key] }));
     }, []);
 
-    const toggleDataset = useCallback((id) => {
+    // Transform to UI format with REAL views (or placeholder if none)
+    const datasets = useMemo(() => {
+        return loadedDatasets.map(ds => {
+            const realViews = getViewsForDataset(ds.id);
+
+            // If no real views exist, create a placeholder "default view"
+            // This allows users to click to create their first view
+            const views = realViews.length > 0 ? realViews : [{
+                id: `placeholder-${ds.id}`,
+                name: 'Default View',
+                workspace: workspaceId || 'personal',
+                status: ds.hasPolydata || ds.isAnalyzed ? 'inactive' : 'inactive',
+                instanceColor: '#60a5fa',
+                filters: [],
+                isShared: false,
+                isPlaceholder: true,
+            }];
+
+            return {
+                id: ds.id,
+                name: ds.name,
+                fileType: ds.fileType, // Server-validated, not extracted from filename
+                annotations: ds.annotations?.length || 0,
+                pointCount: ds.pointCount,
+                cellCount: ds.cellCount,
+                uploadedByName: ds.uploadedByName,
+                views,
+            };
+        });
+    }, [loadedDatasets, getViewsForDataset, workspaceId]);
+
+    // Filter helpers
+    const getActiveViews = useCallback((ds) =>
+        filters.active ? ds.views.filter(v => v.status === 'active') : [],
+        [filters.active]);
+
+    const getInactiveViews = useCallback((ds) =>
+        filters.inactive ? ds.views.filter(v => v.status === 'inactive' && !v.isShared) : [],
+        [filters.inactive]);
+
+    const getSharedViews = useCallback((ds) =>
+        filters.shared ? ds.views.filter(v => v.isShared) : [],
+        [filters.shared]);
+
+    // Count helpers
+    const counts = useMemo(() => ({
+        active: datasets.reduce((sum, ds) => sum + ds.views.filter(v => v.status === 'active').length, 0),
+        inactive: datasets.reduce((sum, ds) => sum + ds.views.filter(v => v.status === 'inactive' && !v.isShared).length, 0),
+        shared: datasets.reduce((sum, ds) => sum + ds.views.filter(v => v.isShared).length, 0),
+    }), [datasets]);
+
+    // Toggle filter
+    const toggleFilter = useCallback((filterKey) => {
+        setFilters(prev => ({ ...prev, [filterKey]: !prev[filterKey] }));
+    }, []);
+
+    // Toggle dataset expansion
+    const toggleDataset = useCallback((datasetId) => {
         setExpandedDatasets(prev => {
             const next = new Set(prev);
-            if (next.has(id)) {
-                next.delete(id);
+            if (next.has(datasetId)) {
+                next.delete(datasetId);
             } else {
-                next.add(id);
+                next.add(datasetId);
             }
             return next;
         });
     }, []);
 
+    // Load dataset handler
+    const handleLoadDataset = useCallback(() => {
+        // Dispatch event to open file picker
+        window.dispatchEvent(new CustomEvent('cia:open-file-picker'));
+    }, []);
+
     return (
         <div className="datasets-tab">
-            {/* Header */}
+            {/* Header with search */}
             <div className="panel-header">
-                <Database size={14} className="panel-header__icon file-icon--dicom" />
+                <Database size={14} className="panel-header__icon file-icon--teal" />
                 <span className="panel-header__title">Datasets</span>
-                <span className="panel-header__count">{counts.total}</span>
-            </div>
-
-            {/* Search */}
-            <div className="panel-search">
-                <div className="panel-search__wrapper">
-                    <Search size={12} className="search-icon" />
+                <div className="panel-header__search">
+                    <Search size={10} />
                     <input
                         type="text"
+                        placeholder="Search datasets..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search datasets & views..."
                     />
                     {searchQuery && (
-                        <button
-                            className="clear-button"
-                            onClick={() => setSearchQuery('')}
-                        >
+                        <button className="clear-button" onClick={() => setSearchQuery('')}>
                             <X size={10} />
                         </button>
                     )}
@@ -367,7 +446,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                 <FilterToggle
                     icon={Archive}
                     label="Inactive"
-                    color="muted"
+                    color="gray"
                     active={filters.inactive}
                     count={counts.inactive}
                     onClick={() => toggleFilter('inactive')}
@@ -380,22 +459,19 @@ export function DatasetsPanelContent({ workspaceId }) {
                     count={counts.shared}
                     onClick={() => toggleFilter('shared')}
                 />
-                <div className="panel-toolbar__spacer" />
-                <button className="panel-header__action-btn" title="Filter options">
-                    <Filter size={12} />
-                </button>
             </div>
 
-            {/* Resizable Sections */}
+            {/* Resizable sections */}
             <ResizableSectionsContainer
+                className="datasets-tab__sections"
                 sectionStates={sectionStates}
                 onSectionToggle={toggleSection}
             >
-                {/* Active views - scoped to current workspace */}
+                {/* Active Views */}
                 <ResizableSection id="active" icon={Eye} iconColorClass="icon-green" label="Active" count={counts.active}>
                     {datasets.filter(ds => getActiveViews(ds).length > 0).length === 0 ? (
                         <div className="resizable-section__empty">
-                            No active views in this workspace
+                            No active views - click a dataset to open one
                         </div>
                     ) : (
                         datasets.filter(ds => getActiveViews(ds).length > 0).map(ds => (
@@ -410,8 +486,8 @@ export function DatasetsPanelContent({ workspaceId }) {
                     )}
                 </ResizableSection>
 
-                {/* Inactive views - global */}
-                <ResizableSection id="inactive" icon={Archive} iconColorClass="icon-muted" label="Inactive" count={counts.inactive}>
+                {/* Inactive Views */}
+                <ResizableSection id="inactive" icon={Archive} iconColorClass="icon-gray" label="Inactive" count={counts.inactive}>
                     {datasets.filter(ds => getInactiveViews(ds).length > 0).length === 0 ? (
                         <div className="resizable-section__empty">
                             No inactive views
@@ -452,11 +528,11 @@ export function DatasetsPanelContent({ workspaceId }) {
 
             {/* Footer */}
             <div className="panel-footer">
-                <button className="panel-footer__btn panel-footer__btn--primary">
+                <button className="panel-footer__btn panel-footer__btn--primary" onClick={handleLoadDataset}>
                     <FolderOpen size={11} />
                     <span>Load Dataset</span>
                 </button>
-                <button className="panel-footer__btn panel-footer__btn--icon" title="Clean up">
+                <button className="panel-footer__btn panel-footer__btn--icon" title="Clean up unused views">
                     <Trash2 size={11} />
                 </button>
                 <button className="panel-footer__btn panel-footer__btn--icon" title="Refresh">
