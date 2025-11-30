@@ -8,14 +8,17 @@
  * @param {Array} placements - Array of placement objects
  * @param {Object} gridSize - { rows, cols }
  * @param {Array} collaborators - Array of collaborator objects (for presence context)
+ * @param {boolean} isExpanded - Whether the preview is in expanded mode
  * @param {function} onApply - Callback when changes are applied
  * @param {function} onNavigate - Callback when viewport navigates
  * @param {function} onCellClick - Callback when cell is clicked
  * @param {function} onFollow - Callback when following a collaborator
+ * @param {function} onSpawn - Callback when spawning a new view in an empty cell
+ * @param {function} onExternalDrop - Callback when a ViewItem is dropped from external source
  * @param {string} className - Additional CSS class
  */
 
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useState, useRef, useEffect } from 'react';
 import {
     Edit3,
     Save,
@@ -81,15 +84,20 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
     placements = [],
     gridSize = { rows: 4, cols: 4 },
     collaborators = [],
+    isExpanded = false,
     onApply,
     onNavigate,
     onCellClick,
     onFollow,
     onSetHome,
     onSavePlace,
+    onSpawn,
+    onExternalDrop,
     className = '',
 }) {
     const config = CONTEXT_CONFIG[context] || CONTEXT_CONFIG.layout;
+    const containerRef = useRef(null);
+    const [externalDragOver, setExternalDragOver] = useState(null);
 
     const {
         placements: currentPlacements,
@@ -137,17 +145,102 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
 
     const [layoutMode, setLayoutMode] = useState('grid'); // grid | flow
 
+    // Prevent middle mouse button pan (scrolling behavior)
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleMouseDown = (e) => {
+            // Middle mouse button (button === 1)
+            if (e.button === 1) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+
+        const handleAuxClick = (e) => {
+            // Prevent middle click auto-scroll
+            if (e.button === 1) {
+                e.preventDefault();
+            }
+        };
+
+        container.addEventListener('mousedown', handleMouseDown);
+        container.addEventListener('auxclick', handleAuxClick);
+
+        return () => {
+            container.removeEventListener('mousedown', handleMouseDown);
+            container.removeEventListener('auxclick', handleAuxClick);
+        };
+    }, []);
+
+    // Handle external drag-and-drop (from ViewItem list)
+    const handleExternalDragEnter = useCallback((e) => {
+        // Check if this is an external drag (from ViewItem)
+        if (e.dataTransfer.types.includes('application/x-viewitem')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        }
+    }, []);
+
+    const handleExternalDragOver = useCallback((e) => {
+        if (e.dataTransfer.types.includes('application/x-viewitem')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+
+            // Get cell from target
+            const cellElement = e.target.closest('[data-row][data-col]');
+            if (cellElement) {
+                const row = parseInt(cellElement.dataset.row, 10);
+                const col = parseInt(cellElement.dataset.col, 10);
+                setExternalDragOver({ row, col });
+            }
+        }
+    }, []);
+
+    const handleExternalDragLeave = useCallback((e) => {
+        // Only clear if leaving the grid container
+        if (!containerRef.current?.contains(e.relatedTarget)) {
+            setExternalDragOver(null);
+        }
+    }, []);
+
+    const handleExternalDrop = useCallback((e) => {
+        if (e.dataTransfer.types.includes('application/x-viewitem')) {
+            e.preventDefault();
+            const viewItemData = e.dataTransfer.getData('application/x-viewitem');
+
+            try {
+                const viewItem = JSON.parse(viewItemData);
+                const cellElement = e.target.closest('[data-row][data-col]');
+
+                if (cellElement) {
+                    const row = parseInt(cellElement.dataset.row, 10);
+                    const col = parseInt(cellElement.dataset.col, 10);
+                    onExternalDrop?.(viewItem, { row, col });
+                }
+            } catch (err) {
+                console.error('Failed to parse dropped ViewItem:', err);
+            }
+        }
+
+        setExternalDragOver(null);
+    }, [onExternalDrop]);
+
     // Handle cell click based on context
     const handleCellClick = useCallback((cell) => {
         if (context === 'layout' && isEditMode) {
             if (cell.type === 'empty') {
                 toggleCellSelection(cell.row, cell.col);
             }
+        } else if (cell.type === 'empty' && onSpawn) {
+            // Spawn new view in empty cell
+            onSpawn({ row: cell.row, col: cell.col });
         } else {
             navigateToCell(cell.row, cell.col);
             onCellClick?.(cell);
         }
-    }, [context, isEditMode, toggleCellSelection, navigateToCell, onCellClick]);
+    }, [context, isEditMode, toggleCellSelection, navigateToCell, onCellClick, onSpawn]);
 
     // Handle header action based on context
     const handleHeaderAction = useCallback(() => {
@@ -171,8 +264,34 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
 
     const ContextIcon = config.icon;
 
+    // Conditional rendering - show minimal UI when not expanded
+    if (!isExpanded && context === 'views') {
+        return (
+            <div
+                ref={containerRef}
+                className={`grid-layout-preview grid-layout-preview--${context} grid-layout-preview--collapsed ${className}`}
+                onDragEnter={handleExternalDragEnter}
+                onDragOver={handleExternalDragOver}
+                onDragLeave={handleExternalDragLeave}
+                onDrop={handleExternalDrop}
+            >
+                <div className="grid-layout-preview__collapsed-content">
+                    <ContextIcon size={16} />
+                    <span className="grid-layout-preview__collapsed-text">Drop view here</span>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className={`grid-layout-preview grid-layout-preview--${context} ${className}`}>
+        <div
+            ref={containerRef}
+            className={`grid-layout-preview grid-layout-preview--${context} ${isExpanded ? 'grid-layout-preview--expanded' : ''} ${className}`}
+            onDragEnter={handleExternalDragEnter}
+            onDragOver={handleExternalDragOver}
+            onDragLeave={handleExternalDragLeave}
+            onDrop={handleExternalDrop}
+        >
             {/* Header */}
             <div className="grid-layout-preview__header">
                 <div className="grid-layout-preview__header-left">
@@ -252,10 +371,19 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                                 }
                                 isDragging={dragState?.placementId === cell.placement?.id}
                                 isDropTarget={
-                                    dragState &&
-                                    dragState.currentRow === cell.row &&
-                                    dragState.currentCol === cell.col
+                                    (dragState &&
+                                        dragState.currentRow === cell.row &&
+                                        dragState.currentCol === cell.col) ||
+                                    (externalDragOver &&
+                                        externalDragOver.row === cell.row &&
+                                        externalDragOver.col === cell.col)
                                 }
+                                isExternalDropTarget={
+                                    externalDragOver &&
+                                    externalDragOver.row === cell.row &&
+                                    externalDragOver.col === cell.col
+                                }
+                                canSpawn={!!onSpawn && cell.type === 'empty'}
                                 isEditMode={isEditMode}
                                 onClick={() => handleCellClick(cell)}
                                 onDragStart={() =>
@@ -277,6 +405,8 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                     <DPadController
                         onNavigate={navigateViewport}
                         onHome={navigateHome}
+                        viewport={viewport}
+                        gridSize={currentGridSize}
                         className="grid-layout-preview__dpad"
                     />
                 )}

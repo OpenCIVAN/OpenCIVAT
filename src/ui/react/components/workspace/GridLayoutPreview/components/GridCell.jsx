@@ -12,6 +12,8 @@
  * @param {Array} collaborators - Collaborators viewing this cell
  * @param {boolean} isDragging - Whether this cell's placement is being dragged
  * @param {boolean} isDropTarget - Whether this is the current drop target
+ * @param {boolean} isExternalDropTarget - Whether external item is hovering over this cell
+ * @param {boolean} canSpawn - Whether clicking can spawn a new view
  * @param {boolean} isEditMode - Whether in edit mode
  * @param {function} onClick - Click handler
  * @param {function} onDragStart - Drag start handler
@@ -46,6 +48,8 @@ export const GridCell = memo(function GridCell({
     collaborators = [],
     isDragging = false,
     isDropTarget = false,
+    isExternalDropTarget = false,
+    canSpawn = false,
     isEditMode = false,
     onClick,
     onDragStart,
@@ -96,6 +100,8 @@ export const GridCell = memo(function GridCell({
         hasOverlap && 'grid-cell--overlap',
         isDragging && 'grid-cell--dragging',
         isDropTarget && 'grid-cell--drop-target',
+        isExternalDropTarget && 'grid-cell--external-drop-target',
+        canSpawn && 'grid-cell--spawnable',
         isEditMode && 'grid-cell--edit-mode',
         collaborators.length > 0 && 'grid-cell--has-collaborators',
     ].filter(Boolean).join(' ');

@@ -43,9 +43,16 @@
       color: $color-text-secondary;
     }
 
-    &:active {
+    &:active:not(:disabled) {
       background: $color-glass-medium;
       transform: scale(0.95);
+    }
+
+    &:disabled,
+    &--disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+      pointer-events: none;
     }
 
     &--up {

@@ -121,6 +121,36 @@
     }
   }
 
+  // External drop target (from ViewItem list)
+  &--external-drop-target {
+    background: rgba($color-accent-blue, 0.25);
+    border: 2px dashed $color-accent-blue;
+    box-shadow: 0 0 12px rgba($color-accent-blue, 0.4);
+
+    &::after {
+      content: "Place view here";
+      position: absolute;
+      font-size: 9px;
+      font-weight: 500;
+      color: $color-accent-blue;
+    }
+  }
+
+  // Spawnable (empty cell that can create new view)
+  &--spawnable {
+    cursor: pointer;
+
+    &:hover {
+      background: rgba($color-accent-teal, 0.15);
+      border-color: rgba($color-accent-teal, 0.4);
+
+      .grid-cell__add-icon {
+        opacity: 1;
+        color: $color-accent-teal;
+      }
+    }
+  }
+
   // Edit mode
   &--edit-mode {
     cursor: grab;

@@ -167,7 +167,16 @@ export const ViewItem = memo(function ViewItem({
                     className="view-item__drag-handle"
                     draggable
                     onDragStart={(e) => {
-                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.effectAllowed = 'copyMove';
+                        // Set data for internal reordering
+                        e.dataTransfer.setData('text/plain', view.id);
+                        // Set data for external drop targets (GridLayoutPreview)
+                        e.dataTransfer.setData('application/x-viewitem', JSON.stringify({
+                            id: view.id,
+                            name: view.name,
+                            color: view.color,
+                            size: view.size,
+                        }));
                         onDragStart?.(view.id);
                     }}
                     onDragEnd={onDragEnd}
