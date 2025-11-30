@@ -163,6 +163,252 @@ CREATE TABLE file_project_access (
     UNIQUE(file_id, project_id)
 );
 
+
+-- ============================================================================
+-- ROOMS TABLE (if not exists - needed for star scoping)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS rooms (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    
+    -- Room type
+    is_main BOOLEAN DEFAULT FALSE,  -- Each project has one main room
+    room_type VARCHAR(20) DEFAULT 'breakout' CHECK (room_type IN ('main', 'breakout')),
+    
+    -- Access control
+    is_public BOOLEAN DEFAULT TRUE,  -- Can anyone join, or invite-only?
+    max_members INTEGER DEFAULT 50,
+    
+    -- Audit
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    CONSTRAINT one_main_room_per_project UNIQUE (project_id, is_main) 
+        DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE INDEX IF NOT EXISTS idx_rooms_project ON rooms(project_id);
+
+-- Room members
+CREATE TABLE IF NOT EXISTS room_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    UNIQUE(room_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_members_room ON room_members(room_id);
+CREATE INDEX IF NOT EXISTS idx_room_members_user ON room_members(user_id);
+
+
+-- ============================================================================
+-- FOLDERS (File Organization)
+-- ============================================================================
+
+-- Folders within a project for file organization
+CREATE TABLE IF NOT EXISTS folders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES folders(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    
+    -- Audit fields
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Prevent duplicate folder names in same parent
+    CONSTRAINT unique_folder_name_in_parent UNIQUE NULLS NOT DISTINCT (project_id, parent_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_folders_project ON folders(project_id);
+CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id);
+
+-- Add folder_id to file_project_access if not exists
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'file_project_access' AND column_name = 'folder_id'
+    ) THEN
+        ALTER TABLE file_project_access 
+        ADD COLUMN folder_id UUID REFERENCES folders(id) ON DELETE SET NULL;
+        
+        CREATE INDEX idx_file_project_access_folder ON file_project_access(folder_id);
+    END IF;
+END $$;
+
+-- ============================================================================
+-- STARS (User Favorites - Workspace Scoped)
+-- ============================================================================
+
+-- Stars are scoped to workspace, allowing different starred items per context
+-- scope: 'personal' | 'room' | 'project'
+-- - personal: Only visible in user's personal workspace
+-- - room: Visible to everyone in the room's workspaces  
+-- - project: Visible project-wide (like a team favorite)
+
+CREATE TABLE IF NOT EXISTS stars (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    
+    -- Scope determines visibility
+    scope VARCHAR(20) NOT NULL DEFAULT 'personal' 
+        CHECK (scope IN ('personal', 'room', 'project')),
+    room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,  -- Required if scope='room'
+    
+    -- Polymorphic reference: 'file' or 'folder'
+    target_type VARCHAR(20) NOT NULL CHECK (target_type IN ('file', 'folder')),
+    target_id UUID NOT NULL,
+    
+    -- Audit
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- One star per user per target per scope
+    -- User can star same file in personal AND room contexts
+    CONSTRAINT unique_star_per_scope UNIQUE (user_id, target_type, target_id, scope, room_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stars_user ON stars(user_id);
+CREATE INDEX IF NOT EXISTS idx_stars_project ON stars(project_id);
+CREATE INDEX IF NOT EXISTS idx_stars_scope ON stars(scope);
+CREATE INDEX IF NOT EXISTS idx_stars_room ON stars(room_id) WHERE room_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_stars_target ON stars(target_type, target_id);
+
+-- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
+
+-- Function to get full folder path
+CREATE OR REPLACE FUNCTION get_folder_path(folder_uuid UUID)
+RETURNS TEXT AS $$
+DECLARE
+    result TEXT := '';
+    current_id UUID := folder_uuid;
+    folder_name TEXT;
+    parent UUID;
+BEGIN
+    IF folder_uuid IS NULL THEN
+        RETURN '/';
+    END IF;
+    
+    WHILE current_id IS NOT NULL LOOP
+        SELECT f.name, f.parent_id INTO folder_name, parent
+        FROM folders f WHERE f.id = current_id;
+        
+        IF folder_name IS NOT NULL THEN
+            result := '/' || folder_name || result;
+        END IF;
+        
+        current_id := parent;
+    END LOOP;
+    
+    IF result = '' THEN
+        result := '/';
+    END IF;
+    
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to count files in a folder (including subfolders)
+CREATE OR REPLACE FUNCTION count_files_in_folder(folder_uuid UUID)
+RETURNS INTEGER AS $$
+DECLARE
+    file_count INTEGER;
+BEGIN
+    IF folder_uuid IS NULL THEN
+        RETURN 0;
+    END IF;
+    
+    WITH RECURSIVE folder_tree AS (
+        SELECT id FROM folders WHERE id = folder_uuid
+        UNION ALL
+        SELECT f.id FROM folders f
+        INNER JOIN folder_tree ft ON f.parent_id = ft.id
+    )
+    SELECT COUNT(*) INTO file_count
+    FROM file_project_access fpa
+    WHERE fpa.folder_id IN (SELECT id FROM folder_tree);
+    
+    RETURN COALESCE(file_count, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- TRIGGERS
+-- ============================================================================
+
+-- Update timestamps on folder modification
+CREATE OR REPLACE FUNCTION update_folder_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_folder_updated ON folders;
+CREATE TRIGGER trigger_folder_updated
+    BEFORE UPDATE ON folders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_folder_timestamp();
+
+-- Cascade delete stars when folder is deleted
+CREATE OR REPLACE FUNCTION delete_folder_stars()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM stars 
+    WHERE target_type = 'folder' AND target_id = OLD.id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_delete_folder_stars ON folders;
+CREATE TRIGGER trigger_delete_folder_stars
+    BEFORE DELETE ON folders
+    FOR EACH ROW
+    EXECUTE FUNCTION delete_folder_stars();
+
+-- Auto-create main room when project is created
+CREATE OR REPLACE FUNCTION create_main_room_for_project()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO rooms (project_id, name, is_main, room_type, created_by)
+    VALUES (NEW.id, 'Main Room', TRUE, 'main', NEW.created_by);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_create_main_room ON projects;
+CREATE TRIGGER trigger_create_main_room
+    AFTER INSERT ON projects
+    FOR EACH ROW
+    EXECUTE FUNCTION create_main_room_for_project();
+
+-- Update room timestamps
+CREATE OR REPLACE FUNCTION update_room_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_room_updated ON rooms;
+CREATE TRIGGER trigger_room_updated
+    BEFORE UPDATE ON rooms
+    FOR EACH ROW
+    EXECUTE FUNCTION update_room_timestamp();
+
 -- ============================================================================
 -- VIEW CONFIGURATIONS
 -- Server-authoritative view state for v2.0 architecture
