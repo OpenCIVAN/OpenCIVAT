@@ -193,9 +193,7 @@ export async function initializePhase1() {
 
   // Utility functions for debugging/cleanup
   window.CIA.clearYjsDatasets = clearAllYjsDatasets;
-  log.info(
-    "Debug: Use window.CIA.clearYjsDatasets() to clear stale Y.js data"
-  );
+  log.info("Debug: Use window.CIA.clearYjsDatasets() to clear stale Y.js data");
 }
 
 /**
@@ -269,10 +267,7 @@ export async function initializePhase2() {
       }
       log.info("Y.js observers active");
     } catch (observerError) {
-      log.warn(
-        "Y.js observers setup incomplete:",
-        observerError.message
-      );
+      log.warn("Y.js observers setup incomplete:", observerError.message);
     }
 
     // STEP 6: Cursor system
@@ -333,9 +328,7 @@ export async function initializePhase2() {
 export async function initializePhase3() {
   log.info("Phase 3: Enhanced Systems (Currently Disabled)");
   log.info("================================================");
-  log.info(
-    "Phase 3 is disabled until enhancement systems are implemented"
-  );
+  log.info("Phase 3 is disabled until enhancement systems are implemented");
   log.info("See comments in appInitializer.js for details");
 
   // When ready, uncomment and implement:
@@ -567,8 +560,40 @@ async function fetchDatasetsFromServer() {
       serverFile.hash
     );
     if (existingByHash) {
-      // Update the existing dataset with server ID
-      existingByHash.serverId = serverFile.id;
+      // v2.0 FIX: Update the dataset's primary ID to match server ID
+      // This ensures the UI uses the correct server-recognized ID
+      const oldId = existingByHash.id;
+      if (oldId !== serverFile.id) {
+        log.info(`Updating dataset ID: ${oldId} → ${serverFile.id}`);
+
+        // Remove from map with old ID
+        datasetManager._datasets.delete(oldId);
+
+        // Update the dataset object's ID
+        existingByHash.id = serverFile.id;
+        existingByHash.serverId = serverFile.id;
+
+        // Re-add with new ID
+        datasetManager._datasets.set(serverFile.id, existingByHash);
+
+        // Update IndexedDB (remove old, add with new ID)
+        try {
+          await datasetManager._deleteDataset(oldId);
+          await datasetManager._persistDataset(existingByHash);
+
+          // Re-sync to Y.js with correct ID
+          datasetManager._syncDatasetMetadataToYjs(existingByHash);
+
+          log.info(`Dataset ID migration complete: ${existingByHash.filename}`);
+        } catch (err) {
+          log.warn(
+            `Failed to persist ID update for ${existingByHash.filename}:`,
+            err
+          );
+        }
+      } else {
+        existingByHash.serverId = serverFile.id;
+      }
       skippedCount++;
       continue;
     }
@@ -579,10 +604,45 @@ async function fetchDatasetsFromServer() {
   }
 
   log.info(`Added ${addedCount}, skipped ${skippedCount} existing`);
+
+  // v2.0: Clean up orphan datasets that don't exist on server
+  // This prevents "File not found" errors from stale local data
+  const serverIds = new Set(serverFiles.map((f) => f.id));
+  const serverHashes = new Set(serverFiles.map((f) => f.hash).filter(Boolean));
+  const localDatasets = datasetManager.getAllDatasets();
+  let orphanCount = 0;
+
+  for (const localDataset of localDatasets) {
+    const hasServerId = serverIds.has(localDataset.id);
+    const hasServerHash =
+      localDataset.hash && serverHashes.has(localDataset.hash);
+
+    if (!hasServerId && !hasServerHash) {
+      // This dataset doesn't exist on server - it's orphan
+      log.warn(
+        `Orphan dataset found: ${localDataset.filename} (${localDataset.id})`
+      );
+      log.warn(`  → Removing from local storage (file not on server)`);
+
+      try {
+        datasetManager._datasets.delete(localDataset.id);
+        await datasetManager._deleteDataset(localDataset.id);
+        orphanCount++;
+      } catch (err) {
+        log.warn(`Failed to remove orphan dataset:`, err);
+      }
+    }
+  }
+
+  if (orphanCount > 0) {
+    log.info(`Cleaned up ${orphanCount} orphan dataset(s)`);
+  }
+
   return {
     total: serverFiles.length,
     added: addedCount,
     skipped: skippedCount,
+    orphansRemoved: orphanCount,
   };
 }
 

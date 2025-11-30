@@ -143,8 +143,10 @@ app.use("/api/placements", optionalAuth, canvasesRouter);
 
 // Note: /api/files/:id/download is now handled by filesRouter
 
-app.use("/api/projects", optionalAuth, folderRoutes);
-app.use("/api/projects", optionalAuth, starRoutes);
+// Folders and stars routes expect :projectId in the path
+// The routes use mergeParams: true to access projectId from the mount path
+app.use("/api/projects/:projectId/folders", optionalAuth, folderRoutes);
+app.use("/api/projects/:projectId/stars", optionalAuth, starRoutes);
 
 // ============================================================================
 // HEALTH & STATUS ENDPOINTS
