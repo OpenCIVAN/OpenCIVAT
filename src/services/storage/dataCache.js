@@ -1,6 +1,8 @@
 // IndexedDB wrapper for caching VTP file data locally
 // This allows multiple tabs and users to share the same file data without re-uploading
 
+import { files as log } from "@Utils/logger.js";
+
 /**
  * DataCache Class
  *
@@ -51,18 +53,18 @@ class DataCache {
           // Create index on "name" for searching by filename
           objectStore.createIndex("name", "name", { unique: false });
 
-          console.log("✅ IndexedDB object store created");
+          log.debug("IndexedDB object store created");
         }
       };
 
       request.onsuccess = (event) => {
         const db = event.target.result;
-        console.log("✅ IndexedDB connection established");
+        log.debug("IndexedDB connection established");
         resolve(db);
       };
 
       request.onerror = (event) => {
-        console.error("❌ IndexedDB connection failed:", event.target.error);
+        log.error("IndexedDB connection failed:", event.target.error);
         reject(event.target.error);
       };
     });
@@ -95,9 +97,9 @@ class DataCache {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    console.log(`📊 Hash calculated for ${file.name}:`);
-    console.log(`   Full hash: ${hashHex}`);
-    console.log(`   Short hash: ${hashHex.substring(0, 16)}...`);
+    log.debug(
+      `Hash calculated for ${file.name}: ${hashHex.substring(0, 16)}...`
+    );
 
     return hashHex;
   }
@@ -114,18 +116,17 @@ class DataCache {
    * and we'll skip re-storing it
    */
   async storeDataset(file) {
-    console.log(`📦 Storing dataset in cache: ${file.name}`);
+    log.debug(`Storing dataset in cache: ${file.name}`);
 
     try {
       // Calculate hash - this is deterministic!
       const hash = await this.hashFile(file);
-      console.log(`   Hash: ${hash.substring(0, 16)}...`);
+      log.trace(`Hash: ${hash.substring(0, 16)}...`);
 
       // Check if already stored (by ANY user)
       const existing = await this.hasDataset(hash);
       if (existing) {
-        console.log(`   ✅ Dataset already in cache (hash match!)`);
-        console.log(`   Another user must have uploaded the same file`);
+        log.debug(`Dataset already in cache (hash match)`);
         return hash;
       }
 
@@ -151,19 +152,19 @@ class DataCache {
         const request = store.put(dataset);
 
         request.onsuccess = () => {
-          console.log(`   ✅ Dataset stored successfully`);
+          log.debug(`Dataset stored successfully`);
           resolve();
         };
 
         request.onerror = () => {
-          console.error(`   ❌ Failed to store dataset:`, request.error);
+          log.error(`Failed to store dataset:`, request.error);
           reject(request.error);
         };
       });
 
       return hash;
     } catch (error) {
-      console.error("❌ Error storing dataset:", error);
+      log.error("Error storing dataset:", error);
       throw error;
     }
   }
@@ -180,7 +181,7 @@ class DataCache {
    */
   async getDataset(hash) {
     if (!hash || typeof hash !== "string") {
-      console.warn("⚠️  Invalid hash provided to getDataset:", hash);
+      log.warn("Invalid hash provided to getDataset:", hash);
       return null;
     }
 
@@ -194,29 +195,22 @@ class DataCache {
 
         request.onsuccess = () => {
           if (request.result) {
-            console.log(
-              `✅ Retrieved dataset from cache: ${request.result.name}`
-            );
-            console.log(
-              `   This file was cached at: ${new Date(
-                request.result.storedAt
-              ).toLocaleString()}`
-            );
+            log.debug(`Retrieved dataset from cache: ${request.result.name}`);
           } else {
-            console.log(
-              `ℹ️  Dataset not found in cache: ${hash.substring(0, 16)}...`
+            log.debug(
+              `Dataset not found in cache: ${hash.substring(0, 16)}...`
             );
           }
           resolve(request.result);
         };
 
         request.onerror = () => {
-          console.error("❌ Error retrieving dataset:", request.error);
+          log.error("Error retrieving dataset:", request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-      console.error("❌ Error in getDataset:", error);
+      log.error("Error in getDataset:", error);
       return null;
     }
   }
@@ -268,19 +262,17 @@ class DataCache {
         const request = store.delete(hash);
 
         request.onsuccess = () => {
-          console.log(
-            `✅ Dataset deleted from cache: ${hash.substring(0, 16)}...`
-          );
+          log.debug(`Dataset deleted from cache: ${hash.substring(0, 16)}...`);
           resolve(true);
         };
 
         request.onerror = () => {
-          console.error("❌ Error deleting dataset:", request.error);
+          log.error("Error deleting dataset:", request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-      console.error("❌ Error deleting dataset:", error);
+      log.error("Error deleting dataset:", error);
       return false;
     }
   }
@@ -309,17 +301,17 @@ class DataCache {
             sizeBytes: ds.sizeBytes,
           }));
 
-          console.log(`✅ Found ${datasets.length} datasets in cache`);
+          log.debug(`Found ${datasets.length} datasets in cache`);
           resolve(datasets);
         };
 
         request.onerror = () => {
-          console.error("❌ Error listing datasets:", request.error);
+          log.error("Error listing datasets:", request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-      console.error("❌ Error listing datasets:", error);
+      log.error("Error listing datasets:", error);
       return [];
     }
   }
@@ -340,17 +332,17 @@ class DataCache {
         const request = store.clear();
 
         request.onsuccess = () => {
-          console.log("✅ All datasets cleared from cache");
+          log.info("All datasets cleared from cache");
           resolve(true);
         };
 
         request.onerror = () => {
-          console.error("❌ Error clearing cache:", request.error);
+          log.error("Error clearing cache:", request.error);
           reject(request.error);
         };
       });
     } catch (error) {
-      console.error("❌ Error clearing cache:", error);
+      log.error("Error clearing cache:", error);
       return false;
     }
   }

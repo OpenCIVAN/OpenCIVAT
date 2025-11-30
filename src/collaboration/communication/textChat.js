@@ -9,6 +9,7 @@ import {
 } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { generateTextChatId } from "@Utils/idGenerator.js";
+import { sync as log } from "@Utils/logger.js";
 
 class TextChat {
   constructor() {
@@ -58,7 +59,7 @@ class TextChat {
       }
     });
 
-    console.log("💬 Text chat initialized");
+    log.debug("Text chat initialized");
   }
 
   sendMessage(text) {
@@ -104,7 +105,7 @@ class TextChat {
 
     if (index !== -1) {
       this.messages.delete(index, 1);
-      console.log("💬 Message deleted:", messageId);
+      log.debug("Message deleted:", messageId);
       return true;
     }
     return false;
@@ -151,7 +152,7 @@ class TextChat {
       try {
         callback(message);
       } catch (error) {
-        console.error("Error in message listener:", error);
+        log.error("Error in message listener:", error);
       }
     });
   }
@@ -161,7 +162,7 @@ class TextChat {
       try {
         callback();
       } catch (error) {
-        console.error("Error in clear listener:", error);
+        log.error("Error in clear listener:", error);
       }
     });
   }
@@ -171,7 +172,7 @@ class TextChat {
       try {
         callback();
       } catch (error) {
-        console.error("Error in delete listener:", error);
+        log.error("Error in delete listener:", error);
       }
     });
   }

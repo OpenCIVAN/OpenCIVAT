@@ -2,6 +2,8 @@
 // Central registry for instance type plugins
 // This is how the core discovers and uses type handlers
 
+import { instance as log } from "@Utils/logger.js";
+
 /**
  * InstanceTypeRegistry
  *
@@ -24,7 +26,7 @@ class InstanceTypeRegistry {
     // Example: { 'vtk': vtkHandlerInstance, 'plotly': plotlyHandlerInstance }
     this.handlers = new Map();
 
-    console.log("📋 InstanceTypeRegistry: Created");
+    log.debug("InstanceTypeRegistry created");
   }
 
   /**
@@ -43,14 +45,12 @@ class InstanceTypeRegistry {
     const type = handler.getType();
 
     if (this.handlers.has(type)) {
-      console.warn(
-        `⚠️ Registry: Type '${type}' already registered, overwriting`
-      );
+      log.warn(`Registry: Type '${type}' already registered, overwriting`);
     }
 
     this.handlers.set(type, handler);
-    console.log(
-      `✅ Registry: Registered type '${type}' (${handler.getDisplayName()})`
+    log.debug(
+      `Registry: Registered type '${type}' (${handler.getDisplayName()})`
     );
   }
 
@@ -223,7 +223,7 @@ class InstanceTypeRegistry {
    */
   unregister(type) {
     if (this.handlers.delete(type)) {
-      console.log(`✅ Registry: Unregistered type '${type}'`);
+      log.debug(`Registry: Unregistered type '${type}'`);
     }
   }
 
@@ -232,7 +232,7 @@ class InstanceTypeRegistry {
    */
   clear() {
     this.handlers.clear();
-    console.log("✅ Registry: Cleared all types");
+    log.debug("Registry: Cleared all types");
   }
 }
 

@@ -2,7 +2,7 @@
 // Mode Manager - Handles VR vs Desktop Mode
 // ----------------------------------------------------------------------------
 
-import { logInfo, logSuccess } from "@UI/react/hooks/useLogging.js";
+import { vr as log } from "@Utils/logger.js";
 
 class VRModeManager {
   constructor() {
@@ -29,14 +29,14 @@ class VRModeManager {
     const previousMode = this.currentMode;
     this.currentMode = mode;
 
-    logInfo(`Mode changed: ${previousMode} → ${mode}`);
+    log.info(`Mode changed: ${previousMode} → ${mode}`);
 
     // Notify all listeners
     this.modeChangeListeners.forEach((callback) => {
       try {
         callback(mode, previousMode);
       } catch (error) {
-        console.error("Error in mode change listener:", error);
+        log.error("Error in mode change listener:", error);
       }
     });
   }
@@ -49,7 +49,7 @@ class VRModeManager {
     // TODO: Implement proper VR session detection
     // For now, we"ll detect VR mode manually or via button click
 
-    logInfo("VR detection initialized (manual mode)");
+    log.info("VR detection initialized (manual mode)");
 
     // Listen for Enter VR button clicks
     // The "Enter VR" button will trigger mode change manually
@@ -85,10 +85,10 @@ class VRModeManager {
 
       if (isFullscreen && this.currentMode !== "vr") {
         this.setMode("vr");
-        logSuccess("VR mode activated");
+        log.info("VR mode activated");
       } else if (!isFullscreen && this.currentMode === "vr") {
         this.setMode("desktop");
-        logSuccess("Desktop mode activated");
+        log.info("Desktop mode activated");
       }
     }, 1000);
 

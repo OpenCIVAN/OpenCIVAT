@@ -52,33 +52,33 @@ export async function initializePhase1() {
   try {
     // STEP 1: Register instance types
     // This MUST happen first so handlers are available when needed
-    log.info("Registering instance types...");
+    log.debug("Registering instance types...");
     registerInstanceTypes();
 
     // STEP 2: Session management
     // Sets up room ID from URL for collaboration
-    log.info("Initializing session...");
+    log.debug("Initializing session...");
     sessionManager.initializeFromURL();
-    log.info(`Session initialized - Room: ${sessionManager.getRoomId()}`);
+    log.debug(`Session initialized - Room: ${sessionManager.getRoomId()}`);
 
     // STEP 3: Data storage layer (Layer 1)
-    log.info("Setting up data storage layer...");
+    log.debug("Setting up data storage layer...");
 
     // Initialize storage provider (with automatic fallback)
     const { provider: storageProvider, mode: storageMode } =
       await initializeStorageProvider();
 
     // Create dataset manager WITH the storage provider
-    log.info("Creating dataset manager (Layer 1)...");
+    log.debug("Creating dataset manager (Layer 1)...");
     datasetManager = new DatasetManager(storageProvider);
     await datasetManager.initialize();
-    log.info("Dataset manager ready");
+    log.debug("Dataset manager ready");
 
     // Initialize server sync (WebSocket for real-time updates)
     try {
       const { serverSync } = await import("@Services/serverSync.js");
       serverSync.initialize(datasetManager);
-      log.info("Server sync connected");
+      log.debug("Server sync connected");
     } catch (syncError) {
       log.warn("Server sync failed:", syncError.message);
     }
@@ -86,9 +86,9 @@ export async function initializePhase1() {
     // v2.0: Sync from server API (primary source of truth)
     if (storageMode === "server" || config.useServerStorage) {
       try {
-        log.info("Fetching datasets from server API...");
+        log.debug("Fetching datasets from server API...");
         await fetchDatasetsFromServer();
-        log.info("Synced datasets from server");
+        log.debug("Synced datasets from server");
       } catch (error) {
         log.warn("Failed to fetch from server:", error.message);
         log.warn("Continuing with local datasets only...");
@@ -101,37 +101,37 @@ export async function initializePhase1() {
       }
     }
 
-    log.info("Data storage layer complete");
-    log.info(`Storage mode: ${storageMode}`);
+    log.debug("Data storage layer complete");
+    log.debug(`Storage mode: ${storageMode}`);
 
     // STEP 4: View Configuration layer (Layer 2)
-    log.info("Setting up view configuration layer...");
+    log.debug("Setting up view configuration layer...");
     viewConfigurationManager = new ViewConfigurationManager();
-    log.info("View configuration manager ready");
-    log.info("View configuration layer complete");
+    log.debug("View configuration manager ready");
+    log.debug("View configuration layer complete");
 
     // STEP 5: TensorFlow setup
     // Needed for dimensionality reduction algorithms (PCA, t-SNE, UMAP)
-    log.info("Setting up TensorFlow...");
+    log.debug("Setting up TensorFlow...");
     try {
       if (initializeTensorFlow && typeof initializeTensorFlow === "function") {
         await initializeTensorFlow();
-        log.info("TensorFlow ready");
+        log.debug("TensorFlow ready");
       } else {
         log.warn("TensorFlow setup not available");
       }
     } catch (tfError) {
       log.warn("TensorFlow initialization failed:", tfError.message);
-      log.info("Continuing without TensorFlow support");
+      log.debug("Continuing without TensorFlow support");
     }
 
     // STEP 6: Y.js provider
     // Required for real-time presence (cursors, avatars)
     // NOTE v2.0: Y.js is now for presence only, not state sync
-    log.info("Initializing Y.js provider (presence only)...");
+    log.debug("Initializing Y.js provider (presence only)...");
     if (typeof initializeYjsProvider === "function") {
       initializeYjsProvider();
-      log.info("Y.js provider connected (presence layer)");
+      log.debug("Y.js provider connected (presence layer)");
     } else {
       throw new Error("Y.js provider is required for presence");
     }
@@ -139,22 +139,22 @@ export async function initializePhase1() {
     // DEPRECATED v2.0: Y.js state sync
     // State comes from server now, not Y.js
     // Keeping this for backward compatibility during migration
-    log.info(
+    log.debug(
       "DEPRECATED: Syncing datasets to Y.js (for backward compatibility)..."
     );
     datasetManager.syncAllDatasetsToYjs();
-    log.info("Note: In v2.0, state should come from server API");
+    log.debug("Note: In v2.0, state should come from server API");
 
     // STEP 7: Initialize ViewConfigurationManager AFTER Y.js is ready
-    log.info("Initializing view configuration manager...");
+    log.debug("Initializing view configuration manager...");
     viewConfigurationManager.initialize();
-    log.info("View configuration manager ready");
+    log.debug("View configuration manager ready");
 
     // Wire up ViewConfigurationManager to receive WebSocket broadcasts
     try {
       const { serverSync } = await import("@Services/serverSync.js");
       serverSync.setViewConfigurationManager(viewConfigurationManager);
-      log.info("ViewConfigurationManager wired to server sync");
+      log.debug("ViewConfigurationManager wired to server sync");
     } catch (error) {
       log.warn(
         "Failed to wire ViewConfigurationManager to server sync:",
@@ -165,9 +165,9 @@ export async function initializePhase1() {
     // v2.0: Load views from server API (primary source of truth)
     if (storageMode === "server" || config.useServerStorage) {
       try {
-        log.info("Fetching views from server API...");
+        log.debug("Fetching views from server API...");
         await viewConfigurationManager.loadFromServer();
-        log.info("Synced views from server");
+        log.debug("Synced views from server");
       } catch (error) {
         log.warn("Failed to fetch views from server:", error.message);
         log.warn("Views will be created as needed");
@@ -176,7 +176,7 @@ export async function initializePhase1() {
 
     // STEP 8: Debug helpers
     setupDebugHelpers();
-    log.info("Debug helpers available");
+    log.debug("Debug helpers available");
 
     log.info("Phase 1 complete - Core services ready");
   } catch (error) {
@@ -193,7 +193,9 @@ export async function initializePhase1() {
 
   // Utility functions for debugging/cleanup
   window.CIA.clearYjsDatasets = clearAllYjsDatasets;
-  log.info("Debug: Use window.CIA.clearYjsDatasets() to clear stale Y.js data");
+  log.debug(
+    "Debug: Use window.CIA.clearYjsDatasets() to clear stale Y.js data"
+  );
 }
 
 /**
@@ -208,56 +210,56 @@ export async function initializePhase2() {
 
   try {
     // STEP 1: Wait for Y.js to sync
-    log.info("Checking Y.js sync status...");
+    log.debug("Checking Y.js sync status...");
     const synced = await waitForYjsSync();
     if (synced) {
-      log.info("Y.js already synced");
+      log.debug("Y.js already synced");
     } else {
       log.warn("Y.js sync timeout, continuing anyway");
     }
 
     // STEP 2: Presence system
     // Tracks which users are in the room and their activities
-    log.info("👥 Initializing presence system...");
+    log.debug("Initializing presence system...");
     if (presenceSystem && typeof presenceSystem.initialize === "function") {
       presenceSystem.initialize();
-      log.info("Presence system ready");
+      log.debug("Presence system ready");
       // Note: Presence system logs its own status, we don't need to query it here
     } else if (
       presenceSystem &&
       typeof presenceSystem.initializePresence === "function"
     ) {
       presenceSystem.initializePresence();
-      log.info("Presence system ready");
+      log.debug("Presence system ready");
     } else {
       log.warn("Presence system not available");
     }
 
     // STEP 3: Data managers
     // DatasetManager was initialized in Phase 1, confirm it's ready
-    log.info("Confirming data managers...");
-    log.info("Dataset manager ready (initialized in Phase 1)");
+    log.debug("Confirming data managers...");
+    log.debug("Dataset manager ready (initialized in Phase 1)");
 
     // ✅ NEW: Initialize annotation system
-    log.info("Initializing annotation system...");
+    log.debug("Initializing annotation system...");
     try {
       // Dynamically import to avoid circular dependencies
       const { initializeAnnotationManager } = await import(
         "@Core/data/managers/AnnotationManager.js"
       );
       annotationManager = initializeAnnotationManager(datasetManager);
-      log.info("Annotation system ready");
+      log.debug("Annotation system ready");
     } catch (annotError) {
       log.warn("Annotation system failed to initialize:", annotError);
     }
 
-    log.info("Data managers ready");
+    log.debug("Data managers ready");
 
     useDatasetStore.getState().initialize(datasetManager);
 
     // STEP 4: Y.js observers
     // Set up observers for real-time data sync
-    log.info("Setting up Y.js observers...");
+    log.debug("Setting up Y.js observers...");
     try {
       if (typeof initializeAllObservers === "function") {
         initializeAllObservers();
@@ -265,30 +267,30 @@ export async function initializePhase2() {
       if (typeof markSystemReady === "function") {
         markSystemReady();
       }
-      log.info("Y.js observers active");
+      log.debug("Y.js observers active");
     } catch (observerError) {
       log.warn("Y.js observers setup incomplete:", observerError.message);
     }
 
     // STEP 6: Cursor system
-    log.info("Initializing cursor system...");
+    log.debug("Initializing cursor system...");
     try {
       const { initializeCursorTracking } = await import(
         "@Collaboration/presence/cursors.js"
       );
       initializeCursorTracking();
-      log.info("Cursor tracking active");
+      log.debug("Cursor tracking active");
     } catch (cursorError) {
       log.warn("Cursor system failed to initialize:", cursorError);
     }
 
     // STEP 7: Text chat
     // Real-time text communication between users
-    log.info("Initializing text chat...");
+    log.debug("Initializing text chat...");
     if (textChat && typeof textChat.initialize === "function") {
       try {
         textChat.initialize();
-        log.info("Text chat ready");
+        log.debug("Text chat ready");
       } catch (chatError) {
         log.warn("Text chat failed:", chatError.message);
       }
@@ -298,10 +300,10 @@ export async function initializePhase2() {
 
     // STEP 8: Workspace manager
     // Manages multiple visualization instances
-    log.info("Initializing workspace manager...");
+    log.debug("Initializing workspace manager...");
     if (workspaceManager && typeof workspaceManager.initialize === "function") {
       workspaceManager.initialize();
-      log.info("Workspace manager ready");
+      log.debug("Workspace manager ready");
     }
 
     log.info("Phase 2 complete - User services ready");
@@ -328,8 +330,8 @@ export async function initializePhase2() {
 export async function initializePhase3() {
   log.info("Phase 3: Enhanced Systems (Currently Disabled)");
   log.info("================================================");
-  log.info("Phase 3 is disabled until enhancement systems are implemented");
-  log.info("See comments in appInitializer.js for details");
+  log.debug("Phase 3 is disabled until enhancement systems are implemented");
+  log.debug("See comments in appInitializer.js for details");
 
   // When ready, uncomment and implement:
   // await initializeVREnhancements();
@@ -353,7 +355,7 @@ function waitForYjsSync(timeoutMs = 2000) {
         return;
       }
 
-      log.info("Waiting for Y.js sync before Phase 2...");
+      log.debug("Waiting for Y.js sync before Phase 2...");
 
       // Set up sync listener
       const handleSync = (synced) => {
@@ -510,8 +512,8 @@ function setupDebugHelpers() {
     return workspaceManager?.getInstance(id);
   };
 
-  log.info("Debug helpers available");
-  log.info("Type CIA.help() for available commands");
+  log.debug("Debug helpers available");
+  log.debug("Type CIA.help() for available commands");
 }
 
 // Export annotation manager getter (since it's created in Phase 2)
@@ -542,7 +544,7 @@ async function fetchDatasetsFromServer() {
   const data = await response.json();
   const serverFiles = data.files || [];
 
-  log.info(`Found ${serverFiles.length} file(s) on server`);
+  log.debug(`Found ${serverFiles.length} file(s) on server`);
 
   let addedCount = 0;
   let skippedCount = 0;
@@ -564,7 +566,7 @@ async function fetchDatasetsFromServer() {
       // This ensures the UI uses the correct server-recognized ID
       const oldId = existingByHash.id;
       if (oldId !== serverFile.id) {
-        log.info(`Updating dataset ID: ${oldId} → ${serverFile.id}`);
+        log.debug(`Updating dataset ID: ${oldId} → ${serverFile.id}`);
 
         // Remove from map with old ID
         datasetManager._datasets.delete(oldId);
@@ -584,7 +586,9 @@ async function fetchDatasetsFromServer() {
           // Re-sync to Y.js with correct ID
           datasetManager._syncDatasetMetadataToYjs(existingByHash);
 
-          log.info(`Dataset ID migration complete: ${existingByHash.filename}`);
+          log.debug(
+            `Dataset ID migration complete: ${existingByHash.filename}`
+          );
         } catch (err) {
           log.warn(
             `Failed to persist ID update for ${existingByHash.filename}:`,
@@ -603,7 +607,7 @@ async function fetchDatasetsFromServer() {
     addedCount++;
   }
 
-  log.info(`Added ${addedCount}, skipped ${skippedCount} existing`);
+  log.debug(`Added ${addedCount}, skipped ${skippedCount} existing`);
 
   // v2.0: Clean up orphan datasets that don't exist on server
   // This prevents "File not found" errors from stale local data
@@ -635,7 +639,7 @@ async function fetchDatasetsFromServer() {
   }
 
   if (orphanCount > 0) {
-    log.info(`Cleaned up ${orphanCount} orphan dataset(s)`);
+    log.debug(`Cleaned up ${orphanCount} orphan dataset(s)`);
   }
 
   return {
@@ -664,7 +668,7 @@ async function fetchViewsFromServer() {
   const data = await response.json();
   const serverViews = data.views || [];
 
-  log.info(`Found ${serverViews.length} view(s) on server`);
+  log.debug(`Found ${serverViews.length} view(s) on server`);
 
   let addedCount = 0;
   for (const serverView of serverViews) {

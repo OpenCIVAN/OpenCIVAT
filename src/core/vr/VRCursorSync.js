@@ -8,6 +8,7 @@
 // - VR controller pointers visible on desktop as projected rays
 // - VR hand positions visible when hand tracking is active
 
+import { cursor as log } from "@Utils/logger.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 
 /**
@@ -59,7 +60,7 @@ export class VRCursorSync {
    * @param {string} userColor - Current user's color (hex)
    */
   initialize(userId, userName, userColor = "#00ff00") {
-    console.log(`VRCursorSync: Initializing for user ${userId}`);
+    log.debug(`VRCursorSync: Initializing for user ${userId}`);
 
     this._localUserId = userId;
     this._localUserName = userName;
@@ -72,7 +73,7 @@ export class VRCursorSync {
     // Set up observers
     this._setupObservers();
 
-    console.log("VRCursorSync: Initialized");
+    log.debug("VRCursorSync: Initialized");
   }
 
   /**
@@ -141,7 +142,7 @@ export class VRCursorSync {
     try {
       this._yCursors.set(this._localUserId, cursorData);
     } catch (error) {
-      console.error("VRCursorSync: Failed to broadcast desktop cursor:", error);
+      log.error("VRCursorSync: Failed to broadcast desktop cursor:", error);
     }
   }
 
@@ -171,7 +172,7 @@ export class VRCursorSync {
     try {
       this._yCursors.set(this._localUserId, cursorData);
     } catch (error) {
-      console.error("VRCursorSync: Failed to broadcast VR pointer:", error);
+      log.error("VRCursorSync: Failed to broadcast VR pointer:", error);
     }
   }
 
@@ -201,7 +202,7 @@ export class VRCursorSync {
     try {
       this._yHands.set(key, handData);
     } catch (error) {
-      console.error("VRCursorSync: Failed to broadcast hand position:", error);
+      log.error("VRCursorSync: Failed to broadcast hand position:", error);
     }
   }
 
@@ -214,7 +215,7 @@ export class VRCursorSync {
     try {
       this._yCursors.delete(this._localUserId);
     } catch (error) {
-      console.error("VRCursorSync: Failed to clear cursor:", error);
+      log.error("VRCursorSync: Failed to clear cursor:", error);
     }
   }
 
@@ -228,7 +229,7 @@ export class VRCursorSync {
       this._yHands.delete(`${this._localUserId}_left`);
       this._yHands.delete(`${this._localUserId}_right`);
     } catch (error) {
-      console.error("VRCursorSync: Failed to clear hands:", error);
+      log.error("VRCursorSync: Failed to clear hands:", error);
     }
   }
 
@@ -309,7 +310,7 @@ export class VRCursorSync {
           try {
             cb(odUserId, null);
           } catch (error) {
-            console.error("Cursor callback error:", error);
+            log.error("Cursor callback error:", error);
           }
         });
       });
@@ -323,7 +324,7 @@ export class VRCursorSync {
         try {
           cb(odUserId, cursorData);
         } catch (error) {
-          console.error("Cursor callback error:", error);
+          log.error("Cursor callback error:", error);
         }
       });
     }
@@ -334,7 +335,7 @@ export class VRCursorSync {
    */
   _notifyHandCallbacks(odUserId, hand, handData) {
     // TODO: Implement hand tracking callbacks
-    console.log(
+    log.debug(
       "VRCursorSync._notifyHandCallbacks() - STUB: Not fully implemented"
     );
   }
@@ -379,7 +380,7 @@ export class VRCursorSync {
     this._yCursors = null;
     this._yHands = null;
 
-    console.log("VRCursorSync: Disposed");
+    log.debug("VRCursorSync: Disposed");
   }
 }
 

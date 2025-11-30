@@ -1,5 +1,7 @@
 // src/core/instances/ViewStateAdapter.js
 
+import { instance as log } from "@Utils/logger.js";
+
 /**
  * ViewStateAdapter
  *
@@ -106,7 +108,7 @@ export class ViewStateAdapter {
       try {
         observer(stateUpdate);
       } catch (error) {
-        console.error("Error in state observer:", error);
+        log.error("Error in state observer:", error);
       }
     });
   }

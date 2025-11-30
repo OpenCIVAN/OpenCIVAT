@@ -1,6 +1,7 @@
 // src/utils/sessionCleanup.js
 // Utilities for cleaning up orphaned data from old sessions
 
+import { files as log } from "@Utils/logger.js";
 import {
   yDatasets,
   yViews,
@@ -16,14 +17,14 @@ import { dataCache } from "@Services/storage/dataCache.js";
  * Remove orphaned datasets that can't be loaded
  */
 export async function validateDatasetsInCache() {
-  console.log("🔍 Validating datasets against cache...");
+  log.debug("Validating datasets against cache...");
 
   const orphaned = [];
   const promises = [];
 
   yDatasets.forEach((metadata, datasetId) => {
     if (!metadata.hash) {
-      console.warn(`⚠️ Dataset ${datasetId} has no hash, marking as orphaned`);
+      log.warn(`Dataset ${datasetId} has no hash, marking as orphaned`);
       orphaned.push({ id: datasetId, reason: "no_hash", name: metadata.name });
       return;
     }
@@ -31,7 +32,7 @@ export async function validateDatasetsInCache() {
     // Check if file exists in cache
     const promise = dataCache.hasDataset(metadata.hash).then((exists) => {
       if (!exists) {
-        console.warn(`⚠️ Dataset ${datasetId} file not in cache`);
+        log.warn(`Dataset ${datasetId} file not in cache`);
         orphaned.push({
           id: datasetId,
           reason: "missing_file",
@@ -46,9 +47,7 @@ export async function validateDatasetsInCache() {
 
   await Promise.all(promises);
 
-  console.log(
-    `✅ Validation complete. Found ${orphaned.length} orphaned datasets.`
-  );
+  log.info(`Validation complete. Found ${orphaned.length} orphaned datasets.`);
   return orphaned;
 }
 
@@ -57,15 +56,15 @@ export async function validateDatasetsInCache() {
  * Call this after validateDatasetsInCache()
  */
 export function removeOrphanedDatasets(orphanedList) {
-  console.log(`🗑️ Removing ${orphanedList.length} orphaned datasets...`);
+  log.info(`Removing ${orphanedList.length} orphaned datasets...`);
 
   orphanedList.forEach(({ id, reason, name }) => {
-    console.log(`  Removing ${name} (${reason})`);
+    log.debug(`Removing ${name} (${reason})`);
     yDatasets.delete(id);
     yAnnotations.delete(id);
   });
 
-  console.log("✅ Orphaned datasets removed");
+  log.info("Orphaned datasets removed");
 }
 
 /**
@@ -73,7 +72,7 @@ export function removeOrphanedDatasets(orphanedList) {
  * and views for datasets that no longer exist
  */
 export function cleanupStaleViews() {
-  console.log("🔍 Cleaning up stale views...");
+  log.debug("Cleaning up stale views...");
 
   const validDatasets = new Set();
   yDatasets.forEach((_, id) => validDatasets.add(id));
@@ -83,7 +82,7 @@ export function cleanupStaleViews() {
   yViews.forEach((view, viewId) => {
     // Remove views for deleted datasets
     if (!validDatasets.has(view.datasetId)) {
-      console.warn(`⚠️ View ${viewId} references deleted dataset`);
+      log.warn(`View ${viewId} references deleted dataset`);
       toRemove.push(viewId);
       return;
     }
@@ -100,8 +99,8 @@ export function cleanupStaleViews() {
     const isInactive = view.status !== "active";
 
     if (isOld && isUnsaved && isUnshared && isInactive) {
-      console.warn(
-        `⚠️ View ${viewId} is stale (${Math.floor(
+      log.warn(
+        `View ${viewId} is stale (${Math.floor(
           age / 3600000
         )}h old, unsaved, inactive)`
       );
@@ -113,7 +112,7 @@ export function cleanupStaleViews() {
     yViews.delete(id);
   });
 
-  console.log(`✅ Removed ${toRemove.length} stale views`);
+  log.info(`Removed ${toRemove.length} stale views`);
   return toRemove;
 }
 
@@ -122,16 +121,16 @@ export function cleanupStaleViews() {
  * This removes old instance data that should no longer be synced
  */
 export function cleanupLegacyInstances() {
-  console.log("🔍 Cleaning up legacy instances...");
+  log.debug("Cleaning up legacy instances...");
 
   const count = yInstances.size;
 
   if (count > 0) {
-    console.log(`  Found ${count} legacy instances, removing...`);
+    log.debug(`Found ${count} legacy instances, removing...`);
     yInstances.clear();
-    console.log("✅ Legacy instances cleared");
+    log.info("Legacy instances cleared");
   } else {
-    console.log("✅ No legacy instances to clean up");
+    log.debug("No legacy instances to clean up");
   }
 
   return count;
@@ -141,7 +140,7 @@ export function cleanupLegacyInstances() {
  * Clean up workspace layouts that reference deleted users or projects
  */
 export function cleanupStaleWorkspaceLayouts() {
-  console.log("🔍 Cleaning up stale workspace layouts...");
+  log.debug("Cleaning up stale workspace layouts...");
 
   const toRemove = [];
 
@@ -150,7 +149,7 @@ export function cleanupStaleWorkspaceLayouts() {
     const age =
       Date.now() - (layout.lastActiveTimestamp || layout.createdAt || 0);
     if (age > 7 * 24 * 60 * 60 * 1000) {
-      console.warn(`⚠️ Workspace layout ${layoutId} is very old`);
+      log.warn(`Workspace layout ${layoutId} is very old`);
       toRemove.push(layoutId);
     }
   });
@@ -159,7 +158,7 @@ export function cleanupStaleWorkspaceLayouts() {
     yWorkspaceLayouts.delete(id);
   });
 
-  console.log(`✅ Removed ${toRemove.length} stale workspace layouts`);
+  log.info(`Removed ${toRemove.length} stale workspace layouts`);
   return toRemove;
 }
 
@@ -167,7 +166,7 @@ export function cleanupStaleWorkspaceLayouts() {
  * Run all cleanup tasks
  */
 export async function runFullCleanup() {
-  console.log("🧹 Running full session cleanup...");
+  log.info("Running full session cleanup...");
 
   // 1. Validate and clean datasets
   const orphanedDatasets = await validateDatasetsInCache();
@@ -184,7 +183,7 @@ export async function runFullCleanup() {
   // 4. Clean stale workspace layouts
   cleanupStaleWorkspaceLayouts();
 
-  console.log("✅ Full cleanup complete");
+  log.info("Full cleanup complete");
 }
 
 /**
@@ -192,7 +191,7 @@ export async function runFullCleanup() {
  * WARNING: This deletes everything!
  */
 export async function clearAllData() {
-  console.log("💣 CLEARING ALL DATA...");
+  log.warn("CLEARING ALL DATA...");
 
   // Clear Y.js maps
   yDatasets.clear();
@@ -200,13 +199,13 @@ export async function clearAllData() {
   yAnnotations.clear();
   yWorkspaceLayouts.clear();
   yInstances.clear(); // Legacy cleanup
-  console.log("  ✅ Y.js maps cleared");
+  log.debug("Y.js maps cleared");
 
   // Clear IndexedDB
   await dataCache.clearAll();
-  console.log("  ✅ IndexedDB cleared");
+  log.debug("IndexedDB cleared");
 
-  console.log("✅ All data cleared!");
+  log.info("All data cleared!");
 }
 
 /**

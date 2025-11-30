@@ -9,6 +9,8 @@
 // - 'grid': Views arranged in curved arc around user (Fiesta-style)
 // - 'isolated': Single view at room-scale, user can walk around
 
+import { vr as log } from "@Utils/logger.js";
+
 /**
  * VRManager - Manages VR session lifecycle
  *
@@ -114,10 +116,10 @@ export class VRManager {
    * @returns {Promise<void>}
    */
   async enterVR() {
-    console.log("VRManager.enterVR() - STUB: Not fully implemented");
+    log.debug("VRManager.enterVR() - STUB: Not fully implemented");
 
     if (this._xrSession) {
-      console.warn("VR session already active");
+      log.warn("VR session already active");
       return;
     }
 
@@ -148,9 +150,9 @@ export class VRManager {
       this._emit("sessionStarted", { session: this._xrSession });
       this._emit("modeChanged", { mode: this._mode });
 
-      console.log("VR session started (stub mode)");
+      log.info("VR session started (stub mode)");
     } catch (error) {
-      console.error("Failed to enter VR:", error);
+      log.error("Failed to enter VR:", error);
       throw new Error(`Failed to enter VR: ${error.message}`);
     }
   }
@@ -160,10 +162,10 @@ export class VRManager {
    * @returns {Promise<void>}
    */
   async exitVR() {
-    console.log("VRManager.exitVR() - STUB: Not fully implemented");
+    log.debug("VRManager.exitVR() - STUB: Not fully implemented");
 
     if (!this._xrSession) {
-      console.warn("No VR session to exit");
+      log.warn("No VR session to exit");
       return;
     }
 
@@ -177,9 +179,9 @@ export class VRManager {
       // await this._xrSession.end();
       this._cleanup();
 
-      console.log("VR session ended");
+      log.info("VR session ended");
     } catch (error) {
-      console.error("Error exiting VR:", error);
+      log.error("Error exiting VR:", error);
       this._cleanup();
     }
   }
@@ -188,7 +190,7 @@ export class VRManager {
    * Handle XR session end event
    */
   _handleSessionEnd() {
-    console.log("VR session ended by system");
+    log.info("VR session ended by system");
     this._cleanup();
   }
 
@@ -220,12 +222,12 @@ export class VRManager {
    * @param {string} viewId - The ViewConfiguration ID to isolate
    */
   enterIsolationMode(viewId) {
-    console.log(
+    log.debug(
       `VRManager.enterIsolationMode(${viewId}) - STUB: Not fully implemented`
     );
 
     if (this._mode !== "grid") {
-      console.warn("Must be in VR grid mode to enter isolation");
+      log.warn("Must be in VR grid mode to enter isolation");
       return;
     }
 
@@ -242,17 +244,17 @@ export class VRManager {
     this._emit("isolationEntered", { viewId });
     this._emit("modeChanged", { mode: this._mode, isolatedViewId: viewId });
 
-    console.log(`Entered isolation mode for view: ${viewId}`);
+    log.debug(`Entered isolation mode for view: ${viewId}`);
   }
 
   /**
    * Exit isolation mode - return to grid view
    */
   exitIsolationMode() {
-    console.log("VRManager.exitIsolationMode() - STUB: Not fully implemented");
+    log.debug("VRManager.exitIsolationMode() - STUB: Not fully implemented");
 
     if (this._mode !== "isolated") {
-      console.warn("Not in isolation mode");
+      log.warn("Not in isolation mode");
       return;
     }
 
@@ -268,7 +270,7 @@ export class VRManager {
     this._emit("isolationExited", { viewId: previousViewId });
     this._emit("modeChanged", { mode: this._mode });
 
-    console.log("Exited isolation mode, returned to grid");
+    log.debug("Exited isolation mode, returned to grid");
   }
 
   // ===========================================================================
@@ -328,7 +330,7 @@ export class VRManager {
    */
   on(event, callback) {
     if (!this._listeners[event]) {
-      console.warn(`Unknown VR event: ${event}`);
+      log.warn(`Unknown VR event: ${event}`);
       return () => {};
     }
 
@@ -356,7 +358,7 @@ export class VRManager {
         try {
           callback(data);
         } catch (error) {
-          console.error(`VR event handler error (${event}):`, error);
+          log.error(`VR event handler error (${event}):`, error);
         }
       });
     }

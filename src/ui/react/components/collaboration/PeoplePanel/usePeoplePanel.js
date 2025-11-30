@@ -2,6 +2,7 @@
 // Logic hook for PeoplePanel - separates business logic from presentation
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { presence as log } from "@Utils/logger.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import {
   getUserId,
@@ -105,11 +106,11 @@ export function usePeoplePanel() {
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    console.log("👥 usePeoplePanel: Setting up presence listener");
+    log.debug("usePeoplePanel: Setting up presence listener");
 
     const cleanup = presenceSystem.onPresenceChange((onlineUsers) => {
-      console.log(
-        "👥 usePeoplePanel: Received presence update",
+      log.debug(
+        "usePeoplePanel: Received presence update",
         onlineUsers.length,
         "users"
       );
@@ -162,7 +163,7 @@ export function usePeoplePanel() {
         timeSinceActivity >= idleTimeoutMs &&
         currentUser?.status === "online"
       ) {
-        console.log("💤 User idle - auto-updating status");
+        log.debug("User idle - auto-updating status");
         updateMyStatus("idle");
       }
     }, 30000); // Check every 30 seconds
@@ -224,7 +225,7 @@ export function usePeoplePanel() {
   // ---------------------------------------------------------------------------
 
   const updateMyStatus = useCallback((status) => {
-    console.log("📊 Updating my status to:", status);
+    log.debug("Updating my status to:", status);
 
     // Update in presence system
     if (presenceSystem && typeof presenceSystem.updateStatus === "function") {
@@ -241,7 +242,7 @@ export function usePeoplePanel() {
   }, []);
 
   const updateMyStatusMessage = useCallback((statusMessage) => {
-    console.log("💬 Updating my status message to:", statusMessage);
+    log.debug("Updating my status message to:", statusMessage);
 
     // Update in presence system
     if (presenceSystem && typeof presenceSystem.setPresence === "function") {
@@ -258,7 +259,7 @@ export function usePeoplePanel() {
 
   const joinRoom = useCallback(
     (roomId) => {
-      console.log("🚪 Joining room:", roomId);
+      log.debug("Joining room:", roomId);
       const room = breakoutRooms.find((r) => r.id === roomId);
       if (room) {
         setCurrentRoom(room);
@@ -274,7 +275,7 @@ export function usePeoplePanel() {
 
   const leaveRoom = useCallback(
     (roomId) => {
-      console.log("🚪 Leaving room:", roomId);
+      log.debug("Leaving room:", roomId);
 
       // Go back to main room
       const mainRoom =
@@ -290,17 +291,17 @@ export function usePeoplePanel() {
   );
 
   const requestRoomInvite = useCallback((roomId) => {
-    console.log("📨 Requesting invite to room:", roomId);
+    log.debug("Requesting invite to room:", roomId);
 
     // TODO: Send invite request
     // - Create notification for room owner
     // - Show pending state in UI
-    console.warn(`Invite request sent for room ${roomId}. This is a stub!`);
+    log.warn(`Invite request sent for room ${roomId}. This is a stub!`);
   }, []);
 
   const createRoom = useCallback(
     (roomConfig) => {
-      console.log("🏠 Creating room:", roomConfig);
+      log.debug("Creating room:", roomConfig);
 
       const newRoom = {
         id: `room-${Date.now()}`,

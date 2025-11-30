@@ -6,6 +6,7 @@
 
 import { Note } from "../models/Note.js";
 import { CanvasImage } from "../models/CanvasImage.js";
+import { workspace as log } from "@Utils/logger.js";
 
 /**
  * ContentHandler - Base class for content type handlers
@@ -154,7 +155,7 @@ class ContentManagerClass {
       try {
         listener(event, data);
       } catch (err) {
-        console.error("ContentManager listener error:", err);
+        log.error("ContentManager listener error:", err);
       }
     });
   }

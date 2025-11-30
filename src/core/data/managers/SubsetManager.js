@@ -8,6 +8,7 @@
 // - Integrates with CanvasManager for placement references
 
 import { Subset } from "@Core/data/models/Subset.js";
+import { workspace as log } from "@Utils/logger.js";
 
 /**
  * SubsetManager - Manages subsets and focus mode
@@ -64,7 +65,7 @@ export class SubsetManager {
     if (options.sessionManager) this._sessionManager = options.sessionManager;
     if (options.canvasManager) this._canvasManager = options.canvasManager;
 
-    console.log("SubsetManager: Initialized");
+    log.debug("SubsetManager initialized");
   }
 
   /**
@@ -263,9 +264,7 @@ export class SubsetManager {
   enterFocusMode(subsetId, currentViewport) {
     const subset = this._subsets.get(subsetId);
     if (!subset) {
-      console.error(
-        "SubsetManager: Cannot enter focus mode - subset not found"
-      );
+      log.error("SubsetManager: Cannot enter focus mode - subset not found");
       return;
     }
 
@@ -273,7 +272,7 @@ export class SubsetManager {
     this._previousViewport = { ...currentViewport };
     this._activeSubsetId = subsetId;
 
-    console.log(
+    log.debug(
       `SubsetManager: Entering focus mode with subset "${subset.name}"`
     );
 
@@ -290,7 +289,7 @@ export class SubsetManager {
    */
   exitFocusMode() {
     if (!this._activeSubsetId) {
-      console.warn("SubsetManager: Not in focus mode");
+      log.warn("SubsetManager: Not in focus mode");
       return null;
     }
 
@@ -300,7 +299,7 @@ export class SubsetManager {
     this._activeSubsetId = null;
     this._previousViewport = null;
 
-    console.log("SubsetManager: Exiting focus mode");
+    log.debug("SubsetManager: Exiting focus mode");
 
     this._emit("focusModeExited", {
       subset,
@@ -494,7 +493,7 @@ export class SubsetManager {
    * Handle server broadcast events
    */
   handleServerBroadcast(message) {
-    console.log("SubsetManager: Received broadcast", message.type);
+    log.debug("SubsetManager received broadcast:", message.type);
 
     switch (message.type) {
       case "subset:created":
@@ -570,7 +569,7 @@ export class SubsetManager {
         try {
           cb(data);
         } catch (error) {
-          console.error(`SubsetManager event error (${event}):`, error);
+          log.error(`SubsetManager event error (${event}):`, error);
         }
       });
     }

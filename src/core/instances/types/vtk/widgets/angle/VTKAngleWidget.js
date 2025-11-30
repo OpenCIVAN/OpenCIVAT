@@ -1,3 +1,4 @@
+import { render as log } from "@Utils/logger.js";
 import VtkJsAngleWidget from "@kitware/vtk.js/Widgets/Widgets3D/AngleWidget";
 
 /**
@@ -11,11 +12,11 @@ export class VTKAngleWidget {
 
   initialize(instanceId, config) {
     if (this.instances.has(instanceId)) {
-      console.warn(`⚠️ Angle widget already exists for ${instanceId}`);
+      log.warn(`Angle widget already exists for ${instanceId}`);
       return;
     }
 
-    console.log(`📐 Initializing angle measurement for ${instanceId}`);
+    log.debug(`Initializing angle measurement for ${instanceId}`);
 
     const { widgetManager, sceneObjects } = config;
 
@@ -66,7 +67,7 @@ export class VTKAngleWidget {
       // Update on interaction
       handle.onInteractionEvent(() => {
         // Angle is calculated automatically by the widget
-        console.log(`📐 Angle measurement updated`);
+        log.trace(`Angle measurement updated`);
         sceneObjects.renderWindow.render();
       });
 
@@ -82,9 +83,9 @@ export class VTKAngleWidget {
       // Force initial render
       sceneObjects.renderWindow.render();
 
-      console.log(`✅ Angle widget created for ${instanceId}`);
+      log.debug(`Angle widget created for ${instanceId}`);
     } catch (error) {
-      console.error(`❌ Error initializing angle widget:`, error);
+      log.error(`Error initializing angle widget:`, error);
     }
   }
 
@@ -96,7 +97,7 @@ export class VTKAngleWidget {
     const widgetData = this.instances.get(instanceId);
     if (!widgetData) return;
 
-    console.log(`🧹 Cleaning up angle widget for ${instanceId}`);
+    log.debug(`Cleaning up angle widget for ${instanceId}`);
 
     const { widget, handle, widgetManager, sceneObjects } = widgetData;
 
@@ -108,11 +109,11 @@ export class VTKAngleWidget {
     sceneObjects.renderWindow.render();
     this.instances.delete(instanceId);
 
-    console.log(`✅ Angle widget cleaned up for ${instanceId}`);
+    log.debug(`Angle widget cleaned up for ${instanceId}`);
   }
 
   destroy() {
-    console.log(`🧹 Destroying all angle widgets`);
+    log.debug(`Destroying all angle widgets`);
     this.instances.forEach((widgetData, instanceId) => {
       this.cleanup(instanceId);
     });

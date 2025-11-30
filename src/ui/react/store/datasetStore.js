@@ -3,6 +3,7 @@
 // This store is now a THIN WRAPPER around DatasetManager for React reactivity
 
 import { create } from "zustand";
+import { store as log } from "@Utils/logger.js";
 
 /**
  * Dataset Store
@@ -40,33 +41,33 @@ export const useDatasetStore = create((set, get) => ({
    * @param {DatasetManager} datasetManager - The dataset manager instance
    */
   initialize: (datasetManager) => {
-    console.log("📊 Initializing dataset store sync with DatasetManager");
+    log.debug("Initializing dataset store sync with DatasetManager");
 
     // Subscribe to dataset changes
     datasetManager.on("datasetAdded", (dataset) => {
-      console.log("📊 React: Dataset added:", dataset.id);
+      log.debug("React: Dataset added:", dataset.id);
       get().refresh();
     });
 
     datasetManager.on("datasetRemoved", (datasetId) => {
-      console.log("📊 React: Dataset removed:", datasetId);
+      log.debug("React: Dataset removed:", datasetId);
       get().refresh();
     });
 
     datasetManager.on("datasetUpdated", (dataset) => {
-      console.log("📊 React: Dataset updated:", dataset.id);
+      log.debug("React: Dataset updated:", dataset.id);
       get().refresh();
     });
 
     datasetManager.on("datasetLoaded", ({ datasetId }) => {
-      console.log("📊 React: Dataset loaded:", datasetId);
+      log.debug("React: Dataset loaded:", datasetId);
       get().refresh();
     });
 
     // Initial load
     get().refresh();
 
-    console.log("✅ Dataset store initialized and synced");
+    log.info("Dataset store initialized and synced");
   },
 
   /**
@@ -78,7 +79,7 @@ export const useDatasetStore = create((set, get) => ({
     import("@Init/appInitializer.js")
       .then(({ datasetManager }) => {
         if (!datasetManager) {
-          console.warn("⚠️ DatasetManager not available yet");
+          log.warn("DatasetManager not available yet");
           return;
         }
 
@@ -91,7 +92,7 @@ export const useDatasetStore = create((set, get) => ({
         });
       })
       .catch((error) => {
-        console.error("❌ Failed to refresh dataset store:", error);
+        log.error("Failed to refresh dataset store:", error);
         // Don't throw - just log the error to prevent unhandled rejection
       });
   },
@@ -104,7 +105,7 @@ export const useDatasetStore = create((set, get) => ({
    */
   setSelectedDataset: (id) => {
     set({ selectedDatasetId: id });
-    console.log(`✅ UI: Selected dataset: ${id}`);
+    log.debug(`UI: Selected dataset: ${id}`);
   },
 
   /**
@@ -126,12 +127,12 @@ export const useDatasetStore = create((set, get) => ({
    * Called when a remote dataset is discovered
    */
   addDataset: (dataset) => {
-    console.log("📊 React: Adding dataset to store:", dataset.id);
+    log.debug("React: Adding dataset to store:", dataset.id);
 
     // Import dynamically to avoid circular dependency
     import("@Init/appInitializer.js").then(({ datasetManager }) => {
       if (!datasetManager) {
-        console.warn("⚠️ DatasetManager not available yet");
+        log.warn("DatasetManager not available yet");
         return;
       }
 
@@ -157,7 +158,7 @@ export const useDatasetStore = create((set, get) => ({
    * Remove a dataset from the store
    */
   removeDataset: (datasetId) => {
-    console.log("📊 React: Removing dataset from store:", datasetId);
+    log.debug("React: Removing dataset from store:", datasetId);
 
     const currentIds = get().datasetIds;
     set({
@@ -175,12 +176,12 @@ export const useDatasetStore = create((set, get) => ({
    * Update annotations for a dataset
    */
   updateAnnotations: (datasetId, annotations) => {
-    console.log("📊 React: Updating annotations for dataset:", datasetId);
+    log.debug("React: Updating annotations for dataset:", datasetId);
 
     // Import dynamically to avoid circular dependency
     import("@Init/appInitializer.js").then(({ datasetManager }) => {
       if (!datasetManager) {
-        console.warn("⚠️ DatasetManager not available yet");
+        log.warn("DatasetManager not available yet");
         return;
       }
 

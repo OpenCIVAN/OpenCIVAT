@@ -3,6 +3,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from 'react-dom';
 import { ChevronDown, Maximize2, Trash2, AlertCircle, ZoomIn, ZoomOut, RotateCcw, Move, LayoutGrid } from 'lucide-react';
 
+import { instance as log } from "@Utils/logger.js";
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
@@ -166,7 +167,7 @@ export function InstanceViewport({
         const initialize = async () => {
             try {
                 setLoading(true);
-                console.log(`🎨 Creating typeless instance (view: ${viewConfigId || 'none'})`);
+                log.debug(`Creating typeless instance (view: ${viewConfigId || 'none'})`);
 
                 const instanceId = await workspaceManager.createInstance(
                     containerRef.current,
@@ -188,10 +189,10 @@ export function InstanceViewport({
                 const instanceHeader = workspaceManager.getInstanceHeaderInfo(instanceId);
                 setHeaderInfo(instanceHeader);
 
-                console.log(`✅ Typeless instance ${instanceId} created`);
+                log.info(`Typeless instance ${instanceId} created`);
 
             } catch (err) {
-                console.error(`❌ Instance initialization failed:`, err);
+                log.error(`Instance initialization failed:`, err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -203,7 +204,7 @@ export function InstanceViewport({
         return () => {
             // Use ref instead of state to get the correct instanceId
             if (instanceIdRef.current) {
-                console.log(`🧹 Cleaning up instance ${instanceIdRef.current}`);
+                log.debug(`Cleaning up instance ${instanceIdRef.current}`);
                 workspaceManager.deleteInstance(instanceIdRef.current);
             }
 
@@ -223,11 +224,11 @@ export function InstanceViewport({
 
         const loadViewData = async () => {
             try {
-                console.log(`📊 Loading view ${viewConfigId} into instance ${actualInstanceId}`);
+                log.debug(`Loading view ${viewConfigId} into instance ${actualInstanceId}`);
 
                 const viewConfig = viewConfigurationManager.getView(viewConfigId);
                 if (!viewConfig) {
-                    console.warn(`View ${viewConfigId} not found`);
+                    log.warn(`View ${viewConfigId} not found`);
                     return;
                 }
 
@@ -241,11 +242,11 @@ export function InstanceViewport({
                     setInstanceType(instance.type);
                     setHasData(true);
 
-                    console.log(`✅ Instance ${actualInstanceId} is now type: ${instance.type}`);
+                    log.info(`Instance ${actualInstanceId} is now type: ${instance.type}`);
                 }
 
             } catch (err) {
-                console.error(`❌ Failed to load view data:`, err);
+                log.error(`Failed to load view data:`, err);
                 setError(err.message);
             }
         };
@@ -263,13 +264,13 @@ export function InstanceViewport({
         const loadTools = () => {
             try {
                 const toolsList = workspaceManager.getInstanceTools(actualInstanceId);
-                console.log(`🔧 Loaded ${toolsList.length} tools for ${instanceType} instance`);
+                log.debug(`Loaded ${toolsList.length} tools for ${instanceType} instance`);
                 setTools(toolsList);
 
                 const updatedHeader = workspaceManager.getInstanceHeaderInfo(actualInstanceId);
                 setHeaderInfo(updatedHeader);
             } catch (err) {
-                console.warn(`⚠️ Failed to load tools:`, err);
+                log.warn(`Failed to load tools:`, err);
             }
         };
 
@@ -277,7 +278,7 @@ export function InstanceViewport({
 
         const handleToolsUpdate = (event) => {
             if (event.detail?.instanceId === actualInstanceId) {
-                console.log(`🔄 Tools updated for ${actualInstanceId}, refreshing toolbar`);
+                log.debug(`Tools updated for ${actualInstanceId}, refreshing toolbar`);
                 const updatedTools = workspaceManager.getInstanceTools(actualInstanceId);
                 setTools(updatedTools);
             }

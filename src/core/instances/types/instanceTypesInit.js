@@ -11,6 +11,7 @@
 
 import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
 import { vtkInstanceHandler } from "@Core/instances/types/vtk/VTKInstanceHandler.js";
+import { instance as log } from "@Utils/logger.js";
 
 /**
  * registerInstanceTypes
@@ -30,7 +31,7 @@ import { vtkInstanceHandler } from "@Core/instances/types/vtk/VTKInstanceHandler
  * instances of it. You never need to touch any core files.
  */
 export function registerInstanceTypes() {
-  console.log("📋 Registering instance type plugins...");
+  log.debug("Registering instance type plugins...");
 
   // Register VTK (3D visualization)
   instanceTypeRegistry.register(vtkInstanceHandler);
@@ -54,10 +55,8 @@ export function registerInstanceTypes() {
   // =========================================================================
 
   const registered = instanceTypeRegistry.getAvailableTypes();
-  console.log(
-    `✅ Registered ${registered.length} instance type(s): ${registered.join(
-      ", "
-    )}`
+  log.info(
+    `Registered ${registered.length} instance type(s): ${registered.join(", ")}`
   );
 }
 

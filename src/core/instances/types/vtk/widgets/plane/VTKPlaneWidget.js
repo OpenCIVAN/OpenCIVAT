@@ -1,6 +1,7 @@
 // src/core/instances/types/vtk/widgets/plane/VTKPlaneWidget.js
 // Clipping plane widget - FIXED for correct VTK.js API
 
+import { render as log } from "@Utils/logger.js";
 import vtkImplicitPlaneWidget from "@kitware/vtk.js/Widgets/Widgets3D/ImplicitPlaneWidget";
 import vtkPlane from "@kitware/vtk.js/Common/DataModel/Plane";
 
@@ -23,11 +24,11 @@ export class VTKPlaneWidget {
    */
   initialize(instanceId, config) {
     if (this.instances.has(instanceId)) {
-      console.warn(`⚠️ Plane widget already exists for ${instanceId}`);
+      log.warn(`Plane widget already exists for ${instanceId}`);
       return;
     }
 
-    console.log(`✂️ Initializing clipping plane for ${instanceId}`);
+    log.debug(`Initializing clipping plane for ${instanceId}`);
 
     const { widgetManager, sceneObjects, placeFactor = 1.25 } = config;
 
@@ -87,9 +88,9 @@ export class VTKPlaneWidget {
         config,
       });
 
-      console.log(`✅ Clipping plane created for ${instanceId}`);
+      log.debug(`Clipping plane created for ${instanceId}`);
     } catch (error) {
-      console.error(`❌ Error initializing clipping plane:`, error);
+      log.error(`Error initializing clipping plane:`, error);
       throw error;
     }
   }
@@ -165,7 +166,7 @@ export class VTKPlaneWidget {
       return;
     }
 
-    console.log(`🧹 Cleaning up clipping plane for ${instanceId}`);
+    log.debug(`Cleaning up clipping plane for ${instanceId}`);
 
     const { widget, handle, widgetManager, sceneObjects } = widgetData;
 
@@ -184,14 +185,14 @@ export class VTKPlaneWidget {
     // Remove from storage
     this.instances.delete(instanceId);
 
-    console.log(`✅ Clipping plane cleaned up for ${instanceId}`);
+    log.debug(`Clipping plane cleaned up for ${instanceId}`);
   }
 
   /**
    * Clean up all widgets (app shutdown)
    */
   destroy() {
-    console.log(`🧹 Destroying all clipping planes`);
+    log.debug(`Destroying all clipping planes`);
 
     this.instances.forEach((widgetData, instanceId) => {
       this.cleanup(instanceId);
@@ -199,7 +200,7 @@ export class VTKPlaneWidget {
 
     this.instances.clear();
 
-    console.log(`✅ All clipping planes destroyed`);
+    log.debug(`All clipping planes destroyed`);
   }
 }
 

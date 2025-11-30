@@ -50,7 +50,7 @@ export function getActiveInstance() {
 // ----------------------------------------------------------------------------
 
 export function initializeCursorTracking() {
-  log.info("Initializing cursor tracking");
+  log.debug("Initializing cursor tracking");
 
   document.addEventListener("mousemove", (event) => {
     const now = Date.now();
@@ -81,7 +81,7 @@ export function initializeCursorTracking() {
     }
   });
 
-  log.info("Cursor tracking initialized");
+  log.debug("Cursor tracking initialized");
 }
 
 // ----------------------------------------------------------------------------
@@ -124,7 +124,7 @@ export function setMyCursorVisible(visible) {
   // Update current position with new visibility
   broadcastCursorPosition();
 
-  log.info(`My cursor visibility: ${visible}`);
+  log.debug(`My cursor visibility: ${visible}`);
 }
 
 export function getMyCursorVisible() {
@@ -210,4 +210,4 @@ yCursors.observe((event) => {
   });
 });
 
-log.info("Cursor coordination system initialized");
+log.debug("Cursor coordination system initialized");

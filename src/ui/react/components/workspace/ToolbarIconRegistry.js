@@ -1,5 +1,6 @@
 // CLEAN PATTERN: Map semantic icon names, not tool IDs
 
+import { ui as log } from "@Utils/logger.js";
 import { createSlashedIcon } from "@UI/react/components/common/IconOverlay";
 
 import {
@@ -280,9 +281,10 @@ export function getToolIcon(toolId, toolIcon) {
   }
 
   // Priority 3: Default fallback
-  console.warn(`⚠️ No icon mapping for tool: ${toolId}, using default`);
-  console.log(`   Hint: Add 'icon: "icon-name"' to tool definition`);
-  console.log(`   Or add mapping: "${toolId}": IconComponent`);
+  log.warn(`No icon mapping for tool: ${toolId}, using default`);
+  log.debug(
+    `Hint: Add 'icon: "icon-name"' to tool definition or add mapping: "${toolId}": IconComponent`
+  );
   return TOOL_ICON_MAP["default"];
 }
 
@@ -315,7 +317,7 @@ export function getAvailableIcons() {
  */
 export function registerIcon(iconName, iconComponent) {
   if (TOOL_ICON_MAP[iconName]) {
-    console.warn(`⚠️ Overwriting existing icon mapping: ${iconName}`);
+    log.warn(`Overwriting existing icon mapping: ${iconName}`);
   }
   TOOL_ICON_MAP[iconName] = iconComponent;
 }

@@ -9,6 +9,7 @@ import {
   applyReductionToPolyData,
   clonePolydata,
 } from "@VTK/utils/VTKPointProcessing.js";
+import { render as log } from "@Utils/logger.js";
 
 /**
  * VTK Dimensionality Reduction Feature
@@ -42,9 +43,7 @@ export class VTKReductionFeature extends ReductionFeature {
       sceneObjects,
     });
 
-    console.log(
-      `✅ VTK Reduction feature initialized for instance: ${instanceId}`
-    );
+    log.debug(`VTK Reduction feature initialized for instance: ${instanceId}`);
   }
 
   /**
@@ -60,7 +59,7 @@ export class VTKReductionFeature extends ReductionFeature {
     const state = this.instanceStates.get(instanceId);
 
     if (!state) {
-      console.warn(`⚠️ Instance ${instanceId} not initialized for reduction`);
+      log.warn(`Instance ${instanceId} not initialized for reduction`);
       return;
     }
 
@@ -87,23 +86,23 @@ export class VTKReductionFeature extends ReductionFeature {
     const state = this.instanceStates.get(instanceId);
 
     if (!state) {
-      console.warn(`⚠️ Instance ${instanceId} not initialized for reduction`);
+      log.warn(`Instance ${instanceId} not initialized for reduction`);
       return;
     }
 
     if (!state.isApplied || !state.method) {
-      console.warn(`⚠️ No reduction applied - can't change components`);
+      log.warn("No reduction applied - can't change components");
       return;
     }
 
     // Already at this dimension count?
     if (state.components === components) {
-      console.log(`ℹ️ Already using ${components} components`);
+      log.debug(`Already using ${components} components`);
       return;
     }
 
     // Re-apply same method with new component count
-    console.log(`🔄 Changing from ${state.components}D to ${components}D`);
+    log.debug(`Changing from ${state.components}D to ${components}D`);
 
     // Restore original first
     await this.restoreOriginal(instanceId);
@@ -145,7 +144,7 @@ export class VTKReductionFeature extends ReductionFeature {
     }
 
     this.instanceStates.delete(instanceId);
-    console.log(`🧹 VTK Reduction cleaned up for instance: ${instanceId}`);
+    log.debug(`VTK Reduction cleaned up for instance: ${instanceId}`);
   }
 
   getAvailableMethods() {
@@ -172,8 +171,8 @@ export class VTKReductionFeature extends ReductionFeature {
 
     // Guard: Check if there's actually data to reduce
     if (!currentPolydata) {
-      console.warn(
-        `⚠️ Cannot apply reduction: no data loaded in instance ${instanceId}`
+      log.warn(
+        `Cannot apply reduction: no data loaded in instance ${instanceId}`
       );
       return;
     }
@@ -181,23 +180,20 @@ export class VTKReductionFeature extends ReductionFeature {
     // PERFORMANCE GUARD: Warn for large datasets
     const pointCount = currentPolydata.getPoints().getNumberOfPoints();
     if (pointCount > 100000) {
-      console.warn(
-        `⚠️ Large dataset (${pointCount.toLocaleString()} points) - reduction may be slow`
+      log.warn(
+        `Large dataset (${pointCount.toLocaleString()} points) - reduction may be slow`
       );
-      console.log(`   Consider downsampling the data first`);
-      // You could prompt the user here or automatically downsample
     }
 
-    console.log(
-      `🎨 Applying ${method} reduction (${components}D) to ${pointCount.toLocaleString()} points`
+    log.debug(
+      `Applying ${method} reduction (${components}D) to ${pointCount.toLocaleString()} points`
     );
-    console.log(`   This may take a moment...`);
 
     try {
       // CRITICAL: Save original polydata the FIRST time we apply reduction
       // This lets us restore later
       if (!state.originalPolydata) {
-        console.log(`  💾 Saving original polydata for restoration`);
+        log.debug("Saving original polydata for restoration");
         state.originalPolydata = clonePolydata(currentPolydata);
       }
 
@@ -208,9 +204,7 @@ export class VTKReductionFeature extends ReductionFeature {
         throw new Error("No points to reduce");
       }
 
-      console.log(
-        `  Processing ${pointsMatrix.length.toLocaleString()} points`
-      );
+      log.debug(`Processing ${pointsMatrix.length.toLocaleString()} points`);
 
       // Apply the algorithm
       let reducedPoints;
@@ -245,18 +239,18 @@ export class VTKReductionFeature extends ReductionFeature {
       renderer.resetCamera();
       renderWindow.render();
 
-      console.log(`✅ Reduction applied successfully`);
+      log.debug("Reduction applied successfully");
 
-      // 🆕 REQUEST SYNC: Notify other users about the reduction (unless this is from remote state)
+      // REQUEST SYNC: Notify other users about the reduction (unless this is from remote state)
       if (!options.skipSync) {
         const instanceManager = window.CIA?.instanceManager;
         if (instanceManager) {
           await instanceManager.requestSync(instanceId);
-          console.log(`📡 Reduction synced to remote users`);
+          log.debug("Reduction synced to remote users");
         }
       }
     } catch (error) {
-      console.error(`❌ Reduction failed:`, error);
+      log.error("Reduction failed:", error);
       throw error;
     }
   }
@@ -276,8 +270,8 @@ export class VTKReductionFeature extends ReductionFeature {
 
     // Guard: Make sure we actually have original data saved
     if (!state.originalPolydata) {
-      console.warn(
-        `⚠️ Cannot restore: no original data saved for instance ${instanceId}`
+      log.warn(
+        `Cannot restore: no original data saved for instance ${instanceId}`
       );
       return;
     }
@@ -285,7 +279,7 @@ export class VTKReductionFeature extends ReductionFeature {
     const { sceneObjects } = state;
     const { mapper, renderer, renderWindow } = sceneObjects;
 
-    console.log(`🔄 Restoring original data for instance ${instanceId}`);
+    log.debug(`Restoring original data for instance ${instanceId}`);
 
     // Clone the original (don't modify our backup!)
     const restoredPolydata = clonePolydata(state.originalPolydata);
@@ -302,14 +296,14 @@ export class VTKReductionFeature extends ReductionFeature {
     renderer.resetCamera();
     renderWindow.render();
 
-    console.log(`✅ Original data restored`);
-    
-    // 🆕 REQUEST SYNC: Notify other users about the restoration (unless this is from remote state)
+    log.debug("Original data restored");
+
+    // REQUEST SYNC: Notify other users about the restoration (unless this is from remote state)
     if (!options.skipSync) {
       const instanceManager = window.CIA?.instanceManager;
       if (instanceManager) {
         await instanceManager.requestSync(instanceId);
-        console.log(`📡 Restoration synced to remote users`);
+        log.debug("Restoration synced to remote users");
       }
     }
   }

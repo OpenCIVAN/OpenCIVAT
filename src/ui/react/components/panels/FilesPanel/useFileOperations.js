@@ -11,6 +11,7 @@
 // - loadSample: Legacy support for static sample files (deprecated)
 
 import { useRef, useCallback } from "react";
+import { files as log } from "@Utils/logger.js";
 import { datasetManager } from "@Init/appInitializer.js";
 import { config } from "@Core/config/clientConfig.js";
 
@@ -39,14 +40,14 @@ export function useFileOperations() {
 
     // Prevent duplicate loading
     if (loadingFilesRef.current.has(fileId)) {
-      console.log(`📂 File ${filename} already loading, skipping`);
+      log.debug(`File ${filename} already loading, skipping`);
       return null;
     }
 
     loadingFilesRef.current.add(fileId);
 
     try {
-      console.log(`📂 Loading from server: ${filename} (${fileId})`);
+      log.debug(`Loading from server: ${filename} (${fileId})`);
 
       // Download file from server
       const response = await fetch(
@@ -78,7 +79,7 @@ export function useFileOperations() {
         },
       });
 
-      console.log(`✅ Server file loaded: ${filename} → Dataset ${datasetId}`);
+      log.info(`Server file loaded: ${filename} → Dataset ${datasetId}`);
 
       // Emit event for other components to react
       window.dispatchEvent(
@@ -89,7 +90,7 @@ export function useFileOperations() {
 
       return datasetId;
     } catch (error) {
-      console.error(`❌ Failed to load server file ${filename}:`, error);
+      log.error(`Failed to load server file ${filename}:`, error);
       throw new Error(`Failed to load ${filename}: ${error.message}`);
     } finally {
       loadingFilesRef.current.delete(fileId);
@@ -118,21 +119,21 @@ export function useFileOperations() {
   const uploadFile = useCallback(async (file) => {
     if (!file) return null;
 
-    console.warn(
-      "⚠️ useFileOperations.uploadFile is deprecated. Use useProjectFiles().uploadFile()"
+    log.warn(
+      "useFileOperations.uploadFile is deprecated. Use useProjectFiles().uploadFile()"
     );
 
     try {
-      console.log(`📂 Uploading file: ${file.name}`);
+      log.debug(`Uploading file: ${file.name}`);
 
       // Load directly into DatasetManager for now
       // In production, this should go through useProjectFiles
       const datasetId = await datasetManager.loadDataset(file, null);
 
-      console.log(`✅ File uploaded: ${file.name} → Dataset ${datasetId}`);
+      log.info(`File uploaded: ${file.name} → Dataset ${datasetId}`);
       return datasetId;
     } catch (error) {
-      console.error(`❌ Failed to upload file ${file.name}:`, error);
+      log.error(`Failed to upload file ${file.name}:`, error);
       throw new Error(`Failed to upload ${file.name}: ${error.message}`);
     }
   }, []);
@@ -148,16 +149,16 @@ export function useFileOperations() {
    */
   const loadSample = useCallback(async (sample) => {
     if (loadingFilesRef.current.has(sample.name)) {
-      console.log(`📂 Sample ${sample.name} already loading, skipping`);
+      log.debug(`Sample ${sample.name} already loading, skipping`);
       return null;
     }
 
     loadingFilesRef.current.add(sample.name);
 
     try {
-      console.log(`📂 Loading sample: ${sample.path}`);
-      console.warn(
-        "⚠️ loadSample is deprecated. Samples should be served from database."
+      log.debug(`Loading sample: ${sample.path}`);
+      log.warn(
+        "loadSample is deprecated. Samples should be served from database."
       );
 
       const response = await fetch(sample.path);
@@ -171,11 +172,11 @@ export function useFileOperations() {
       });
 
       const datasetId = await datasetManager.loadDataset(file, sample.path);
-      console.log(`✅ Sample loaded: ${sample.name}`);
+      log.info(`Sample loaded: ${sample.name}`);
 
       return datasetId;
     } catch (error) {
-      console.error(`❌ Failed to load sample ${sample.name}:`, error);
+      log.error(`Failed to load sample ${sample.name}:`, error);
       throw new Error(`Failed to load ${sample.name}: ${error.message}`);
     } finally {
       loadingFilesRef.current.delete(sample.name);

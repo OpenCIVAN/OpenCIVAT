@@ -3,6 +3,7 @@
 // Updated: Added view mode (Desktop/VR) state management
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { ui as log } from "@Utils/logger.js";
 import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 
@@ -103,14 +104,14 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
    * This will eventually trigger WebXR session management
    */
   const handleViewModeChange = useCallback((newMode) => {
-    console.log(`🎮 View mode changing: ${viewMode} → ${newMode}`);
+    log.info(`View mode changing: ${viewMode} → ${newMode}`);
 
     if (newMode === VIEW_MODES.VR) {
       // TODO: In future, this will:
       // 1. Request WebXR session
       // 2. Transition instances to VR rendering
       // 3. Update collaboration presence to show VR mode
-      console.log('🥽 Entering VR mode...');
+      log.debug("Entering VR mode...");
 
       // For now, just update state
       setViewMode(newMode);
@@ -119,7 +120,7 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
       // presenceSystem.updateLocalPresence({ mode: 'vr' });
     } else {
       // Exiting VR
-      console.log('🖥️ Returning to Desktop mode...');
+      log.debug("Returning to Desktop mode...");
 
       // TODO: End WebXR session if active
       setViewMode(newMode);
@@ -137,17 +138,17 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
 
     const timer = setTimeout(() => {
       phase3Started.current = true;
-      console.log("🎨 CIAWebApp: Starting Phase 3 (optional enhancements)...");
+      log.debug("CIAWebApp: Starting Phase 3 (optional enhancements)...");
       setPhase3Status('running');
 
       initializePhase3()
         .then(() => {
-          console.log("✅ CIAWebApp: Phase 3 complete");
+          log.info("CIAWebApp: Phase 3 complete");
           setPhase3Status('complete');
         })
         .catch(error => {
-          console.warn("⚠️ CIAWebApp: Some enhancements couldn't be loaded:", error.message);
-          console.log("Continuing with basic features...");
+          log.warn("CIAWebApp: Some enhancements couldn't be loaded:", error.message);
+          log.debug("Continuing with basic features...");
           setPhase3Status('failed');
         });
     }, 100);

@@ -1,6 +1,7 @@
 // src/services/dataCleanup.js
 // Utility to clean up orphaned datasets and stale data
 
+import { files as log } from "@Utils/logger.js";
 import { yDatasets } from "@Collaboration/yjs/yjsSetup.js";
 import { dataCache } from "@Services/storage/dataCache.js";
 import { useDatasetStore } from "@UI/react/store/datasetStore.js";
@@ -43,10 +44,10 @@ class DataCleanup {
   async removeOrphanedDatasets() {
     const orphaned = await this.findOrphanedDatasets();
 
-    console.log(`🗑️  Removing ${orphaned.length} orphaned datasets...`);
+    log.info(`Removing ${orphaned.length} orphaned datasets...`);
 
     for (const dataset of orphaned) {
-      console.log(`  - ${dataset.name} (${dataset.reason})`);
+      log.debug(`  - ${dataset.name} (${dataset.reason})`);
       window.CIA.datasetManager.removeDataset(dataset.id);
     }
 
@@ -76,10 +77,10 @@ class DataCleanup {
   removeDanglingYjsDatasets() {
     const dangling = this.findDanglingYjsDatasets();
 
-    console.log(`🗑️  Removing ${dangling.length} dangling Y.js datasets...`);
+    log.info(`Removing ${dangling.length} dangling Y.js datasets...`);
 
     for (const dataset of dangling) {
-      console.log(`  - ${dataset.name}`);
+      log.debug(`  - ${dataset.name}`);
       yDatasets.delete(dataset.id);
     }
 
@@ -90,14 +91,12 @@ class DataCleanup {
    * Full cleanup routine
    */
   async performFullCleanup() {
-    console.log("🧹 Starting full cleanup...");
+    log.info("Starting full cleanup...");
 
     const orphaned = await this.removeOrphanedDatasets();
     const dangling = this.removeDanglingYjsDatasets();
 
-    console.log(`✅ Cleanup complete:`);
-    console.log(`  - Orphaned datasets removed: ${orphaned}`);
-    console.log(`  - Dangling Y.js entries removed: ${dangling}`);
+    log.info(`Cleanup complete: orphaned=${orphaned}, dangling=${dangling}`);
 
     return { orphaned, dangling };
   }
@@ -130,43 +129,36 @@ class DataCleanup {
   async printCleanupReport() {
     const stats = await this.getCleanupStats();
 
-    console.log("📊 Data Cleanup Report:");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log(`Zustand Store: ${stats.zustandCount} datasets`);
-    console.log(`Y.js Shared: ${stats.yjsCount} datasets`);
-    console.log(
+    log.info("Data Cleanup Report:");
+    log.info(`Zustand Store: ${stats.zustandCount} datasets`);
+    log.info(`Y.js Shared: ${stats.yjsCount} datasets`);
+    log.info(
       `IndexedDB Cache: ${stats.cacheCount} files (${(
         stats.cacheSize /
         1024 /
         1024
       ).toFixed(2)} MB)`
     );
-    console.log("");
 
     if (stats.orphaned > 0) {
-      console.log(`⚠️  Found ${stats.orphaned} orphaned datasets:`);
+      log.warn(`Found ${stats.orphaned} orphaned datasets:`);
       stats.orphanedList.forEach((d) => {
-        console.log(`  - ${d.name} (${d.reason})`);
+        log.debug(`  - ${d.name} (${d.reason})`);
       });
-      console.log("");
     }
 
     if (stats.dangling > 0) {
-      console.log(`⚠️  Found ${stats.dangling} dangling Y.js entries:`);
+      log.warn(`Found ${stats.dangling} dangling Y.js entries:`);
       stats.danglingList.forEach((d) => {
-        console.log(`  - ${d.name}`);
+        log.debug(`  - ${d.name}`);
       });
-      console.log("");
     }
 
     if (stats.orphaned === 0 && stats.dangling === 0) {
-      console.log("✅ No issues found - all data is clean!");
+      log.info("No issues found - all data is clean!");
     } else {
-      console.log(
-        "💡 Run dataCleanup.performFullCleanup() to fix these issues"
-      );
+      log.info("Run dataCleanup.performFullCleanup() to fix these issues");
     }
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     return stats;
   }

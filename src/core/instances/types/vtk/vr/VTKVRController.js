@@ -22,7 +22,7 @@
 // See VTKOrientationWidget.js for the correct per-instance pattern.
 // ----------------------------------------------------------------------------
 
-import { logInfo, logSuccess } from "@UI/react/hooks/useLogging.js";
+import { vr as log } from "@Utils/logger.js";
 import { vrModeManager } from "@VR/vrModeManager.js";
 
 class VRControllers {
@@ -49,7 +49,7 @@ class VRControllers {
       }
     });
 
-    logInfo("VR controller system ready (placeholder)");
+    log.info("VR controller system ready (placeholder)");
   }
 
   /**
@@ -69,7 +69,7 @@ class VRControllers {
     // const { renderer, interactor } = instance.instanceData.sceneObjects;
     // const xrSession = instance.instanceData.xrSession;
 
-    console.log(
+    log.debug(
       "VR Controllers: Placeholder - needs per-instance implementation"
     );
 
@@ -88,32 +88,32 @@ class VRControllers {
       if (session) {
         // Listen for controller events
         session.addEventListener("selectstart", (event) => {
-          console.log("Controller select start:", event);
+          log.trace("Controller select start:", event);
           this.onSelectStart(event);
         });
 
         session.addEventListener("selectend", (event) => {
-          console.log("Controller select end:", event);
+          log.trace("Controller select end:", event);
           this.onSelectEnd(event);
         });
 
         session.addEventListener("squeezestart", (event) => {
-          console.log("Controller squeeze start:", event);
+          log.trace("Controller squeeze start:", event);
           this.onSqueezeStart(event);
         });
 
         session.addEventListener("squeezeend", (event) => {
-          console.log("Controller squeeze end:", event);
+          log.trace("Controller squeeze end:", event);
           this.onSqueezeEnd(event);
         });
 
         this.initialized = true;
-        logSuccess("VR controllers initialized (placeholder)");
+        log.info("VR controllers initialized (placeholder)");
       } else {
-        console.warn("No XR session available");
+        log.warn("No XR session available");
       }
     } catch (error) {
-      console.error("Failed to setup VR controllers:", error);
+      log.error("Failed to setup VR controllers:", error);
     }
   }
 
@@ -122,13 +122,13 @@ class VRControllers {
    * TODO: Pass instanceId to know which instance this affects
    */
   onSelectStart(event) {
-    console.log("Trigger pressed on controller");
+    log.trace("Trigger pressed on controller");
     // TODO: Implement interaction (e.g., select annotation, grab object)
     // Should call: instance.handler.handleVRSelect(instanceData, event)
   }
 
   onSelectEnd(event) {
-    console.log("Trigger released");
+    log.trace("Trigger released");
   }
 
   /**
@@ -136,13 +136,13 @@ class VRControllers {
    * TODO: Pass instanceId to know which instance this affects
    */
   onSqueezeStart(event) {
-    console.log("Grip pressed on controller");
+    log.trace("Grip pressed on controller");
     // TODO: Implement grab/move functionality
     // Should call: instance.handler.handleVRGrip(instanceData, event)
   }
 
   onSqueezeEnd(event) {
-    console.log("Grip released");
+    log.trace("Grip released");
   }
 
   /**
@@ -152,7 +152,7 @@ class VRControllers {
   cleanupControllers() {
     this.controllers = [];
     this.initialized = false;
-    logInfo("VR controllers cleaned up");
+    log.info("VR controllers cleaned up");
   }
 
   isInitialized() {

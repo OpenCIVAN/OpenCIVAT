@@ -85,7 +85,7 @@ class PresenceSystem {
    * Update my presence information
    */
   async updateMyPresence(updates) {
-    log.info("Updating my presence:", {
+    log.trace("Updating my presence:", {
       userId: getUserId(),
       userName: getUserName(),
       sessionId: this.sessionId, // If you track sessions
@@ -106,7 +106,7 @@ class PresenceSystem {
     // Notify local listeners so React components can update
     this.notifyPresenceListeners();
 
-    log.info("Presence updated:", this.localPresence);
+    log.trace("Presence updated:", this.localPresence);
   }
 
   /**
@@ -224,7 +224,7 @@ class PresenceSystem {
       }
     }, 10000);
 
-    log.info("Heartbeat started");
+    log.debug("Heartbeat started");
   }
 
   /**
@@ -234,7 +234,7 @@ class PresenceSystem {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
-      log.info("Heartbeat stopped");
+      log.debug("Heartbeat stopped");
     }
   }
 
@@ -283,7 +283,7 @@ class PresenceSystem {
     // Mark as active immediately on setup
     markActive();
 
-    log.info("Activity tracking enabled");
+    log.debug("Activity tracking enabled");
   }
 
   /**
@@ -354,7 +354,7 @@ class PresenceSystem {
    * Called when user closes tab or disconnects
    */
   destroy() {
-    log.info("Destroying presence system");
+    log.debug("Destroying presence system");
 
     // Stop heartbeat
     this.stopHeartbeat();

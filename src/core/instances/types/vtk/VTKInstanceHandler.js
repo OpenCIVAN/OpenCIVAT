@@ -1,6 +1,7 @@
 // src/core/instances/types/vtk/VTKInstanceHandler.js
 // Complete VTK handler implementation with proper interface
 
+import { instance as log } from "@Utils/logger.js";
 import { InstanceTypeHandler } from "@Core/instances/types/InstanceTypeInterface.js";
 import { ViewStateAdapter } from "@Core/instances/ViewStateAdapter.js";
 import { instanceTools } from "@VTK/vtkInstanceTools.js";
@@ -141,12 +142,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   async initialize(containerElement, options = {}) {
     const { instanceId, datasetId, viewConfigId } = options;
 
-    console.log(
-      `🎨 VTK Handler: Initializing instance ${instanceId} (lazy mode)`
-    );
+    log.info(`Initializing instance ${instanceId} (lazy mode)`);
 
     const stateAdapter = new ViewStateAdapter(instanceId, "vtk");
-    console.log(`📡 Created stateAdapter for ${instanceId}`);
+    log.debug(`Created stateAdapter for ${instanceId}`);
 
     const instanceData = {
       instanceId,
@@ -194,9 +193,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       instanceData.instanceId,
       containerElement
     );
-    console.log(`✅ Cursors initialized for ${instanceData.instanceId}`);
+    log.debug(`Cursors initialized for ${instanceData.instanceId}`);
 
-    console.log(`✅ VTK instance ${instanceId} created (awaiting data)`);
+    log.info(`Instance ${instanceId} created (awaiting data)`);
     return instanceData;
   }
 
@@ -206,14 +205,14 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   async cleanup(instanceData) {
     const { instanceId } = instanceData;
 
-    console.log(`🧹 VTK Handler: Cleaning up instance ${instanceId}`);
+    log.info(`Cleaning up instance ${instanceId}`);
 
     // CLEAN UP FEATURES FIRST (before sceneObjects are destroyed)
     await this.reductionFeature.cleanup(instanceId);
     vtkOrientationWidget.cleanup(instanceId);
 
     vtkInstanceCursors.cleanupInstance(instanceId);
-    console.log(`✅ Cursors cleaned up for ${instanceId}`);
+    log.debug(`Cursors cleaned up for ${instanceId}`);
 
     // Clean up instance tools
     instanceTools.cleanupTools(instanceId);
@@ -260,7 +259,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // Remove from instances map
     this.instances.delete(instanceId);
 
-    console.log(`✅ Instance ${instanceId} cleaned up`);
+    log.info(`Instance ${instanceId} cleaned up`);
   }
 
   /**
@@ -299,8 +298,8 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
   async loadData(instanceData, dataset) {
     const instanceId = instanceData.instanceId;
 
-    console.log(`🎨 VTK Handler: Loading data into instance ${instanceId}`);
-    console.log(`  📋 Dataset: ${dataset.filename}`);
+    log.info(`Loading data into instance ${instanceId}`);
+    log.debug(`Dataset: ${dataset.filename}`);
 
     // Validate file type
     const fileType = dataset.fileType;
@@ -312,7 +311,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       );
     }
 
-    console.log(`  📋 File type: ${fileType}`);
+    log.debug(`File type: ${fileType}`);
 
     if (!this.canHandle(fileType)) {
       const supported = this.getSupportedFileTypes()
@@ -337,10 +336,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const cached = datasetManager.getCachedParsedData(dataset.id, "vtk");
 
     if (cached) {
-      console.log(`  ✓ Using cached VTK polydata`);
+      log.debug(`Using cached VTK polydata`);
       polydata = cached.data;
     } else {
-      console.log(`  ⏳ Parsing ${fileType.toUpperCase()} file...`);
+      log.debug(`Parsing ${fileType.toUpperCase()} file...`);
 
       // Get the raw file (DatasetManager handles fetching if needed)
       // Use loadFile() or loadPolydata() depending on what you named it
@@ -367,20 +366,20 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       // Cache the parsed data for reuse
       datasetManager.cacheParsedData(dataset.id, "vtk", polydata, metadata);
 
-      console.log(`  ✓ Parsed and cached`);
-      console.log(`    Points: ${metadata.pointCount.toLocaleString()}`);
+      log.debug(`Parsed and cached`);
+      log.trace(`Points: ${metadata.pointCount.toLocaleString()}`);
     }
 
     // Initialize VTK pipeline if this is the first data load
     if (!instanceData.sceneObjects) {
-      console.log(`  🎨 First data load - initializing VTK pipeline...`);
+      log.debug(`First data load - initializing VTK pipeline...`);
 
       // CRITICAL FIX: Make sure to assign the returned sceneObjects!
       const pipelineObjects = this._initializeVTKPipeline(instanceData);
 
       // DIAGNOSTIC: Log what we got back
-      console.log(
-        `  📦 Pipeline returned:`,
+      log.trace(
+        `Pipeline returned:`,
         pipelineObjects ? "objects" : "null/undefined"
       );
 
@@ -392,11 +391,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       instanceData.sceneObjects = pipelineObjects;
       instanceData.initialized = true;
 
-      console.log(`  ✅ VTK pipeline ready`);
+      log.debug(`VTK pipeline ready`);
 
       // DIAGNOSTIC: Verify assignment worked
-      console.log(
-        `  🔍 instanceData.sceneObjects is now:`,
+      log.trace(
+        `instanceData.sceneObjects is now:`,
         instanceData.sceneObjects ? "assigned" : "STILL NULL!"
       );
     }
@@ -404,7 +403,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // Initialize instance tools (needed for widgets and rendering controls)
     // Use instanceData.sceneObjects which is now guaranteed to be set
     instanceTools.initializeTools(instanceId, instanceData.sceneObjects);
-    console.log(`  ✅ Instance tools initialized`);
+    log.debug(`Instance tools initialized`);
 
     // Initialize orientation widget (always create it, but start enabled)
     vtkOrientationWidget.initialize(instanceId, instanceData.sceneObjects, {
@@ -415,7 +414,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       maxPixelSize: 300,
     });
 
-    console.log(`  ✅ Orientation widget initialized`);
+    log.debug(`Orientation widget initialized`);
 
     // CRITICAL: Add safety check before using sceneObjects
     if (!instanceData.sceneObjects) {
@@ -426,7 +425,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     }
 
     // Update the visualization with new data
-    console.log(`  🔄 Updating visualization...`);
+    log.debug(`Updating visualization...`);
 
     const { mapper, actor, renderer, renderWindow } = instanceData.sceneObjects;
 
@@ -451,7 +450,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     instanceData.polydata = polydata;
     instanceData.hasData = true;
 
-    console.log(`✅ VTK Handler: Data loaded successfully`);
+    log.info(`Data loaded successfully`);
   }
 
   /**
@@ -520,7 +519,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
    * to check capabilities again here - just do the extraction.
    */
   async extractMetadata(file, fileType) {
-    console.log(`📋 VTK Handler: Extracting metadata from ${fileType} file`);
+    log.debug(`Extracting metadata from ${fileType} file`);
 
     try {
       // For VTK XML formats (VTP, VTI, VTU), we can read the XML header
@@ -539,10 +538,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
       return null;
     } catch (error) {
-      console.warn(
-        `⚠️ VTK Handler: Could not extract metadata:`,
-        error.message
-      );
+      log.warn(`Could not extract metadata:`, error.message);
       return null;
     }
   }
@@ -600,7 +596,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             points.getNumberOfPoints() > 0;
         }
       } catch (error) {
-        console.warn("Error checking data capabilities:", error);
+        log.warn("Error checking data capabilities:", error);
         hasScalarData = false;
         hasGeometry = false;
       }
@@ -717,7 +713,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             // Trigger re-render
             this._emitToolsUpdate(instanceId);
 
-            console.log(`📷 Camera switched to: ${viewId}`);
+            log.debug(`Camera switched to: ${viewId}`);
           },
         },
       ],
@@ -753,7 +749,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: lineActive,
           disabled: !caps.canUseMeasurement,
           onClick: () => {
-            console.log("🎯 Line measurement clicked");
+            log.debug("Line measurement clicked");
             // FIX: Use correct method name
             instanceTools.toggleRulerMeasurement?.(instanceId);
             this._emitToolsUpdate(instanceId);
@@ -767,7 +763,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: angleActive,
           disabled: !caps.canUseMeasurement,
           onClick: () => {
-            console.log("🎯 Angle measurement clicked");
+            log.debug("Angle measurement clicked");
             // FIX: Use correct method name
             instanceTools.toggleAngleMeasurement?.(instanceId);
             this._emitToolsUpdate(instanceId);
@@ -781,7 +777,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: planeActive,
           disabled: !caps.canUseClipping,
           onClick: () => {
-            console.log("🎯 Clipping plane clicked");
+            log.debug("Clipping plane clicked");
             instanceTools.toggleClippingPlane?.(instanceId);
             this._emitToolsUpdate(instanceId);
           },
@@ -794,7 +790,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           description: "Remove all active widgets",
           disabled: !caps.canUseWidgets,
           onClick: () => {
-            console.log("🎯 Clear all widgets clicked");
+            log.debug("Clear all widgets clicked");
             // Clean up all widgets
             instanceTools.toggleRulerMeasurement?.(instanceId); // Disable if active
             instanceTools.toggleAngleMeasurement?.(instanceId); // Disable if active
@@ -834,7 +830,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           description: "Principal Component Analysis",
           active: currentMethod === "pca",
           onClick: async () => {
-            console.log("🎯 PCA clicked");
+            log.debug("PCA clicked");
             await this.reductionFeature.toggleReduction(instanceId, "pca");
             this._emitToolsUpdate(instanceId);
           },
@@ -847,7 +843,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: currentMethod === "tsne",
           disabled: !caps.hasData, // 🆕 Individual disable
           onClick: async () => {
-            console.log("🎯 t-SNE clicked");
+            log.debug("t-SNE clicked");
             await this.reductionFeature.toggleReduction(instanceId, "tsne");
             this._emitToolsUpdate(instanceId);
           },
@@ -860,7 +856,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: currentMethod === "umap",
           disabled: !caps.hasData, // 🆕 Individual disable
           onClick: async () => {
-            console.log("🎯 UMAP clicked");
+            log.debug("UMAP clicked");
             await this.reductionFeature.toggleReduction(instanceId, "umap");
             this._emitToolsUpdate(instanceId);
           },
@@ -874,7 +870,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: hasReduction && currentComponents === 2,
           disabled: !hasReduction,
           onClick: async () => {
-            console.log("🎯 2D projection clicked");
+            log.debug("2D projection clicked");
             await this.reductionFeature.setComponents(instanceId, 2);
             this._emitToolsUpdate(instanceId);
           },
@@ -887,7 +883,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: hasReduction && currentComponents === 3,
           disabled: !hasReduction,
           onClick: async () => {
-            console.log("🎯 3D projection clicked");
+            log.debug("3D projection clicked");
             await this.reductionFeature.setComponents(instanceId, 3);
             this._emitToolsUpdate(instanceId);
           },
@@ -900,7 +896,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           description: "Remove dimensionality reduction",
           disabled: !hasReduction,
           onClick: async () => {
-            console.log("🎯 Restore original clicked");
+            log.debug("Restore original clicked");
             await this.reductionFeature.restoreOriginal(instanceId);
             this._emitToolsUpdate(instanceId);
           },
@@ -1225,7 +1221,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             if (!caps.canUseColormap) return;
             instanceTools.setColorMap(instanceId, colormapId);
             this._emitToolsUpdate(instanceId);
-            console.log(`🎨 Colormap changed to: ${colormapId}`);
+            log.debug(`Colormap changed to: ${colormapId}`);
           },
         },
       ],
@@ -1357,7 +1353,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                   });
                   instanceTools.forceRender?.(instanceId);
                   this._emitToolsUpdate(instanceId);
-                  console.log(`📍 Orientation widget moved to: ${positionId}`);
+                  log.debug(`Orientation widget moved to: ${positionId}`);
                 },
               },
             ]
@@ -1365,7 +1361,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       ],
     });
 
-    console.log(`✅ Built ${tools.length} tools for instance ${instanceId}`);
+    log.debug(`Built ${tools.length} tools for instance ${instanceId}`);
     return tools;
   }
 
@@ -1573,8 +1569,8 @@ console.log('Tools:', tools);
       metadata.dataArrays = dataArrayNames;
     }
 
-    console.log(
-      `  ✓ Extracted: ${metadata.pointCount} points, ${metadata.cellCount} cells`
+    log.trace(
+      `Extracted: ${metadata.pointCount} points, ${metadata.cellCount} cells`
     );
 
     return metadata;
@@ -1777,7 +1773,7 @@ console.log('Tools:', tools);
   async applySharedState(instanceData, state, sourceUserId) {
     // Guard against applying state before VTK is initialized
     if (!instanceData?.sceneObjects) {
-      console.warn("Cannot apply state: VTK not initialized yet");
+      log.warn("Cannot apply state: VTK not initialized yet");
       return;
     }
 
@@ -1785,9 +1781,7 @@ console.log('Tools:', tools);
     this._isApplyingRemoteState = true;
 
     try {
-      console.log(
-        `🔥 VTK Handler: Applying remote state from user ${sourceUserId}`
-      );
+      log.debug(`Applying remote state from user ${sourceUserId}`);
 
       // Apply camera state
       if (state.camera) {
@@ -1840,8 +1834,8 @@ console.log('Tools:', tools);
         if (needsUpdate) {
           if (state.reduction.isApplied && state.reduction.method) {
             // Apply the reduction (skipSync to avoid infinite loop)
-            console.log(
-              `📥 Applying remote reduction: ${state.reduction.method} (${state.reduction.components}D)`
+            log.debug(
+              `Applying remote reduction: ${state.reduction.method} (${state.reduction.components}D)`
             );
             await this.reductionFeature.applyReduction(
               instanceId,
@@ -1851,8 +1845,8 @@ console.log('Tools:', tools);
             );
           } else {
             // Restore original (no reduction) (skipSync to avoid infinite loop)
-            console.log(
-              `📥 Restoring original data (remote user removed reduction)`
+            log.debug(
+              `Restoring original data (remote user removed reduction)`
             );
             await this.reductionFeature.restoreOriginal(instanceId, {
               skipSync: true,
@@ -1876,7 +1870,7 @@ console.log('Tools:', tools);
         instanceData.sceneObjects.renderWindow.render();
       }
     } catch (error) {
-      console.error("❌ VTK Handler: Failed to apply remote state:", error);
+      log.error("Failed to apply remote state:", error);
     } finally {
       // Always clear the flag, even if there was an error
       this._isApplyingRemoteState = false;
@@ -1889,8 +1883,8 @@ console.log('Tools:', tools);
   applyCameraState(instanceId, cameraState) {
     const instanceData = this.instances.get(instanceId);
     if (!instanceData?.sceneObjects?.camera) {
-      console.warn(
-        `⚠️ Cannot apply camera state - instance ${instanceId} not initialized`
+      log.warn(
+        `Cannot apply camera state - instance ${instanceId} not initialized`
       );
       return;
     }
@@ -1912,7 +1906,7 @@ console.log('Tools:', tools);
 
       instanceData.sceneObjects.renderWindow.render();
 
-      console.log(`📷 Applied camera state to instance ${instanceId}`);
+      log.debug(`Applied camera state to instance ${instanceId}`);
     } finally {
       this._isApplyingRemoteState = false;
     }
@@ -1956,7 +1950,7 @@ console.log('Tools:', tools);
    * Enter VR mode for this instance
    */
   async enterInstanceVR(instanceData, xrSession) {
-    console.log("🥽 Entering VR for VTK instance", instanceData.instanceId);
+    log.info("Entering VR for VTK instance", instanceData.instanceId);
     // TODO: Implement WebXR integration
     // This would set up stereo rendering and controller input
     return {};
@@ -1992,8 +1986,8 @@ console.log('Tools:', tools);
   _initializeVTKPipeline(instanceData) {
     const { container } = instanceData;
 
-    console.log(
-      `🎨 Initializing VTK rendering pipeline for ${instanceData.instanceId}`
+    log.debug(
+      `Initializing VTK rendering pipeline for ${instanceData.instanceId}`
     );
 
     // ✅ Remove placeholder safely instead of using innerHTML
@@ -2005,7 +1999,7 @@ console.log('Tools:', tools);
         }
       } catch (e) {
         // Ignore if already removed
-        console.warn("Placeholder already removed or not in DOM");
+        log.warn("Placeholder already removed or not in DOM");
       }
       instanceData.placeholder = null;
     }
@@ -2047,7 +2041,7 @@ console.log('Tools:', tools);
     if (width > 0 && height > 0) {
       openGLRenderWindow.setSize(width, height);
     } else {
-      console.warn("Container has no size, using defaults");
+      log.warn("Container has no size, using defaults");
       openGLRenderWindow.setSize(800, 600);
     }
 
@@ -2121,7 +2115,7 @@ console.log('Tools:', tools);
         // Silently catch camera update errors to prevent error spam
         // These can happen during rapid camera movements or cleanup
         if (error) {
-          console.debug("Camera update error (non-critical):", error.message);
+          log.trace("Camera update error (non-critical):", error.message);
         }
       }
     });
@@ -2138,7 +2132,7 @@ console.log('Tools:', tools);
       } catch (error) {
         // Silently catch interaction state errors
         if (error) {
-          console.debug(
+          log.trace(
             "Interaction state update error (non-critical):",
             error.message
           );
@@ -2204,8 +2198,8 @@ console.log('Tools:', tools);
               // This prevents parts of the visualization from becoming inaccessible
               if (hasDataLoaded && renderer) {
                 renderer.resetCamera();
-                console.log(
-                  `📐 Canvas resized and camera recentered for ${instanceData.instanceId}`
+                log.trace(
+                  `Canvas resized and camera recentered for ${instanceData.instanceId}`
                 );
               }
 
@@ -2242,7 +2236,7 @@ console.log('Tools:', tools);
       hasDataLoaded = true;
     };
 
-    console.log(`✅ VTK pipeline initialized for ${instanceData.instanceId}`);
+    log.info(`VTK pipeline initialized for ${instanceData.instanceId}`);
     return sceneObjects;
   }
 

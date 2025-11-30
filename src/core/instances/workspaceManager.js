@@ -5,6 +5,7 @@ import { generateInstanceId } from "@Utils/idGenerator.js";
 import { getHandlerForType } from "@Core/instances/types/instanceTypesInit.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { datasetManager } from "@Init/appInitializer.js";
+import { instance as log } from "@Utils/logger.js";
 
 // ViewConfigurations (Layer 2) are the collaborative unit
 
@@ -45,17 +46,17 @@ class WorkspaceManager {
     this._initialized = false;
     this.listeners = new Set();
 
-    console.log("🎨 WorkspaceManager created (type-agnostic)");
+    log.debug("WorkspaceManager created (type-agnostic)");
   }
 
   initialize() {
     if (this._initialized) {
-      console.log("⚠️  WorkspaceManager already initialized");
+      log.warn("WorkspaceManager already initialized");
       return;
     }
 
     this._initialized = true;
-    console.log("✅ WorkspaceManager initialized");
+    log.info("WorkspaceManager initialized");
   }
 
   /**
@@ -77,13 +78,11 @@ class WorkspaceManager {
     const { viewConfigId, datasetId } = options;
 
     if (this.instances.has(instanceId)) {
-      console.warn(
-        `⚠️  Instance ${instanceId} already exists, skipping creation`
-      );
+      log.warn(`Instance ${instanceId} already exists, skipping creation`);
       return instanceId;
     }
 
-    console.log(`🎨 Creating ${type || "typeless"} instance: ${instanceId}`);
+    log.debug(`Creating ${type || "typeless"} instance: ${instanceId}`);
 
     try {
       // Create instance metadata (handler will be initialized later if needed)
@@ -110,15 +109,18 @@ class WorkspaceManager {
       // Set as active
       this.activeInstanceId = instanceId;
 
-      console.log(`✅ Instance created: ${instanceId} (${type || "typeless"})`);
-      console.log(`   Total instances: ${this.instances.size}`);
+      log.debug(
+        `Instance created: ${instanceId} (${type || "typeless"}), total: ${
+          this.instances.size
+        }`
+      );
 
       // Notify listeners
       this._notifyListeners();
 
       return instanceId;
     } catch (error) {
-      console.error(`❌ Failed to create instance:`, error);
+      log.error("Failed to create instance:", error);
       throw error;
     }
   }
@@ -128,8 +130,8 @@ class WorkspaceManager {
    * @private
    */
   async _initializeHandler(instance, type) {
-    console.log(
-      `🔌 Initializing ${type} handler for instance ${instance.instanceId}`
+    log.debug(
+      `Initializing ${type} handler for instance ${instance.instanceId}`
     );
 
     const handler = getHandlerForType(type);
@@ -143,7 +145,7 @@ class WorkspaceManager {
     instance.instanceData = instanceData;
     instance.type = type;
 
-    console.log(`✅ Handler initialized for instance ${instance.instanceId}`);
+    log.debug(`Handler initialized for instance ${instance.instanceId}`);
   }
 
   /**
@@ -161,9 +163,7 @@ class WorkspaceManager {
     }
 
     try {
-      console.log(
-        `📊 Loading dataset ${datasetId} into instance ${instanceId}`
-      );
+      log.debug(`Loading dataset ${datasetId} into instance ${instanceId}`);
 
       // Get the dataset
       const dataset = datasetManager.getDataset(datasetId);
@@ -174,7 +174,7 @@ class WorkspaceManager {
       // CRITICAL: If instance doesn't have a type yet, determine it from dataset
       if (!instance.type) {
         const inferredType = this._inferTypeFromDataset(dataset);
-        console.log(`🔍 Instance ${instanceId} type inferred: ${inferredType}`);
+        log.debug(`Instance ${instanceId} type inferred: ${inferredType}`);
 
         // Initialize the handler now that we know the type
         await this._initializeHandler(instance, inferredType);
@@ -188,7 +188,7 @@ class WorkspaceManager {
       instance.datasetId = datasetId;
       instance.lastActive = Date.now();
 
-      console.log(`✅ Dataset loaded into instance ${instanceId}`);
+      log.debug(`Dataset loaded into instance ${instanceId}`);
 
       // Emit event for workspace updates
       window.dispatchEvent(
@@ -200,10 +200,7 @@ class WorkspaceManager {
       // Notify listeners so UI updates (toolbar should appear now)
       this._notifyListeners();
     } catch (error) {
-      console.error(
-        `❌ Failed to load dataset into instance ${instanceId}:`,
-        error
-      );
+      log.error(`Failed to load dataset into instance ${instanceId}:`, error);
       throw error;
     }
   }
@@ -234,11 +231,11 @@ class WorkspaceManager {
   async deleteInstance(instanceId) {
     const instance = this.getInstance(instanceId);
     if (!instance) {
-      console.warn(`⚠️  Instance ${instanceId} not found`);
+      log.warn(`Instance ${instanceId} not found`);
       return;
     }
 
-    console.log(`🗑️  Deleting instance: ${instanceId}`);
+    log.debug(`Deleting instance: ${instanceId}`);
 
     try {
       // Clean up handler if it exists
@@ -254,13 +251,14 @@ class WorkspaceManager {
         this.activeInstanceId = null;
       }
 
-      console.log(`✅ Instance deleted: ${instanceId}`);
-      console.log(`   Remaining instances: ${this.instances.size}`);
+      log.debug(
+        `Instance deleted: ${instanceId}, remaining: ${this.instances.size}`
+      );
 
       // Notify listeners
       this._notifyListeners();
     } catch (error) {
-      console.error(`❌ Error deleting instance ${instanceId}:`, error);
+      log.error(`Error deleting instance ${instanceId}:`, error);
       throw error;
     }
   }
@@ -337,9 +335,7 @@ class WorkspaceManager {
    */
   setActiveInstance(instanceId) {
     if (!this.instances.has(instanceId)) {
-      console.warn(
-        `⚠️  Cannot set non-existent instance as active: ${instanceId}`
-      );
+      log.warn(`Cannot set non-existent instance as active: ${instanceId}`);
       return;
     }
 
@@ -384,7 +380,7 @@ class WorkspaceManager {
       try {
         callback();
       } catch (error) {
-        console.error("❌ Error in workspace listener:", error);
+        log.error("Error in workspace listener:", error);
       }
     });
   }

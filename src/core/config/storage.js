@@ -1,9 +1,10 @@
 // src/core/config/storage.js
-import { config } from '@Core/config/clientConfig.js';
-export { logStorageConfig } from '@Core/config/clientConfig.js';
+import { config } from "@Core/config/clientConfig.js";
+export { logStorageConfig } from "@Core/config/clientConfig.js";
 import { ServerStorageProvider } from "@Core/data/providers/ServerStorageProvider.js";
 import { DatasetManagerAdapter } from "@Core/data/managers/DatasetManagerAdapter.js";
 import { dataCache } from "@Services/storage/dataCache.js";
+import { files as log } from "@Utils/logger.js";
 
 /**
  * Storage configuration for the application
@@ -49,7 +50,7 @@ export const DEFAULT_SESSION_ID = config.defaultSessionId;
  */
 export async function initializeStorageProvider() {
   if (USE_SERVER_STORAGE) {
-    console.log("  📡 Creating server storage provider...");
+    log.debug("Creating server storage provider...");
     const provider = new ServerStorageProvider(
       API_BASE_URL,
       DEFAULT_SESSION_ID
@@ -57,17 +58,17 @@ export async function initializeStorageProvider() {
 
     try {
       await provider.initialize();
-      console.log("  ✅ Server storage provider ready");
+      log.debug("Server storage provider ready");
       return { provider, mode: "server" };
     } catch (error) {
-      console.warn("  ⚠️ Server storage provider failed:", error.message);
-      console.warn("  Falling back to local storage...");
+      log.warn("Server storage provider failed:", error.message);
+      log.warn("Falling back to local storage...");
       // Fall through to local storage initialization below
     }
   }
 
   // Either USE_SERVER_STORAGE is false, or server initialization failed
-  console.log("  💾 Creating local storage adapter...");
+  log.debug("Creating local storage adapter...");
 
   // Initialize the data cache if needed
   if (dataCache && typeof dataCache.initialize === "function") {
@@ -76,7 +77,7 @@ export async function initializeStorageProvider() {
 
   const provider = new DatasetManagerAdapter(dataCache);
   await provider.initialize();
-  console.log("  ✅ Local storage provider ready");
+  log.debug("Local storage provider ready");
 
   return { provider, mode: "local" };
 }

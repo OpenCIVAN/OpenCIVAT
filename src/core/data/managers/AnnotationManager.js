@@ -7,6 +7,7 @@ import {
   getUserColor,
 } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
+import { annotation as log } from "@Utils/logger.js";
 
 /**
  * AnnotationManager - Unified annotation system for the three-layer architecture
@@ -52,12 +53,12 @@ export class AnnotationManager {
    * Sets up Y.js observation for collaboration
    */
   initialize() {
-    console.log("📍 AnnotationManager: Initializing...");
+    log.debug("AnnotationManager initializing...");
 
     // Set up Y.js observer for remote annotation changes
     this._setupYjsObserver();
 
-    console.log("✅ AnnotationManager initialized");
+    log.info("AnnotationManager initialized");
   }
 
   /**
@@ -70,15 +71,14 @@ export class AnnotationManager {
           const remoteAnnotations = this._yAnnotations.get(datasetId);
           if (!remoteAnnotations) return;
 
-          console.log(
-            `📥 Remote annotations received for dataset: ${datasetId}`
+          log.debug(
+            `Remote annotations received for dataset: ${datasetId}, count: ${remoteAnnotations.length}`
           );
-          console.log(`   Count: ${remoteAnnotations.length}`);
 
           // Update the dataset's annotations
           this._syncAnnotationsToDataset(datasetId, remoteAnnotations);
         } else if (change.action === "delete") {
-          console.log(`🗑️ All annotations deleted for dataset: ${datasetId}`);
+          log.debug(`All annotations deleted for dataset: ${datasetId}`);
           // Clear annotations for this dataset
           const dataset = this._datasetManager.getDataset(datasetId);
           if (dataset) {
@@ -95,7 +95,7 @@ export class AnnotationManager {
   _syncAnnotationsToDataset(datasetId, annotationDataArray) {
     const dataset = this._datasetManager.getDataset(datasetId);
     if (!dataset) {
-      console.warn(`Dataset ${datasetId} not found, cannot sync annotations`);
+      log.warn(`Dataset ${datasetId} not found, cannot sync annotations`);
       return;
     }
 
@@ -149,9 +149,7 @@ export class AnnotationManager {
     // Emit event
     this._emit("annotationAdded", { datasetId, annotation });
 
-    console.log(
-      `✅ Annotation created: ${annotation.id} on dataset ${datasetId}`
-    );
+    log.debug(`Annotation created: ${annotation.id} on dataset ${datasetId}`);
 
     return annotation;
   }
@@ -166,19 +164,19 @@ export class AnnotationManager {
   updateAnnotation(datasetId, annotationId, updates) {
     const dataset = this._datasetManager.getDataset(datasetId);
     if (!dataset) {
-      console.warn(`Dataset ${datasetId} not found`);
+      log.warn(`Dataset ${datasetId} not found`);
       return;
     }
 
     const annotation = dataset.getAnnotation(annotationId);
     if (!annotation) {
-      console.warn(`Annotation ${annotationId} not found`);
+      log.warn(`Annotation ${annotationId} not found`);
       return;
     }
 
     // Check permission
     if (!annotation.canEdit(getUserId())) {
-      console.warn("Cannot edit annotation created by another user");
+      log.warn("Cannot edit annotation created by another user");
       return;
     }
 
@@ -191,7 +189,7 @@ export class AnnotationManager {
     // Emit event
     this._emit("annotationUpdated", { datasetId, annotation });
 
-    console.log(`✅ Annotation updated: ${annotationId}`);
+    log.debug(`Annotation updated: ${annotationId}`);
   }
 
   /**
@@ -203,19 +201,19 @@ export class AnnotationManager {
   deleteAnnotation(datasetId, annotationId) {
     const dataset = this._datasetManager.getDataset(datasetId);
     if (!dataset) {
-      console.warn(`Dataset ${datasetId} not found`);
+      log.warn(`Dataset ${datasetId} not found`);
       return;
     }
 
     const annotation = dataset.getAnnotation(annotationId);
     if (!annotation) {
-      console.warn(`Annotation ${annotationId} not found`);
+      log.warn(`Annotation ${annotationId} not found`);
       return;
     }
 
     // Check permission
     if (!annotation.canEdit(getUserId())) {
-      console.warn("Cannot delete annotation created by another user");
+      log.warn("Cannot delete annotation created by another user");
       return;
     }
 
@@ -228,7 +226,7 @@ export class AnnotationManager {
     // Emit event
     this._emit("annotationRemoved", { datasetId, annotationId });
 
-    console.log(`🗑️ Annotation deleted: ${annotationId}`);
+    log.debug(`Annotation deleted: ${annotationId}`);
   }
 
   /**
@@ -310,7 +308,7 @@ export class AnnotationManager {
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in ${event} listener:`, error);
+          log.error(`Error in ${event} listener:`, error);
         }
       });
     }

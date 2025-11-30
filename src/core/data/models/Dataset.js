@@ -2,6 +2,7 @@
 // v2.0: Server-authoritative - IDs must come from server
 
 import { Annotation } from "@Core/data/models/Annotation.js";
+import { dataset as log } from "@Utils/logger.js";
 
 /**
  * Dataset - Represents a raw data file with associated metadata and annotations
@@ -121,8 +122,7 @@ export class Dataset {
     }
 
     // Log status changes for debugging
-    // This helps track the file lifecycle in console
-    console.log(`📁 Dataset ${this.filename} status: ${status}`);
+    log.debug(`Dataset ${this.filename} status: ${status}`);
   }
 
   /**
@@ -167,18 +167,16 @@ export class Dataset {
       const parts = json.filename.split(".");
       if (parts.length > 1) {
         fileType = parts[parts.length - 1].toLowerCase();
-        console.log(
-          `📋 Derived fileType "${fileType}" from filename: ${json.filename}`
+        log.debug(
+          `Derived fileType "${fileType}" from filename: ${json.filename}`
         );
       }
     }
 
     // If still no fileType, this is a serious problem
     if (!fileType) {
-      console.error(`❌ Cannot determine fileType for dataset ${json.id}`);
-      console.error(`   Filename: ${json.filename}`);
-      console.error(
-        `   This dataset may be corrupted or from a very old version`
+      log.error(
+        `Cannot determine fileType for dataset ${json.id}, filename: ${json.filename}`
       );
       // Set a fallback so the dataset can at least load
       fileType = "unknown";

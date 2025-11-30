@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import { render as log } from "@Utils/logger.js";
 
 /**
  * Hook to control dimensionality reduction for a specific VTK instance
@@ -44,7 +45,7 @@ export function useVTKReduction(instanceId) {
   // Toggle reduction
   const toggleReduction = useCallback(async () => {
     if (!canApplyReduction) {
-      console.warn("⚠️ Cannot apply reduction: No data loaded");
+      log.warn("Cannot apply reduction: No data loaded");
       return false;
     }
 
@@ -66,7 +67,7 @@ export function useVTKReduction(instanceId) {
 
       return success;
     } catch (error) {
-      console.error("❌ Reduction failed:", error);
+      log.error("Reduction failed:", error);
       return false;
     }
   }, [instanceId, method, components, canApplyReduction, isReductionApplied]);

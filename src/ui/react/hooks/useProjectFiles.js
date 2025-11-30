@@ -9,6 +9,7 @@
 // - Star/unstar toggle
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { api as log } from "@Utils/logger.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { config } from "@Core/config/clientConfig.js";
 
@@ -142,7 +143,7 @@ export function useProjectFiles(options = {}) {
       );
     } catch (err) {
       if (err.name === "AbortError") return;
-      console.error("Failed to fetch project data:", err);
+      log.error("Failed to fetch project data:", err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -508,7 +509,7 @@ export function useAllAccessibleFiles() {
       const data = await response.json();
       setFiles(data.datasets || data || []);
     } catch (err) {
-      console.error("Failed to fetch all files:", err);
+      log.error("Failed to fetch all files:", err);
       setError(err.message);
     } finally {
       setIsLoading(false);

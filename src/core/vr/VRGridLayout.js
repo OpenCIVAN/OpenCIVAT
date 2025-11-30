@@ -6,6 +6,8 @@
 // Layout Style: Fiesta-style curved grid surrounding user
 // Views are arranged in a curved arc so user doesn't need to turn completely around
 
+import { vr as log } from "@Utils/logger.js";
+
 /**
  * VRGridLayout - Curved grid layout for VR mode
  *
@@ -84,9 +86,7 @@ export class VRGridLayout {
    * @returns {{ position: Vector3, rotation: Quaternion, scale: Vector3 }}
    */
   getWorldTransform(placement, canvasDimensions) {
-    console.log(
-      "VRGridLayout.getWorldTransform() - STUB: Returning placeholder"
-    );
+    log.trace("VRGridLayout.getWorldTransform() - STUB: Returning placeholder");
 
     // TODO: Full implementation
     // 1. Calculate horizontal angle based on column position
@@ -139,7 +139,7 @@ export class VRGridLayout {
    * @returns {Map<string, Object>} - placementId -> transform
    */
   calculateAllTransforms(placements, canvasDimensions) {
-    console.log(
+    log.trace(
       "VRGridLayout.calculateAllTransforms() - STUB: Calculating placeholders"
     );
 
@@ -166,7 +166,7 @@ export class VRGridLayout {
    * @returns {CanvasPlacement|null} - The targeted placement, or null
    */
   getTargetedPlacement(ray, placements) {
-    console.log(
+    log.trace(
       "VRGridLayout.getTargetedPlacement() - STUB: Not fully implemented"
     );
 

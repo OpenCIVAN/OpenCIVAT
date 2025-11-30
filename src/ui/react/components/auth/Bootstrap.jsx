@@ -3,6 +3,7 @@
 // This component ensures all prerequisites are met before rendering the main application
 
 import React, { useState, useEffect, useRef } from "react";
+import { auth as log } from "@Utils/logger.js";
 import { hasUserName, getUserName, setUserName, getUserId } from "@Collaboration/presence/userManagement.js";
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
@@ -51,7 +52,7 @@ export function Bootstrap() {
      * This is where future authentication checks would go
      */
     async function checkPrerequisites() {
-        console.log("🔐 Bootstrap: Checking prerequisites...");
+        log.debug("Bootstrap: Checking prerequisites...");
 
         try {
             // FUTURE: Add authentication check here
@@ -71,7 +72,7 @@ export function Bootstrap() {
             // Check for existing username
             if (hasUserName()) {
                 const existingName = getUserName();
-                console.log(`✅ Bootstrap: Found existing username: ${existingName}`);
+                log.info(`Bootstrap: Found existing username: ${existingName}`);
                 setUsername(existingName);
 
                 // If we already completed Phase 2 in a previous mount, skip to ready
@@ -82,11 +83,11 @@ export function Bootstrap() {
                     await runPhase2Initialization(existingName);
                 }
             } else {
-                console.log("📝 Bootstrap: Username required");
+                log.debug("Bootstrap: Username required");
                 setBootstrapState('username');
             }
         } catch (error) {
-            console.error("❌ Bootstrap: Prerequisite check failed:", error);
+            log.error("Bootstrap: Prerequisite check failed:", error);
             setErrorMessage(`System check failed: ${error.message}`);
             setBootstrapState('error');
         }
@@ -118,7 +119,7 @@ export function Bootstrap() {
         //   return;
         // }
 
-        console.log(`👤 Bootstrap: Setting username: ${trimmedName}`);
+        log.info(`Bootstrap: Setting username: ${trimmedName}`);
         setUserName(trimmedName);
         setBootstrapState('initializing');
         await runPhase2Initialization(trimmedName);
@@ -130,18 +131,18 @@ export function Bootstrap() {
     async function runPhase2Initialization(validatedUsername) {
         // Prevent double initialization
         if (initializationStarted.current) {
-            console.log("⚠️ Bootstrap: Phase 2 already started, skipping");
+            log.debug("Bootstrap: Phase 2 already started, skipping");
             return;
         }
 
         initializationStarted.current = true;
-        console.log("🚀 Bootstrap: Starting Phase 2 initialization...");
+        log.debug("Bootstrap: Starting Phase 2 initialization...");
 
         try {
             await initializePhase2();
 
             phase2Complete.current = true;
-            console.log("✅ Bootstrap: Phase 2 complete, user services ready");
+            log.info("Bootstrap: Phase 2 complete, user services ready");
 
             // FUTURE: Initialize user-specific features here
             // await loadUserPreferences(validatedUsername);
@@ -149,7 +150,7 @@ export function Bootstrap() {
 
             setBootstrapState('ready');
         } catch (error) {
-            console.error("❌ Bootstrap: Phase 2 initialization failed:", error);
+            log.error("Bootstrap: Phase 2 initialization failed:", error);
             setErrorMessage(`Failed to initialize user services: ${error.message}`);
             setBootstrapState('error');
         }

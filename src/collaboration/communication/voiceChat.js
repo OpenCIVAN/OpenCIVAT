@@ -3,6 +3,7 @@
 // ----------------------------------------------------------------------------
 
 import { Room } from "livekit-client";
+import { ws as log } from "@Utils/logger.js";
 
 class VoiceChat {
   constructor() {
@@ -15,7 +16,7 @@ class VoiceChat {
     // Use HTTP not HTTPS for local token server
     const TOKEN_SERVER = "http://localhost:3002";
 
-    console.log("   Fetching token from:", TOKEN_SERVER);
+    log.debug("Fetching token from:", TOKEN_SERVER);
 
     try {
       const response = await fetch(`${TOKEN_SERVER}/token`, {
@@ -26,16 +27,14 @@ class VoiceChat {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("   ✅ Token received");
-        console.log("🐛 DEBUG data:", data);
-        console.log("🐛 DEBUG data.token:", data.token);
-        console.log("🐛 DEBUG typeof data.token:", typeof data.token);
+        log.debug("Token received");
+        log.trace("Token data:", data);
         return data.token;
       } else {
-        console.error("   ❌ Token server error:", response.status);
+        log.error("Token server error:", response.status);
       }
     } catch (error) {
-      console.error("   ❌ Token server not reachable:", error.message);
+      log.error("Token server not reachable:", error.message);
     }
 
     throw new Error("Could not get token from server");
@@ -43,7 +42,7 @@ class VoiceChat {
 
   async connect(roomName, userName) {
     try {
-      console.log("🔌 Connecting to voice chat...");
+      log.debug("Connecting to voice chat...");
 
       const token = await this.getDevToken(roomName, userName);
 
@@ -53,10 +52,7 @@ class VoiceChat {
       // Use local LiveKit server
       const LIVEKIT_URL = "ws://localhost:7880";
 
-      // DEBUG: Log token to verify it's a string, not an object
-      console.log("🐛 DEBUG: Token type:", typeof token);
-      console.log("🐛 DEBUG: Token value:", token);
-      console.log("🐛 DEBUG: Token is string?", typeof token === "string");
+      log.trace("Token type:", typeof token);
 
       await this.room.connect(LIVEKIT_URL, token);
 
@@ -64,9 +60,9 @@ class VoiceChat {
       this.isMuted = false;
 
       this.isConnected = true;
-      console.log("✅ Voice chat connected!");
+      log.info("Voice chat connected");
     } catch (error) {
-      console.error("❌ Failed to connect:", error);
+      log.error("Failed to connect:", error);
       this.isConnected = false;
       throw error;
     }
@@ -76,34 +72,34 @@ class VoiceChat {
     if (!this.room) return;
 
     this.room.on("participantConnected", (participant) => {
-      console.log("👤 Participant joined:", participant.identity);
+      log.debug("Participant joined:", participant.identity);
     });
 
     this.room.on("participantDisconnected", (participant) => {
-      console.log("👋 Participant left:", participant.identity);
+      log.debug("Participant left:", participant.identity);
     });
 
     this.room.on("trackSubscribed", (track, publication, participant) => {
       if (track.kind === "audio") {
         const audioElement = track.attach();
         document.body.appendChild(audioElement);
-        console.log("🔊 Audio track subscribed from:", participant.identity);
+        log.debug("Audio track subscribed from:", participant.identity);
       }
     });
   }
 
   async toggleMute() {
     if (!this.room || !this.isConnected) {
-      console.warn("Not connected to voice chat");
+      log.warn("Not connected to voice chat");
       return;
     }
 
     try {
       this.isMuted = !this.isMuted;
       await this.room.localParticipant.setMicrophoneEnabled(!this.isMuted);
-      console.log(`🎤 Microphone ${this.isMuted ? "muted" : "unmuted"}`);
+      log.debug(`Microphone ${this.isMuted ? "muted" : "unmuted"}`);
     } catch (error) {
-      console.error("Failed to toggle mute:", error);
+      log.error("Failed to toggle mute:", error);
     }
   }
 
@@ -113,7 +109,7 @@ class VoiceChat {
       this.room = null;
       this.isConnected = false;
       this.isMuted = false;
-      console.log("Voice chat disconnected");
+      log.debug("Voice chat disconnected");
     }
   }
 }

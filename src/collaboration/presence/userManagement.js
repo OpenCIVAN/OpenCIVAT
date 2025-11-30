@@ -6,9 +6,9 @@ let userId = localStorage.getItem("cia_user_id");
 if (!userId) {
   userId = generateUserId();
   localStorage.setItem("cia_user_id", userId);
-  log.info("Generated new user ID:", userId);
+  log.debug("Generated new user ID:", userId);
 } else {
-  log.info("Retrieved existing user ID:", userId);
+  log.debug("Retrieved existing user ID:", userId);
 }
 
 // Display name (can be changed)
@@ -34,7 +34,7 @@ export function setUserName(name) {
   userName = name;
   userColor = getUserColor();
 
-  log.info(`Username set: ${userName}`);
+  log.debug(`Username set: ${userName}`);
 
   // Store for next time
   localStorage.setItem("cia_username", userName);
@@ -47,12 +47,12 @@ export async function setupUserName() {
   if (stored) {
     userName = stored;
     userColor = getUserColor();
-    log.info(`Username loaded from storage: ${userName}`);
+    log.debug(`Username loaded from storage: ${userName}`);
     return true; // Username ready
   }
 
   // No username yet - React modal will handle it
-  log.info(`No username in storage - modal will prompt`);
+  log.debug(`No username in storage - modal will prompt`);
   return false; // Username not ready (but don't block)
 }
 
@@ -67,7 +67,7 @@ export function changeUserName() {
 export function clearUserName() {
   userName = null;
   localStorage.removeItem("cia_username");
-  log.info("Username cleared from localStorage");
+  log.debug("Username cleared from localStorage");
 }
 
 export function getUserColor(uid = null) {

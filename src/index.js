@@ -5,6 +5,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { initializePhase1 } from "@Init/appInitializer.js";
+import { app as log } from "@Utils/logger.js";
 import { Bootstrap } from "@UI/react/components/auth/Bootstrap.jsx";
 
 // Import global styles
@@ -27,7 +28,7 @@ function checkBrowserCompatibility() {
     .map(([feature]) => feature);
 
   if (missing.length > 0) {
-    console.warn(`⚠️ Missing browser features: ${missing.join(", ")}`);
+    log.warn(`Missing browser features: ${missing.join(", ")}`);
     return false;
   }
 
@@ -78,11 +79,7 @@ function showFatalError(message) {
  * Runs Phase 1, then hands control to Bootstrap → CIAWebApp
  */
 async function initializeApp() {
-  console.log("====================================");
-  console.log("   CIA Web - Collaborative");
-  console.log("   Immersive Analytics");
-  console.log("====================================");
-  console.log("");
+  log.info("CIA Web - Collaborative Immersive Analytics starting...");
 
   // Check browser compatibility first
   if (!checkBrowserCompatibility()) {
@@ -96,9 +93,9 @@ async function initializeApp() {
   try {
     // Run Phase 1: Core Services (before React)
     // This initializes services that don't depend on user context
-    console.log("🏗️ Foundation: Initializing core services...");
+    log.info("Foundation: Initializing core services...");
     await initializePhase1();
-    console.log("✅ Foundation: Core services ready");
+    log.info("Foundation: Core services ready");
 
     // Verify critical services are available
     if (!window.CIA || !window.CIA.datasetManager) {
@@ -126,11 +123,11 @@ async function initializeApp() {
       </React.StrictMode>
     );
 
-    console.log("✅ Foundation: React application rendered");
-    console.log("🔐 Bootstrap layer will handle user setup and Phase 2");
-    console.log("📝 Type CIA.help() in console for debug commands");
+    log.info("Foundation: React application rendered");
+    log.debug("Bootstrap layer will handle user setup and Phase 2");
+    log.debug("Type CIA.help() in console for debug commands");
   } catch (error) {
-    console.error("❌ Fatal error during core initialization:", error);
+    log.error("Fatal error during core initialization:", error);
     showFatalError(
       `Failed to initialize core services: ${error.message}. ` +
         `Check the console for details and try refreshing the page.`
@@ -147,11 +144,11 @@ if (document.readyState === "loading") {
 
 // Global error handlers for debugging
 window.addEventListener("error", (event) => {
-  console.error("Global error:", event.error);
+  log.error("Global error:", event.error);
 });
 
 window.addEventListener("unhandledrejection", (event) => {
-  console.error("Unhandled promise rejection:", event.reason);
+  log.error("Unhandled promise rejection:", event.reason);
 });
 
 // Version for debugging

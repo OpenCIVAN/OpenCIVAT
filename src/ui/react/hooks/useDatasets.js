@@ -1,18 +1,19 @@
 // src/ui/react/hooks/useDatasets.js
 import { useState, useEffect } from "react";
+import { ui as log } from "@Utils/logger.js";
 import { getDatasetManager } from "./useDatasetManager.js";
 
 export function useDatasets() {
   const [datasets, setDatasets] = useState([]);
 
   useEffect(() => {
-    console.log("🔗 useDatasets: Setting up subscription");
+    log.debug("useDatasets: Setting up subscription");
 
     // Get the manager (this will throw a clear error if not ready)
     const datasetManager = getDatasetManager();
 
     const updateDatasets = () => {
-      console.log("📊 useDatasets: Updating datasets");
+      log.debug("useDatasets: Updating datasets");
 
       // Get all datasets from the NEW datasetManager
       const allDatasets = datasetManager.getAllDatasets();
@@ -49,7 +50,7 @@ export function useDatasets() {
     datasetManager.on("datasetLoaded", updateDatasets);
 
     return () => {
-      console.log("🔗 useDatasets: Cleaning up subscription");
+      log.debug("useDatasets: Cleaning up subscription");
       datasetManager.off("datasetAdded", updateDatasets);
       datasetManager.off("datasetUpdated", updateDatasets);
       datasetManager.off("datasetRemoved", updateDatasets);

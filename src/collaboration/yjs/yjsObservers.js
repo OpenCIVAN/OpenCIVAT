@@ -45,7 +45,7 @@ let pendingDatasets = new Map(); // Store datasets received before we're ready
  * This signals that we're ready to process remote datasets
  */
 export function markSystemReady() {
-  log.info("System marked as ready - processing pending datasets");
+  log.debug("System marked as ready - processing pending datasets");
   isSystemReady = true;
   // Process any datasets that arrived while we were waiting
   processPendingDatasets();
@@ -67,7 +67,7 @@ async function processPendingDatasets() {
   }
 
   pendingDatasets.clear();
-  log.info("All pending datasets processed");
+  log.debug("All pending datasets processed");
 }
 
 /**
@@ -76,7 +76,7 @@ async function processPendingDatasets() {
 async function handleRemoteDataset(datasetId, metadata) {
   // If system isn't ready yet, queue it
   if (!isSystemReady) {
-    log.info(`Queueing dataset ${datasetId} (system not ready yet)`);
+    log.debug(`Queueing dataset ${datasetId} (system not ready yet)`);
     pendingDatasets.set(datasetId, metadata);
     return;
   }
@@ -113,10 +113,10 @@ async function validateServerIdExists(serverId, publicPath) {
  * This cleans up datasets that reference non-existent server resources
  */
 function removeStaleYjsDataset(datasetId) {
-  log.info(`🗑️ Removing stale Y.js dataset: ${datasetId}`);
+  log.debug(`Removing stale Y.js dataset: ${datasetId}`);
   try {
     yDatasets.delete(datasetId);
-    log.debug("Removing stale entry from Y.js");
+    log.trace("Removed stale entry from Y.js");
   } catch (error) {
     log.error(`Failed to remove stale dataset:`, error);
   }
@@ -127,7 +127,7 @@ function removeStaleYjsDataset(datasetId) {
  * Access via: window.CIA.clearYjsDatasets()
  */
 export function clearAllYjsDatasets() {
-  log.info("🗑️ Clearing all Y.js datasets...");
+  log.debug("Clearing all Y.js datasets...");
   const keys = Array.from(yDatasets.keys());
   log.debug(`Found ${keys.length} dataset(s) to clear`);
 
@@ -135,7 +135,7 @@ export function clearAllYjsDatasets() {
     yDatasets.delete(key);
   });
 
-  log.info("All Y.js datasets cleared");
+  log.debug("All Y.js datasets cleared");
   return keys.length;
 }
 
@@ -194,12 +194,12 @@ async function processRemoteDataset(datasetId, metadata) {
   const hasFile = await dataCache.hasDataset(metadata.hash);
 
   if (hasFile) {
-    log.info(`File already cached`);
+    log.debug(`File already cached`);
     return;
   }
 
   if (metadata.publicPath) {
-    log.info(`Fetching from: ${metadata.publicPath}`);
+    log.debug(`Fetching from: ${metadata.publicPath}`);
 
     try {
       const response = await fetch(metadata.publicPath);
@@ -224,7 +224,7 @@ async function processRemoteDataset(datasetId, metadata) {
       dataset.rawFile = file;
       dataset.setFileStatus("available", file);
 
-      log.info(`File fetched and cached`);
+      log.debug(`File fetched and cached`);
     } catch (error) {
       log.error(`Failed to fetch:`, error);
       dataset.setFileStatus("fetch-failed");
@@ -242,7 +242,7 @@ async function processRemoteDataset(datasetId, metadata) {
 // Watches for remote dataset changes
 // ----------------------------------------------------------------------------
 export async function initializeDatasetObserver() {
-  log.info("Setting up dataset observer (v2.0 hybrid mode)");
+  log.debug("Setting up dataset observer (v2.0 hybrid mode)");
 
   // Check for existing datasets
   log.debug("Checking for existing datasets in Y.js");
@@ -320,7 +320,7 @@ export async function initializeDatasetObserver() {
     });
   });
 
-  log.info("Dataset observer initialized");
+  log.debug("Dataset observer initialized");
 }
 
 // ----------------------------------------------------------------------------
@@ -328,14 +328,14 @@ export async function initializeDatasetObserver() {
 // Watches for remote instance changes
 // ----------------------------------------------------------------------------
 export function initializeInstanceObserver() {
-  log.info("Setting up instance observer");
+  log.debug("Setting up instance observer");
 
   // REMOVED: The instance observer is now handled by instanceManager.js
   // This eliminates duplicate observers and ensures callbacks fire correctly
 
   // The instanceManager sets up its own Y.js observer when initialized
   // and provides a proper callback system via onRemoteInstanceChange()
-  log.info("Instance observer initialization deferred to InstanceManager");
+  log.debug("Instance observer initialization deferred to InstanceManager");
 }
 
 // ----------------------------------------------------------------------------
@@ -344,13 +344,8 @@ export function initializeInstanceObserver() {
 // ----------------------------------------------------------------------------
 export function initializeAnnotationObserver() {
   yAnnotations.observe((event) => {
-    log.info("🔍 Setting up annotation observer");
     // Capture changes IMMEDIATELY while event is still valid
-    log.info(
-      "🔍 Annotation observer fired",
-      event.changes.keys.size,
-      "changes"
-    );
+    log.trace("Annotation observer fired", event.changes.keys.size, "changes");
     const changes = [];
     event.changes.keys.forEach((change, key) => {
       changes.push({
@@ -368,7 +363,7 @@ export function initializeAnnotationObserver() {
 
           if (!remoteAnnotations) return; // Safety check
 
-          log.info(
+          log.debug(
             `Remote annotations received: ${datasetId} (${remoteAnnotations.length} annotations)`
           );
 
@@ -380,7 +375,7 @@ export function initializeAnnotationObserver() {
     }, 0);
   });
 
-  log.info("✅ Annotation observer initialized");
+  log.debug("Annotation observer initialized");
 }
 
 // ============================================================================
@@ -403,7 +398,7 @@ export function onCursorChange(callback) {
 }
 
 export function initializeCursorObserver() {
-  log.info("🔍 Setting up cursor presence observer");
+  log.debug("Setting up cursor presence observer");
 
   yCursors.observe((event) => {
     const myId = getUserId();
@@ -423,7 +418,7 @@ export function initializeCursorObserver() {
     });
   });
 
-  log.info("Cursor observer initialized");
+  log.debug("Cursor observer initialized");
 }
 
 /**
@@ -441,7 +436,7 @@ export function onAvatarChange(callback) {
 }
 
 export function initializeAvatarObserver() {
-  log.info("Setting up avatar presence observer");
+  log.debug("Setting up avatar presence observer");
 
   yAvatars.observe((event) => {
     const myId = getUserId();
@@ -461,7 +456,7 @@ export function initializeAvatarObserver() {
     });
   });
 
-  log.info("Avatar observer initialized");
+  log.debug("Avatar observer initialized");
 }
 
 /**
@@ -479,7 +474,7 @@ export function onViewPresenceChange(callback) {
 }
 
 export function initializeViewPresenceObserver() {
-  log.info("Setting up view presence observer");
+  log.debug("Setting up view presence observer");
 
   yViewPresence.observe((event) => {
     event.changes.keys.forEach((change, viewId) => {
@@ -494,14 +489,14 @@ export function initializeViewPresenceObserver() {
     });
   });
 
-  log.info("View presence observer initialized");
+  log.debug("View presence observer initialized");
 }
 
 // ============================================================================
 // Initialize All Observers
 // ============================================================================
 export function initializeAllObservers() {
-  log.info("Setting up Y.js observers (v2.0 - presence focused)");
+  log.debug("Setting up Y.js observers (v2.0 - presence focused)");
 
   // v2.0 Active observers (presence only)
   initializeCursorObserver();
@@ -511,14 +506,14 @@ export function initializeAllObservers() {
   // DEPRECATED: State observers - kept for backward compatibility only
   // In v2.0, state comes from server via WebSocket broadcast
   // These will be removed once server sync is fully implemented
-  log.info(
+  log.debug(
     "Initializing deprecated state observers for backward compatibility..."
   );
   initializeDatasetObserver();
   initializeInstanceObserver();
   initializeAnnotationObserver();
 
-  log.info("✅ All Y.js observers initialized");
+  log.info("All Y.js observers initialized");
 }
 
 // ----------------------------------------------------------------------------

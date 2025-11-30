@@ -10,6 +10,7 @@
 // - Handles linking, broadcasting, and presence
 // - Manages view lifecycle and cleanup
 
+import { view as log } from "@Utils/logger.js";
 import {
   ViewConfiguration,
   LINK_MODES,
@@ -71,7 +72,7 @@ export class ViewConfigurationManager {
   // ===========================================================================
 
   initialize() {
-    console.log("📋 ViewConfigurationManager: Initializing...");
+    log.info("Initializing...");
 
     // Get project ID for API calls
     this._projectId =
@@ -83,9 +84,7 @@ export class ViewConfigurationManager {
     // Note: Views are loaded from server via loadFromServer() called by appInitializer
     // This is async and happens after initialize() returns
 
-    console.log(
-      `📋 ViewConfigurationManager: Initialized with ${this._viewConfigs.size} views`
-    );
+    log.info(`Initialized with ${this._viewConfigs.size} views`);
   }
 
   /**
@@ -93,7 +92,7 @@ export class ViewConfigurationManager {
    * Called by appInitializer after WebSocket is connected
    */
   async loadFromServer() {
-    console.log("📋 ViewConfigurationManager: Loading views from server...");
+    log.info("Loading views from server...");
 
     try {
       const response = await fetch(
@@ -107,7 +106,7 @@ export class ViewConfigurationManager {
       const data = await response.json();
       const serverViews = data.views || [];
 
-      console.log(`   Found ${serverViews.length} view(s) on server`);
+      log.debug(`Found ${serverViews.length} view(s) on server`);
 
       let addedCount = 0;
       for (const serverView of serverViews) {
@@ -127,19 +126,14 @@ export class ViewConfigurationManager {
 
           addedCount++;
         } catch (error) {
-          console.error(`Failed to load view ${serverView.id}:`, error);
+          log.error(`Failed to load view ${serverView.id}:`, error);
         }
       }
 
-      console.log(
-        `✅ ViewConfigurationManager: Loaded ${addedCount} view(s) from server`
-      );
+      log.info(`Loaded ${addedCount} view(s) from server`);
       return serverViews.length;
     } catch (error) {
-      console.error(
-        "❌ ViewConfigurationManager: Failed to load from server:",
-        error
-      );
+      log.error("Failed to load from server:", error);
       throw error;
     }
   }
@@ -160,7 +154,7 @@ export class ViewConfigurationManager {
         this._handleRemoteViewDeleted(data.viewId);
         break;
       default:
-        console.warn(`Unknown view broadcast type: ${type}`);
+        log.warn(`Unknown view broadcast type: ${type}`);
     }
   }
 
@@ -172,7 +166,7 @@ export class ViewConfigurationManager {
       return;
     }
 
-    console.log(`📥 Remote view created: ${viewId}`);
+    log.debug(`Remote view created: ${viewId}`);
 
     try {
       const viewData = this._serverToClientFormat(serverView);
@@ -181,14 +175,14 @@ export class ViewConfigurationManager {
       this._setupLinkObserversForView(view);
       this._emit("viewAdded", view);
     } catch (error) {
-      console.error(`Failed to add remote view ${viewId}:`, error);
+      log.error(`Failed to add remote view ${viewId}:`, error);
     }
   }
 
   _handleRemoteViewUpdated(serverView) {
     const viewId = serverView.id;
 
-    console.log(`📥 Remote view updated: ${viewId}`);
+    log.debug(`Remote view updated: ${viewId}`);
 
     try {
       const viewData = this._serverToClientFormat(serverView);
@@ -198,7 +192,7 @@ export class ViewConfigurationManager {
       this._emit("viewUpdated", view);
       this._notifyLinkedViews(viewId, view);
     } catch (error) {
-      console.error(`Failed to update remote view ${viewId}:`, error);
+      log.error(`Failed to update remote view ${viewId}:`, error);
     }
   }
 
@@ -207,7 +201,7 @@ export class ViewConfigurationManager {
       return;
     }
 
-    console.log(`📥 Remote view deleted: ${viewId}`);
+    log.debug(`Remote view deleted: ${viewId}`);
 
     this._handleLinkTargetDeleted(viewId);
     this._viewConfigs.delete(viewId);
@@ -380,14 +374,11 @@ export class ViewConfigurationManager {
       // Emit event
       this._emit("viewAdded", view);
 
-      console.log(`✅ View created: ${view.id} for dataset ${datasetId}`);
+      log.info(`View created: ${view.id} for dataset ${datasetId}`);
 
       return view;
     } catch (error) {
-      console.error(
-        `❌ Failed to create view for dataset ${datasetId}:`,
-        error
-      );
+      log.error(`Failed to create view for dataset ${datasetId}:`, error);
       throw error;
     }
   }
@@ -430,7 +421,7 @@ export class ViewConfigurationManager {
     // Use createView to handle server creation
     const newView = await this.createView(sourceView.datasetId, newViewConfig);
 
-    console.log(`📋 Duplicated view ${sourceViewId} to ${newView.id}`);
+    log.debug(`Duplicated view ${sourceViewId} to ${newView.id}`);
 
     return newView;
   }
@@ -495,7 +486,7 @@ export class ViewConfigurationManager {
   activateView(viewId) {
     const view = this._viewConfigs.get(viewId);
     if (!view) {
-      console.warn(`Cannot activate view ${viewId}: not found`);
+      log.warn(`Cannot activate view ${viewId}: not found`);
       return;
     }
 
@@ -503,8 +494,8 @@ export class ViewConfigurationManager {
     view.lastActiveTimestamp = Date.now();
     view.status = "active";
 
-    console.log(
-      `📊 View ${viewId} activated (${view.activeInstanceCount} instance(s))`
+    log.debug(
+      `View ${viewId} activated (${view.activeInstanceCount} instance(s))`
     );
 
     this._syncToServer(view);
@@ -529,10 +520,10 @@ export class ViewConfigurationManager {
     // If no instances remain, mark as inactive (but don't delete)
     if (view.activeInstanceCount === 0) {
       view.status = "inactive";
-      console.log(`📊 View ${viewId} deactivated (no instances remaining)`);
+      log.debug(`View ${viewId} deactivated (no instances remaining)`);
     } else {
-      console.log(
-        `📊 View ${viewId} has ${view.activeInstanceCount} instance(s) remaining`
+      log.trace(
+        `View ${viewId} has ${view.activeInstanceCount} instance(s) remaining`
       );
     }
 
@@ -575,7 +566,7 @@ export class ViewConfigurationManager {
 
     // Only owner can delete
     if (view.ownerUserId !== getUserId()) {
-      console.warn(`Cannot delete view ${viewId}: not owner`);
+      log.warn(`Cannot delete view ${viewId}: not owner`);
       return false;
     }
 
@@ -601,11 +592,11 @@ export class ViewConfigurationManager {
       // Emit event
       this._emit("viewRemoved", viewId);
 
-      console.log(`🗑️ View deleted: ${viewId}`);
+      log.info(`View deleted: ${viewId}`);
 
       return true;
     } catch (error) {
-      console.error(`❌ Failed to delete view ${viewId}:`, error);
+      log.error(`Failed to delete view ${viewId}:`, error);
       throw error;
     }
   }
@@ -716,7 +707,7 @@ export class ViewConfigurationManager {
     const targetView = this._viewConfigs.get(targetViewId);
 
     if (!view || !targetView) {
-      console.error(`Cannot link: view or target not found`);
+      log.error(`Cannot link: view or target not found`);
       return null;
     }
 
@@ -835,7 +826,7 @@ export class ViewConfigurationManager {
 
     // Only owner can broadcast
     if (view.ownerUserId !== getUserId()) {
-      console.warn(`Cannot broadcast view ${viewId}: not owner`);
+      log.warn(`Cannot broadcast view ${viewId}: not owner`);
       return;
     }
 
@@ -894,7 +885,7 @@ export class ViewConfigurationManager {
     if (!view || !sourceView) return;
 
     if (!sourceView.isBroadcasting()) {
-      console.warn(`Cannot follow ${sourceViewId}: not broadcasting`);
+      log.warn(`Cannot follow ${sourceViewId}: not broadcasting`);
       return;
     }
 
@@ -979,7 +970,7 @@ export class ViewConfigurationManager {
     // Emit event
     this._emit("viewAdded", forkedView);
 
-    console.log(`🍴 View forked: ${view.id} -> ${forkedView.id}`);
+    log.debug(`View forked: ${view.id} -> ${forkedView.id}`);
 
     return forkedView;
   }
@@ -1043,7 +1034,7 @@ export class ViewConfigurationManager {
 
     // Only owner can share
     if (view.ownerUserId !== getUserId()) {
-      console.warn(`Cannot share view ${viewId}: not owner`);
+      log.warn(`Cannot share view ${viewId}: not owner`);
       return;
     }
 
@@ -1169,7 +1160,7 @@ export class ViewConfigurationManager {
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in ${event} listener:`, error);
+          log.error(`Error in ${event} listener:`, error);
         }
       });
     }
@@ -1204,7 +1195,7 @@ export class ViewConfigurationManager {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error(
+          log.error(
             `Failed to sync view ${view.id}:`,
             errorData.error || response.status
           );
@@ -1219,7 +1210,7 @@ export class ViewConfigurationManager {
         view.lastSyncedToServer = Date.now();
         view.pendingServerSync = false;
       } catch (error) {
-        console.error(`Failed to sync view ${view.id} to server:`, error);
+        log.error(`Failed to sync view ${view.id} to server:`, error);
         view.pendingServerSync = true;
       }
     }, this._syncThrottleMs);
@@ -1243,7 +1234,7 @@ export class ViewConfigurationManager {
     try {
       yPresence.set(viewId, presence);
     } catch (error) {
-      console.error(`Failed to sync presence for ${viewId}:`, error);
+      log.error(`Failed to sync presence for ${viewId}:`, error);
     }
   }
 
@@ -1364,7 +1355,7 @@ export class ViewConfigurationManager {
     }
 
     for (const viewId of toRemove) {
-      console.log(`🧹 Auto-cleaning inactive view: ${viewId}`);
+      log.debug(`Auto-cleaning inactive view: ${viewId}`);
       this._yViews.delete(viewId);
       this._viewConfigs.delete(viewId);
       this._emit("viewRemoved", viewId);
@@ -1391,7 +1382,7 @@ export class ViewConfigurationManager {
     this._linkObservers.clear();
     this._lastPresenceUpdate.clear();
 
-    console.log("📋 ViewConfigurationManager: Shutdown complete");
+    log.info("Shutdown complete");
   }
 }
 

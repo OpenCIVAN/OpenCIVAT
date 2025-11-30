@@ -1,5 +1,7 @@
 // src/core/data/managers/DatasetManagerAdapter.js
 
+import { dataset as log } from "@Utils/logger.js";
+
 /**
  * DatasetManagerAdapter
  *
@@ -25,7 +27,7 @@ export class DatasetManagerAdapter {
     // This helps with debugging and understanding cache state
     this._hashRegistry = new Map(); // hash → { filename, timestamp }
 
-    console.log("🔌 DatasetManagerAdapter: Created");
+    log.debug("DatasetManagerAdapter created");
   }
 
   /**
@@ -33,14 +35,14 @@ export class DatasetManagerAdapter {
    * This ensures the underlying cache is ready
    */
   async initialize() {
-    console.log("🔌 DatasetManagerAdapter: Initializing...");
+    log.debug("DatasetManagerAdapter initializing...");
 
     // Your dataCache initializes on first use, but we can trigger it explicitly
     if (this._cache.initDB && typeof this._cache.initDB === "function") {
       await this._cache.initDB();
     }
 
-    console.log("✅ DatasetManagerAdapter: Ready");
+    log.debug("DatasetManagerAdapter ready");
   }
 
   /**
@@ -52,7 +54,7 @@ export class DatasetManagerAdapter {
    * @returns {Promise<string>} - Hash of the stored file (used as cache key)
    */
   async storeFile(file) {
-    console.log(`🔌 Adapter: Storing file "${file.name}"`);
+    log.debug(`Adapter storing file: ${file.name}`);
 
     try {
       // Call your existing dataCache.storeDataset()
@@ -66,14 +68,12 @@ export class DatasetManagerAdapter {
         timestamp: Date.now(),
       });
 
-      console.log(
-        `✅ Adapter: File stored with hash ${hash.substring(0, 16)}...`
-      );
+      log.debug(`Adapter file stored with hash ${hash.substring(0, 16)}...`);
 
       // Return the hash - this becomes the file reference in Dataset objects
       return hash;
     } catch (error) {
-      console.error("❌ Adapter: Failed to store file:", error);
+      log.error("Adapter failed to store file:", error);
       throw error;
     }
   }
@@ -87,8 +87,8 @@ export class DatasetManagerAdapter {
    * @returns {Promise<File>} - The original file object
    */
   async getFile(cacheKey) {
-    console.log(
-      `🔌 Adapter: Retrieving file with key ${cacheKey.substring(0, 16)}...`
+    log.debug(
+      `Adapter retrieving file with key ${cacheKey.substring(0, 16)}...`
     );
 
     try {
@@ -97,8 +97,8 @@ export class DatasetManagerAdapter {
       const cached = await this._cache.getDataset(cacheKey);
 
       if (!cached) {
-        console.warn(
-          `⚠️ Adapter: File not found for key ${cacheKey.substring(0, 16)}...`
+        log.warn(
+          `Adapter file not found for key ${cacheKey.substring(0, 16)}...`
         );
         return null;
       }
@@ -111,11 +111,11 @@ export class DatasetManagerAdapter {
         lastModified: cached.storedAt,
       });
 
-      console.log(`✅ Adapter: File retrieved: "${cached.name}"`);
+      log.debug(`Adapter file retrieved: ${cached.name}`);
 
       return file;
     } catch (error) {
-      console.error("❌ Adapter: Failed to retrieve file:", error);
+      log.error("Adapter failed to retrieve file:", error);
       throw error;
     }
   }
@@ -130,7 +130,7 @@ export class DatasetManagerAdapter {
     try {
       return await this._cache.hasDataset(cacheKey);
     } catch (error) {
-      console.error("❌ Adapter: Error checking file existence:", error);
+      log.error("Adapter error checking file existence:", error);
       return false;
     }
   }
@@ -144,9 +144,7 @@ export class DatasetManagerAdapter {
    * @returns {Promise<boolean>} - Whether removal was successful
    */
   async removeFile(cacheKey) {
-    console.log(
-      `🔌 Adapter: Removing file with key ${cacheKey.substring(0, 16)}...`
-    );
+    log.debug(`Adapter removing file with key ${cacheKey.substring(0, 16)}...`);
 
     try {
       const result = await this._cache.deleteDataset(cacheKey);
@@ -154,11 +152,11 @@ export class DatasetManagerAdapter {
       // Clean up our tracking registry
       this._hashRegistry.delete(cacheKey);
 
-      console.log(`✅ Adapter: File removed`);
+      log.debug("Adapter file removed");
 
       return result;
     } catch (error) {
-      console.error("❌ Adapter: Failed to remove file:", error);
+      log.error("Adapter failed to remove file:", error);
       throw error;
     }
   }
@@ -187,7 +185,7 @@ export class DatasetManagerAdapter {
 
       return stats;
     } catch (error) {
-      console.error("❌ Adapter: Failed to get stats:", error);
+      log.error("Adapter failed to get stats:", error);
       return {
         count: 0,
         totalSize: 0,
@@ -214,14 +212,14 @@ export class DatasetManagerAdapter {
    * @returns {Promise<boolean>} - Whether clear was successful
    */
   async clearAll() {
-    console.warn("🔌 Adapter: Clearing all cached files!");
+    log.warn("Adapter clearing all cached files!");
 
     try {
       const result = await this._cache.clearAll();
       this._hashRegistry.clear();
       return result;
     } catch (error) {
-      console.error("❌ Adapter: Failed to clear cache:", error);
+      log.error("Adapter failed to clear cache:", error);
       return false;
     }
   }
@@ -242,11 +240,11 @@ export class DatasetManagerAdapter {
    * the real-time synchronization of dataset metadata and state between users.
    */
   async syncDatasetsFromServer() {
-    console.log("📡 DatasetManager: Syncing datasets from server...");
+    log.debug("DatasetManager syncing datasets from server...");
 
     // Check if we're using server storage
     if (!this.storageProvider || !this.storageProvider.listDatasets) {
-      console.log("   ℹ️ Not using server storage, skipping sync");
+      log.debug("Not using server storage, skipping sync");
       return;
     }
 
@@ -254,7 +252,7 @@ export class DatasetManagerAdapter {
       // Get the list of datasets from the server
       const serverDatasets = await this.storageProvider.listDatasets();
 
-      console.log(`   Found ${serverDatasets.length} dataset(s) on server`);
+      log.debug(`Found ${serverDatasets.length} dataset(s) on server`);
 
       let syncedCount = 0;
       let skippedCount = 0;
@@ -269,9 +267,7 @@ export class DatasetManagerAdapter {
           continue;
         }
 
-        console.log(
-          `   📥 Creating dataset from server: ${serverDataset.filename}`
-        );
+        log.debug(`Creating dataset from server: ${serverDataset.filename}`);
 
         // Create a Dataset object from the server metadata
         // The file itself stays on the server until someone actually needs to view it
@@ -305,8 +301,8 @@ export class DatasetManagerAdapter {
         syncedCount++;
       }
 
-      console.log(
-        `   ✅ Synced ${syncedCount} new dataset(s), skipped ${skippedCount} existing`
+      log.debug(
+        `Synced ${syncedCount} new dataset(s), skipped ${skippedCount} existing`
       );
 
       // After syncing from server, sync the metadata to Y.js so other users see it
@@ -318,7 +314,7 @@ export class DatasetManagerAdapter {
         skipped: skippedCount,
       };
     } catch (error) {
-      console.error("❌ DatasetManager: Server sync failed:", error);
+      log.error("DatasetManager server sync failed:", error);
       throw error;
     }
   }

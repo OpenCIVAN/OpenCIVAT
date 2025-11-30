@@ -9,6 +9,7 @@ import {
   onCursorUpdate,
   onCursorRemove,
 } from "@Collaboration/presence/cursors.js";
+import { cursor as log } from "@Utils/logger.js";
 
 class VTKInstanceCursors {
   constructor() {
@@ -26,7 +27,7 @@ class VTKInstanceCursors {
    * @param {HTMLElement} container - VTK container element
    */
   setupInstanceCursors(instanceId, container) {
-    console.log(`🖱️ Setting up cursors for instance: ${instanceId}`);
+    log.debug(`Setting up cursors for instance: ${instanceId}`);
 
     // Create cursor map for this instance
     if (!this.cursorElements.has(instanceId)) {

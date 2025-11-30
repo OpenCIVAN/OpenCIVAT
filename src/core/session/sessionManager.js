@@ -2,6 +2,7 @@
 // Centralized management of session identity and routing
 // This is the single source of truth for "which room am I in?"
 import { config } from "@Core/config/clientConfig.js";
+import { auth as log } from "@Utils/logger.js";
 
 class SessionManager {
   constructor() {
@@ -23,7 +24,7 @@ class SessionManager {
     if (pathMatch) {
       this.roomId = pathMatch[1];
       this.roomName = this.roomId; // For now, ID and name are the same
-      console.log(`🏠 Session initialized from URL path: ${this.roomId}`);
+      log.info(`Session initialized from URL path: ${this.roomId}`);
       return this.roomId;
     }
 
@@ -33,7 +34,7 @@ class SessionManager {
     if (roomParam) {
       this.roomId = roomParam;
       this.roomName = roomParam;
-      console.log(`🏠 Session initialized from query param: ${this.roomId}`);
+      log.info(`Session initialized from query param: ${this.roomId}`);
       return this.roomId;
     }
 
@@ -42,7 +43,7 @@ class SessionManager {
     if (savedRoom) {
       this.roomId = savedRoom;
       this.roomName = savedRoom;
-      console.log(`🏠 Session initialized from localStorage: ${this.roomId}`);
+      log.info(`Session initialized from localStorage: ${this.roomId}`);
       return this.roomId;
     }
 
@@ -50,7 +51,7 @@ class SessionManager {
     // Use demo project ID from config (server-compatible UUID)
     this.roomId = config.defaultSessionId;
     this.roomName = "Demo Project";
-    console.log(`🏠 Session initialized with default room: ${this.roomId}`);
+    log.info(`Session initialized with default room: ${this.roomId}`);
 
     return this.roomId;
   }
@@ -82,7 +83,7 @@ class SessionManager {
    */
   setRoomDisplayName(displayName) {
     this.roomName = displayName;
-    console.log(`🏷️ Room display name updated: ${displayName}`);
+    log.debug(`Room display name updated: ${displayName}`);
   }
 
   /**
@@ -108,7 +109,7 @@ class SessionManager {
 
     // For now, we need to reload to reconnect Y.js
     // In the future, you might implement hot room switching
-    console.log(`🔄 Switching to room: ${newRoomId}`);
+    log.info(`Switching to room: ${newRoomId}`);
     window.location.reload();
   }
 
@@ -134,7 +135,7 @@ class SessionManager {
   setUserInfo(userId, email) {
     this.userId = userId;
     this.userEmail = email;
-    console.log(`👤 User info set: ${email} (${userId})`);
+    log.debug(`User info set: ${email} (${userId})`);
   }
 
   /**

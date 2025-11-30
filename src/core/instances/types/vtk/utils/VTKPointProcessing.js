@@ -1,6 +1,7 @@
 // src/core/instances/types/vtk/utils/VTKPointProcessing.js
 
 import { logProgress, logSuccess } from "@UI/react/hooks/useLogging.js";
+import { render as log } from "@Utils/logger.js";
 
 /**
  * VTK Point Processing Utilities
@@ -106,7 +107,7 @@ export function clonePolydata(polydata) {
     throw new Error("Cannot clone null polydata");
   }
 
-  console.log("🔄 Cloning polydata for backup...");
+  log.debug("Cloning polydata for backup...");
 
   // Import VTK factories
   const vtkPolyData =
@@ -153,6 +154,6 @@ export function clonePolydata(polydata) {
     cloned.setLines(newLines);
   }
 
-  console.log("  ✓ Polydata cloned successfully");
+  log.debug("Polydata cloned successfully");
   return cloned;
 }

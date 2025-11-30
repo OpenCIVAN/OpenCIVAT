@@ -1,5 +1,7 @@
 // src/core/data/providers/ServerStorageProvider.js
 
+import { files as log } from "@Utils/logger.js";
+
 /**
  * ServerStorageProvider
  *
@@ -34,7 +36,7 @@ export class ServerStorageProvider {
     // Maps datasetId -> { filename, hash, size, etc. }
     this._metadata = new Map();
 
-    console.log("📡 ServerStorageProvider: Created");
+    log.debug("ServerStorageProvider created");
   }
 
   /**
@@ -42,7 +44,7 @@ export class ServerStorageProvider {
    * This could load existing datasets from the server to populate our cache
    */
   async initialize() {
-    console.log("📡 ServerStorageProvider: Initializing...");
+    log.debug("ServerStorageProvider initializing...");
 
     try {
       // Load existing datasets for this session
@@ -56,11 +58,11 @@ export class ServerStorageProvider {
         this._metadata.set(dataset.id, dataset);
       }
 
-      console.log(
-        `✅ ServerStorageProvider: Loaded ${datasets.length} existing datasets`
+      log.debug(
+        `ServerStorageProvider loaded ${datasets.length} existing datasets`
       );
     } catch (error) {
-      console.error("❌ ServerStorageProvider: Initialization failed:", error);
+      log.error("ServerStorageProvider initialization failed:", error);
 
       // Re-throw so the fallback logic in initializeStorageProvider can catch it
       throw new Error(`Failed to initialize server storage: ${error.message}`);
@@ -77,14 +79,14 @@ export class ServerStorageProvider {
    * @returns {Promise<string>} - Dataset ID (used as cache key)
    */
   async storeFile(file) {
-    console.log(`📡 ServerStorageProvider: Uploading file "${file.name}"`);
+    log.debug(`ServerStorageProvider uploading file: ${file.name}`);
 
     try {
       const hash = await this.calculateHash(file);
 
       if (this._hashToId.has(hash)) {
         const existingId = this._hashToId.get(hash);
-        console.log(`  ✓ File already exists with ID ${existingId}`);
+        log.debug(`File already exists with ID ${existingId}`);
         return existingId;
       }
 
@@ -103,20 +105,17 @@ export class ServerStorageProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(
-          `❌ Upload failed with status ${response.status}:`,
-          errorText
-        );
+        log.error(`Upload failed with status ${response.status}:`, errorText);
         throw new Error(`Upload failed: ${response.statusText}`);
       }
 
       const responseData = await response.json();
-      console.log("📦 Server response:", responseData);
+      log.trace("Server response:", responseData);
 
       const { file: dataset } = responseData;
 
       if (!dataset) {
-        console.error("❌ No file object in response:", responseData);
+        log.error("No file object in response:", responseData);
         throw new Error("Server response missing 'file' object");
       }
 
@@ -129,12 +128,10 @@ export class ServerStorageProvider {
         },
       });
 
-      console.log(
-        `✅ ServerStorageProvider: File uploaded with ID ${dataset.id}`
-      );
+      log.debug(`ServerStorageProvider file uploaded with ID ${dataset.id}`);
       return dataset.id;
     } catch (error) {
-      console.error("❌ ServerStorageProvider: Upload failed:", error);
+      log.error("ServerStorageProvider upload failed:", error);
       throw error;
     }
   }
@@ -146,7 +143,7 @@ export class ServerStorageProvider {
    * @returns {Promise<File>} - The file object
    */
   async getFile(cacheKey) {
-    console.log(`📡 ServerStorageProvider: Downloading file ${cacheKey}`);
+    log.debug(`ServerStorageProvider downloading file: ${cacheKey}`);
 
     try {
       // Use correct download endpoint: /api/files/:id/download
@@ -156,7 +153,7 @@ export class ServerStorageProvider {
 
       if (!response.ok) {
         if (response.status === 404) {
-          console.warn(`⚠️ ServerStorageProvider: File not found: ${cacheKey}`);
+          log.warn(`ServerStorageProvider file not found: ${cacheKey}`);
           return null;
         }
         throw new Error(`Download failed: ${response.statusText}`);
@@ -174,10 +171,10 @@ export class ServerStorageProvider {
           : Date.now(),
       });
 
-      console.log(`✅ ServerStorageProvider: File downloaded: "${filename}"`);
+      log.debug(`ServerStorageProvider file downloaded: ${filename}`);
       return file;
     } catch (error) {
-      console.error("❌ ServerStorageProvider: Download failed:", error);
+      log.error("ServerStorageProvider download failed:", error);
       throw error;
     }
   }
@@ -199,10 +196,7 @@ export class ServerStorageProvider {
       );
       return response.ok;
     } catch (error) {
-      console.error(
-        "❌ ServerStorageProvider: Error checking file existence:",
-        error
-      );
+      log.error("ServerStorageProvider error checking file existence:", error);
       return false;
     }
   }
@@ -214,7 +208,7 @@ export class ServerStorageProvider {
    * @returns {Promise<boolean>}
    */
   async removeFile(cacheKey) {
-    console.log(`📡 ServerStorageProvider: Removing file ${cacheKey}`);
+    log.debug(`ServerStorageProvider removing file: ${cacheKey}`);
 
     try {
       // Find and remove hash mapping
@@ -232,11 +226,11 @@ export class ServerStorageProvider {
       // In the future, this would call DELETE /api/files/:id
       // For now, files stay on server (which is safer during development)
 
-      console.log(`✅ ServerStorageProvider: File removed from local tracking`);
+      log.debug("ServerStorageProvider file removed from local tracking");
 
       return true;
     } catch (error) {
-      console.error("❌ ServerStorageProvider: Removal failed:", error);
+      log.error("ServerStorageProvider removal failed:", error);
       return false;
     }
   }
@@ -263,7 +257,7 @@ export class ServerStorageProvider {
    * @returns {Promise<Array>} Array of dataset metadata
    */
   async listDatasets() {
-    console.log("📡 ServerStorageProvider: Listing datasets from server");
+    log.debug("ServerStorageProvider listing datasets from server");
 
     try {
       // Use the correct server route: /api/projects/:projectId/files
@@ -288,14 +282,11 @@ export class ServerStorageProvider {
       const data = await response.json();
       const datasets = data.files || [];
 
-      console.log(`   ✓ Retrieved ${datasets.length} datasets from server`);
+      log.debug(`Retrieved ${datasets.length} datasets from server`);
 
       return datasets;
     } catch (error) {
-      console.error(
-        "❌ ServerStorageProvider: Failed to list datasets:",
-        error
-      );
+      log.error("ServerStorageProvider failed to list datasets:", error);
       throw error;
     }
   }
@@ -320,7 +311,7 @@ export class ServerStorageProvider {
         })),
       };
     } catch (error) {
-      console.error("❌ ServerStorageProvider: Failed to get stats:", error);
+      log.error("ServerStorageProvider failed to get stats:", error);
       return {
         count: 0,
         totalSize: 0,
@@ -344,10 +335,10 @@ export class ServerStorageProvider {
    * WARNING: Destructive!
    */
   async clearAll() {
-    console.warn(
-      "📡 ServerStorageProvider: Clear operation not implemented on server"
+    log.warn(
+      "ServerStorageProvider: Clear operation not implemented on server"
     );
-    console.warn("   Clearing local tracking only");
+    log.warn("Clearing local tracking only");
 
     this._hashToId.clear();
     this._metadata.clear();

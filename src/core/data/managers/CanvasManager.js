@@ -9,6 +9,7 @@
 
 import { WorkspaceCanvas } from "@Core/data/models/WorkspaceCanvas.js";
 import { CanvasPlacement } from "@Core/data/models/CanvasPlacement.js";
+import { workspace as log } from "@Utils/logger.js";
 
 /**
  * CanvasManager - Manages workspace canvases with server sync
@@ -58,7 +59,7 @@ export class CanvasManager {
     if (options.apiBaseUrl) this._apiBaseUrl = options.apiBaseUrl;
     if (options.sessionManager) this._sessionManager = options.sessionManager;
 
-    console.log("CanvasManager: Initialized");
+    log.debug("CanvasManager initialized");
   }
 
   /**
@@ -486,7 +487,7 @@ export class CanvasManager {
    * @param {Object} message - { type, canvasId, placement, ... }
    */
   handleServerBroadcast(message) {
-    console.log("CanvasManager: Received broadcast", message.type);
+    log.debug("CanvasManager received broadcast:", message.type);
 
     switch (message.type) {
       case "canvas:created":
@@ -514,7 +515,7 @@ export class CanvasManager {
         break;
 
       default:
-        console.warn("CanvasManager: Unknown broadcast type", message.type);
+        log.warn("CanvasManager: Unknown broadcast type", message.type);
     }
   }
 
@@ -631,7 +632,7 @@ export class CanvasManager {
         try {
           cb(data);
         } catch (error) {
-          console.error(`CanvasManager event error (${event}):`, error);
+          log.error(`CanvasManager event error (${event}):`, error);
         }
       });
     }

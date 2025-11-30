@@ -2,6 +2,7 @@
 // VR Avatars - Show User Representations in VR
 // ----------------------------------------------------------------------------
 
+import { vr as log } from "@Utils/logger.js";
 import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
 import vtkMapper from "@kitware/vtk.js/Rendering/Core/Mapper";
@@ -21,16 +22,16 @@ class VRAvatarSystem {
   }
 
   initialize() {
-    console.log("VR avatar system initialized (placeholder)");
+    log.debug("VR avatar system initialized (placeholder)");
 
     // TODO: Implement actual avatar tracking with WebXR poses
     // For now, just log when mode changes
     vrModeManager.onModeChange((mode) => {
       if (mode === "vr") {
-        console.log("VR mode: Would create avatars here");
+        log.debug("VR mode: Would create avatars here");
         // this.createLocalAvatar();
       } else {
-        console.log("Desktop mode: Would remove avatars here");
+        log.debug("Desktop mode: Would remove avatars here");
         // this.removeLocalAvatar();
       }
     });
@@ -42,10 +43,10 @@ class VRAvatarSystem {
 
         if (change.action === "add" || change.action === "update") {
           const avatarData = yAvatars.get(userId);
-          console.log("Remote avatar update:", userId, avatarData);
+          log.debug("Remote avatar update:", userId, avatarData);
           // this.updateRemoteAvatar(userId, avatarData);
         } else if (change.action === "delete") {
-          console.log("Remote avatar removed:", userId);
+          log.debug("Remote avatar removed:", userId);
           // this.removeRemoteAvatar(userId);
         }
       });
@@ -54,15 +55,15 @@ class VRAvatarSystem {
 
   // Placeholder methods for future implementation
   createLocalAvatar() {
-    console.log("TODO: Create local VR avatar");
+    log.debug("TODO: Create local VR avatar");
   }
 
   removeLocalAvatar() {
-    console.log("TODO: Remove local VR avatar");
+    log.debug("TODO: Remove local VR avatar");
   }
 
   updateRemoteAvatar(userId, avatarData) {
-    console.log("TODO: Update remote avatar:", userId);
+    log.debug("TODO: Update remote avatar:", userId);
   }
 
   hexToRgb(hex) {

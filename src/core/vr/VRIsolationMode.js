@@ -9,6 +9,8 @@
 // - Other VR users appear as avatars in the same space
 // - Desktop users' cursors visible as floating rays/dots
 
+import { vr as log } from "@Utils/logger.js";
+
 /**
  * VRIsolationMode - Room-scale single view mode
  *
@@ -61,7 +63,7 @@ export class VRIsolationMode {
    * @param {Object} options - Isolation options
    */
   isolateView(viewConfig, options = {}) {
-    console.log(
+    log.debug(
       `VRIsolationMode.isolateView(${viewConfig.id}) - STUB: Not fully implemented`
     );
 
@@ -99,19 +101,17 @@ export class VRIsolationMode {
       });
     }, 500);
 
-    console.log(
-      `Isolated view: ${viewConfig.id} at scale ${this._currentScale}`
-    );
+    log.debug(`Isolated view: ${viewConfig.id} at scale ${this._currentScale}`);
   }
 
   /**
    * Return to grid view
    */
   returnToGrid() {
-    console.log("VRIsolationMode.returnToGrid() - STUB: Not fully implemented");
+    log.debug("VRIsolationMode.returnToGrid() - STUB: Not fully implemented");
 
     if (!this._isolatedViewId) {
-      console.warn("Not in isolation mode");
+      log.warn("Not in isolation mode");
       return;
     }
 
@@ -140,7 +140,7 @@ export class VRIsolationMode {
       });
     }, 500);
 
-    console.log("Returning to grid view");
+    log.debug("Returning to grid view");
   }
 
   // ===========================================================================
@@ -214,7 +214,7 @@ export class VRIsolationMode {
    * @returns {Object} - { x, y, z } world position for the cursor dot
    */
   projectDesktopCursor(userId, screenPos, viewBounds) {
-    console.log(
+    log.trace(
       "VRIsolationMode.projectDesktopCursor() - STUB: Not fully implemented"
     );
 
@@ -239,7 +239,7 @@ export class VRIsolationMode {
    * @returns {Object|null} - Intersection point or null
    */
   getControllerIntersection(ray) {
-    console.log(
+    log.trace(
       "VRIsolationMode.getControllerIntersection() - STUB: Not fully implemented"
     );
 
@@ -342,7 +342,7 @@ export class VRIsolationMode {
         try {
           cb(data);
         } catch (error) {
-          console.error(`VRIsolationMode event error (${event}):`, error);
+          log.error(`VRIsolationMode event error (${event}):`, error);
         }
       });
     }

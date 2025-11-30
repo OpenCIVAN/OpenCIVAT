@@ -3,6 +3,7 @@
 // Connects to WorkspaceManager and provides React-friendly interface
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { ui as log } from "@Utils/logger.js";
 import { workspaceManager } from "@Core/data/managers/WorkspaceManager.js";
 import { WorkspaceType } from "@Core/data/models/Workspace.js";
 
@@ -109,7 +110,7 @@ export function useWorkspaces({ userId, projectId } = {}) {
           workspaceManager.setActiveWorkspace(personal.getEffectiveId());
         }
       } catch (err) {
-        console.error("Failed to load workspaces:", err);
+        log.error("Failed to load workspaces:", err);
         setError(err.message);
       } finally {
         setIsLoading(false);
@@ -122,7 +123,7 @@ export function useWorkspaces({ userId, projectId } = {}) {
   // Subscribe to workspace changes
   useEffect(() => {
     const handleChange = (event, data) => {
-      console.log("🏢 Workspace event:", event, data);
+      log.debug("Workspace event:", event, data);
 
       // Refresh workspace list on changes
       const refreshWorkspaces = () => {

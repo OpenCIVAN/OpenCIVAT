@@ -8,6 +8,7 @@ import {
   WorkspaceType,
   WorkspacePermission,
 } from "../models/Workspace.js";
+import { workspace as log } from "@Utils/logger.js";
 
 /**
  * WorkspaceManager - Manages workspace hierarchy
@@ -45,7 +46,7 @@ class WorkspaceManagerClass {
       try {
         listener(event, data);
       } catch (err) {
-        console.error("WorkspaceManager listener error:", err);
+        log.error("WorkspaceManager listener error:", err);
       }
     });
   }

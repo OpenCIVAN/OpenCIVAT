@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
+import { sync as log } from "@Utils/logger.js";
 import { textChat } from "@Collaboration/communication/textChat.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { provider } from "@Collaboration/yjs/yjsSetup.js";
@@ -19,8 +20,8 @@ export function TextChatPanel() {
 
   const refreshMessages = () => {
     const allMessages = textChat.getMessages();
-    console.log("📨 Refreshing messages, count:", allMessages.length);
-    setMessages([...allMessages]); // ✅ Force new array reference for React
+    log.debug("Refreshing messages, count:", allMessages.length);
+    setMessages([...allMessages]); // Force new array reference for React
     setIsLoading(false);
     setTimeout(scrollToBottom, 100);
   };
@@ -29,17 +30,17 @@ export function TextChatPanel() {
     // Initialize text chat system
     textChat.initialize();
 
-    // ✅ CRITICAL FIX: Use textChat's event system instead of direct Y.js observer
+    // CRITICAL FIX: Use textChat's event system instead of direct Y.js observer
     // This properly triggers React state updates
     const handleNewMessage = (message) => {
-      console.log("📬 New message received:", message);
+      log.debug("New message received:", message);
       // Force re-fetch all messages to ensure React sees the change
       setMessages([...textChat.getMessages()]);
       setTimeout(scrollToBottom, 50);
     };
 
     const handleDelete = () => {
-      console.log("🗑️ Message deleted");
+      log.debug("Message deleted");
       setMessages([...textChat.getMessages()]);
     };
 
@@ -52,7 +53,7 @@ export function TextChatPanel() {
 
     const handleSync = (synced) => {
       if (synced) {
-        console.log("🔄 Y.js synced, loading initial messages...");
+        log.debug("Y.js synced, loading initial messages...");
         clearTimeout(syncTimeout);
         setTimeout(() => {
           refreshMessages();
@@ -64,7 +65,7 @@ export function TextChatPanel() {
 
     // Fallback timeout
     syncTimeout = setTimeout(() => {
-      console.log("⏰ Sync timeout, loading messages anyway");
+      log.debug("Sync timeout, loading messages anyway");
       refreshMessages();
     }, 3000);
 
@@ -87,7 +88,7 @@ export function TextChatPanel() {
         inputRef.current?.focus();
         // No need to manually update state - the onMessage callback will handle it
       } catch (error) {
-        console.error("Error sending message:", error);
+        log.error("Error sending message:", error);
         toast.error("Failed to send message. Check console for details.");
       }
     }

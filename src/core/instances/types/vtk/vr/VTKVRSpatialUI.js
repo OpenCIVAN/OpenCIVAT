@@ -2,6 +2,7 @@
 // VR Spatial UI - 3D Floating Panels in VR
 // ----------------------------------------------------------------------------
 
+import { vr as log } from "@Utils/logger.js";
 import { vrModeManager } from "@VR/vrModeManager.js";
 
 class VRSpatialUI {
@@ -10,14 +11,14 @@ class VRSpatialUI {
   }
 
   initialize() {
-    console.log("VR spatial UI initialized (placeholder)");
+    log.debug("VR spatial UI initialized (placeholder)");
 
     vrModeManager.onModeChange((mode) => {
       if (mode === "vr") {
-        console.log("VR mode: Would create spatial UI here");
+        log.debug("VR mode: Would create spatial UI here");
         // this.createVRMenus();
       } else {
-        console.log("Desktop mode: Would cleanup spatial UI here");
+        log.debug("Desktop mode: Would cleanup spatial UI here");
         // this.cleanupVRMenus();
       }
     });
@@ -25,11 +26,11 @@ class VRSpatialUI {
 
   // Placeholder methods
   createVRMenus() {
-    console.log("TODO: Create VR spatial menus");
+    log.debug("TODO: Create VR spatial menus");
   }
 
   cleanupVRMenus() {
-    console.log("TODO: Cleanup VR spatial menus");
+    log.debug("TODO: Cleanup VR spatial menus");
   }
 }
 

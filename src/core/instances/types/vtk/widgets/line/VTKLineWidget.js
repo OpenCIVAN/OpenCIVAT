@@ -1,3 +1,4 @@
+import { render as log } from "@Utils/logger.js";
 import VtkJsLineWidget from "@kitware/vtk.js/Widgets/Widgets3D/LineWidget";
 import VtkJsSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 
@@ -12,11 +13,11 @@ export class VTKLineWidget {
 
   initialize(instanceId, config) {
     if (this.instances.has(instanceId)) {
-      console.warn(`⚠️ Line widget already exists for ${instanceId}`);
+      log.warn(`Line widget already exists for ${instanceId}`);
       return;
     }
 
-    console.log(`📏 Initializing line measurement for ${instanceId}`);
+    log.debug(`Initializing line measurement for ${instanceId}`);
 
     const { widgetManager, sceneObjects } = config;
 
@@ -80,7 +81,7 @@ export class VTKLineWidget {
             Math.pow(p2[2] - p1[2], 2)
         );
 
-        console.log(`📏 Line measurement: ${distance.toFixed(2)} units`);
+        log.trace(`Line measurement: ${distance.toFixed(2)} units`);
 
         sceneObjects.renderWindow.render();
       });
@@ -97,9 +98,9 @@ export class VTKLineWidget {
       // Force initial render
       sceneObjects.renderWindow.render();
 
-      console.log(`✅ Line widget created for ${instanceId}`);
+      log.debug(`Line widget created for ${instanceId}`);
     } catch (error) {
-      console.error(`❌ Error initializing line widget:`, error);
+      log.error(`Error initializing line widget:`, error);
     }
   }
 
@@ -111,7 +112,7 @@ export class VTKLineWidget {
     const widgetData = this.instances.get(instanceId);
     if (!widgetData) return;
 
-    console.log(`🧹 Cleaning up line widget for ${instanceId}`);
+    log.debug(`Cleaning up line widget for ${instanceId}`);
 
     const { widget, handle, widgetManager, sceneObjects } = widgetData;
 
@@ -127,11 +128,11 @@ export class VTKLineWidget {
     // Remove from storage
     this.instances.delete(instanceId);
 
-    console.log(`✅ Line widget cleaned up for ${instanceId}`);
+    log.debug(`Line widget cleaned up for ${instanceId}`);
   }
 
   destroy() {
-    console.log(`🧹 Destroying all line widgets`);
+    log.debug(`Destroying all line widgets`);
     this.instances.forEach((widgetData, instanceId) => {
       this.cleanup(instanceId);
     });

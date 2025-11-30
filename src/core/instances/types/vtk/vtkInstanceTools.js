@@ -1,6 +1,7 @@
 // src/core/instances/types/vtk/vtkInstanceTools.js
 // REFACTORED: Thin coordination layer - No widget creation duplication!
 
+import { instance as log } from "@Utils/logger.js";
 import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
 import vtkWidgetManager from "@kitware/vtk.js/Widgets/Core/WidgetManager";
 
@@ -36,11 +37,11 @@ class InstanceToolsManager {
    */
   initializeTools(instanceId, sceneObjects) {
     if (this.instanceTools.has(instanceId)) {
-      console.warn(`⚠️ Tools already initialized for instance: ${instanceId}`);
+      log.warn(`Tools already initialized for instance: ${instanceId}`);
       return;
     }
 
-    console.log(`🛠️ Initializing tools for instance: ${instanceId}`);
+    log.debug(`Initializing tools for instance: ${instanceId}`);
 
     const tools = {
       instanceId,
@@ -58,7 +59,7 @@ class InstanceToolsManager {
     tools.widgetManager.setRenderer(sceneObjects.renderer);
 
     this.instanceTools.set(instanceId, tools);
-    console.log(`✅ Tools initialized for instance: ${instanceId}`);
+    log.debug(`Tools initialized for instance: ${instanceId}`);
   }
 
   // ==========================================================================
@@ -79,7 +80,7 @@ class InstanceToolsManager {
       case "angle":
         return vtkAngleWidget.isEnabled(instanceId);
       default:
-        console.warn(`Unknown widget type: ${widgetType}`);
+        log.warn(`Unknown widget type: ${widgetType}`);
         return false;
     }
   }
@@ -96,7 +97,7 @@ class InstanceToolsManager {
    * Clean up tools for an instance
    */
   cleanupTools(instanceId) {
-    console.log(`🧹 Cleaning up tools for instance: ${instanceId}`);
+    log.debug(`Cleaning up tools for instance: ${instanceId}`);
 
     // Clean up all widgets first
     vtkPlaneWidget.cleanup(instanceId);
@@ -107,7 +108,7 @@ class InstanceToolsManager {
     // Clean up tools
     this.instanceTools.delete(instanceId);
 
-    console.log(`✅ Tools cleaned up for instance: ${instanceId}`);
+    log.debug(`Tools cleaned up for instance: ${instanceId}`);
   }
 
   // ==========================================================================
@@ -193,7 +194,7 @@ class InstanceToolsManager {
 
     const config = views[view];
     if (!config) {
-      console.warn(`Unknown camera view: ${view}`);
+      log.warn(`Unknown camera view: ${view}`);
       return;
     }
 
@@ -208,7 +209,7 @@ class InstanceToolsManager {
     // Render
     renderWindow.render();
 
-    console.log(`📷 Camera set to ${view} view for instance: ${instanceId}`);
+    log.trace(`Camera set to ${view} view for instance: ${instanceId}`);
   }
 
   /**
@@ -227,7 +228,7 @@ class InstanceToolsManager {
     // Render
     renderWindow.render();
 
-    console.log(`📷 Camera reset for instance: ${instanceId}`);
+    log.trace(`Camera reset for instance: ${instanceId}`);
   }
 
   /**
@@ -288,7 +289,7 @@ class InstanceToolsManager {
     // Render
     renderWindow.render();
 
-    console.log(`📷 Camera state applied for instance: ${instanceId}`);
+    log.trace(`Camera state applied for instance: ${instanceId}`);
   }
 
   /* ============================================================================
@@ -316,7 +317,7 @@ class InstanceToolsManager {
     tools.sceneObjects.actor.getProperty().setOpacity(opacity);
     tools.sceneObjects.renderWindow.render();
 
-    console.log(`👁️ Opacity set to ${opacity} for instance: ${instanceId}`);
+    log.trace(`Opacity set to ${opacity} for instance: ${instanceId}`);
   }
 
   /**
@@ -344,7 +345,7 @@ class InstanceToolsManager {
 
     const representation = modeMap[mode];
     if (representation === undefined) {
-      console.warn(`Unknown representation mode: ${mode}`);
+      log.warn(`Unknown representation mode: ${mode}`);
       return;
     }
 
@@ -355,7 +356,7 @@ class InstanceToolsManager {
 
     tools.sceneObjects.renderWindow.render();
 
-    console.log(`🎨 Representation set to ${mode} for instance: ${instanceId}`);
+    log.trace(`Representation set to ${mode} for instance: ${instanceId}`);
   }
 
   /**
@@ -381,7 +382,7 @@ class InstanceToolsManager {
     tools.sceneObjects.actor.getProperty().setPointSize(size);
     tools.sceneObjects.renderWindow.render();
 
-    console.log(`⚫ Point size set to ${size} for instance: ${instanceId}`);
+    log.trace(`Point size set to ${size} for instance: ${instanceId}`);
   }
 
   /**
@@ -404,7 +405,7 @@ class InstanceToolsManager {
     tools.sceneObjects.actor.getProperty().setLineWidth(width);
     tools.sceneObjects.renderWindow.render();
 
-    console.log(`📏 Line width set to ${width}px for instance: ${instanceId}`);
+    log.trace(`Line width set to ${width}px for instance: ${instanceId}`);
   }
 
   /**
@@ -473,7 +474,7 @@ class InstanceToolsManager {
     tools.currentColormap = preset;
 
     renderWindow.render();
-    console.log(`🎨 Color map set to ${preset} for instance: ${instanceId}`);
+    log.trace(`Color map set to ${preset} for instance: ${instanceId}`);
   }
 
   /**
@@ -503,7 +504,7 @@ class InstanceToolsManager {
     if (isActive) {
       // Disable
       vtkPlaneWidget.cleanup(instanceId);
-      console.log(`✂️ Clipping plane disabled for instance: ${instanceId}`);
+      log.debug(`Clipping plane disabled for instance: ${instanceId}`);
     } else {
       // Enable
       vtkPlaneWidget.initialize(instanceId, {
@@ -511,7 +512,7 @@ class InstanceToolsManager {
         sceneObjects: tools.sceneObjects,
         placeFactor: 1.25,
       });
-      console.log(`✂️ Clipping plane enabled for instance: ${instanceId}`);
+      log.debug(`Clipping plane enabled for instance: ${instanceId}`);
     }
   }
 
@@ -528,7 +529,7 @@ class InstanceToolsManager {
     if (isActive) {
       // Disable
       vtkLineWidget.cleanup(instanceId);
-      console.log(`📏 Ruler measurement disabled for instance: ${instanceId}`);
+      log.debug(`Ruler measurement disabled for instance: ${instanceId}`);
     } else {
       // Enable
       vtkLineWidget.initialize(instanceId, {
@@ -536,10 +537,10 @@ class InstanceToolsManager {
         sceneObjects: tools.sceneObjects,
         onMeasurement: (measurement) => {
           tools.measurements.push(measurement);
-          console.log(`📏 Distance measured: ${measurement.value.toFixed(2)}`);
+          log.debug(`Distance measured: ${measurement.value.toFixed(2)}`);
         },
       });
-      console.log(`📏 Ruler measurement enabled for instance: ${instanceId}`);
+      log.debug(`Ruler measurement enabled for instance: ${instanceId}`);
     }
   }
 
@@ -556,14 +557,14 @@ class InstanceToolsManager {
     if (isActive) {
       // Disable
       vtkAngleWidget.cleanup(instanceId);
-      console.log(`📐 Angle measurement disabled for instance: ${instanceId}`);
+      log.debug(`Angle measurement disabled for instance: ${instanceId}`);
     } else {
       // Enable
       vtkAngleWidget.initialize(instanceId, {
         widgetManager: tools.widgetManager,
         sceneObjects: tools.sceneObjects,
       });
-      console.log(`📐 Angle measurement enabled for instance: ${instanceId}`);
+      log.debug(`Angle measurement enabled for instance: ${instanceId}`);
     }
   }
 
@@ -581,8 +582,8 @@ class InstanceToolsManager {
     // ✅ CRITICAL: Force render to update display immediately
     tools.sceneObjects.renderWindow.render();
 
-    console.log(
-      `🧭 Orientation ${
+    log.debug(
+      `Orientation ${
         !isActive ? "enabled" : "disabled"
       } for instance: ${instanceId}`
     );
@@ -594,7 +595,7 @@ class InstanceToolsManager {
    */
   initializeOrientationWidget(instanceId) {
     // Just for tracking - actual widget managed by vtkOrientationWidget module
-    console.log(`🧭 Orientation widget tracked for instance: ${instanceId}`);
+    log.trace(`Orientation widget tracked for instance: ${instanceId}`);
   }
 
   // ==========================================================================
@@ -632,8 +633,8 @@ class InstanceToolsManager {
     // The plane position is controlled by the user dragging the widget handles.
     // This slider just tracks the approximate position for display purposes.
 
-    console.log(
-      `✂️ Clip position tracked at ${percentage}% for instance: ${instanceId}`
+    log.trace(
+      `Clip position tracked at ${percentage}% for instance: ${instanceId}`
     );
   }
 
@@ -654,7 +655,7 @@ class InstanceToolsManager {
     tools.sceneObjects.mapper.removeAllClippingPlanes();
     tools.sceneObjects.renderWindow.render();
 
-    console.log(`✂️ Clipping reset for instance: ${instanceId}`);
+    log.debug(`Clipping reset for instance: ${instanceId}`);
   }
 
   // ==========================================================================
@@ -711,9 +712,7 @@ class InstanceToolsManager {
       tools.measurements = [];
     }
 
-    console.log(
-      `🧹 All measurement tools disabled for instance: ${instanceId}`
-    );
+    log.debug(`All measurement tools disabled for instance: ${instanceId}`);
   }
 
   /**
@@ -723,7 +722,7 @@ class InstanceToolsManager {
     this.disableMeasurementTools(instanceId);
     vtkOrientationWidget.setVisible(instanceId, false);
 
-    console.log(`🧹 All tools disabled for instance: ${instanceId}`);
+    log.debug(`All tools disabled for instance: ${instanceId}`);
   }
 }
 

@@ -2,6 +2,7 @@
 // Orientation marker widget showing XYZ axes in corner
 // Each instance gets its own orientation widget that tracks that instance's camera
 
+import { render as log } from "@Utils/logger.js";
 import vtkOrientationMarkerWidget from "@kitware/vtk.js/Interaction/Widgets/OrientationMarkerWidget";
 import vtkAnnotatedCubeActor from "@kitware/vtk.js/Rendering/Core/AnnotatedCubeActor";
 
@@ -37,16 +38,16 @@ export class VTKOrientationWidget {
   initialize(instanceId, sceneObjects, config = {}) {
     // Don't recreate if already exists for this instance
     if (this.instances.has(instanceId)) {
-      console.warn(`⚠️ Orientation widget already exists for ${instanceId}`);
+      log.warn(`Orientation widget already exists for ${instanceId}`);
       return;
     }
 
-    console.log(`🧭 Initializing orientation widget for ${instanceId}`);
+    log.debug(`Initializing orientation widget for ${instanceId}`);
 
     const { interactor } = sceneObjects;
 
     if (!interactor) {
-      console.error(`❌ No interactor available for instance ${instanceId}`);
+      log.error(`No interactor available for instance ${instanceId}`);
       return;
     }
 
@@ -83,7 +84,7 @@ export class VTKOrientationWidget {
       interactor,
     });
 
-    console.log(`✅ Orientation widget created for ${instanceId}`);
+    log.debug(`Orientation widget created for ${instanceId}`);
   }
 
   /**
@@ -166,17 +167,15 @@ export class VTKOrientationWidget {
     const widgetData = this.instances.get(instanceId);
 
     if (!widgetData) {
-      console.warn(`⚠️ No orientation widget found for ${instanceId}`);
+      log.warn(`No orientation widget found for ${instanceId}`);
       return;
     }
 
     widgetData.widget.setEnabled(visible);
     widgetData.config.enabled = visible;
 
-    console.log(
-      `🧭 Orientation widget ${
-        visible ? "enabled" : "disabled"
-      } for ${instanceId}`
+    log.debug(
+      `Orientation widget ${visible ? "enabled" : "disabled"} for ${instanceId}`
     );
   }
 
@@ -190,7 +189,7 @@ export class VTKOrientationWidget {
     const widgetData = this.instances.get(instanceId);
 
     if (!widgetData) {
-      console.warn(`⚠️ No orientation widget found for ${instanceId}`);
+      log.warn(`No orientation widget found for ${instanceId}`);
       return;
     }
 
@@ -220,7 +219,7 @@ export class VTKOrientationWidget {
       config.maxPixelSize = newConfig.maxPixelSize;
     }
 
-    console.log(`🧭 Orientation widget config updated for ${instanceId}`);
+    log.debug(`Orientation widget config updated for ${instanceId}`);
   }
 
   /**
@@ -259,7 +258,7 @@ export class VTKOrientationWidget {
       return; // Already cleaned up or never created
     }
 
-    console.log(`🧹 Cleaning up orientation widget for ${instanceId}`);
+    log.debug(`Cleaning up orientation widget for ${instanceId}`);
 
     const { widget, actor } = widgetData;
 
@@ -277,14 +276,14 @@ export class VTKOrientationWidget {
     // Remove from storage
     this.instances.delete(instanceId);
 
-    console.log(`✅ Orientation widget cleaned up for ${instanceId}`);
+    log.debug(`Orientation widget cleaned up for ${instanceId}`);
   }
 
   /**
    * Clean up all widgets (app shutdown)
    */
   destroy() {
-    console.log(`🧹 Destroying all orientation widgets`);
+    log.debug(`Destroying all orientation widgets`);
 
     this.instances.forEach((widgetData, instanceId) => {
       this.cleanup(instanceId);
@@ -292,7 +291,7 @@ export class VTKOrientationWidget {
 
     this.instances.clear();
 
-    console.log(`✅ All orientation widgets destroyed`);
+    log.debug(`All orientation widgets destroyed`);
   }
 }
 

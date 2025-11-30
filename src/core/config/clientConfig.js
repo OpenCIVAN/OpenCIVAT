@@ -11,6 +11,8 @@
 //   import { config } from '@Core/config/clientConfig.js';
 //   const response = await fetch(`${config.apiBaseUrl}/projects`);
 
+import { app as log } from "@Utils/logger.js";
+
 /**
  * Configuration object with all client settings
  * Values are resolved once at module load time
@@ -173,14 +175,14 @@ export function isDev() {
 export function logConfig() {
   if (!config.debugEnabled) return;
 
-  console.group("🔧 CIA Web Configuration");
-  console.log("API Base URL:", config.apiBaseUrl);
-  console.log("Y.js WebSocket:", config.yjsWebSocketUrl);
-  console.log("LiveKit URL:", config.liveKitUrl);
-  console.log("Development:", config.isDevelopment);
-  console.log("Debug:", config.debugEnabled);
-  console.log("Version:", config.version);
-  console.groupEnd();
+  log.debug("CIA Web Configuration:", {
+    apiBaseUrl: config.apiBaseUrl,
+    yjsWebSocketUrl: config.yjsWebSocketUrl,
+    liveKitUrl: config.liveKitUrl,
+    isDevelopment: config.isDevelopment,
+    debugEnabled: config.debugEnabled,
+    version: config.version,
+  });
 }
 
 // Log config on load in development
@@ -214,14 +216,13 @@ export const DEFAULT_SESSION_ID = config.defaultSessionId;
  * @deprecated Use logConfig() instead
  */
 export function logStorageConfig() {
-  console.log("📡 Storage Configuration:");
-  console.log(
-    `   Mode: ${
-      config.useServerStorage ? "Server (with local fallback)" : "Local only"
-    }`
-  );
-  console.log(`   API Base URL: ${config.apiBaseUrl}`);
-  console.log(`   Session ID: ${config.defaultSessionId}`);
+  log.debug("Storage Configuration:", {
+    mode: config.useServerStorage
+      ? "Server (with local fallback)"
+      : "Local only",
+    apiBaseUrl: config.apiBaseUrl,
+    sessionId: config.defaultSessionId,
+  });
 }
 
 export default config;

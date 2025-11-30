@@ -11,6 +11,7 @@
 // - Footer anchored to bottom
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { ui as log } from "@Utils/logger.js";
 import {
     FolderOpen,
     FolderPlus,
@@ -310,7 +311,7 @@ export function FilesPanelContent({
         });
     }, []);
 
-    const handleStar = useCallback((id) => console.log('Toggle star:', id), []);
+    const handleStar = useCallback((id) => log.debug('Toggle star:', id), []);
     const handleDragStart = useCallback((e, file) => {
         e.dataTransfer.setData('application/json', JSON.stringify(file));
         e.dataTransfer.effectAllowed = 'copy';
@@ -319,7 +320,7 @@ export function FilesPanelContent({
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY, file });
     }, []);
-    const handleContextAction = useCallback((action, file) => console.log('Context action:', action, file), []);
+    const handleContextAction = useCallback((action, file) => log.debug('Context action:', action, file), []);
     const toggleTypeFilter = useCallback((type) => {
         setActiveFilters(prev => ({
             ...prev,
@@ -477,7 +478,7 @@ export function FilesPanelContent({
                                             await uploadFile(file);
                                             refetch();
                                         } catch (err) {
-                                            console.error('Upload failed:', err);
+                                            log.error('Upload failed:', err);
                                         }
                                     }
                                 };

@@ -1,18 +1,19 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 
+import { ui as log } from "@Utils/logger.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 
 // Store the root instance to prevent multiple createRoot calls
 let reactRoot = null;
 
 export function mountReactUI(roomName = "default-analytics-room") {
-  console.log("🔍 Mounting React UI...");
+  log.debug("Mounting React UI...");
 
   let rootElement = document.getElementById("react-root");
 
   if (!rootElement) {
-    console.log("📦 Creating react-root element");
+    log.debug("Creating react-root element");
     rootElement = document.createElement("div");
     rootElement.id = "react-root";
     document.body.appendChild(rootElement);
@@ -20,15 +21,15 @@ export function mountReactUI(roomName = "default-analytics-room") {
 
   // If root already exists, just update it
   if (reactRoot) {
-    console.log("🔄 Updating existing React root");
+    log.debug("Updating existing React root");
     reactRoot.render(<CIAWebApp roomName={roomName} />);
   } else {
-    console.log("🆕 Creating new React root");
+    log.debug("Creating new React root");
     reactRoot = createRoot(rootElement);
     reactRoot.render(<CIAWebApp roomName={roomName} />);
   }
 
-  console.log("✅ React UI mounted successfully");
+  log.info("React UI mounted successfully");
 }
 
 // Optional: Export function to unmount React (for cleanup if needed)
@@ -42,6 +43,6 @@ export function unmountReactUI() {
       rootElement.remove();
     }
 
-    console.log("✅ React UI unmounted");
+    log.info("React UI unmounted");
   }
 }

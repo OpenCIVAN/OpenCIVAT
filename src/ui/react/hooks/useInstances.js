@@ -2,6 +2,7 @@
 // Hook to track all active instances across the workspace
 
 import { useState, useEffect } from "react";
+import { ui as log } from "@Utils/logger.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 
 /**
@@ -12,10 +13,10 @@ export function useInstances() {
   const [instances, setInstances] = useState([]);
 
   useEffect(() => {
-    console.log("🔗 useInstances: Setting up subscription");
+    log.debug("useInstances: Setting up subscription");
 
     const updateInstances = () => {
-      console.log("📊 useInstances: Updating instances");
+      log.debug("useInstances: Updating instances");
 
       // Get all instances from workspaceManager
       const allInstances = workspaceManager
@@ -41,7 +42,7 @@ export function useInstances() {
     workspaceManager.addListener(updateInstances);
 
     return () => {
-      console.log("🔗 useInstances: Cleaning up subscription");
+      log.debug("useInstances: Cleaning up subscription");
       workspaceManager.removeListener(updateInstances);
     };
   }, []);
