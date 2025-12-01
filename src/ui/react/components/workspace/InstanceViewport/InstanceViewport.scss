@@ -25,14 +25,38 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   outline: none; // Remove focus outline, we handle focus visually
 
   background: $color-bg-secondary;
-  border-radius: $radius-md;
+  border-radius: $radius-lg; // Increased for softer appearance (8px)
 
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  // Base border - subtle when inactive
+  border: 1px solid $color-border-default;
 
-  // Focus state indicator
-  &:focus-within {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2),
-      0 0 0 2px rgba($color-accent-primary, 0.3);
+  // Transition for smooth glow appearance
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  // Inactive state - inset shadow for depth, no outer glow
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
+
+  // Active state with colored outer glow
+  &--active,
+  &:focus-visible {
+    // Border uses instance color
+    border-color: rgba(var(--instance-color-rgb), 0.5);
+
+    // Outer glow effect - layered box shadows
+    box-shadow:
+      // Outer glow - soft, spread out
+      0 0 25px rgba(var(--instance-color-rgb), 0.2),
+      // Secondary glow - tighter
+      0 0 10px rgba(var(--instance-color-rgb), 0.15),
+      // Keep the inset shadow for depth
+      inset 0 0 60px rgba(0, 0, 0, 0.5);
+  }
+
+  // Focus-within also shows glow (when clicking inside)
+  &:focus-within:not(&--active) {
+    border-color: rgba(var(--instance-color-rgb), 0.3);
+    box-shadow: 0 0 15px rgba(var(--instance-color-rgb), 0.1),
+      inset 0 0 60px rgba(0, 0, 0, 0.5);
   }
 
   // UI Mode variants
@@ -46,119 +70,157 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // ============================================================================
-// HEADER - Always visible for normal viewports
+// HEADER - Blended dark overlay style
 // ============================================================================
 
 .instance-viewport__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: $spacing-sm $spacing-md;
-  @include glass-subtle;
+  padding: $spacing-xs $spacing-sm; // Compact padding
+
+  // Solid dark background so toolbar slides from behind
+  background: $color-bg-secondary;
   border-bottom: 1px solid $color-border-subtle;
+
   flex-shrink: 0;
-  min-height: 40px;
+  min-height: 32px; // Slightly shorter
   position: relative;
-  z-index: 100;
-  background: rgba($color-bg-tertiary, 0.4);
+  z-index: 100; // Higher than toolbar overlay (90)
 }
 
-.instance-viewport__header-info {
+// Instance Label Badge - colored badge with glowing dot
+.instance-viewport__label {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-  flex: 1;
-  min-width: 0;
+  gap: 6px;
+  padding: 4px 10px;
+
+  // Use instance's accent color with low opacity
+  background: rgba(var(--instance-color-rgb), 0.12);
+  border: 1px solid rgba(var(--instance-color-rgb), 0.25);
+  border-radius: $radius-sm;
+
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(var(--instance-color-rgb), 0.18);
+    border-color: rgba(var(--instance-color-rgb), 0.35);
+  }
 }
 
-.instance-viewport__header-color-dot {
-  width: 8px;
-  height: 8px;
+.instance-viewport__label-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 6px currentColor;
-}
-
-.instance-viewport__header-type-icon {
-  color: $color-text-tertiary;
+  background: var(--instance-color);
+  box-shadow: 0 0 8px var(--instance-color);
   flex-shrink: 0;
 }
 
-.instance-viewport__header-title {
-  flex: 1;
-  min-width: 0;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
+.instance-viewport__label-text {
+  font-size: $font-size-sm; // 11px
+  font-weight: $font-weight-medium;
+  color: var(--instance-color);
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.instance-viewport__header-actions {
+// Right side controls container
+.instance-viewport__header-controls {
   display: flex;
-  gap: $spacing-xs;
+  align-items: center;
+  gap: 5px;
 }
 
-.instance-viewport__header-button {
-  width: 28px;
-  height: 28px;
-  padding: $spacing-xs;
-  @include glass-button;
-  color: $color-text-secondary;
-  cursor: pointer;
+// Instance type icon in subtle container
+.instance-viewport__type-icon {
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
 
+  // Very subtle background
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+
+  svg {
+    width: 12px;
+    height: 12px;
+    color: $color-text-muted;
+  }
+}
+
+// Header buttons - subtle backlit style
+.instance-viewport__header-button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+
   &:hover {
-    @include glass-hover;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
     color: $color-text-primary;
   }
 
   &.active {
     background: rgba($color-accent-primary, 0.15);
-    border-color: rgba($color-accent-primary, 0.4);
+    border-color: rgba($color-accent-primary, 0.3);
     color: $color-accent-primary;
   }
 
   &--danger {
     &:hover {
-      background: rgba($color-error, 0.15);
-      border-color: rgba($color-error, 0.4);
+      background: rgba($color-error, 0.12);
+      border-color: rgba($color-error, 0.3);
       color: $color-error;
     }
   }
 
   svg {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     flex-shrink: 0;
   }
 }
 
 // ============================================================================
-// TOP TOOLBAR OVERLAY - Slides down on hover
+// TOP TOOLBAR OVERLAY - Slides down from behind header
 // ============================================================================
 
 .instance-viewport__toolbar-overlay {
   position: absolute;
-  top: 40px; // Just below header
+  top: 0; // Start behind header
   left: $spacing-sm;
   right: $spacing-sm;
-  z-index: 150;
+  z-index: 90; // Lower than header (100) so it slides from behind
 
-  // Hidden state
+  // Hidden state - tucked behind header
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(24px); // Partially visible behind 32px header
   pointer-events: none;
   transition: opacity $animation-duration $animation-easing,
     transform $animation-duration $animation-easing;
 
-  // Visible state
+  // Visible state - slides down from behind header
   &--visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(40px); // Fully visible below header (32px + 8px gap)
     pointer-events: auto;
   }
 
@@ -178,11 +240,26 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
   height: $toolbar-height;
-
-  @include etched-bar;
-  @include frosted-glass;
   border-radius: $radius-lg;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+
+  // Dark etched style - sunken/carved appearance
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(0, 0, 0, 0.4) 50%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+
+  // Inset shadow for sunken look + outer shadow for depth
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-top-color: rgba(0, 0, 0, 0.6);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+
+  // Subtle blur for polish
+  backdrop-filter: blur(12px);
 }
 
 .instance-toolbar__groups {
@@ -215,7 +292,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 .instance-toolbar__separator {
   width: 1px;
   height: 20px;
-  background: $color-border-default;
+  background: rgba(255, 255, 255, 0.08);
   margin: 0 $spacing-xs;
   flex-shrink: 0;
 }
@@ -229,8 +306,19 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   align-items: center;
   justify-content: center;
   position: relative;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all 0.15s ease;
 
-  @include etched-toggle($color-accent-primary, false);
+  // Dark etched toggle - inactive/sunken state
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: $color-text-tertiary;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 
   // Backlit glow effect on hover
   &::before {
@@ -240,8 +328,8 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: inherit;
     background: radial-gradient(
       ellipse at center,
-      rgba($color-accent-primary, 0.2) 0%,
-      rgba($color-accent-primary, 0.08) 40%,
+      rgba(var(--instance-color-rgb), 0.2) 0%,
+      rgba(var(--instance-color-rgb), 0.08) 40%,
       transparent 70%
     );
     filter: blur(6px);
@@ -252,12 +340,20 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   &:hover:not(:disabled) {
+    color: $color-text-primary;
+    border-color: rgba(255, 255, 255, 0.15);
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.25) 0%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
+
     &::before {
       opacity: 1;
     }
 
     svg {
-      filter: drop-shadow(0 0 3px rgba($color-accent-primary, 0.5));
+      filter: drop-shadow(0 0 3px rgba(var(--instance-color-rgb), 0.5));
     }
   }
 
@@ -266,21 +362,26 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
     cursor: not-allowed;
   }
 
+  // Active state - glowing with instance accent color
   &.active {
-    @include etched-toggle-active($color-accent-pink);
+    background: rgba(var(--instance-color-rgb), 0.15);
+    border: 1px solid rgba(var(--instance-color-rgb), 0.4);
+    color: var(--instance-color);
+    box-shadow: 0 0 12px rgba(var(--instance-color-rgb), 0.3),
+      inset 0 0 8px rgba(var(--instance-color-rgb), 0.1);
 
     &::before {
       opacity: 1;
       background: radial-gradient(
         ellipse at center,
-        rgba($color-accent-pink, 0.35) 0%,
-        rgba($color-accent-pink, 0.15) 40%,
+        rgba(var(--instance-color-rgb), 0.35) 0%,
+        rgba(var(--instance-color-rgb), 0.15) 40%,
         transparent 70%
       );
     }
 
     svg {
-      filter: drop-shadow(0 0 4px rgba($color-accent-pink, 0.7));
+      filter: drop-shadow(0 0 4px rgba(var(--instance-color-rgb), 0.6));
     }
   }
 
@@ -420,11 +521,26 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   gap: $spacing-md;
   padding: $spacing-xs $spacing-md;
   height: $toolbar-height;
-
-  @include etched-bar;
-  @include frosted-glass;
   border-radius: $radius-lg;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+
+  // Dark etched style - matching toolbar
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(0, 0, 0, 0.4) 50%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+
+  // Inset shadow for sunken look + outer shadow for depth
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-top-color: rgba(0, 0, 0, 0.6);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+
+  // Subtle blur for polish
+  backdrop-filter: blur(12px);
 }
 
 .instance-navbar__nav-buttons {

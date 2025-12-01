@@ -329,8 +329,23 @@ function TooSmallNotice({ constraintMessage, onOpenTools }) {
     );
 }
 
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 /**
- * HeaderBar - Always visible header with instance info
+ * Convert hex color to RGB string for rgba() usage in CSS
+ */
+const hexToRgb = (hex) => {
+    if (!hex) return '255, 255, 255';
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+        : '255, 255, 255';
+};
+
+/**
+ * HeaderBar - Blended dark header with instance label badge
  */
 function HeaderBar({
     displayName,
@@ -348,6 +363,8 @@ function HeaderBar({
     onHideToolbar,
 }) {
     const TypeIcon = getInstanceTypeIcon(instanceType);
+    const colorHex = instanceColor?.hex || '#60a5fa';
+    const colorRgb = hexToRgb(colorHex);
 
     return (
         <div
@@ -355,24 +372,32 @@ function HeaderBar({
             onMouseEnter={onShowToolbar}
             onMouseLeave={onHideToolbar}
         >
-            <div className="instance-viewport__header-info">
-                {/* Color dot */}
-                {instanceColor && (
-                    <span
-                        className="instance-viewport__header-color-dot"
-                        style={{ backgroundColor: instanceColor.hex }}
-                    />
-                )}
-                {/* Type icon */}
-                {instanceType && (
-                    <TypeIcon size={14} className="instance-viewport__header-type-icon" />
-                )}
-                {/* Label */}
-                <span className="instance-viewport__header-title">
+            {/* Instance Label Badge */}
+            <div
+                className="instance-viewport__label"
+                style={{
+                    '--instance-color': colorHex,
+                    '--instance-color-rgb': colorRgb,
+                }}
+            >
+                <div className="instance-viewport__label-dot" />
+                <span className="instance-viewport__label-text">
                     {displayName}
                 </span>
             </div>
-            <div className="instance-viewport__header-actions">
+
+            {/* Right Controls */}
+            <div className="instance-viewport__header-controls">
+                {/* Instance Type Icon */}
+                {instanceType && (
+                    <div
+                        className="instance-viewport__type-icon"
+                        title={`Type: ${instanceType}`}
+                    >
+                        <TypeIcon size={12} />
+                    </div>
+                )}
+
                 {/* Span size picker */}
                 {onChangeSpan && (
                     <div className="span-picker-wrapper" ref={spanPickerRef}>
@@ -381,7 +406,7 @@ function HeaderBar({
                             className={`instance-viewport__header-button ${showSpanPicker ? 'active' : ''}`}
                             title={`Window size: ${currentSpan}`}
                         >
-                            <LayoutGrid size={14} />
+                            <LayoutGrid size={12} />
                         </button>
                         {showSpanPicker && (
                             <div className="span-picker-dropdown">
@@ -428,28 +453,31 @@ function HeaderBar({
                     </div>
                 )}
 
-                {/* Settings dropdown button */}
+                {/* Settings button */}
                 <button
                     className="instance-viewport__header-button"
                     title="Settings"
                 >
-                    <Settings size={14} />
+                    <Settings size={12} />
                 </button>
 
+                {/* Fullscreen toggle */}
                 <button
                     onClick={onFullscreen}
                     className="instance-viewport__header-button"
                     title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
-                    {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                    {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 </button>
+
+                {/* Delete button */}
                 {onDelete && (
                     <button
                         onClick={onDelete}
                         className="instance-viewport__header-button instance-viewport__header-button--danger"
                         title="Delete"
                     >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                     </button>
                 )}
             </div>
@@ -1179,11 +1207,17 @@ export function InstanceViewport({
     // =========================================================================
 
     const displayName = getDisplayName();
+    const colorHex = instanceColor?.hex || '#60a5fa';
+    const colorRgb = hexToRgb(colorHex);
 
     return (
         <div
             ref={viewportRef}
-            className={`instance-viewport instance-viewport--${uiMode}`}
+            className={`instance-viewport instance-viewport--${uiMode} ${isFocused ? 'instance-viewport--active' : ''}`}
+            style={{
+                '--instance-color': colorHex,
+                '--instance-color-rgb': colorRgb,
+            }}
             tabIndex={0}
             onFocus={handleFocus}
             onBlur={handleBlur}
