@@ -140,11 +140,11 @@ export function WorkspaceGrid() {
     // Calculate grid layout class based on instance count
     const getGridLayoutClass = () => {
         const count = instances.length;
-        if (count <= 1) return 'grid-1';
-        if (count <= 2) return 'grid-2';
-        if (count <= 4) return 'grid-4';
-        if (count <= 6) return 'grid-6';
-        return 'grid-9';
+        if (count <= 1) return 'grid-layout-1';
+        if (count <= 2) return 'grid-layout-2';
+        if (count <= 4) return 'grid-layout-4';
+        if (count <= 6) return 'grid-layout-6';
+        return 'grid-layout-9';
     };
 
     // Get span class for an instance

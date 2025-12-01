@@ -19,7 +19,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   flex-direction: column;
   height: 100%;
   width: 100%;
-  min-height: 0;
+  min-height: 100px; // Prevent collapsing when empty or errored
   overflow: hidden;
   position: relative;
   outline: none; // Remove focus outline, we handle focus visually
@@ -59,14 +59,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
       inset 0 0 60px rgba(0, 0, 0, 0.5);
   }
 
-  // UI Mode variants
-  &--corner-controls,
-  &--gear-only {
-    // Small viewport modes don't show header
-    .instance-viewport__header {
-      display: none;
-    }
-  }
+  // Note: Header always renders in all UI modes so users can always close the instance
 }
 
 // ============================================================================
@@ -95,6 +88,9 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
+  flex: 1; // Take available space
+  min-width: 0; // Allow shrinking below content size
+  max-width: fit-content; // Don't expand beyond content
 
   // Use instance's accent color with low opacity
   background: rgba(var(--instance-color-rgb), 0.12);
@@ -122,10 +118,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   font-size: $font-size-sm; // 11px
   font-weight: $font-weight-medium;
   color: var(--instance-color);
-  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  // No max-width - let it use available space from flex parent
 }
 
 // Right side controls container

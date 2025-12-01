@@ -4,7 +4,10 @@
 import { generateInstanceId } from "@Utils/idGenerator.js";
 import { getHandlerForType } from "@Core/instances/types/instanceTypesInit.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
-import { datasetManager } from "@Init/appInitializer.js";
+import {
+  datasetManager,
+  viewConfigurationManager,
+} from "@Init/appInitializer.js";
 import { instance as log } from "@Utils/logger.js";
 
 // ============================================================================
@@ -69,8 +72,81 @@ class WorkspaceManager {
       return;
     }
 
+    // Set up listener for remote view updates (camera sync, etc.)
+    this._setupViewSyncListener();
+
     this._initialized = true;
     log.info("WorkspaceManager initialized");
+  }
+
+  /**
+   * Set up listener for ViewConfiguration updates from server
+   * This enables camera synchronization between instances viewing the same view
+   * @private
+   */
+  _setupViewSyncListener() {
+    if (!viewConfigurationManager) {
+      log.warn("ViewConfigurationManager not available, camera sync disabled");
+      return;
+    }
+
+    // Listen for remote view updates (broadcasted from server via WebSocket)
+    viewConfigurationManager.on("viewUpdated", (view) => {
+      this._handleRemoteViewUpdate(view);
+    });
+
+    log.debug("View sync listener registered for camera synchronization");
+  }
+
+  /**
+   * Handle remote view update - apply camera/state changes to local instances
+   * @private
+   */
+  _handleRemoteViewUpdate(view) {
+    if (!view || !view.id) return;
+
+    const viewId = view.id;
+
+    // Find all instances viewing this view
+    for (const [instanceId, instance] of this.instances) {
+      if (instance.viewConfigId !== viewId) continue;
+      if (!instance.handler || !instance.instanceData) continue;
+
+      // Skip if this instance triggered the update (prevent loops)
+      // The handler's _isApplyingRemoteState flag handles this internally too
+
+      try {
+        // Build state object from view
+        const state = {};
+
+        if (view.camera) {
+          state.camera = view.camera;
+        }
+
+        if (view.colorMaps) {
+          state.colorMaps = view.colorMaps;
+        }
+
+        // Only apply if there's state to apply
+        if (Object.keys(state).length > 0) {
+          log.debug(`Applying remote view state to instance ${instanceId}`);
+
+          // Call handler's applySharedState
+          if (typeof instance.handler.applySharedState === "function") {
+            instance.handler.applySharedState(
+              instance.instanceData,
+              state,
+              view.lastModifiedBy || "remote"
+            );
+          }
+        }
+      } catch (error) {
+        log.error(
+          `Failed to apply remote state to instance ${instanceId}:`,
+          error
+        );
+      }
+    }
   }
 
   /**

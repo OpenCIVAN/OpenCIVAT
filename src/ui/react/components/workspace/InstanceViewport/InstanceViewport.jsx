@@ -1222,24 +1222,22 @@ export function InstanceViewport({
             onFocus={handleFocus}
             onBlur={handleBlur}
         >
-            {/* Header - Always visible for normal viewports */}
-            {showFullToolbars && (
-                <HeaderBar
-                    displayName={displayName}
-                    instanceType={instanceType}
-                    instanceColor={instanceColor}
-                    isFullscreen={isFullscreen}
-                    onFullscreen={handleFullscreen}
-                    onDelete={onDelete}
-                    onChangeSpan={onChangeSpan}
-                    currentSpan={currentSpan}
-                    showSpanPicker={showSpanPicker}
-                    setShowSpanPicker={setShowSpanPicker}
-                    spanPickerRef={spanPickerRef}
-                    onShowToolbar={showToolbar}
-                    onHideToolbar={hideToolbar}
-                />
-            )}
+            {/* Header - ALWAYS visible so users can always close the instance */}
+            <HeaderBar
+                displayName={displayName}
+                instanceType={instanceType}
+                instanceColor={instanceColor}
+                isFullscreen={isFullscreen}
+                onFullscreen={handleFullscreen}
+                onDelete={onDelete}
+                onChangeSpan={onChangeSpan}
+                currentSpan={currentSpan}
+                showSpanPicker={showSpanPicker}
+                setShowSpanPicker={setShowSpanPicker}
+                spanPickerRef={spanPickerRef}
+                onShowToolbar={showToolbar}
+                onHideToolbar={hideToolbar}
+            />
 
             {/* Top Toolbar - Overlay that slides down on hover */}
             {showFullToolbars && tools.length > 0 && (
