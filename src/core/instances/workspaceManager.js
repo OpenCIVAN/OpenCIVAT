@@ -8,6 +8,7 @@ import {
   datasetManager,
   viewConfigurationManager,
 } from "@Init/appInitializer.js";
+import { onCameraChange } from "@Collaboration/yjs/yjsObservers.js";
 import { instance as log } from "@Utils/logger.js";
 
 // ============================================================================
@@ -85,17 +86,49 @@ class WorkspaceManager {
    * @private
    */
   _setupViewSyncListener() {
-    if (!viewConfigurationManager) {
-      log.warn("ViewConfigurationManager not available, camera sync disabled");
-      return;
-    }
-
-    // Listen for remote view updates (broadcasted from server via WebSocket)
-    viewConfigurationManager.on("viewUpdated", (view) => {
-      this._handleRemoteViewUpdate(view);
+    // REAL-TIME: Listen for Y.js camera updates (instant, smooth sync)
+    onCameraChange(({ viewId, camera, userId }) => {
+      if (camera) {
+        this._handleYjsCameraUpdate(viewId, camera, userId);
+      }
     });
+    log.debug("Y.js camera sync listener registered (real-time)");
 
-    log.debug("View sync listener registered for camera synchronization");
+    // PERSISTENCE: Listen for server view updates (fallback + durability)
+    if (viewConfigurationManager) {
+      viewConfigurationManager.on("viewUpdated", (view) => {
+        this._handleRemoteViewUpdate(view);
+      });
+      log.debug("Server view sync listener registered (persistence)");
+    }
+  }
+
+  /**
+   * Handle Y.js camera update - apply immediately for smooth real-time sync
+   * @private
+   */
+  _handleYjsCameraUpdate(viewId, camera, sourceUserId) {
+    // Find all instances viewing this view
+    for (const [instanceId, instance] of this.instances) {
+      if (instance.viewConfigId !== viewId) continue;
+      if (!instance.handler || !instance.instanceData) continue;
+
+      try {
+        // Call handler's applySharedState for immediate camera update
+        if (typeof instance.handler.applySharedState === "function") {
+          instance.handler.applySharedState(
+            instance.instanceData,
+            { camera },
+            sourceUserId || "remote"
+          );
+        }
+      } catch (error) {
+        log.error(
+          `Failed to apply Y.js camera to instance ${instanceId}:`,
+          error
+        );
+      }
+    }
   }
 
   /**

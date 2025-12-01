@@ -9,6 +9,8 @@ import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature";
 import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget";
 import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 import { viewConfigurationManager } from "@Init/appInitializer.js";
+import { syncCameraToYjs } from "@Collaboration/yjs/yjsSetup.js";
+import { getUserId } from "@Collaboration/presence/userManagement.js";
 
 import vtkRenderer from "@kitware/vtk.js/Rendering/Core/Renderer";
 import vtkRenderWindow from "@kitware/vtk.js/Rendering/Core/RenderWindow";
@@ -2086,6 +2088,13 @@ console.log('Tools:', tools);
             viewAngle: camera.getViewAngle(),
           };
 
+          // REAL-TIME: Sync to Y.js for immediate updates to other users
+          const userId = getUserId();
+          if (userId) {
+            syncCameraToYjs(instanceData.viewConfigId, userId, cameraState);
+          }
+
+          // PERSISTENCE: Sync to server via ViewConfigurationManager (throttled)
           viewConfigurationManager.updateCamera(
             instanceData.viewConfigId,
             cameraState

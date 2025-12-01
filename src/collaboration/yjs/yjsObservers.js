@@ -17,6 +17,7 @@
 import {
   yDatasets,
   yCursors,
+  yCameras,
   yAvatars,
   yViewPresence,
 } from "@Collaboration/yjs/yjsSetup.js";
@@ -173,6 +174,52 @@ export function initializeViewPresenceObserver() {
   log.debug("View presence observer initialized");
 }
 
+/**
+ * Camera presence observer
+ * Watches for remote camera updates for real-time smooth synchronization
+ * This enables smooth camera sync between users viewing the same view
+ */
+let cameraChangeCallbacks = [];
+
+export function onCameraChange(callback) {
+  cameraChangeCallbacks.push(callback);
+  return () => {
+    cameraChangeCallbacks = cameraChangeCallbacks.filter(
+      (cb) => cb !== callback
+    );
+  };
+}
+
+export function initializeCameraObserver() {
+  log.debug("Setting up camera presence observer");
+
+  yCameras.observe((event) => {
+    const myId = getUserId();
+
+    event.changes.keys.forEach((change, viewId) => {
+      const cameraData = yCameras.get(viewId);
+
+      // Skip if this is our own camera update
+      if (cameraData && cameraData.userId === myId) return;
+
+      cameraChangeCallbacks.forEach((cb) => {
+        try {
+          cb({
+            action: change.action,
+            viewId,
+            camera: cameraData?.camera,
+            userId: cameraData?.userId,
+          });
+        } catch (error) {
+          log.error("Camera observer callback error:", error);
+        }
+      });
+    });
+  });
+
+  log.debug("Camera observer initialized");
+}
+
 // ============================================================================
 // Initialize All Observers
 // ============================================================================
@@ -184,6 +231,7 @@ export function initializeAllObservers() {
   initializeCursorObserver();
   initializeAvatarObserver();
   initializeViewPresenceObserver();
+  initializeCameraObserver(); // Real-time camera sync
 
   // State (datasets, views, annotations) comes from server via:
   // - REST API: useProjectFiles, DatasetManager.fetchDatasetsFromServer

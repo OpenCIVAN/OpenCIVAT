@@ -42,6 +42,10 @@ export const awareness = new Awareness(ydoc);
 // Cursor presence: userId -> { position, color, name, viewId, lastUpdate }
 export const yCursors = ydoc.getMap("cursors");
 
+// Camera presence: viewId -> { camera: {...}, userId, lastUpdate }
+// Real-time camera sync for smooth collaborative viewing
+export const yCameras = ydoc.getMap("cameras");
+
 // View presence: viewId -> { viewers: [userId, ...], lastUpdate }
 export const yViewPresence = ydoc.getMap("viewPresence");
 
@@ -210,6 +214,25 @@ export function syncViewPresenceToYjs(viewId, viewers) {
     });
   } catch (error) {
     log.error("Failed to sync view presence to Y.js:", error);
+  }
+}
+
+/**
+ * Update camera presence in Y.js for real-time sync
+ * This enables smooth camera synchronization between users viewing the same view
+ * @param {string} viewId - View configuration ID
+ * @param {string} userId - User who moved the camera
+ * @param {Object} cameraState - { position, focalPoint, viewUp, parallelScale, clippingRange, viewAngle }
+ */
+export function syncCameraToYjs(viewId, userId, cameraState) {
+  try {
+    yCameras.set(viewId, {
+      camera: cameraState,
+      userId,
+      lastUpdate: Date.now(),
+    });
+  } catch (error) {
+    log.error("Failed to sync camera to Y.js:", error);
   }
 }
 
