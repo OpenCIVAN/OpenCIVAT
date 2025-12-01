@@ -441,8 +441,44 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     // Set the data
     mapper.setInputData(polydata);
 
-    // Reset camera to frame the data
-    renderer.resetCamera();
+    // CRITICAL: Prevent Y.js sync during initial camera setup
+    // Without this, resetCamera() broadcasts default position to all users
+    this._isApplyingRemoteState = true;
+
+    try {
+      // Reset camera to frame the data (default position)
+      renderer.resetCamera();
+
+      // Restore saved camera state from ViewConfiguration if reopening an existing view
+      if (instanceData.viewConfigId) {
+        const viewConfig = viewConfigurationManager.getView(
+          instanceData.viewConfigId
+        );
+        if (viewConfig?.camera) {
+          log.debug(
+            `Restoring saved camera state for view ${instanceData.viewConfigId}`
+          );
+          const camera = instanceData.sceneObjects.camera;
+          const savedCamera = viewConfig.camera;
+
+          // Apply saved camera state
+          if (savedCamera.position) camera.setPosition(...savedCamera.position);
+          if (savedCamera.focalPoint)
+            camera.setFocalPoint(...savedCamera.focalPoint);
+          if (savedCamera.viewUp) camera.setViewUp(...savedCamera.viewUp);
+          if (savedCamera.parallelScale)
+            camera.setParallelScale(savedCamera.parallelScale);
+          if (savedCamera.clippingRange)
+            camera.setClippingRange(...savedCamera.clippingRange);
+          if (savedCamera.viewAngle) camera.setViewAngle(savedCamera.viewAngle);
+
+          log.debug(`Camera state restored`);
+        }
+      }
+    } finally {
+      // Re-enable Y.js sync after initial setup is complete
+      this._isApplyingRemoteState = false;
+    }
 
     // Render
     renderWindow.render();
