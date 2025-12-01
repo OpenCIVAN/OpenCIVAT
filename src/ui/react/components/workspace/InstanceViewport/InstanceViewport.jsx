@@ -884,6 +884,8 @@ export function InstanceViewport({
         setNavbarVisible(true);
         if (actualInstanceId) {
             setActiveInstance(actualInstanceId);
+            // Also update workspaceManager so the left panel tools update
+            workspaceManager.setActiveInstance(actualInstanceId);
         }
     }, [actualInstanceId]);
 
@@ -1262,7 +1264,6 @@ export function InstanceViewport({
             <div
                 ref={containerRef}
                 className="instance-viewport__content"
-                onMouseEnter={() => actualInstanceId && setActiveInstance(actualInstanceId)}
             >
                 {loading && (
                     <div className="instance-viewport__loading">

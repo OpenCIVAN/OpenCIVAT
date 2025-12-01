@@ -829,10 +829,16 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.canUseWidgets,
           onClick: () => {
             log.debug("Clear all widgets clicked");
-            // Clean up all widgets
-            instanceTools.toggleRulerMeasurement?.(instanceId); // Disable if active
-            instanceTools.toggleAngleMeasurement?.(instanceId); // Disable if active
-            instanceTools.toggleClippingPlane?.(instanceId); // Disable if active
+            // Only disable widgets that are currently active
+            if (lineActive) {
+              instanceTools.toggleRulerMeasurement?.(instanceId);
+            }
+            if (angleActive) {
+              instanceTools.toggleAngleMeasurement?.(instanceId);
+            }
+            if (planeActive) {
+              instanceTools.toggleClippingPlane?.(instanceId);
+            }
             this._emitToolsUpdate(instanceId);
           },
         },

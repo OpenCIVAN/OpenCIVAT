@@ -3,12 +3,11 @@
 //
 // Features:
 // - Shows tools for the currently focused instance
-// - Tools/Layers sub-tabs
-// - Navigation, visualization, widget, and annotation tools
-// - Widget configuration when selected
-// - VS Code-style collapsible sections
+// - Dynamically updates when active instance changes
+// - Renders tools provided by the instance handler
+// - Tools/Layers sub-tabs for organization
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     Wrench,
     Layers,
@@ -17,6 +16,7 @@ import {
     RotateCcw,
     ZoomIn,
     Palette,
+    Circle,
     CircleDot,
     Sliders,
     Scissors,
@@ -42,87 +42,86 @@ import {
     Copy,
     Trash2,
     Wand2,
+    Camera,
+    Triangle,
+    X,
+    Maximize2,
+    BarChart3,
+    Activity,
+    Network,
+    Minus,
 } from 'lucide-react';
 
+import { workspaceManager } from '@Core/instances/workspaceManager.js';
+import { workspace as log } from '@Utils/logger.js';
+
 // =============================================================================
-// TOOLS CONFIGURATION
+// ICON MAPPING - Map string icon names to Lucide components
 // =============================================================================
 
-const TOOL_CATEGORIES = {
-    navigation: {
-        label: 'Navigation',
-        tools: [
-            { id: 'select', icon: MousePointer, label: 'Select' },
-            { id: 'pan', icon: Move, label: 'Pan' },
-            { id: 'rotate', icon: RotateCcw, label: 'Rotate' },
-            { id: 'zoom', icon: ZoomIn, label: 'Zoom' },
-        ]
-    },
-    visualization: {
-        label: 'Visualization',
-        tools: [
-            { id: 'colormap', icon: Palette, label: 'Colormap', hasDropdown: true },
-            { id: 'opacity', icon: CircleDot, label: 'Opacity', hasSlider: true },
-            { id: 'threshold', icon: Sliders, label: 'Threshold' },
-        ]
-    },
-    widgets: {
-        label: 'Widgets',
-        tools: [
-            { id: 'clip', icon: Scissors, label: 'Clip Plane' },
-            { id: 'slice', icon: Grid3X3, label: 'Slice' },
-            { id: 'measure', icon: Ruler, label: 'Measure' },
-            { id: 'orientation', icon: Compass, label: 'Orientation' },
-            { id: 'axis', icon: Crosshair, label: 'Axis Actor' },
-        ]
-    },
-    annotations: {
-        label: 'Add Annotation',
-        note: '(to dataset)',
-        tools: [
-            { id: 'point', icon: MapPin, label: 'Point' },
-            { id: 'ruler', icon: Ruler, label: 'Ruler' },
-            { id: 'region', icon: Square, label: 'Region' },
-            { id: 'note', icon: MessageSquare, label: 'Note' },
-        ]
-    },
+const ICON_MAP = {
+    'mouse-pointer': MousePointer,
+    'move': Move,
+    'rotate-ccw': RotateCcw,
+    'zoom-in': ZoomIn,
+    'palette': Palette,
+    'circle': Circle,
+    'circle-dot': CircleDot,
+    'sliders': Sliders,
+    'scissors': Scissors,
+    'grid-3x3': Grid3X3,
+    'ruler': Ruler,
+    'compass': Compass,
+    'crosshair': Crosshair,
+    'map-pin': MapPin,
+    'square': Square,
+    'message-square': MessageSquare,
+    'eye': Eye,
+    'eye-off': EyeOff,
+    'settings': Settings,
+    'save': Save,
+    'monitor': Monitor,
+    'users': Users,
+    'pen-tool': PenTool,
+    'box': Box,
+    'plus': Plus,
+    'flip-horizontal': FlipHorizontal,
+    'copy': Copy,
+    'trash-2': Trash2,
+    'wand-2': Wand2,
+    'camera': Camera,
+    'triangle': Triangle,
+    'x': X,
+    'maximize-2': Maximize2,
+    'bar-chart-3': BarChart3,
+    'activity': Activity,
+    'network': Network,
+    'transform': Box, // Widget/transform icon
+    'wrench': Wrench,
+    'layers': Layers,
+    'minus': Minus,
 };
 
-// Sample focused instance
-const FOCUSED_INSTANCE = {
-    id: 'inst-1',
-    name: 'Main Analysis',
-    type: 'vtk',
-    dataset: 'Brain_Scan_001.nii',
-    color: 'blue',
-};
-
-// Sample active widgets
-const SAMPLE_WIDGETS = [
-    { id: 'w1', name: 'Orientation', visible: true },
-    { id: 'w2', name: 'Axis Actor', visible: true },
-    { id: 'w3', name: 'Clip Plane A', visible: true, selected: true },
-    { id: 'w4', name: 'Clip Plane B', visible: false },
-];
-
-// Sample layer state
-const SAMPLE_LAYERS = {
-    cursors: { enabled: true, opacity: 1.0, count: 3, total: 5 },
-    annotations: { enabled: true, opacity: 1.0, count: 12, total: 45 },
-    segmentations: { enabled: true, opacity: 0.7, count: 2, total: 3 },
-};
+function getIcon(iconName) {
+    if (!iconName) return Box;
+    return ICON_MAP[iconName] || ICON_MAP[iconName.toLowerCase()] || Box;
+}
 
 // =============================================================================
-// TOOL BUTTON
+// TOOL BUTTON COMPONENT
 // =============================================================================
 
-function ToolButton({ tool, isActive, onClick }) {
-    const Icon = tool.icon;
+function ToolButton({ tool, onClick }) {
+    const Icon = getIcon(tool.icon);
+    const isActive = tool.active || false;
+    const isDisabled = tool.disabled || false;
+
     return (
         <button
-            className={`tool-button ${isActive ? 'tool-button--active' : ''}`}
-            onClick={onClick}
-            title={tool.label}
+            className={`tool-button ${isActive ? 'tool-button--active' : ''} ${isDisabled ? 'tool-button--disabled' : ''}`}
+            onClick={() => !isDisabled && onClick?.(tool)}
+            title={tool.description || tool.label}
+            disabled={isDisabled}
         >
             <Icon size={16} />
             {tool.hasDropdown && (
@@ -133,28 +132,206 @@ function ToolButton({ tool, isActive, onClick }) {
 }
 
 // =============================================================================
-// TOOL SECTION
+// TOOL MENU ITEM COMPONENT
 // =============================================================================
 
-function ToolSection({ category, categoryKey, activeTool, onToolSelect, expanded, onToggle }) {
+function ToolMenuItem({ option, onClose }) {
+    const Icon = getIcon(option.icon);
+    const isActive = option.active || false;
+    const isDisabled = option.disabled || false;
+
+    const handleClick = () => {
+        if (isDisabled) return;
+        option.onClick?.();
+        onClose?.();
+    };
+
+    if (option.type === 'separator') {
+        return <div className="tool-menu__separator" />;
+    }
+
+    // Section header
+    if (option.type === 'header') {
+        return <div className="tool-menu__header-label">{option.label}</div>;
+    }
+
+    // Special handling for camera-grid type
+    if (option.type === 'camera-grid') {
+        return (
+            <CameraGridMenu
+                views={option.views}
+                onViewSelect={(viewId) => {
+                    option.onViewSelect?.(viewId);
+                    onClose?.();
+                }}
+                disabled={option.disabled}
+            />
+        );
+    }
+
+    // Slider with presets (supports both 'slider' and 'slider-with-presets' types)
+    if (option.type === 'slider-with-presets' || option.type === 'slider') {
+        return (
+            <SliderWithPresets
+                icon={option.icon}
+                label={option.label}
+                value={option.value}
+                min={option.min}
+                max={option.max}
+                step={option.step}
+                presets={option.presets}
+                formatValue={option.formatValue}
+                disabled={option.disabled}
+                disabledReason={option.disabledReason}
+                onChange={option.onChange}
+            />
+        );
+    }
+
     return (
-        <div className="tool-section">
-            <div
-                className="tool-section__header"
-                onClick={onToggle}
-            >
-                {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                <span className="tool-section__label">{category.label}</span>
-                {category.note && <span className="tool-section__note">{category.note}</span>}
+        <button
+            className={`tool-menu__item ${isActive ? 'tool-menu__item--active' : ''} ${isDisabled ? 'tool-menu__item--disabled' : ''}`}
+            onClick={handleClick}
+            disabled={isDisabled}
+        >
+            <Icon size={14} />
+            <div className="tool-menu__item-content">
+                <span className="tool-menu__item-label">{option.label}</span>
+                {option.description && (
+                    <span className="tool-menu__item-desc">{option.description}</span>
+                )}
             </div>
-            {expanded && (
-                <div className="tool-section__tools">
-                    {category.tools.map(tool => (
-                        <ToolButton
-                            key={tool.id}
-                            tool={tool}
-                            isActive={activeTool === tool.id}
-                            onClick={() => onToolSelect(tool.id)}
+            {isActive && <span className="tool-menu__item-active-dot" />}
+        </button>
+    );
+}
+
+// =============================================================================
+// SLIDER WITH PRESETS COMPONENT
+// =============================================================================
+
+function SliderWithPresets({ icon, label, value, min, max, step, presets, formatValue, disabled, disabledReason, onChange }) {
+    const Icon = getIcon(icon);
+    const displayValue = formatValue ? formatValue(value) : value;
+
+    return (
+        <div className={`slider-with-presets ${disabled ? 'slider-with-presets--disabled' : ''}`}>
+            <div className="slider-with-presets__header">
+                <Icon size={14} />
+                <span className="slider-with-presets__label">{label}</span>
+                <span className="slider-with-presets__value">{displayValue}</span>
+            </div>
+            <div className="slider-with-presets__slider-row">
+                <input
+                    type="range"
+                    className="slider-with-presets__slider"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={value}
+                    disabled={disabled}
+                    onChange={(e) => onChange?.(parseFloat(e.target.value))}
+                />
+            </div>
+            {presets && presets.length > 0 && (
+                <div className="slider-with-presets__presets">
+                    {presets.map((preset, index) => (
+                        <button
+                            key={index}
+                            className={`slider-with-presets__preset ${value === preset ? 'slider-with-presets__preset--active' : ''}`}
+                            onClick={() => !disabled && onChange?.(preset)}
+                            disabled={disabled}
+                        >
+                            {formatValue ? formatValue(preset) : preset}
+                        </button>
+                    ))}
+                </div>
+            )}
+            {disabled && disabledReason && (
+                <div className="slider-with-presets__disabled-reason">{disabledReason}</div>
+            )}
+        </div>
+    );
+}
+
+// =============================================================================
+// CAMERA GRID MENU COMPONENT
+// =============================================================================
+
+function CameraGridMenu({ views, onViewSelect, disabled }) {
+    if (!views || views.length === 0) return null;
+
+    // Organize views into a 3x3 grid
+    const gridViews = [
+        views.find(v => v?.id === 'top'),
+        views.find(v => v?.id === 'isometric'),
+        null,
+        views.find(v => v?.id === 'left'),
+        views.find(v => v?.id === 'reset'),
+        views.find(v => v?.id === 'right'),
+        views.find(v => v?.id === 'bottom'),
+        views.find(v => v?.id === 'front'),
+        views.find(v => v?.id === 'back'),
+    ];
+
+    return (
+        <div className="camera-grid-menu">
+            <div className="camera-grid-menu__label">Camera Views</div>
+            <div className="camera-grid-menu__grid">
+                {gridViews.map((view, index) => {
+                    if (!view) {
+                        return <div key={index} className="camera-grid-menu__cell camera-grid-menu__cell--empty" />;
+                    }
+
+                    const Icon = getIcon(view.icon);
+                    return (
+                        <button
+                            key={view.id}
+                            className={`camera-grid-menu__cell ${view.special ? 'camera-grid-menu__cell--special' : ''}`}
+                            onClick={() => !disabled && onViewSelect?.(view.id)}
+                            title={view.label}
+                            disabled={disabled}
+                        >
+                            <Icon size={12} />
+                            <span>{view.label}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+// =============================================================================
+// TOOL MENU COMPONENT (Expandable)
+// =============================================================================
+
+function ToolMenu({ tool, expanded, onToggle }) {
+    const Icon = getIcon(tool.icon);
+    const isDisabled = tool.disabled || false;
+    const hasActiveOption = tool.options?.some(opt => opt.active);
+
+    return (
+        <div className={`tool-menu ${expanded ? 'tool-menu--expanded' : ''} ${isDisabled ? 'tool-menu--disabled' : ''}`}>
+            <button
+                className={`tool-menu__header ${hasActiveOption ? 'tool-menu__header--has-active' : ''}`}
+                onClick={() => !isDisabled && onToggle?.()}
+                disabled={isDisabled}
+            >
+                <Icon size={14} />
+                <span className="tool-menu__title">{tool.label}</span>
+                {tool.description && !expanded && (
+                    <span className="tool-menu__hint">{tool.description}</span>
+                )}
+                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+            {expanded && tool.options && (
+                <div className="tool-menu__options">
+                    {tool.options.map((option, index) => (
+                        <ToolMenuItem
+                            key={option.id || index}
+                            option={option}
+                            onClose={() => { }} // Keep menu open after selection
                         />
                     ))}
                 </div>
@@ -164,137 +341,109 @@ function ToolSection({ category, categoryKey, activeTool, onToolSelect, expanded
 }
 
 // =============================================================================
-// WIDGET LIST ITEM
+// TOOLS LIST COMPONENT
 // =============================================================================
 
-function WidgetListItem({ widget, isSelected, onSelect, onToggleVisibility }) {
+function ToolsList({ tools, expandedMenus, onToggleMenu }) {
+    if (!tools || tools.length === 0) {
+        return (
+            <div className="tools-list__empty">
+                <Wrench size={24} />
+                <p>No tools available</p>
+                <span>Load data into an instance to see available tools</span>
+            </div>
+        );
+    }
+
     return (
-        <div
-            className={`widget-list-item ${isSelected ? 'widget-list-item--selected' : ''}`}
-            onClick={() => onSelect(widget.id)}
-        >
-            <button
-                className="widget-list-item__visibility"
-                onClick={(e) => { e.stopPropagation(); onToggleVisibility(widget.id); }}
-            >
-                {widget.visible ? (
-                    <Eye size={12} style={{ color: 'var(--color-accent-green)' }} />
-                ) : (
-                    <EyeOff size={12} />
-                )}
-            </button>
-            <span className={`widget-list-item__dot ${widget.visible ? 'widget-list-item__dot--active' : ''}`} />
-            <span className="widget-list-item__name">{widget.name}</span>
-            <ChevronRight size={12} className="widget-list-item__arrow" />
+        <div className="tools-list">
+            {tools.map((tool, index) => {
+                if (tool.type === 'separator') {
+                    return <div key={index} className="tools-list__separator" />;
+                }
+
+                if (tool.type === 'menu') {
+                    return (
+                        <ToolMenu
+                            key={tool.id}
+                            tool={tool}
+                            expanded={expandedMenus[tool.id]}
+                            onToggle={() => onToggleMenu(tool.id)}
+                        />
+                    );
+                }
+
+                // Regular tool button
+                return (
+                    <div key={tool.id} className="tools-list__item">
+                        <ToolButton
+                            tool={tool}
+                            onClick={() => tool.onClick?.()}
+                        />
+                        <span className="tools-list__item-label">{tool.label}</span>
+                    </div>
+                );
+            })}
         </div>
     );
 }
 
 // =============================================================================
-// WIDGET CONFIG PANEL
+// LAYER TOGGLE COMPONENT
 // =============================================================================
 
-function WidgetConfigPanel({ widget }) {
-    if (!widget) return null;
-
-    return (
-        <div className="widget-config">
-            <div className="widget-config__header">
-                <Scissors size={14} style={{ color: 'var(--color-accent-purple)' }} />
-                <span className="widget-config__title">{widget.name}</span>
-                <button className="widget-config__delete">
-                    <Trash2 size={12} />
-                </button>
-            </div>
-
-            {/* Position controls */}
-            <div className="widget-config__section">
-                <span className="widget-config__section-label">Position</span>
-                <div className="widget-config__position-inputs">
-                    {['X', 'Y', 'Z'].map(axis => (
-                        <div key={axis} className="widget-config__input-group">
-                            <span className="widget-config__input-label">{axis}</span>
-                            <input
-                                type="number"
-                                defaultValue={axis === 'X' ? '0.5' : '0'}
-                                step="0.1"
-                                className="widget-config__input"
-                            />
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Normal direction */}
-            <div className="widget-config__section">
-                <span className="widget-config__section-label">Normal Direction</span>
-                <div className="widget-config__direction-buttons">
-                    {['+X', '-X', '+Y', '-Y', '+Z', '-Z'].map((dir, i) => (
-                        <button
-                            key={dir}
-                            className={`widget-config__dir-btn ${i === 0 ? 'widget-config__dir-btn--active' : ''}`}
-                        >
-                            {dir}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Actions */}
-            <div className="widget-config__actions">
-                <button className="widget-config__action-btn" data-color="blue">
-                    <FlipHorizontal size={12} /> Flip
-                </button>
-                <button className="widget-config__action-btn" data-color="amber">
-                    <RotateCcw size={12} /> Reset
-                </button>
-                <button className="widget-config__action-btn" data-color="green">
-                    <Copy size={12} /> Duplicate
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// =============================================================================
-// LAYER TOGGLE
-// =============================================================================
-
-function LayerToggle({ icon: Icon, label, layer, onToggle, onOpacityChange }) {
+function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onToggle, onOpacityChange }) {
     return (
         <div className="layer-toggle">
             <button
-                className={`layer-toggle__btn ${layer.enabled ? 'layer-toggle__btn--active' : ''}`}
+                className={`layer-toggle__btn ${enabled ? 'layer-toggle__btn--active' : ''}`}
                 onClick={onToggle}
             >
-                {layer.enabled ? <Eye size={14} /> : <EyeOff size={14} />}
+                {enabled ? <Eye size={14} /> : <EyeOff size={14} />}
             </button>
             <div className="layer-toggle__info">
                 <div className="layer-toggle__label">
                     <Icon size={14} />
                     {label}
                 </div>
-                {layer.count !== undefined && (
+                {count !== undefined && (
                     <span className="layer-toggle__count">
-                        {layer.count} visible / {layer.total} total
+                        {count} visible / {total} total
                     </span>
                 )}
             </div>
-            {layer.opacity !== undefined && (
+            {opacity !== undefined && (
                 <div className="layer-toggle__opacity">
                     <input
                         type="range"
                         min="0"
                         max="100"
-                        value={layer.opacity * 100}
+                        value={opacity * 100}
                         onChange={(e) => onOpacityChange?.(e.target.value / 100)}
                     />
-                    <span>{Math.round(layer.opacity * 100)}%</span>
+                    <span>{Math.round(opacity * 100)}%</span>
                 </div>
             )}
             <button className="layer-toggle__manage">
                 <ChevronRight size={14} />
             </button>
+        </div>
+    );
+}
+
+// =============================================================================
+// NO INSTANCE PLACEHOLDER
+// =============================================================================
+
+function NoInstancePlaceholder() {
+    return (
+        <div className="instance-tools-tab__no-instance">
+            <Monitor size={32} />
+            <h3>No Instance Selected</h3>
+            <p>Click on an instance viewport to select it and see its tools here.</p>
+            <p className="instance-tools-tab__no-instance-hint">
+                You can also create a new instance by clicking a dataset in the Files panel.
+            </p>
         </div>
     );
 }
@@ -306,28 +455,58 @@ function LayerToggle({ icon: Icon, label, layer, onToggle, onOpacityChange }) {
 export function InstanceToolsPanelContent({ workspaceId }) {
     // State
     const [activeTab, setActiveTab] = useState('tools'); // 'tools' | 'layers'
-    const [activeTool, setActiveTool] = useState('select');
-    const [selectedWidget, setSelectedWidget] = useState('w3');
-    const [widgets, setWidgets] = useState(SAMPLE_WIDGETS);
-    const [layers, setLayers] = useState(SAMPLE_LAYERS);
-    const [expandedSections, setExpandedSections] = useState({
-        navigation: true,
-        visualization: true,
-        widgets: true,
-        annotations: false,
-        presets: false,
+    const [activeInstance, setActiveInstance] = useState(null);
+    const [tools, setTools] = useState([]);
+    const [expandedMenus, setExpandedMenus] = useState({});
+    const [layers, setLayers] = useState({
+        cursors: { enabled: true, opacity: 1.0, count: 0, total: 0 },
+        annotations: { enabled: true, opacity: 1.0, count: 0, total: 0 },
+        widgets: { enabled: true, opacity: 1.0, count: 0, total: 0 },
     });
 
-    // Toggle section
-    const toggleSection = useCallback((key) => {
-        setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+    // Subscribe to workspace changes
+    useEffect(() => {
+        const updateFromWorkspace = () => {
+            const instance = workspaceManager.getActiveInstance();
+            setActiveInstance(instance);
+
+            if (instance?.handler && instance?.instanceData) {
+                const instanceTools = instance.handler.getTools(instance.instanceData);
+                setTools(instanceTools || []);
+                log.debug(`Updated tools for instance ${instance.instanceId}:`, instanceTools?.length || 0);
+            } else {
+                setTools([]);
+            }
+        };
+
+        // Initial update
+        updateFromWorkspace();
+
+        // Subscribe to changes
+        workspaceManager.addListener(updateFromWorkspace);
+
+        // Also listen for tools-updated event (dispatched when tool state changes)
+        const handleToolsUpdated = (event) => {
+            const { instanceId } = event.detail || {};
+            const currentInstance = workspaceManager.getActiveInstance();
+            if (currentInstance?.instanceId === instanceId) {
+                updateFromWorkspace();
+            }
+        };
+        window.addEventListener('cia:tools-updated', handleToolsUpdated);
+
+        return () => {
+            workspaceManager.removeListener(updateFromWorkspace);
+            window.removeEventListener('cia:tools-updated', handleToolsUpdated);
+        };
     }, []);
 
-    // Toggle widget visibility
-    const toggleWidgetVisibility = useCallback((widgetId) => {
-        setWidgets(prev => prev.map(w =>
-            w.id === widgetId ? { ...w, visible: !w.visible } : w
-        ));
+    // Toggle menu expansion
+    const toggleMenu = useCallback((menuId) => {
+        setExpandedMenus(prev => ({
+            ...prev,
+            [menuId]: !prev[menuId]
+        }));
     }, []);
 
     // Toggle layer
@@ -338,19 +517,40 @@ export function InstanceToolsPanelContent({ workspaceId }) {
         }));
     }, []);
 
-    const selectedWidgetData = widgets.find(w => w.id === selectedWidget);
-    const activeWidgetCount = widgets.filter(w => w.visible).length;
+    // Get instance display info
+    const instanceInfo = activeInstance ? {
+        name: activeInstance.instanceData?.dataset?.filename ||
+            activeInstance.instanceData?.dataset?.fileName ||
+            `Instance ${activeInstance.instanceId?.slice(0, 8)}`,
+        type: activeInstance.type || 'unknown',
+        color: activeInstance.color?.name || 'blue',
+        dataset: activeInstance.instanceData?.dataset?.filename ||
+            activeInstance.instanceData?.dataset?.fileName ||
+            'No data loaded',
+    } : null;
+
+    // If no active instance, show placeholder
+    if (!activeInstance) {
+        return (
+            <div className="instance-tools-tab">
+                <NoInstancePlaceholder />
+            </div>
+        );
+    }
 
     return (
         <div className="instance-tools-tab">
             {/* Focused Instance Header */}
-            <div className="instance-tools-tab__instance-header" style={{ '--instance-color': `var(--color-accent-${FOCUSED_INSTANCE.color})` }}>
+            <div
+                className="instance-tools-tab__instance-header"
+                style={{ '--instance-color': activeInstance.color?.hex || 'var(--color-accent-blue)' }}
+            >
                 <Monitor size={14} />
                 <div className="instance-tools-tab__instance-info">
-                    <span className="instance-tools-tab__instance-name">{FOCUSED_INSTANCE.name}</span>
-                    <span className="instance-tools-tab__instance-dataset">{FOCUSED_INSTANCE.dataset}</span>
+                    <span className="instance-tools-tab__instance-name">{instanceInfo.name}</span>
+                    <span className="instance-tools-tab__instance-dataset">{instanceInfo.dataset}</span>
                 </div>
-                <span className="instance-tools-tab__instance-type">{FOCUSED_INSTANCE.type.toUpperCase()}</span>
+                <span className="instance-tools-tab__instance-type">{instanceInfo.type.toUpperCase()}</span>
             </div>
 
             {/* Tab Bar */}
@@ -372,62 +572,11 @@ export function InstanceToolsPanelContent({ workspaceId }) {
             {/* Content */}
             <div className="instance-tools-tab__content">
                 {activeTab === 'tools' ? (
-                    <>
-                        {/* Tool Sections */}
-                        {Object.entries(TOOL_CATEGORIES).map(([key, category]) => (
-                            <ToolSection
-                                key={key}
-                                categoryKey={key}
-                                category={category}
-                                activeTool={activeTool}
-                                onToolSelect={setActiveTool}
-                                expanded={expandedSections[key]}
-                                onToggle={() => toggleSection(key)}
-                            />
-                        ))}
-
-                        {/* Active Widgets Section (inside widgets category) */}
-                        {expandedSections.widgets && (
-                            <div className="active-widgets-section">
-                                <div className="active-widgets-section__header">
-                                    Active Widgets ({activeWidgetCount})
-                                </div>
-                                {widgets.filter(w => w.visible).map(widget => (
-                                    <WidgetListItem
-                                        key={widget.id}
-                                        widget={widget}
-                                        isSelected={selectedWidget === widget.id}
-                                        onSelect={setSelectedWidget}
-                                        onToggleVisibility={toggleWidgetVisibility}
-                                    />
-                                ))}
-                                {selectedWidgetData && <WidgetConfigPanel widget={selectedWidgetData} />}
-                            </div>
-                        )}
-
-                        {/* Presets Section */}
-                        <div className="tool-section">
-                            <div
-                                className="tool-section__header"
-                                onClick={() => toggleSection('presets')}
-                            >
-                                {expandedSections.presets ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                                <span className="tool-section__label">Presets</span>
-                            </div>
-                            {expandedSections.presets && (
-                                <div className="presets-grid">
-                                    {['Bone View', 'Soft Tissue', 'MIP', 'Custom 1'].map(preset => (
-                                        <button key={preset} className="preset-btn">
-                                            {preset}
-                                        </button>
-                                    ))}
-                                    <button className="preset-btn preset-btn--save">
-                                        <Plus size={12} /> Save Current
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </>
+                    <ToolsList
+                        tools={tools}
+                        expandedMenus={expandedMenus}
+                        onToggleMenu={toggleMenu}
+                    />
                 ) : (
                     /* Layers Tab Content */
                     <>
@@ -437,68 +586,26 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                         <LayerToggle
                             icon={Users}
                             label="Collaborator Cursors"
-                            layer={layers.cursors}
+                            enabled={layers.cursors.enabled}
+                            count={layers.cursors.count}
+                            total={layers.cursors.total}
                             onToggle={() => toggleLayer('cursors')}
                         />
                         <LayerToggle
                             icon={PenTool}
                             label="Annotations"
-                            layer={layers.annotations}
+                            enabled={layers.annotations.enabled}
+                            count={layers.annotations.count}
+                            total={layers.annotations.total}
                             onToggle={() => toggleLayer('annotations')}
                         />
-
-                        {/* Widgets quick list */}
-                        <div className="layer-toggle layer-toggle--widgets">
-                            <button
-                                className={`layer-toggle__btn ${widgets.some(w => w.visible) ? 'layer-toggle__btn--active' : ''}`}
-                            >
-                                <Eye size={14} />
-                            </button>
-                            <div className="layer-toggle__info">
-                                <div className="layer-toggle__label">
-                                    <Compass size={14} />
-                                    Widgets
-                                </div>
-                            </div>
-                            <span className="layer-toggle__count-inline">
-                                {activeWidgetCount} / {widgets.length}
-                            </span>
-                        </div>
-                        <div className="widgets-quick-list">
-                            {widgets.map(widget => (
-                                <div key={widget.id} className="widgets-quick-list__item">
-                                    <button
-                                        className="widgets-quick-list__visibility"
-                                        onClick={() => toggleWidgetVisibility(widget.id)}
-                                    >
-                                        {widget.visible ? (
-                                            <Eye size={12} style={{ color: 'var(--color-accent-green)' }} />
-                                        ) : (
-                                            <EyeOff size={12} />
-                                        )}
-                                    </button>
-                                    <span className={`widgets-quick-list__name ${widget.visible ? '' : 'widgets-quick-list__name--hidden'}`}>
-                                        {widget.name}
-                                    </span>
-                                    <button
-                                        className="widgets-quick-list__config"
-                                        onClick={() => {
-                                            setActiveTab('tools');
-                                            setExpandedSections(prev => ({ ...prev, widgets: true }));
-                                            setSelectedWidget(widget.id);
-                                        }}
-                                    >
-                                        <Settings size={10} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-
                         <LayerToggle
-                            icon={Box}
-                            label="Segmentation Masks"
-                            layer={layers.segmentations}
-                            onToggle={() => toggleLayer('segmentations')}
+                            icon={Compass}
+                            label="Widgets"
+                            enabled={layers.widgets.enabled}
+                            count={layers.widgets.count}
+                            total={layers.widgets.total}
+                            onToggle={() => toggleLayer('widgets')}
                         />
                     </>
                 )}

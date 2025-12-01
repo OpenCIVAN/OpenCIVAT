@@ -798,6 +798,432 @@
       background: rgba(255, 255, 255, 0.05);
     }
   }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: $spacing-md;
+  }
+
+  &__no-instance {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+    min-height: 200px;
+
+    svg {
+      margin-bottom: $spacing-md;
+      opacity: 0.4;
+    }
+
+    h3 {
+      font-size: 13px;
+      font-weight: $font-weight-semibold;
+      color: $color-text-secondary;
+      margin: 0 0 $spacing-sm 0;
+    }
+
+    p {
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 0 0 $spacing-xs 0;
+    }
+
+    &-hint {
+      font-size: 10px;
+      opacity: 0.7;
+    }
+  }
+}
+
+// =============================================================================
+// TOOLS LIST - Dynamic tool list from handler
+// =============================================================================
+
+.tools-list {
+  padding: $spacing-sm 0;
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+
+    svg {
+      margin-bottom: $spacing-sm;
+      opacity: 0.4;
+    }
+
+    p {
+      font-size: 12px;
+      margin: 0 0 $spacing-xs 0;
+      color: $color-text-secondary;
+    }
+
+    span {
+      font-size: 10px;
+      opacity: 0.7;
+    }
+  }
+
+  &__separator {
+    height: 1px;
+    margin: $spacing-sm $spacing-md;
+    background: $color-border-subtle;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-xs $spacing-md;
+
+    &-label {
+      font-size: 11px;
+      color: $color-text-secondary;
+    }
+  }
+}
+
+// =============================================================================
+// TOOL MENU - Expandable menu for grouped tools
+// =============================================================================
+
+.tool-menu {
+  border-bottom: 1px solid $color-border-subtle;
+
+  &--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $color-text-secondary;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    &--has-active {
+      color: $color-accent-purple;
+
+      .tool-menu__title {
+        color: $color-accent-purple;
+      }
+    }
+  }
+
+  &__title {
+    flex: 1;
+    text-align: left;
+    font-size: 11px;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  &__hint {
+    font-size: 9px;
+    color: $color-text-muted;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__options {
+    padding: 0 $spacing-md $spacing-sm;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__separator {
+    height: 1px;
+    margin: $spacing-xs 0;
+    background: $color-border-subtle;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+    text-align: left;
+
+    &:hover:not(&--disabled) {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: $color-border-default;
+    }
+
+    &--active {
+      background: rgba($color-accent-purple, 0.1);
+      border-color: rgba($color-accent-purple, 0.3);
+
+      .tool-menu__item-label {
+        color: $color-accent-purple;
+      }
+    }
+
+    &--disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    &-label {
+      display: block;
+      font-size: 11px;
+      color: $color-text-primary;
+    }
+
+    &-desc {
+      display: block;
+      font-size: 9px;
+      color: $color-text-muted;
+      margin-top: 2px;
+    }
+
+    &-active-dot {
+      width: 6px;
+      height: 6px;
+      background: $color-accent-purple;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  }
+
+  &__header-label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: $spacing-sm 0 $spacing-xs 0;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+// =============================================================================
+// SLIDER WITH PRESETS - Slider control with quick preset buttons
+// =============================================================================
+
+.slider-with-presets {
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: $radius-sm;
+
+  &--disabled {
+    opacity: 0.5;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__label {
+    flex: 1;
+    font-size: 11px;
+    color: $color-text-primary;
+  }
+
+  &__value {
+    font-size: 11px;
+    color: $color-accent-blue;
+    font-weight: $font-weight-medium;
+    min-width: 40px;
+    text-align: right;
+  }
+
+  &__slider-row {
+    margin-bottom: $spacing-sm;
+  }
+
+  &__slider {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    cursor: pointer;
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: $color-accent-blue;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 4px rgba($color-accent-blue, 0.4);
+      transition: transform $transition-fast;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+    }
+
+    &::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: $color-accent-blue;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+
+      &::-webkit-slider-thumb {
+        background: $color-text-muted;
+        box-shadow: none;
+      }
+    }
+  }
+
+  &__presets {
+    display: flex;
+    gap: 4px;
+  }
+
+  &__preset {
+    flex: 1;
+    padding: 4px 6px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &__disabled-reason {
+    font-size: 9px;
+    color: $color-text-muted;
+    font-style: italic;
+    margin-top: $spacing-xs;
+  }
+}
+
+// =============================================================================
+// CAMERA GRID MENU - 3x3 grid of camera views
+// =============================================================================
+
+.camera-grid-menu {
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: $radius-md;
+
+  &__label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $spacing-sm;
+    text-align: center;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+
+  &__cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: $spacing-sm;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+    min-height: 44px;
+
+    span {
+      font-size: 8px;
+      color: $color-text-muted;
+    }
+
+    &:hover:not(&--empty):not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba($color-accent-blue, 0.4);
+
+      svg {
+        color: $color-accent-blue;
+      }
+    }
+
+    &--empty {
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+
+    &--special {
+      background: rgba($color-accent-purple, 0.1);
+      border-color: rgba($color-accent-purple, 0.3);
+
+      &:hover:not(:disabled) {
+        background: rgba($color-accent-purple, 0.2);
+        border-color: rgba($color-accent-purple, 0.5);
+
+        svg {
+          color: $color-accent-purple;
+        }
+      }
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
 }
 
 .tool-section {
@@ -874,6 +1300,12 @@
     border: 1px solid rgba($color-accent-purple, 0.4);
     color: $color-accent-purple;
     box-shadow: 0 0 10px rgba($color-accent-purple, 0.2);
+  }
+
+  &--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
   }
 
   &__dropdown-indicator {

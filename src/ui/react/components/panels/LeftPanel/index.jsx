@@ -16,7 +16,7 @@
 // - Saved Filters: Reusable filter presets
 // - Bookmarks: Saved view bookmarks
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     FolderOpen,
     Database,
@@ -201,6 +201,22 @@ export function LeftPanel({
             setActiveTab(panelId);
         }
     }, []);
+
+    // Listen for instance tools open event (from wrench button in InstanceViewport)
+    useEffect(() => {
+        const handleOpenInstanceTools = () => {
+            setActiveTab('instance-tools');
+            // Ensure panel is open
+            if (isCollapsed && onToggle) {
+                onToggle();
+            }
+        };
+
+        window.addEventListener('cia:open-instance-tools', handleOpenInstanceTools);
+        return () => {
+            window.removeEventListener('cia:open-instance-tools', handleOpenInstanceTools);
+        };
+    }, [isCollapsed, onToggle]);
 
     // Render tab content based on active tab
     const renderContent = useCallback(() => {

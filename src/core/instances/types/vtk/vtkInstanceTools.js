@@ -74,8 +74,10 @@ class InstanceToolsManager {
       case "orientation":
         return vtkOrientationWidget.isEnabled(instanceId);
       case "clipping":
+      case "plane":
         return vtkPlaneWidget.isEnabled(instanceId);
       case "ruler":
+      case "line":
         return vtkLineWidget.isEnabled(instanceId);
       case "angle":
         return vtkAngleWidget.isEnabled(instanceId);
