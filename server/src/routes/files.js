@@ -2,17 +2,10 @@
 // File management routes for v2.0 server-authority architecture
 // All file operations are server-authoritative with versioning support
 //
-// MANIFEST-DRIVEN ARCHITECTURE (Phase 1):
-// File type validation can now use the handler capabilities service.
+// MANIFEST-DRIVEN ARCHITECTURE:
+// File type validation uses the handler capabilities service.
 // The handlerCapabilities module reads from registry.json, which is
 // generated from handler manifests by `npm run build:manifests`.
-//
-// MIGRATION PATH:
-// 1. Current: Uses fileTypeValidator.js (hardcoded magic bytes)
-// 2. Future: Use handlerCapabilities.js (manifest-driven)
-//
-// Once registry.json is generated, you can switch to:
-// const { validateUpload, getSupportedExtensions } = require("../services/handlerCapabilities");
 
 const express = require("express");
 const router = express.Router();
@@ -21,11 +14,8 @@ const crypto = require("crypto");
 const { Readable } = require("stream");
 
 const {
-  validateUpload,
   validateUploadWithMagicBytes,
   getSupportedExtensions,
-  isExtensionSupported,
-  createValidationMiddleware,
 } = require("../services/handlerCapabilities");
 
 const { createLogger } = require("../utils/logger");
@@ -195,30 +185,16 @@ router.post("/", upload.single("file"), async (req, res, next) => {
     }
 
     // Validate file type using magic bytes
-    const validation = validateUploadWithMagicBytes(file.originalname, file.buffer);
+    const validation = validateUploadWithMagicBytes(
+      file.originalname,
+      file.buffer
+    );
 
     if (!validation.valid) {
       return res.status(400).json({
         error: "Invalid file type",
         message: validation.error || "Could not verify file type",
       });
-    }
-
-    if (!isTypeAllowed(validation.detectedType)) {
-      return res.status(400).json({
-        error: "File type not allowed",
-        detectedType: validation.detectedType,
-        allowedTypes: getSupportedExtensions(),
-      });
-    }
-
-    if (validation.mismatch) {
-      log.warn(
-        "File extension mismatch: claimed",
-        validation.claimedType,
-        "actual",
-        validation.detectedType
-      );
     }
 
     await client.query("BEGIN");
@@ -256,7 +232,7 @@ router.post("/", upload.single("file"), async (req, res, next) => {
       {
         "Content-Type": file.mimetype,
         "Original-Filename": file.originalname,
-        "Detected-Type": validation.detectedType,
+        "Detected-Type": validation.extension,
       }
     );
 
@@ -274,7 +250,7 @@ router.post("/", upload.single("file"), async (req, res, next) => {
         orgId,
         file.originalname,
         file.size,
-        validation.detectedType,
+        validation.extension,
         hash,
         storageKey,
         user.id,
@@ -322,9 +298,9 @@ router.post("/", upload.single("file"), async (req, res, next) => {
         after: {
           filename: file.originalname,
           size: file.size,
-          type: validation.detectedType,
+          type: validation.extension,
         },
-        details: { hash, mismatch: validation.mismatch },
+        details: { hash, handlerType: validation.handlerType },
       });
     }
 
@@ -350,9 +326,9 @@ router.post("/", upload.single("file"), async (req, res, next) => {
       success: true,
       file: newFile.rows[0],
       validation: {
-        detectedType: validation.detectedType,
-        category: validation.category,
-        mismatch: validation.mismatch,
+        extension: validation.extension,
+        handlerType: validation.handlerType,
+        displayName: validation.displayName,
       },
     });
   } catch (error) {
@@ -382,7 +358,10 @@ router.post("/:id/versions", upload.single("file"), async (req, res, next) => {
     }
 
     // Validate file type
-    const validation = validateUploadWithMagicBytes(file.originalname, file.buffer);
+    const validation = validateUploadWithMagicBytes(
+      file.originalname,
+      file.buffer
+    );
 
     if (!validation.valid) {
       return res.status(400).json({
