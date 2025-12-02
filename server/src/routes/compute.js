@@ -777,6 +777,67 @@ router.post("/internal/job-complete", async (req, res, next) => {
 
     const cacheId = cacheResult.rows[0]?.id;
 
+    // Get job details for derived dataset creation
+    const job = await client.query(
+      "SELECT file_id, operation, params, requested_by FROM computation_jobs WHERE id = $1",
+      [jobId]
+    );
+
+    // Create derived dataset from compute result
+    let derivedFileId = null;
+    if (resultStorageKey && job.rows.length > 0) {
+      // Get original file info
+      const originalFile = await client.query(
+        "SELECT filename, file_type, organization_id FROM datasets WHERE id = $1",
+        [job.rows[0].file_id]
+      );
+
+      if (originalFile.rows.length > 0) {
+        const orig = originalFile.rows[0];
+        const operation = job.rows[0].operation;
+
+        // Generate derived filename: original_operation.ext
+        const baseName = orig.filename.replace(/\.[^/.]+$/, "");
+        const ext = orig.filename.split(".").pop();
+        const derivedFilename = `${baseName}_${operation.replace(
+          /-/g,
+          "_"
+        )}.${ext}`;
+
+        // Create derived dataset entry
+        const derivedResult = await client.query(
+          `
+          INSERT INTO datasets (
+            organization_id, filename, file_type, storage_key,
+            derived_from, derivation_info, uploaded_by, status
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
+          RETURNING id
+        `,
+          [
+            orig.organization_id,
+            derivedFilename,
+            orig.file_type,
+            resultStorageKey,
+            job.rows[0].file_id, // derived_from = original file
+            JSON.stringify({
+              operation: operation,
+              params: job.rows[0].params,
+              jobId: jobId,
+              computeTimeMs: computeTimeMs,
+              cacheId: cacheId,
+            }),
+            job.rows[0].requested_by,
+          ]
+        );
+
+        derivedFileId = derivedResult.rows[0].id;
+        log.info(
+          `Created derived dataset: ${derivedFileId} from ${job.rows[0].file_id}`
+        );
+      }
+    }
+
     // Update job status
     await client.query(
       `
@@ -790,16 +851,12 @@ router.post("/internal/job-complete", async (req, res, next) => {
 
     await client.query("COMMIT");
 
-    // Get job to notify user
-    const job = await pool.query(
-      "SELECT requested_by FROM computation_jobs WHERE id = $1",
-      [jobId]
-    );
-
+    // Notify user via WebSocket
     if (job.rows.length > 0 && wsManager) {
       wsManager.computeComplete(job.rows[0].requested_by, jobId, {
         cacheId,
         metadata: resultMetadata,
+        derivedFileId,
       });
     }
 

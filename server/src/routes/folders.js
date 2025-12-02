@@ -4,7 +4,7 @@ const router = express.Router({ mergeParams: true });
 
 function getUserId(req) {
   if (process.env.NODE_ENV === "development") {
-    return req.headers["x-user-id"] || "dev-user-id";
+    return req.headers["x-user-id"] || "00000000-0000-0000-0000-000000000001";
   }
   return req.user?.id;
 }

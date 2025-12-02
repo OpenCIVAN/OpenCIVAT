@@ -128,6 +128,10 @@ CREATE TABLE datasets (
     status VARCHAR(20) DEFAULT 'active',
     current_version_id UUID,  -- FK added after file_versions created
 
+    -- Derivation tracking (for computed/processed results)
+    derived_from UUID REFERENCES datasets(id) ON DELETE SET NULL,
+    derivation_info JSONB,  -- {operation, params, jobId, computeTimeMs, workerType}
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -678,6 +682,7 @@ CREATE TABLE audit_log (
 CREATE INDEX idx_datasets_hash ON datasets(hash);
 CREATE INDEX idx_datasets_org ON datasets(organization_id);
 CREATE INDEX idx_datasets_status ON datasets(status);
+CREATE INDEX idx_datasets_derived_from ON datasets(derived_from);
 
 -- File versions
 CREATE INDEX idx_file_versions_file ON file_versions(file_id);
