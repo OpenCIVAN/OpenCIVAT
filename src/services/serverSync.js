@@ -4,6 +4,8 @@
 import { config } from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { ws as log } from "@Utils/logger.js";
+import { useComputeJobStore } from "@UI/react/store/computeJobStore.js";
+import { toast } from "@UI/react/store/toastStore.js";
 
 class ServerSyncService {
   constructor() {
@@ -225,6 +227,69 @@ class ServerSyncService {
     // Member events
     this.on("member:joined", (msg) => log.debug(`User ${msg.userId} joined`));
     this.on("member:left", (msg) => log.debug(`User ${msg.userId} left`));
+
+    // Compute job events
+    this.on("compute:progress", (msg) => {
+      log.debug(`Compute progress: ${msg.jobId} - ${msg.progress}%`);
+      const { updateProgress, getJob } = useComputeJobStore.getState();
+      updateProgress(msg.jobId, msg.progress, msg.message);
+
+      // Show toast at key milestones only (to avoid spam)
+      if (msg.progress === 50) {
+        const job = getJob(msg.jobId);
+        if (job) {
+          toast.info(`Processing ${job.fileName || "file"}... 50%`, 2000);
+        }
+      }
+    });
+
+    this.on("compute:complete", async (msg) => {
+      log.info(`Compute complete: ${msg.jobId}`);
+      const { completeJob, getJob } = useComputeJobStore.getState();
+
+      // Get job info BEFORE marking complete (for toast message)
+      const job = getJob(msg.jobId);
+      const jobName = job?.fileName || "Processing";
+      const operation = job?.operation?.replace(/-/g, " ") || "Operation";
+
+      completeJob(msg.jobId, msg.result);
+
+      // Show success toast
+      toast.success(`${jobName}: ${operation} complete!`, 4000);
+
+      // If a derived file was created, add it to DatasetManager
+      if (msg.result?.derivedFileId && this.datasetManager) {
+        try {
+          const response = await fetch(
+            `${config.apiBaseUrl}/files/${msg.result.derivedFileId}`
+          );
+          if (response.ok) {
+            const { file } = await response.json();
+            await this.datasetManager._addDatasetFromServer(file);
+            log.info(`Added derived dataset: ${file.filename}`);
+
+            // Additional toast for derived file
+            toast.info(`New file created: ${file.filename}`, 3000);
+          }
+        } catch (error) {
+          log.error("Failed to fetch derived dataset:", error);
+        }
+      }
+    });
+
+    this.on("compute:failed", (msg) => {
+      log.error(`Compute failed: ${msg.jobId} - ${msg.error}`);
+      const { failJob, getJob } = useComputeJobStore.getState();
+
+      // Get job info for toast
+      const job = getJob(msg.jobId);
+      const jobName = job?.fileName || "Processing";
+
+      failJob(msg.jobId, msg.error);
+
+      // Show error toast (longer duration for errors)
+      toast.error(`${jobName} failed: ${msg.error || "Unknown error"}`, 6000);
+    });
   }
 
   on(type, handler) {

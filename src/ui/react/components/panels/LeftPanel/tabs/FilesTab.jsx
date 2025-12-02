@@ -10,7 +10,7 @@
 // - Search and filter capabilities
 // - Footer anchored to bottom
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { ui as log } from "@Utils/logger.js";
 import {
     FolderOpen,
@@ -39,7 +39,10 @@ import {
     Info,
     Pencil,
     Loader,
+    Cpu,
 } from 'lucide-react';
+
+import { useComputeJobs, config } from '@UI/react/hooks/useComputeJobs.js';
 
 import {
     ResizableSectionsContainer,
@@ -85,17 +88,68 @@ const getFileTypeConfig = (file) => {
 };
 
 // =============================================================================
-// CONTEXT MENU
+// CONTEXT MENU (with submenu support)
 // =============================================================================
 
 function ContextMenu({ x, y, onClose, onAction, file }) {
+    const [activeSubmenu, setActiveSubmenu] = useState(null);
+    const [operations, setOperations] = useState([]);
+    const [loadingOps, setLoadingOps] = useState(false);
+
+    // Fetch available operations when Process submenu is hovered
+    useEffect(() => {
+        if (activeSubmenu !== 'process' || !file) return;
+
+        const fetchOperations = async () => {
+            setLoadingOps(true);
+            try {
+                // Get handler type from file type
+                const handler = getHandlerForFileType(file.fileType);
+                if (!handler) {
+                    setOperations([]);
+                    return;
+                }
+
+                const handlerType = handler.id || 'vtk';
+                const url = new URL(`${config.apiBaseUrl}/compute/operations`);
+                url.searchParams.set('handlerType', handlerType);
+                url.searchParams.set('fileType', file.fileType);
+
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    setOperations(data.operations || []);
+                } else {
+                    setOperations([]);
+                }
+            } catch (err) {
+                log.error('Failed to fetch operations:', err);
+                setOperations([]);
+            } finally {
+                setLoadingOps(false);
+            }
+        };
+
+        fetchOperations();
+    }, [activeSubmenu, file]);
+
     const menuItems = [
         { id: 'open', icon: Eye, label: 'Load in Instance' },
         { id: 'info', icon: Info, label: 'File Details...' },
         { divider: true },
+        { id: 'process', icon: Cpu, label: 'Process', hasSubmenu: true },
+        { divider: true },
         { id: 'rename', icon: Pencil, label: 'Rename...' },
         { id: 'star', icon: Star, label: file?.starred ? 'Unstar' : 'Star' },
     ];
+
+    const handleMouseEnter = (itemId) => {
+        if (itemId === 'process') {
+            setActiveSubmenu('process');
+        } else {
+            setActiveSubmenu(null);
+        }
+    };
 
     return (
         <>
@@ -105,14 +159,54 @@ function ContextMenu({ x, y, onClose, onAction, file }) {
                     item.divider ? (
                         <div key={index} className="context-menu__divider" />
                     ) : (
-                        <button
+                        <div
                             key={item.id}
-                            className="context-menu__item"
-                            onClick={() => { onAction(item.id, file); onClose(); }}
+                            className="context-menu__item-wrapper"
+                            onMouseEnter={() => handleMouseEnter(item.id)}
                         >
-                            <item.icon size={12} />
-                            <span>{item.label}</span>
-                        </button>
+                            <button
+                                className={`context-menu__item ${item.hasSubmenu ? 'has-submenu' : ''}`}
+                                onClick={() => {
+                                    if (!item.hasSubmenu) {
+                                        onAction(item.id, file);
+                                        onClose();
+                                    }
+                                }}
+                            >
+                                <item.icon size={12} />
+                                <span>{item.label}</span>
+                                {item.hasSubmenu && <ChevronRight size={10} className="submenu-arrow" />}
+                            </button>
+
+                            {/* Process submenu */}
+                            {item.id === 'process' && activeSubmenu === 'process' && (
+                                <div className="context-menu__submenu">
+                                    {loadingOps ? (
+                                        <div className="context-menu__item context-menu__item--loading">
+                                            <Loader size={12} className="spin" />
+                                            <span>Loading...</span>
+                                        </div>
+                                    ) : operations.length === 0 ? (
+                                        <div className="context-menu__item context-menu__item--disabled">
+                                            <span>No operations available</span>
+                                        </div>
+                                    ) : (
+                                        operations.map(op => (
+                                            <button
+                                                key={op.id}
+                                                className="context-menu__item"
+                                                onClick={() => {
+                                                    onAction('process', file, op);
+                                                    onClose();
+                                                }}
+                                            >
+                                                <span>{op.name}</span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     )
                 )}
             </div>
@@ -243,6 +337,9 @@ export function FilesPanelContent({
     // Fetch files from server (hook call)
     const { files: hookFiles, isLoading: hookLoading, error: hookError, refetch, uploadFile } = useProjectFiles();
 
+    // Compute jobs hook
+    const { submitJob } = useComputeJobs();
+
     // Use mock data if provided, otherwise use hook data
     const serverFiles = mockFiles ?? hookFiles;
     const isLoading = mockIsLoading ?? hookLoading;
@@ -325,7 +422,23 @@ export function FilesPanelContent({
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY, file });
     }, []);
-    const handleContextAction = useCallback((action, file) => log.debug('Context action:', action, file), []);
+    const handleContextAction = useCallback(async (action, file, operation) => {
+        log.debug('Context action:', action, file, operation);
+
+        if (action === 'process' && operation) {
+            try {
+                log.info(`Submitting ${operation.id} job for file ${file.id}`);
+                await submitJob(
+                    file.id,
+                    operation.id,
+                    operation.defaultParams || {},
+                    { fileName: file.name }
+                );
+            } catch (err) {
+                log.error('Failed to submit compute job:', err);
+            }
+        }
+    }, [submitJob]);
     const toggleTypeFilter = useCallback((type) => {
         setActiveFilters(prev => ({
             ...prev,

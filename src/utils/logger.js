@@ -56,6 +56,7 @@ const DEFAULT_CATEGORIES = {
   vr: true, // VR/XR events
   files: true, // File operations
   auth: true, // Authentication
+  compute: true, // Compute job events
 };
 
 // Parse configuration from localStorage or URL
@@ -147,6 +148,7 @@ const CATEGORY_COLORS = {
   vr: "#00d2d3",
   files: "#74b9ff",
   auth: "#b2bec3",
+  compute: "#e056fd",
 };
 
 /**
@@ -220,6 +222,7 @@ const loggers = {
   vr: createLogger("vr"),
   files: createLogger("files"),
   auth: createLogger("auth"),
+  compute: createLogger("compute"),
 };
 
 // Runtime configuration API (exposed on window.log)
@@ -340,6 +343,7 @@ export const {
   vr,
   files,
   auth,
+  compute,
 } = loggers;
 
 // Default export for simple usage
