@@ -35,7 +35,7 @@ print_status "Docker is running"
 echo ""
 
 # Start Docker services
-echo "🐳 Starting Docker services (PostgreSQL, MinIO, API, Y.js)..."
+echo "🐳 Starting Docker services (PostgreSQL, MinIO, Redis, API, Y.js, VTK Worker)..."
 docker-compose up -d
 
 # Wait for services to be healthy
@@ -59,6 +59,15 @@ if curl -s http://localhost:9000/minio/health/live > /dev/null 2>&1; then
 else
     print_warning "Not ready yet, waiting..."
     sleep 3
+fi
+
+# Check Redis
+echo -n "  Redis: "
+if docker exec cia-redis redis-cli ping > /dev/null 2>&1; then
+    print_status "Ready"
+else
+    print_warning "Not ready yet, waiting..."
+    sleep 2
 fi
 
 # Check API
@@ -103,8 +112,10 @@ fi
 echo "🌐 Services running:"
 echo "  • PostgreSQL:     localhost:5432"
 echo "  • MinIO:          localhost:9000 (Console: localhost:9002)"
+echo "  • Redis:          localhost:6379"
 echo "  • API:            http://localhost:3001"
 echo "  • Y.js WebSocket: ws://localhost:9001"
+echo "  • VTK Worker:     Processing jobs from Redis queue"
 echo ""
 
 echo "📝 Next steps:"

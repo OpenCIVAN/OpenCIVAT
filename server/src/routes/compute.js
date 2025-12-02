@@ -13,7 +13,16 @@ const {
   handleWorkerHeartbeat,
   handleWorkerDeregistration,
 } = require("../services/workerRegistry");
-const { compute: log } = require("../utils/logger");
+const jobQueue = require("../services/jobQueue");
+const {
+  getServerOperations,
+  getComputeWorkerType,
+  getHandlerForExtension,
+  isRegistryLoaded,
+} = require("../services/handlerCapabilities");
+const { createLogger } = require("../utils/logger");
+
+const log = createLogger("compute");
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -151,7 +160,7 @@ router.post("/jobs", async (req, res, next) => {
       projectId,
       operation,
       params = {},
-      priority = "normal",
+      priority = 5,
     } = req.body;
 
     if (!fileId || !operation) {
@@ -163,7 +172,7 @@ router.post("/jobs", async (req, res, next) => {
 
     // Verify file exists and get version
     const fileCheck = await pool.query(
-      "SELECT id, current_version_id, organization_id FROM datasets WHERE id = $1 AND status = 'active'",
+      "SELECT id, current_version_id, organization_id, file_type, storage_key FROM datasets WHERE id = $1 AND status = 'active'",
       [fileId]
     );
 
@@ -174,12 +183,43 @@ router.post("/jobs", async (req, res, next) => {
     const file = fileCheck.rows[0];
     const fileVersionId = file.current_version_id;
 
+    // Get handler type for this file
+    const handlerType = getHandlerForExtension(file.file_type);
+    if (!handlerType) {
+      return res.status(400).json({
+        error: "No handler for file type",
+        fileType: file.file_type,
+      });
+    }
+
+    // Validate operation exists for this handler
+    const operations = getServerOperations(handlerType);
+    const opDef = operations.find((op) => op.id === operation);
+
+    if (!opDef) {
+      return res.status(400).json({
+        error: "Unknown operation",
+        operation,
+        availableOperations: operations.map((op) => op.id),
+      });
+    }
+
+    // Validate input format
+    if (!opDef.inputFormats.includes(file.file_type.toLowerCase())) {
+      return res.status(400).json({
+        error: "Operation does not support this file type",
+        operation,
+        fileType: file.file_type,
+        supportedTypes: opDef.inputFormats,
+      });
+    }
+
     // Generate cache key to check for existing result
     const cacheKey = generateCacheKey(fileId, fileVersionId, operation, params);
 
     // Check cache first
     const cacheCheck = await pool.query(
-      "SELECT * FROM computation_cache WHERE cache_key = $1",
+      "SELECT * FROM computation_cache WHERE cache_key = $1 AND expires_at > NOW()",
       [cacheKey]
     );
 
@@ -206,6 +246,7 @@ router.post("/jobs", async (req, res, next) => {
         success: true,
         cached: true,
         cacheId: cacheCheck.rows[0].id,
+        resultStorageKey: cacheCheck.rows[0].result_storage_key,
         result: cacheCheck.rows[0].result_metadata,
       });
     }
@@ -235,9 +276,9 @@ router.post("/jobs", async (req, res, next) => {
       INSERT INTO computation_jobs (
         file_id, file_version_id, project_id,
         operation, params, priority,
-        requested_by
+        requested_by, cache_key
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `,
       [
@@ -248,10 +289,47 @@ router.post("/jobs", async (req, res, next) => {
         JSON.stringify(params),
         priority,
         user.id,
+        cacheKey,
       ]
     );
 
     const job = result.rows[0];
+
+    // Queue the job via BullMQ
+    const workerType =
+      opDef.workerType || getComputeWorkerType(handlerType) || "general";
+
+    try {
+      await jobQueue.addJob({
+        id: job.id,
+        operation,
+        workerType,
+        fileId,
+        fileStorageKey: file.storage_key,
+        params,
+        priority,
+        cacheKey,
+      });
+
+      // Update job status to queued
+      await pool.query(
+        "UPDATE computation_jobs SET status = 'queued' WHERE id = $1",
+        [job.id]
+      );
+
+      log.info(`Job ${job.id} queued: ${operation} on file ${file.file_type}`);
+    } catch (queueError) {
+      log.error(`Failed to queue job ${job.id}:`, queueError);
+      // Update job status to failed
+      await pool.query(
+        "UPDATE computation_jobs SET status = 'failed', error_message = $1 WHERE id = $2",
+        ["Failed to queue job: " + queueError.message, job.id]
+      );
+      return res.status(500).json({
+        error: "Failed to queue job",
+        message: queueError.message,
+      });
+    }
 
     // Audit log
     if (req.audit) {
@@ -261,16 +339,14 @@ router.post("/jobs", async (req, res, next) => {
         projectId,
         entityType: "computation",
         entityId: job.id,
-        details: { operation, params, priority },
+        details: { operation, params, priority, workerType },
       });
     }
 
-    // TODO: Publish job to worker queue (BullMQ/Redis)
-    // await jobQueue.add(operation, { jobId: job.id, fileId, params });
-
     res.status(201).json({
       success: true,
-      job,
+      job: { ...job, status: "queued" },
+      estimatedDuration: opDef.estimatedDuration,
     });
   } catch (error) {
     next(error);
@@ -501,95 +577,60 @@ router.delete("/cache/:id", async (req, res, next) => {
 
 /**
  * GET /api/compute/operations
- * List available computation operations
+ * List available computation operations for a file type
  */
 router.get("/operations", (req, res) => {
-  // Get supported operations from worker registry
-  const supportedOps = workerRegistry.getSupportedOperations();
+  const { fileType, handlerType } = req.query;
 
-  // Static operation definitions (could be moved to worker registry)
-  const operationDefs = [
-    {
-      name: "decimate-point-cloud",
-      description: "Reduce point cloud point count",
-      category: "point_cloud",
-      params: {
-        targetReduction: { type: "number", min: 0, max: 0.99, default: 0.5 },
-      },
-    },
-    {
-      name: "point-cloud-to-mesh",
-      description: "Convert point cloud to mesh surface",
-      category: "point_cloud",
-      params: {
-        method: {
-          type: "string",
-          enum: ["poisson", "ball-pivot"],
-          default: "poisson",
-        },
-      },
-    },
-    {
-      name: "extract-isosurface",
-      description: "Extract isosurface from volume",
-      category: "isosurface",
-      params: {
-        isovalue: { type: "number" },
-        field: { type: "string" },
-      },
-    },
-    {
-      name: "decimate-mesh",
-      description: "Reduce mesh polygon count",
-      category: "decimation",
-      params: {
-        targetReduction: { type: "number", min: 0, max: 0.99, default: 0.5 },
-      },
-    },
-    {
-      name: "smooth-mesh",
-      description: "Smooth mesh surface",
-      category: "mesh",
-      params: {
-        iterations: { type: "integer", min: 1, max: 100, default: 20 },
-        relaxationFactor: { type: "number", min: 0, max: 1, default: 0.1 },
-      },
-    },
-    {
-      name: "clip-mesh",
-      description: "Clip mesh with plane",
-      category: "mesh",
-      params: {
-        origin: { type: "array", items: "number", length: 3 },
-        normal: { type: "array", items: "number", length: 3 },
-      },
-    },
-    {
-      name: "compute-bounds",
-      description: "Calculate data bounding box",
-      category: "general",
-      params: {},
-    },
-    {
-      name: "compute-histogram",
-      description: "Calculate field histogram",
-      category: "general",
-      params: {
-        field: { type: "string" },
-        bins: { type: "integer", default: 100 },
-      },
-    },
-  ];
+  if (!isRegistryLoaded()) {
+    return res.status(503).json({
+      error: "Registry not loaded",
+      message: "Run npm run build:manifests and restart server",
+    });
+  }
 
-  // Filter to only supported operations
-  const operations = operationDefs.filter((op) =>
-    supportedOps.includes(op.name)
-  );
+  let handler = handlerType;
+  if (!handler && fileType) {
+    handler = getHandlerForExtension(fileType);
+  }
+
+  if (!handler) {
+    // Return all operations from all handlers
+    const workerStatus = workerRegistry.getStatus();
+    return res.json({
+      operations: [],
+      message: "Provide fileType or handlerType to get specific operations",
+      workerStatus,
+    });
+  }
+
+  const operations = getServerOperations(handler);
+
+  // Filter by input format if fileType provided
+  const filtered = fileType
+    ? operations.filter((op) =>
+        op.inputFormats.includes(fileType.toLowerCase())
+      )
+    : operations;
 
   res.json({
-    operations,
+    handlerType: handler,
+    operations: filtered,
     workerStatus: workerRegistry.getStatus(),
   });
+});
+
+/**
+ * GET /api/compute/queue-stats
+ * Get job queue statistics
+ */
+router.get("/queue-stats", async (req, res) => {
+  try {
+    const stats = await jobQueue.getAllQueueStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ============================================================================

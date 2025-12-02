@@ -229,15 +229,213 @@ export const vtkManifest: HandlerManifest = {
         "measurement",
       ],
       maxDatasetSize: "100MB",
+      maxPointCount: 5_000_000,
     },
     serverSide: {
-      operations: [], // Empty for Phase 1
-      workerType: "vtk-compute",
+      operations: [
+        // =====================================================
+        // MESH OPERATIONS
+        // =====================================================
+        {
+          id: "mesh-decimation",
+          name: "Mesh Decimation",
+          description:
+            "Reduce polygon count while preserving shape quality. Uses quadric error metrics for optimal vertex placement.",
+          inputFormats: ["vtp", "stl", "obj", "ply"],
+          outputFormat: "vtp",
+          requiredForVR: false,
+          cacheable: true,
+          computeCost: 5,
+          estimatedDuration: "seconds",
+          parameters: [
+            {
+              name: "targetReduction",
+              type: "number",
+              label: "Target Reduction %",
+              default: 50,
+              min: 10,
+              max: 95,
+              description:
+                "Percentage of polygons to remove (50 = reduce to half)",
+            },
+            {
+              name: "preserveBoundary",
+              type: "boolean",
+              label: "Preserve Boundary",
+              default: true,
+              description: "Prevent boundary edges from being modified",
+            },
+          ],
+          workerType: "vtk-python",
+        },
+        {
+          id: "mesh-smoothing",
+          name: "Mesh Smoothing",
+          description:
+            "Apply Laplacian smoothing to reduce surface noise while preserving features.",
+          inputFormats: ["vtp", "stl", "obj", "ply"],
+          outputFormat: "vtp",
+          requiredForVR: false,
+          cacheable: true,
+          computeCost: 3,
+          estimatedDuration: "seconds",
+          parameters: [
+            {
+              name: "iterations",
+              type: "number",
+              label: "Iterations",
+              default: 20,
+              min: 1,
+              max: 100,
+              description: "Number of smoothing passes",
+            },
+            {
+              name: "relaxationFactor",
+              type: "number",
+              label: "Relaxation Factor",
+              default: 0.1,
+              min: 0.01,
+              max: 1.0,
+              description: "Strength of smoothing per iteration",
+            },
+          ],
+          workerType: "vtk-python",
+        },
+
+        // =====================================================
+        // VR-REQUIRED PREPROCESSING
+        // =====================================================
+        {
+          id: "lod-generation",
+          name: "LOD Generation",
+          description:
+            "Generate Level-of-Detail hierarchy for progressive rendering. Creates multiple resolution levels for efficient VR streaming.",
+          inputFormats: ["vtp", "stl", "obj", "ply"],
+          outputFormat: "lod-hierarchy",
+          requiredForVR: true,
+          cacheable: true,
+          computeCost: 7,
+          estimatedDuration: "minutes",
+          parameters: [
+            {
+              name: "levels",
+              type: "number",
+              label: "LOD Levels",
+              default: 4,
+              min: 2,
+              max: 8,
+              description: "Number of detail levels to generate",
+            },
+            {
+              name: "reductionRatio",
+              type: "number",
+              label: "Reduction Ratio",
+              default: 0.5,
+              min: 0.25,
+              max: 0.75,
+              description: "Polygon reduction between each level",
+            },
+          ],
+          workerType: "vtk-python",
+        },
+        {
+          id: "volume-chunking",
+          name: "Volume Chunking",
+          description:
+            "Split volumetric data into streamable octree chunks for progressive VR loading.",
+          inputFormats: ["vti"],
+          outputFormat: "chunked-volume",
+          requiredForVR: true,
+          cacheable: true,
+          computeCost: 8,
+          estimatedDuration: "minutes",
+          parameters: [
+            {
+              name: "chunkSize",
+              type: "number",
+              label: "Chunk Size",
+              default: 64,
+              min: 16,
+              max: 256,
+              description: "Size of each chunk in voxels (per dimension)",
+            },
+            {
+              name: "overlap",
+              type: "number",
+              label: "Overlap",
+              default: 2,
+              min: 0,
+              max: 8,
+              description: "Overlap between chunks for seamless rendering",
+            },
+          ],
+          workerType: "vtk-python",
+        },
+
+        // =====================================================
+        // EXTRACTION OPERATIONS
+        // =====================================================
+        {
+          id: "isosurface-extraction",
+          name: "Isosurface Extraction",
+          description:
+            "Extract surface mesh from volumetric data at specified threshold value.",
+          inputFormats: ["vti"],
+          outputFormat: "vtp",
+          requiredForVR: false,
+          cacheable: true,
+          computeCost: 6,
+          estimatedDuration: "seconds",
+          parameters: [
+            {
+              name: "isoValue",
+              type: "number",
+              label: "Iso Value",
+              default: 0.5,
+              min: 0,
+              max: 1,
+              description: "Threshold value for surface extraction",
+            },
+            {
+              name: "computeNormals",
+              type: "boolean",
+              label: "Compute Normals",
+              default: true,
+              description: "Calculate surface normals for smooth shading",
+            },
+          ],
+          workerType: "vtk-python",
+        },
+
+        // =====================================================
+        // ANALYSIS OPERATIONS
+        // =====================================================
+        {
+          id: "compute-statistics",
+          name: "Compute Statistics",
+          description:
+            "Calculate statistical properties of the dataset (bounds, point count, data ranges).",
+          inputFormats: ["vtp", "vti", "vtu", "vtk", "stl", "obj", "ply"],
+          outputFormat: "json",
+          requiredForVR: false,
+          cacheable: true,
+          computeCost: 2,
+          estimatedDuration: "instant",
+          parameters: [],
+          workerType: "vtk-python",
+        },
+      ],
+
+      workerType: "vtk-python",
+      preferredRuntime: "python",
+
+      // Auto-run these on upload for VR-destined files
+      autoPreprocess: ["compute-statistics"],
     },
     caching: {
       preprocessResults: true,
-      cacheKey: ["datasetId", "operation", "parameters"],
-      ttl: "24h",
+      cacheKey: ["datasetId", "operation", "parameters", "fileVersion"],
+      ttl: "7d",
       invalidateOn: ["dataset-update", "dataset-delete"],
     },
   },

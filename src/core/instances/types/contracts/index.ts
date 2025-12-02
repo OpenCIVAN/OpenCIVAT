@@ -82,28 +82,111 @@ export interface FileTypeCapability {
 }
 
 // =============================================================================
-// COMPUTE OPERATIONS (Phase 1 Stubs)
+// COMPUTE OPERATIONS (Phase 2 - Full Implementation)
 // =============================================================================
 
 /**
- * Defines a compute operation that can run on client or server.
- * Stubbed for Phase 1 - full implementation in Phase 2.
+ * Defines a server-side compute operation.
+ * Operations can be triggered manually or automatically on file upload.
  */
 export interface ComputeOperation {
-  /** Unique operation identifier */
+  /** Unique operation identifier (e.g., 'mesh-decimation') */
   id: string;
 
-  /** Human-readable name */
+  /** Human-readable name for UI */
   name: string;
 
-  /** Operation description */
+  /** Detailed description of what this operation does */
+  description: string;
+
+  /** File extensions this operation accepts as input */
+  inputFormats: string[];
+
+  /** Output format produced (extension or special type like 'lod-hierarchy') */
+  outputFormat: string;
+
+  /**
+   * Must this operation complete before VR streaming can begin?
+   * If true, the system will auto-trigger this on file upload when
+   * the file is destined for VR viewing.
+   */
+  requiredForVR: boolean;
+
+  /** Can the results be cached? Most preprocessing should be cacheable. */
+  cacheable: boolean;
+
+  /**
+   * Relative compute cost (1-10).
+   * Used for job prioritization and worker routing.
+   * 1 = instant, 5 = moderate, 10 = very expensive
+   */
+  computeCost: number;
+
+  /**
+   * Estimated time category for UI feedback.
+   */
+  estimatedDuration: "instant" | "seconds" | "minutes" | "hours";
+
+  /**
+   * Parameters this operation accepts.
+   * Used for validation and UI generation.
+   */
+  parameters?: ComputeOperationParameter[];
+
+  /**
+   * Worker type required to run this operation.
+   * Overrides handler-level workerType if specified.
+   */
+  workerType?: string;
+}
+
+/**
+ * Parameter definition for compute operations.
+ */
+export interface ComputeOperationParameter {
+  /** Parameter name */
+  name: string;
+
+  /** Parameter type */
+  type: "number" | "string" | "boolean" | "select";
+
+  /** Human-readable label */
+  label: string;
+
+  /** Default value */
+  default: number | string | boolean;
+
+  /** For number type: minimum value */
+  min?: number;
+
+  /** For number type: maximum value */
+  max?: number;
+
+  /** For select type: available options */
+  options?: Array<{ value: string; label: string }>;
+
+  /** Help text for UI */
   description?: string;
+}
 
-  /** Input data requirements */
-  inputType?: string;
+/**
+ * Server-side compute capabilities for a handler.
+ */
+export interface ServerComputeCapabilities {
+  /** Operations this handler supports on the server */
+  operations: ComputeOperation[];
 
-  /** Output data type */
-  outputType?: string;
+  /** Default worker type for this handler's operations */
+  workerType: string;
+
+  /** Preferred runtime for heavy computation */
+  preferredRuntime: "javascript" | "python" | "rust";
+
+  /**
+   * Operations to auto-trigger on file upload.
+   * Subset of operation IDs that should run automatically.
+   */
+  autoPreprocess?: string[];
 }
 
 // =============================================================================
@@ -174,7 +257,7 @@ export interface HandlerManifest {
     supportsCameraSync?: boolean;
   };
 
-  /** Compute capabilities (Phase 1 simplified) */
+  /** Compute capabilities */
   compute: {
     /** Client-side compute capabilities */
     clientSide: {
@@ -183,16 +266,13 @@ export interface HandlerManifest {
 
       /** Maximum dataset size for client processing */
       maxDatasetSize?: string;
+
+      /** Maximum point count before recommending server processing */
+      maxPointCount?: number;
     };
 
     /** Server-side compute capabilities */
-    serverSide: {
-      /** Operations requiring server compute */
-      operations: ComputeOperation[];
-
-      /** Worker type for compute routing */
-      workerType: string;
-    };
+    serverSide: ServerComputeCapabilities;
 
     /** Caching configuration */
     caching: {

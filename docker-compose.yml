@@ -42,6 +42,21 @@ services:
       retries: 5
 
 
+  redis:
+    image: redis:7-alpine
+    container_name: cia-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
   api:
     build:
       context: .
@@ -66,6 +81,11 @@ services:
       # Keycloak Auth
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-cia-web}
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # API URL for worker callbacks
+      API_URL: http://api:3001
       # Development bypass
       DEV_BYPASS_AUTH: ${DEV_BYPASS_AUTH:-false}
     ports:
@@ -74,6 +94,8 @@ services:
       postgres:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 
@@ -124,7 +146,34 @@ services:
       start_period: 60s
 
 
+  vtk-worker:
+    build:
+      context: ./workers/vtk-python
+      dockerfile: Dockerfile
+    container_name: cia-vtk-worker
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_NAME: vtk-python
+      WORKER_ID: vtk-worker-1
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: cia-files
+      MINIO_SECURE: "false"
+      API_CALLBACK_URL: http://api:3001/api/compute/internal
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+
 volumes:
   postgres_data:
   minio_data:
+  redis_data:
   # yjs_data:  # Uncomment when adding persistence

@@ -90,6 +90,7 @@ if [ "$QUICK_MODE" = false ]; then
     echo "🌐 Services running:"
     echo "   • API:      http://localhost:3001"
     echo "   • MinIO:    http://localhost:9000 (Console: localhost:9002)"
+    echo "   • Redis:    localhost:6379"
     echo "   • Y.js:     ws://localhost:9001"
     echo ""
     echo -e "${YELLOW}⚠️  IMPORTANT: Clear browser IndexedDB to remove stale Y.js data!${NC}"
