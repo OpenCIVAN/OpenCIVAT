@@ -676,6 +676,71 @@ CREATE TABLE audit_log (
 );
 
 -- ============================================================================
+-- Y.JS PERSISTENCE (Phase 2E)
+-- ============================================================================
+-- Three-table design for collaborative state:
+-- 1. yjs_documents: Snapshots for fast client hydration on reconnect
+-- 2. yjs_updates: Incremental updates for session recording/playback (Sprint 5)
+-- 3. chat_messages: Denormalized audit log (queryable, searchable, Matrix-ready)
+--
+-- Architecture note: Y.js handles only presence data (cursors, avatars, chat).
+-- Datasets, views, annotations use REST API + WebSocket broadcasts.
+
+-- Y.js document snapshots (efficient loading on reconnect)
+CREATE TABLE yjs_documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_id VARCHAR(255) NOT NULL UNIQUE,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    document_state BYTEA NOT NULL,          -- Encoded Y.Doc state vector
+    snapshot_version INTEGER DEFAULT 1,      -- Increments on each snapshot
+    last_update_id UUID,                     -- Reference to last applied update
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Y.js incremental updates (for recording and playback)
+CREATE TABLE yjs_updates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_id VARCHAR(255) NOT NULL,
+    update_data BYTEA NOT NULL,              -- Binary Y.js update
+    update_origin VARCHAR(50),               -- 'chat', 'cursor', 'camera', 'avatar', 'presence'
+    user_id UUID REFERENCES users(id),
+    client_id INTEGER,                       -- Y.js awareness client ID
+    sequence_num BIGSERIAL,                  -- Monotonic ordering for playback
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT fk_yjs_room FOREIGN KEY (room_id)
+        REFERENCES yjs_documents(room_id) ON DELETE CASCADE
+);
+
+-- Chat messages (denormalized for audit queries)
+-- Mirrors Y.js yText in queryable form; ready for future Matrix integration
+CREATE TABLE chat_messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_id VARCHAR(255) NOT NULL,
+    project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    username VARCHAR(255),                   -- Denormalized for query convenience
+    message TEXT NOT NULL,
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+
+    -- Threading support (future Matrix integration)
+    reply_to_id UUID REFERENCES chat_messages(id) ON DELETE SET NULL,
+    thread_root_id UUID REFERENCES chat_messages(id) ON DELETE SET NULL,
+
+    -- Message metadata
+    message_type VARCHAR(50) DEFAULT 'text', -- 'text', 'system', 'file_share', 'annotation_ref'
+    metadata JSONB DEFAULT '{}',             -- { mentionedUsers: [], attachments: [], reactions: {} }
+
+    -- Moderation
+    deleted_at TIMESTAMPTZ,
+    deleted_by UUID REFERENCES users(id),
+
+    -- Y.js correlation (links audit to recording)
+    yjs_update_id UUID REFERENCES yjs_updates(id) ON DELETE SET NULL
+);
+
+-- ============================================================================
 -- INDEXES
 -- ============================================================================
 
@@ -730,6 +795,24 @@ CREATE INDEX idx_audit_org ON audit_log(organization_id, timestamp DESC);
 CREATE INDEX idx_audit_project ON audit_log(project_id, timestamp DESC);
 CREATE INDEX idx_audit_user ON audit_log(user_id, timestamp DESC);
 CREATE INDEX idx_audit_action ON audit_log(action);
+
+-- Y.js documents
+CREATE INDEX idx_yjs_docs_project ON yjs_documents(project_id);
+CREATE INDEX idx_yjs_docs_updated ON yjs_documents(updated_at DESC);
+
+-- Y.js updates (optimized for playback)
+CREATE INDEX idx_yjs_updates_room_seq ON yjs_updates(room_id, sequence_num);
+CREATE INDEX idx_yjs_updates_room_time ON yjs_updates(room_id, timestamp);
+CREATE INDEX idx_yjs_updates_origin ON yjs_updates(update_origin) WHERE update_origin IS NOT NULL;
+CREATE INDEX idx_yjs_updates_user ON yjs_updates(user_id) WHERE user_id IS NOT NULL;
+
+-- Chat messages (optimized for history queries and audit)
+CREATE INDEX idx_chat_room_time ON chat_messages(room_id, timestamp DESC);
+CREATE INDEX idx_chat_project_time ON chat_messages(project_id, timestamp DESC);
+CREATE INDEX idx_chat_user ON chat_messages(user_id);
+CREATE INDEX idx_chat_thread ON chat_messages(thread_root_id) WHERE thread_root_id IS NOT NULL;
+CREATE INDEX idx_chat_not_deleted ON chat_messages(room_id, timestamp) WHERE deleted_at IS NULL;
+CREATE INDEX idx_chat_type ON chat_messages(message_type) WHERE message_type != 'text';
 
 -- ============================================================================
 -- TRIGGERS
