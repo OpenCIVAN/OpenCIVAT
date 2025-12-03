@@ -55,7 +55,7 @@
   }
 
   // =============================================================================
-  // SECONDARY TOP BAR - Spans between activity bars with fixed-width zones
+  // SECONDARY TOP BAR - Spans between activity bars with content-sized zones
   // =============================================================================
 
   // Container spans all columns between activity bars
@@ -69,19 +69,18 @@
     min-width: 0;
   }
 
-  // Left zone - FIXED width, doesn't change with panel resize
+  // Left zone - takes space it needs, can shrink if necessary
   .three-edge-layout__sec-top-left {
-    flex: 0 0 auto;
-    width: 200px; // Fixed width for left controls
+    flex: 0 1 auto; // Don't grow, can shrink, auto width
     display: flex;
     align-items: center;
     padding: 0 $spacing-sm;
-    overflow: hidden;
+    min-width: 0; // Allow shrinking below content size
   }
 
   // Center zone - FLEXIBLE, expands to fill available space
   .three-edge-layout__sec-top-center {
-    flex: 1;
+    flex: 1 1 0; // Grow, shrink, start at 0
     display: flex;
     align-items: center;
     justify-content: center;
@@ -98,15 +97,14 @@
     }
   }
 
-  // Right zone - FIXED width, doesn't change with panel resize
+  // Right zone - takes space it needs, can shrink if necessary
   .three-edge-layout__sec-top-right {
-    flex: 0 0 auto;
-    width: 200px; // Fixed width for right controls
+    flex: 0 1 auto; // Don't grow, can shrink, auto width
     display: flex;
     align-items: center;
     justify-content: flex-end;
     padding: 0 $spacing-sm;
-    overflow: hidden;
+    min-width: 0; // Allow shrinking below content size
   }
 
   // =============================================================================
@@ -178,7 +176,7 @@
   }
 
   // =============================================================================
-  // SECONDARY BOTTOM BAR - Spans between activity bars with fixed-width zones
+  // SECONDARY BOTTOM BAR - Spans between activity bars with content-sized zones
   // =============================================================================
 
   // Container spans all columns between activity bars
@@ -192,19 +190,18 @@
     min-width: 0;
   }
 
-  // Left zone - FIXED width
+  // Left zone - takes space it needs, can shrink if necessary
   .three-edge-layout__sec-bot-left {
-    flex: 0 0 auto;
-    width: 200px;
+    flex: 0 1 auto; // Don't grow, can shrink, auto width
     display: flex;
     align-items: center;
     padding: 0 $spacing-sm;
-    overflow: hidden;
+    min-width: 0; // Allow shrinking below content size
   }
 
   // Center zone - FLEXIBLE
   .three-edge-layout__sec-bot-center {
-    flex: 1;
+    flex: 1 1 0; // Grow, shrink, start at 0
     display: flex;
     align-items: center;
     justify-content: center;
@@ -221,15 +218,14 @@
     }
   }
 
-  // Right zone - FIXED width
+  // Right zone - takes space it needs, can shrink if necessary
   .three-edge-layout__sec-bot-right {
-    flex: 0 0 auto;
-    width: 200px;
+    flex: 0 1 auto; // Don't grow, can shrink, auto width
     display: flex;
     align-items: center;
     justify-content: flex-end;
     padding: 0 $spacing-sm;
-    overflow: hidden;
+    min-width: 0; // Allow shrinking below content size
   }
 
   // =============================================================================
