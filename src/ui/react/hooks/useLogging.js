@@ -1,123 +1,69 @@
 // src/ui/react/hooks/useLogging.js
-// Custom hook for system logging
-// Provides real-time log access to React components
+// React hook for displaying progress logs in UI
+//
+// This hook subscribes to progress log events from @Utils/logger.js
+// and maintains a React state array for the LoggingPanel component.
+//
+// IMPORTANT: For logging in non-React code (algorithms, services, etc.),
+// import directly from @Utils/logger.js instead:
+//
+//   import { logProgress, logSuccess, logError } from '@Utils/logger.js';
 
 import { useState, useEffect, useCallback } from "react";
-import { generateLogId } from "@Utils/idGenerator.js";
+import { subscribeToProgressLogs, LogType } from "@Utils/logger.js";
 
-// Global log storage (shared across all components)
-const logStore = {
-  logs: [],
-  maxLogs: 100,
-  listeners: [],
-};
+// Re-export LogType for backward compatibility with LoggingPanel
+export { LogType };
 
-// Log types
-export const LogType = {
-  INFO: "info",
-  SUCCESS: "success",
-  WARNING: "warning",
-  ERROR: "error",
-  PROGRESS: "progress",
-};
-
-// Core logging functions (called from anywhere in the app)
-export function logInfo(message) {
-  addLog(LogType.INFO, message);
-}
-
-export function logSuccess(message) {
-  addLog(LogType.SUCCESS, message);
-}
-
-export function logWarning(message) {
-  addLog(LogType.WARNING, message);
-}
-
-export function logError(message) {
-  addLog(LogType.ERROR, message);
-}
-
-export function logProgress(message) {
-  addLog(LogType.PROGRESS, message);
-}
-
-function addLog(type, message) {
-  const log = {
-    id: generateLogId("log"),
-    type,
-    message,
-    timestamp: new Date(),
-  };
-
-  // Add to store
-  logStore.logs.push(log);
-
-  // Keep only last N logs
-  if (logStore.logs.length > logStore.maxLogs) {
-    logStore.logs.shift();
-  }
-
-  // Notify listeners
-  logStore.listeners.forEach((listener) => {
-    try {
-      listener(log);
-    } catch (error) {
-      console.error("Error in log listener:", error);
-    }
-  });
-
-  // Also log to console for debugging
-  const emoji = {
-    info: "ℹ️",
-    success: "✅",
-    warning: "⚠️",
-    error: "❌",
-    progress: "⏳",
-  };
-  console.log(`${emoji[type] || "📋"} ${message}`);
-}
+// Maximum logs to keep in memory (prevents memory leaks in long sessions)
+const MAX_LOGS = 200;
 
 /**
- * Hook to access system logs in React components
- * Returns: { logs, clearLogs }
+ * useLogging - React hook for log display
+ *
+ * Use this ONLY in React components that need to display logs.
+ * For creating logs, use the functions from @Utils/logger.js directly.
+ *
+ * @returns {{ logs: Array, clearLogs: Function }}
  */
 export function useLogging() {
-  const [logs, setLogs] = useState([...logStore.logs]);
+  const [logs, setLogs] = useState([]);
 
+  // Subscribe to progress log events
   useEffect(() => {
-    // Listener function
-    const listener = (newLog) => {
-      setLogs((prevLogs) => {
-        const updatedLogs = [...prevLogs, newLog];
-        // Keep only last maxLogs
-        if (updatedLogs.length > logStore.maxLogs) {
-          updatedLogs.shift();
+    const unsubscribe = subscribeToProgressLogs((logEntry) => {
+      setLogs((prev) => {
+        const newLogs = [...prev, logEntry];
+        // Trim to max size
+        if (newLogs.length > MAX_LOGS) {
+          return newLogs.slice(-MAX_LOGS);
         }
-        return updatedLogs;
+        return newLogs;
       });
-    };
+    });
 
-    // Register listener
-    logStore.listeners.push(listener);
-
-    // Cleanup
-    return () => {
-      const index = logStore.listeners.indexOf(listener);
-      if (index > -1) {
-        logStore.listeners.splice(index, 1);
-      }
-    };
+    return unsubscribe;
   }, []);
 
+  // Clear all logs
   const clearLogs = useCallback(() => {
-    logStore.logs = [];
     setLogs([]);
-    console.log("🧹 Logs cleared");
   }, []);
 
-  return {
-    logs,
-    clearLogs,
-  };
+  return { logs, clearLogs };
 }
+
+// =============================================================================
+// DEPRECATED EXPORTS - Use @Utils/logger.js instead
+// These are kept temporarily for backward compatibility during migration
+// =============================================================================
+
+// Re-export from logger for backward compatibility
+// TODO: Remove these after updating all imports
+export {
+  logInfo,
+  logSuccess,
+  logWarning,
+  logError,
+  logProgress,
+} from "@Utils/logger.js";

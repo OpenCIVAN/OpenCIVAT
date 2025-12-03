@@ -12,6 +12,8 @@ import {
     EyeOff,
     Circle,
     Zap,
+    ChevronUp,
+    ChevronDown,
 } from 'lucide-react';
 
 import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
@@ -287,6 +289,22 @@ export function StatusBar() {
         });
     }, []);
 
+    // Add handler for panel toggle
+    const handleTogglePanel = () => {
+        const controls = getBottomPanelControls();
+        if (controls) {
+            controls.toggle();
+        }
+    };
+
+    // Add handler for clicking on warnings (opens logs filtered to warnings)
+    const handleWarningsClick = () => {
+        const controls = getBottomPanelControls();
+        if (controls) {
+            controls.showLogs();
+        }
+    };
+
     return (
         <div className="status-bar">
             {/* Left Zone: Sync, Online, Warnings */}
@@ -300,11 +318,16 @@ export function StatusBar() {
 
                 <OnlineUsersIndicator count={onlineCount} />
 
+                {/* Warnings indicator - clickable to open logs */}
                 {warningCount > 0 && (
-                    <>
-                        <div className="status-bar__divider" />
-                        <WarningsIndicator count={warningCount} />
-                    </>
+                    <button
+                        className="status-bar__item status-bar__item--warnings"
+                        onClick={handleWarningsClick}
+                        title="Click to view logs"
+                    >
+                        <AlertTriangle size={12} />
+                        <span>{warningCount}</span>
+                    </button>
                 )}
 
                 <div className="status-bar__divider" />
@@ -329,6 +352,16 @@ export function StatusBar() {
                 />
 
                 <FPSCounter fps={fps} />
+
+                {/* Panel toggle button - at the right end */}
+                <button
+                    className="status-bar__item status-bar__item--toggle"
+                    onClick={handleTogglePanel}
+                    title="Toggle output panel"
+                    aria-label="Toggle output panel"
+                >
+                    <ChevronUp size={14} />
+                </button>
             </div>
         </div>
     );

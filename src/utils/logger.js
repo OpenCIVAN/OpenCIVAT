@@ -317,6 +317,135 @@ const logConfig = {
   },
 };
 
+// =============================================================================
+// PROGRESS LOGGING
+// =============================================================================
+// These functions are for long-running operations (algorithms, file processing)
+// They emit events that the LoggingPanel can subscribe to for UI display.
+
+/**
+ * Log types for progress-style logging
+ * Used by LoggingPanel to style messages appropriately
+ */
+export const LogType = Object.freeze({
+  INFO: "info",
+  SUCCESS: "success",
+  WARNING: "warning",
+  ERROR: "error",
+  PROGRESS: "progress",
+});
+
+// Event emitter for progress logs (LoggingPanel subscribes to this)
+const progressListeners = new Set();
+
+/**
+ * Subscribe to progress log events
+ * Used by LoggingPanel to display logs in UI
+ * @param {Function} callback - Called with { type, message, timestamp }
+ * @returns {Function} Unsubscribe function
+ */
+export function subscribeToProgressLogs(callback) {
+  progressListeners.add(callback);
+  return () => progressListeners.delete(callback);
+}
+
+/**
+ * Emit a progress log event
+ * @private
+ */
+function emitProgressLog(type, message) {
+  const logEntry = {
+    type,
+    message,
+    timestamp: Date.now(),
+  };
+
+  // Emit to subscribers (LoggingPanel)
+  progressListeners.forEach((listener) => {
+    try {
+      listener(logEntry);
+    } catch (e) {
+      console.error("Progress log listener error:", e);
+    }
+  });
+
+  // Also log to console using the compute category
+  const log = createLogger("compute");
+  switch (type) {
+    case LogType.ERROR:
+      log.error(message);
+      break;
+    case LogType.WARNING:
+      log.warn(message);
+      break;
+    case LogType.SUCCESS:
+      log.info(`✅ ${message}`);
+      break;
+    case LogType.PROGRESS:
+      log.debug(`⏳ ${message}`);
+      break;
+    default:
+      log.info(message);
+  }
+}
+
+// =============================================================================
+// PROGRESS LOGGING FUNCTIONS
+// Use these in algorithms and long-running operations
+// =============================================================================
+
+/**
+ * Log an informational message about operation progress
+ * @param {string} message
+ */
+export function logInfo(message) {
+  emitProgressLog(LogType.INFO, message);
+}
+
+/**
+ * Log a success message (operation completed)
+ * @param {string} message
+ */
+export function logSuccess(message) {
+  emitProgressLog(LogType.SUCCESS, message);
+}
+
+/**
+ * Log a warning (non-fatal issue)
+ * @param {string} message
+ */
+export function logWarning(message) {
+  emitProgressLog(LogType.WARNING, message);
+}
+
+/**
+ * Log an error (operation failed)
+ * @param {string} message
+ */
+export function logError(message) {
+  emitProgressLog(LogType.ERROR, message);
+}
+
+/**
+ * Log progress update (for long operations)
+ * @param {string} message
+ */
+export function logProgress(message) {
+  emitProgressLog(LogType.PROGRESS, message);
+}
+
+/**
+ * Log memory usage (useful for debugging TensorFlow/large datasets)
+ * @param {string} context - Description of when this was measured
+ */
+export function logMemoryUsage(context = "") {
+  if (typeof performance !== "undefined" && performance.memory) {
+    const used = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+    const total = Math.round(performance.memory.totalJSHeapSize / 1024 / 1024);
+    logProgress(`Memory ${context}: ${used}MB / ${total}MB`);
+  }
+}
+
 // Expose to window for debugging
 if (typeof window !== "undefined") {
   window.log = logConfig;

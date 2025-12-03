@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
+import { BottomPanel } from "@UI/react/components/panels/BottomPanel";
 
 export function CIAWebLayout({
   children,
