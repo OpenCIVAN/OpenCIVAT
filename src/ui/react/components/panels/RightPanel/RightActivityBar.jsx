@@ -7,6 +7,7 @@
 import React from 'react';
 import { PanelRightClose, ChevronLeft } from 'lucide-react';
 import { useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
+import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 // Uses existing styles from RightPanel.scss - no separate SCSS needed
 import './RightPanel.scss';
 
@@ -18,23 +19,25 @@ import './RightPanel.scss';
  * RightActivityBar - Vertical icon navigation for panel tabs
  * Fixed width (48px), always visible even when panel is collapsed.
  *
- * Props are injected by ThreeEdgeLayout via React.cloneElement:
- * @param {boolean} isOpen - Whether the panel content is expanded
- * @param {Function} onToggle - Callback to toggle panel open/closed
+ * Uses LayoutContext from ThreeEdgeLayout to control panel open/close state.
  */
-export function RightActivityBar({ isOpen, onToggle }) {
+export function RightActivityBar() {
     const { activeTab, setActiveTab } = useRightPanelContext();
+    const { rightOpen: isOpen, setRightOpen } = useLayoutContext();
+
+    // Toggle the panel open/closed
+    const onToggle = () => setRightOpen(!isOpen);
 
     // Handle tab click - if clicking active tab, toggle panel
     const handleTabClick = (tabId) => {
         if (tabId === activeTab) {
             // Clicking active tab toggles the panel
-            onToggle?.();
+            onToggle();
         } else {
             // Clicking different tab - switch to it and ensure panel is open
             setActiveTab(tabId);
             if (!isOpen) {
-                onToggle?.();
+                setRightOpen(true);
             }
         }
     };

@@ -55,53 +55,67 @@
   }
 
   // =============================================================================
-  // SECONDARY TOP BAR ZONES
+  // SECONDARY TOP BAR - Spans between activity bars with fixed-width zones
   // =============================================================================
 
-  // Left zone - sits above left panel
-  .three-edge-layout__sec-top-left {
-    grid-column: 1 / 3; // Activity bar + panel content
+  // Container spans all columns between activity bars
+  .three-edge-layout__sec-top {
+    grid-column: 2 / 5; // Between activity bars (columns 2, 3, 4)
     grid-row: 2;
     background: $color-bg-tertiary;
     border-bottom: 1px solid $color-border-default;
     display: flex;
     align-items: center;
-    padding: 0 $spacing-sm;
-    min-width: var(--sec-bar-left-min, 180px);
+    min-width: 0;
   }
 
-  // Center zone - sits above workspace
+  // Left zone - FIXED width, doesn't change with panel resize
+  .three-edge-layout__sec-top-left {
+    flex: 0 0 auto;
+    width: 200px; // Fixed width for left controls
+    display: flex;
+    align-items: center;
+    padding: 0 $spacing-sm;
+    overflow: hidden;
+  }
+
+  // Center zone - FLEXIBLE, expands to fill available space
   .three-edge-layout__sec-top-center {
-    grid-column: 3;
-    grid-row: 2;
-    background: $color-bg-tertiary;
-    border-bottom: 1px solid $color-border-default;
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     min-width: 0;
+    padding: 0 $spacing-sm;
+
+    // Children should expand to fill available horizontal space
+    > * {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
-  // Right zone - sits above right panel
+  // Right zone - FIXED width, doesn't change with panel resize
   .three-edge-layout__sec-top-right {
-    grid-column: 4 / 6; // Panel content + activity bar
-    grid-row: 2;
-    background: $color-bg-tertiary;
-    border-bottom: 1px solid $color-border-default;
+    flex: 0 0 auto;
+    width: 200px; // Fixed width for right controls
     display: flex;
     align-items: center;
     justify-content: flex-end;
     padding: 0 $spacing-sm;
-    min-width: var(--sec-bar-right-min, 180px);
+    overflow: hidden;
   }
 
   // =============================================================================
-  // ACTIVITY BARS (Always visible, fixed width)
+  // ACTIVITY BARS (Always visible, fixed width, span beside secondary bars)
   // =============================================================================
 
   .three-edge-layout__left-activity {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 2 / 5; // Span secondary top, main content, secondary bottom
     width: var(--left-activity-width);
     background: $color-bg-secondary;
     border-right: 1px solid $color-border-subtle;
@@ -111,7 +125,7 @@
 
   .three-edge-layout__right-activity {
     grid-column: 5;
-    grid-row: 3;
+    grid-row: 2 / 5; // Span secondary top, main content, secondary bottom
     width: var(--right-activity-width);
     background: $color-bg-secondary;
     border-left: 1px solid $color-border-subtle;
@@ -126,6 +140,7 @@
   .three-edge-layout__left-panel {
     grid-column: 2;
     grid-row: 3;
+    position: relative; // For resize handle positioning
     display: flex;
     flex-direction: column;
     background: $color-bg-secondary;
@@ -138,6 +153,7 @@
   .three-edge-layout__right-panel {
     grid-column: 4;
     grid-row: 3;
+    position: relative; // For resize handle positioning
     display: flex;
     flex-direction: column;
     background: $color-bg-secondary;
@@ -162,41 +178,58 @@
   }
 
   // =============================================================================
-  // SECONDARY BOTTOM BAR ZONES
+  // SECONDARY BOTTOM BAR - Spans between activity bars with fixed-width zones
   // =============================================================================
 
-  .three-edge-layout__sec-bot-left {
-    grid-column: 1 / 3;
+  // Container spans all columns between activity bars
+  .three-edge-layout__sec-bot {
+    grid-column: 2 / 5; // Between activity bars (columns 2, 3, 4)
     grid-row: 4;
     background: $color-bg-tertiary;
     border-top: 1px solid $color-border-default;
     display: flex;
     align-items: center;
-    padding: 0 $spacing-sm;
-    min-width: var(--sec-bar-left-min, 180px);
+    min-width: 0;
   }
 
+  // Left zone - FIXED width
+  .three-edge-layout__sec-bot-left {
+    flex: 0 0 auto;
+    width: 200px;
+    display: flex;
+    align-items: center;
+    padding: 0 $spacing-sm;
+    overflow: hidden;
+  }
+
+  // Center zone - FLEXIBLE
   .three-edge-layout__sec-bot-center {
-    grid-column: 3;
-    grid-row: 4;
-    background: $color-bg-tertiary;
-    border-top: 1px solid $color-border-default;
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     min-width: 0;
+    padding: 0 $spacing-sm;
+
+    // Children should expand to fill available horizontal space
+    > * {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
+  // Right zone - FIXED width
   .three-edge-layout__sec-bot-right {
-    grid-column: 4 / 6;
-    grid-row: 4;
-    background: $color-bg-tertiary;
-    border-top: 1px solid $color-border-default;
+    flex: 0 0 auto;
+    width: 200px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     padding: 0 $spacing-sm;
-    min-width: var(--sec-bar-right-min, 180px);
+    overflow: hidden;
   }
 
   // =============================================================================
@@ -214,40 +247,25 @@
   // =============================================================================
 
   // When left panel is collapsed, its content width becomes 0
+  // The grid column 2 becomes 0px, workspace (column 3) expands via 1fr
+  // Secondary bars keep their grid positions - they just shrink with the column
   &.three-edge-layout--left-collapsed {
-    --left-content-width: 0px;
-
     .three-edge-layout__left-panel {
       display: none; // Hide the panel content entirely
     }
 
-    // Secondary bar zones still span activity bar area
-    .three-edge-layout__sec-top-left,
-    .three-edge-layout__sec-bot-left {
-      grid-column: 1; // Only activity bar column
-    }
+    // Secondary bar zones keep spanning their original columns (1-2)
+    // Since column 2 is 0px, they effectively just show above activity bar
+    // but maintain grid alignment
   }
 
   // When right panel is collapsed, its content width becomes 0
   &.three-edge-layout--right-collapsed {
-    --right-content-width: 0px;
-
     .three-edge-layout__right-panel {
       display: none;
     }
 
-    .three-edge-layout__sec-top-right,
-    .three-edge-layout__sec-bot-right {
-      grid-column: 5; // Only activity bar column
-    }
-  }
-
-  // When BOTH panels are collapsed, workspace gets maximum space
-  &.three-edge-layout--left-collapsed.three-edge-layout--right-collapsed {
-    // Center gets all the freed space due to 1fr
-    .three-edge-layout__workspace {
-      // Already handled by grid template
-    }
+    // Secondary bar zones keep spanning their original columns (4-5)
   }
 }
 
@@ -270,19 +288,15 @@
     background: rgba($color-accent-primary, 0.4);
   }
 
+  // Left panel resize handle - positioned at RIGHT edge of left panel
   &--left {
-    // Position at the right edge of column 2
-    grid-column: 2;
-    grid-row: 2 / 5; // Span secondary top through secondary bottom
-    justify-self: end;
-    margin-right: -3px;
+    right: -3px; // Overlap slightly into workspace for easier grabbing
+    left: auto;
   }
 
+  // Right panel resize handle - positioned at LEFT edge of right panel
   &--right {
-    // Position at the left edge of column 4
-    grid-column: 4;
-    grid-row: 2 / 5;
-    justify-self: start;
-    margin-left: -3px;
+    left: -3px; // Overlap slightly into workspace for easier grabbing
+    right: auto;
   }
 }

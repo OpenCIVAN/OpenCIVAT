@@ -217,9 +217,9 @@ function GridZonesLayout({
                 </div>
             )}
 
-            {/* Row 2: Secondary Top Bar Zones */}
+            {/* Row 2: Secondary Top Bar - spans between activity bars */}
             {(secTopLeft || secTopCenter || secTopRight) && (
-                <>
+                <div className="three-edge-layout__sec-top">
                     <div className="three-edge-layout__sec-top-left">
                         {secTopLeft}
                     </div>
@@ -229,7 +229,7 @@ function GridZonesLayout({
                     <div className="three-edge-layout__sec-top-right">
                         {secTopRight}
                     </div>
-                </>
+                </div>
             )}
 
             {/* Row 3: Main Content Area */}
@@ -273,9 +273,9 @@ function GridZonesLayout({
                 {rightActivityBar}
             </div>
 
-            {/* Row 4: Secondary Bottom Bar Zones */}
+            {/* Row 4: Secondary Bottom Bar - spans between activity bars */}
             {(secBotLeft || secBotCenter || secBotRight) && (
-                <>
+                <div className="three-edge-layout__sec-bot">
                     <div className="three-edge-layout__sec-bot-left">
                         {secBotLeft}
                     </div>
@@ -285,7 +285,7 @@ function GridZonesLayout({
                     <div className="three-edge-layout__sec-bot-right">
                         {secBotRight}
                     </div>
-                </>
+                </div>
             )}
 
             {/* Row 5: Status Bar (spans all columns) */}
