@@ -68,11 +68,3 @@ export {
   useMockViewConfigurations,
   useMockDatasetsWithViews,
 } from "./hooks/useDatasets.mock.js";
-
-// =============================================================================
-// LEGACY EXPORTS (Deprecated - migrate to new structure)
-// =============================================================================
-
-// Re-export from old panelMockData for backward compatibility
-// TODO: Migrate stories to use new imports, then remove this
-export * from "./panelMockData.js";

@@ -243,9 +243,9 @@ export class VTKReductionFeature extends ReductionFeature {
 
       // REQUEST SYNC: Notify other users about the reduction (unless this is from remote state)
       if (!options.skipSync) {
-        const instanceManager = window.CIA?.instanceManager;
-        if (instanceManager) {
-          await instanceManager.requestSync(instanceId);
+        const workspaceManager = window.CIA?.workspaceManager;
+        if (workspaceManager) {
+          await workspaceManager.requestSync(instanceId);
           log.debug("Reduction synced to remote users");
         }
       }
@@ -300,9 +300,9 @@ export class VTKReductionFeature extends ReductionFeature {
 
     // REQUEST SYNC: Notify other users about the restoration (unless this is from remote state)
     if (!options.skipSync) {
-      const instanceManager = window.CIA?.instanceManager;
-      if (instanceManager) {
-        await instanceManager.requestSync(instanceId);
+      const workspaceManager = window.CIA?.workspaceManager;
+      if (workspaceManager) {
+        await workspaceManager.requestSync(instanceId);
         log.debug("Restoration synced to remote users");
       }
     }

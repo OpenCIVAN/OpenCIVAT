@@ -65,10 +65,6 @@ export const yText = ydoc.getArray("chatMessages");
 // Kept for: sessionCleanup.js, dataCleanup.js, DebugPanel.jsx
 // ============================================================================
 
-// ============================================================================
-// LEGACY STATE MAPS (Deprecated - DO NOT USE IN NEW CODE)
-// ============================================================================
-
 // @deprecated v2.0 - Use server API: GET/POST /api/files
 export const yDatasets = ydoc.getMap("datasets");
 
