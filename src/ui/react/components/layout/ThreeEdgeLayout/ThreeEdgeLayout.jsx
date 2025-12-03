@@ -2,7 +2,7 @@
 // Main layout orchestrator for the three-edge panel system
 // CSS Grid layout with separated activity bars and panel content
 
-import React, { useMemo, useEffect, cloneElement } from 'react';
+import React, { useMemo, cloneElement } from 'react';
 import { useLayoutState, usePanelPersistence, PANEL_CONSTRAINTS, useResizeHandler } from './ThreeEdgeLayout.logic.js';
 import './ThreeEdgeLayout.scss';
 

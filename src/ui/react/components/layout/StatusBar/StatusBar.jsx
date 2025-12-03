@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
+import { getBottomPanelControls } from '@UI/react/components/panels/BottomPanel';
 import './StatusBar.scss';
 
 // =============================================================================
@@ -291,7 +292,9 @@ export function StatusBar() {
 
     // Add handler for panel toggle
     const handleTogglePanel = () => {
-        const controls = getBottomPanelControls();
+        const controls = typeof getBottomPanelControls === 'function'
+            ? getBottomPanelControls()
+            : null;
         if (controls) {
             controls.toggle();
         }
@@ -299,7 +302,9 @@ export function StatusBar() {
 
     // Add handler for clicking on warnings (opens logs filtered to warnings)
     const handleWarningsClick = () => {
-        const controls = getBottomPanelControls();
+        const controls = typeof getBottomPanelControls === 'function'
+            ? getBottomPanelControls()
+            : null;
         if (controls) {
             controls.showLogs();
         }

@@ -43,7 +43,8 @@ import {
     Cpu,
 } from 'lucide-react';
 
-import { useComputeJobs, config } from '@UI/react/hooks/useComputeJobs.js';
+import { useComputeJobs } from '@UI/react/hooks/useComputeJobs.js';
+import { config } from '@Core/config/clientConfig.js';
 
 import {
     ResizableSectionsContainer,

@@ -52,18 +52,3 @@ export function useLogging() {
 
   return { logs, clearLogs };
 }
-
-// =============================================================================
-// DEPRECATED EXPORTS - Use @Utils/logger.js instead
-// These are kept temporarily for backward compatibility during migration
-// =============================================================================
-
-// Re-export from logger for backward compatibility
-// TODO: Remove these after updating all imports
-export {
-  logInfo,
-  logSuccess,
-  logWarning,
-  logError,
-  logProgress,
-} from "@Utils/logger.js";

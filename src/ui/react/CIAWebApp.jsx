@@ -13,6 +13,7 @@ import { WorkspaceGrid } from "@UI/react/components/workspace/Workspace/Workspac
 import { CanvasWorkspace } from "@UI/react/components/workspace/";
 import { TopBar } from "@UI/react/components/layout/TopBar";
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
+import { BottomPanel } from "@UI/react/components/panels/BottomPanel";
 import {
   SecondaryTopBar,
   WorkspaceSelector,
@@ -203,7 +204,12 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
           centerPanel={renderCenterPanel()}
 
           // Bottom bar
-          bottomBar={<StatusBar />}
+          bottomBar={
+            <>
+              <BottomPanel />
+              <StatusBar />
+            </>
+          }
 
           // Left side - separated activity bar and content
           leftActivityBar={<LeftActivityBar />}
