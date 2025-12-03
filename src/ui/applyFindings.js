@@ -78,3 +78,31 @@ export function applyFindings(polyData, findings = []) {
   // expose overlay actors globally so index.js can render them
   window.__highlightActors__ = overlayActors;
 }
+export function renderFindingsUI(findings, summary, focusCallback) {
+  // summary update
+  document.getElementById("llm-summary").innerText = summary;
+
+  const list = document.getElementById("findings-list");
+  list.innerHTML = "";
+
+  findings.forEach((f, i) => {
+    const card = document.createElement("div");
+    card.className = "finding-card";
+
+    card.innerHTML = `
+      <div class="finding-title">
+        ${i + 1}. ${f.type} (${f.signal}) — ${(f.confidence * 100).toFixed(0)}%
+      </div>
+      <div class="finding-region">${f.regionHint}</div>
+      <div class="finding-context">${f.context}</div>
+    `;
+
+    card.addEventListener("click", () => {
+      focusCallback(f.indices);
+      card.classList.add("selected-finding");
+      setTimeout(() => card.classList.remove("selected-finding"), 600);
+    });
+
+    list.appendChild(card);
+  });
+}
