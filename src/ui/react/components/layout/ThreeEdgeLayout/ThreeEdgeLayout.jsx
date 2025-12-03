@@ -1,60 +1,59 @@
 // src/ui/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.jsx
 // Main layout orchestrator for the three-edge panel system
-// Provides left panel, center workspace, and right panel with resize capabilities
-// UPDATED: Secondary bars now span BETWEEN activity bars, not full width
+// CSS Grid layout with separated activity bars and panel content
 
-import React, { useMemo } from 'react';
-import { ResizablePanel } from '@UI/react/components/layout/ResizablePanel';
-import { useLayoutState, usePanelPersistence, PANEL_CONSTRAINTS } from './ThreeEdgeLayout.logic.js';
+import React, { useMemo, cloneElement } from 'react';
+import { useLayoutState, usePanelPersistence, PANEL_CONSTRAINTS, useResizeHandler } from './ThreeEdgeLayout.logic.js';
 import './ThreeEdgeLayout.scss';
 
 /**
  * ThreeEdgeLayout - Main application layout container
- * 
- * Manages three resizable panels:
- * - Left: Datasets, Files, Quick Access
- * - Center: WorkspaceGrid (main visualization area)
- * - Right: Collaboration features (chat, presence, etc.)
- * 
+ *
+ * CSS Grid layout with separated activity bars and panel content:
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │                              TOP BAR                                  │
+ * ├────────┬──────────┬─────────────────────┬─────────────┬──────────────┤
+ * │        │ SEC-TOP  │   SEC-TOP-CENTER    │  SEC-TOP    │              │
+ * │  LEFT  │  LEFT    │                     │   RIGHT     │    RIGHT     │
+ * │  ACT   ├──────────┼─────────────────────┼─────────────┤    ACT       │
+ * │  BAR   │  LEFT    │                     │   RIGHT     │    BAR       │
+ * │        │  PANEL   │   WORKSPACE GRID    │   PANEL     │              │
+ * │        ├──────────┼─────────────────────┼─────────────┤              │
+ * │        │ SEC-BOT  │   SEC-BOT-CENTER    │  SEC-BOT    │              │
+ * │        │  LEFT    │                     │   RIGHT     │              │
+ * ├────────┴──────────┴─────────────────────┴─────────────┴──────────────┤
+ * │                            STATUS BAR                                 │
+ * └──────────────────────────────────────────────────────────────────────┘
+ *
  * Features:
+ * - Activity bars span full height (always visible)
  * - Panels collapse to activity bars (48px)
  * - Drag-to-resize with constraints
  * - State persists across sessions
- * - Smooth animations
- * - Secondary bars span BETWEEN activity bars (not full width)
- * 
- * Layout Structure:
- * ┌──────────────────────────────────────────────────────────────┐
- * │                         TOP BAR                              │
- * ├────────┬───────────────────────────────────────────┬─────────┤
- * │        │            SECONDARY TOP BAR              │         │
- * │  LEFT  ├───────────────────────────────────────────┤  RIGHT  │
- * │ PANEL  │              CENTER PANEL                 │  PANEL  │
- * │        ├───────────────────────────────────────────┤         │
- * │        │           SECONDARY BOTTOM BAR            │         │
- * ├────────┴───────────────────────────────────────────┴─────────┤
- * │                        BOTTOM BAR                            │
- * └──────────────────────────────────────────────────────────────┘
- * 
+ *
  * @example
  * <ThreeEdgeLayout
  *   topBar={<TopBar />}
- *   secondaryTopBar={<SecondaryTopBar />}
- *   leftPanel={<DatasetsPanel />}
+ *   leftActivityBar={<LeftActivityBar />}
+ *   leftPanelContent={<LeftPanelContent />}
+ *   secondaryTopBarZones={{ left: ..., center: ..., right: ... }}
  *   centerPanel={<WorkspaceGrid />}
- *   rightPanel={<CollaborationPanel />}
- *   secondaryBottomBar={<SecondaryBottomBar />}
+ *   secondaryBottomBarZones={{ left: ..., center: ..., right: ... }}
+ *   rightPanelContent={<RightPanelContent />}
+ *   rightActivityBar={<RightActivityBar />}
  *   bottomBar={<StatusBar />}
  * />
  */
 export function ThreeEdgeLayout({
     topBar,
-    secondaryTopBar,
-    leftPanel,
     centerPanel,
-    rightPanel,
-    secondaryBottomBar,
-    bottomBar
+    bottomBar,
+    leftActivityBar,
+    leftPanelContent,
+    rightActivityBar,
+    rightPanelContent,
+    secondaryTopBarZones,    // { left, center, right }
+    secondaryBottomBarZones, // { left, center, right }
 }) {
     // Layout state management
     const {
@@ -95,90 +94,182 @@ export function ThreeEdgeLayout({
         ...layoutDimensions
     }), [leftOpen, setLeftOpen, rightOpen, setRightOpen, leftWidth, rightWidth, layoutDimensions]);
 
-    // Clone secondary bars with layout dimensions
-    const renderSecondaryBar = (bar, position) => {
-        if (!bar) return null;
-
-        return React.cloneElement(bar, {
-            leftPanelWidth: layoutDimensions.leftPanelWidth,
-            rightPanelWidth: layoutDimensions.rightPanelWidth,
-            leftPanelOpen: layoutDimensions.leftPanelOpen,
-            rightPanelOpen: layoutDimensions.rightPanelOpen,
-        });
-    };
-
     return (
         <LayoutContext.Provider value={contextValue}>
-            <div className="three-edge-layout">
-                {/* Top Bar (Header) - Full width */}
-                {topBar && (
-                    <div className="three-edge-layout__top">
-                        {topBar}
-                    </div>
-                )}
-
-                {/* Main Content Area - Contains panels and secondary bars */}
-                <div className="three-edge-layout__main">
-                    {/* Left Panel */}
-                    <ResizablePanel
-                        side="left"
-                        isOpen={leftOpen}
-                        onToggle={() => setLeftOpen(!leftOpen)}
-                        width={leftWidth}
-                        onWidthChange={setLeftWidth}
-                    >
-                        {leftPanel}
-                    </ResizablePanel>
-
-                    {/* Center Column - Secondary bars + workspace */}
-                    <div className="three-edge-layout__center-column">
-                        {/* Secondary Top Bar */}
-                        {secondaryTopBar && (
-                            <div className="three-edge-layout__secondary-top">
-                                {renderSecondaryBar(secondaryTopBar, 'top')}
-                            </div>
-                        )}
-
-                        {/* Center Panel (Workspace) */}
-                        <div className="three-edge-layout__center">
-                            {centerPanel}
-                        </div>
-
-                        {/* Secondary Bottom Bar */}
-                        {secondaryBottomBar && (
-                            <div className="three-edge-layout__secondary-bottom">
-                                {renderSecondaryBar(secondaryBottomBar, 'bottom')}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right Panel */}
-                    <ResizablePanel
-                        side="right"
-                        isOpen={rightOpen}
-                        onToggle={() => setRightOpen(!rightOpen)}
-                        width={rightWidth}
-                        onWidthChange={setRightWidth}
-                    >
-                        {rightPanel}
-                    </ResizablePanel>
-                </div>
-
-                {/* Bottom Bar (Status) - Full width */}
-                {bottomBar && (
-                    <div className="three-edge-layout__bottom">
-                        {bottomBar}
-                    </div>
-                )}
-            </div>
+            <GridZonesLayout
+                topBar={topBar}
+                leftActivityBar={leftActivityBar}
+                leftPanelContent={leftPanelContent}
+                rightActivityBar={rightActivityBar}
+                rightPanelContent={rightPanelContent}
+                secondaryTopBarZones={secondaryTopBarZones}
+                secondaryBottomBarZones={secondaryBottomBarZones}
+                centerPanel={centerPanel}
+                bottomBar={bottomBar}
+                leftOpen={leftOpen}
+                setLeftOpen={setLeftOpen}
+                rightOpen={rightOpen}
+                setRightOpen={setRightOpen}
+                leftWidth={leftWidth}
+                setLeftWidth={setLeftWidth}
+                rightWidth={rightWidth}
+                setRightWidth={setRightWidth}
+            />
         </LayoutContext.Provider>
     );
 }
 
+// =============================================================================
+// GRID ZONES LAYOUT
+// =============================================================================
+
+function GridZonesLayout({
+    topBar,
+    leftActivityBar,
+    leftPanelContent,
+    rightActivityBar,
+    rightPanelContent,
+    secondaryTopBarZones,
+    secondaryBottomBarZones,
+    centerPanel,
+    bottomBar,
+    leftOpen,
+    setLeftOpen,
+    rightOpen,
+    setRightOpen,
+    leftWidth,
+    setLeftWidth,
+    rightWidth,
+    setRightWidth,
+}) {
+    // Resize handlers for the panels
+    const { isResizing: leftResizing, handleMouseDown: leftMouseDown } = useResizeHandler('left', setLeftWidth);
+    const { isResizing: rightResizing, handleMouseDown: rightMouseDown } = useResizeHandler('right', setRightWidth);
+
+    // Calculate panel content widths (excluding activity bar)
+    // When collapsed, use 'auto' to let zones determine their width
+    const leftContentWidth = leftOpen ? leftWidth - PANEL_CONSTRAINTS.left.collapsed : 'auto';
+    const rightContentWidth = rightOpen ? rightWidth - PANEL_CONSTRAINTS.right.collapsed : 'auto';
+
+    // Build class names
+    const layoutClasses = [
+        'three-edge-layout',
+        'three-edge-layout--grid-zones',
+        !leftOpen && 'three-edge-layout--left-collapsed',
+        !rightOpen && 'three-edge-layout--right-collapsed',
+    ].filter(Boolean).join(' ');
+
+    // CSS custom properties for grid column widths
+    const gridStyle = {
+        '--left-panel-width': typeof leftContentWidth === 'number' ? `${leftContentWidth}px` : leftContentWidth,
+        '--right-panel-width': typeof rightContentWidth === 'number' ? `${rightContentWidth}px` : rightContentWidth,
+    };
+
+    // Clone activity bars with isOpen and onToggle props
+    const renderActivityBar = (bar, isOpen, onToggle) => {
+        if (!bar) return null;
+        return cloneElement(bar, { isOpen, onToggle });
+    };
+
+    return (
+        <div className={layoutClasses} style={gridStyle}>
+            {/* Top Bar (Header) - Full width */}
+            {topBar && (
+                <div className="three-edge-layout__top">
+                    {topBar}
+                </div>
+            )}
+
+            {/* Main Content Area - CSS Grid */}
+            <div className="three-edge-layout__main">
+                {/* Left Activity Bar - spans all rows */}
+                <div className="three-edge-layout__left-actbar">
+                    {renderActivityBar(leftActivityBar, leftOpen, () => setLeftOpen(!leftOpen))}
+                </div>
+
+                {/* Secondary Top Bar Zones - always visible */}
+                {secondaryTopBarZones?.left && (
+                    <div className="three-edge-layout__sec-top-left">
+                        {secondaryTopBarZones.left}
+                    </div>
+                )}
+                <div className="three-edge-layout__sec-top-center">
+                    {secondaryTopBarZones?.center}
+                </div>
+                {secondaryTopBarZones?.right && (
+                    <div className="three-edge-layout__sec-top-right">
+                        {secondaryTopBarZones.right}
+                    </div>
+                )}
+
+                {/* Left Panel Content */}
+                {leftOpen && (
+                    <div className="three-edge-layout__left-panel">
+                        {leftPanelContent}
+                        {/* Left resize handle */}
+                        <div
+                            className={`grid-resize-handle grid-resize-handle--left ${leftResizing ? 'grid-resize-handle--active' : ''}`}
+                            onMouseDown={leftMouseDown}
+                        />
+                    </div>
+                )}
+
+                {/* Workspace Grid (center) */}
+                <div className="three-edge-layout__workspace">
+                    {centerPanel}
+                </div>
+
+                {/* Right Panel Content */}
+                {rightOpen && (
+                    <div className="three-edge-layout__right-panel">
+                        {/* Right resize handle */}
+                        <div
+                            className={`grid-resize-handle grid-resize-handle--right ${rightResizing ? 'grid-resize-handle--active' : ''}`}
+                            onMouseDown={rightMouseDown}
+                        />
+                        {rightPanelContent}
+                    </div>
+                )}
+
+                {/* Secondary Bottom Bar Zones - always visible */}
+                {secondaryBottomBarZones?.left && (
+                    <div className="three-edge-layout__sec-bot-left">
+                        {secondaryBottomBarZones.left}
+                    </div>
+                )}
+                <div className="three-edge-layout__sec-bot-center">
+                    {secondaryBottomBarZones?.center}
+                </div>
+                {secondaryBottomBarZones?.right && (
+                    <div className="three-edge-layout__sec-bot-right">
+                        {secondaryBottomBarZones.right}
+                    </div>
+                )}
+
+                {/* Right Activity Bar - spans all rows */}
+                <div className="three-edge-layout__right-actbar">
+                    {renderActivityBar(rightActivityBar, rightOpen, () => setRightOpen(!rightOpen))}
+                </div>
+            </div>
+
+            {/* Bottom Bar (Status) - Full width */}
+            {bottomBar && (
+                <div className="three-edge-layout__bottom">
+                    {bottomBar}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// =============================================================================
+// LAYOUT CONTEXT
+// =============================================================================
+
 /**
  * Context for panels to access layout state
  * Allows child components to trigger panel actions and access dimensions
- * 
+ *
  * @property {boolean} leftOpen - Is left panel expanded
  * @property {Function} setLeftOpen - Toggle left panel
  * @property {boolean} rightOpen - Is right panel expanded
@@ -205,7 +296,7 @@ export const LayoutContext = React.createContext({
 
 /**
  * Hook for child components to access layout state
- * 
+ *
  * @example
  * const { leftOpen, setLeftOpen, leftPanelWidth } = useLayoutContext();
  */

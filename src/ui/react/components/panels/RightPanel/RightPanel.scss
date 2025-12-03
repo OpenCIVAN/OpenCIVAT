@@ -23,6 +23,7 @@
 .right-panel__activity-bar {
   width: 48px;
   min-width: 48px;
+  height: 100%; // Fill grid cell height
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -30,8 +31,36 @@
   padding: $spacing-sm 0;
   gap: $spacing-xs;
   background: $color-bg-primary;
-  border-left: 1px solid $color-border-subtle;
   order: 2; // Places it after content
+
+  // Colored indicator line on left edge (based on active tab color)
+  &[data-color="pink"] {
+    border-left: 2px solid rgba($color-accent-pink, 0.4);
+  }
+
+  &[data-color="teal"] {
+    border-left: 2px solid rgba($color-accent-teal, 0.4);
+  }
+
+  &[data-color="blue"] {
+    border-left: 2px solid rgba($color-accent-blue, 0.4);
+  }
+
+  &[data-color="green"] {
+    border-left: 2px solid rgba($color-accent-green, 0.4);
+  }
+
+  &[data-color="red"] {
+    border-left: 2px solid rgba($color-accent-red, 0.4);
+  }
+
+  &[data-color="amber"] {
+    border-left: 2px solid rgba($color-accent-amber, 0.4);
+  }
+
+  &[data-color="purple"] {
+    border-left: 2px solid rgba($color-accent-purple, 0.4);
+  }
 }
 
 .right-panel__activity-tabs {
@@ -164,35 +193,7 @@
   backdrop-filter: $blur-strong saturate(200%);
   overflow: hidden;
   order: 1; // Places it before activity bar
-
-  // Right accent border based on active tab color
-  &[data-color="pink"] {
-    border-right: 2px solid rgba($color-accent-pink, 0.4);
-  }
-
-  &[data-color="teal"] {
-    border-right: 2px solid rgba($color-accent-teal, 0.4);
-  }
-
-  &[data-color="blue"] {
-    border-right: 2px solid rgba($color-accent-blue, 0.4);
-  }
-
-  &[data-color="green"] {
-    border-right: 2px solid rgba($color-accent-green, 0.4);
-  }
-
-  &[data-color="red"] {
-    border-right: 2px solid rgba($color-accent-red, 0.4);
-  }
-
-  &[data-color="amber"] {
-    border-right: 2px solid rgba($color-accent-amber, 0.4);
-  }
-
-  &[data-color="purple"] {
-    border-right: 2px solid rgba($color-accent-purple, 0.4);
-  }
+  // Colored indicator moved to activity bar
 }
 
 // =============================================================================

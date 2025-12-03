@@ -77,10 +77,6 @@ $color-accent-pink-glow: rgba(251, 113, 133, 0.18);
 $color-accent-amber: #fbbf24;
 $color-accent-amber-glow: rgba(251, 191, 36, 0.18);
 
-// Orange - Alias for amber (backwards compatibility)
-$color-accent-orange: $color-accent-amber;
-$color-accent-orange-glow: $color-accent-amber-glow;
-
 // Green - Emerald (active states, loaded, success)
 $color-accent-green: #34d399;
 $color-accent-green-glow: rgba(52, 211, 153, 0.18);
@@ -96,10 +92,6 @@ $color-accent-indigo: #a78bfa;
 $color-accent-indigo-glow: rgba(167, 139, 250, 0.18);
 $color-accent-violet: $color-accent-indigo;
 $color-accent-violet-glow: $color-accent-indigo-glow;
-
-// Cyan - For backwards compatibility
-$color-accent-cyan: $color-accent-teal;
-$color-accent-cyan-glow: $color-accent-teal-glow;
 
 // Red - Recording, stop, urgent actions
 $color-accent-red: #f87171;
@@ -165,21 +157,13 @@ $color-workspace-breakout: $color-accent-purple;
 
 $color-tool-files: $color-accent-blue;
 $color-tool-datasets: $color-accent-teal;
-$color-tool-instance: $color-accent-orange;
+$color-tool-instance: $color-accent-amber;
 $color-tool-layout: $color-accent-green;
 $color-tool-annotations: $color-accent-pink;
 $color-tool-cursors: $color-accent-amber;
 $color-tool-filters: $color-accent-indigo;
 $color-tool-bookmarks: $color-accent-purple;
 $color-tool-recordings: $color-accent-red;
-
-// Legacy aliases
-$color-tool-files: $color-accent-blue;
-$color-tool-visualize: $color-accent-purple;
-$color-tool-analyze: $color-accent-orange;
-$color-tool-transform: $color-accent-green;
-$color-tool-annotate: $color-accent-pink;
-$color-tool-measure: $color-accent-teal;
 
 // ============================================================================
 // SEMANTIC: FILE TYPES

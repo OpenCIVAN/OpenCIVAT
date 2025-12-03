@@ -62,7 +62,7 @@ const ACTIVITY_TYPES = {
   },
   view_shared: { 
     icon: Share2, 
-    color: "var(--accent-orange)", 
+    color: "var(--accent-amber)", 
     label: "View Shared" 
   },
   message: { 

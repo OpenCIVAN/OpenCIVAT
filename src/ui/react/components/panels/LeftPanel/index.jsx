@@ -58,7 +58,7 @@ import './LeftPanel.scss';
 const TABS = [
     { id: 'files', icon: FolderOpen, label: 'Files', color: 'blue', implemented: true },
     { id: 'datasets', icon: Database, label: 'Datasets', color: 'teal', implemented: true },
-    { id: 'instance-tools', icon: Wrench, label: 'Instance Tools', color: 'orange', implemented: true },
+    { id: 'instance-tools', icon: Wrench, label: 'Instance Tools', color: 'amber', implemented: true },
     { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
     { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'pink', implemented: true },
     { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: true },
@@ -286,5 +286,13 @@ export function LeftPanel({
 // EXPORTS
 // =============================================================================
 
+// Tab configuration
 export { TABS as LEFT_PANEL_TABS };
+
+// Monolithic component (activity bar + content combined) - exported above via `export function`
 export default LeftPanel;
+
+// Separated components (activity bar and content in separate grid cells)
+export { LeftPanelProvider, useLeftPanelContext } from './LeftPanelContext';
+export { LeftActivityBar } from './LeftActivityBar';
+export { LeftPanelContent } from './LeftPanelContent';

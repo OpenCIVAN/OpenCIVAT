@@ -1,6 +1,5 @@
 // src/ui/react/components/layout/SecondaryBottomBar/SecondaryBottomBar.jsx
-// Secondary bar above StatusBar with layout mode toggle, canvas position, workspace info, and voice controls
-// Refactored: Uses SecondaryBar and SecondaryBarZone for consistent layout
+// Secondary bar components: VoiceControls and center content (canvas, workspace, instances)
 
 import React, { useState } from 'react';
 import {
@@ -20,12 +19,7 @@ import {
 
 import { useSecondaryBottomBar } from './SecondaryBottomBar.logic.js';
 import { WORKSPACE_TYPES } from '../SecondaryTopBar/SecondaryTopBar.logic.js';
-import { LayoutModeToggle, LAYOUT_MODES } from '../../controls/LayoutModeToggle';
-import {
-    SecondaryBar,
-    SecondaryBarZone,
-    SecondaryBarDivider,
-} from '../SecondaryBarZone';
+import { SecondaryBarDivider } from '../SecondaryBarZone';
 import './SecondaryBottomBar.scss';
 
 // =============================================================================
@@ -252,12 +246,11 @@ function VoiceControls({
 // =============================================================================
 
 /**
- * SecondaryBottomBar - Main component
+ * SecondaryBottomBar - Center zone content only
  *
- * Layout:
- * - Left Zone: Layout Mode Toggle (Normal/Isolation/Subset)
- * - Center Zone: Canvas position, workspace indicator, instance count
- * - Right Zone: Voice controls
+ * Renders canvas position, workspace indicator, and instance count for the center zone.
+ * LayoutModeToggle (left) and VoiceControls (right) are now
+ * passed directly to ThreeEdgeLayout zone props.
  */
 export function SecondaryBottomBar({
     // Canvas props
@@ -265,129 +258,64 @@ export function SecondaryBottomBar({
     viewport,
     onViewportChange,
 
-    // Voice props
-    initialInVoice = false,
-    initialMuted = false,
-    initialDeafened = false,
-    currentVoiceRoom = 'Main Room',
-    onJoinVoice,
-    onLeaveVoice,
-    onMuteToggle,
-    onDeafenToggle,
-
     // Workspace
     currentWorkspace,
 
     // Stats
     instanceCount = 0,
     instances = [],
-
-    // Layout mode props
-    layoutMode = LAYOUT_MODES.NORMAL,
-    onLayoutModeChange,
-
-    // Panel dimensions (passed from ThreeEdgeLayout)
-    leftPanelWidth = 280,
-    rightPanelWidth = 280,
-    leftPanelOpen = true,
-    rightPanelOpen = true,
 }) {
     const {
         canvas,
-        voice,
         workspace,
     } = useSecondaryBottomBar({
         canvasSize,
         viewport,
         onViewportChange,
-        initialInVoice,
-        initialMuted,
-        initialDeafened,
-        currentVoiceRoom,
-        onJoinVoice,
-        onLeaveVoice,
-        onMuteToggle,
-        onDeafenToggle,
         currentWorkspace,
         instanceCount,
     });
 
     return (
-        <SecondaryBar position="bottom" height={28}>
-            {/* Left Zone - Layout Mode Toggle */}
-            <SecondaryBarZone
-                position="left"
-                panelWidth={leftPanelWidth}
-                panelOpen={leftPanelOpen}
-            >
-                <LayoutModeToggle
-                    mode={layoutMode}
-                    onModeChange={onLayoutModeChange}
-                    compact={!leftPanelOpen}
-                />
-            </SecondaryBarZone>
-
-            {/* Center Zone - Canvas position, workspace, instances */}
-            <SecondaryBarZone position="center">
-                <div className="secondary-bottom-bar__center-content">
-                    {/* Canvas minimap - only show when canvas mode is active */}
-                    {canvasSize && (
-                        <>
-                            <CanvasMinimap
-                                positionString={canvas.positionString}
-                                sizeString={canvas.sizeString}
-                                minimapCells={canvas.minimapCells}
-                                canvasSize={canvas.canvasSize}
-                                isHovering={canvas.isHovering}
-                                onHoverChange={canvas.setIsHovering}
-                                show={!!canvasSize}
-                            />
-                            <SecondaryBarDivider height={12} />
-                        </>
-                    )}
-
-                    {/* Workspace indicator - always show if workspace exists */}
-                    {currentWorkspace && (
-                        <>
-                            <WorkspaceIndicator
-                                name={workspace.name}
-                                color={workspace.color}
-                                type={workspace.type}
-                            />
-                            <SecondaryBarDivider height={12} />
-                        </>
-                    )}
-
-                    {/* Instance counter with hover popover */}
-                    <InstanceCounter
-                        count={instanceCount}
-                        instances={instances}
+        <div className="secondary-bottom-bar__center">
+            {/* Canvas minimap - only show when canvas mode is active */}
+            {canvasSize && (
+                <>
+                    <CanvasMinimap
+                        positionString={canvas.positionString}
+                        sizeString={canvas.sizeString}
+                        minimapCells={canvas.minimapCells}
+                        canvasSize={canvas.canvasSize}
+                        isHovering={canvas.isHovering}
+                        onHoverChange={canvas.setIsHovering}
+                        show={!!canvasSize}
                     />
-                </div>
-            </SecondaryBarZone>
+                    <SecondaryBarDivider height={12} />
+                </>
+            )}
 
-            {/* Right Zone - Voice controls */}
-            <SecondaryBarZone
-                position="right"
-                panelWidth={rightPanelWidth}
-                panelOpen={rightPanelOpen}
-            >
-                <VoiceControls
-                    inVoice={voice.inVoice}
-                    muted={voice.muted}
-                    deafened={voice.deafened}
-                    currentRoom={voice.currentRoom}
-                    showRoomDropdown={voice.showRoomDropdown}
-                    onJoin={voice.joinVoice}
-                    onLeave={voice.leaveVoice}
-                    onToggleMute={voice.toggleMute}
-                    onToggleDeafen={voice.toggleDeafen}
-                    onToggleRoomDropdown={voice.toggleRoomDropdown}
-                    compact={!rightPanelOpen}
-                />
-            </SecondaryBarZone>
-        </SecondaryBar>
+            {/* Workspace indicator - always show if workspace exists */}
+            {currentWorkspace && (
+                <>
+                    <WorkspaceIndicator
+                        name={workspace.name}
+                        color={workspace.color}
+                        type={workspace.type}
+                    />
+                    <SecondaryBarDivider height={12} />
+                </>
+            )}
+
+            {/* Instance counter with hover popover */}
+            <InstanceCounter
+                count={instanceCount}
+                instances={instances}
+            />
+        </div>
     );
 }
 
 export default SecondaryBottomBar;
+
+// Export zone components for use in grid layout
+export { VoiceControls };

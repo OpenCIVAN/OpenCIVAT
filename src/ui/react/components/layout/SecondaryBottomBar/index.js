@@ -1,5 +1,5 @@
 // src/ui/react/components/layout/SecondaryBottomBar/index.js
-export { SecondaryBottomBar } from "./SecondaryBottomBar.jsx";
+export { SecondaryBottomBar, VoiceControls } from "./SecondaryBottomBar.jsx";
 export {
   useSecondaryBottomBar,
   useCanvasViewport,

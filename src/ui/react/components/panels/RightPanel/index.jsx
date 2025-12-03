@@ -214,4 +214,10 @@ export function RightPanel({
     );
 }
 
+// Monolithic component (activity bar + content combined) - exported above via `export function`
 export default RightPanel;
+
+// Separated components (activity bar and content in separate grid cells)
+export { RightPanelProvider, useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
+export { RightActivityBar } from './RightActivityBar';
+export { RightPanelContent } from './RightPanelContent';

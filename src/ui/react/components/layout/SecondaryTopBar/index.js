@@ -1,7 +1,11 @@
 // =============================================================================
 // src/ui/react/components/layout/SecondaryTopBar/index.js
 // =============================================================================
-export { SecondaryTopBar } from "./SecondaryTopBar.jsx";
+export {
+  SecondaryTopBar,
+  WorkspaceSelector,
+  WorkspacePresence,
+} from "./SecondaryTopBar.jsx";
 export {
   useSecondaryTopBar,
   useWorkspaceSelector,

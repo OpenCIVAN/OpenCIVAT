@@ -1,29 +1,29 @@
-// src/ui/react/components/panels/RightPanel/RightActivityBar.jsx
-// Activity bar icons for the right panel
-// Renders in ThreeEdgeLayout's right activity bar slot
+// src/ui/react/components/panels/LeftPanel/LeftActivityBar.jsx
+// Activity bar icons for the left panel
+// Renders in ThreeEdgeLayout's left activity bar slot
 //
-// IMPORTANT: Uses existing class names from RightPanel.scss to preserve styles
+// IMPORTANT: Uses existing class names from LeftPanel.scss to preserve styles
 
 import React from 'react';
-import { PanelRightClose, ChevronLeft } from 'lucide-react';
-import { useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
-// Uses existing styles from RightPanel.scss - no separate SCSS needed
-import './RightPanel.scss';
+import { PanelLeftClose, ChevronRight } from 'lucide-react';
+import { useLeftPanelContext, LEFT_PANEL_TABS } from './LeftPanelContext';
+// Uses existing styles from LeftPanel.scss - no separate SCSS needed
+import './LeftPanel.scss';
 
 // =============================================================================
-// RIGHT ACTIVITY BAR
+// LEFT ACTIVITY BAR
 // =============================================================================
 
 /**
- * RightActivityBar - Vertical icon navigation for panel tabs
+ * LeftActivityBar - Vertical icon navigation for panel tabs
  * Fixed width (48px), always visible even when panel is collapsed.
  *
  * Props are injected by ThreeEdgeLayout via React.cloneElement:
  * @param {boolean} isOpen - Whether the panel content is expanded
  * @param {Function} onToggle - Callback to toggle panel open/closed
  */
-export function RightActivityBar({ isOpen, onToggle }) {
-    const { activeTab, setActiveTab } = useRightPanelContext();
+export function LeftActivityBar({ isOpen, onToggle }) {
+    const { activeTab, setActiveTab } = useLeftPanelContext();
 
     // Handle tab click - if clicking active tab, toggle panel
     const handleTabClick = (tabId) => {
@@ -40,23 +40,23 @@ export function RightActivityBar({ isOpen, onToggle }) {
     };
 
     // Get active tab's color for the indicator line
-    const activeTabConfig = RIGHT_PANEL_TABS.find(tab => tab.id === activeTab);
-    const activeColor = activeTabConfig?.color || 'pink';
+    const activeTabConfig = LEFT_PANEL_TABS.find(tab => tab.id === activeTab);
+    const activeColor = activeTabConfig?.color || 'blue';
 
     return (
-        // Uses existing .right-panel__activity-bar class from RightPanel.scss
+        // Uses existing .left-panel__activity-bar class from LeftPanel.scss
         // data-color attribute controls the colored indicator line on the activity bar
-        <div className="right-panel__activity-bar" data-color={activeColor}>
+        <div className="left-panel__activity-bar" data-color={activeColor}>
             {/* Tab buttons */}
-            <div className="right-panel__activity-tabs">
-                {RIGHT_PANEL_TABS.map((tab) => {
+            <div className="left-panel__activity-tabs">
+                {LEFT_PANEL_TABS.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
 
                     return (
                         <button
                             key={tab.id}
-                            className={`right-panel__activity-btn ${isActive ? 'active' : ''}`}
+                            className={`left-panel__activity-btn ${isActive ? 'active' : ''}`}
                             data-color={tab.color}
                             onClick={() => handleTabClick(tab.id)}
                             title={tab.label}
@@ -65,7 +65,7 @@ export function RightActivityBar({ isOpen, onToggle }) {
                         >
                             <Icon size={18} />
                             {!tab.implemented && (
-                                <span className="right-panel__activity-badge">Soon</span>
+                                <span className="left-panel__activity-badge">Soon</span>
                             )}
                         </button>
                     );
@@ -73,19 +73,19 @@ export function RightActivityBar({ isOpen, onToggle }) {
             </div>
 
             {/* Spacer pushes toggle to bottom */}
-            <div className="right-panel__activity-spacer" />
+            <div className="left-panel__activity-spacer" />
 
             {/* Toggle panel button at bottom */}
             <button
-                className="right-panel__activity-btn right-panel__toggle-btn"
+                className="left-panel__activity-btn left-panel__toggle-btn"
                 onClick={onToggle}
                 title={isOpen ? 'Collapse Panel' : 'Expand Panel'}
                 aria-label={isOpen ? 'Collapse Panel' : 'Expand Panel'}
             >
-                {isOpen ? <PanelRightClose size={18} /> : <ChevronLeft size={18} />}
+                {isOpen ? <PanelLeftClose size={18} /> : <ChevronRight size={18} />}
             </button>
         </div>
     );
 }
 
-export default RightActivityBar;
+export default LeftActivityBar;

@@ -1,6 +1,6 @@
 // src/ui/react/CIAWebApp.jsx
 // Main Application Component
-// UPDATED: Removed canvasMode state and toggle (layout mode is in SecondaryBottomBar now)
+// CSS Grid layout with separated activity bars and panel content
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ui as log } from "@Utils/logger.js";
@@ -9,14 +9,21 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 
 // Import UI components
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
-import { LeftPanel } from '@UI/react/components/panels/LeftPanel';
 import { WorkspaceGrid } from "@UI/react/components/workspace/Workspace/WorkspaceGrid";
 import { CanvasWorkspace } from "@UI/react/components/workspace/";
 import { TopBar } from "@UI/react/components/layout/TopBar";
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
-import { RightPanel } from "@UI/react/components/panels/RightPanel";
-import { SecondaryTopBar } from "@UI/react/components/layout/SecondaryTopBar";
-import { SecondaryBottomBar } from "@UI/react/components/layout/SecondaryBottomBar";
+import {
+  SecondaryTopBar,
+  WorkspaceSelector,
+  WorkspacePresence,
+  useSecondaryTopBar,
+} from "@UI/react/components/layout/SecondaryTopBar";
+import {
+  SecondaryBottomBar,
+  VoiceControls,
+  useVoiceControls,
+} from "@UI/react/components/layout/SecondaryBottomBar";
 import { useWorkspaces } from "@UI/react/hooks/useWorkspaces.js";
 import {
   VIEW_MODES,
@@ -24,13 +31,27 @@ import {
   useViewModeKeyboardShortcut,
   useGlobalKeyboardShortcuts,
 } from "@UI/react/components/controls/ViewModeToggle";
-import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
+import { LayoutModeToggle, LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
+
+// Panel components (separated activity bars and content)
+import {
+  LeftPanelProvider,
+  LeftActivityBar,
+  LeftPanelContent,
+} from '@UI/react/components/panels/LeftPanel';
+import {
+  RightPanelProvider,
+  RightActivityBar,
+  RightPanelContent,
+} from "@UI/react/components/panels/RightPanel";
 
 /**
  * Main Application Component
  *
+ * CSS Grid layout with separated activity bars and panel content.
+ *
  * Manages:
- * - Layout with resizable panels
+ * - Layout with resizable panels (activity bars always visible)
  * - Workspace selection and navigation
  * - View mode (Desktop/VR) switching
  * - Layout mode (Normal/Isolation/Subset)
@@ -52,11 +73,24 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
   const [viewMode, setViewMode] = useState(VIEW_MODES.DESKTOP);
   const vrAvailable = useWebXRAvailability();
 
-  // Layout mode state (Normal/Isolation/Subset) - controlled in SecondaryBottomBar
+  // Layout mode state (Normal/Isolation/Subset)
   const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.NORMAL);
 
   // Workspace selector dropdown state
   const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
+
+  // =========================================================================
+  // SECONDARY BAR HOOKS (for zone content)
+  // =========================================================================
+
+  // Top bar state (workspace selector, presence)
+  const { workspace, presence } = useSecondaryTopBar({
+    workspaces,
+    onWorkspaceChange: selectWorkspace,
+  });
+
+  // Voice controls state
+  const voice = useVoiceControls({});
 
   // =========================================================================
   // PHASE 3 INITIALIZATION
@@ -151,41 +185,88 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
   // =========================================================================
 
   return (
-    <ThreeEdgeLayout
-      // Top bars
-      topBar={
-        <TopBar
-          username={username}
-          projectName={projectId ? `Project ${projectId}` : null}
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
-          vrAvailable={vrAvailable}
-        />
-      }
-      secondaryTopBar={
-        <SecondaryTopBar
-          workspaces={workspaces}
-          onWorkspaceChange={selectWorkspace}
-          workspaceSelectorOpen={workspaceSelectorOpen}
-          onWorkspaceSelectorOpenChange={setWorkspaceSelectorOpen}
-        />
-      }
+    <LeftPanelProvider>
+      <RightPanelProvider>
+        <ThreeEdgeLayout
+          // Top bar
+          topBar={
+            <TopBar
+              username={username}
+              projectName={projectId ? `Project ${projectId}` : null}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              vrAvailable={vrAvailable}
+            />
+          }
 
-      // Main panels
-      leftPanel={<LeftPanel workspaceId={workspaceId} />}
-      centerPanel={renderCenterPanel()}
-      rightPanel={<RightPanel workspaceId={workspaceId} />}
+          // Center workspace
+          centerPanel={renderCenterPanel()}
 
-      // Bottom bars
-      secondaryBottomBar={
-        <SecondaryBottomBar
-          currentWorkspace={currentWorkspace}
-          layoutMode={layoutMode}
-          onLayoutModeChange={setLayoutMode}
+          // Bottom bar
+          bottomBar={<StatusBar />}
+
+          // Left side - separated activity bar and content
+          leftActivityBar={<LeftActivityBar />}
+          leftPanelContent={<LeftPanelContent workspaceId={workspaceId} />}
+
+          // Right side - separated activity bar and content
+          rightActivityBar={<RightActivityBar />}
+          rightPanelContent={<RightPanelContent workspaceId={workspaceId} />}
+
+          // Secondary bar zones - distributed across grid cells
+          secondaryTopBarZones={{
+            left: (
+              <WorkspaceSelector
+                currentWorkspace={workspace.currentWorkspace}
+                isOpen={workspaceSelectorOpen}
+                searchQuery={workspace.searchQuery}
+                groupedWorkspaces={workspace.groupedWorkspaces}
+                onToggle={() => setWorkspaceSelectorOpen(!workspaceSelectorOpen)}
+                onSelect={(id) => {
+                  workspace.selectWorkspace(id);
+                  setWorkspaceSelectorOpen(false);
+                }}
+                onSearchChange={workspace.setSearchQuery}
+                onClose={() => setWorkspaceSelectorOpen(false)}
+              />
+            ),
+            center: <SecondaryTopBar />,
+            right: (
+              <WorkspacePresence
+                visibleUsers={presence.visibleUsers}
+                overflowCount={presence.overflowCount}
+                totalCount={presence.totalCount}
+                isHovering={presence.isHovering}
+                onHoverChange={presence.setIsHovering}
+              />
+            ),
+          }}
+          secondaryBottomBarZones={{
+            left: (
+              <LayoutModeToggle
+                mode={layoutMode}
+                onModeChange={setLayoutMode}
+              />
+            ),
+            center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,
+            right: (
+              <VoiceControls
+                inVoice={voice.inVoice}
+                muted={voice.muted}
+                deafened={voice.deafened}
+                currentRoom={voice.currentRoom}
+                showRoomDropdown={voice.showRoomDropdown}
+                onJoin={voice.joinVoice}
+                onLeave={voice.leaveVoice}
+                onToggleMute={voice.toggleMute}
+                onToggleDeafen={voice.toggleDeafen}
+                onToggleRoomDropdown={voice.toggleRoomDropdown}
+              />
+            ),
+          }}
         />
-      }
-      bottomBar={<StatusBar />}
-    />
+      </RightPanelProvider>
+    </LeftPanelProvider>
   );
 }
 

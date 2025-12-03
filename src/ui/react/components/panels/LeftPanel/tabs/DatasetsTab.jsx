@@ -413,12 +413,16 @@ export function DatasetsPanelContent({ workspaceId }) {
 
     return (
         <div className="datasets-tab">
-            {/* Header with search */}
+            {/* Header */}
             <div className="panel-header">
                 <Database size={14} className="panel-header__icon file-icon--teal" />
                 <span className="panel-header__title">Datasets</span>
-                <div className="panel-header__search">
-                    <Search size={10} />
+            </div>
+
+            {/* Search - matches FilesTab styling */}
+            <div className="panel-search">
+                <div className="panel-search__wrapper">
+                    <Search size={12} className="search-icon" />
                     <input
                         type="text"
                         placeholder="Search datasets..."

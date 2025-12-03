@@ -1,6 +1,5 @@
 // src/ui/react/components/layout/SecondaryTopBar/SecondaryTopBar.jsx
-// Secondary bar below main TopBar with workspace selector, controls, and presence
-// Refactored: Uses SecondaryBar and SecondaryBarZone for consistent layout
+// Secondary bar components: WorkspaceSelector, WorkspacePresence, and center content
 
 import React, { useRef } from 'react';
 import {
@@ -19,12 +18,7 @@ import {
 } from 'lucide-react';
 
 import { useSecondaryTopBar, WORKSPACE_TYPES } from './SecondaryTopBar.logic.js';
-import {
-    SecondaryBar,
-    SecondaryBarZone,
-    SecondaryBarDivider,
-    SecondaryBarSpacer,
-} from '../SecondaryBarZone';
+import { SecondaryBarSpacer } from '../SecondaryBarZone';
 import { PortalPopover } from '../../common/PortalPopover';
 import './SecondaryTopBar.scss';
 
@@ -273,151 +267,68 @@ function WorkspacePresence({
 // =============================================================================
 
 /**
- * SecondaryTopBar - Main component
+ * SecondaryTopBar - Center zone content only
  *
- * Layout:
- * - Left Zone: Workspace selector dropdown
- * - Center Zone: Layout actions (Add Cell, Reset Layout), sharing (Link Views, Share)
- * - Right Zone: Workspace presence (users in this workspace)
- *
- * Note: Layout mode toggle (Normal/Isolation/Subset) has been moved to SecondaryBottomBar
+ * Renders layout actions and sharing controls for the center zone.
+ * WorkspaceSelector (left) and WorkspacePresence (right) are now
+ * passed directly to ThreeEdgeLayout zone props.
  */
 export function SecondaryTopBar({
-    // Workspace data
-    workspaces = [],
-    initialWorkspaceId,
-    onWorkspaceChange,
-
-    // Controlled workspace selector state (for keyboard shortcuts)
-    workspaceSelectorOpen,
-    onWorkspaceSelectorOpenChange,
-
     // Actions
     onAddCell,
     onResetLayout,
     onLinkViews,
     onShare,
-
-    // Panel dimensions (passed from ThreeEdgeLayout)
-    leftPanelWidth = 280,
-    rightPanelWidth = 280,
-    leftPanelOpen = true,
-    rightPanelOpen = true,
 }) {
-    const {
-        workspace,
-        presence,
-        actions,
-    } = useSecondaryTopBar({
-        workspaces,
-        initialWorkspaceId,
-        onWorkspaceChange,
-        onAddCell: onAddCell,
-        onResetLayout: onResetLayout,
-        onLinkViews: onLinkViews,
-        onShare: onShare,
+    const { actions } = useSecondaryTopBar({
+        onAddCell,
+        onResetLayout,
+        onLinkViews,
+        onShare,
     });
 
-    // Use controlled state if provided, otherwise use internal state
-    const isOpen = workspaceSelectorOpen !== undefined
-        ? workspaceSelectorOpen
-        : workspace.isOpen;
-
-    const handleToggle = () => {
-        if (onWorkspaceSelectorOpenChange) {
-            onWorkspaceSelectorOpenChange(!isOpen);
-        } else {
-            workspace.toggleDropdown();
-        }
-    };
-
-    const handleClose = () => {
-        if (onWorkspaceSelectorOpenChange) {
-            onWorkspaceSelectorOpenChange(false);
-        } else {
-            workspace.closeDropdown();
-        }
-    };
-
     return (
-        <SecondaryBar position="top" height={36}>
-            {/* Left Zone - Workspace Selector */}
-            <SecondaryBarZone
-                position="left"
-                panelWidth={leftPanelWidth}
-                panelOpen={leftPanelOpen}
+        <div className="secondary-top-bar__center">
+            {/* Layout Actions */}
+            <button
+                className="secondary-bar-action"
+                onClick={actions.addCell}
             >
-                <WorkspaceSelector
-                    currentWorkspace={workspace.currentWorkspace}
-                    isOpen={isOpen}
-                    searchQuery={workspace.searchQuery}
-                    groupedWorkspaces={workspace.groupedWorkspaces}
-                    onToggle={handleToggle}
-                    onSelect={(id) => {
-                        workspace.selectWorkspace(id);
-                        handleClose();
-                    }}
-                    onSearchChange={workspace.setSearchQuery}
-                    onClose={handleClose}
-                    compact={!leftPanelOpen}
-                />
-            </SecondaryBarZone>
+                <Plus size={10} />
+                <span>Add Cell</span>
+            </button>
 
-            {/* Center Zone - Layout Actions & Sharing */}
-            <SecondaryBarZone position="center">
-                {/* Layout Actions */}
-                <button
-                    className="secondary-bar-action"
-                    onClick={actions.addCell}
-                >
-                    <Plus size={10} />
-                    <span>Add Cell</span>
-                </button>
-
-                <button
-                    className="secondary-bar-action secondary-bar-action--icon"
-                    onClick={actions.resetLayout}
-                    title="Reset Layout"
-                >
-                    <RotateCcw size={12} />
-                </button>
-
-                <SecondaryBarSpacer />
-
-                {/* Sharing Actions */}
-                <button
-                    className="secondary-bar-action"
-                    onClick={actions.linkViews}
-                >
-                    <Link2 size={12} />
-                    <span>Link Views</span>
-                </button>
-
-                <button
-                    className="secondary-bar-action secondary-bar-action--primary"
-                    onClick={actions.share}
-                >
-                    <Share2 size={12} />
-                    <span>Share</span>
-                </button>
-            </SecondaryBarZone>
-
-            {/* Right Zone - Workspace Presence */}
-            <SecondaryBarZone
-                position="right"
-                panelWidth={rightPanelWidth}
-                panelOpen={rightPanelOpen}
+            <button
+                className="secondary-bar-action secondary-bar-action--icon"
+                onClick={actions.resetLayout}
+                title="Reset Layout"
             >
-                <WorkspacePresence
-                    visibleUsers={presence.visibleUsers}
-                    overflowCount={presence.overflowCount}
-                    totalCount={presence.totalCount}
-                    isHovering={presence.isHovering}
-                    onHoverChange={presence.setIsHovering}
-                />
-            </SecondaryBarZone>
-        </SecondaryBar>
+                <RotateCcw size={12} />
+            </button>
+
+            <SecondaryBarSpacer />
+
+            {/* Sharing Actions */}
+            <button
+                className="secondary-bar-action"
+                onClick={actions.linkViews}
+            >
+                <Link2 size={12} />
+                <span>Link Views</span>
+            </button>
+
+            <button
+                className="secondary-bar-action secondary-bar-action--primary"
+                onClick={actions.share}
+            >
+                <Share2 size={12} />
+                <span>Share</span>
+            </button>
+        </div>
     );
 }
 
 export default SecondaryTopBar;
+
+// Export zone components for use in grid layout
+export { WorkspaceSelector, WorkspacePresence };
