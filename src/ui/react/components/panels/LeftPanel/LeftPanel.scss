@@ -297,6 +297,16 @@
     color: $color-text-secondary;
   }
 
+  &__count {
+    font-size: 10px;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: $radius-xs;
+    white-space: nowrap;
+  }
+
   &__actions {
     display: flex;
     align-items: center;
@@ -624,56 +634,44 @@
 // POP-OUT PANEL SUPPORT
 // =============================================================================
 
-// Panel header with pop-out button
-.left-panel__header {
+// Mini toolbar at top of content - contains pop-out button
+.left-panel__toolbar {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm $spacing-md;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid $color-border-subtle;
+  justify-content: flex-end;
+  padding: 2px $spacing-xs;
+  min-height: 24px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba($color-border-subtle, 0.5);
+  background: rgba(0, 0, 0, 0.1);
 }
 
-.left-panel__header-icon {
-  color: $color-text-secondary;
-  flex-shrink: 0;
-}
-
-.left-panel__header-title {
-  flex: 1;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: $color-text-secondary;
-}
-
+// Pop-out button in toolbar
 .left-panel__pop-out-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
-  border-radius: $radius-sm;
+  border-radius: $radius-xs;
   background: transparent;
   color: $color-text-muted;
   cursor: pointer;
+  opacity: 0.5;
   transition: all $transition-fast;
 
   &:hover {
-    background: $color-bg-tertiary;
+    background: rgba(255, 255, 255, 0.1);
     color: $color-text-primary;
+    opacity: 1;
   }
 }
 
-// Body container for tab content
-.left-panel__body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
+// Show pop-out button more prominently on panel hover
+.left-panel__content:hover .left-panel__pop-out-btn {
+  opacity: 0.8;
 }
 
 // Popped-out state placeholder
@@ -719,5 +717,29 @@
     background: $color-bg-tertiary;
     color: $color-text-primary;
     border-color: $color-border-subtle;
+  }
+}
+
+// Tab is floating state (when current tab is already popped out)
+.left-panel__content--tab-floating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg;
+}
+
+.left-panel__floating-notice {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  background: $color-bg-secondary;
+  border: 1px dashed $color-border-default;
+  border-radius: $radius-md;
+  color: $color-text-muted;
+  font-size: $font-size-sm;
+
+  svg {
+    opacity: 0.5;
   }
 }

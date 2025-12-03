@@ -1759,59 +1759,342 @@
 }
 
 // =============================================================================
-// POP-OUT PANEL SUPPORT
+// VOICE TAB STYLES
 // =============================================================================
 
-// Panel header with pop-out button
-.right-panel__header {
+.voice-tab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+// Channel selector dropdown
+.channel-selector {
+  position: relative;
+  margin: $spacing-sm;
+
+  &__trigger {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__icon {
+    color: $color-accent-purple;
+  }
+
+  &__name {
+    flex: 1;
+    text-align: left;
+  }
+
+  &__count {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: rgba($color-accent-purple, 0.15);
+    color: $color-accent-purple;
+    border-radius: $radius-xs;
+  }
+
+  &__chevron {
+    color: $color-text-muted;
+    transition: transform $transition-fast;
+
+    &.open {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+  }
+
+  &__dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    overflow: hidden;
+  }
+
+  &__option {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: transparent;
+    border: none;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active {
+      background: rgba($color-accent-purple, 0.1);
+      color: $color-accent-purple;
+    }
+  }
+
+  &__option-name {
+    flex: 1;
+    text-align: left;
+  }
+
+  &__option-count {
+    font-size: 9px;
+    padding: 1px 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: $radius-xs;
+  }
+}
+
+// Voice controls
+.voice-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-top: 1px solid $color-border-default;
+
+  &--disconnected {
+    padding: $spacing-lg;
+  }
+
+  &__join-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-lg;
+    background: rgba($color-accent-purple, 0.15);
+    border: 1px solid rgba($color-accent-purple, 0.4);
+    border-radius: $radius-md;
+    color: $color-accent-purple;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: rgba($color-accent-purple, 0.25);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__status {
+    font-size: 10px;
+    color: $color-accent-amber;
+    margin-right: $spacing-sm;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-default;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-primary;
+    }
+
+    &--active {
+      background: rgba($color-accent-red, 0.15);
+      border-color: rgba($color-accent-red, 0.4);
+      color: $color-accent-red;
+    }
+
+    &--leave {
+      &:hover {
+        background: rgba($color-accent-red, 0.15);
+        border-color: rgba($color-accent-red, 0.4);
+        color: $color-accent-red;
+      }
+    }
+  }
+}
+
+// Participant card
+.participant-card {
   display: flex;
   align-items: center;
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  &--speaking {
+    background: rgba($color-accent-green, 0.08);
+  }
+
+  &__avatar {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--user-color, $color-accent-purple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  &__speaking-indicator {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    color: $color-accent-green;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: $font-size-xs;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__you {
+    color: $color-text-muted;
+    font-weight: normal;
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__status-text {
+    color: $color-accent-green;
+  }
+
+  &__actions {
+    opacity: 0;
+    transition: opacity $transition-fast;
+  }
+
+  &:hover &__actions {
+    opacity: 1;
+  }
+
+  &__volume-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-primary;
+    }
+  }
+}
+
+// =============================================================================
+// POP-OUT PANEL SUPPORT
+// =============================================================================
+
+// Mini toolbar at top of content - contains pop-out button
+.right-panel__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 2px $spacing-xs;
+  min-height: 24px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba($color-border-subtle, 0.5);
+  background: rgba(0, 0, 0, 0.1);
 }
 
-.right-panel__header-icon {
-  color: $color-text-secondary;
-  flex-shrink: 0;
-}
-
-.right-panel__header-title {
-  flex: 1;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: $color-text-secondary;
-}
-
+// Pop-out button in toolbar
 .right-panel__pop-out-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
-  border-radius: $radius-sm;
+  border-radius: $radius-xs;
   background: transparent;
   color: $color-text-muted;
   cursor: pointer;
+  opacity: 0.5;
   transition: all $transition-fast;
 
   &:hover {
-    background: $color-bg-tertiary;
+    background: rgba(255, 255, 255, 0.1);
     color: $color-text-primary;
+    opacity: 1;
   }
 }
 
-// Body container for tab content
-.right-panel__body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
+// Show pop-out button more prominently on panel hover
+.right-panel__content:hover .right-panel__pop-out-btn {
+  opacity: 0.8;
 }
 
 // Popped-out state placeholder
@@ -1857,5 +2140,29 @@
     background: $color-bg-tertiary;
     color: $color-text-primary;
     border-color: $color-border-subtle;
+  }
+}
+
+// Tab is floating state (when current tab is already popped out)
+.right-panel__content--tab-floating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg;
+}
+
+.right-panel__floating-notice {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  background: $color-bg-secondary;
+  border: 1px dashed $color-border-default;
+  border-radius: $radius-md;
+  color: $color-text-muted;
+  font-size: $font-size-sm;
+
+  svg {
+    opacity: 0.5;
   }
 }

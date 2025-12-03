@@ -1,13 +1,14 @@
 // src/ui/react/components/panels/RightPanel/RightPanelContent.jsx
 // Expandable content for the right panel
 // Renders in ThreeEdgeLayout's right panel content slot
-// Supports pop-out to floating panel
+// Supports pop-out to floating panel with space reclamation
 //
 // IMPORTANT: Uses existing class names from RightPanel.scss to preserve styles
 
 import React, { useCallback } from 'react';
 import { useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
-import { FloatingPanel, usePanelPopOut } from '@UI/react/components/panels/FloatingPanel';
+import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel';
+import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 
 // Tab content components
 import { PeoplePanelContent } from './tabs/PeopleTab';
@@ -19,7 +20,7 @@ import { RecordingsPanelContent } from './tabs/RecordingsTab';
 import { ActivityPanelContent } from './tabs/ActivityTab';
 
 // Icons for pop-out button
-import { ExternalLink, Pin } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 // Uses existing styles from RightPanel.scss - no separate SCSS needed
 import './RightPanel.scss';
@@ -29,10 +30,10 @@ import './RightPanel.scss';
 // =============================================================================
 
 /**
- * Renders the appropriate content based on active tab
+ * Render content for a specific tab
  */
-function TabContent({ activeTab, workspaceId, roomName }) {
-    switch (activeTab) {
+function renderTabContent(tabId, workspaceId, roomName) {
+    switch (tabId) {
         case 'people':
             return <PeoplePanelContent workspaceId={workspaceId} />;
         case 'rooms':
@@ -48,7 +49,7 @@ function TabContent({ activeTab, workspaceId, roomName }) {
         case 'activity':
             return <ActivityPanelContent workspaceId={workspaceId} />;
         default:
-            return <PlaceholderContent tabId={activeTab} />;
+            return <PlaceholderContent tabId={tabId} />;
     }
 }
 
@@ -91,102 +92,73 @@ function PlaceholderContent({ tabId }) {
  * Contains the actual tab content (people, chat, voice, etc).
  * Supports pop-out to floating window for flexible positioning.
  *
+ * Note: Floating panels are rendered at the app level (AllFloatingPanels),
+ * not here, so they persist even when the docked panel is closed.
+ *
  * @param {string} workspaceId - Current workspace ID
  * @param {string} roomName - Current room name (for voice chat)
  */
 export function RightPanelContent({ workspaceId = 'default', roomName }) {
     const { activeTab } = useRightPanelContext();
+    const { popOutPanel, isPoppedOut } = useFloatingPanels();
+    const { setRightOpen } = useLayoutContext();
+
     const tabConfig = RIGHT_PANEL_TABS.find(t => t.id === activeTab);
     const Icon = tabConfig?.icon;
 
-    // Pop-out functionality - unique ID per tab
+    // Check if current tab is already popped out
     const panelId = `right-${activeTab}`;
-    const { poppedOut, popOut, dock } = usePanelPopOut(panelId, {
-        title: tabConfig?.label,
-        icon: Icon,
-        color: tabConfig?.color,
-    });
+    const isCurrentTabFloating = isPoppedOut(panelId);
 
-    // Render tab content
-    const renderContent = useCallback(() => (
-        <TabContent
-            activeTab={activeTab}
-            workspaceId={workspaceId}
-            roomName={roomName}
-        />
-    ), [activeTab, workspaceId, roomName]);
-
-    // Handle pop-out click
-    const handlePopOut = () => {
-        // Position on the right side of screen
-        popOut({
+    // Handle pop-out - close docked panel to reclaim space
+    const handlePopOut = useCallback(() => {
+        popOutPanel(panelId, {
+            title: tabConfig?.label,
+            icon: Icon,
+            color: tabConfig?.color,
+            // Position on the right side of screen
             x: window.innerWidth - 500,
             y: 100,
             width: 400,
-            height: 600
+            height: 600,
         });
-    };
+        // Collapse the docked panel to reclaim workspace space
+        setRightOpen(false);
+    }, [panelId, tabConfig, Icon, popOutPanel, setRightOpen]);
 
-    // If popped out, render as floating panel
-    if (poppedOut) {
+    // If the current tab is floating, show a message to select another tab
+    if (isCurrentTabFloating) {
         return (
-            <>
-                {/* Show placeholder in docked position */}
-                <div
-                    className="right-panel__content right-panel__content--popped-out"
-                    data-color={tabConfig?.color}
-                >
-                    <div className="right-panel__popped-out-placeholder">
-                        {Icon && <Icon size={24} />}
-                        <span>{tabConfig?.label} (floating)</span>
-                        <button
-                            className="right-panel__dock-btn"
-                            onClick={dock}
-                            title="Dock panel"
-                        >
-                            <Pin size={14} />
-                            Dock
-                        </button>
-                    </div>
+            <div
+                className="right-panel__content right-panel__content--tab-floating"
+                data-color={tabConfig?.color}
+            >
+                <div className="right-panel__floating-notice">
+                    {Icon && <Icon size={20} />}
+                    <span>{tabConfig?.label} is floating</span>
                 </div>
-
-                {/* Floating panel */}
-                <FloatingPanel
-                    panelId={panelId}
-                    title={tabConfig?.label}
-                    icon={Icon}
-                    color={tabConfig?.color}
-                    onDock={dock}
-                >
-                    {renderContent()}
-                </FloatingPanel>
-            </>
+            </div>
         );
     }
 
     return (
-        // Uses existing .right-panel__content class from RightPanel.scss
         <div
             className="right-panel__content"
             data-color={tabConfig?.color}
         >
-            {/* Panel header with title and pop-out button */}
-            <div className="right-panel__header">
-                {Icon && <Icon size={16} className="right-panel__header-icon" />}
-                <span className="right-panel__header-title">{tabConfig?.label}</span>
+            {/* Mini toolbar with pop-out button */}
+            <div className="right-panel__toolbar">
                 <button
                     className="right-panel__pop-out-btn"
                     onClick={handlePopOut}
-                    title="Pop out panel"
+                    title="Pop out to floating window"
                 >
-                    <ExternalLink size={14} />
+                    <ExternalLink size={12} />
                 </button>
             </div>
 
-            {/* Tab content */}
-            <div className="right-panel__body">
-                {renderContent()}
-            </div>
+            {/* Tab content - no redundant header, activity bar shows tab */}
+            {renderTabContent(activeTab, workspaceId, roomName)}
         </div>
     );
 }

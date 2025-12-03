@@ -54,6 +54,7 @@ export function ThreeEdgeLayout({
     rightPanelContent,
     secondaryTopBarZones,    // { left, center, right }
     secondaryBottomBarZones, // { left, center, right }
+    children, // Additional content rendered inside LayoutContext (e.g., floating panels)
 }) {
     // Layout state management
     const {
@@ -115,6 +116,8 @@ export function ThreeEdgeLayout({
                 rightWidth={rightWidth}
                 setRightWidth={setRightWidth}
             />
+            {/* Render children inside LayoutContext (e.g., floating panels) */}
+            {children}
         </LayoutContext.Provider>
     );
 }

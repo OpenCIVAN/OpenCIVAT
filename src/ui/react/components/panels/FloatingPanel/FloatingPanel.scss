@@ -104,9 +104,11 @@
 
 .floating-panel__title {
   flex: 1;
-  font-size: 13px;
-  font-weight: 500;
-  color: $color-text-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: $color-text-secondary;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

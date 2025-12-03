@@ -86,50 +86,6 @@ export function useComputeJobs(options = {}) {
   // WEBSOCKET FOR REAL-TIME UPDATES
   // =========================================================================
 
-  const connectWebSocket = useCallback(() => {
-    // Use the Y.js WebSocket URL base, or construct from API URL
-    const wsUrl = config.yjsWebSocketUrl.replace("/yjs", "") + "/compute";
-
-    try {
-      wsRef.current = new WebSocket(wsUrl);
-
-      wsRef.current.onopen = () => {
-        log.debug("Compute WebSocket connected");
-        // Subscribe to job updates
-        wsRef.current.send(
-          JSON.stringify({
-            type: "subscribe",
-            channel: "compute-jobs",
-            projectId,
-          })
-        );
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          handleWebSocketMessage(message);
-        } catch (err) {
-          log.warn("Invalid WebSocket message:", event.data);
-        }
-      };
-
-      wsRef.current.onclose = () => {
-        log.debug("Compute WebSocket disconnected");
-        // Attempt reconnect after delay
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connectWebSocket();
-        }, 5000);
-      };
-
-      wsRef.current.onerror = (err) => {
-        log.warn("Compute WebSocket error:", err);
-      };
-    } catch (err) {
-      log.warn("Failed to connect compute WebSocket:", err);
-    }
-  }, [projectId]);
-
   const handleWebSocketMessage = useCallback((message) => {
     switch (message.type) {
       case "job:created":
@@ -187,6 +143,61 @@ export function useComputeJobs(options = {}) {
         log.debug("Unknown compute message type:", message.type);
     }
   }, []);
+
+  const connectWebSocket = useCallback(() => {
+    // Use the Y.js WebSocket URL base, or construct from API URL
+    const wsUrl = config.yjsWebSocketUrl.replace("/yjs", "") + "/compute";
+
+    try {
+      // Close existing connection if any
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      // Capture 'ws' in closure to avoid race conditions with wsRef.current
+      ws.onopen = () => {
+        log.debug("Compute WebSocket connected");
+        // Ensure this is still the current WebSocket and it's actually open
+        if (ws === wsRef.current && ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              type: "subscribe",
+              channel: "compute-jobs",
+              projectId,
+            })
+          );
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          handleWebSocketMessage(message);
+        } catch (err) {
+          log.warn("Invalid WebSocket message:", event.data);
+        }
+      };
+
+      ws.onclose = () => {
+        log.debug("Compute WebSocket disconnected");
+        // Only reconnect if this is still the current WebSocket
+        if (ws === wsRef.current) {
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connectWebSocket();
+          }, 5000);
+        }
+      };
+
+      ws.onerror = (err) => {
+        log.warn("Compute WebSocket error:", err);
+      };
+    } catch (err) {
+      log.warn("Failed to connect compute WebSocket:", err);
+    }
+  }, [projectId, handleWebSocketMessage]);
 
   // =========================================================================
   // JOB ACTIONS
