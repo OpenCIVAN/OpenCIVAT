@@ -1,12 +1,70 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>vtk.js Visualization</title>
-</head>
-<body>
-  <h1>vtk.js Visualization</h1>
-  <!-- bundle.js will be injected here by html-webpack-plugin -->
-</body>
-</html>
+/* SUMMARY */
+.summary-line {
+  margin: 8px 0;
+  padding: 8px;
+  font-size: 14px;
+  background: rgba(255,255,255,0.05);
+  border-left: 4px solid #4af;
+}
+
+/* PANEL */
+.findings-panel {
+  margin-top: 12px;
+  background: rgba(0,0,0,0.75);   /* improved contrast */
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.findings-header {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+/* FINDING CARDS */
+.finding-card {
+  background: #2e2e2e;
+  color: #ffffff;
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.finding-card:hover {
+  background: #3a3a3a;
+  transform: translateY(-2px);
+}
+
+.finding-card-title {
+  font-weight: 600;
+  font-size: 17px;
+  margin-bottom: 6px;
+  color: #ffd166;
+}
+
+.finding-card-subtitle {
+  font-size: 14px;
+  color: #e0e0e0;     /* brighter */
+}
+
+.finding-card-context {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #c8c8c8;     /* clearer */
+}
+
+.finding-card.selected-finding {
+  outline: 2px solid #4af;
+}
+
+/* TIP */
+.tip-line {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.7;
+}
