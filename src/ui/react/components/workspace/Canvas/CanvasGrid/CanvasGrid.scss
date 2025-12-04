@@ -8,6 +8,7 @@
 // ============================================================================
 
 .canvas-grid {
+  flex: 1;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -15,6 +16,7 @@
   min-height: 0;
   background: transparent;
   overflow: hidden;
+  position: relative;
 
   &:focus {
     outline: none;
@@ -151,19 +153,22 @@
 }
 
 // ============================================================================
-// GRID CONTAINER - Fills available space
+// GRID CONTAINER - Fills available space with CSS Grid
 // ============================================================================
 
 .canvas-grid__container {
   flex: 1;
   display: flex;
   flex-direction: column;
+  margin: $spacing-md;
   padding: $spacing-md;
-  background: transparent;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-default;
   border-radius: $radius-lg;
   min-height: 200px;
   overflow: hidden;
   position: relative;
+  user-select: none;
 }
 
 // ============================================================================
@@ -189,6 +194,19 @@
 }
 
 // ============================================================================
+// RUBBER BAND SELECTION
+// ============================================================================
+
+.canvas-grid__rubber-band {
+  position: absolute;
+  background: rgba($color-accent-teal, 0.15);
+  border: 2px solid $color-accent-teal;
+  border-radius: $radius-sm;
+  pointer-events: none;
+  z-index: 100;
+}
+
+// ============================================================================
 // VIEWPORT INFO BAR
 // ============================================================================
 
@@ -209,11 +227,23 @@
 }
 
 // ============================================================================
+// BAR DIVIDER - Reusable vertical divider
+// ============================================================================
+
+.bar-divider {
+  width: 1px;
+  height: 20px;
+  background: $color-border-default;
+  margin: 0 $spacing-xs;
+}
+
+// ============================================================================
 // RESPONSIVE ADJUSTMENTS
 // ============================================================================
 
 @media (max-width: 768px) {
   .canvas-grid__container {
+    margin: $spacing-sm;
     padding: $spacing-sm;
   }
 

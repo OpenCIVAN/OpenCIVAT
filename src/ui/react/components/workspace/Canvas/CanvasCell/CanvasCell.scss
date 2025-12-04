@@ -15,13 +15,18 @@
   min-height: 0;
   overflow: hidden;
   transition: all 0.15s ease;
+  cursor: pointer;
 
-  // View cells inherit InstanceViewport styling
+  // View cells - dark background with gradient header
   &--view {
     background: #0a0a0f;
     border: 1px solid $color-border-default;
     border-radius: $radius-lg;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
 
     // Active/selected state with instance color
     &.canvas-cell--selected {
@@ -36,13 +41,30 @@
   // ============================================================================
 
   &--empty {
-    background: $color-bg-secondary;
-    border: 1px dashed $color-border-subtle;
-    border-radius: $radius-lg;
+    background: rgba(255, 255, 255, 0.02);
+    border: 2px dashed rgba(255, 255, 255, 0.08);
+    border-radius: $radius-md;
 
     &:hover {
-      background: rgba($color-bg-tertiary, 0.8);
-      border-color: $color-border-default;
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    // Edit mode - more prominent styling
+    &.canvas-cell--edit-mode {
+      cursor: pointer;
+
+      &:hover {
+        background: rgba($color-accent-primary, 0.08);
+        border-color: rgba($color-accent-primary, 0.3);
+      }
+    }
+
+    // Selected state for merging
+    &.canvas-cell--selected {
+      background: rgba($color-accent-teal, 0.15);
+      border-color: $color-accent-teal;
+      border-style: dashed;
     }
   }
 
@@ -172,6 +194,7 @@
     display: flex;
     align-items: center;
     gap: $spacing-sm;
+    flex-shrink: 0;
   }
 
   &__color-indicator {
@@ -179,18 +202,28 @@
     height: 10px;
     border-radius: 3px;
     background: var(--instance-color, $color-accent-primary);
-    box-shadow: 0 0 6px var(--instance-color, $color-accent-primary);
+    box-shadow: 0 0 6px rgba(var(--instance-color-rgb, 96, 165, 250), 0.5);
     flex-shrink: 0;
   }
 
   &__title {
     flex: 1;
-    font-size: $font-size-sm;
+    font-size: $font-size-xs;
     font-weight: $font-weight-medium;
     color: $color-text-primary;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  // Size badge - shows span dimensions
+  &__size-badge {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-tertiary;
+    padding: 2px 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 3px;
   }
 
   // ============================================================================
@@ -199,14 +232,30 @@
 
   &__body {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
     position: relative;
     min-height: 0;
     overflow: hidden;
   }
 
+  // Coordinate badge - shows cell position
+  &__coords {
+    position: absolute;
+    bottom: $spacing-xs;
+    right: $spacing-xs;
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-tertiary;
+    padding: 2px 5px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+  }
+
   // ============================================================================
-  // TOOLBAR TRAY (for notes/image types)
+  // TOOLBAR TRAY (shown on selection)
   // ============================================================================
 
   &__toolbar-tray {
@@ -222,6 +271,25 @@
     display: flex;
     align-items: center;
     gap: $spacing-xs;
+  }
+
+  &__toolbar-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-secondary;
+    }
   }
 
   // ============================================================================

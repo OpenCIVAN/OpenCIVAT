@@ -1,10 +1,229 @@
 // src/ui/react/components/layout/SecondaryTopBar/SecondaryTopBar.scss
 // Secondary top bar styling with workspace selector, controls, and presence
-// Updated: Added compact mode for workspace selector when panel is collapsed
+// Updated: Added etched style layout mode toggle and canvas navigation
 // Uses design tokens - no hard-coded values
 
 @use "sass:color";
 @use "theme" as *;
+
+// =============================================================================
+// SECONDARY TOP BAR LAYOUT
+// =============================================================================
+
+.secondary-top-bar {
+  height: 36px;
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border-default;
+  display: flex;
+  align-items: center;
+  padding: 0 $spacing-md;
+  gap: $spacing-sm;
+}
+
+.secondary-top-bar__zone {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &--left {
+    min-width: 200px;
+  }
+
+  &--center {
+    flex: 1;
+    justify-content: center;
+  }
+
+  &--right {
+    min-width: 200px;
+    justify-content: flex-end;
+  }
+}
+
+// =============================================================================
+// LAYOUT MODE TOGGLE - Etched style
+// =============================================================================
+
+.layout-mode-toggle {
+  display: flex;
+  border-radius: $radius-sm;
+  overflow: hidden;
+
+  // Etched container - sunken/carved appearance
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+
+  &__btn {
+    padding: $spacing-xs $spacing-sm;
+    background: transparent;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-xs;
+    transition: all 0.15s ease;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.05);
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba(var(--mode-color-rgb), 0.2);
+      color: var(--mode-color);
+    }
+
+    &--grid {
+      --mode-color: #{$color-accent-blue};
+      --mode-color-rgb: 96, 165, 250;
+    }
+
+    &--flow {
+      --mode-color: #{$color-accent-green};
+      --mode-color-rgb: 74, 222, 128;
+    }
+  }
+}
+
+// Flow direction toggle
+.flow-direction-toggle {
+  display: flex;
+  gap: 2px;
+
+  &__btn {
+    padding: 3px 6px;
+    font-size: 10px;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: 3px;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &--active {
+      background: rgba($color-accent-green, 0.15);
+      border-color: $color-accent-green;
+      color: $color-accent-green;
+    }
+  }
+}
+
+// =============================================================================
+// CANVAS NAVIGATION
+// =============================================================================
+
+.canvas-nav {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &__home-btn {
+    padding: $spacing-xs;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-accent-amber;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: rgba($color-accent-amber, 0.1);
+    }
+
+    &--at-home {
+      background: rgba($color-accent-amber, 0.15);
+      border-color: $color-accent-amber;
+    }
+  }
+
+  &__dpad {
+    display: flex;
+    gap: 2px;
+  }
+
+  &__dpad-btn {
+    padding: 3px;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: 3px;
+    color: $color-text-muted;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: $color-text-secondary;
+    }
+  }
+
+  &__position {
+    font-size: 10px;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 3px;
+  }
+}
+
+// =============================================================================
+// PRESENCE AVATARS (for secondary top bar right zone)
+// =============================================================================
+
+.presence-avatars {
+  display: flex;
+  margin-right: $spacing-xs;
+}
+
+.presence-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid $color-bg-secondary;
+  margin-left: -6px;
+  transition: transform 0.15s ease;
+
+  &:first-child {
+    margin-left: 0;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    z-index: 10;
+  }
+
+  &--overflow {
+    background: $color-bg-tertiary;
+    color: $color-text-muted;
+  }
+}
+
+.presence-count {
+  font-size: 10px;
+  color: $color-text-muted;
+}
 
 // =============================================================================
 // VIEW MODE BUTTONS
@@ -435,6 +654,27 @@
 // =============================================================================
 
 @media (max-width: 768px) {
+  .secondary-top-bar__zone {
+    &--left,
+    &--right {
+      min-width: 100px;
+    }
+  }
+
+  .layout-mode-toggle__btn {
+    span {
+      display: none;
+    }
+  }
+
+  .flow-direction-toggle {
+    display: none;
+  }
+
+  .canvas-nav__position {
+    display: none;
+  }
+
   .view-mode-buttons {
     &__btn {
       span {

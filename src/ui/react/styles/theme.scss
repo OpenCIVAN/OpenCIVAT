@@ -17,6 +17,12 @@
 @forward "./mixins/glass-mixins";
 @forward "./mixins/etched-mixins";
 
+// ============================================================================
+// SHARED COMPONENTS
+// ============================================================================
+
+@forward "./components/bar-buttons";
+
 // For internal use within this file
 @use "./tokens/colors" as *;
 @use "./tokens/effects" as *;
