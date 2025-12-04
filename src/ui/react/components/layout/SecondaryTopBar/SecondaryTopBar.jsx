@@ -1,7 +1,7 @@
 // src/ui/react/components/layout/SecondaryTopBar/SecondaryTopBar.jsx
 // Secondary bar components: WorkspaceSelector, WorkspacePresence, and center content
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     ChevronDown,
     Search,
@@ -15,16 +15,39 @@ import {
     Check,
     X,
     Mic,
+    MousePointer2,
+    Hand,
+    Combine,
+    Pencil,
+    Undo,
+    Redo,
 } from 'lucide-react';
 
 import { useSecondaryTopBar, WORKSPACE_TYPES } from './SecondaryTopBar.logic.js';
-import { SecondaryBarSpacer } from '../SecondaryBarZone';
+import { SecondaryBarSpacer, SecondaryBarDivider } from '../SecondaryBarZone';
 import { PortalPopover } from '../../common/PortalPopover';
 import './SecondaryTopBar.scss';
+
+// Tool definitions
+const TOOLS = {
+    SELECT: 'select',
+    PAN: 'pan',
+    MERGE: 'merge',
+};
 
 // =============================================================================
 // HELPER COMPONENTS
 // =============================================================================
+
+/**
+ * Convert hex color to RGB values string
+ */
+const hexToRgb = (hex) => {
+    if (!hex) return '96, 165, 250'; // Default blue
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!result) return '96, 165, 250';
+    return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`;
+};
 
 /**
  * Get icon component for workspace type
@@ -61,7 +84,10 @@ function WorkspaceSelector({
             <button
                 className={`workspace-selector__trigger ${compact ? 'workspace-selector__trigger--compact' : ''}`}
                 onClick={onToggle}
-                style={{ '--workspace-color': currentWorkspace.color }}
+                style={{
+                    '--workspace-color': currentWorkspace.color,
+                    '--workspace-color-rgb': hexToRgb(currentWorkspace.color),
+                }}
             >
                 <Icon size={14} className="workspace-selector__icon" />
                 {!compact && (
@@ -159,7 +185,10 @@ function WorkspaceGroup({ label, workspaces, currentId, onSelect }) {
                         key={ws.id}
                         className={`workspace-group__item ${isSelected ? 'workspace-group__item--selected' : ''}`}
                         onClick={() => onSelect(ws.id)}
-                        style={{ '--workspace-color': ws.color }}
+                        style={{
+                            '--workspace-color': ws.color,
+                            '--workspace-color-rgb': hexToRgb(ws.color),
+                        }}
                     >
                         <Icon size={14} className="workspace-group__item-icon" />
                         <span className="workspace-group__item-name">{ws.name}</span>
@@ -279,7 +308,25 @@ export function SecondaryTopBar({
     onResetLayout,
     onLinkViews,
     onShare,
+    // Tool state (optional - for canvas integration)
+    tool,
+    onToolChange,
+    editMode,
+    onEditModeChange,
+    canUndo,
+    canRedo,
+    onUndo,
+    onRedo,
 }) {
+    // Local state for demo if not controlled
+    const [localTool, setLocalTool] = useState(TOOLS.SELECT);
+    const [localEditMode, setLocalEditMode] = useState(false);
+
+    const activeTool = tool ?? localTool;
+    const setActiveTool = onToolChange ?? setLocalTool;
+    const isEditMode = editMode ?? localEditMode;
+    const toggleEditMode = onEditModeChange ?? (() => setLocalEditMode(!localEditMode));
+
     const { actions } = useSecondaryTopBar({
         onAddCell,
         onResetLayout,
@@ -289,37 +336,100 @@ export function SecondaryTopBar({
 
     return (
         <div className="secondary-top-bar__center">
+            {/* Tool Buttons */}
+            <div className="bar-btn-group">
+                <button
+                    className={`bar-tool-btn bar-tool-btn--blue ${activeTool === TOOLS.SELECT ? 'bar-tool-btn--active' : ''}`}
+                    onClick={() => setActiveTool(TOOLS.SELECT)}
+                    title="Select tool (V)"
+                >
+                    <MousePointer2 size={14} />
+                </button>
+                <button
+                    className={`bar-tool-btn bar-tool-btn--teal ${activeTool === TOOLS.PAN ? 'bar-tool-btn--active' : ''}`}
+                    onClick={() => setActiveTool(TOOLS.PAN)}
+                    title="Pan tool (H)"
+                >
+                    <Hand size={14} />
+                </button>
+                <button
+                    className={`bar-tool-btn bar-tool-btn--purple ${activeTool === TOOLS.MERGE ? 'bar-tool-btn--active' : ''}`}
+                    onClick={() => setActiveTool(TOOLS.MERGE)}
+                    title="Merge cells (M)"
+                >
+                    <Combine size={14} />
+                </button>
+            </div>
+
+            <SecondaryBarDivider height={16} />
+
+            {/* Edit Mode Toggle */}
+            <button
+                className={`bar-tool-btn bar-tool-btn--amber ${isEditMode ? 'bar-tool-btn--active' : ''}`}
+                onClick={toggleEditMode}
+                title="Toggle edit mode (E)"
+            >
+                <Pencil size={14} />
+            </button>
+
+            <SecondaryBarDivider height={16} />
+
             {/* Layout Actions */}
             <button
-                className="secondary-bar-action"
+                className="bar-action-btn bar-action-btn--green"
                 onClick={actions.addCell}
+                title="Add new cell"
             >
-                <Plus size={10} />
-                <span>Add Cell</span>
+                <Plus size={12} />
+                <span>Add</span>
             </button>
 
             <button
-                className="secondary-bar-action secondary-bar-action--icon"
+                className="bar-tool-btn"
                 onClick={actions.resetLayout}
                 title="Reset Layout"
             >
-                <RotateCcw size={12} />
+                <RotateCcw size={14} />
             </button>
 
             <SecondaryBarSpacer />
 
+            {/* Undo/Redo */}
+            <div className="bar-btn-group">
+                <button
+                    className="bar-tool-btn"
+                    onClick={onUndo}
+                    disabled={canUndo === false}
+                    title="Undo (Ctrl+Z)"
+                >
+                    <Undo size={14} />
+                </button>
+                <button
+                    className="bar-tool-btn"
+                    onClick={onRedo}
+                    disabled={canRedo === false}
+                    title="Redo (Ctrl+Shift+Z)"
+                >
+                    <Redo size={14} />
+                </button>
+            </div>
+
+            <SecondaryBarDivider height={16} />
+
             {/* Sharing Actions */}
             <button
-                className="secondary-bar-action"
+                className="bar-action-btn bar-action-btn--blue"
                 onClick={actions.linkViews}
+                title="Link selected views"
             >
                 <Link2 size={12} />
-                <span>Link Views</span>
+                <span>Link</span>
             </button>
 
             <button
-                className="secondary-bar-action secondary-bar-action--primary"
+                className="bar-action-btn bar-action-btn--purple"
                 onClick={actions.share}
+                title="Share workspace"
             >
                 <Share2 size={12} />
                 <span>Share</span>

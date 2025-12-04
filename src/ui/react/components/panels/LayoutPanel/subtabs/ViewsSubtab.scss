@@ -1,0 +1,169 @@
+// src/ui/react/components/panels/LayoutPanel/subtabs/ViewsSubtab.scss
+// Views subtab styling
+// Uses design tokens - no hard-coded values
+
+@use "theme" as *;
+
+.views-subtab {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+
+  // Search Bar
+  &__search {
+    position: relative;
+  }
+
+  &__search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $color-text-muted;
+    pointer-events: none;
+  }
+
+  &__search-input {
+    width: 100%;
+    padding: $spacing-sm 10px $spacing-sm 32px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font-size: 11px;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-primary;
+    }
+  }
+
+  &__search-clear {
+    position: absolute;
+    right: $spacing-sm;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: $radius-xs;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      color: $color-text-primary;
+      background: $color-glass-light;
+    }
+  }
+
+  // Filter Bar
+  &__filter-bar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding-bottom: $spacing-sm;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__filter-icon {
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__filter-spacer {
+    flex: 1;
+  }
+
+  &__group-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 3px $spacing-sm;
+    border-radius: $radius-full;
+    cursor: pointer;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    color: $color-text-muted;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.2);
+      border-color: $color-accent-blue;
+      color: $color-accent-blue;
+    }
+  }
+
+  &__clear-btn {
+    background: none;
+    border: none;
+    font-size: 9px;
+    color: $color-text-muted;
+    cursor: pointer;
+    padding: 2px $spacing-xs;
+
+    &:hover {
+      color: $color-text-secondary;
+    }
+  }
+
+  // View Count
+  &__count {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  // View List
+  &__list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Group
+  &__group {
+    margin-bottom: $spacing-sm;
+  }
+
+  &__group-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm 0;
+    margin-top: $spacing-sm;
+    border-top: 1px solid $color-border-subtle;
+
+    svg {
+      color: $color-accent-blue;
+    }
+  }
+
+  &__group-name {
+    font-size: 10px;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+  }
+
+  &__group-count {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  // Empty State
+  &__empty {
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+    font-size: 11px;
+  }
+}

@@ -1,0 +1,66 @@
+// src/ui/react/components/panels/LayoutPanel/components/FilterChips.scss
+// Filter chips styling for Views subtab
+// Uses design tokens - no hard-coded values
+
+@use "theme" as *;
+
+.filter-chips {
+  display: flex;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+
+  &__chip {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 3px $spacing-sm;
+    border-radius: $radius-full;
+    cursor: pointer;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    color: $color-text-muted;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--active {
+      background: rgba(var(--chip-color-rgb), 0.2);
+      border-color: var(--chip-color);
+      color: var(--chip-color);
+    }
+
+    // Color variants
+    &[data-color="pink"] {
+      --chip-color: #{$color-accent-pink};
+      --chip-color-rgb: 251, 113, 133;
+    }
+
+    &[data-color="teal"] {
+      --chip-color: #{$color-accent-teal};
+      --chip-color-rgb: 125, 211, 252;
+    }
+
+    &[data-color="blue"] {
+      --chip-color: #{$color-accent-blue};
+      --chip-color-rgb: 96, 165, 250;
+    }
+
+    &[data-color="purple"] {
+      --chip-color: #{$color-accent-purple};
+      --chip-color-rgb: 192, 132, 252;
+    }
+
+    &[data-color="amber"] {
+      --chip-color: #{$color-accent-amber};
+      --chip-color-rgb: 251, 191, 36;
+    }
+
+    &[data-color="green"] {
+      --chip-color: #{$color-accent-green};
+      --chip-color-rgb: 52, 211, 153;
+    }
+  }
+}

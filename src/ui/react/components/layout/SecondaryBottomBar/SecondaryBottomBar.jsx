@@ -15,6 +15,11 @@ import {
     Briefcase,
     User,
     Lock,
+    ZoomIn,
+    ZoomOut,
+    Home,
+    Plus,
+    Minus,
 } from 'lucide-react';
 
 import { useSecondaryBottomBar } from './SecondaryBottomBar.logic.js';
@@ -258,6 +263,22 @@ export function SecondaryBottomBar({
     viewport,
     onViewportChange,
 
+    // Zoom props
+    zoom = 100,
+    onZoomIn,
+    onZoomOut,
+    onZoomReset,
+
+    // Canvas size controls
+    onIncrementCols,
+    onDecrementCols,
+    onIncrementRows,
+    onDecrementRows,
+
+    // Home navigation
+    isAtHome,
+    onGoHome,
+
     // Workspace
     currentWorkspace,
 
@@ -278,7 +299,22 @@ export function SecondaryBottomBar({
 
     return (
         <div className="secondary-bottom-bar__center">
-            {/* Canvas minimap - only show when canvas mode is active */}
+            {/* Home Button */}
+            {canvasSize && (
+                <>
+                    <button
+                        className={`bar-nav-btn bar-nav-btn--amber ${isAtHome ? 'bar-nav-btn--active' : ''}`}
+                        onClick={onGoHome}
+                        title="Go to home position"
+                    >
+                        <Home size={12} />
+                    </button>
+
+                    <SecondaryBarDivider height={12} />
+                </>
+            )}
+
+            {/* Canvas Position */}
             {canvasSize && (
                 <>
                     <CanvasMinimap
@@ -290,6 +326,62 @@ export function SecondaryBottomBar({
                         onHoverChange={canvas.setIsHovering}
                         show={!!canvasSize}
                     />
+                    <SecondaryBarDivider height={12} />
+                </>
+            )}
+
+            {/* Canvas Size Controls */}
+            {canvasSize && (
+                <>
+                    <div className="bar-btn-group">
+                        <button
+                            className="bar-tool-btn"
+                            onClick={onDecrementCols}
+                            title="Remove column"
+                        >
+                            <Minus size={10} />
+                        </button>
+                        <span className="bar-position">{canvasSize.cols}×{canvasSize.rows}</span>
+                        <button
+                            className="bar-tool-btn"
+                            onClick={onIncrementCols}
+                            title="Add column"
+                        >
+                            <Plus size={10} />
+                        </button>
+                    </div>
+
+                    <SecondaryBarDivider height={12} />
+                </>
+            )}
+
+            {/* Zoom Controls */}
+            {canvasSize && (
+                <>
+                    <div className="bar-btn-group">
+                        <button
+                            className="bar-tool-btn"
+                            onClick={onZoomOut}
+                            title="Zoom out"
+                        >
+                            <ZoomOut size={12} />
+                        </button>
+                        <button
+                            className="bar-position"
+                            onClick={onZoomReset}
+                            title="Reset zoom"
+                        >
+                            {zoom}%
+                        </button>
+                        <button
+                            className="bar-tool-btn"
+                            onClick={onZoomIn}
+                            title="Zoom in"
+                        >
+                            <ZoomIn size={12} />
+                        </button>
+                    </div>
+
                     <SecondaryBarDivider height={12} />
                 </>
             )}

@@ -1,0 +1,114 @@
+// src/ui/react/components/panels/LayoutPanel/subtabs/CanvasSubtab.scss
+// Canvas subtab styling
+// Uses design tokens - no hard-coded values
+
+@use "theme" as *;
+
+.canvas-subtab {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  // Card sections
+  &__card {
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+
+    // Card color accent (header icon)
+    &[data-color="blue"] {
+      --card-color: #{$color-accent-blue};
+    }
+
+    &[data-color="green"] {
+      --card-color: #{$color-accent-green};
+    }
+
+    &[data-color="amber"] {
+      --card-color: #{$color-accent-amber};
+    }
+
+    &[data-color="purple"] {
+      --card-color: #{$color-accent-purple};
+    }
+  }
+
+  &__card-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: 10px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    svg {
+      color: var(--card-color, $color-text-muted);
+    }
+  }
+
+  &__description {
+    font-size: 9px;
+    color: $color-text-tertiary;
+    line-height: 1.4;
+  }
+
+  &__label {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  // Flow direction row
+  &__flow-direction {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  // Tools row
+  &__tools {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  &__tool-group {
+    display: flex;
+    gap: $spacing-xs;
+  }
+
+  // Edit button
+  &__edit-btn {
+    padding: $spacing-xs 10px;
+    font-size: 11px;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    color: $color-text-muted;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &--active {
+      background: rgba($color-accent-amber, 0.2);
+      border-color: $color-accent-amber;
+      color: $color-accent-amber;
+    }
+  }
+
+  // Drop mode row
+  &__drop-mode {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-top: $spacing-xs;
+  }
+}

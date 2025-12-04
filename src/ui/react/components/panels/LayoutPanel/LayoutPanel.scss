@@ -1,0 +1,337 @@
+// src/ui/react/components/panels/LayoutPanel/LayoutPanel.scss
+// Layout Panel styling - main container with subtabs
+// Uses design tokens - no hard-coded values
+
+@use "theme" as *;
+
+// =============================================================================
+// LAYOUT PANEL CONTAINER
+// =============================================================================
+
+.layout-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: $color-bg-primary;
+  overflow: hidden;
+
+  // Header
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $color-border-default;
+    flex-shrink: 0;
+  }
+
+  &__header-icon {
+    color: $color-accent-green;
+  }
+
+  &__header-title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  // Subtab Navigation
+  &__tabs {
+    display: flex;
+    border-bottom: 1px solid $color-border-subtle;
+    flex-shrink: 0;
+  }
+
+  &__tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: $color-text-muted;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: $color-glass-light;
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      color: var(--tab-color);
+      border-bottom-color: var(--tab-color);
+      background: rgba(var(--tab-color-rgb), 0.04);
+    }
+
+    // Color variants
+    &[data-color="amber"] {
+      --tab-color: #{$color-accent-amber};
+      --tab-color-rgb: 251, 191, 36;
+    }
+
+    &[data-color="purple"] {
+      --tab-color: #{$color-accent-purple};
+      --tab-color-rgb: 192, 132, 252;
+    }
+  }
+
+  &__tab-badge {
+    padding: 1px 5px;
+    background: rgba(var(--tab-color-rgb), 0.2);
+    border-radius: $radius-full;
+    font-size: 9px;
+    color: var(--tab-color);
+  }
+
+  // Content Area
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: $spacing-sm;
+  }
+
+  // Docked Navigator
+  &__navigator {
+    flex-shrink: 0;
+    border-top: 1px solid $color-border-default;
+  }
+}
+
+// =============================================================================
+// FLOATING CANVAS NAVIGATOR
+// =============================================================================
+
+.floating-canvas-navigator {
+  position: absolute;
+  bottom: $spacing-md;
+  left: $spacing-md;
+  width: 400px;
+  border-radius: $radius-md;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: $z-popover;
+  overflow: hidden;
+}
+
+// =============================================================================
+// SUBTAB COMMON STYLES
+// =============================================================================
+
+// Card/Section styling
+.layout-panel-card {
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+    font-size: 10px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__header-icon {
+    color: var(--card-color, $color-text-muted);
+  }
+
+  &__description {
+    font-size: 9px;
+    color: $color-text-tertiary;
+    margin-top: $spacing-sm;
+    line-height: 1.4;
+  }
+}
+
+// =============================================================================
+// ETCHED TOGGLE (used in Layout Mode and View Mode)
+// =============================================================================
+
+.etched-toggle {
+  display: inline-flex;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.etched-toggle__btn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
+  white-space: nowrap;
+
+  &:hover:not(&--active) {
+    color: $color-text-secondary;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &--active {
+    background: rgba(var(--toggle-color-rgb), 0.2);
+    color: var(--toggle-color);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  // Color variants
+  &--grid,
+  &--blue {
+    --toggle-color: #{$color-accent-blue};
+    --toggle-color-rgb: 96, 165, 250;
+  }
+
+  &--flow,
+  &--green {
+    --toggle-color: #{$color-accent-green};
+    --toggle-color-rgb: 52, 211, 153;
+  }
+
+  &--normal {
+    --toggle-color: #{$color-accent-blue};
+    --toggle-color-rgb: 96, 165, 250;
+  }
+
+  &--isolation,
+  &--amber {
+    --toggle-color: #{$color-accent-amber};
+    --toggle-color-rgb: 251, 191, 36;
+  }
+
+  &--subset,
+  &--purple {
+    --toggle-color: #{$color-accent-purple};
+    --toggle-color-rgb: 192, 132, 252;
+  }
+
+  // Compact variant
+  &--compact {
+    padding: $spacing-xs;
+  }
+}
+
+// =============================================================================
+// TOOL BUTTONS (28x28)
+// =============================================================================
+
+.layout-tool-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled):not(&--active) {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-secondary;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &--active {
+    background: rgba(var(--tool-color-rgb), 0.2);
+    border-color: var(--tool-color);
+    color: var(--tool-color);
+  }
+
+  // Color variants
+  &--blue {
+    --tool-color: #{$color-accent-blue};
+    --tool-color-rgb: 96, 165, 250;
+  }
+
+  &--teal {
+    --tool-color: #{$color-accent-teal};
+    --tool-color-rgb: 125, 211, 252;
+  }
+
+  &--purple {
+    --tool-color: #{$color-accent-purple};
+    --tool-color-rgb: 192, 132, 252;
+  }
+
+  &--amber {
+    --tool-color: #{$color-accent-amber};
+    --tool-color-rgb: 251, 191, 36;
+  }
+
+  &--green {
+    --tool-color: #{$color-accent-green};
+    --tool-color-rgb: 52, 211, 153;
+  }
+}
+
+// =============================================================================
+// NAV BUTTONS (D-pad, position)
+// =============================================================================
+
+.layout-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  background: transparent;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba($color-accent-amber, 0.15);
+    border-color: $color-accent-amber;
+    color: $color-accent-amber;
+  }
+
+  &--amber {
+    color: $color-accent-amber;
+  }
+}
+
+// =============================================================================
+// DIVIDER
+// =============================================================================
+
+.layout-divider {
+  width: 1px;
+  height: 16px;
+  background: $color-border-default;
+  margin: 0 $spacing-xs;
+  flex-shrink: 0;
+}

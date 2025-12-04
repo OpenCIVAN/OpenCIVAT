@@ -1,0 +1,417 @@
+// src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.scss
+// Canvas Navigator styling - minimap and navigation controls
+// Uses design tokens - no hard-coded values
+
+@use "theme" as *;
+
+// =============================================================================
+// CANVAS NAVIGATOR CONTAINER
+// =============================================================================
+
+.canvas-navigator {
+  background: $color-bg-tertiary;
+  overflow: hidden;
+
+  &--docked {
+    border-radius: 0;
+    border: none;
+  }
+
+  &--floating {
+    border-radius: $radius-md;
+    border: 1px solid $color-border-default;
+  }
+
+  // Header
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__header-icon {
+    color: $color-accent-amber;
+  }
+
+  &__header-title {
+    flex: 1;
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__header-actions {
+    display: flex;
+    gap: 2px;
+  }
+
+  &__header-btn {
+    padding: 2px;
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  // Tools Bar (floating only)
+  &__tools {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__tool-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled):not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-secondary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: rgba(var(--tool-color-rgb), 0.2);
+      border-color: var(--tool-color);
+      color: var(--tool-color);
+    }
+
+    &--blue {
+      --tool-color: #{$color-accent-blue};
+      --tool-color-rgb: 96, 165, 250;
+    }
+
+    &--teal {
+      --tool-color: #{$color-accent-teal};
+      --tool-color-rgb: 125, 211, 252;
+    }
+
+    &--purple {
+      --tool-color: #{$color-accent-purple};
+      --tool-color-rgb: 192, 132, 252;
+    }
+
+    &--amber {
+      --tool-color: #{$color-accent-amber};
+      --tool-color-rgb: 251, 191, 36;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 16px;
+    background: $color-border-default;
+    margin: 0 $spacing-xs;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  // Drop mode etched toggle
+  &__drop-mode {
+    display: flex;
+    border-radius: $radius-sm;
+    overflow: hidden;
+    margin-left: $spacing-xs;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.2) 50%,
+      rgba(255, 255, 255, 0.02) 100%
+    );
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  &__drop-btn {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: $spacing-xs 6px;
+    background: transparent;
+    border: none;
+    color: $color-text-muted;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &--active {
+      &[data-color="green"] {
+        background: rgba($color-accent-green, 0.2);
+        color: $color-accent-green;
+      }
+
+      &[data-color="amber"] {
+        background: rgba($color-accent-amber, 0.2);
+        color: $color-accent-amber;
+      }
+    }
+  }
+
+  // Main content (minimap + controls)
+  &__main {
+    display: flex;
+  }
+
+  // Minimap
+  &__minimap {
+    flex: 1;
+    height: 120px;
+    overflow: auto;
+    padding: $spacing-sm;
+    background: $color-bg-base;
+    position: relative;
+  }
+
+  &__grid {
+    display: grid;
+    position: relative;
+  }
+
+  &__cell {
+    border-radius: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $transition-fast;
+
+    &--filled {
+      background: rgba(var(--cell-color-rgb, 96, 165, 250), 0.4);
+      border: 1px solid var(--cell-color, $color-accent-blue);
+
+      // Parse hex to RGB for rgba usage
+      &[style*="--cell-color: #60a5fa"] {
+        --cell-color-rgb: 96, 165, 250;
+      }
+
+      &[style*="--cell-color: #4ade80"] {
+        --cell-color-rgb: 74, 222, 128;
+      }
+
+      &[style*="--cell-color: #f472b6"] {
+        --cell-color-rgb: 244, 114, 182;
+      }
+
+      &[style*="--cell-color: #fbbf24"] {
+        --cell-color-rgb: 251, 191, 36;
+      }
+
+      &[style*="--cell-color: #2dd4bf"] {
+        --cell-color-rgb: 45, 212, 191;
+      }
+
+      &[style*="--cell-color: #a78bfa"] {
+        --cell-color-rgb: 167, 139, 250;
+      }
+    }
+
+    &--empty {
+      background: $color-bg-secondary;
+      border: 1px solid $color-border-subtle;
+    }
+
+    &:hover {
+      filter: brightness(1.2);
+    }
+  }
+
+  &__cell-label {
+    font-size: 7px;
+    color: var(--cell-color, $color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Viewport indicator
+  &__viewport-indicator {
+    position: absolute;
+    border: 2px solid $color-accent-amber;
+    border-radius: $radius-xs;
+    pointer-events: none;
+    box-shadow: 0 0 6px rgba($color-accent-amber, 0.5);
+  }
+
+  // Controls panel
+  &__controls {
+    width: 90px;
+    padding: $spacing-sm;
+    border-left: 1px solid $color-border-subtle;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  // D-pad
+  &__dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 20px);
+    gap: 1px;
+  }
+
+  &__nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: $color-text-secondary;
+    }
+
+    &--center {
+      color: $color-accent-amber;
+    }
+
+    &--active {
+      background: rgba($color-accent-amber, 0.15);
+      border-color: $color-accent-amber;
+      color: $color-accent-amber;
+    }
+  }
+
+  // Position display
+  &__position {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: $radius-xs;
+  }
+
+  // Zoom controls
+  &__zoom {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__zoom-level {
+    font-size: 8px;
+    color: $color-text-muted;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  // Size controls
+  &__size-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid $color-border-subtle;
+  }
+
+  &__size-label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+  }
+
+  &__size-group {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__size-dim {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__size-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: $color-text-secondary;
+    }
+  }
+
+  &__size-input {
+    width: 44px;
+    padding: $spacing-xs 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-primary;
+    font-size: 11px;
+    text-align: center;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-primary;
+    }
+
+    // Hide number input spinners
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  &__size-separator {
+    font-size: 12px;
+    color: $color-text-muted;
+  }
+}

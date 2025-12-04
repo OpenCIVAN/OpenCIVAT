@@ -1,0 +1,355 @@
+// src/ui/react/components/panels/LayoutPanel/components/ViewItem/ViewItem.scss
+// View Item styling for the Views subtab list
+// Uses design tokens - no hard-coded values
+
+@use "theme" as *;
+
+// =============================================================================
+// VIEW ITEM CONTAINER
+// =============================================================================
+
+.layout-view-item {
+  margin-bottom: $spacing-xs;
+
+  // Main Row
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px $spacing-sm;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid $color-border-subtle;
+    border-left: 3px solid var(--view-color);
+    border-radius: 0 $radius-sm $radius-sm 0;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(var(--view-color-rgb, 96, 165, 250), 0.08);
+    }
+
+    &--active {
+      background: rgba(var(--view-color-rgb, 96, 165, 250), 0.15);
+      border-color: var(--view-color);
+    }
+  }
+
+  &--expanded &__main {
+    background: rgba(var(--view-color-rgb, 96, 165, 250), 0.08);
+    border-color: rgba(var(--view-color-rgb, 96, 165, 250), 0.3);
+  }
+
+  // Drag Handle
+  &__drag-handle {
+    color: $color-text-muted;
+    cursor: grab;
+    opacity: 0.5;
+    transition: opacity $transition-fast;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  // Active Dot
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid var(--view-color);
+    background: transparent;
+    flex-shrink: 0;
+
+    &--active {
+      background: var(--view-color);
+    }
+  }
+
+  // Name
+  &__name {
+    flex: 1;
+    font-size: 11px;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Status Icons
+  &__status {
+    display: flex;
+    gap: 2px;
+  }
+
+  &__status-icon {
+    &--shared {
+      color: $color-accent-pink;
+    }
+
+    &--linked {
+      color: $color-accent-teal;
+    }
+  }
+
+  // Position
+  &__position {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+  }
+
+  // Chevron
+  &__chevron {
+    color: $color-text-muted;
+    transition: transform $transition-fast;
+
+    &--open {
+      transform: rotate(180deg);
+    }
+  }
+
+  // ==========================================================================
+  // EXPANDED PANEL
+  // ==========================================================================
+
+  &__panel {
+    border-left: 3px solid var(--view-color);
+    background: rgba(18, 18, 24, 0.8);
+    border-radius: 0 0 $radius-md 0;
+    padding: $spacing-sm 10px;
+    margin-top: -1px;
+    border-bottom: 1px solid rgba(var(--view-color-rgb, 96, 165, 250), 0.3);
+    border-right: 1px solid rgba(var(--view-color-rgb, 96, 165, 250), 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  // Tooltip Row
+  &__tooltip {
+    height: 14px;
+    font-size: 9px;
+    color: $color-text-muted;
+    font-style: italic;
+
+    &:not(:empty) {
+      color: $color-text-secondary;
+      font-style: normal;
+    }
+  }
+
+  // Action Buttons Row
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+
+  &__btn-group {
+    display: flex;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    overflow: hidden;
+
+    .layout-view-item__action-btn {
+      border: none;
+      border-radius: 0;
+
+      &:not(:last-child) {
+        border-right: 1px solid $color-border-default;
+      }
+    }
+  }
+
+  &__action-btn {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      &[data-color="purple"] {
+        background: rgba($color-accent-purple, 0.2);
+        color: $color-accent-purple;
+      }
+
+      &[data-color="amber"] {
+        background: rgba($color-accent-amber, 0.2);
+        color: $color-accent-amber;
+      }
+
+      &[data-color="pink"] {
+        background: rgba($color-accent-pink, 0.2);
+        color: $color-accent-pink;
+      }
+    }
+
+    &--teal {
+      color: $color-accent-teal;
+    }
+
+    &--danger {
+      color: $color-accent-red;
+
+      &:hover {
+        background: rgba($color-accent-red, 0.1);
+      }
+    }
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  // Size Picker Row
+  &__size-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__size-label {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  &__size-options {
+    display: flex;
+    gap: 2px;
+  }
+
+  &__size-btn {
+    padding: 3px 6px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    border-radius: $radius-xs;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--active {
+      background: rgba(var(--view-color-rgb, 96, 165, 250), 0.2);
+      border-color: var(--view-color);
+      color: var(--view-color);
+    }
+  }
+
+  // Linked Parent Display
+  &__linked-parent {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs 6px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-sm;
+    font-size: 9px;
+    color: $color-text-muted;
+
+    svg {
+      color: $color-accent-teal;
+    }
+  }
+
+  &__linked-name {
+    color: $color-accent-teal;
+  }
+
+  // Link Properties Row
+  &__link-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+
+    &--disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+  }
+
+  &__link-label {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  &__link-toggle {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.2);
+      border-color: $color-accent-teal;
+      color: $color-accent-teal;
+    }
+  }
+
+  &__link-divider {
+    width: 1px;
+    height: 12px;
+    background: $color-border-default;
+  }
+
+  &__link-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    position: relative;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.15);
+      border-color: $color-accent-teal;
+      color: $color-accent-teal;
+    }
+  }
+
+  &__link-dot {
+    position: absolute;
+    bottom: 2px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: $color-accent-teal;
+  }
+}
