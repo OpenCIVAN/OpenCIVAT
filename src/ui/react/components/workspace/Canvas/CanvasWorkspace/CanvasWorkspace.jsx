@@ -274,6 +274,61 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
         // TODO: Show add content dialog
     }, []);
 
+    // Handle adding content to a cell from placeholder buttons
+    const handleAddContent = useCallback(async (row, col, type) => {
+        log.debug(`Add content requested: type=${type} at (${row}, ${col})`);
+
+        if (!activeCanvasId) {
+            log.error('No canvas available for adding content');
+            return;
+        }
+
+        switch (type) {
+            case 'view':
+                // TODO: Implement view button functionality
+                // Options to consider:
+                // 1. Open file browser sidebar with target cell context
+                // 2. Show dataset selector modal
+                // 3. Quick-add from recent datasets
+                log.debug('[STUB] View button clicked - need to implement dataset selection', { row, col });
+                console.info('🔧 [TODO] View button needs implementation - should open dataset selector for cell', row, col);
+                break;
+
+            case 'notes':
+                // Create a notes placement directly
+                try {
+                    await addPlacement({
+                        row,
+                        col,
+                        rowSpan: 1,
+                        colSpan: 1,
+                        content: {
+                            type: 'notes',
+                            notesBlockId: null, // Will be created on first save
+                        },
+                    });
+                    log.debug('Notes placement added');
+                } catch (err) {
+                    log.error('Failed to add notes placement:', err);
+                }
+                break;
+
+            case 'image':
+                // Dispatch event to open image selector
+                window.dispatchEvent(new CustomEvent('cia:open-image-selector', {
+                    detail: {
+                        targetRow: row,
+                        targetCol: col,
+                        purpose: 'add-image-to-cell'
+                    }
+                }));
+                break;
+
+            default:
+                log.warn(`Unknown content type: ${type}`);
+        }
+    }, [activeCanvasId, addPlacement]);
+
     // Show error if canvas loading failed
     const showError = (canvasError || loadError) && !canvas;
 
@@ -302,6 +357,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                             onRemovePlacement={removePlacement}
                             onAddRow={addRow}
                             onAddColumn={addColumn}
+                            onAddContent={handleAddContent}
                         />
                     ) : (
                         <div className="canvas-workspace__empty">

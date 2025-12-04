@@ -18,7 +18,7 @@ import {
   FlowLayoutEngine,
   calculateOptimalGrid,
   reflowPlacements,
-} from "@Core/data/utils/flowLayoutEngine.js";
+} from "../utils/flowLayoutEngine.js";
 
 // Re-export layout constants for convenience
 export { LAYOUT_MODES, FLOW_DIRECTIONS };
@@ -34,48 +34,107 @@ export { LAYOUT_MODES, FLOW_DIRECTIONS };
  */
 export class WorkspaceCanvas {
   /**
-   * @param {Object} options
+   * @param {Object} options - Accepts both client format (camelCase) and server format (snake_case)
    * @param {string} options.id - Server-generated ID
-   * @param {string} options.projectId - Parent project ID
+   * @param {string} options.projectId - Parent project ID (client format)
+   * @param {string} options.project_id - Parent project ID (server format)
    * @param {string} options.name - Canvas display name
    * @param {Object} options.dimensions - { rows, cols } current grid size
    * @param {Object} options.ownership - { type, ownerId }
    * @param {Array} options.placements - Array of CanvasPlacement objects
-   * @param {string} options.layoutMode - 'grid' or 'flow'
-   * @param {string} options.flowDirection - 'row' or 'column'
+   * @param {string} options.layoutMode - 'grid' or 'flow' (client format)
+   * @param {string} options.layout_mode - 'grid' or 'flow' (server format)
+   * @param {string} options.flowDirection - 'row' or 'column' (client format)
+   * @param {string} options.flow_direction - 'row' or 'column' (server format)
    * @param {Object} options.homepoint - { row, col } saved homepoint position
-   * @param {string} options.createdBy - User ID who created this
-   * @param {string} options.createdAt - ISO timestamp
-   * @param {string} options.updatedAt - ISO timestamp
+   * @param {string} options.createdBy - User ID who created this (client format)
+   * @param {string} options.created_by - User ID who created this (server format)
+   * @param {string} options.createdAt - ISO timestamp (client format)
+   * @param {string} options.created_at - ISO timestamp (server format)
+   * @param {string} options.updatedAt - ISO timestamp (client format)
+   * @param {string} options.updated_at - ISO timestamp (server format)
    */
-  constructor({
-    id = null,
-    projectId,
-    name = "Untitled Workspace",
-    dimensions = { rows: 3, cols: 3 },
-    ownership = { type: "personal", ownerId: null },
-    placements = [],
-    layoutMode = LAYOUT_MODES.FLOW,
-    flowDirection = FLOW_DIRECTIONS.ROW,
-    homepoint = null,
-    createdBy = null,
-    createdAt = null,
-    updatedAt = null,
-  } = {}) {
+  constructor(options = {}) {
+    // Handle both camelCase (client) and snake_case (server) formats
+    const {
+      id = null,
+      projectId,
+      project_id,
+      name = "Untitled Workspace",
+      dimensions = { rows: 3, cols: 3 },
+      ownership = { type: "personal", ownerId: null },
+      placements = [],
+      layoutMode,
+      layout_mode,
+      flowDirection,
+      flow_direction,
+      homepoint = null,
+      createdBy,
+      created_by,
+      createdAt,
+      created_at,
+      updatedAt,
+      updated_at,
+    } = options;
+
     this.id = id;
-    this.projectId = projectId;
+    this.projectId = projectId ?? project_id;
     this.name = name;
-    this.dimensions = { ...dimensions };
-    this.ownership = { ...ownership };
-    this.placements = placements.map((p) =>
-      p instanceof CanvasPlacement ? p : new CanvasPlacement(p)
-    );
-    this.layoutMode = layoutMode;
-    this.flowDirection = flowDirection;
-    this.homepoint = homepoint ? { ...homepoint } : null;
-    this.createdBy = createdBy;
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
+
+    // Handle dimensions - could be string (from DB) or object
+    if (typeof dimensions === "string") {
+      try {
+        this.dimensions = JSON.parse(dimensions);
+      } catch {
+        this.dimensions = { rows: 3, cols: 3 };
+      }
+    } else {
+      this.dimensions = { ...dimensions };
+    }
+
+    // Handle ownership - could be string (from DB) or object
+    if (typeof ownership === "string") {
+      try {
+        this.ownership = JSON.parse(ownership);
+      } catch {
+        this.ownership = { type: "personal", ownerId: null };
+      }
+    } else {
+      this.ownership = { ...ownership };
+    }
+
+    // Convert and deduplicate placements by ID
+    const placementMap = new Map();
+    placements.forEach((p) => {
+      const placement =
+        p instanceof CanvasPlacement ? p : new CanvasPlacement(p);
+      if (placement.id) {
+        // Dedupe by ID - later entries override earlier ones
+        placementMap.set(placement.id, placement);
+      } else {
+        // Placements without ID (new/unsaved) - use position as key
+        const posKey = `pos-${placement.row}-${placement.col}`;
+        placementMap.set(posKey, placement);
+      }
+    });
+    this.placements = Array.from(placementMap.values());
+    this.layoutMode = layoutMode ?? layout_mode ?? LAYOUT_MODES.FLOW;
+    this.flowDirection = flowDirection ?? flow_direction ?? FLOW_DIRECTIONS.ROW;
+
+    // Handle homepoint - could be string (from DB) or object
+    if (typeof homepoint === "string") {
+      try {
+        this.homepoint = JSON.parse(homepoint);
+      } catch {
+        this.homepoint = null;
+      }
+    } else {
+      this.homepoint = homepoint ? { ...homepoint } : null;
+    }
+
+    this.createdBy = createdBy ?? created_by;
+    this.createdAt = createdAt ?? created_at;
+    this.updatedAt = updatedAt ?? updated_at;
 
     // Initialize flow layout engine
     this._flowEngine = new FlowLayoutEngine({

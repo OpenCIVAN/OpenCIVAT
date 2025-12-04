@@ -77,6 +77,7 @@ export class CanvasPlacement {
             viewConfigurationId: contentId,
           };
           break;
+        case "note": // DB stores 'note' (singular)
         case "notes":
         case PlacementContentType.NOTES:
           this.content = {

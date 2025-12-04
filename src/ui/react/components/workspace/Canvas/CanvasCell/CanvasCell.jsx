@@ -9,7 +9,7 @@
 
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Grid3X3, LayoutGrid, FileImage, FileText, Box } from 'lucide-react';
+import { Plus, Grid3X3, LayoutGrid, FileImage, FileText, Box, X } from 'lucide-react';
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
 import './CanvasCell.scss';
@@ -129,6 +129,7 @@ export const CanvasCell = memo(function CanvasCell({
                 return (
                     <NotesPlaceholder
                         notesId={placement.content.notesBlockId}
+                        onClose={() => onRemovePlacement?.(placement.id)}
                     />
                 );
 
@@ -136,6 +137,7 @@ export const CanvasCell = memo(function CanvasCell({
                 return (
                     <ImagePlaceholder
                         imageId={placement.content.imageBlockId}
+                        onClose={() => onRemovePlacement?.(placement.id)}
                     />
                 );
 
@@ -218,102 +220,135 @@ export const CanvasCell = memo(function CanvasCell({
 });
 
 /**
- * EmptyPlaceholder - Enhanced placeholder for empty cells
+ * EmptyPlaceholder - Enhanced placeholder for empty cells with radial menu
  */
 function EmptyPlaceholder({ row, col, editMode, onAddClick }) {
-    const [showActions, setShowActions] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [hoveredOption, setHoveredOption] = useState(null);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const containerRef = useRef(null);
+    const menuRef = useRef(null);
 
-    // Update menu position when shown
+    // Update menu position when opened
     useEffect(() => {
-        if (showActions && containerRef.current) {
+        if (menuOpen && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
             setMenuPosition({
                 x: rect.left + rect.width / 2,
-                y: rect.bottom - 8, // Position above bottom edge
+                y: rect.top + rect.height / 2,
             });
         }
-    }, [showActions]);
+    }, [menuOpen]);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        if (!menuOpen) return;
+
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setMenuOpen(false);
+                setHoveredOption(null);
+            }
+        };
+
+        // Delay to avoid immediate close from the opening click
+        const timer = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 0);
+
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [menuOpen]);
+
+    const handleOptionClick = (type) => {
+        setMenuOpen(false);
+        setHoveredOption(null);
+        onAddClick?.(type);
+    };
+
+    // Radial menu options with positions (angle in degrees, 0 = right, -90 = top, 180 = left)
+    const menuOptions = [
+        { type: 'view', icon: Box, label: 'View', angle: 180 },       // Left
+        { type: 'notes', icon: FileText, label: 'Notes', angle: -90 }, // Top
+        { type: 'image', icon: FileImage, label: 'Image', angle: 0 },  // Right
+    ];
+
+    const radius = 50; // Distance from center
 
     return (
         <div
             ref={containerRef}
             className="canvas-cell__empty-content"
-            onMouseEnter={() => setShowActions(true)}
-            onMouseLeave={() => setShowActions(false)}
         >
             {/* Cell position indicator */}
             <span className="canvas-cell__position">
                 ({col}, {row})
             </span>
 
-            {/* Quick add button */}
-            <div className={`canvas-cell__add-actions ${showActions || editMode ? 'visible' : ''}`}>
-                <button
-                    className="canvas-cell__add-btn canvas-cell__add-btn--primary"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onAddClick?.('view');
-                    }}
-                    title="Add visualization"
-                >
-                    <Plus size={16} />
-                </button>
-            </div>
+            {/* Central add button */}
+            <button
+                className={`canvas-cell__add-btn canvas-cell__add-btn--primary ${menuOpen ? 'canvas-cell__add-btn--active' : ''}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(!menuOpen);
+                }}
+                title="Add content"
+            >
+                <Plus size={20} className={menuOpen ? 'rotate-45' : ''} />
+            </button>
 
             {/* Drop hint */}
             <span className="canvas-cell__drop-hint">
-                Drop file or click +
+                {menuOpen ? '' : 'Drop file or click +'}
             </span>
 
-            {/* Additional actions on hover - rendered as portal to avoid overflow clipping */}
-            {showActions && createPortal(
+            {/* Hover label below the + button */}
+            {hoveredOption && menuOpen && (
+                <span className="canvas-cell__option-label">
+                    {hoveredOption}
+                </span>
+            )}
+
+            {/* Radial menu - rendered as portal */}
+            {menuOpen && createPortal(
                 <div
-                    className="canvas-cell__content-options canvas-cell__content-options--portal"
+                    ref={menuRef}
+                    className="canvas-cell__radial-menu"
                     style={{
                         position: 'fixed',
                         left: `${menuPosition.x}px`,
                         top: `${menuPosition.y}px`,
-                        transform: 'translateX(-50%)',
                         zIndex: 9999,
                     }}
-                    onMouseEnter={() => setShowActions(true)}
-                    onMouseLeave={() => setShowActions(false)}
                 >
-                    <button
-                        className="canvas-cell__option-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onAddClick?.('view');
-                        }}
-                        title="Add visualization"
-                    >
-                        <Box size={12} />
-                        <span>View</span>
-                    </button>
-                    <button
-                        className="canvas-cell__option-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onAddClick?.('notes');
-                        }}
-                        title="Add notes"
-                    >
-                        <FileText size={12} />
-                        <span>Notes</span>
-                    </button>
-                    <button
-                        className="canvas-cell__option-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onAddClick?.('image');
-                        }}
-                        title="Add image"
-                    >
-                        <FileImage size={12} />
-                        <span>Image</span>
-                    </button>
+                    {menuOptions.map(({ type, icon: Icon, label, angle }, index) => {
+                        const rad = (angle * Math.PI) / 180;
+                        const x = Math.cos(rad) * radius;
+                        const y = Math.sin(rad) * radius;
+
+                        return (
+                            <button
+                                key={type}
+                                className={`canvas-cell__radial-option canvas-cell__radial-option--${type}`}
+                                style={{
+                                    '--x': `${x}px`,
+                                    '--y': `${y}px`,
+                                    '--delay': `${index * 0.05}s`,
+                                }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOptionClick(type);
+                                }}
+                                onMouseEnter={() => setHoveredOption(label)}
+                                onMouseLeave={() => setHoveredOption(null)}
+                                title={label}
+                            >
+                                <Icon size={16} />
+                            </button>
+                        );
+                    })}
                 </div>,
                 document.body
             )}
@@ -340,16 +375,26 @@ function ViewContent({ viewId, rowSpan, colSpan, placementId, onClose }) {
 /**
  * NotesPlaceholder - Placeholder for notes content
  */
-function NotesPlaceholder({ notesId }) {
+function NotesPlaceholder({ notesId, onClose }) {
     return (
         <div className="canvas-cell__notes-placeholder">
             <div className="canvas-cell__notes-header">
                 <span className="canvas-cell__notes-icon">📝</span>
                 <span className="canvas-cell__notes-title">Notes</span>
+                <button
+                    className="canvas-cell__close-btn"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose?.();
+                    }}
+                    title="Remove notes"
+                >
+                    <X size={14} />
+                </button>
             </div>
             <div className="canvas-cell__notes-body">
                 <p className="canvas-cell__notes-preview">
-                    Notes content preview...
+                    {notesId ? 'Notes content...' : 'Empty notes - click to edit'}
                 </p>
             </div>
         </div>
@@ -359,16 +404,26 @@ function NotesPlaceholder({ notesId }) {
 /**
  * ImagePlaceholder - Placeholder for image content
  */
-function ImagePlaceholder({ imageId }) {
+function ImagePlaceholder({ imageId, onClose }) {
     return (
         <div className="canvas-cell__image-placeholder">
             <div className="canvas-cell__image-header">
                 <span className="canvas-cell__image-icon">🖼️</span>
                 <span className="canvas-cell__image-title">Image</span>
+                <button
+                    className="canvas-cell__close-btn"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose?.();
+                    }}
+                    title="Remove image"
+                >
+                    <X size={14} />
+                </button>
             </div>
             <div className="canvas-cell__image-body">
                 <div className="canvas-cell__image-preview">
-                    Image: {imageId?.slice(0, 8)}...
+                    {imageId ? `Image: ${imageId.slice(0, 8)}...` : 'No image selected'}
                 </div>
             </div>
         </div>

@@ -13,7 +13,7 @@
   height: 100%;
   width: 100%;
   min-height: 0;
-  background: $color-bg-primary;
+  background: transparent;
   overflow: hidden;
 
   &:focus {
@@ -45,22 +45,11 @@
     }
   }
 
-  // Layout mode states
-  &--flow-mode {
-    .canvas-grid__container {
-      // Flow mode indicator - subtle gradient
-      background: linear-gradient(
-        135deg,
-        rgba($color-accent-teal, 0.02) 0%,
-        rgba($color-bg-tertiary, 1) 100%
-      );
-    }
-  }
-
+  // Layout mode states - transparent backgrounds
+  &--flow-mode,
   &--grid-mode {
     .canvas-grid__container {
-      // Grid mode - show grid lines subtly
-      background: $color-bg-tertiary;
+      background: transparent;
     }
   }
 
@@ -170,7 +159,7 @@
   display: flex;
   flex-direction: column;
   padding: $spacing-md;
-  background: $color-bg-tertiary;
+  background: transparent;
   border-radius: $radius-lg;
   min-height: 200px;
   overflow: hidden;

@@ -115,26 +115,30 @@ export class CanvasManager {
   async getPersonalCanvas(projectId) {
     const userId = this._getUserId();
 
-    // Check cache for existing personal canvas
+    // Check cache for existing personal canvas WITH placements loaded
     const cached = Array.from(this._canvases.values()).find(
       (c) =>
         c.projectId === projectId &&
         c.ownership.type === "personal" &&
-        c.ownership.ownerId === userId
+        c.ownership.ownerId === userId &&
+        c.placements !== undefined // Ensure placements are loaded
     );
     if (cached) return cached;
 
     try {
-      // Try to fetch from server
+      // Try to fetch from server (list endpoint returns basic info)
       const response = await this._fetch(
         `/projects/${projectId}/canvases?type=personal`
       );
       const data = await response.json();
 
       if (data.canvases && data.canvases.length > 0) {
-        const canvas = new WorkspaceCanvas(data.canvases[0]);
-        this._canvases.set(canvas.id, canvas);
-        return canvas;
+        // Found a canvas in the list - now load it fully with placements
+        const canvasId = data.canvases[0].id;
+        // Clear from cache to force full reload
+        this._canvases.delete(canvasId);
+        // Load the full canvas with placements
+        return this.loadCanvas(canvasId);
       }
 
       // Create new personal canvas
@@ -154,9 +158,12 @@ export class CanvasManager {
    * @returns {Promise<WorkspaceCanvas>}
    */
   async getProjectCanvas(projectId) {
-    // Check cache
+    // Check cache for existing project canvas WITH placements loaded
     const cached = Array.from(this._canvases.values()).find(
-      (c) => c.projectId === projectId && c.ownership.type === "project"
+      (c) =>
+        c.projectId === projectId &&
+        c.ownership.type === "project" &&
+        c.placements !== undefined // Ensure placements are loaded
     );
     if (cached) return cached;
 
@@ -167,9 +174,12 @@ export class CanvasManager {
       const data = await response.json();
 
       if (data.canvases && data.canvases.length > 0) {
-        const canvas = new WorkspaceCanvas(data.canvases[0]);
-        this._canvases.set(canvas.id, canvas);
-        return canvas;
+        // Found a canvas in the list - now load it fully with placements
+        const canvasId = data.canvases[0].id;
+        // Clear from cache to force full reload
+        this._canvases.delete(canvasId);
+        // Load the full canvas with placements
+        return this.loadCanvas(canvasId);
       }
 
       // Create project canvas (usually done by project creator)
@@ -288,10 +298,18 @@ export class CanvasManager {
       const data = await response.json();
       const placement = new CanvasPlacement(data);
 
-      // Update local cache
+      // Update local cache with duplicate prevention
       const canvas = this._canvases.get(canvasId);
       if (canvas) {
-        canvas.placements.push(placement);
+        const existingIdx = canvas.placements.findIndex(
+          (p) => p.id === placement.id
+        );
+        if (existingIdx === -1) {
+          canvas.placements.push(placement);
+        } else {
+          // Replace existing placement (shouldn't happen, but safe)
+          canvas.placements[existingIdx] = placement;
+        }
       }
 
       this._emit("placementAdded", { canvasId, placement });
@@ -605,12 +623,26 @@ export class CanvasManager {
     const canvas = this._canvases.get(message.canvasId);
     if (canvas) {
       const placement = new CanvasPlacement(message.placement);
-      canvas.placements.push(placement);
-      this._emit("placementAdded", {
-        canvasId: message.canvasId,
-        placement,
-        source: "broadcast",
-      });
+      // Check for duplicate - don't add if placement with same ID already exists
+      const existingIdx = canvas.placements.findIndex(
+        (p) => p.id === placement.id
+      );
+      if (existingIdx === -1) {
+        canvas.placements.push(placement);
+        this._emit("placementAdded", {
+          canvasId: message.canvasId,
+          placement,
+          source: "broadcast",
+        });
+      } else {
+        // Update existing placement instead
+        canvas.placements[existingIdx] = placement;
+        this._emit("placementUpdated", {
+          canvasId: message.canvasId,
+          placement,
+          source: "broadcast",
+        });
+      }
     }
   }
 

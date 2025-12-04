@@ -365,7 +365,18 @@ router.post("/:id/placements", async (req, res, next) => {
 
     if (content) {
       resolvedContentType = content.type || "view";
-      resolvedContentId = content.viewConfigurationId || content.id || null;
+      resolvedContentId =
+        content.viewConfigurationId ||
+        content.notesBlockId ||
+        content.imageBlockId ||
+        content.id ||
+        null;
+    }
+
+    // Normalize content_type to match database constraint
+    // Client may send 'notes' but DB expects 'note'
+    if (resolvedContentType === "notes") {
+      resolvedContentType = "note";
     }
 
     const result = await pool.query(

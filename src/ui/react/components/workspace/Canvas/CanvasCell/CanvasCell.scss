@@ -280,27 +280,164 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    border: 2px dashed $color-border-subtle;
-    background: transparent;
+    border: 2px solid $color-border-subtle;
+    background: $color-bg-secondary;
     color: $color-text-muted;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
 
     &:hover {
       border-color: $color-accent-primary;
-      background: rgba($color-accent-primary, 0.1);
+      background: rgba($color-accent-primary, 0.15);
       color: $color-accent-primary;
       transform: scale(1.1);
+      box-shadow: 0 0 20px rgba($color-accent-primary, 0.3);
     }
 
     &--primary {
-      border-style: solid;
       background: rgba($color-accent-primary, 0.1);
-      border-color: rgba($color-accent-primary, 0.3);
+      border-color: rgba($color-accent-primary, 0.4);
       color: $color-accent-primary;
+    }
+
+    &--active {
+      background: $color-accent-primary;
+      border-color: $color-accent-primary;
+      color: $color-bg-primary;
+      transform: scale(1.05);
+      box-shadow: 0 0 24px rgba($color-accent-primary, 0.5);
+
+      svg {
+        transition: transform 0.2s ease;
+      }
+
+      // Rotate icon when active
+      .rotate-45 {
+        transform: rotate(45deg);
+      }
+    }
+  }
+
+  // Option label that appears below + button on hover
+  &__option-label {
+    position: absolute;
+    bottom: $spacing-lg;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    background: $color-bg-tertiary;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-sm;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.15s ease;
+  }
+
+  // ============================================================================
+  // RADIAL MENU
+  // ============================================================================
+
+  &__radial-menu {
+    pointer-events: none;
+    // Create a larger hit area container
+    width: 140px;
+    height: 140px;
+    margin-left: -70px;
+    margin-top: -70px;
+  }
+
+  &__radial-option {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: $color-bg-secondary;
+    cursor: pointer;
+    pointer-events: auto;
+    // Use CSS variables for position, set via inline style
+    transform: translate(
+      calc(-50% + var(--x, 0px)),
+      calc(-50% + var(--y, 0px))
+    );
+    animation: radialFadeIn 0.2s ease forwards;
+    animation-delay: var(--delay, 0s);
+    opacity: 0;
+
+    // Hover effect - scale only, position stays the same
+    &:hover {
+      transform: translate(
+          calc(-50% + var(--x, 0px)),
+          calc(-50% + var(--y, 0px))
+        )
+        scale(1.15);
+      box-shadow: 0 0 16px currentColor;
+    }
+
+    // View option - blue (left)
+    &--view {
+      border-color: $color-accent-primary;
+      color: $color-accent-primary;
+
+      &:hover {
+        background: rgba($color-accent-primary, 0.25);
+      }
+    }
+
+    // Notes option - amber/gold (top)
+    &--notes {
+      border-color: $color-accent-amber;
+      color: $color-accent-amber;
+
+      &:hover {
+        background: rgba($color-accent-amber, 0.25);
+      }
+    }
+
+    // Image option - teal (right)
+    &--image {
+      border-color: $color-accent-teal;
+      color: $color-accent-teal;
+
+      &:hover {
+        background: rgba($color-accent-teal, 0.25);
+      }
+    }
+  }
+
+  @keyframes radialFadeIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: translate(
+        calc(-50% + var(--x, 0px)),
+        calc(-50% + var(--y, 0px))
+      );
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
   }
 
@@ -425,6 +562,28 @@
       rgba(255, 255, 255, 0.02) 100%
     );
     border-bottom: 1px solid $color-border-default;
+  }
+
+  &__close-btn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    opacity: 0.6;
+
+    &:hover {
+      background: rgba($color-error, 0.15);
+      color: $color-error;
+      opacity: 1;
+    }
   }
 
   &__notes-icon,
