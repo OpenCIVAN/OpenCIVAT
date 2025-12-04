@@ -59,7 +59,7 @@ import { FloatingPanelProvider, AllFloatingPanels } from "@UI/react/components/p
  * - Layout mode (Normal/Isolation/Subset)
  * - Phase 3 initialization
  */
-export function CIAWebApp({ username, userId, projectId, useNewCanvas = false }) {
+export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) {
   // =========================================================================
   // STATE
   // =========================================================================
@@ -167,8 +167,8 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
       );
     }
 
-    // Always use the new canvas-based workspace
-    // Layout mode (Normal/Isolation/Subset) is handled inside CanvasWorkspace
+    // Use unified canvas-based workspace (default)
+    // Falls back to legacy WorkspaceGrid if useNewCanvas=false
     if (useNewCanvas) {
       return (
         <CanvasWorkspace
@@ -179,6 +179,7 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
         />
       );
     }
+    // Legacy grid (max 9 instances, localStorage persistence)
     return <WorkspaceGrid layoutMode={layoutMode} />;
   };
 
@@ -191,87 +192,87 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = false })
       <LeftPanelProvider>
         <RightPanelProvider>
           <ThreeEdgeLayout
-          // Top bar
-          topBar={
-            <TopBar
-              username={username}
-              projectName={projectId ? `Project ${projectId}` : null}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-              vrAvailable={vrAvailable}
-            />
-          }
-
-          // Center workspace
-          centerPanel={renderCenterPanel()}
-
-          // Bottom bar
-          bottomBar={
-            <>
-              <BottomPanel />
-              <StatusBar />
-            </>
-          }
-
-          // Left side - separated activity bar and content
-          leftActivityBar={<LeftActivityBar />}
-          leftPanelContent={<LeftPanelContent workspaceId={workspaceId} />}
-
-          // Right side - separated activity bar and content
-          rightActivityBar={<RightActivityBar />}
-          rightPanelContent={<RightPanelContent workspaceId={workspaceId} />}
-
-          // Secondary bar zones - distributed across grid cells
-          secondaryTopBarZones={{
-            left: (
-              <WorkspaceSelector
-                currentWorkspace={workspace.currentWorkspace}
-                isOpen={workspaceSelectorOpen}
-                searchQuery={workspace.searchQuery}
-                groupedWorkspaces={workspace.groupedWorkspaces}
-                onToggle={() => setWorkspaceSelectorOpen(!workspaceSelectorOpen)}
-                onSelect={(id) => {
-                  workspace.selectWorkspace(id);
-                  setWorkspaceSelectorOpen(false);
-                }}
-                onSearchChange={workspace.setSearchQuery}
-                onClose={() => setWorkspaceSelectorOpen(false)}
+            // Top bar
+            topBar={
+              <TopBar
+                username={username}
+                projectName={projectId ? `Project ${projectId}` : null}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                vrAvailable={vrAvailable}
               />
-            ),
-            center: <SecondaryTopBar />,
-            right: (
-              <WorkspacePresence
-                visibleUsers={presence.visibleUsers}
-                overflowCount={presence.overflowCount}
-                totalCount={presence.totalCount}
-                isHovering={presence.isHovering}
-                onHoverChange={presence.setIsHovering}
-              />
-            ),
-          }}
-          secondaryBottomBarZones={{
-            left: (
-              <LayoutModeToggle
-                mode={layoutMode}
-                onModeChange={setLayoutMode}
-              />
-            ),
-            center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,
-            right: (
-              <VoiceControls
-                inVoice={voice.inVoice}
-                muted={voice.muted}
-                deafened={voice.deafened}
-                currentRoom={voice.currentRoom}
-                showRoomDropdown={voice.showRoomDropdown}
-                onJoin={voice.joinVoice}
-                onLeave={voice.leaveVoice}
-                onToggleMute={voice.toggleMute}
-                onToggleDeafen={voice.toggleDeafen}
-                onToggleRoomDropdown={voice.toggleRoomDropdown}
-              />
-            ),
-          }}
+            }
+
+            // Center workspace
+            centerPanel={renderCenterPanel()}
+
+            // Bottom bar
+            bottomBar={
+              <>
+                <BottomPanel />
+                <StatusBar />
+              </>
+            }
+
+            // Left side - separated activity bar and content
+            leftActivityBar={<LeftActivityBar />}
+            leftPanelContent={<LeftPanelContent workspaceId={workspaceId} />}
+
+            // Right side - separated activity bar and content
+            rightActivityBar={<RightActivityBar />}
+            rightPanelContent={<RightPanelContent workspaceId={workspaceId} />}
+
+            // Secondary bar zones - distributed across grid cells
+            secondaryTopBarZones={{
+              left: (
+                <WorkspaceSelector
+                  currentWorkspace={workspace.currentWorkspace}
+                  isOpen={workspaceSelectorOpen}
+                  searchQuery={workspace.searchQuery}
+                  groupedWorkspaces={workspace.groupedWorkspaces}
+                  onToggle={() => setWorkspaceSelectorOpen(!workspaceSelectorOpen)}
+                  onSelect={(id) => {
+                    workspace.selectWorkspace(id);
+                    setWorkspaceSelectorOpen(false);
+                  }}
+                  onSearchChange={workspace.setSearchQuery}
+                  onClose={() => setWorkspaceSelectorOpen(false)}
+                />
+              ),
+              center: <SecondaryTopBar />,
+              right: (
+                <WorkspacePresence
+                  visibleUsers={presence.visibleUsers}
+                  overflowCount={presence.overflowCount}
+                  totalCount={presence.totalCount}
+                  isHovering={presence.isHovering}
+                  onHoverChange={presence.setIsHovering}
+                />
+              ),
+            }}
+            secondaryBottomBarZones={{
+              left: (
+                <LayoutModeToggle
+                  mode={layoutMode}
+                  onModeChange={setLayoutMode}
+                />
+              ),
+              center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,
+              right: (
+                <VoiceControls
+                  inVoice={voice.inVoice}
+                  muted={voice.muted}
+                  deafened={voice.deafened}
+                  currentRoom={voice.currentRoom}
+                  showRoomDropdown={voice.showRoomDropdown}
+                  onJoin={voice.joinVoice}
+                  onLeave={voice.leaveVoice}
+                  onToggleMute={voice.toggleMute}
+                  onToggleDeafen={voice.toggleDeafen}
+                  onToggleRoomDropdown={voice.toggleRoomDropdown}
+                />
+              ),
+            }}
           >
             {/* Floating panels rendered at app level - persist when docked panels close */}
             <AllFloatingPanels workspaceId={workspaceId} />

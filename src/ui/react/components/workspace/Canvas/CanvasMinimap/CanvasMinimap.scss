@@ -1,0 +1,195 @@
+// src/ui/react/components/workspace/Canvas/CanvasMinimap/CanvasMinimap.scss
+// Styles for the canvas minimap
+
+@use "theme" as *;
+
+// =============================================================================
+// MINIMAP CONTAINER
+// =============================================================================
+
+.canvas-minimap {
+  position: absolute;
+  bottom: $spacing-md;
+  left: $spacing-md;
+  z-index: 40;
+  transition: all $transition-base;
+
+  // Collapsed state - just a small icon button
+  &--collapsed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    background: rgba($color-bg-secondary, 0.9);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    color: $color-text-secondary;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba($color-bg-secondary, 1);
+      color: $color-accent-blue;
+      border-color: $color-accent-blue;
+    }
+  }
+
+  // Expanded state - full minimap
+  &--expanded {
+    display: flex;
+    flex-direction: column;
+    max-width: 200px;
+    background: rgba($color-bg-secondary, 0.95);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+  }
+}
+
+// =============================================================================
+// HEADER
+// =============================================================================
+
+.canvas-minimap__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.canvas-minimap__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: $color-text-secondary;
+
+  svg {
+    color: $color-accent-blue;
+  }
+}
+
+.canvas-minimap__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: $radius-xs;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+}
+
+// =============================================================================
+// GRID
+// =============================================================================
+
+.canvas-minimap__grid {
+  display: grid;
+  gap: 1px;
+  padding: $spacing-xs;
+  background: $color-border-subtle;
+  max-height: 120px;
+  overflow: auto;
+  position: relative;
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+}
+
+// =============================================================================
+// CELLS
+// =============================================================================
+
+.canvas-minimap__cell {
+  background: $color-bg-primary;
+  border-radius: 1px;
+  cursor: pointer;
+  transition: all $transition-fast;
+  position: relative;
+
+  &:hover {
+    background: rgba($color-accent-blue, 0.3);
+  }
+
+  // Occupied cell
+  &--occupied {
+    background: rgba($color-accent-blue, 0.4);
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.5);
+    }
+  }
+
+  // Cell in current viewport
+  &--in-viewport {
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid transparent;
+    }
+  }
+}
+
+// =============================================================================
+// VIEWPORT INDICATOR
+// =============================================================================
+
+.canvas-minimap__viewport-indicator {
+  position: absolute;
+  border: 2px solid $color-accent-purple;
+  border-radius: 2px;
+  background: rgba($color-accent-purple, 0.1);
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba($color-accent-purple, 0.3);
+  z-index: 1;
+}
+
+// =============================================================================
+// FOOTER
+// =============================================================================
+
+.canvas-minimap__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs $spacing-sm;
+  border-top: 1px solid $color-border-subtle;
+}
+
+.canvas-minimap__stat {
+  font-size: 9px;
+  color: $color-text-muted;
+}

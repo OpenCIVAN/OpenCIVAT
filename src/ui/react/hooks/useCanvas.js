@@ -14,7 +14,7 @@ import { subsetManager } from "@Core/data/managers/SubsetManager.js";
 const DEFAULT_VIEWPORT = {
   row: 0,
   col: 0,
-  rows: 3,
+  rows: 2,
   cols: 3,
 };
 

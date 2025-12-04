@@ -6,9 +6,13 @@
 // - Supports spanning (1-3 rows/cols per placement)
 // - Handles keyboard navigation
 // - Integrates with selection mode for subset creation
+// - Edit mode for grid manipulation (add rows/cols, merge cells)
+// - Minimap for canvas overview and navigation
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CanvasCell } from '@UI/react/components/workspace';
+import { GridEditOverlay } from '../GridEditOverlay';
+import { CanvasMinimap } from '../CanvasMinimap';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import './CanvasGrid.scss';
 
@@ -19,8 +23,13 @@ import './CanvasGrid.scss';
  * to their row/col coordinates. Only placements visible in the viewport
  * are rendered.
  */
-export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
+export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddContent, onRemovePlacement, onAddRow, onAddColumn, highlightedPlacementId }) {
     const gridRef = useRef(null);
+
+    // Edit mode state
+    const [editMode, setEditMode] = useState(false);
+    const [selectedCells, setSelectedCells] = useState([]);
+    const [minimapExpanded, setMinimapExpanded] = useState(false);
 
     const {
         canvas,
@@ -29,6 +38,7 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
         viewport,
         visiblePlacements,
         moveViewport,
+        addPlacement,
     } = useCanvas(canvasId);
 
     const {
@@ -79,13 +89,25 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
     // Handle cell click
     const handleCellClick = useCallback(
         (placement, row, col) => {
+            // Edit mode: select cells for merging
+            if (editMode && !placement) {
+                const cellId = `${row}-${col}`;
+                setSelectedCells(prev => {
+                    if (prev.includes(cellId)) {
+                        return prev.filter(id => id !== cellId);
+                    }
+                    return [...prev, cellId];
+                });
+                return;
+            }
+
             if (selectionMode && placement) {
                 toggleSelection(placement.id);
             } else if (onCellClick) {
                 onCellClick(placement, row, col);
             }
         },
-        [selectionMode, toggleSelection, onCellClick]
+        [editMode, selectionMode, toggleSelection, onCellClick]
     );
 
     // Handle cell double click
@@ -97,6 +119,63 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
         },
         [onCellDoubleClick]
     );
+
+    // Handle dropping content onto a cell
+    const handleCellDrop = useCallback(
+        async (row, col, data) => {
+            if (!canvasId) return;
+
+            // Create placement from dropped data
+            try {
+                await addPlacement({
+                    row,
+                    col,
+                    rowSpan: 1,
+                    colSpan: 1,
+                    content: {
+                        type: 'view',
+                        viewConfigurationId: data.viewConfigId || data.id,
+                    },
+                });
+            } catch (err) {
+                console.error('Failed to add placement:', err);
+            }
+        },
+        [canvasId, addPlacement]
+    );
+
+    // Handle adding content to a cell
+    const handleAddContent = useCallback(
+        (row, col, type) => {
+            if (onAddContent) {
+                onAddContent(row, col, type);
+            }
+        },
+        [onAddContent]
+    );
+
+    // Toggle edit mode
+    const handleToggleEditMode = useCallback(() => {
+        setEditMode(prev => {
+            if (prev) {
+                // Exiting edit mode - clear selection
+                setSelectedCells([]);
+            }
+            return !prev;
+        });
+    }, []);
+
+    // Merge selected cells
+    const handleMergeCells = useCallback((cells) => {
+        // TODO: Implement cell merging via canvas manager
+        console.log('Merge cells:', cells);
+        setSelectedCells([]);
+    }, []);
+
+    // Clear cell selection
+    const handleClearSelection = useCallback(() => {
+        setSelectedCells([]);
+    }, []);
 
     // Build grid cells
     const renderCells = () => {
@@ -133,10 +212,14 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
 
                 const placement = placementMap.get(key);
                 const isSelected = placement && selectedIds.includes(placement.id);
+                const isHighlighted = placement && highlightedPlacementId === placement.id;
 
                 // Calculate grid position (relative to viewport)
                 const gridRow = row - viewport.row + 1;
                 const gridCol = col - viewport.col + 1;
+
+                // Check if cell is selected in edit mode
+                const isCellSelected = editMode && selectedCells.includes(key);
 
                 cells.push(
                     <CanvasCell
@@ -148,10 +231,15 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
                         gridCol={gridCol}
                         rowSpan={placement?.rowSpan || 1}
                         colSpan={placement?.colSpan || 1}
-                        isSelected={isSelected}
+                        isSelected={isSelected || isCellSelected}
+                        isHighlighted={isHighlighted}
                         selectionMode={selectionMode}
+                        editMode={editMode}
                         onClick={() => handleCellClick(placement, row, col)}
                         onDoubleClick={() => handleCellDoubleClick(placement, row, col)}
+                        onDrop={handleCellDrop}
+                        onAddContent={handleAddContent}
+                        onRemovePlacement={onRemovePlacement}
                     />
                 );
             }
@@ -195,8 +283,7 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
     return (
         <div
             ref={gridRef}
-            className={`canvas-grid ${selectionMode ? 'canvas-grid--selection-mode' : ''} ${inFocusMode ? 'canvas-grid--focus-mode' : ''
-                }`}
+            className={`canvas-grid ${selectionMode ? 'canvas-grid--selection-mode' : ''} ${inFocusMode ? 'canvas-grid--focus-mode' : ''} ${editMode ? 'canvas-grid--edit-mode' : ''}`}
             tabIndex={0}
             role="grid"
             aria-label="Workspace canvas"
@@ -218,6 +305,13 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
                 </div>
             )}
 
+            {/* Edit mode indicator */}
+            {editMode && (
+                <div className="canvas-grid__edit-banner">
+                    <span>Edit Mode - Select cells to merge, or use + to add content</span>
+                </div>
+            )}
+
             {/* Grid container */}
             <div
                 className="canvas-grid__cells"
@@ -229,15 +323,24 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick }) {
                 {renderCells()}
             </div>
 
-            {/* Viewport info */}
-            <div className="canvas-grid__viewport-info">
-                <span>
-                    Viewport: ({viewport.row}, {viewport.col}) - {viewport.rows}×{viewport.cols}
-                </span>
-                <span>
-                    Canvas: {canvas.dimensions.rows}×{canvas.dimensions.cols}
-                </span>
-            </div>
+            {/* Grid Edit Overlay */}
+            <GridEditOverlay
+                canvasId={canvasId}
+                editMode={editMode}
+                onToggleEditMode={handleToggleEditMode}
+                selectedCells={selectedCells}
+                onMergeCells={handleMergeCells}
+                onClearSelection={handleClearSelection}
+                onAddRow={onAddRow}
+                onAddColumn={onAddColumn}
+            />
+
+            {/* Canvas Minimap */}
+            <CanvasMinimap
+                canvasId={canvasId}
+                expanded={minimapExpanded}
+                onToggleExpand={() => setMinimapExpanded(prev => !prev)}
+            />
         </div>
     );
 }

@@ -369,12 +369,13 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     log.debug(`Instance tools initialized`);
 
     // Initialize orientation widget (always create it, but start enabled)
+    // Using smaller sizes for proportional scaling in tight layouts
     vtkOrientationWidget.initialize(instanceId, instanceData.sceneObjects, {
       enabled: true,
       corner: "BOTTOM_RIGHT",
-      viewportSize: 0.1,
-      minPixelSize: 100,
-      maxPixelSize: 300,
+      viewportSize: 0.12,
+      minPixelSize: 40,
+      maxPixelSize: 100,
     });
 
     log.debug(`Orientation widget initialized`);
@@ -1116,7 +1117,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                 min: 0,
                 max: 100,
                 step: 1,
-                formatValue: (val) => `${val}%`,
+                formatValue: (val) => `${Math.round(val)}%`,
                 presets: [0, 25, 50, 75, 100],
                 description: "Position along clipping axis",
                 onChange: (value) => {
@@ -1297,7 +1298,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                 min: 5,
                 max: 20,
                 step: 1,
-                formatValue: (val) => `${val}%`,
+                formatValue: (val) => `${Math.round(val)}%`,
                 presets: [6, 8, 10, 12, 15],
                 disabled: false,
                 onChange: (value) => {

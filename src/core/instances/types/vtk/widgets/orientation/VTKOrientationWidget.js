@@ -61,12 +61,13 @@ export class VTKOrientationWidget {
     });
 
     // Apply configuration
+    // Use smaller sizes to scale proportionally with viewport
     const cfg = {
       enabled: true,
       corner: config.corner || "BOTTOM_RIGHT",
-      viewportSize: config.viewportSize || 0.1,
-      minPixelSize: config.minPixelSize || 100,
-      maxPixelSize: config.maxPixelSize || 300,
+      viewportSize: config.viewportSize || 0.12, // 12% of viewport
+      minPixelSize: config.minPixelSize || 40, // Smaller min for tight layouts
+      maxPixelSize: config.maxPixelSize || 100, // Cap max to avoid being too large
       ...config,
     };
 
