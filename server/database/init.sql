@@ -993,6 +993,11 @@ CREATE TABLE canvases (
     -- Viewport state (optional, for persistence)
     viewport JSONB DEFAULT '{"row": 0, "col": 0, "rows": 3, "cols": 3}',
 
+    -- Layout configuration
+    layout_mode VARCHAR(20) NOT NULL DEFAULT 'grid' CHECK (layout_mode IN ('grid', 'flow')),
+    flow_direction VARCHAR(20) NOT NULL DEFAULT 'row' CHECK (flow_direction IN ('row', 'column')),
+    homepoint JSONB, -- { row: number, col: number }
+
     -- Ownership (for personal canvases)
     ownership JSONB NOT NULL DEFAULT '{"type": "personal", "ownerId": null}',
 

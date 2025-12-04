@@ -3,10 +3,16 @@
 //
 // Provides reactive access to canvas data and viewport state.
 // Connects React components to CanvasManager and SubsetManager.
+// Supports Grid and Flow layout modes.
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { subsetManager } from "@Core/data/managers/SubsetManager.js";
+import {
+  WorkspaceCanvas,
+  LAYOUT_MODES,
+  FLOW_DIRECTIONS,
+} from "@Core/data/models/WorkspaceCanvas.js";
 
 /**
  * Default viewport configuration
@@ -30,11 +36,34 @@ export function useCanvas(canvasId = null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Connection state
+  const [connectionState, setConnectionState] = useState(
+    canvasManager.getConnectionState()
+  );
+  const [isConnected, setIsConnected] = useState(canvasManager.isConnected());
+
   // Viewport state (local, not persisted)
   const [viewport, setViewport] = useState(DEFAULT_VIEWPORT);
 
   // Resolve canvas ID
   const resolvedCanvasId = canvasId || canvasManager.getActiveCanvasId();
+
+  // Subscribe to connection state changes
+  useEffect(() => {
+    const handleConnectionStateChanged = ({
+      state,
+      isConnected: connected,
+    }) => {
+      setConnectionState(state);
+      setIsConnected(connected);
+    };
+
+    const unsub = canvasManager.on(
+      "connectionStateChanged",
+      handleConnectionStateChanged
+    );
+    return () => unsub();
+  }, []);
 
   // Load canvas
   useEffect(() => {
@@ -63,19 +92,29 @@ export function useCanvas(canvasId = null) {
   useEffect(() => {
     const handleCanvasUpdated = ({ canvas: updatedCanvas }) => {
       if (updatedCanvas.id === resolvedCanvasId) {
-        setCanvas(new (canvas?.constructor || Object)(updatedCanvas));
+        // Re-fetch from cache and create fresh instance for React's benefit
+        const cached = canvasManager.getCanvas(resolvedCanvasId);
+        if (cached) {
+          // Create new instance to trigger React re-render while preserving methods
+          setCanvas(WorkspaceCanvas.fromJSON(cached.toJSON()));
+        }
       }
     };
 
-    const handlePlacementAdded = ({ canvasId: cId }) => {
+    const handlePlacementChanged = ({ canvasId: cId }) => {
       if (cId === resolvedCanvasId) {
+        // Get the canvas from cache - it's already a WorkspaceCanvas instance
         const updated = canvasManager.getCanvas(cId);
-        if (updated) setCanvas({ ...updated });
+        if (updated) {
+          // Create new instance to trigger React re-render while preserving methods
+          setCanvas(WorkspaceCanvas.fromJSON(updated.toJSON()));
+        }
       }
     };
 
-    const handlePlacementUpdated = handlePlacementAdded;
-    const handlePlacementRemoved = handlePlacementAdded;
+    const handlePlacementAdded = handlePlacementChanged;
+    const handlePlacementUpdated = handlePlacementChanged;
+    const handlePlacementRemoved = handlePlacementChanged;
 
     const unsubs = [
       canvasManager.on("canvasUpdated", handleCanvasUpdated),
@@ -90,6 +129,11 @@ export function useCanvas(canvasId = null) {
   // Get visible placements
   const visiblePlacements = useMemo(() => {
     if (!canvas) return [];
+    // Safety check - canvas must be a WorkspaceCanvas with proper methods
+    if (typeof canvas.getPlacementsInViewport !== "function") {
+      console.warn("[useCanvas] Canvas missing getPlacementsInViewport method");
+      return canvas.placements || [];
+    }
     return canvas.getPlacementsInViewport(viewport);
   }, [canvas, viewport]);
 
@@ -185,6 +229,72 @@ export function useCanvas(canvasId = null) {
     });
   }, [canvas]);
 
+  // Layout mode operations
+  const setLayoutMode = useCallback(
+    async (mode) => {
+      if (!canvas) return;
+      if (mode !== LAYOUT_MODES.GRID && mode !== LAYOUT_MODES.FLOW) {
+        throw new Error(`Invalid layout mode: ${mode}`);
+      }
+      return canvasManager.updateCanvas(canvas.id, { layoutMode: mode });
+    },
+    [canvas]
+  );
+
+  const setFlowDirection = useCallback(
+    async (direction) => {
+      if (!canvas) return;
+      if (
+        direction !== FLOW_DIRECTIONS.ROW &&
+        direction !== FLOW_DIRECTIONS.COLUMN
+      ) {
+        throw new Error(`Invalid flow direction: ${direction}`);
+      }
+      return canvasManager.updateCanvas(canvas.id, {
+        flowDirection: direction,
+      });
+    },
+    [canvas]
+  );
+
+  const reflowPlacements = useCallback(async () => {
+    if (!canvas || canvas.layoutMode !== LAYOUT_MODES.FLOW) return;
+    // Trigger reflow on the canvas model
+    const updates = canvas.reflowPlacements();
+    // Persist the updated placements
+    for (const update of updates) {
+      await canvasManager.updatePlacement(update.id, {
+        row: update.row,
+        col: update.col,
+        rowSpan: update.rowSpan,
+        colSpan: update.colSpan,
+      });
+    }
+  }, [canvas]);
+
+  // Add view in flow mode
+  const addViewInFlowMode = useCallback(
+    async (viewConfigurationId) => {
+      if (!canvas) return;
+      if (canvas.layoutMode === LAYOUT_MODES.FLOW) {
+        // Use the flow engine to get the next position
+        const placement = canvas.addViewInFlowMode(viewConfigurationId);
+        return canvasManager.addPlacement(canvas.id, placement.toJSON());
+      } else {
+        // In grid mode, find first available position
+        const position = canvas.findAvailablePosition();
+        return canvasManager.addPlacement(canvas.id, {
+          row: position.row,
+          col: position.col,
+          rowSpan: 1,
+          colSpan: 1,
+          content: { type: "view", viewConfigurationId },
+        });
+      }
+    },
+    [canvas]
+  );
+
   return {
     // State
     canvas,
@@ -192,6 +302,10 @@ export function useCanvas(canvasId = null) {
     error,
     viewport,
     visiblePlacements,
+
+    // Connection state
+    connectionState,
+    isConnected,
 
     // Viewport controls
     moveViewport,
@@ -208,6 +322,12 @@ export function useCanvas(canvasId = null) {
     // Canvas operations
     addRow,
     addColumn,
+
+    // Layout mode operations
+    setLayoutMode,
+    setFlowDirection,
+    reflowPlacements,
+    addViewInFlowMode,
   };
 }
 

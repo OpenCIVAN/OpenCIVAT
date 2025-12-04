@@ -1,5 +1,5 @@
 // CanvasGrid.scss
-// Styles for the main canvas grid component - matches WorkspaceGrid styling
+// Unified canvas grid styles - fills available space, supports Grid and Flow modes
 @use "sass:color";
 @use "theme" as *;
 
@@ -40,8 +40,44 @@
   }
 
   &--edit-mode {
+    .canvas-grid__container {
+      background: rgba($color-accent-primary, 0.02);
+    }
+  }
+
+  // Layout mode states
+  &--flow-mode {
+    .canvas-grid__container {
+      // Flow mode indicator - subtle gradient
+      background: linear-gradient(
+        135deg,
+        rgba($color-accent-teal, 0.02) 0%,
+        rgba($color-bg-tertiary, 1) 100%
+      );
+    }
+  }
+
+  &--grid-mode {
+    .canvas-grid__container {
+      // Grid mode - show grid lines subtly
+      background: $color-bg-tertiary;
+    }
+  }
+
+  // Tool cursors
+  &--pan-tool {
     .canvas-grid__cells {
-      background: rgba($color-accent-primary, 0.03);
+      cursor: grab;
+    }
+
+    &:active .canvas-grid__cells {
+      cursor: grabbing;
+    }
+  }
+
+  &--merge-tool {
+    .canvas-grid__cells {
+      cursor: cell;
     }
   }
 }
@@ -126,15 +162,31 @@
 }
 
 // ============================================================================
-// GRID CELLS CONTAINER - Matches WorkspaceGrid styling
+// GRID CONTAINER - Fills available space
+// ============================================================================
+
+.canvas-grid__container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-md;
+  background: $color-bg-tertiary;
+  border-radius: $radius-lg;
+  min-height: 200px;
+  overflow: hidden;
+  position: relative;
+}
+
+// ============================================================================
+// GRID CELLS - CSS Grid with 1fr units
 // ============================================================================
 
 .canvas-grid__cells {
   flex: 1;
   display: grid;
+  grid-template-columns: repeat(var(--viewport-cols, 3), 1fr);
+  grid-template-rows: repeat(var(--viewport-rows, 2), 1fr);
   gap: $spacing-md;
-  padding: $spacing-md;
-  overflow: hidden;
   min-height: 0;
 
   // Grid cells must constrain their children
@@ -172,8 +224,11 @@
 // ============================================================================
 
 @media (max-width: 768px) {
-  .canvas-grid__cells {
+  .canvas-grid__container {
     padding: $spacing-sm;
+  }
+
+  .canvas-grid__cells {
     gap: $spacing-sm;
   }
 

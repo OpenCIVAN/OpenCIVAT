@@ -1,5 +1,5 @@
 // src/ui/react/components/workspace/Canvas/CanvasMinimap/CanvasMinimap.scss
-// Styles for the canvas minimap
+// Styles for the canvas minimap with navigation controls
 
 @use "theme" as *;
 
@@ -41,7 +41,8 @@
   &--expanded {
     display: flex;
     flex-direction: column;
-    max-width: 200px;
+    min-width: 180px;
+    max-width: 240px;
     background: rgba($color-bg-secondary, 0.95);
     border: 1px solid $color-border-default;
     border-radius: $radius-md;
@@ -79,6 +80,41 @@
   }
 }
 
+.canvas-minimap__header-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.canvas-minimap__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: $radius-xs;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+
+  &--active {
+    color: $color-accent-amber;
+
+    &:hover {
+      color: $color-accent-amber;
+      background: rgba($color-accent-amber, 0.15);
+    }
+  }
+}
+
 .canvas-minimap__toggle {
   display: flex;
   align-items: center;
@@ -100,17 +136,12 @@
 }
 
 // =============================================================================
-// GRID
+// GRID CONTAINER (scrollable)
 // =============================================================================
 
-.canvas-minimap__grid {
-  display: grid;
-  gap: 1px;
-  padding: $spacing-xs;
-  background: $color-border-subtle;
-  max-height: 120px;
+.canvas-minimap__grid-container {
   overflow: auto;
-  position: relative;
+  padding: $spacing-xs;
 
   // Custom scrollbar
   &::-webkit-scrollbar {
@@ -129,6 +160,17 @@
 }
 
 // =============================================================================
+// GRID
+// =============================================================================
+
+.canvas-minimap__grid {
+  display: grid;
+  gap: 1px;
+  background: $color-border-subtle;
+  position: relative;
+}
+
+// =============================================================================
 // CELLS
 // =============================================================================
 
@@ -143,12 +185,12 @@
     background: rgba($color-accent-blue, 0.3);
   }
 
-  // Occupied cell
+  // Occupied cell - uses instance color
   &--occupied {
-    background: rgba($color-accent-blue, 0.4);
+    background: var(--cell-color, rgba($color-accent-blue, 0.4));
 
     &:hover {
-      background: rgba($color-accent-blue, 0.5);
+      filter: brightness(1.2);
     }
   }
 
@@ -161,6 +203,17 @@
       border: 1px solid transparent;
     }
   }
+
+  // Homepoint cell
+  &--homepoint {
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border: 1px solid $color-accent-amber;
+      border-radius: 1px;
+    }
+  }
 }
 
 // =============================================================================
@@ -169,12 +222,99 @@
 
 .canvas-minimap__viewport-indicator {
   position: absolute;
-  border: 2px solid $color-accent-purple;
+  border: 2px solid $color-accent-blue;
   border-radius: 2px;
-  background: rgba($color-accent-purple, 0.1);
+  background: rgba($color-accent-blue, 0.1);
   pointer-events: none;
-  box-shadow: 0 0 8px rgba($color-accent-purple, 0.3);
+  box-shadow: 0 0 8px rgba($color-accent-blue, 0.3);
   z-index: 1;
+}
+
+// =============================================================================
+// HOMEPOINT INDICATOR
+// =============================================================================
+
+.canvas-minimap__homepoint-indicator {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-accent-amber;
+  pointer-events: none;
+  z-index: 2;
+
+  svg {
+    filter: drop-shadow(0 0 2px rgba($color-accent-amber, 0.5));
+  }
+}
+
+// =============================================================================
+// NAVIGATION CONTROLS
+// =============================================================================
+
+.canvas-minimap__nav-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs $spacing-sm;
+  border-top: 1px solid $color-border-subtle;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.canvas-minimap__dpad {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.canvas-minimap__dpad-row {
+  display: flex;
+  gap: 1px;
+
+  > div {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.canvas-minimap__nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: $radius-xs;
+  background: rgba(255, 255, 255, 0.06);
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: $color-text-primary;
+  }
+
+  &:active {
+    background: rgba($color-accent-blue, 0.2);
+    color: $color-accent-blue;
+  }
+
+  &--center {
+    background: rgba($color-accent-blue, 0.15);
+    color: $color-accent-blue;
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.25);
+    }
+  }
+}
+
+.canvas-minimap__position-info {
+  font-size: 9px;
+  font-family: $font-family-mono;
+  color: $color-text-muted;
 }
 
 // =============================================================================

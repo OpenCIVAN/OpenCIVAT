@@ -8,12 +8,18 @@
 // - Integrates with selection mode for subset creation
 // - Edit mode for grid manipulation (add rows/cols, merge cells)
 // - Minimap for canvas overview and navigation
+// - Supports Grid and Flow layout modes
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { CanvasCell } from '@UI/react/components/workspace';
 import { GridEditOverlay } from '../GridEditOverlay';
 import { CanvasMinimap } from '../CanvasMinimap';
+import { ConnectionOverlay } from '../ConnectionOverlay';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
+import { canvasManager } from '@Core/data/managers/CanvasManager.js';
+import { viewConfigurationManager, datasetManager } from '@Init/appInitializer.js';
+import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
+import { workspace as log } from '@Utils/logger.js';
 import './CanvasGrid.scss';
 
 /**
@@ -22,14 +28,33 @@ import './CanvasGrid.scss';
  * Renders a viewport-sized grid with placements positioned according
  * to their row/col coordinates. Only placements visible in the viewport
  * are rendered.
+ *
+ * Supports two layout modes:
+ * - Grid: Manual placement with cell merging
+ * - Flow: Auto-arrange with reflow on add/remove
  */
-export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddContent, onRemovePlacement, onAddRow, onAddColumn, highlightedPlacementId }) {
+export function CanvasGrid({
+    canvasId,
+    onCellClick,
+    onCellDoubleClick,
+    onAddContent,
+    onRemovePlacement,
+    onAddRow,
+    onAddColumn,
+    highlightedPlacementId,
+    layoutMode: propLayoutMode,
+    flowDirection: propFlowDirection,
+    onLayoutModeChange,
+    onFlowDirectionChange,
+}) {
     const gridRef = useRef(null);
+    const containerRef = useRef(null);
 
     // Edit mode state
     const [editMode, setEditMode] = useState(false);
     const [selectedCells, setSelectedCells] = useState([]);
     const [minimapExpanded, setMinimapExpanded] = useState(false);
+    const [activeTool, setActiveTool] = useState('select'); // 'select', 'pan', 'merge'
 
     const {
         canvas,
@@ -39,7 +64,28 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddCont
         visiblePlacements,
         moveViewport,
         addPlacement,
+        setLayoutMode,
+        setFlowDirection,
+        connectionState,
+        isConnected,
     } = useCanvas(canvasId);
+
+    // Retry connection
+    const handleRetryConnection = useCallback(() => {
+        // Trigger a refresh by reloading the canvas
+        if (canvasId) {
+            canvasManager.handleReconnecting();
+            canvasManager.loadCanvas(canvasId).catch(() => {
+                // Error will be handled by connection state
+            });
+        }
+    }, [canvasId]);
+
+    // Use prop layout mode if provided, otherwise use canvas state
+    const layoutMode = propLayoutMode || canvas?.layoutMode || LAYOUT_MODES.FLOW;
+    const flowDirection = propFlowDirection || canvas?.flowDirection || FLOW_DIRECTIONS.ROW;
+    const isFlowMode = layoutMode === LAYOUT_MODES.FLOW;
+    const isGridMode = layoutMode === LAYOUT_MODES.GRID;
 
     const {
         selectionMode,
@@ -125,8 +171,36 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddCont
         async (row, col, data) => {
             if (!canvasId) return;
 
-            // Create placement from dropped data
             try {
+                let viewConfigId = data.viewConfigId;
+
+                // If we have a viewConfigId, use it directly
+                // Otherwise, this is a dataset drop - create a view first
+                if (!viewConfigId) {
+                    const datasetId = data.datasetId || data.id;
+                    if (!datasetId) {
+                        log.error('Drop data missing both viewConfigId and datasetId');
+                        return;
+                    }
+
+                    // Get the dataset to get its name
+                    const dataset = datasetManager.getDataset(datasetId);
+                    const datasetName = dataset?.filename || dataset?.fileName || 'Unknown';
+
+                    log.debug(`Creating view for dropped dataset ${datasetId}`);
+                    const newView = await viewConfigurationManager.createView(datasetId, {
+                        name: `View of ${datasetName}`,
+                        instanceType: dataset?.metadata?.defaultInstanceType || 'vtk'
+                    });
+
+                    if (!newView) {
+                        log.error('Failed to create view for dropped dataset');
+                        return;
+                    }
+                    viewConfigId = newView.id;
+                }
+
+                // Create placement with the view
                 await addPlacement({
                     row,
                     col,
@@ -134,11 +208,11 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddCont
                     colSpan: 1,
                     content: {
                         type: 'view',
-                        viewConfigurationId: data.viewConfigId || data.id,
+                        viewConfigurationId: viewConfigId,
                     },
                 });
             } catch (err) {
-                console.error('Failed to add placement:', err);
+                log.error('Failed to add placement:', err);
             }
         },
         [canvasId, addPlacement]
@@ -280,10 +354,22 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddCont
         );
     }
 
+    // Build class names
+    const gridClassNames = [
+        'canvas-grid',
+        selectionMode && 'canvas-grid--selection-mode',
+        inFocusMode && 'canvas-grid--focus-mode',
+        editMode && 'canvas-grid--edit-mode',
+        isFlowMode && 'canvas-grid--flow-mode',
+        isGridMode && 'canvas-grid--grid-mode',
+        activeTool === 'pan' && 'canvas-grid--pan-tool',
+        activeTool === 'merge' && 'canvas-grid--merge-tool',
+    ].filter(Boolean).join(' ');
+
     return (
         <div
-            ref={gridRef}
-            className={`canvas-grid ${selectionMode ? 'canvas-grid--selection-mode' : ''} ${inFocusMode ? 'canvas-grid--focus-mode' : ''} ${editMode ? 'canvas-grid--edit-mode' : ''}`}
+            ref={containerRef}
+            className={gridClassNames}
             tabIndex={0}
             role="grid"
             aria-label="Workspace canvas"
@@ -308,19 +394,32 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddCont
             {/* Edit mode indicator */}
             {editMode && (
                 <div className="canvas-grid__edit-banner">
-                    <span>Edit Mode - Select cells to merge, or use + to add content</span>
+                    <span>
+                        {isFlowMode
+                            ? 'Flow Mode - Views auto-arrange. Switch to Grid for manual placement.'
+                            : 'Grid Mode - Select cells to merge, or use + to add content'}
+                    </span>
                 </div>
             )}
 
-            {/* Grid container */}
+            {/* Grid container - fills available space */}
             <div
-                className="canvas-grid__cells"
+                ref={gridRef}
+                className="canvas-grid__container"
                 style={{
-                    gridTemplateRows: `repeat(${viewport.rows}, 1fr)`,
-                    gridTemplateColumns: `repeat(${viewport.cols}, 1fr)`,
+                    '--viewport-rows': viewport.rows,
+                    '--viewport-cols': viewport.cols,
                 }}
             >
-                {renderCells()}
+                <div
+                    className="canvas-grid__cells"
+                    style={{
+                        gridTemplateRows: `repeat(${viewport.rows}, 1fr)`,
+                        gridTemplateColumns: `repeat(${viewport.cols}, 1fr)`,
+                    }}
+                >
+                    {renderCells()}
+                </div>
             </div>
 
             {/* Grid Edit Overlay */}
@@ -333,6 +432,9 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddCont
                 onClearSelection={handleClearSelection}
                 onAddRow={onAddRow}
                 onAddColumn={onAddColumn}
+                layoutMode={layoutMode}
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
             />
 
             {/* Canvas Minimap */}
@@ -340,6 +442,13 @@ export function CanvasGrid({ canvasId, onCellClick, onCellDoubleClick, onAddCont
                 canvasId={canvasId}
                 expanded={minimapExpanded}
                 onToggleExpand={() => setMinimapExpanded(prev => !prev)}
+            />
+
+            {/* Connection Overlay - shown when disconnected */}
+            <ConnectionOverlay
+                connectionState={connectionState}
+                error={canvasManager.getLastError()}
+                onRetry={handleRetryConnection}
             />
         </div>
     );

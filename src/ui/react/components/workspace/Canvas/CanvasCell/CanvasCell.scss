@@ -1,10 +1,10 @@
 // CanvasCell.scss
-// Styles for individual canvas cells - matches WorkspaceGrid cell styling
+// Canvas cell styles - matches InstanceViewport aesthetic
 @use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
-// CANVAS CELL - Base container
+// CANVAS CELL - Base container (matches InstanceViewport styling)
 // ============================================================================
 
 .canvas-cell {
@@ -16,15 +16,23 @@
   overflow: hidden;
   transition: all 0.15s ease;
 
-  // Content cells (view, notes, image) inherit InstanceViewport styling
-  &--view,
-  &--notes,
-  &--image {
-    // No additional styling needed - InstanceViewport handles it
+  // View cells inherit InstanceViewport styling
+  &--view {
+    background: #0a0a0f;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-lg;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    // Active/selected state with instance color
+    &.canvas-cell--selected {
+      border-color: var(--instance-color, $color-accent-primary);
+      box-shadow: 0 0 0 1px var(--instance-color, $color-accent-primary),
+        0 4px 20px rgba(0, 0, 0, 0.4);
+    }
   }
 
   // ============================================================================
-  // EMPTY STATE
+  // EMPTY STATE - Dashed border placeholder
   // ============================================================================
 
   &--empty {
@@ -74,7 +82,7 @@
     box-shadow: 0 0 0 4px rgba($color-accent-primary, 0.2);
   }
 
-  // Highlight animation - matches WorkspaceGrid instance highlight
+  // Highlight animation
   &--highlighted {
     animation: highlight-pulse 2s ease-in-out;
   }
@@ -146,6 +154,74 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+  }
+
+  // ============================================================================
+  // CELL HEADER (for notes/image types - matches InstanceViewport header)
+  // ============================================================================
+
+  &__header {
+    height: 32px;
+    padding: 0 $spacing-sm;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    );
+    border-bottom: 1px solid $color-border-default;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__color-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--instance-color, $color-accent-primary);
+    box-shadow: 0 0 6px var(--instance-color, $color-accent-primary);
+    flex-shrink: 0;
+  }
+
+  &__title {
+    flex: 1;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // ============================================================================
+  // CELL CONTENT AREA (matches InstanceViewport content)
+  // ============================================================================
+
+  &__body {
+    flex: 1;
+    background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // ============================================================================
+  // TOOLBAR TRAY (for notes/image types)
+  // ============================================================================
+
+  &__toolbar-tray {
+    height: 28px;
+    padding: 0 $spacing-sm;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.6) 0%,
+      rgba(0, 0, 0, 0.4) 100%
+    );
+    border-top: 1px solid $color-border-subtle;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
   }
 
   // ============================================================================
@@ -244,6 +320,13 @@
     border-radius: $radius-md;
     border: 1px solid $color-border-subtle;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    // Portal version - rendered to document.body
+    &--portal {
+      position: fixed;
+      bottom: auto;
+      left: auto;
+    }
   }
 
   &__option-btn {
@@ -314,7 +397,7 @@
   }
 
   // ============================================================================
-  // NOTES & IMAGE PLACEHOLDERS
+  // NOTES & IMAGE PLACEHOLDERS (match InstanceViewport style)
   // ============================================================================
 
   &__notes-placeholder,
@@ -322,20 +405,26 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: $spacing-md;
-    background: $color-bg-secondary;
-    border-radius: $radius-lg;
+    background: #0a0a0f;
     border: 1px solid $color-border-default;
+    border-radius: $radius-lg;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
   &__notes-header,
   &__image-header {
+    height: 32px;
     display: flex;
     align-items: center;
     gap: $spacing-xs;
-    padding-bottom: $spacing-sm;
-    border-bottom: 1px solid $color-border-subtle;
-    margin-bottom: $spacing-sm;
+    padding: 0 $spacing-sm;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    );
+    border-bottom: 1px solid $color-border-default;
   }
 
   &__notes-icon,
@@ -354,6 +443,8 @@
   &__image-body {
     flex: 1;
     overflow: hidden;
+    padding: $spacing-sm;
+    background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
   }
 
   &__notes-preview {

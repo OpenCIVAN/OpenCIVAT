@@ -135,6 +135,206 @@ router.get("/:id", async (req, res, next) => {
 });
 
 // ============================================================================
+// CANVAS ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/projects/:id/canvases
+ * List canvases for a project
+ */
+router.get("/:id/canvases", async (req, res, next) => {
+  try {
+    const { id: projectId } = req.params;
+    const { type } = req.query; // 'personal', 'shared', or undefined for all
+    const userId = getUserId(req);
+    const { pool } = req.app.locals;
+
+    // Verify user has access to project
+    const projectCheck = await pool.query(
+      `SELECT 1 FROM projects p
+       LEFT JOIN project_members pm ON p.id = pm.project_id
+       WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)`,
+      [projectId, userId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    let query = `
+      SELECT c.*, w.name as workspace_name
+      FROM canvases c
+      JOIN workspaces w ON c.workspace_id = w.id
+      WHERE c.project_id = $1 AND c.is_active = true
+    `;
+    const params = [projectId];
+    let paramIndex = 2;
+
+    // Filter by ownership type
+    if (type === "personal") {
+      query += ` AND c.ownership->>'type' = 'personal' AND c.ownership->>'ownerId' = $${paramIndex}`;
+      params.push(userId);
+    } else if (type === "shared") {
+      query += ` AND c.ownership->>'type' = 'shared'`;
+    }
+
+    query += " ORDER BY c.updated_at DESC";
+
+    const result = await pool.query(query, params);
+
+    res.json({
+      canvases: result.rows,
+      count: result.rows.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/projects/:id/canvases
+ * Create a new canvas in a project
+ */
+router.post("/:id/canvases", async (req, res, next) => {
+  const client = await req.app.locals.pool.connect();
+
+  try {
+    const { id: projectId } = req.params;
+    const userId = getUserId(req);
+    const { wsManager } = req.app.locals;
+    const {
+      workspace_id,
+      name,
+      dimensions,
+      ownership,
+      layout_mode,
+      flow_direction,
+    } = req.body;
+
+    console.log(
+      "[DEBUG] Creating canvas for project:",
+      projectId,
+      "user:",
+      userId
+    );
+
+    await client.query("BEGIN");
+
+    // Verify user has access to project
+    const projectCheck = await client.query(
+      `SELECT p.organization_id FROM projects p
+       LEFT JOIN project_members pm ON p.id = pm.project_id
+       WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)`,
+      [projectId, userId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // If no workspace_id provided, find or create a default workspace
+    let workspaceId = workspace_id;
+    if (!workspaceId) {
+      // Try to find an existing workspace for this project
+      const wsResult = await client.query(
+        `SELECT w.id FROM workspaces w
+         WHERE w.owner_id = $1
+         ORDER BY w.created_at DESC LIMIT 1`,
+        [userId]
+      );
+
+      if (wsResult.rows.length > 0) {
+        workspaceId = wsResult.rows[0].id;
+        console.log("[DEBUG] Found existing workspace:", workspaceId);
+      } else {
+        // Create a default workspace
+        console.log("[DEBUG] Creating new workspace for user:", userId);
+        const newWs = await client.query(
+          `INSERT INTO workspaces (name, owner_id, created_by)
+           VALUES ($1, $2, $2) RETURNING id`,
+          ["Default Workspace", userId]
+        );
+        workspaceId = newWs.rows[0].id;
+        console.log("[DEBUG] Created workspace:", workspaceId);
+      }
+    }
+
+    // Create the canvas (handle both old and new schema)
+    let result;
+    try {
+      console.log("[DEBUG] Inserting canvas with new schema");
+      // Try with new schema (layout_mode, flow_direction)
+      result = await client.query(
+        `INSERT INTO canvases (
+          workspace_id, project_id, name, dimensions, ownership,
+          layout_mode, flow_direction, created_by
+        )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [
+          workspaceId,
+          projectId,
+          name || "Untitled Canvas",
+          JSON.stringify(dimensions || { rows: 3, cols: 3 }),
+          JSON.stringify(ownership || { type: "personal", ownerId: userId }),
+          layout_mode || "grid",
+          flow_direction || "row",
+          userId,
+        ]
+      );
+      console.log("[DEBUG] Canvas created:", result.rows[0]?.id);
+    } catch (insertError) {
+      console.log("[DEBUG] Insert error:", insertError.message);
+      // Fallback for old schema (without layout_mode, flow_direction)
+      if (
+        insertError.message.includes("layout_mode") ||
+        insertError.message.includes("flow_direction") ||
+        insertError.message.includes("column")
+      ) {
+        console.log("[DEBUG] Falling back to old schema");
+        result = await client.query(
+          `INSERT INTO canvases (workspace_id, project_id, name, dimensions, ownership, created_by)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING *`,
+          [
+            workspaceId,
+            projectId,
+            name || "Untitled Canvas",
+            JSON.stringify(dimensions || { rows: 3, cols: 3 }),
+            JSON.stringify(ownership || { type: "personal", ownerId: userId }),
+            userId,
+          ]
+        );
+      } else {
+        throw insertError;
+      }
+    }
+
+    await client.query("COMMIT");
+
+    const canvas = result.rows[0];
+
+    // Broadcast to project
+    if (wsManager) {
+      wsManager.broadcast(projectId, {
+        type: "canvas:created",
+        canvasId: canvas.id,
+        canvas,
+        userId,
+      });
+    }
+
+    res.status(201).json(canvas);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+// ============================================================================
 // FILE ENDPOINTS
 // ============================================================================
 

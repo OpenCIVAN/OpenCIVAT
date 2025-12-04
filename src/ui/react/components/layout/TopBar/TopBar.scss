@@ -57,15 +57,40 @@
 .top-bar__logo-icon {
   width: 32px;
   height: 32px;
+  border-radius: 6px;
   background: linear-gradient(135deg, $color-accent-blue, $color-accent-purple);
-  border-radius: $radius-md;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: $font-weight-bold;
+  font-weight: 700;
   font-size: 12px;
-  color: white;
+  color: $color-text-primary;
   letter-spacing: 0.5px;
+}
+
+.top-bar__project {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-bar__project-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.top-bar__project-label {
+  font-size: 11px;
+  color: $color-text-muted;
+  line-height: 1;
+}
+
+.top-bar__project-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: $color-text-primary;
+  line-height: 1.2;
 }
 
 // =============================================================================
@@ -206,33 +231,10 @@
   }
 }
 
-// =============================================================================
-// CANVAS MODE TOGGLE (Dev Feature)
-// =============================================================================
-
-.top-bar__canvas-toggle {
-  margin-left: $spacing-md;
-  padding: $spacing-xs $spacing-md;
-  background: rgba($color-accent-indigo, 0.15);
-  border: 1px solid rgba($color-accent-indigo, 0.3);
-  border-radius: $radius-full;
-  font-size: $font-size-xs;
-  color: $color-accent-primary;
-  cursor: pointer;
-  transition: all $transition-fast;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: $font-weight-medium;
-
-  &:hover {
-    background: rgba($color-accent-indigo, 0.25);
-    border-color: rgba($color-accent-indigo, 0.5);
-  }
-
-  &.active {
-    background: $color-accent-primary;
-    color: white;
-    border-color: $color-accent-primary;
-    box-shadow: 0 0 12px rgba($color-accent-primary, 0.3);
-  }
+// TopBar right section - separator before user info
+.top-bar__separator {
+  width: 1px;
+  height: 24px;
+  background: $color-border-default;
+  margin: 0 8px;
 }

@@ -27,31 +27,76 @@ export const PlacementContentType = {
  */
 export class CanvasPlacement {
   /**
-   * @param {Object} options
+   * @param {Object} options - Accepts both client format (row, col, content) and server format (row_index, col_index, content_type, content_id)
    * @param {string} options.id - Server-generated placement ID
-   * @param {number} options.row - Grid row (0-indexed)
-   * @param {number} options.col - Grid column (0-indexed)
-   * @param {number} options.rowSpan - Height in cells (1-3)
-   * @param {number} options.colSpan - Width in cells (1-3)
-   * @param {Object} options.content - Content definition { type, ...ids }
+   * @param {number} options.row - Grid row (0-indexed, client format)
+   * @param {number} options.row_index - Grid row (0-indexed, server format)
+   * @param {number} options.col - Grid column (0-indexed, client format)
+   * @param {number} options.col_index - Grid column (0-indexed, server format)
+   * @param {number} options.rowSpan - Height in cells (1-3, client format)
+   * @param {number} options.row_span - Height in cells (1-3, server format)
+   * @param {number} options.colSpan - Width in cells (1-3, client format)
+   * @param {number} options.col_span - Width in cells (1-3, server format)
+   * @param {Object} options.content - Content definition { type, ...ids } (client format)
+   * @param {string} options.content_type - Content type (server format)
+   * @param {string} options.content_id - Content reference ID (server format)
    * @param {string[]} options.subsetIds - Subsets that include this placement
    */
-  constructor({
-    id = null,
-    row = 0,
-    col = 0,
-    rowSpan = 1,
-    colSpan = 1,
-    content = { type: PlacementContentType.EMPTY },
-    subsetIds = [],
-  } = {}) {
-    this.id = id;
-    this.row = row;
-    this.col = col;
-    this.rowSpan = Math.min(3, Math.max(1, rowSpan)); // Clamp to 1-3
-    this.colSpan = Math.min(3, Math.max(1, colSpan)); // Clamp to 1-3
-    this.content = { ...content };
-    this.subsetIds = [...subsetIds];
+  constructor(options = {}) {
+    this.id = options.id || null;
+
+    // Handle both client (row, col) and server (row_index, col_index) formats
+    this.row = options.row ?? options.row_index ?? 0;
+    this.col = options.col ?? options.col_index ?? 0;
+    this.rowSpan = Math.min(
+      3,
+      Math.max(1, options.rowSpan ?? options.row_span ?? 1)
+    );
+    this.colSpan = Math.min(
+      3,
+      Math.max(1, options.colSpan ?? options.col_span ?? 1)
+    );
+
+    // Handle both client (content object) and server (content_type, content_id) formats
+    if (options.content && typeof options.content === "object") {
+      // Client format: { content: { type: 'view', viewConfigurationId: '...' } }
+      this.content = { ...options.content };
+    } else {
+      // Server format: { content_type: 'view', content_id: '...' }
+      const contentType =
+        options.content_type ||
+        options.contentType ||
+        PlacementContentType.EMPTY;
+      const contentId = options.content_id || options.contentId || null;
+
+      switch (contentType) {
+        case "view":
+        case PlacementContentType.VIEW:
+          this.content = {
+            type: PlacementContentType.VIEW,
+            viewConfigurationId: contentId,
+          };
+          break;
+        case "notes":
+        case PlacementContentType.NOTES:
+          this.content = {
+            type: PlacementContentType.NOTES,
+            notesBlockId: contentId,
+          };
+          break;
+        case "image":
+        case PlacementContentType.IMAGE:
+          this.content = {
+            type: PlacementContentType.IMAGE,
+            imageBlockId: contentId,
+          };
+          break;
+        default:
+          this.content = { type: PlacementContentType.EMPTY };
+      }
+    }
+
+    this.subsetIds = [...(options.subsetIds || options.subset_ids || [])];
   }
 
   // ===========================================================================

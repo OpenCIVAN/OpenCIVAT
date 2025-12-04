@@ -49,12 +49,36 @@ import {
     Database,
     X,
     GripVertical,
+    Hand,
+    Combine,
+    Undo,
+    Redo,
+    ArrowDown,
+    ArrowRight,
 } from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
 } from '@UI/react/components/common/ResizableSections';
+
+// Layout mode constants
+const LAYOUT_MODES = {
+    GRID: 'grid',
+    FLOW: 'flow'
+};
+
+const FLOW_DIRECTIONS = {
+    ROW: 'row',
+    COLUMN: 'column'
+};
+
+// Tool types
+const TOOLS = {
+    SELECT: 'select',
+    PAN: 'pan',
+    MERGE: 'merge'
+};
 
 // =============================================================================
 // SAMPLE DATA
@@ -112,6 +136,122 @@ const VIEW_MODES = [
 ];
 
 const RESIZE_OPTIONS = ['1×1', '1×2', '2×1', '2×2', '1×3', '3×1'];
+
+// =============================================================================
+// LAYOUT MODE BUTTONS
+// =============================================================================
+
+function LayoutModeButtons({ layoutMode, flowDirection, onLayoutModeChange, onFlowDirectionChange }) {
+    return (
+        <div className="layout-mode-section">
+            <div className="layout-mode-section__buttons">
+                <button
+                    className={`layout-mode-btn ${layoutMode === LAYOUT_MODES.FLOW ? 'layout-mode-btn--active' : ''}`}
+                    data-color="teal"
+                    onClick={() => onLayoutModeChange(LAYOUT_MODES.FLOW)}
+                    title="Auto-arrange views"
+                >
+                    <Layers size={16} />
+                    <span>Flow</span>
+                </button>
+                <button
+                    className={`layout-mode-btn ${layoutMode === LAYOUT_MODES.GRID ? 'layout-mode-btn--active' : ''}`}
+                    data-color="purple"
+                    onClick={() => onLayoutModeChange(LAYOUT_MODES.GRID)}
+                    title="Manual placement"
+                >
+                    <Grid3X3 size={16} />
+                    <span>Grid</span>
+                </button>
+            </div>
+            {layoutMode === LAYOUT_MODES.FLOW && (
+                <div className="layout-mode-section__flow-options">
+                    <span className="layout-mode-section__label">Direction:</span>
+                    <button
+                        className={`layout-mode-direction-btn ${flowDirection === FLOW_DIRECTIONS.ROW ? 'layout-mode-direction-btn--active' : ''}`}
+                        onClick={() => onFlowDirectionChange(FLOW_DIRECTIONS.ROW)}
+                        title="Fill rows first"
+                    >
+                        <ArrowRight size={12} />
+                        Row
+                    </button>
+                    <button
+                        className={`layout-mode-direction-btn ${flowDirection === FLOW_DIRECTIONS.COLUMN ? 'layout-mode-direction-btn--active' : ''}`}
+                        onClick={() => onFlowDirectionChange(FLOW_DIRECTIONS.COLUMN)}
+                        title="Fill columns first"
+                    >
+                        <ArrowDown size={12} />
+                        Column
+                    </button>
+                </div>
+            )}
+            <div className="layout-mode-section__description">
+                {layoutMode === LAYOUT_MODES.FLOW
+                    ? 'Views auto-arrange when added or removed. Reflows to optimal layout.'
+                    : 'Manually place and resize views. Supports cell merging.'}
+            </div>
+        </div>
+    );
+}
+
+// =============================================================================
+// TOOLS SECTION
+// =============================================================================
+
+function ToolsSection({ activeTool, editMode, onToolChange, onToggleEditMode, onUndo, onRedo, canUndo, canRedo }) {
+    return (
+        <div className="tools-section">
+            <div className="tools-section__tools">
+                <button
+                    className={`tools-section__tool-btn ${activeTool === TOOLS.SELECT ? 'tools-section__tool-btn--active' : ''}`}
+                    onClick={() => onToolChange(TOOLS.SELECT)}
+                    title="Select tool"
+                >
+                    <MousePointer2 size={14} />
+                </button>
+                <button
+                    className={`tools-section__tool-btn ${activeTool === TOOLS.PAN ? 'tools-section__tool-btn--active' : ''}`}
+                    onClick={() => onToolChange(TOOLS.PAN)}
+                    title="Pan tool"
+                >
+                    <Hand size={14} />
+                </button>
+                <button
+                    className={`tools-section__tool-btn ${activeTool === TOOLS.MERGE ? 'tools-section__tool-btn--active' : ''}`}
+                    onClick={() => onToolChange(TOOLS.MERGE)}
+                    title="Merge tool - select cells to combine"
+                >
+                    <Combine size={14} />
+                </button>
+            </div>
+            <div className="tools-section__divider" />
+            <div className="tools-section__edit-controls">
+                <button
+                    className={`tools-section__edit-btn ${editMode ? 'tools-section__edit-btn--active' : ''}`}
+                    onClick={onToggleEditMode}
+                >
+                    {editMode ? 'Done' : 'Edit'}
+                </button>
+                <button
+                    className="tools-section__action-btn"
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    title="Undo"
+                >
+                    <Undo size={14} />
+                </button>
+                <button
+                    className="tools-section__action-btn"
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    title="Redo"
+                >
+                    <Redo size={14} />
+                </button>
+            </div>
+        </div>
+    );
+}
 
 // =============================================================================
 // WORKSPACE ICON HELPER
@@ -520,6 +660,9 @@ function MemberItem({ member, cursorVisible, onToggleCursor }) {
 export function LayoutPanelContent({ workspaceId }) {
     // State
     const [viewMode, setViewMode] = useState('normal');
+    const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.FLOW);
+    const [flowDirection, setFlowDirection] = useState(FLOW_DIRECTIONS.ROW);
+    const [activeTool, setActiveTool] = useState(TOOLS.SELECT);
     const [canvasSize, setCanvasSize] = useState(INITIAL_CANVAS_SIZE);
     const [viewport, setViewport] = useState(INITIAL_VIEWPORT);
     const [cells, setCells] = useState(INITIAL_CELLS);
@@ -530,15 +673,43 @@ export function LayoutPanelContent({ workspaceId }) {
     const [memberCursors, setMemberCursors] = useState(
         Object.fromEntries(WORKSPACE_MEMBERS.map(m => [m.id, m.cursorVisible]))
     );
+    // Undo/redo state (placeholder)
+    const [canUndo, setCanUndo] = useState(false);
+    const [canRedo, setCanRedo] = useState(false);
 
     // Section states
     const { states: sectionStates, toggleSection } = useSectionStates({
-        modes: { expanded: true, flexGrow: 0 },
+        layoutMode: { expanded: true, flexGrow: 0 },
+        tools: { expanded: true, flexGrow: 0 },
+        modes: { expanded: false, flexGrow: 0 },
         canvas: { expanded: true, flexGrow: 1 },
         arrange: { expanded: true, flexGrow: 2 },
         presets: { expanded: false, flexGrow: 0 },
         members: { expanded: false, flexGrow: 1 },
     });
+
+    // Layout mode handlers
+    const handleLayoutModeChange = useCallback((mode) => {
+        setLayoutMode(mode);
+    }, []);
+
+    const handleFlowDirectionChange = useCallback((direction) => {
+        setFlowDirection(direction);
+    }, []);
+
+    const handleToolChange = useCallback((tool) => {
+        setActiveTool(tool);
+    }, []);
+
+    const handleUndo = useCallback(() => {
+        // TODO: Implement undo
+        console.log('Undo');
+    }, []);
+
+    const handleRedo = useCallback(() => {
+        // TODO: Implement redo
+        console.log('Redo');
+    }, []);
 
     // Canvas navigation
     const moveViewport = useCallback((direction) => {
@@ -646,6 +817,51 @@ export function LayoutPanelContent({ workspaceId }) {
 
             {/* Content */}
             <div className="layout-tab__content">
+                {/* Layout Mode */}
+                <div className="layout-tab__section">
+                    <div
+                        className="layout-tab__section-header"
+                        onClick={() => toggleSection('layoutMode')}
+                    >
+                        {sectionStates.layoutMode?.expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                        <LayoutGrid size={12} />
+                        <span>Layout Mode</span>
+                        <span className="layout-tab__section-badge">{layoutMode}</span>
+                    </div>
+                    {sectionStates.layoutMode?.expanded && (
+                        <LayoutModeButtons
+                            layoutMode={layoutMode}
+                            flowDirection={flowDirection}
+                            onLayoutModeChange={handleLayoutModeChange}
+                            onFlowDirectionChange={handleFlowDirectionChange}
+                        />
+                    )}
+                </div>
+
+                {/* Tools */}
+                <div className="layout-tab__section">
+                    <div
+                        className="layout-tab__section-header"
+                        onClick={() => toggleSection('tools')}
+                    >
+                        {sectionStates.tools?.expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                        <MousePointer2 size={12} />
+                        <span>Tools</span>
+                    </div>
+                    {sectionStates.tools?.expanded && (
+                        <ToolsSection
+                            activeTool={activeTool}
+                            editMode={editMode}
+                            onToolChange={handleToolChange}
+                            onToggleEditMode={() => setEditMode(!editMode)}
+                            onUndo={handleUndo}
+                            onRedo={handleRedo}
+                            canUndo={canUndo}
+                            canRedo={canRedo}
+                        />
+                    )}
+                </div>
+
                 {/* View Modes */}
                 <div className="layout-tab__section">
                     <div

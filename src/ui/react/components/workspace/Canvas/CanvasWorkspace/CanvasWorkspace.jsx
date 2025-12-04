@@ -16,11 +16,10 @@ import { workspace as log } from '@Utils/logger.js';
 
 import './CanvasWorkspace.scss';
 
-// Local canvas ID for fallback mode (when server APIs not available)
-const LOCAL_CANVAS_ID = 'local-canvas-001';
-
 /**
  * CanvasWorkspace - Full canvas system with workspace selection
+ *
+ * Server-authoritative: No local fallback. Shows connection overlay when disconnected.
  */
 export function CanvasWorkspace({ userId, projectId: propProjectId }) {
     // Use sessionManager room ID as fallback project ID
@@ -31,7 +30,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
     const [activeCanvasId, setActiveCanvasId] = useState(null);
     const [showSubsetPanel, setShowSubsetPanel] = useState(false);
     const [highlightedPlacementId, setHighlightedPlacementId] = useState(null);
-    const [isLocalCanvas, setIsLocalCanvas] = useState(false);
+    const [loadError, setLoadError] = useState(null);
     const instanceCreationInProgress = useRef(false);
 
     // Canvas hook for the active canvas
@@ -55,208 +54,67 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
         exitFocusMode,
     } = useSubsets(activeCanvasId);
 
-    // Load initial workspace/canvas
+    // Load initial workspace/canvas (server-authoritative, no local fallback)
     useEffect(() => {
         const loadWorkspace = async () => {
             log.debug(`Loading canvases for project: ${projectId}`);
+            setLoadError(null);
 
             try {
-                // Try to get/create canvas from server
+                // Get/create canvas from server (server is source of truth)
                 const personalCanvas = await canvasManager.getPersonalCanvas(projectId);
 
                 if (personalCanvas) {
                     log.debug(`Got personal canvas: ${personalCanvas.id}`);
                     setActiveCanvasId(personalCanvas.id);
-                    setIsLocalCanvas(false);
                 }
             } catch (error) {
-                log.warn('Server canvas API not available, using local canvas:', error.message);
-                createLocalFallbackCanvas();
+                log.error('Failed to load canvas from server:', error.message);
+                setLoadError(error);
+                // Mark as disconnected so ConnectionOverlay shows
+                canvasManager.handleDisconnected(error);
             }
-        };
-
-        // Create a local fallback canvas (used when server is unavailable)
-        const createLocalFallbackCanvas = () => {
-            // Check if already exists
-            if (canvasManager.getCanvas(LOCAL_CANVAS_ID)) {
-                log.debug('Local canvas already exists, reusing');
-                setActiveCanvasId(LOCAL_CANVAS_ID);
-                setIsLocalCanvas(true);
-                return;
-            }
-
-            // Create a canvas object that mimics WorkspaceCanvas
-            const fallbackCanvas = {
-                id: LOCAL_CANVAS_ID,
-                name: 'My Workspace',
-                projectId,
-                dimensions: { rows: 6, cols: 6 },
-                placements: [],
-                ownership: { type: 'personal', ownerId: userId || 'local-user' },
-                getPlacementsInViewport: function (vp) {
-                    return this.placements.filter(p =>
-                        p.row >= vp.row &&
-                        p.row < vp.row + vp.rows &&
-                        p.col >= vp.col &&
-                        p.col < vp.col + vp.cols
-                    );
-                },
-                getPlacementById: function (id) {
-                    return this.placements.find(p => p.id === id);
-                }
-            };
-
-            // Register with canvasManager so useCanvas hook works
-            canvasManager._canvases.set(LOCAL_CANVAS_ID, fallbackCanvas);
-            canvasManager.setActiveCanvas(LOCAL_CANVAS_ID);
-
-            setActiveCanvasId(LOCAL_CANVAS_ID);
-            setIsLocalCanvas(true);
-            log.info('Created local fallback canvas');
         };
 
         loadWorkspace();
-    }, [projectId, userId]);
+    }, [projectId]);
 
-    // Add placement (with local fallback)
+    // Add placement (server-authoritative)
     const addPlacement = useCallback(async (placementData) => {
-        // For server-backed canvases, use the server API
-        if (!isLocalCanvas && activeCanvasId) {
-            return serverAddPlacement(placementData);
+        if (!activeCanvasId) {
+            throw new Error('No canvas available');
         }
+        return serverAddPlacement(placementData);
+    }, [activeCanvasId, serverAddPlacement]);
 
-        // Local canvas fallback - update canvasManager cache directly
-        const cachedCanvas = canvasManager.getCanvas(activeCanvasId);
-        if (cachedCanvas) {
-            const newPlacement = {
-                id: `local-placement-${Date.now()}`,
-                row: placementData.row || 0,
-                col: placementData.col || 0,
-                rowSpan: placementData.rowSpan || 1,
-                colSpan: placementData.colSpan || 1,
-                content: placementData.content || { type: 'empty' },
-            };
-
-            // Update the cached canvas directly
-            cachedCanvas.placements.push(newPlacement);
-
-            // Emit event so useCanvas hook updates
-            canvasManager._emit('placementAdded', {
-                canvasId: activeCanvasId,
-                placement: newPlacement,
-                source: 'local'
-            });
-
-            return newPlacement;
-        }
-
-        throw new Error('No canvas available');
-    }, [isLocalCanvas, activeCanvasId, serverAddPlacement]);
-
-    // Add row to canvas (with local fallback)
+    // Add row to canvas (server-authoritative)
     const addRow = useCallback(async () => {
         const cachedCanvas = canvasManager.getCanvas(activeCanvasId);
         if (!cachedCanvas) return;
 
         log.debug('Adding row to canvas');
+        await canvasManager.updateCanvas(activeCanvasId, {
+            dimensions: { ...cachedCanvas.dimensions, rows: cachedCanvas.dimensions.rows + 1 }
+        });
+    }, [activeCanvasId]);
 
-        // For local canvas, update directly
-        if (isLocalCanvas) {
-            cachedCanvas.dimensions.rows += 1;
-            canvasManager._emit('canvasUpdated', {
-                canvas: cachedCanvas,
-                updates: { dimensions: cachedCanvas.dimensions },
-                source: 'local'
-            });
-            return;
-        }
-
-        // Try server API
-        try {
-            await canvasManager.updateCanvas(activeCanvasId, {
-                dimensions: { ...cachedCanvas.dimensions, rows: cachedCanvas.dimensions.rows + 1 }
-            });
-        } catch (error) {
-            log.warn('Server update failed, updating locally:', error.message);
-            cachedCanvas.dimensions.rows += 1;
-            canvasManager._emit('canvasUpdated', {
-                canvas: cachedCanvas,
-                updates: { dimensions: cachedCanvas.dimensions },
-                source: 'local'
-            });
-        }
-    }, [isLocalCanvas, activeCanvasId]);
-
-    // Add column to canvas (with local fallback)
+    // Add column to canvas (server-authoritative)
     const addColumn = useCallback(async () => {
         const cachedCanvas = canvasManager.getCanvas(activeCanvasId);
         if (!cachedCanvas) return;
 
         log.debug('Adding column to canvas');
+        await canvasManager.updateCanvas(activeCanvasId, {
+            dimensions: { ...cachedCanvas.dimensions, cols: cachedCanvas.dimensions.cols + 1 }
+        });
+    }, [activeCanvasId]);
 
-        // For local canvas, update directly
-        if (isLocalCanvas) {
-            cachedCanvas.dimensions.cols += 1;
-            canvasManager._emit('canvasUpdated', {
-                canvas: cachedCanvas,
-                updates: { dimensions: cachedCanvas.dimensions },
-                source: 'local'
-            });
-            return;
-        }
-
-        // Try server API
-        try {
-            await canvasManager.updateCanvas(activeCanvasId, {
-                dimensions: { ...cachedCanvas.dimensions, cols: cachedCanvas.dimensions.cols + 1 }
-            });
-        } catch (error) {
-            log.warn('Server update failed, updating locally:', error.message);
-            cachedCanvas.dimensions.cols += 1;
-            canvasManager._emit('canvasUpdated', {
-                canvas: cachedCanvas,
-                updates: { dimensions: cachedCanvas.dimensions },
-                source: 'local'
-            });
-        }
-    }, [isLocalCanvas, activeCanvasId]);
-
-    // Remove placement (with local fallback)
+    // Remove placement (server-authoritative)
     const removePlacement = useCallback(async (placementId) => {
         if (!placementId) return;
-
         log.debug('Removing placement:', placementId);
-
-        // For server-backed canvases, use the server API
-        if (!isLocalCanvas && activeCanvasId) {
-            try {
-                await canvasManager.removePlacement(placementId);
-                return;
-            } catch (error) {
-                log.error('Failed to remove placement via server:', error);
-                // Fall through to local removal
-            }
-        }
-
-        // Local canvas fallback - update canvasManager cache directly
-        const cachedCanvas = canvasManager.getCanvas(activeCanvasId);
-        if (cachedCanvas) {
-            const idx = cachedCanvas.placements.findIndex(p => p.id === placementId);
-            if (idx !== -1) {
-                const removed = cachedCanvas.placements.splice(idx, 1)[0];
-
-                // Emit event so useCanvas hook updates
-                canvasManager._emit('placementRemoved', {
-                    canvasId: activeCanvasId,
-                    placement: removed,
-                    placementId,
-                    source: 'local'
-                });
-
-                log.debug('Placement removed:', placementId);
-            }
-        }
-    }, [isLocalCanvas, activeCanvasId]);
+        await canvasManager.removePlacement(placementId);
+    }, []);
 
     // Find next empty cell for placement
     const findNextEmptyCell = useCallback(() => {
@@ -416,8 +274,8 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
         // TODO: Show add content dialog
     }, []);
 
-    // Show error only if no canvas is available (not using local fallback)
-    const showError = canvasError && !isLocalCanvas && !canvas;
+    // Show error if canvas loading failed
+    const showError = (canvasError || loadError) && !canvas;
 
     return (
         <div className="canvas-workspace">
@@ -428,7 +286,9 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     {isLoading && !canvas ? (
                         <div className="canvas-workspace__loading">Loading canvas...</div>
                     ) : showError ? (
-                        <div className="canvas-workspace__error">{canvasError}</div>
+                        <div className="canvas-workspace__error">
+                            {(canvasError || loadError)?.message || 'Failed to load canvas'}
+                        </div>
                     ) : canvas ? (
                         <CanvasGrid
                             canvasId={activeCanvasId}

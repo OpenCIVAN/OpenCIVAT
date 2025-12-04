@@ -114,25 +114,69 @@ router.post("/", async (req, res, next) => {
   try {
     const userId = getUserId(req);
     const { pool, wsManager } = req.app.locals;
-    const { workspace_id, project_id, name, dimensions, ownership } = req.body;
+    const {
+      workspace_id,
+      project_id,
+      name,
+      dimensions,
+      ownership,
+      layout_mode,
+      flow_direction,
+    } = req.body;
 
     if (!workspace_id) {
       return res.status(400).json({ error: "workspace_id is required" });
     }
 
-    const result = await pool.query(
-      `INSERT INTO canvases (workspace_id, project_id, name, dimensions, ownership, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [
-        workspace_id,
-        project_id || null,
-        name || "Untitled Canvas",
-        JSON.stringify(dimensions || { rows: 3, cols: 3 }),
-        JSON.stringify(ownership || { type: "personal", ownerId: userId }),
-        userId,
-      ]
-    );
+    // Handle both old and new schema
+    let result;
+    try {
+      console.log("[DEBUG] canvases.js: Inserting canvas with new schema");
+      // Try with new schema (layout_mode, flow_direction)
+      result = await pool.query(
+        `INSERT INTO canvases (
+          workspace_id, project_id, name, dimensions, ownership,
+          layout_mode, flow_direction, created_by
+        )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [
+          workspace_id,
+          project_id || null,
+          name || "Untitled Canvas",
+          JSON.stringify(dimensions || { rows: 3, cols: 3 }),
+          JSON.stringify(ownership || { type: "personal", ownerId: userId }),
+          layout_mode || "grid",
+          flow_direction || "row",
+          userId,
+        ]
+      );
+    } catch (insertError) {
+      console.log("[DEBUG] canvases.js: Insert error:", insertError.message);
+      // Fallback for old schema (without layout_mode, flow_direction)
+      if (
+        insertError.message.includes("layout_mode") ||
+        insertError.message.includes("flow_direction") ||
+        insertError.message.includes("column")
+      ) {
+        console.log("[DEBUG] canvases.js: Falling back to old schema");
+        result = await pool.query(
+          `INSERT INTO canvases (workspace_id, project_id, name, dimensions, ownership, created_by)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING *`,
+          [
+            workspace_id,
+            project_id || null,
+            name || "Untitled Canvas",
+            JSON.stringify(dimensions || { rows: 3, cols: 3 }),
+            JSON.stringify(ownership || { type: "personal", ownerId: userId }),
+            userId,
+          ]
+        );
+      } else {
+        throw insertError;
+      }
+    }
 
     const canvas = result.rows[0];
 
@@ -161,20 +205,33 @@ router.put("/:id", async (req, res, next) => {
     const { id } = req.params;
     const userId = getUserId(req);
     const { pool, wsManager } = req.app.locals;
-    const { name, dimensions, viewport } = req.body;
+    const {
+      name,
+      dimensions,
+      viewport,
+      layout_mode,
+      flow_direction,
+      homepoint,
+    } = req.body;
 
     const result = await pool.query(
       `UPDATE canvases
        SET name = COALESCE($1, name),
            dimensions = COALESCE($2, dimensions),
            viewport = COALESCE($3, viewport),
+           layout_mode = COALESCE($4, layout_mode),
+           flow_direction = COALESCE($5, flow_direction),
+           homepoint = COALESCE($6, homepoint),
            updated_at = NOW()
-       WHERE id = $4
+       WHERE id = $7
        RETURNING *`,
       [
         name,
         dimensions ? JSON.stringify(dimensions) : null,
         viewport ? JSON.stringify(viewport) : null,
+        layout_mode,
+        flow_direction,
+        homepoint ? JSON.stringify(homepoint) : null,
         id,
       ]
     );
@@ -191,7 +248,14 @@ router.put("/:id", async (req, res, next) => {
         type: "canvas:updated",
         canvasId: canvas.id,
         canvas,
-        updates: { name, dimensions, viewport },
+        updates: {
+          name,
+          dimensions,
+          viewport,
+          layout_mode,
+          flow_direction,
+          homepoint,
+        },
         userId,
       });
     }
@@ -279,14 +343,30 @@ router.post("/:id/placements", async (req, res, next) => {
     const { id: canvas_id } = req.params;
     const userId = getUserId(req);
     const { pool, wsManager } = req.app.locals;
+
+    // Accept both camelCase (client) and snake_case (database)
     const {
       row_index,
+      row,
       col_index,
+      col,
       row_span,
+      rowSpan,
       col_span,
+      colSpan,
       content_type,
+      content,
       content_id,
     } = req.body;
+
+    // Resolve content from either format
+    let resolvedContentType = content_type || "empty";
+    let resolvedContentId = content_id || null;
+
+    if (content) {
+      resolvedContentType = content.type || "view";
+      resolvedContentId = content.viewConfigurationId || content.id || null;
+    }
 
     const result = await pool.query(
       `INSERT INTO placements (canvas_id, row_index, col_index, row_span, col_span, content_type, content_id, created_by)
@@ -294,12 +374,12 @@ router.post("/:id/placements", async (req, res, next) => {
        RETURNING *`,
       [
         canvas_id,
-        row_index || 0,
-        col_index || 0,
-        row_span || 1,
-        col_span || 1,
-        content_type || "empty",
-        content_id || null,
+        row_index ?? row ?? 0,
+        col_index ?? col ?? 0,
+        row_span ?? rowSpan ?? 1,
+        col_span ?? colSpan ?? 1,
+        resolvedContentType,
+        resolvedContentId,
         userId,
       ]
     );
@@ -428,6 +508,226 @@ router.delete("/placements/:id", async (req, res, next) => {
         type: "placement:removed",
         canvasId,
         placementId: id,
+        userId,
+      });
+    }
+
+    res.json({ success: true, id });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================================================
+// SUBSET ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/canvases/:id/subsets
+ * Get subsets for a canvas
+ */
+router.get("/:id/subsets", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const { pool } = req.app.locals;
+
+    const result = await pool.query(
+      `SELECT * FROM subsets
+       WHERE canvas_id = $1
+         AND (visibility = 'public'
+              OR visibility = 'shared'
+              OR (visibility = 'private' AND created_by = $2))
+       ORDER BY created_at DESC`,
+      [id, userId]
+    );
+
+    res.json({
+      subsets: result.rows,
+      count: result.rows.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/canvases/:id/subsets
+ * Create a new subset
+ */
+router.post("/:id/subsets", async (req, res, next) => {
+  try {
+    const { id: canvas_id } = req.params;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
+    const {
+      name,
+      description,
+      placement_ids,
+      placementIds,
+      attached_notes,
+      attached_images,
+      visibility,
+      shared_with,
+    } = req.body;
+
+    // Get project_id from canvas
+    const canvasResult = await pool.query(
+      `SELECT project_id FROM canvases WHERE id = $1`,
+      [canvas_id]
+    );
+    const projectId = canvasResult.rows[0]?.project_id;
+
+    const result = await pool.query(
+      `INSERT INTO subsets (
+        canvas_id, project_id, name, description, placement_ids,
+        attached_notes, attached_images, visibility, shared_with, created_by
+      )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [
+        canvas_id,
+        projectId || null,
+        name || "Untitled Focus Group",
+        description || null,
+        placement_ids || placementIds || [],
+        attached_notes || [],
+        attached_images || [],
+        visibility || "private",
+        shared_with || [],
+        userId,
+      ]
+    );
+
+    const subset = result.rows[0];
+
+    // Broadcast to project
+    if (projectId && wsManager) {
+      wsManager.broadcast(projectId, {
+        type: "subset:created",
+        canvasId: canvas_id,
+        subset,
+        userId,
+      });
+    }
+
+    res.status(201).json(subset);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/subsets/:id
+ * Update a subset
+ */
+router.put("/subsets/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
+    const {
+      name,
+      description,
+      placement_ids,
+      placementIds,
+      attached_notes,
+      attached_images,
+      visibility,
+      shared_with,
+    } = req.body;
+
+    const result = await pool.query(
+      `UPDATE subsets
+       SET name = COALESCE($1, name),
+           description = COALESCE($2, description),
+           placement_ids = COALESCE($3, placement_ids),
+           attached_notes = COALESCE($4, attached_notes),
+           attached_images = COALESCE($5, attached_images),
+           visibility = COALESCE($6, visibility),
+           shared_with = COALESCE($7, shared_with),
+           updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [
+        name,
+        description,
+        placement_ids || placementIds,
+        attached_notes,
+        attached_images,
+        visibility,
+        shared_with,
+        id,
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Subset not found" });
+    }
+
+    const subset = result.rows[0];
+
+    // Get project_id from canvas for broadcast
+    const canvasResult = await pool.query(
+      `SELECT project_id FROM canvases WHERE id = $1`,
+      [subset.canvas_id]
+    );
+    const projectId = canvasResult.rows[0]?.project_id;
+
+    // Broadcast to project
+    if (projectId && wsManager) {
+      wsManager.broadcast(projectId, {
+        type: "subset:updated",
+        canvasId: subset.canvas_id,
+        subset,
+        userId,
+      });
+    }
+
+    res.json(subset);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * DELETE /api/subsets/:id
+ * Delete a subset
+ */
+router.delete("/subsets/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const { pool, wsManager } = req.app.locals;
+
+    // First get the subset to find canvas_id
+    const subsetResult = await pool.query(
+      `SELECT canvas_id FROM subsets WHERE id = $1`,
+      [id]
+    );
+
+    if (subsetResult.rows.length === 0) {
+      return res.status(404).json({ error: "Subset not found" });
+    }
+
+    const canvasId = subsetResult.rows[0].canvas_id;
+
+    // Get project_id from canvas for broadcast
+    const canvasResult = await pool.query(
+      `SELECT project_id FROM canvases WHERE id = $1`,
+      [canvasId]
+    );
+    const projectId = canvasResult.rows[0]?.project_id;
+
+    // Delete the subset
+    await pool.query(`DELETE FROM subsets WHERE id = $1`, [id]);
+
+    // Broadcast to project
+    if (projectId && wsManager) {
+      wsManager.broadcast(projectId, {
+        type: "subset:deleted",
+        canvasId,
+        subsetId: id,
         userId,
       });
     }

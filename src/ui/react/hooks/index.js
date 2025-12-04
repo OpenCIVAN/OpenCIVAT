@@ -3,6 +3,7 @@
 
 // Canvas & Viewport
 export { useCanvas, useViewport, useSubsets } from "./useCanvas.js";
+export { useCanvasSelection } from "./useCanvasSelection.js";
 
 // Data Management
 export { useDatasets } from "./useDatasets.js";

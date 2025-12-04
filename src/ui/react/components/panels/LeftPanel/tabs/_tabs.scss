@@ -2026,6 +2026,202 @@
   }
 }
 
+// =============================================================================
+// LAYOUT MODE SECTION
+// =============================================================================
+
+.layout-mode-section {
+  padding: $spacing-sm $spacing-md;
+
+  &__buttons {
+    display: flex;
+    gap: 6px;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__flow-options {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs 0;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__label {
+    font-size: 10px;
+    color: $color-text-tertiary;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__description {
+    font-size: 10px;
+    color: $color-text-muted;
+    line-height: 1.4;
+  }
+}
+
+.layout-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font-size: 10px;
+  transition: all $transition-fast;
+
+  &:hover:not(&--active) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &--active {
+    &[data-color="teal"] {
+      background: rgba($color-accent-teal, 0.15);
+      border-color: rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+    }
+
+    &[data-color="purple"] {
+      background: rgba($color-accent-purple, 0.15);
+      border-color: rgba($color-accent-purple, 0.4);
+      color: $color-accent-purple;
+    }
+  }
+}
+
+.layout-mode-direction-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(&--active) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &--active {
+    background: rgba($color-accent-teal, 0.15);
+    border-color: rgba($color-accent-teal, 0.4);
+    color: $color-accent-teal;
+  }
+}
+
+// =============================================================================
+// TOOLS SECTION
+// =============================================================================
+
+.tools-section {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+
+  &__tools {
+    display: flex;
+    gap: 2px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-sm;
+    padding: 2px;
+  }
+
+  &__tool-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: $radius-xs;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.2);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 20px;
+    background: $color-border-default;
+  }
+
+  &__edit-controls {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__edit-btn {
+    padding: 4px 10px;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--active {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+
+  &__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: $radius-xs;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-secondary;
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  }
+}
+
 .layout-presets {
   display: flex;
   flex-wrap: wrap;

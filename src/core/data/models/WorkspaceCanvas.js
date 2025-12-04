@@ -12,6 +12,16 @@
 // - 'project': Shared with all project members
 
 import { CanvasPlacement } from "./CanvasPlacement.js";
+import {
+  LAYOUT_MODES,
+  FLOW_DIRECTIONS,
+  FlowLayoutEngine,
+  calculateOptimalGrid,
+  reflowPlacements,
+} from "@Core/data/utils/flowLayoutEngine.js";
+
+// Re-export layout constants for convenience
+export { LAYOUT_MODES, FLOW_DIRECTIONS };
 
 /**
  * WorkspaceCanvas - The infinite pinboard containing view placements
@@ -20,6 +30,7 @@ import { CanvasPlacement } from "./CanvasPlacement.js";
  * - Dimensions grow on demand (add rows/columns)
  * - Placements can span multiple cells (1-3 rows, 1-3 cols)
  * - Viewport determines which placements are rendered
+ * - Supports Grid (manual) and Flow (auto-arrange) layout modes
  */
 export class WorkspaceCanvas {
   /**
@@ -30,6 +41,9 @@ export class WorkspaceCanvas {
    * @param {Object} options.dimensions - { rows, cols } current grid size
    * @param {Object} options.ownership - { type, ownerId }
    * @param {Array} options.placements - Array of CanvasPlacement objects
+   * @param {string} options.layoutMode - 'grid' or 'flow'
+   * @param {string} options.flowDirection - 'row' or 'column'
+   * @param {Object} options.homepoint - { row, col } saved homepoint position
    * @param {string} options.createdBy - User ID who created this
    * @param {string} options.createdAt - ISO timestamp
    * @param {string} options.updatedAt - ISO timestamp
@@ -41,6 +55,9 @@ export class WorkspaceCanvas {
     dimensions = { rows: 3, cols: 3 },
     ownership = { type: "personal", ownerId: null },
     placements = [],
+    layoutMode = LAYOUT_MODES.FLOW,
+    flowDirection = FLOW_DIRECTIONS.ROW,
+    homepoint = null,
     createdBy = null,
     createdAt = null,
     updatedAt = null,
@@ -53,9 +70,18 @@ export class WorkspaceCanvas {
     this.placements = placements.map((p) =>
       p instanceof CanvasPlacement ? p : new CanvasPlacement(p)
     );
+    this.layoutMode = layoutMode;
+    this.flowDirection = flowDirection;
+    this.homepoint = homepoint ? { ...homepoint } : null;
     this.createdBy = createdBy;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
+
+    // Initialize flow layout engine
+    this._flowEngine = new FlowLayoutEngine({
+      direction: this.flowDirection,
+      useSpanning: true,
+    });
   }
 
   // ===========================================================================
@@ -314,6 +340,190 @@ export class WorkspaceCanvas {
   }
 
   // ===========================================================================
+  // LAYOUT MODE MANAGEMENT
+  // ===========================================================================
+
+  /**
+   * Set the layout mode
+   * @param {string} mode - 'grid' or 'flow'
+   */
+  setLayoutMode(mode) {
+    if (mode !== LAYOUT_MODES.GRID && mode !== LAYOUT_MODES.FLOW) {
+      throw new Error(`Invalid layout mode: ${mode}`);
+    }
+    this.layoutMode = mode;
+
+    // If switching to flow mode, trigger reflow
+    if (mode === LAYOUT_MODES.FLOW) {
+      this.reflowPlacements();
+    }
+  }
+
+  /**
+   * Set the flow direction
+   * @param {string} direction - 'row' or 'column'
+   */
+  setFlowDirection(direction) {
+    if (
+      direction !== FLOW_DIRECTIONS.ROW &&
+      direction !== FLOW_DIRECTIONS.COLUMN
+    ) {
+      throw new Error(`Invalid flow direction: ${direction}`);
+    }
+    this.flowDirection = direction;
+    this._flowEngine.setDirection(direction);
+
+    // If in flow mode, trigger reflow
+    if (this.layoutMode === LAYOUT_MODES.FLOW) {
+      this.reflowPlacements();
+    }
+  }
+
+  /**
+   * Check if canvas is in grid mode
+   */
+  isGridMode() {
+    return this.layoutMode === LAYOUT_MODES.GRID;
+  }
+
+  /**
+   * Check if canvas is in flow mode
+   */
+  isFlowMode() {
+    return this.layoutMode === LAYOUT_MODES.FLOW;
+  }
+
+  /**
+   * Reflow all placements according to current flow settings
+   * @returns {Array} Updated placement positions
+   */
+  reflowPlacements() {
+    if (this.layoutMode !== LAYOUT_MODES.FLOW) {
+      return [];
+    }
+
+    const viewPlacements = this.placements.filter((p) => p.isView());
+    const updates = reflowPlacements(
+      viewPlacements.map((p) => ({
+        id: p.id,
+        viewConfigurationId: p.getViewId(),
+      })),
+      this.flowDirection
+    );
+
+    // Apply updates to placements
+    updates.forEach((update) => {
+      const placement = this.getPlacementById(update.id);
+      if (placement) {
+        placement.row = update.row;
+        placement.col = update.col;
+        placement.rowSpan = update.rowSpan;
+        placement.colSpan = update.colSpan;
+      }
+    });
+
+    // Update dimensions to optimal size
+    const viewCount = viewPlacements.length;
+    if (viewCount > 0) {
+      const optimal = calculateOptimalGrid(viewCount);
+      this.dimensions.rows = Math.max(this.dimensions.rows, optimal.rows);
+      this.dimensions.cols = Math.max(this.dimensions.cols, optimal.cols);
+    }
+
+    return updates;
+  }
+
+  /**
+   * Add a view placement in flow mode
+   * @param {string} viewConfigurationId - The view to add
+   * @returns {CanvasPlacement} The created placement
+   */
+  addViewInFlowMode(viewConfigurationId) {
+    const viewCount = this.placements.filter((p) => p.isView()).length;
+    const nextPos = this._flowEngine.getNextPosition(viewCount);
+
+    // Expand grid if needed
+    if (nextPos.needsExpansion && nextPos.newDimensions) {
+      this.dimensions.rows = Math.max(
+        this.dimensions.rows,
+        nextPos.newDimensions.rows
+      );
+      this.dimensions.cols = Math.max(
+        this.dimensions.cols,
+        nextPos.newDimensions.cols
+      );
+    }
+
+    const placement = new CanvasPlacement({
+      row: nextPos.row,
+      col: nextPos.col,
+      rowSpan: 1,
+      colSpan: 1,
+      content: {
+        type: "view",
+        viewConfigurationId,
+      },
+    });
+
+    this.placements.push(placement);
+
+    // Trigger reflow to handle special cases (like 3 views)
+    this.reflowPlacements();
+
+    return placement;
+  }
+
+  /**
+   * Remove a placement and reflow if in flow mode
+   * @param {string} placementId
+   * @returns {CanvasPlacement|null}
+   */
+  removePlacementWithReflow(placementId) {
+    const removed = this.removePlacement(placementId);
+
+    if (removed && this.layoutMode === LAYOUT_MODES.FLOW) {
+      this.reflowPlacements();
+    }
+
+    return removed;
+  }
+
+  // ===========================================================================
+  // HOMEPOINT MANAGEMENT
+  // ===========================================================================
+
+  /**
+   * Set the homepoint position
+   * @param {number} row
+   * @param {number} col
+   */
+  setHomepoint(row, col) {
+    this.homepoint = { row, col };
+  }
+
+  /**
+   * Clear the homepoint
+   */
+  clearHomepoint() {
+    this.homepoint = null;
+  }
+
+  /**
+   * Check if homepoint is set
+   */
+  hasHomepoint() {
+    return this.homepoint !== null;
+  }
+
+  /**
+   * Get the homepoint position
+   * @returns {{ row: number, col: number }|null}
+   */
+  getHomepoint() {
+    return this.homepoint ? { ...this.homepoint } : null;
+  }
+
+  // ===========================================================================
   // OWNERSHIP & SHARING
   // ===========================================================================
 
@@ -372,6 +582,9 @@ export class WorkspaceCanvas {
       dimensions: { ...this.dimensions },
       ownership: { ...this.ownership },
       placements: this.placements.map((p) => p.toJSON()),
+      layoutMode: this.layoutMode,
+      flowDirection: this.flowDirection,
+      homepoint: this.homepoint ? { ...this.homepoint } : null,
       createdBy: this.createdBy,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

@@ -7,7 +7,8 @@
 // - image: ImageBlock (renders image)
 // - empty: Empty slot placeholder with interactive UI
 
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Grid3X3, LayoutGrid, FileImage, FileText, Box } from 'lucide-react';
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
@@ -221,9 +222,23 @@ export const CanvasCell = memo(function CanvasCell({
  */
 function EmptyPlaceholder({ row, col, editMode, onAddClick }) {
     const [showActions, setShowActions] = useState(false);
+    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+    const containerRef = useRef(null);
+
+    // Update menu position when shown
+    useEffect(() => {
+        if (showActions && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            setMenuPosition({
+                x: rect.left + rect.width / 2,
+                y: rect.bottom - 8, // Position above bottom edge
+            });
+        }
+    }, [showActions]);
 
     return (
         <div
+            ref={containerRef}
             className="canvas-cell__empty-content"
             onMouseEnter={() => setShowActions(true)}
             onMouseLeave={() => setShowActions(false)}
@@ -252,9 +267,20 @@ function EmptyPlaceholder({ row, col, editMode, onAddClick }) {
                 Drop file or click +
             </span>
 
-            {/* Additional actions on hover */}
-            {showActions && (
-                <div className="canvas-cell__content-options">
+            {/* Additional actions on hover - rendered as portal to avoid overflow clipping */}
+            {showActions && createPortal(
+                <div
+                    className="canvas-cell__content-options canvas-cell__content-options--portal"
+                    style={{
+                        position: 'fixed',
+                        left: `${menuPosition.x}px`,
+                        top: `${menuPosition.y}px`,
+                        transform: 'translateX(-50%)',
+                        zIndex: 9999,
+                    }}
+                    onMouseEnter={() => setShowActions(true)}
+                    onMouseLeave={() => setShowActions(false)}
+                >
                     <button
                         className="canvas-cell__option-btn"
                         onClick={(e) => {
@@ -288,7 +314,8 @@ function EmptyPlaceholder({ row, col, editMode, onAddClick }) {
                         <FileImage size={12} />
                         <span>Image</span>
                     </button>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

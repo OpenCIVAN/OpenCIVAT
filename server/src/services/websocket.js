@@ -245,6 +245,15 @@ class WebSocketManager {
   }
 
   /**
+   * Alias for broadcastToProject - used by route handlers
+   * @param {string} projectId - Project ID
+   * @param {object} message - Message to broadcast
+   */
+  broadcast(projectId, message) {
+    this.broadcastToProject(projectId, message);
+  }
+
+  /**
    * Broadcast message to a specific user (all their connections)
    * @param {string} userId - User ID
    * @param {object} message - Message to broadcast

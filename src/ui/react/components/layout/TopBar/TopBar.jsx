@@ -127,6 +127,8 @@ export function TopBar({
                     vrAvailable={vrAvailable}
                 />
 
+                <div className="top-bar__separator" />
+
                 {/* Notifications */}
                 <button className="top-bar__icon-btn" title="Notifications">
                     <Bell size={18} />

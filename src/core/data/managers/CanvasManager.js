@@ -30,6 +30,12 @@ export class CanvasManager {
     this._canvases = new Map(); // canvasId -> WorkspaceCanvas
     this._activeCanvasId = null;
 
+    // Connection state
+    this._connectionState = "disconnected"; // 'connected', 'disconnected', 'reconnecting'
+    this._lastError = null;
+    this._retryCount = 0;
+    this._maxRetries = 3;
+
     // Event listeners
     this._listeners = {
       canvasLoaded: [],
@@ -40,6 +46,7 @@ export class CanvasManager {
       placementUpdated: [],
       placementRemoved: [],
       activeCanvasChanged: [],
+      connectionStateChanged: [],
       error: [],
     };
 
@@ -211,9 +218,9 @@ export class CanvasManager {
   }
 
   /**
-   * Update canvas metadata (name, dimensions)
+   * Update canvas metadata and settings
    * @param {string} canvasId
-   * @param {Object} updates - { name, dimensions }
+   * @param {Object} updates - { name, dimensions, layoutMode, flowDirection, homepoint }
    * @returns {Promise<WorkspaceCanvas>}
    */
   async updateCanvas(canvasId, updates) {
@@ -304,10 +311,13 @@ export class CanvasManager {
    */
   async updatePlacement(placementId, updates) {
     try {
-      const response = await this._fetch(`/placements/${placementId}`, {
-        method: "PUT",
-        body: JSON.stringify(updates),
-      });
+      const response = await this._fetch(
+        `/canvases/placements/${placementId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(updates),
+        }
+      );
 
       const data = await response.json();
       const placement = new CanvasPlacement(data);
@@ -351,6 +361,50 @@ export class CanvasManager {
     return this.updatePlacement(placementId, { rowSpan, colSpan });
   }
 
+  // ===========================================================================
+  // LAYOUT MODE OPERATIONS
+  // ===========================================================================
+
+  /**
+   * Set the layout mode for a canvas
+   * @param {string} canvasId
+   * @param {string} layoutMode - 'grid' or 'flow'
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async setLayoutMode(canvasId, layoutMode) {
+    return this.updateCanvas(canvasId, { layoutMode });
+  }
+
+  /**
+   * Set the flow direction for a canvas
+   * @param {string} canvasId
+   * @param {string} flowDirection - 'row' or 'column'
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async setFlowDirection(canvasId, flowDirection) {
+    return this.updateCanvas(canvasId, { flowDirection });
+  }
+
+  /**
+   * Set the homepoint for a canvas
+   * @param {string} canvasId
+   * @param {number} row
+   * @param {number} col
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async setHomepoint(canvasId, row, col) {
+    return this.updateCanvas(canvasId, { homepoint: { row, col } });
+  }
+
+  /**
+   * Clear the homepoint for a canvas
+   * @param {string} canvasId
+   * @returns {Promise<WorkspaceCanvas>}
+   */
+  async clearHomepoint(canvasId) {
+    return this.updateCanvas(canvasId, { homepoint: null });
+  }
+
   /**
    * Remove a placement from a canvas
    * @param {string} placementId
@@ -358,7 +412,7 @@ export class CanvasManager {
    */
   async removePlacement(placementId) {
     try {
-      await this._fetch(`/placements/${placementId}`, {
+      await this._fetch(`/canvases/placements/${placementId}`, {
         method: "DELETE",
       });
 
@@ -639,6 +693,81 @@ export class CanvasManager {
   }
 
   // ===========================================================================
+  // CONNECTION STATE MANAGEMENT
+  // ===========================================================================
+
+  /**
+   * Get current connection state
+   * @returns {'connected'|'disconnected'|'reconnecting'}
+   */
+  getConnectionState() {
+    return this._connectionState;
+  }
+
+  /**
+   * Check if connected to server
+   * @returns {boolean}
+   */
+  isConnected() {
+    return this._connectionState === "connected";
+  }
+
+  /**
+   * Get last error if any
+   * @returns {Error|null}
+   */
+  getLastError() {
+    return this._lastError;
+  }
+
+  /**
+   * Set connection state and emit event
+   * @param {'connected'|'disconnected'|'reconnecting'} state
+   * @param {Error|null} error
+   */
+  _setConnectionState(state, error = null) {
+    const previous = this._connectionState;
+    this._connectionState = state;
+    this._lastError = error;
+
+    if (previous !== state) {
+      log.info(
+        `CanvasManager: Connection state changed ${previous} -> ${state}`
+      );
+      this._emit("connectionStateChanged", {
+        state,
+        previousState: previous,
+        error,
+        isConnected: state === "connected",
+      });
+    }
+  }
+
+  /**
+   * Handle successful connection
+   */
+  handleConnected() {
+    this._retryCount = 0;
+    this._setConnectionState("connected");
+  }
+
+  /**
+   * Handle disconnection
+   * @param {Error} error
+   */
+  handleDisconnected(error) {
+    this._setConnectionState("disconnected", error);
+  }
+
+  /**
+   * Handle reconnection attempt
+   */
+  handleReconnecting() {
+    this._retryCount++;
+    this._setConnectionState("reconnecting");
+  }
+
+  // ===========================================================================
   // HELPERS
   // ===========================================================================
 
@@ -664,7 +793,7 @@ export class CanvasManager {
   }
 
   /**
-   * Make authenticated API request
+   * Make authenticated API request with connection state tracking
    */
   async _fetch(endpoint, options = {}) {
     const url = `${this._apiBaseUrl}${endpoint}`;
@@ -676,21 +805,34 @@ export class CanvasManager {
       ...options.headers,
     };
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      const error = new Error(
-        `API error: ${response.status} ${response.statusText}`
-      );
-      error.status = response.status;
-      error.response = response;
+      // Track successful connection
+      if (this._connectionState !== "connected") {
+        this._setConnectionState("connected");
+      }
+
+      if (!response.ok) {
+        const error = new Error(
+          `API error: ${response.status} ${response.statusText}`
+        );
+        error.status = response.status;
+        error.response = response;
+        throw error;
+      }
+
+      return response;
+    } catch (error) {
+      // Network errors indicate disconnection
+      if (error.name === "TypeError" || !error.status) {
+        this._setConnectionState("disconnected", error);
+      }
       throw error;
     }
-
-    return response;
   }
 
   // ===========================================================================
