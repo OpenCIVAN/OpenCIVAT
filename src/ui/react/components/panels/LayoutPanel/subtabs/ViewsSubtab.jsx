@@ -2,33 +2,27 @@
  * ViewsSubtab Component
  *
  * Views management content for the Layout Panel.
- * Contains:
- * - Search bar
- * - Filter bar (Shared, Linked chips + Group toggle)
- * - View list with ViewItem components
+ * Drag-ready structure for future reordering and canvas drops.
+ *
+ * Features:
+ * - Search bar with clear button
+ * - Filter chips (Shared, Linked) + Group toggle
+ * - Draggable view items for reposition on canvas/minimap
+ * - Groups with collapsible headers when grouping enabled
  */
 
-import React, { memo, useCallback } from 'react';
-import { Search, X, Filter, Database } from 'lucide-react';
+import React, { memo, useCallback, useState } from 'react';
+import { Search, X, Database, GripVertical } from 'lucide-react';
 import { ViewItem } from '../components/ViewItem/ViewItem';
 import { FilterChips } from '../components/FilterChips';
 import './ViewsSubtab.scss';
-
-// Instance colors for view color coding
-const INSTANCE_COLORS = [
-    '#60a5fa', // blue
-    '#4ade80', // green
-    '#f472b6', // pink
-    '#fbbf24', // amber
-    '#2dd4bf', // teal
-    '#a78bfa', // purple
-];
 
 export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
     const {
         cells,
         filteredCells,
         groupedCells,
+        groupByDataset,
         expandedViewId,
         toggleViewExpanded,
         searchQuery,
@@ -36,50 +30,108 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         activeFilters,
         toggleFilter,
         clearFilters,
-        groupByDataset,
         setGroupByDataset,
         closeView,
         resizeView,
     } = logic;
 
-    // Handle search input change
-    const handleSearchChange = useCallback(
-        (e) => {
-            setSearchQuery(e.target.value);
-        },
-        [setSearchQuery]
-    );
+    // Local drag state for visual feedback
+    const [draggedId, setDraggedId] = useState(null);
 
-    // Handle search clear
+    // ==========================================================================
+    // SEARCH HANDLERS
+    // ==========================================================================
+
+    const handleSearchChange = useCallback((e) => {
+        setSearchQuery(e.target.value);
+    }, [setSearchQuery]);
+
     const handleClearSearch = useCallback(() => {
         setSearchQuery('');
     }, [setSearchQuery]);
 
-    // Handle view action
-    const handleViewAction = useCallback(
-        (viewId, action) => {
-            switch (action) {
-                case 'close':
-                    closeView(viewId);
-                    break;
-                // Add more actions as needed
-                default:
-                    console.log('View action:', viewId, action);
-            }
-        },
-        [closeView]
-    );
+    // ==========================================================================
+    // VIEW ACTION HANDLERS
+    // ==========================================================================
 
-    // Handle size change
-    const handleSizeChange = useCallback(
-        (viewId, size) => {
-            resizeView(viewId, size.colSpan, size.rowSpan);
-        },
-        [resizeView]
-    );
+    const handleViewAction = useCallback((viewId, action) => {
+        switch (action) {
+            case 'close':
+                closeView(viewId);
+                break;
+            case 'duplicate':
+                console.log('Duplicate view:', viewId);
+                // TODO: Implement duplicate
+                break;
+            case 'save':
+                console.log('Save view:', viewId);
+                // TODO: Implement save
+                break;
+            case 'share':
+                console.log('Share view:', viewId);
+                // TODO: Implement share
+                break;
+            default:
+                console.log('View action:', viewId, action);
+        }
+    }, [closeView]);
 
-    // Check if any filters are active
+    const handleSizeChange = useCallback((viewId, size) => {
+        resizeView(viewId, size.colSpan, size.rowSpan);
+    }, [resizeView]);
+
+    // ==========================================================================
+    // DRAG HANDLERS
+    // ==========================================================================
+
+    /**
+     * Start dragging a view item
+     * Sets data transfer payload for canvas/minimap drops
+     */
+    const handleDragStart = useCallback((e, cell) => {
+        // Set drag data for canvas/minimap to consume
+        const dragData = {
+            type: 'view-item',
+            viewId: cell.id,
+            placementId: cell.id,
+            sourceRow: cell.row,
+            sourceCol: cell.col,
+            rowSpan: cell.rowSpan || 1,
+            colSpan: cell.colSpan || 1,
+            title: cell.title || cell.name,
+            color: cell.color || cell.instanceColor,
+        };
+
+        e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+        e.dataTransfer.setData('text/plain', cell.id); // Fallback
+        e.dataTransfer.effectAllowed = 'move';
+
+        // Set local state for styling
+        setDraggedId(cell.id);
+
+        // Optional: Set custom drag image
+        // const dragImage = e.target.cloneNode(true);
+        // e.dataTransfer.setDragImage(dragImage, 0, 0);
+    }, []);
+
+    /**
+     * End drag - cleanup
+     */
+    const handleDragEnd = useCallback(() => {
+        setDraggedId(null);
+    }, []);
+
+    // ==========================================================================
+    // DERIVED STATE
+    // ==========================================================================
+
     const hasActiveFilters = activeFilters.length > 0 || searchQuery;
+    const totalCount = cells?.length || 0;
+    const filteredCount = filteredCells?.length || 0;
+
+    // ==========================================================================
+    // RENDER
+    // ==========================================================================
 
     return (
         <div className="views-subtab">
@@ -88,15 +140,16 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                 <Search size={12} className="views-subtab__search-icon" />
                 <input
                     type="text"
-                    className="views-subtab__search-input"
                     placeholder="Search views..."
                     value={searchQuery}
                     onChange={handleSearchChange}
+                    className="views-subtab__search-input"
                 />
                 {searchQuery && (
                     <button
                         className="views-subtab__search-clear"
                         onClick={handleClearSearch}
+                        title="Clear search"
                     >
                         <X size={12} />
                     </button>
@@ -104,30 +157,28 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
             </div>
 
             {/* Filter Bar */}
-            <div className="views-subtab__filter-bar">
-                <Filter size={10} className="views-subtab__filter-icon" />
-
+            <div className="views-subtab__filters">
                 <FilterChips
                     activeFilters={activeFilters}
                     onToggle={toggleFilter}
                 />
 
-                <div className="views-subtab__filter-spacer" />
-
-                {/* Group Toggle */}
                 <button
                     className={`views-subtab__group-btn ${groupByDataset ? 'views-subtab__group-btn--active' : ''}`}
                     onClick={() => setGroupByDataset(!groupByDataset)}
+                    title={groupByDataset ? 'Disable grouping' : 'Group by dataset'}
                 >
                     <Database size={9} />
                     <span>Group</span>
                 </button>
 
-                {/* Clear Filters */}
                 {hasActiveFilters && (
                     <button
                         className="views-subtab__clear-btn"
-                        onClick={clearFilters}
+                        onClick={() => {
+                            clearFilters();
+                            setSearchQuery('');
+                        }}
                     >
                         Clear
                     </button>
@@ -136,43 +187,72 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
 
             {/* View Count */}
             <div className="views-subtab__count">
-                {filteredCells.length} of {cells.length} views
+                {filteredCount === totalCount
+                    ? `${totalCount} view${totalCount !== 1 ? 's' : ''}`
+                    : `${filteredCount} of ${totalCount} views`
+                }
             </div>
 
             {/* View List */}
             <div className="views-subtab__list">
-                {Object.entries(groupedCells).map(([group, groupCells]) => (
-                    <div key={group} className="views-subtab__group">
-                        {/* Group Header (only when grouping is enabled) */}
-                        {groupByDataset && group !== 'ungrouped' && (
+                {groupedCells && groupedCells.map((group) => (
+                    <div key={group.groupId} className="views-subtab__group">
+                        {/* Group Header - only render if groupName exists */}
+                        {group.groupName && (
                             <div className="views-subtab__group-header">
-                                <Database size={10} />
-                                <span className="views-subtab__group-name">{group}</span>
-                                <span className="views-subtab__group-count">({groupCells.length})</span>
+                                <Database size={10} className="views-subtab__group-icon" />
+                                <span className="views-subtab__group-name">{group.groupName}</span>
+                                <span className="views-subtab__group-count">
+                                    ({group.cells.length})
+                                </span>
                             </div>
                         )}
 
-                        {/* Views */}
-                        {groupCells.map((cell) => (
-                            <ViewItem
+                        {/* Draggable View Items */}
+                        {group.cells.map((cell) => (
+                            <div
                                 key={cell.id}
-                                view={cell}
-                                isActive={cell.id === cells[0]?.id} // First cell is active (example)
-                                isExpanded={expandedViewId === cell.id}
-                                onToggleExpand={toggleViewExpanded}
-                                onAction={handleViewAction}
-                                onSizeChange={handleSizeChange}
-                            />
+                                className={`views-subtab__item-wrapper ${draggedId === cell.id ? 'views-subtab__item-wrapper--dragging' : ''
+                                    }`}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, cell)}
+                                onDragEnd={handleDragEnd}
+                            >
+                                {/* Drag Handle */}
+                                <div className="views-subtab__drag-handle">
+                                    <GripVertical size={10} />
+                                </div>
+
+                                {/* View Item */}
+                                <ViewItem
+                                    view={cell}
+                                    isExpanded={expandedViewId === cell.id}
+                                    onToggleExpand={toggleViewExpanded}
+                                    onAction={handleViewAction}
+                                    onSizeChange={handleSizeChange}
+                                />
+                            </div>
                         ))}
                     </div>
                 ))}
 
                 {/* Empty State */}
-                {filteredCells.length === 0 && (
+                {filteredCount === 0 && (
                     <div className="views-subtab__empty">
-                        {hasActiveFilters
-                            ? 'No views match filters'
-                            : 'No views open'}
+                        <span className="views-subtab__empty-text">
+                            {hasActiveFilters ? 'No views match filters' : 'No views open'}
+                        </span>
+                        {hasActiveFilters && (
+                            <button
+                                className="views-subtab__empty-action"
+                                onClick={() => {
+                                    clearFilters();
+                                    setSearchQuery('');
+                                }}
+                            >
+                                Clear filters
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

@@ -444,6 +444,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       result = result.filter(
         (cell) =>
           cell.title?.toLowerCase().includes(query) ||
+          cell.name?.toLowerCase().includes(query) ||
           cell.datasetName?.toLowerCase().includes(query)
       );
     }
@@ -459,24 +460,38 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     return result;
   }, [cells, searchQuery, activeFilters]);
 
-  // Group cells by dataset
+  // Group cells by dataset (always returns array - never null)
+  // This makes iteration consistent whether grouping is on or off
   const groupedCells = useMemo(() => {
-    if (!groupByDataset) return null;
+    if (!groupByDataset) {
+      // Single "all" group - no header will be rendered (groupName is null)
+      return [
+        {
+          groupId: "all",
+          groupName: null,
+          cells: filteredCells,
+        },
+      ];
+    }
 
+    // Group by dataset
     const groups = {};
     filteredCells.forEach((cell) => {
       const datasetId = cell.datasetId || "unknown";
       if (!groups[datasetId]) {
         groups[datasetId] = {
-          datasetId,
-          datasetName: cell.datasetName || "Unknown Dataset",
+          groupId: datasetId,
+          groupName: cell.datasetName || "Unknown Dataset",
           cells: [],
         };
       }
       groups[datasetId].cells.push(cell);
     });
 
-    return Object.values(groups);
+    // Sort groups alphabetically by name
+    return Object.values(groups).sort((a, b) =>
+      (a.groupName || "").localeCompare(b.groupName || "")
+    );
   }, [filteredCells, groupByDataset]);
 
   // ===========================================================================
