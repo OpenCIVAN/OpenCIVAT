@@ -25,6 +25,8 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 
 export class ViewConfigurationManager {
   constructor() {
+    this._isReady = false;
+
     // In-memory cache of ViewConfiguration objects
     this._viewConfigs = new Map();
 
@@ -105,20 +107,15 @@ export class ViewConfigurationManager {
 
       let addedCount = 0;
       for (const serverView of serverViews) {
-        // Check if we already have this view
         if (this._viewConfigs.has(serverView.id)) {
           continue;
         }
 
         try {
-          // Convert snake_case from server to camelCase for client model
           const viewData = this._serverToClientFormat(serverView);
           const view = new ViewConfiguration(viewData);
           this._viewConfigs.set(view.id, view);
-
-          // Set up link observers for any existing links
           this._setupLinkObserversForView(view);
-
           addedCount++;
         } catch (error) {
           log.error(`Failed to load view ${serverView.id}:`, error);
@@ -126,9 +123,17 @@ export class ViewConfigurationManager {
       }
 
       log.info(`Loaded ${addedCount} view(s) from server`);
+
+      // Mark as ready and emit event
+      this._isReady = true;
+      this._emit("ready", { viewCount: this._viewConfigs.size });
+
       return serverViews.length;
     } catch (error) {
       log.error("Failed to load from server:", error);
+      // Still mark ready (with 0 views) so UI doesn't hang
+      this._isReady = true;
+      this._emit("ready", { viewCount: 0, error: error.message });
       throw error;
     }
   }
@@ -594,6 +599,32 @@ export class ViewConfigurationManager {
       log.error(`Failed to delete view ${viewId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Check if views have been loaded from server
+   */
+  isReady() {
+    return this._isReady;
+  }
+
+  /**
+   * Subscribe to ready event (fires immediately if already ready)
+   */
+  onReady(callback) {
+    if (this._isReady) {
+      callback({ viewCount: this._viewConfigs.size });
+      return () => {}; // noop unsubscribe
+    }
+
+    const handler = (data) => {
+      callback(data);
+      // Auto-unsubscribe after first call
+      this.off("ready", handler);
+    };
+
+    this.on("ready", handler);
+    return () => this.off("ready", handler);
   }
 
   // ===========================================================================
@@ -1135,27 +1166,40 @@ export class ViewConfigurationManager {
   // ===========================================================================
 
   on(event, callback) {
-    if (this._listeners[event]) {
-      this._listeners[event].push(callback);
+    if (!this._eventListeners) {
+      this._eventListeners = {};
     }
-    return () => this.off(event, callback);
+    if (!this._eventListeners[event]) {
+      this._eventListeners[event] = [];
+    }
+    this._eventListeners[event].push(callback);
   }
 
   off(event, callback) {
-    if (this._listeners[event]) {
-      this._listeners[event] = this._listeners[event].filter(
-        (cb) => cb !== callback
-      );
-    }
+    if (!this._eventListeners?.[event]) return;
+    this._eventListeners[event] = this._eventListeners[event].filter(
+      (cb) => cb !== callback
+    );
   }
 
   _emit(event, data) {
-    if (this._listeners[event]) {
+    // Existing listeners array
+    if (this._listeners?.[event]) {
       this._listeners[event].forEach((callback) => {
         try {
           callback(data);
-        } catch (error) {
-          log.error(`Error in ${event} listener:`, error);
+        } catch (e) {
+          log.error(`Listener error:`, e);
+        }
+      });
+    }
+    // New event listeners
+    if (this._eventListeners?.[event]) {
+      this._eventListeners[event].forEach((callback) => {
+        try {
+          callback(data);
+        } catch (e) {
+          log.error(`Listener error:`, e);
         }
       });
     }

@@ -103,7 +103,7 @@ class WorkspaceManagerClass {
       expiresInHours,
       roomId
     );
-    return this.createWorkspace(workspace.toJSON());
+    return this.createWorkspace(breakout.toJSON());
   }
 
   /**

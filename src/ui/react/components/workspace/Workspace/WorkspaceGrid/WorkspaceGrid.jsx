@@ -82,15 +82,7 @@ export function WorkspaceGrid() {
     useEffect(() => {
         if (isRestored) return;
 
-        const tryRestore = () => {
-            // Check if viewConfigurationManager has loaded
-            const views = viewConfigurationManager?.getAllViews?.();
-            if (!views || views.length === 0) {
-                // Views not loaded yet, try again
-                setTimeout(tryRestore, 200);
-                return;
-            }
-
+        const doRestore = () => {
             const rawState = getRawWorkspaceState();
             if (rawState.length > 0) {
                 const validInstances = validateSavedInstances(rawState);
@@ -102,7 +94,29 @@ export function WorkspaceGrid() {
             setIsRestored(true);
         };
 
-        tryRestore();
+        // If already ready, restore immediately
+        if (viewConfigurationManager?.isReady?.()) {
+            doRestore();
+            return;
+        }
+
+        // Otherwise wait for ready event
+        const unsubscribe = viewConfigurationManager?.onReady?.(() => {
+            doRestore();
+        });
+
+        // Fallback timeout in case onReady never fires
+        const timeout = setTimeout(() => {
+            if (!isRestored) {
+                log.warn("ViewConfigurationManager ready timeout, restoring anyway");
+                doRestore();
+            }
+        }, 5000);
+
+        return () => {
+            unsubscribe?.();
+            clearTimeout(timeout);
+        };
     }, [isRestored]);
 
     // Save workspace state to localStorage whenever instances change
