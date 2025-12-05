@@ -9,7 +9,6 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 
 // Import UI components
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
-import { WorkspaceGrid } from "@UI/react/components/workspace/Workspace/WorkspaceGrid";
 import { CanvasWorkspace } from "@UI/react/components/workspace/";
 import { TopBar } from "@UI/react/components/layout/TopBar";
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
@@ -64,7 +63,7 @@ import { FloatingPanelProvider, AllFloatingPanels } from "@UI/react/components/p
  * - Layout mode (Normal/Isolation/Subset)
  * - Phase 3 initialization
  */
-export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) {
+export function CIAWebApp({ username, userId, projectId }) {
   // =========================================================================
   // STATE
   // =========================================================================
@@ -246,32 +245,20 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
   const renderCenterPanel = () => {
     if (phase3Status !== 'ready') {
       return (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          color: '#666',
-        }}>
+        <div className="cia-loading">
           {phase3Status === 'loading' ? 'Initializing...' : 'Initialization failed'}
         </div>
       );
     }
 
-    // Use unified canvas-based workspace (default)
-    // Falls back to legacy WorkspaceGrid if useNewCanvas=false
-    if (useNewCanvas) {
-      return (
-        <CanvasWorkspace
-          workspaceId={workspaceId}
-          userId={userId || sessionManager.getUserId?.() || 'anonymous'}
-          projectId={projectId}
-          layoutMode={layoutMode}
-        />
-      );
-    }
-    // Legacy grid (max 9 instances, localStorage persistence)
-    return <WorkspaceGrid layoutMode={layoutMode} />;
+    return (
+      <CanvasWorkspace
+        workspaceId={workspaceId}
+        userId={userId || sessionManager.getUserId?.() || 'anonymous'}
+        projectId={projectId}
+        layoutMode={layoutMode}
+      />
+    );
   };
 
   // =========================================================================

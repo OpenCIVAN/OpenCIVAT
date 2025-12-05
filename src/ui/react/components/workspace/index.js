@@ -1,8 +1,6 @@
 // src/ui/react/components/workspace/index.js
 // Workspace component exports
 
-export { WorkspaceGrid } from "./Workspace";
-
 // Canvas components
 export { CanvasGrid } from "./Canvas";
 export { CanvasCell } from "./Canvas";

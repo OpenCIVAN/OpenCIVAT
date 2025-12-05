@@ -1,5 +1,3 @@
-export { WorkspaceGrid } from "./WorkspaceGrid";
-
 // Workspace hierarchy components
 export { WorkspaceSelector } from "./WorkspaceSelector/WorkspaceSelector.jsx";
 export {
