@@ -9,7 +9,11 @@
 
 const express = require("express");
 const router = express.Router({ mergeParams: true }); // Access :projectId
+const zlib = require("zlib");
+const { promisify } = require("util");
 const { createLogger } = require("../utils/logger");
+
+const gzip = promisify(zlib.gzip);
 
 const log = createLogger("recordings");
 
@@ -490,6 +494,343 @@ router.get("/status/active", async (req, res, next) => {
     });
   } catch (error) {
     log.error("Failed to get active recording:", error);
+    next(error);
+  }
+});
+
+// ============================================================================
+// EXPORT RECORDING
+// ============================================================================
+
+/**
+ * POST /api/projects/:projectId/recordings/:id/export
+ * Export recording to MinIO as compressed JSONL
+ */
+router.post("/:id/export", async (req, res, next) => {
+  try {
+    const { projectId, id } = req.params;
+    const user = getUser(req);
+    const { pool, minioClient, bucketName } = req.app.locals;
+
+    // Get recording metadata
+    const recordingResult = await pool.query(
+      `SELECT * FROM session_recordings WHERE id = $1 AND project_id = $2`,
+      [id, projectId]
+    );
+
+    if (recordingResult.rows.length === 0) {
+      return res.status(404).json({ error: "Recording not found" });
+    }
+
+    const recording = recordingResult.rows[0];
+
+    if (recording.status === "recording") {
+      return res
+        .status(400)
+        .json({ error: "Cannot export active recording. Stop it first." });
+    }
+
+    if (recording.storage_key) {
+      return res.json({
+        success: true,
+        message: "Recording already exported",
+        storage_key: recording.storage_key,
+        file_size: recording.file_size,
+      });
+    }
+
+    log.info(`Exporting recording ${id}...`);
+
+    // Stream events and build JSONL
+    const BATCH_SIZE = 1000;
+    let offset = 0;
+    let lines = [];
+    let totalEvents = 0;
+
+    // Add metadata header
+    lines.push(
+      JSON.stringify({
+        _type: "header",
+        recording_id: id,
+        project_id: projectId,
+        started_at: recording.started_at,
+        ended_at: recording.ended_at,
+        duration_ms: recording.duration_ms,
+        metadata: recording.metadata,
+        exported_at: new Date().toISOString(),
+        exported_by: user.email,
+      })
+    );
+
+    // Stream events in batches
+    while (true) {
+      const eventsResult = await pool.query(
+        `SELECT timestamp_offset_ms, event_type, event_source, event_data, user_id, client_id
+         FROM recording_events
+         WHERE recording_id = $1
+         ORDER BY timestamp_offset_ms ASC
+         LIMIT $2 OFFSET $3`,
+        [id, BATCH_SIZE, offset]
+      );
+
+      if (eventsResult.rows.length === 0) break;
+
+      for (const event of eventsResult.rows) {
+        lines.push(
+          JSON.stringify({
+            t: event.timestamp_offset_ms,
+            type: event.event_type,
+            src: event.event_source,
+            data: event.event_data,
+            uid: event.user_id,
+            cid: event.client_id,
+          })
+        );
+        totalEvents++;
+      }
+
+      offset += BATCH_SIZE;
+
+      // Log progress for large exports
+      if (offset % 10000 === 0) {
+        log.debug(`Export progress: ${offset} events processed`);
+      }
+    }
+
+    // Add footer
+    lines.push(
+      JSON.stringify({
+        _type: "footer",
+        total_events: totalEvents,
+        export_complete: true,
+      })
+    );
+
+    // Compress
+    const jsonlContent = lines.join("\n");
+    const compressed = await gzip(Buffer.from(jsonlContent, "utf-8"));
+
+    // Upload to MinIO
+    const storageKey = `recordings/${projectId}/${id}.jsonl.gz`;
+
+    await minioClient.putObject(
+      bucketName,
+      storageKey,
+      compressed,
+      compressed.length,
+      {
+        "Content-Type": "application/gzip",
+        "Content-Encoding": "gzip",
+        "X-Recording-Id": id,
+        "X-Event-Count": String(totalEvents),
+      }
+    );
+
+    // Update recording with storage info
+    await pool.query(
+      `UPDATE session_recordings
+       SET storage_key = $1, file_size = $2
+       WHERE id = $3`,
+      [storageKey, compressed.length, id]
+    );
+
+    log.info(
+      `Recording exported: ${id}, ${totalEvents} events, ${compressed.length} bytes`
+    );
+
+    res.json({
+      success: true,
+      storage_key: storageKey,
+      file_size: compressed.length,
+      event_count: totalEvents,
+      original_size: jsonlContent.length,
+      compression_ratio: (jsonlContent.length / compressed.length).toFixed(2),
+    });
+  } catch (error) {
+    log.error("Failed to export recording:", error);
+    next(error);
+  }
+});
+
+// ============================================================================
+// DOWNLOAD RECORDING
+// ============================================================================
+
+/**
+ * GET /api/projects/:projectId/recordings/:id/download
+ * Download exported recording file
+ */
+router.get("/:id/download", async (req, res, next) => {
+  try {
+    const { projectId, id } = req.params;
+    const { format = "jsonl" } = req.query; // jsonl or json
+    const { pool, minioClient, bucketName } = req.app.locals;
+
+    // Get recording
+    const result = await pool.query(
+      `SELECT * FROM session_recordings WHERE id = $1 AND project_id = $2`,
+      [id, projectId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Recording not found" });
+    }
+
+    const recording = result.rows[0];
+
+    // If exported to MinIO, stream from there
+    if (recording.storage_key) {
+      const stat = await minioClient.statObject(
+        bucketName,
+        recording.storage_key
+      );
+
+      const filename = `recording-${id}-${
+        recording.metadata?.name || "export"
+      }.jsonl.gz`.replace(/[^a-zA-Z0-9.-]/g, "_");
+
+      res.setHeader("Content-Type", "application/gzip");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`
+      );
+      res.setHeader("Content-Length", stat.size);
+
+      const stream = await minioClient.getObject(
+        bucketName,
+        recording.storage_key
+      );
+      stream.pipe(res);
+      return;
+    }
+
+    // Otherwise, generate on-the-fly from database
+    log.info(`Generating download for recording ${id} (not yet exported)`);
+
+    const eventsResult = await pool.query(
+      `SELECT timestamp_offset_ms, event_type, event_source, event_data, user_id, client_id
+       FROM recording_events
+       WHERE recording_id = $1
+       ORDER BY timestamp_offset_ms ASC`,
+      [id]
+    );
+
+    const filename = `recording-${id}.${format}`;
+
+    if (format === "json") {
+      // Full JSON format
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`
+      );
+
+      res.json({
+        recording: {
+          id: recording.id,
+          name: recording.metadata?.name,
+          started_at: recording.started_at,
+          ended_at: recording.ended_at,
+          duration_ms: recording.duration_ms,
+          metadata: recording.metadata,
+        },
+        events: eventsResult.rows.map((e) => ({
+          timestamp_ms: e.timestamp_offset_ms,
+          type: e.event_type,
+          source: e.event_source,
+          data: e.event_data,
+          user_id: e.user_id,
+          client_id: e.client_id,
+        })),
+      });
+    } else {
+      // JSONL format (default)
+      res.setHeader("Content-Type", "application/x-ndjson");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`
+      );
+
+      // Header
+      res.write(
+        JSON.stringify({
+          _type: "header",
+          recording_id: id,
+          started_at: recording.started_at,
+          ended_at: recording.ended_at,
+          duration_ms: recording.duration_ms,
+          metadata: recording.metadata,
+        }) + "\n"
+      );
+
+      // Events
+      for (const event of eventsResult.rows) {
+        res.write(
+          JSON.stringify({
+            t: event.timestamp_offset_ms,
+            type: event.event_type,
+            src: event.event_source,
+            data: event.event_data,
+            uid: event.user_id,
+            cid: event.client_id,
+          }) + "\n"
+        );
+      }
+
+      // Footer
+      res.write(
+        JSON.stringify({
+          _type: "footer",
+          total_events: eventsResult.rows.length,
+        }) + "\n"
+      );
+
+      res.end();
+    }
+  } catch (error) {
+    log.error("Failed to download recording:", error);
+    next(error);
+  }
+});
+
+// ============================================================================
+// DELETE EXPORT (cleanup MinIO)
+// ============================================================================
+
+/**
+ * DELETE /api/projects/:projectId/recordings/:id/export
+ * Delete the exported file from MinIO (keeps DB events)
+ */
+router.delete("/:id/export", async (req, res, next) => {
+  try {
+    const { projectId, id } = req.params;
+    const { pool, minioClient, bucketName } = req.app.locals;
+
+    const result = await pool.query(
+      `SELECT storage_key FROM session_recordings WHERE id = $1 AND project_id = $2`,
+      [id, projectId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Recording not found" });
+    }
+
+    const { storage_key } = result.rows[0];
+
+    if (storage_key) {
+      await minioClient.removeObject(bucketName, storage_key);
+
+      await pool.query(
+        `UPDATE session_recordings SET storage_key = NULL, file_size = NULL WHERE id = $1`,
+        [id]
+      );
+
+      log.info(`Deleted export for recording ${id}`);
+    }
+
+    res.json({ success: true, message: "Export deleted" });
+  } catch (error) {
+    log.error("Failed to delete export:", error);
     next(error);
   }
 });
