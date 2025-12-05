@@ -206,26 +206,6 @@ export class Workspace {
   }
 
   /**
-   * Serialize for server
-   */
-  toServerJSON() {
-    return {
-      id: this.id,
-      localId: this.localId,
-      name: this.name,
-      description: this.description,
-      type: this.type,
-      parentId: this.parentId,
-      projectId: this.projectId,
-      members: this.members,
-      canvasIds: this.canvasIds,
-      activeCanvasId: this.activeCanvasId,
-      expiresAt: this.expiresAt,
-      autoMerge: this.autoMerge,
-    };
-  }
-
-  /**
    * Serialize for storage
    */
   toJSON() {
@@ -250,6 +230,25 @@ export class Workspace {
       archivedAt: this.archivedAt,
       expiresAt: this.expiresAt,
       autoMerge: this.autoMerge,
+    };
+  }
+
+  /**
+   * Serialize for sending to server (snake_case format)
+   */
+  toServerJSON() {
+    return {
+      id: this.id,
+      local_id: this.localId,
+      name: this.name,
+      description: this.description,
+      type: this.type,
+      parent_id: this.parentId,
+      project_id: this.projectId,
+      room_id: this.roomId,
+      owner_id: this.ownerId,
+      expires_at: this.expiresAt,
+      auto_merge: this.autoMerge,
     };
   }
 
@@ -294,7 +293,7 @@ export class Workspace {
       name,
       type: WorkspaceType.BREAKOUT,
       projectId,
-      roomId, // <-- Add this
+      roomId,
       ownerId: creatorId,
       createdBy: creatorId,
       expiresAt: expiresAt.toISOString(),

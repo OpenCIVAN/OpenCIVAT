@@ -27,16 +27,22 @@ function getUserId(req) {
 router.get("/", async (req, res, next) => {
   try {
     const userId = getUserId(req);
-    const { type, project_id } = req.query;
+    const { type, project_id, room_id } = req.query;
     const { pool } = req.app.locals;
 
     let query = `
-      SELECT w.*,
+      SELECT DISTINCT w.*,
              (SELECT COUNT(*) FROM workspace_members WHERE workspace_id = w.id) as member_count,
              (SELECT COUNT(*) FROM canvases WHERE workspace_id = w.id AND is_active = true) as canvas_count
       FROM workspaces w
       LEFT JOIN workspace_members wm ON w.id = wm.workspace_id
-      WHERE w.is_archived = false AND (w.owner_id = $1 OR wm.user_id = $1)
+      LEFT JOIN project_members pm ON w.project_id = pm.project_id AND pm.user_id = $1
+      WHERE w.is_archived = false 
+        AND (
+          w.owner_id = $1 
+          OR wm.user_id = $1 
+          OR (w.type = 'project' AND pm.user_id IS NOT NULL)
+        )
     `;
     const params = [userId];
     let paramIndex = 2;
@@ -51,7 +57,12 @@ router.get("/", async (req, res, next) => {
       params.push(project_id);
     }
 
-    query += " GROUP BY w.id ORDER BY w.updated_at DESC";
+    if (room_id) {
+      query += ` AND (w.room_id = $${paramIndex++} OR w.room_id IS NULL)`;
+      params.push(room_id);
+    }
+
+    query += " ORDER BY w.type, w.updated_at DESC";
 
     const result = await pool.query(query, params);
 

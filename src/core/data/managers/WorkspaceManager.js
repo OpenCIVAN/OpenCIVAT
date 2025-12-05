@@ -95,11 +95,11 @@ class WorkspaceManagerClass {
   /**
    * Create breakout from project
    */
-  async createBreakout(projectId, name, creatorId, expiresInHours = 2) {
-    const workspace = Workspace.createBreakout(
+  createBreakout(projectId, name, userId, expiresInHours = 2, roomId = null) {
+    const breakout = Workspace.createBreakout(
       projectId,
       name,
-      creatorId,
+      userId,
       expiresInHours,
       roomId
     );

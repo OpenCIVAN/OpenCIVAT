@@ -29,7 +29,7 @@ function transformWorkspace(workspace) {
     type: workspace.type,
     color: typeColors[workspace.type] || "#60a5fa",
     ownerId: workspace.ownerId,
-    roomId: workspace.roomId, // <-- ADD THIS
+    roomId: workspace.roomId, // <-- ADD
     createdBy: workspace.createdBy,
     members: workspace.members,
     memberCount: workspace.members?.length || 0,
@@ -195,7 +195,7 @@ export function useWorkspaces({ userId, projectId } = {}) {
         name,
         userId,
         expiresInHours,
-        roomId // <-- Pass through
+        roomId
       );
 
       return transformWorkspace(breakout);

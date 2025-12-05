@@ -82,20 +82,27 @@ export function WorkspaceGrid() {
     useEffect(() => {
         if (isRestored) return;
 
-        // Wait a tick for viewConfigurationManager to be fully initialized
-        const restoreTimeout = setTimeout(() => {
+        const tryRestore = () => {
+            // Check if viewConfigurationManager has loaded
+            const views = viewConfigurationManager?.getAllViews?.();
+            if (!views || views.length === 0) {
+                // Views not loaded yet, try again
+                setTimeout(tryRestore, 200);
+                return;
+            }
+
             const rawState = getRawWorkspaceState();
             if (rawState.length > 0) {
                 const validInstances = validateSavedInstances(rawState);
                 if (validInstances.length > 0) {
-                    log.info(`Restoring ${validInstances.length} instance(s) from saved workspace`);
+                    log.info(`Restoring ${validInstances.length} instance(s)`);
                     setInstances(validInstances);
                 }
             }
             setIsRestored(true);
-        }, 100);
+        };
 
-        return () => clearTimeout(restoreTimeout);
+        tryRestore();
     }, [isRestored]);
 
     // Save workspace state to localStorage whenever instances change
