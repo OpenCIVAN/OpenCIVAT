@@ -36,6 +36,8 @@ import { LayoutModeToggle, LAYOUT_MODES } from "@UI/react/components/controls/La
 
 // Room Navigation
 import { RoomSelector } from "@UI/react/components/navigation/RoomSelector";
+import { WorkspacePickerModal } from '@UI/react/components/modals/WorkspacePickerModal/WorkspacePickerModal.jsx';
+import { useRoomWorkspaceTransition } from '@UI/react/hooks/useRoomWorkspaceTransition.js';
 
 // Panel components (separated activity bars and content)
 import {
@@ -77,6 +79,8 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
   // Room state (Space Navigation)
   const [currentRoomId, setCurrentRoomId] = useState(null);
   const [currentRoomName, setCurrentRoomName] = useState('Main Room');
+  const [pendingRoomChange, setPendingRoomChange] = useState(null);
+  // Shape: { roomId: string, roomName: string } | null
 
   // View mode state (Desktop/VR)
   const [viewMode, setViewMode] = useState(VIEW_MODES.DESKTOP);
@@ -90,11 +94,14 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
 
   // Handle room change - receives both id and name from RoomSelector
   const handleRoomChange = useCallback((roomId, roomName) => {
-    log.info('Room changed:', roomId, roomName);
-    setCurrentRoomId(roomId);
-    setCurrentRoomName(roomName || 'Main Room');
-    // Voice and chat context will update via presence system
-  }, []);
+    // If same room, no picker needed
+    if (roomId === currentRoomId) {
+      return;
+    }
+
+    // Store pending room change and show picker
+    setPendingRoomChange({ roomId, roomName });
+  }, [currentRoomId]);
 
   // =========================================================================
   // SECONDARY BAR HOOKS (for zone content)
@@ -114,6 +121,69 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
     roomName: currentRoomName,
     userName: username || 'Anonymous',
   });
+
+  const transition = useRoomWorkspaceTransition({
+    currentRoomId,
+    onRoomChange: (roomId, roomName) => {
+      setCurrentRoomId(roomId);
+      setCurrentRoomName(roomName);
+    },
+    onWorkspaceChange: (workspaceId) => {
+      workspace.selectWorkspace(workspaceId);
+    },
+  });
+
+  const handleWorkspacePicked = useCallback((workspaceId) => {
+    if (!pendingRoomChange) return;
+
+    // Complete the room change
+    setCurrentRoomId(pendingRoomChange.roomId);
+    setCurrentRoomName(pendingRoomChange.roomName);
+
+    // Switch workspace
+    workspace.selectWorkspace(workspaceId);
+
+    // Clear pending state
+    setPendingRoomChange(null);
+  }, [pendingRoomChange, workspace]);
+
+  const handleSkipWorkspaceChange = useCallback(() => {
+    if (!pendingRoomChange) return;
+
+    // Complete room change without switching workspace
+    setCurrentRoomId(pendingRoomChange.roomId);
+    setCurrentRoomName(pendingRoomChange.roomName);
+
+    // Clear pending state
+    setPendingRoomChange(null);
+  }, [pendingRoomChange]);
+
+  const handleCancelRoomChange = useCallback(() => {
+    // Cancel - don't switch room at all
+    setPendingRoomChange(null);
+  }, []);
+
+  const handleCreateWorkspaceForRoom = useCallback(
+    async (type, roomId) => {
+      // Use existing createBreakout from useWorkspaces or workspaceManager
+      try {
+        const newWorkspace = await workspace.createBreakout?.(
+          `${currentRoomName || 'Room'} Workspace`,
+          2 // expires in 2 hours (or adjust as needed)
+        );
+
+        // If workspaceManager has a method to set roomId, call it
+        // Otherwise, the backend should handle roomId association
+
+        return newWorkspace;
+      } catch (err) {
+        console.error('Failed to create workspace:', err);
+        return null;
+      }
+    },
+    [workspace, currentRoomName]
+  );
+
 
   // =========================================================================
   // PHASE 3 INITIALIZATION
@@ -265,7 +335,18 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <RoomSelector
                     projectId={projectId}
-                    onRoomChange={handleRoomChange}
+                    onRoomChange={transition.initiateRoomChange}
+                  />
+                  <WorkspacePickerModal
+                    isOpen={transition.isPickerOpen}
+                    targetRoom={transition.pendingRoom}
+                    currentWorkspaceId={workspace.currentWorkspace?.id}
+                    groupedWorkspaces={workspace.groupedWorkspaces}
+                    onConfirm={transition.confirmWithWorkspace}
+                    onSkip={transition.confirmKeepWorkspace}
+                    onCancel={transition.cancel}
+                    onAutoEnter={transition.autoEnter}
+                    onCreateWorkspace={handleCreateWorkspaceForRoom}
                   />
                   <WorkspacePresence
                     visibleUsers={presence.visibleUsers}
