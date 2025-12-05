@@ -160,8 +160,6 @@ router.post("/start", async (req, res, next) => {
         recording.metadata.recordedBySnapshot.displayName;
     }
 
-    res.json({ recording });
-
     // Register with recording service for Y.js event capture
     if (recordingService) {
       recordingService.startCapture(recording.id, projectId, user.id);
