@@ -1,115 +1,130 @@
 /**
  * CanvasNavigator Logic Hook
  *
- * Provides press-and-hold behavior for increment/decrement buttons
- * and other navigator-specific logic.
+ * Headless logic for the canvas navigator component.
+ * Wraps parent LayoutPanel logic and adds navigator-specific functionality.
  *
- * UPDATED: Now works with async canvas operations from parent logic.
- * The parent (useLayoutPanel) provides server-authoritative operations,
- * this hook wraps them with press-and-hold behavior and local utilities.
+ * Features:
+ * - Press-and-hold for canvas size controls
+ * - Minimap click-to-navigate
+ * - Viewport dragging
+ * - DROP HANDLERS for view repositioning from ViewsSubtab
  */
 
-import { useRef, useCallback, useState } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+
+// =============================================================================
+// PRESS-AND-HOLD HOOK
+// =============================================================================
 
 /**
  * Hook for press-and-hold button behavior
- * Starts action immediately, then repeats at interval
- *
- * UPDATED: Handles async actions properly
+ * Fires action immediately, then repeatedly after delay
  */
-export function usePressAndHold(action, interval = 150) {
+export function usePressAndHold(action, { delay = 400, interval = 100 } = {}) {
+  const timeoutRef = useRef(null);
   const intervalRef = useRef(null);
-  const isHoldingRef = useRef(false);
 
-  const startHold = useCallback(() => {
-    // Execute immediately
+  const start = useCallback(() => {
     action();
-    isHoldingRef.current = true;
+    timeoutRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(action, interval);
+    }, delay);
+  }, [action, delay, interval]);
 
-    // Then start interval
-    intervalRef.current = setInterval(() => {
-      if (isHoldingRef.current) {
-        action();
-      }
-    }, interval);
-  }, [action, interval]);
-
-  const stopHold = useCallback(() => {
-    isHoldingRef.current = false;
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+  const stop = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    timeoutRef.current = null;
+    intervalRef.current = null;
   }, []);
 
-  return {
-    onMouseDown: startHold,
-    onMouseUp: stopHold,
-    onMouseLeave: stopHold,
-    // Also support touch events
-    onTouchStart: startHold,
-    onTouchEnd: stopHold,
-  };
+  useEffect(() => {
+    return () => stop();
+  }, [stop]);
+
+  return { start, stop };
 }
 
+// =============================================================================
+// VIEWPORT DRAG HOOK
+// =============================================================================
+
 /**
- * Hook for viewport rectangle dragging on minimap
+ * Hook for dragging the viewport rectangle on the minimap
  */
-export function useViewportDrag(onDrag) {
+export function useViewportDrag(onMove) {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef(null);
 
-  const handleDragStart = useCallback((e, startRow, startCol) => {
+  const handleMouseDown = useCallback((e, cellWidth, cellHeight, gap) => {
     setIsDragging(true);
     dragStartRef.current = {
-      startRow,
-      startCol,
       startX: e.clientX,
       startY: e.clientY,
+      cellWidth,
+      cellHeight,
+      gap,
     };
+    e.preventDefault();
   }, []);
 
-  const handleDragMove = useCallback(
-    (e, cellWidth, cellHeight) => {
+  const handleMouseMove = useCallback(
+    (e) => {
       if (!isDragging || !dragStartRef.current) return;
 
-      const dx = e.clientX - dragStartRef.current.startX;
-      const dy = e.clientY - dragStartRef.current.startY;
+      const { startX, startY, cellWidth, cellHeight, gap } =
+        dragStartRef.current;
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
 
-      const deltaRows = Math.round(dy / cellHeight);
-      const deltaCols = Math.round(dx / cellWidth);
+      const cellDeltaX = Math.round(deltaX / (cellWidth + gap));
+      const cellDeltaY = Math.round(deltaY / (cellHeight + gap));
 
-      if (deltaRows !== 0 || deltaCols !== 0) {
-        const newRow = dragStartRef.current.startRow + deltaRows;
-        const newCol = dragStartRef.current.startCol + deltaCols;
-        onDrag?.(newRow, newCol);
+      if (cellDeltaX !== 0 || cellDeltaY !== 0) {
+        onMove(cellDeltaY, cellDeltaX);
+        dragStartRef.current.startX = e.clientX;
+        dragStartRef.current.startY = e.clientY;
       }
     },
-    [isDragging, onDrag]
+    [isDragging, onMove]
   );
 
-  const handleDragEnd = useCallback(() => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     dragStartRef.current = null;
   }, []);
 
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   return {
     isDragging,
-    handleDragStart,
-    handleDragMove,
-    handleDragEnd,
+    handleMouseDown,
   };
 }
 
+// =============================================================================
+// MAIN HOOK
+// =============================================================================
+
 /**
- * Hook for CanvasNavigator component
- * Wraps parent logic with navigator-specific utilities
+ * useCanvasNavigator - Navigator-specific logic
  *
- * @param {Object} logic - Logic object from useLayoutPanel
+ * @param {Object} parentLogic - Logic object from useLayoutPanel
  */
-export function useCanvasNavigator(logic) {
+export function useCanvasNavigator(parentLogic) {
   const {
-    // State from parent
+    canvas,
     canvasSize,
     viewport,
     cells,
@@ -120,8 +135,7 @@ export function useCanvasNavigator(logic) {
     loading,
     error,
     isConnected,
-
-    // Canvas size operations (async, server-authoritative)
+    // Size controls
     incrementCols,
     decrementCols,
     incrementRows,
@@ -129,15 +143,17 @@ export function useCanvasNavigator(logic) {
     setCanvasCols,
     setCanvasRows,
     checkCanReduceSize,
-
-    // Viewport navigation
+    // Navigation
     moveViewport,
     navigateToCell,
     setHomepoint,
+    // Zoom
     setZoom,
     zoomIn,
     zoomOut,
-
+    // Cell helpers
+    getCellAt,
+    isInViewport,
     // Tools
     tool,
     setTool,
@@ -146,92 +162,35 @@ export function useCanvasNavigator(logic) {
     toggleEditMode,
     dropMode,
     setDropMode,
-
-    // Navigator docking
+    // Docking
     toggleNavigatorDocked,
-
     // Undo/redo
     canUndo,
     canRedo,
     undo,
     redo,
-  } = logic;
+  } = parentLogic;
 
   // ===========================================================================
-  // PRESS-AND-HOLD HANDLERS FOR SIZE CONTROLS
+  // DROP STATE
+  // ===========================================================================
+
+  const [dropTargetCell, setDropTargetCell] = useState(null);
+  const [isValidDrop, setIsValidDrop] = useState(false);
+
+  // ===========================================================================
+  // PRESS-AND-HOLD CONTROLS
   // ===========================================================================
 
   const incrementColsHold = usePressAndHold(incrementCols);
-
-  const decrementColsHold = usePressAndHold(() => {
-    if (checkCanReduceSize("cols")) {
-      decrementCols();
-    }
-  });
-
+  const decrementColsHold = usePressAndHold(decrementCols);
   const incrementRowsHold = usePressAndHold(incrementRows);
-
-  const decrementRowsHold = usePressAndHold(() => {
-    if (checkCanReduceSize("rows")) {
-      decrementRows();
-    }
-  });
-
-  // ===========================================================================
-  // CELL HELPERS
-  // ===========================================================================
-
-  /**
-   * Get cell at a specific grid position
-   */
-  const getCellAt = useCallback(
-    (row, col) => {
-      return cells.find(
-        (c) =>
-          row >= c.row &&
-          row < c.row + (c.rowSpan || 1) &&
-          col >= c.col &&
-          col < c.col + (c.colSpan || 1)
-      );
-    },
-    [cells]
-  );
-
-  /**
-   * Check if position is within current viewport
-   */
-  const isInViewport = useCallback(
-    (row, col) => {
-      return (
-        row >= viewport.row &&
-        row < viewport.row + viewport.rows &&
-        col >= viewport.col &&
-        col < viewport.col + viewport.cols
-      );
-    },
-    [viewport]
-  );
-
-  /**
-   * Get color for a cell (based on its view configuration color)
-   */
-  const getCellColor = useCallback(
-    (row, col) => {
-      const cell = getCellAt(row, col);
-      if (!cell) return null;
-      // Return the instance color or a default
-      return cell.instanceColor || cell.color || "#60a5fa";
-    },
-    [getCellAt]
-  );
+  const decrementRowsHold = usePressAndHold(decrementRows);
 
   // ===========================================================================
   // MINIMAP INTERACTIONS
   // ===========================================================================
 
-  /**
-   * Handle click on minimap cell - navigate viewport to that area
-   */
   const handleMinimapClick = useCallback(
     (row, col) => {
       navigateToCell(row, col);
@@ -239,48 +198,172 @@ export function useCanvasNavigator(logic) {
     [navigateToCell]
   );
 
-  /**
-   * Viewport drag functionality for minimap
-   */
   const viewportDrag = useViewportDrag((newRow, newCol) => {
     navigateToCell(newRow, newCol);
   });
 
   // ===========================================================================
+  // DROP HANDLERS
+  // ===========================================================================
+
+  /**
+   * Check if a cell can accept a drop
+   * Valid if: empty, or same placement (no-op), or in replace mode
+   */
+  const canDropAt = useCallback(
+    (row, col, dragData) => {
+      const existingCell = getCellAt(row, col);
+
+      // Empty cell - always valid
+      if (!existingCell) return true;
+
+      // Same placement - no-op but valid
+      if (existingCell.id === dragData.placementId) return true;
+
+      // Different placement - only valid in replace mode
+      return dropMode === "replace";
+    },
+    [getCellAt, dropMode]
+  );
+
+  /**
+   * Handle drag over a minimap cell
+   */
+  const handleCellDragOver = useCallback((e, row, col) => {
+    e.preventDefault();
+
+    // Parse drag data to check validity
+    try {
+      const jsonData = e.dataTransfer.types.includes("application/json");
+      if (jsonData) {
+        e.dataTransfer.dropEffect = "move";
+        setDropTargetCell({ row, col });
+        // We can't read data during dragOver, so assume valid for now
+        // Actual validation happens on drop
+        setIsValidDrop(true);
+      }
+    } catch (err) {
+      console.warn("Drag over error:", err);
+    }
+  }, []);
+
+  /**
+   * Handle drag leave from minimap cell
+   */
+  const handleCellDragLeave = useCallback(() => {
+    setDropTargetCell(null);
+    setIsValidDrop(false);
+  }, []);
+
+  /**
+   * Handle drop on a minimap cell
+   * Repositions the view to the target cell
+   */
+  const handleCellDrop = useCallback(
+    async (e, row, col) => {
+      e.preventDefault();
+      setDropTargetCell(null);
+      setIsValidDrop(false);
+
+      try {
+        const jsonData = e.dataTransfer.getData("application/json");
+        if (!jsonData) return;
+
+        const dragData = JSON.parse(jsonData);
+
+        // Validate it's a view-item drag
+        if (dragData.type !== "view-item") {
+          console.warn("Unknown drag type:", dragData.type);
+          return;
+        }
+
+        // Check if drop is valid
+        if (!canDropAt(row, col, dragData)) {
+          console.log("Invalid drop target");
+          return;
+        }
+
+        // Same position - no-op
+        if (dragData.sourceRow === row && dragData.sourceCol === col) {
+          return;
+        }
+
+        // Check for existing placement at target
+        const existingCell = getCellAt(row, col);
+
+        if (existingCell && existingCell.id !== dragData.placementId) {
+          // Replace mode - remove existing placement first
+          if (dropMode === "replace") {
+            await canvasManager.removePlacement(canvas.id, existingCell.id);
+          } else {
+            // Should not reach here due to canDropAt check
+            return;
+          }
+        }
+
+        // Update the placement position
+        await canvasManager.updatePlacement(canvas.id, dragData.placementId, {
+          row,
+          col,
+        });
+
+        console.log(
+          `Moved view ${dragData.placementId} from (${dragData.sourceRow}, ${dragData.sourceCol}) to (${row}, ${col})`
+        );
+      } catch (err) {
+        console.error("Drop failed:", err);
+      }
+    },
+    [canvas, getCellAt, canDropAt, dropMode]
+  );
+
+  // ===========================================================================
+  // CELL HELPERS
+  // ===========================================================================
+
+  /**
+   * Get cell color for minimap display
+   */
+  const getCellColor = useCallback((cell) => {
+    if (!cell) return null;
+    // Use instance color or default to index-based color
+    return cell.color || cell.instanceColor || 0;
+  }, []);
+
+  // ===========================================================================
   // MINIMAP CALCULATIONS
   // ===========================================================================
 
-  // Fixed cell sizes for minimap
   const MINIMAP_CELL_WIDTH = 28;
   const MINIMAP_CELL_HEIGHT = 20;
   const MINIMAP_GAP = 2;
 
-  /**
-   * Calculate minimap dimensions
-   */
-  const minimapDimensions = {
-    width:
-      canvasSize.cols * MINIMAP_CELL_WIDTH +
-      (canvasSize.cols - 1) * MINIMAP_GAP,
-    height:
-      canvasSize.rows * MINIMAP_CELL_HEIGHT +
-      (canvasSize.rows - 1) * MINIMAP_GAP,
-    cellWidth: MINIMAP_CELL_WIDTH,
-    cellHeight: MINIMAP_CELL_HEIGHT,
-    gap: MINIMAP_GAP,
-  };
+  const minimapDimensions = useMemo(
+    () => ({
+      width:
+        canvasSize.cols * MINIMAP_CELL_WIDTH +
+        (canvasSize.cols - 1) * MINIMAP_GAP,
+      height:
+        canvasSize.rows * MINIMAP_CELL_HEIGHT +
+        (canvasSize.rows - 1) * MINIMAP_GAP,
+      cellWidth: MINIMAP_CELL_WIDTH,
+      cellHeight: MINIMAP_CELL_HEIGHT,
+      gap: MINIMAP_GAP,
+    }),
+    [canvasSize]
+  );
 
-  /**
-   * Get viewport rectangle position on minimap
-   */
-  const viewportRect = {
-    x: viewport.col * (MINIMAP_CELL_WIDTH + MINIMAP_GAP),
-    y: viewport.row * (MINIMAP_CELL_HEIGHT + MINIMAP_GAP),
-    width:
-      viewport.cols * MINIMAP_CELL_WIDTH + (viewport.cols - 1) * MINIMAP_GAP,
-    height:
-      viewport.rows * MINIMAP_CELL_HEIGHT + (viewport.rows - 1) * MINIMAP_GAP,
-  };
+  const viewportRect = useMemo(
+    () => ({
+      x: viewport.col * (MINIMAP_CELL_WIDTH + MINIMAP_GAP),
+      y: viewport.row * (MINIMAP_CELL_HEIGHT + MINIMAP_GAP),
+      width:
+        viewport.cols * MINIMAP_CELL_WIDTH + (viewport.cols - 1) * MINIMAP_GAP,
+      height:
+        viewport.rows * MINIMAP_CELL_HEIGHT + (viewport.rows - 1) * MINIMAP_GAP,
+    }),
+    [viewport]
+  );
 
   // ===========================================================================
   // CONNECTION STATE
@@ -323,6 +406,14 @@ export function useCanvasNavigator(logic) {
 
     // Viewport dragging
     viewportDrag,
+
+    // Drop handling
+    dropTargetCell,
+    isValidDrop,
+    handleCellDragOver,
+    handleCellDragLeave,
+    handleCellDrop,
+    canDropAt,
 
     // Zoom
     setZoom,

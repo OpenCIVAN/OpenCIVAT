@@ -109,6 +109,11 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         // Set local state for styling
         setDraggedId(cell.id);
 
+        document.body.classList.add('dragging-view-item');
+        if (dropMode === 'replace') {
+            document.body.classList.add('drop-mode-replace');
+        }
+
         // Optional: Set custom drag image
         // const dragImage = e.target.cloneNode(true);
         // e.dataTransfer.setDragImage(dragImage, 0, 0);
@@ -119,6 +124,7 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
      */
     const handleDragEnd = useCallback(() => {
         setDraggedId(null);
+        document.body.classList.remove('dragging-view-item', 'drop-mode-replace');
     }, []);
 
     // ==========================================================================
