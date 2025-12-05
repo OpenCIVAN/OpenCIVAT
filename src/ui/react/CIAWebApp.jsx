@@ -34,6 +34,9 @@ import {
 } from "@UI/react/components/controls/ViewModeToggle";
 import { LayoutModeToggle, LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
 
+// Room Navigation
+import { RoomSelector } from "@UI/react/components/navigation/RoomSelector";
+
 // Panel components (separated activity bars and content)
 import {
   LeftPanelProvider,
@@ -71,6 +74,10 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
   const { workspaces, currentWorkspace, selectWorkspace } = useWorkspaces({ userId });
   const workspaceId = 'personal';
 
+  // Room state (Space Navigation)
+  const [currentRoomId, setCurrentRoomId] = useState(null);
+  const [currentRoomName, setCurrentRoomName] = useState('Main Room');
+
   // View mode state (Desktop/VR)
   const [viewMode, setViewMode] = useState(VIEW_MODES.DESKTOP);
   const vrAvailable = useWebXRAvailability();
@@ -81,6 +88,14 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
   // Workspace selector dropdown state
   const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
 
+  // Handle room change - receives both id and name from RoomSelector
+  const handleRoomChange = useCallback((roomId, roomName) => {
+    log.info('Room changed:', roomId, roomName);
+    setCurrentRoomId(roomId);
+    setCurrentRoomName(roomName || 'Main Room');
+    // Voice and chat context will update via presence system
+  }, []);
+
   // =========================================================================
   // SECONDARY BAR HOOKS (for zone content)
   // =========================================================================
@@ -88,11 +103,17 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
   // Top bar state (workspace selector, presence)
   const { workspace, presence } = useSecondaryTopBar({
     workspaces,
+    currentRoomId,
+    currentRoomName,
     onWorkspaceChange: selectWorkspace,
   });
 
-  // Voice controls state
-  const voice = useVoiceControls({});
+  // Voice controls state - bound to current room context
+  const voice = useVoiceControls({
+    roomId: currentRoomId,
+    roomName: currentRoomName,
+    userName: username || 'Anonymous',
+  });
 
   // =========================================================================
   // PHASE 3 INITIALIZATION
@@ -220,7 +241,7 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
 
             // Right side - separated activity bar and content
             rightActivityBar={<RightActivityBar />}
-            rightPanelContent={<RightPanelContent workspaceId={workspaceId} />}
+            rightPanelContent={<RightPanelContent workspaceId={workspaceId} roomId={currentRoomId} roomName={currentRoomName} />}
 
             // Secondary bar zones - distributed across grid cells
             secondaryTopBarZones={{
@@ -241,13 +262,19 @@ export function CIAWebApp({ username, userId, projectId, useNewCanvas = true }) 
               ),
               center: <SecondaryTopBar />,
               right: (
-                <WorkspacePresence
-                  visibleUsers={presence.visibleUsers}
-                  overflowCount={presence.overflowCount}
-                  totalCount={presence.totalCount}
-                  isHovering={presence.isHovering}
-                  onHoverChange={presence.setIsHovering}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <RoomSelector
+                    projectId={projectId}
+                    onRoomChange={handleRoomChange}
+                  />
+                  <WorkspacePresence
+                    visibleUsers={presence.visibleUsers}
+                    overflowCount={presence.overflowCount}
+                    totalCount={presence.totalCount}
+                    isHovering={presence.isHovering}
+                    onHoverChange={presence.setIsHovering}
+                  />
+                </div>
               ),
             }}
             secondaryBottomBarZones={{

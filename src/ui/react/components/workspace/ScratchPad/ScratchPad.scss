@@ -23,7 +23,7 @@
 
   &:hover {
     background: $color-glass-medium;
-    border-color: $color-border-hover;
+    border-color: $color-border-accent;
   }
 
   svg:first-child {
@@ -36,7 +36,7 @@
   color: white;
   font-size: 9px;
   padding: 2px 5px;
-  border-radius: $radius-pill;
+  border-radius: $radius-full;
   font-weight: 600;
 }
 
@@ -317,7 +317,7 @@
 
   &:hover {
     background: $color-glass-medium;
-    border-color: $color-border-hover;
+    border-color: $color-border-accent;
   }
 
   &--active {

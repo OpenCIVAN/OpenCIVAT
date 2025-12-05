@@ -2,6 +2,7 @@
 // Styles for RoomSelector component
 // TODO: Refine styles to match design system perfectly
 
+@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -32,7 +33,7 @@
 
   &:hover {
     background: $color-glass-medium;
-    border-color: $color-border-hover;
+    border-color: $color-border-accent;
   }
 
   &--compact {
@@ -60,7 +61,7 @@
   color: $color-text-muted;
   background: $color-glass-medium;
   padding: 2px 6px;
-  border-radius: $radius-pill;
+  border-radius: $radius-full;
 }
 
 .room-selector__chevron {
@@ -350,7 +351,7 @@
     color: white;
 
     &:hover:not(:disabled) {
-      background: lighten($color-accent-blue, 5%);
+      background: color.adjust($color-accent-blue, $lightness: 5%);
     }
   }
 }

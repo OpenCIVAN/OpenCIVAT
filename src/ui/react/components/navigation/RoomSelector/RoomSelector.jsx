@@ -33,7 +33,7 @@ const RoomItem = memo(function RoomItem({
     return (
         <button
             className={`room-item ${isSelected ? 'room-item--selected' : ''}`}
-            onClick={() => onSelect(room.id)}
+            onClick={() => onSelect(room.id, room.name)}
         >
             <div className="room-item__indicator">
                 {isSelected && <span className="room-item__dot" />}

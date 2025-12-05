@@ -32,16 +32,16 @@ import './RightPanel.scss';
 /**
  * Render content for a specific tab
  */
-function renderTabContent(tabId, workspaceId, roomName) {
+function renderTabContent(tabId, workspaceId, roomId, roomName) {
     switch (tabId) {
         case 'people':
-            return <PeoplePanelContent workspaceId={workspaceId} />;
+            return <PeoplePanelContent workspaceId={workspaceId} roomId={roomId} />;
         case 'rooms':
             return <RoomsPanelContent workspaceId={workspaceId} />;
         case 'chat':
-            return <ChatPanelContent workspaceId={workspaceId} />;
+            return <ChatPanelContent workspaceId={workspaceId} roomId={roomId} />;
         case 'voice':
-            return <VoicePanelContent workspaceId={workspaceId} roomName={roomName} />;
+            return <VoicePanelContent workspaceId={workspaceId} roomId={roomId} roomName={roomName} />;
         case 'notes':
             return <NotesPanelContent workspaceId={workspaceId} />;
         case 'recording':
@@ -96,9 +96,10 @@ function PlaceholderContent({ tabId }) {
  * not here, so they persist even when the docked panel is closed.
  *
  * @param {string} workspaceId - Current workspace ID
+ * @param {string} roomId - Current room ID (for filtering presence)
  * @param {string} roomName - Current room name (for voice chat)
  */
-export function RightPanelContent({ workspaceId = 'default', roomName }) {
+export function RightPanelContent({ workspaceId = 'default', roomId, roomName }) {
     const { activeTab } = useRightPanelContext();
     const { popOutPanel, isPoppedOut } = useFloatingPanels();
     const { setRightOpen } = useLayoutContext();
@@ -158,7 +159,7 @@ export function RightPanelContent({ workspaceId = 'default', roomName }) {
             </div>
 
             {/* Tab content - no redundant header, activity bar shows tab */}
-            {renderTabContent(activeTab, workspaceId, roomName)}
+            {renderTabContent(activeTab, workspaceId, roomId, roomName)}
         </div>
     );
 }

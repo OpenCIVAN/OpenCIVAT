@@ -1,6 +1,8 @@
 // ViewportNavigator.scss
 // Styles for viewport navigation controls
 
+@use "sass:color";
+
 .viewport-navigator {
   display: flex;
   flex-direction: column;

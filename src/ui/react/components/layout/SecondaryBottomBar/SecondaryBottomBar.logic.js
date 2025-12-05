@@ -3,6 +3,11 @@
 // Manages canvas viewport, voice controls, and workspace indicators
 
 import { useState, useCallback, useMemo, useEffect } from "react";
+import {
+  voiceRoomService,
+  VoiceConnectionState,
+} from "@Services/voice/voiceRoomService.js";
+import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 
 /**
  * useCanvasViewport - Manages canvas position/viewport state
@@ -70,61 +75,110 @@ export function useCanvasViewport({
 }
 
 /**
- * useVoiceControls - Manages voice chat state
+ * useVoiceControls - Manages voice chat state with LiveKit integration
  *
  * @param {Object} options
- * @param {boolean} options.initialInVoice - Initial voice connection state
- * @param {boolean} options.initialMuted - Initial mute state
- * @param {boolean} options.initialDeafened - Initial deafen state
- * @param {string} options.currentRoom - Current voice room name
+ * @param {string} options.roomId - Current room ID for voice context
+ * @param {string} options.roomName - Current room name for display
+ * @param {string} options.userName - Current user's display name
  * @param {Function} options.onJoinVoice - Callback for joining voice
  * @param {Function} options.onLeaveVoice - Callback for leaving voice
- * @param {Function} options.onMuteToggle - Callback for mute toggle
- * @param {Function} options.onDeafenToggle - Callback for deafen toggle
  * @returns {Object} Voice control state and actions
  */
 export function useVoiceControls({
-  initialInVoice = false,
-  initialMuted = false,
-  initialDeafened = false,
-  currentRoom = "Main Room",
+  roomId,
+  roomName = "Main Room",
+  userName = "Anonymous",
   onJoinVoice,
   onLeaveVoice,
-  onMuteToggle,
-  onDeafenToggle,
 } = {}) {
-  const [inVoice, setInVoice] = useState(initialInVoice);
-  const [muted, setMuted] = useState(initialMuted);
-  const [deafened, setDeafened] = useState(initialDeafened);
+  // Connection state synced with voiceRoomService
+  const [connectionState, setConnectionState] = useState(
+    voiceRoomService.getConnectionState()
+  );
+  const [muted, setMuted] = useState(voiceRoomService.isMuted);
+  const [deafened, setDeafened] = useState(voiceRoomService.isDeafened);
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
-  const joinVoice = useCallback(() => {
-    setInVoice(true);
-    onJoinVoice?.();
-  }, [onJoinVoice]);
+  // Derived state
+  const inVoice = connectionState === VoiceConnectionState.CONNECTED;
+  const isConnecting = connectionState === VoiceConnectionState.CONNECTING;
 
-  const leaveVoice = useCallback(() => {
-    setInVoice(false);
-    setMuted(false);
+  // Subscribe to voice service state changes
+  useEffect(() => {
+    const unsubConnection = voiceRoomService.onConnectionChange((state) => {
+      setConnectionState(state);
+      setIsJoining(false);
+    });
+
+    return () => {
+      unsubConnection();
+    };
+  }, []);
+
+  // Join voice in current room
+  const joinVoice = useCallback(async () => {
+    if (isJoining || inVoice) return;
+
+    setIsJoining(true);
+    try {
+      // Use room name for LiveKit room identity
+      const voiceRoomName = roomId ? `room-${roomId}` : "main-room";
+      await voiceRoomService.joinRoom(voiceRoomName, userName);
+
+      // Update presence with voice state
+      presenceSystem.updateVoiceState({
+        inVoice: true,
+        isMuted: voiceRoomService.isMuted,
+        roomId: roomId,
+      });
+
+      setMuted(voiceRoomService.isMuted);
+      onJoinVoice?.();
+    } catch (error) {
+      console.error("Failed to join voice:", error);
+      setIsJoining(false);
+    }
+  }, [roomId, userName, isJoining, inVoice, onJoinVoice]);
+
+  // Leave voice
+  const leaveVoice = useCallback(async () => {
+    await voiceRoomService.leaveRoom();
+
+    // Update presence
+    presenceSystem.updateVoiceState({
+      inVoice: false,
+      isMuted: true,
+      roomId: null,
+    });
+
+    setMuted(true);
     setDeafened(false);
     onLeaveVoice?.();
   }, [onLeaveVoice]);
 
-  const toggleMute = useCallback(() => {
-    setMuted((prev) => {
-      const newValue = !prev;
-      onMuteToggle?.(newValue);
-      return newValue;
-    });
-  }, [onMuteToggle]);
+  // Toggle mute
+  const toggleMute = useCallback(async () => {
+    if (!inVoice) return;
 
-  const toggleDeafen = useCallback(() => {
-    setDeafened((prev) => {
-      const newValue = !prev;
-      onDeafenToggle?.(newValue);
-      return newValue;
+    const newMuted = await voiceRoomService.toggleMute();
+    setMuted(newMuted);
+
+    // Update presence
+    presenceSystem.updateVoiceState({
+      inVoice: true,
+      isMuted: newMuted,
     });
-  }, [onDeafenToggle]);
+  }, [inVoice]);
+
+  // Toggle deafen
+  const toggleDeafen = useCallback(() => {
+    if (!inVoice) return;
+
+    const newDeafened = voiceRoomService.toggleDeafen();
+    setDeafened(newDeafened);
+  }, [inVoice]);
 
   const toggleRoomDropdown = useCallback(() => {
     setShowRoomDropdown((prev) => !prev);
@@ -133,10 +187,13 @@ export function useVoiceControls({
   return {
     // State
     inVoice,
+    isConnecting,
+    isJoining,
     muted,
     deafened,
-    currentRoom,
+    currentRoom: roomName,
     showRoomDropdown,
+    connectionState,
 
     // Actions
     joinVoice,

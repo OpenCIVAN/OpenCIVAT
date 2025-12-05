@@ -210,11 +210,16 @@ export function useRoomSelector({ projectId, onRoomChange }) {
     const savedRoomId = presenceSystem.getRoom();
     if (savedRoomId) {
       setCurrentRoomId(savedRoomId);
+      // Also notify parent of the saved room
+      const savedRoom = rooms.find((r) => r.id === savedRoomId);
+      if (savedRoom && onRoomChange) {
+        onRoomChange(savedRoomId, savedRoom.name);
+      }
     } else if (rooms.length > 0) {
       // Default to main room
       const mainRoom = rooms.find((r) => r.room_type === "main");
       if (mainRoom) {
-        handleSelectRoom(mainRoom.id);
+        handleSelectRoom(mainRoom.id, mainRoom.name);
       }
     }
   }, [rooms]);
@@ -242,15 +247,15 @@ export function useRoomSelector({ projectId, onRoomChange }) {
 
   // Select a room
   const handleSelectRoom = useCallback(
-    (roomId) => {
-      log.info("Selecting room:", roomId);
+    (roomId, roomName) => {
+      log.info("Selecting room:", roomId, roomName);
       setCurrentRoomId(roomId);
       setRoom(roomId); // Update presence
       setIsOpen(false);
 
-      // Callback for parent components
+      // Callback for parent components - pass both id and name
       if (onRoomChange) {
-        onRoomChange(roomId);
+        onRoomChange(roomId, roomName);
       }
     },
     [setRoom, onRoomChange]
@@ -264,7 +269,7 @@ export function useRoomSelector({ projectId, onRoomChange }) {
         setShowCreateModal(false);
         // Auto-join and select the new room
         if (newRoom) {
-          handleSelectRoom(newRoom.id);
+          handleSelectRoom(newRoom.id, newRoom.name);
         }
         return newRoom;
       } catch (err) {
