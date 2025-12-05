@@ -335,3 +335,173 @@
   margin: 0 $spacing-xs;
   flex-shrink: 0;
 }
+
+
+// ============================================================================
+// LayoutPanel.scss - ADDITIONS for loading/error/offline states
+// Add these to your existing LayoutPanel.scss file
+// ============================================================================
+
+// -----------------------------------------------------------------------------
+// Loading State
+// -----------------------------------------------------------------------------
+
+.layout-panel--loading {
+  .layout-panel__content {
+    display: none;
+  }
+}
+
+.layout-panel__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl;
+  color: $color-text-muted;
+  font-size: 11px;
+  flex: 1;
+}
+
+.layout-panel__loading-spinner {
+  color: $color-accent-amber;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Error State
+// -----------------------------------------------------------------------------
+
+.layout-panel--error {
+  .layout-panel__content {
+    display: none;
+  }
+}
+
+.layout-panel__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl;
+  color: $color-error;
+  font-size: 11px;
+  flex: 1;
+  text-align: center;
+
+  svg {
+    opacity: 0.7;
+  }
+}
+
+.layout-panel__error-detail {
+  color: $color-text-muted;
+  font-size: 10px;
+  max-width: 200px;
+  word-break: break-word;
+}
+
+// -----------------------------------------------------------------------------
+// Offline Indicator (in header)
+// -----------------------------------------------------------------------------
+
+.layout-panel__header-offline {
+  color: $color-accent-amber;
+  margin-left: auto;
+  opacity: 0.8;
+  
+  // Pulse animation to draw attention
+  animation: pulse-opacity 2s ease-in-out infinite;
+}
+
+@keyframes pulse-opacity {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Disabled state for controls when offline/loading
+// -----------------------------------------------------------------------------
+
+.layout-panel--disabled {
+  .layout-panel__content {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  
+  .layout-panel__navigator {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Navigator disabled state
+// -----------------------------------------------------------------------------
+
+.canvas-navigator--disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  
+  .canvas-navigator__size-input,
+  .canvas-navigator__tool-btn,
+  .canvas-navigator__nav-btn {
+    cursor: not-allowed;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Minimap viewport rectangle (for drag interaction)
+// -----------------------------------------------------------------------------
+
+.canvas-navigator__minimap-viewport {
+  position: absolute;
+  border: 2px solid $color-accent-amber;
+  background: rgba($color-accent-amber, 0.1);
+  border-radius: 2px;
+  cursor: move;
+  transition: background-color 0.15s ease;
+  
+  &:hover {
+    background: rgba($color-accent-amber, 0.2);
+  }
+  
+  &--dragging {
+    background: rgba($color-accent-amber, 0.25);
+    border-color: $color-accent-amber;
+    box-shadow: 0 0 8px rgba($color-accent-amber, 0.4);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Minimap cell hover states
+// -----------------------------------------------------------------------------
+
+.canvas-navigator__minimap-cell {
+  cursor: pointer;
+  transition: all 0.1s ease;
+  
+  &:hover {
+    filter: brightness(1.2);
+    transform: scale(1.05);
+  }
+  
+  &--empty:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}

@@ -1,65 +1,56 @@
-// src/ui/react/components/panels/LayoutPanel/LayoutPanel.logic.js
-// Headless logic for the Layout Panel component.
-//
-// WIRED TO REAL DATA:
-// - Canvas state from useCanvas hook (connects to canvasManager)
-// - View metadata from viewConfigurationManager
-// - Operations delegated to server-authoritative managers
-//
-// LOCAL UI STATE:
-// - Panel subtab (canvas/views)
-// - Navigator docked/floating
-// - Tool selection, edit mode
-// - View filtering and grouping
-// - Spawn size settings
+/**
+ * LayoutPanel Logic Hook
+ *
+ * Headless logic for the Layout Panel component.
+ * NOW WIRED TO REAL DATA via useCanvas hook.
+ *
+ * OPTION C IMPLEMENTATION:
+ * - Accepts optional canvasId to target specific canvas
+ * - Uses useCanvas() internally for real data
+ * - UI-specific state (tools, filters, etc.) remains local
+ * - Supports __testing prop for unit tests
+ *
+ * State sources:
+ * - FROM useCanvas: canvas dimensions, placements, viewport, operations
+ * - LOCAL: panel subtab, navigator docked, tools, filters, zoom, homepoint
+ */
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
-import {
-  viewConfigurationManager,
-  datasetManager,
-} from "@Init/appInitializer.js";
-import {
-  LAYOUT_MODES,
-  FLOW_DIRECTIONS,
-} from "@Core/data/models/WorkspaceCanvas.js";
 
-// Re-export layout constants for convenience
-export { LAYOUT_MODES, FLOW_DIRECTIONS };
+// =============================================================================
+// CONSTANTS
+// =============================================================================
 
-// Tool types
+export const LAYOUT_MODES = {
+  GRID: "grid",
+  FLOW: "flow",
+};
+
+export const FLOW_DIRECTIONS = {
+  ROW: "row",
+  COLUMN: "column",
+};
+
 export const TOOLS = {
   SELECT: "select",
   PAN: "pan",
   MERGE: "merge",
 };
 
-// Drop modes
 export const DROP_MODES = {
   ADD: "add",
   REPLACE: "replace",
 };
 
-// View modes
 export const VIEW_MODES = {
   NORMAL: "normal",
   ISOLATION: "isolation",
   SUBSET: "subset",
 };
 
-// Default spawn sizes
 export const SPAWN_SIZES = ["1x1", "2x1", "1x2", "2x2"];
-
-// Instance colors for view color coding
-export const INSTANCE_COLORS = [
-  "#60a5fa", // blue
-  "#4ade80", // green
-  "#f472b6", // pink
-  "#fbbf24", // amber
-  "#2dd4bf", // teal
-  "#a78bfa", // purple
-];
 
 /**
  * Parse spawn size string to object
@@ -72,67 +63,83 @@ export function parseSpawnSize(size) {
   return { cols, rows };
 }
 
+// =============================================================================
+// MAIN HOOK
+// =============================================================================
+
 /**
  * Main logic hook for LayoutPanel
  *
- * Now wired to real canvas data via useCanvas hook.
- * Enriches placements with view metadata for display.
+ * @param {Object} options
+ * @param {string} [options.canvasId] - Target canvas ID (uses active canvas if not provided)
+ * @param {Object} [options.__testing] - Mock data for unit tests (bypasses useCanvas)
  */
-export function useLayoutPanel({ canvasId = null } = {}) {
-  // ==========================================================================
-  // REAL DATA: Canvas State from useCanvas hook
-  // ==========================================================================
+export function useLayoutPanel({ canvasId, __testing } = {}) {
+  // ===========================================================================
+  // DATA SOURCE: useCanvas or __testing mock
+  // ===========================================================================
 
+  const realCanvasData = useCanvas(canvasId);
+
+  // Allow tests to inject mock data
   const {
     canvas,
-    loading: canvasLoading,
-    error: canvasError,
-    viewport,
-    visiblePlacements,
-    connectionState,
+    viewport: canvasViewport,
+    loading,
+    error,
     isConnected,
-
-    // Viewport controls
-    moveViewport: moveViewportRaw,
+    // Operations from useCanvas
+    moveViewport: canvasMoveViewport,
     setViewportPosition,
-    setViewportSize,
-
-    // Placement operations (delegated to canvasManager)
-    addPlacement,
-    updatePlacement,
+    addRow: canvasAddRow,
+    addColumn: canvasAddColumn,
     removePlacement,
-    movePlacement,
     resizePlacement,
+    setLayoutMode: canvasSetLayoutMode,
+    setFlowDirection: canvasSetFlowDirection,
+  } = __testing || realCanvasData;
 
-    // Canvas operations
-    addRow,
-    addColumn,
-    setLayoutMode: setLayoutModeAsync,
-    setFlowDirection: setFlowDirectionAsync,
-    addViewInFlowMode,
-  } = useCanvas(canvasId);
+  // ===========================================================================
+  // DERIVED STATE FROM CANVAS
+  // ===========================================================================
 
-  // ==========================================================================
-  // LOCAL UI STATE: Panel-specific state
-  // ==========================================================================
+  // Canvas dimensions (with fallback for loading state)
+  const canvasSize = useMemo(
+    () => canvas?.dimensions || { rows: 4, cols: 5 },
+    [canvas]
+  );
 
-  // Active subtab: 'canvas' or 'views'
+  // Placements are our "cells"
+  const cells = useMemo(() => canvas?.placements || [], [canvas]);
+
+  // Layout mode from canvas (server-authoritative)
+  const serverLayoutMode = canvas?.layoutMode || LAYOUT_MODES.GRID;
+  const serverFlowDirection = canvas?.flowDirection || FLOW_DIRECTIONS.ROW;
+
+  // ===========================================================================
+  // LOCAL UI STATE (not persisted to server)
+  // ===========================================================================
+
+  // Panel subtab: 'canvas' or 'views'
   const [panelSubtab, setPanelSubtab] = useState("canvas");
 
   // Navigator docked state
   const [navigatorDocked, setNavigatorDocked] = useState(true);
 
-  // Spawn size for new views
-  const [spawnSize, setSpawnSize] = useState("1x1");
+  // Homepoint (local - could be persisted later)
+  const [homepoint, setHomepoint] = useState({ row: 0, col: 0 });
 
-  // Zoom level (local, affects minimap display)
+  // Zoom level (view-only, affects minimap cell size)
   const [zoom, setZoom] = useState(1);
 
-  // Tools state
+  // Tool selection
   const [tool, setTool] = useState(TOOLS.SELECT);
   const [editMode, setEditMode] = useState(false);
   const [dropMode, setDropMode] = useState(DROP_MODES.ADD);
   const [viewMode, setViewMode] = useState(VIEW_MODES.NORMAL);
+
+  // Spawn size for new views
+  const [spawnSize, setSpawnSize] = useState("1x1");
 
   // Views subtab state
   const [expandedViewId, setExpandedViewId] = useState(null);
@@ -140,107 +147,42 @@ export function useLayoutPanel({ canvasId = null } = {}) {
   const [activeFilters, setActiveFilters] = useState([]);
   const [groupByDataset, setGroupByDataset] = useState(false);
 
-  // Undo/redo history (for local operations)
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  // Undo/redo (placeholder - future enhancement)
+  const [canUndo] = useState(false);
+  const [canRedo] = useState(false);
 
-  // ==========================================================================
-  // DERIVED STATE: Canvas dimensions and homepoint
-  // ==========================================================================
+  // ===========================================================================
+  // VIEWPORT STATE
+  // Local viewport that syncs with canvas viewport
+  // ===========================================================================
 
-  const canvasSize = useMemo(() => {
-    return canvas?.dimensions || { rows: 4, cols: 5 };
-  }, [canvas]);
+  const viewport = canvasViewport || { row: 0, col: 0, rows: 2, cols: 3 };
 
-  const layoutMode = useMemo(() => {
-    return canvas?.layoutMode || LAYOUT_MODES.GRID;
-  }, [canvas]);
+  // ===========================================================================
+  // NAVIGATOR CONTROLS
+  // ===========================================================================
 
-  const flowDirection = useMemo(() => {
-    return canvas?.flowDirection || FLOW_DIRECTIONS.ROW;
-  }, [canvas]);
+  const toggleNavigatorDocked = useCallback(() => {
+    setNavigatorDocked((prev) => !prev);
+  }, []);
 
-  const homepoint = useMemo(() => {
-    return canvas?.homepoint || { row: 0, col: 0 };
-  }, [canvas]);
+  const dockNavigator = useCallback(() => {
+    setNavigatorDocked(true);
+  }, []);
 
-  const isAtHome = useMemo(() => {
-    return viewport.row === homepoint.row && viewport.col === homepoint.col;
-  }, [viewport, homepoint]);
+  const undockNavigator = useCallback(() => {
+    setNavigatorDocked(false);
+  }, []);
 
-  // ==========================================================================
-  // ENRICHED CELLS: Placements with view metadata
-  // ==========================================================================
-
-  /**
-   * Enrich placements with view configuration and dataset metadata.
-   * This transforms raw placements into the "cells" format expected by UI.
-   */
-  const cells = useMemo(() => {
-    if (!canvas?.placements) return [];
-
-    return canvas.placements.map((placement, index) => {
-      // Get view configuration if this is a view placement
-      let viewConfig = null;
-      let dataset = null;
-      let viewName = `View ${index + 1}`;
-      let datasetName = "Unknown Dataset";
-
-      if (
-        placement.content?.type === "view" &&
-        placement.content?.viewConfigurationId
-      ) {
-        viewConfig = viewConfigurationManager?.getView?.(
-          placement.content.viewConfigurationId
-        );
-
-        if (viewConfig) {
-          viewName = viewConfig.name || viewName;
-
-          // Get dataset info
-          if (viewConfig.datasetId) {
-            dataset = datasetManager?.getDataset?.(viewConfig.datasetId);
-            datasetName = dataset?.name || datasetName;
-          }
-        }
-      }
-
-      // Return enriched cell data
-      return {
-        id: placement.id,
-        row: placement.row,
-        col: placement.col,
-        rowSpan: placement.rowSpan || 1,
-        colSpan: placement.colSpan || 1,
-
-        // View metadata
-        name: viewName,
-        dataset: datasetName,
-        viewConfigId: placement.content?.viewConfigurationId,
-        contentType: placement.content?.type || "empty",
-
-        // Color assignment (cycle through INSTANCE_COLORS)
-        color: index % INSTANCE_COLORS.length,
-
-        // Status flags (from view config if available)
-        isShared: viewConfig?.isShared || false,
-        isLinked: viewConfig?.hasActiveLinks?.() || false,
-        linkedParent: viewConfig?.getLinkedParentName?.() || null,
-        linkTarget: viewConfig?.canBeLinkedTo || false,
-
-        // Starred status
-        starredWorkspace: viewConfig?.starredWorkspace || false,
-        starredPersonal: viewConfig?.starredPersonal || false,
-      };
-    });
-  }, [canvas?.placements]);
-
-  // ==========================================================================
+  // ===========================================================================
   // CANVAS SIZE PROTECTION
-  // ==========================================================================
+  // ===========================================================================
 
   /**
    * Check if canvas size can be reduced without cutting off views
+   * @param {'cols'|'rows'} dimension
+   * @param {number} [targetValue]
+   * @returns {boolean}
    */
   const checkCanReduceSize = useCallback(
     (dimension, targetValue) => {
@@ -269,80 +211,92 @@ export function useLayoutPanel({ canvasId = null } = {}) {
     [cells, canvasSize]
   );
 
-  // ==========================================================================
-  // CANVAS SIZE OPERATIONS (Server-authoritative)
-  // ==========================================================================
+  // ===========================================================================
+  // CANVAS SIZE CONTROLS (Server-authoritative)
+  // ===========================================================================
 
   const incrementCols = useCallback(async () => {
     if (!canvas) return;
     await canvasManager.updateCanvas(canvas.id, {
-      dimensions: { ...canvasSize, cols: canvasSize.cols + 1 },
+      dimensions: { ...canvas.dimensions, cols: canvas.dimensions.cols + 1 },
     });
-  }, [canvas, canvasSize]);
+  }, [canvas]);
 
   const decrementCols = useCallback(async () => {
-    if (!canvas || !checkCanReduceSize("cols")) return;
+    if (!canvas) return;
+    if (!checkCanReduceSize("cols")) return;
     await canvasManager.updateCanvas(canvas.id, {
-      dimensions: { ...canvasSize, cols: Math.max(1, canvasSize.cols - 1) },
+      dimensions: {
+        ...canvas.dimensions,
+        cols: Math.max(1, canvas.dimensions.cols - 1),
+      },
     });
-  }, [canvas, canvasSize, checkCanReduceSize]);
+  }, [canvas, checkCanReduceSize]);
 
   const incrementRows = useCallback(async () => {
     if (!canvas) return;
     await canvasManager.updateCanvas(canvas.id, {
-      dimensions: { ...canvasSize, rows: canvasSize.rows + 1 },
+      dimensions: { ...canvas.dimensions, rows: canvas.dimensions.rows + 1 },
     });
-  }, [canvas, canvasSize]);
+  }, [canvas]);
 
   const decrementRows = useCallback(async () => {
-    if (!canvas || !checkCanReduceSize("rows")) return;
+    if (!canvas) return;
+    if (!checkCanReduceSize("rows")) return;
     await canvasManager.updateCanvas(canvas.id, {
-      dimensions: { ...canvasSize, rows: Math.max(1, canvasSize.rows - 1) },
+      dimensions: {
+        ...canvas.dimensions,
+        rows: Math.max(1, canvas.dimensions.rows - 1),
+      },
     });
-  }, [canvas, canvasSize, checkCanReduceSize]);
+  }, [canvas, checkCanReduceSize]);
 
   const setCanvasCols = useCallback(
     async (cols) => {
       if (!canvas) return;
       const value = Math.max(1, cols);
-      if (value < canvasSize.cols && !checkCanReduceSize("cols", value)) return;
+      if (value < canvasSize.cols && !checkCanReduceSize("cols", value)) {
+        return;
+      }
       await canvasManager.updateCanvas(canvas.id, {
-        dimensions: { ...canvasSize, cols: value },
+        dimensions: { ...canvas.dimensions, cols: value },
       });
     },
-    [canvas, canvasSize, checkCanReduceSize]
+    [canvas, canvasSize.cols, checkCanReduceSize]
   );
 
   const setCanvasRows = useCallback(
     async (rows) => {
       if (!canvas) return;
       const value = Math.max(1, rows);
-      if (value < canvasSize.rows && !checkCanReduceSize("rows", value)) return;
+      if (value < canvasSize.rows && !checkCanReduceSize("rows", value)) {
+        return;
+      }
       await canvasManager.updateCanvas(canvas.id, {
-        dimensions: { ...canvasSize, rows: value },
+        dimensions: { ...canvas.dimensions, rows: value },
       });
     },
-    [canvas, canvasSize, checkCanReduceSize]
+    [canvas, canvasSize.rows, checkCanReduceSize]
   );
 
-  // ==========================================================================
+  // ===========================================================================
   // VIEWPORT NAVIGATION
-  // ==========================================================================
+  // ===========================================================================
 
   const moveViewport = useCallback(
     (direction) => {
       switch (direction) {
         case "up":
-          moveViewportRaw(-1, 0);
+          canvasMoveViewport(-1, 0);
           break;
         case "down":
-          moveViewportRaw(1, 0);
+          canvasMoveViewport(1, 0);
           break;
         case "left":
-          moveViewportRaw(0, -1);
+          canvasMoveViewport(0, -1);
           break;
         case "right":
-          moveViewportRaw(0, 1);
+          canvasMoveViewport(0, 1);
           break;
         case "reset":
           setViewportPosition(homepoint.row, homepoint.col);
@@ -351,56 +305,51 @@ export function useLayoutPanel({ canvasId = null } = {}) {
           break;
       }
     },
-    [moveViewportRaw, setViewportPosition, homepoint]
+    [canvasMoveViewport, setViewportPosition, homepoint]
   );
 
   const navigateToCell = useCallback(
     (row, col) => {
-      setViewportPosition(row, col);
+      // Clamp to valid viewport position
+      const maxRow = Math.max(0, canvasSize.rows - viewport.rows);
+      const maxCol = Math.max(0, canvasSize.cols - viewport.cols);
+      setViewportPosition(Math.min(row, maxRow), Math.min(col, maxCol));
     },
-    [setViewportPosition]
+    [canvasSize, viewport, setViewportPosition]
   );
 
-  const setHomepoint = useCallback(
-    async (row, col) => {
-      if (!canvas) return;
-      await canvasManager.updateCanvas(canvas.id, {
-        homepoint: { row, col },
-      });
-    },
-    [canvas]
-  );
+  const isAtHome = useMemo(() => {
+    return viewport.row === homepoint.row && viewport.col === homepoint.col;
+  }, [viewport, homepoint]);
 
-  // ==========================================================================
+  // ===========================================================================
   // ZOOM CONTROLS
-  // ==========================================================================
+  // ===========================================================================
 
   const setZoomLevel = useCallback((level) => {
     setZoom(Math.max(0.5, Math.min(2, level)));
   }, []);
 
   const zoomIn = useCallback(() => {
-    setZoom((z) => Math.min(2, z + 0.25));
-  }, []);
+    setZoomLevel(zoom + 0.25);
+  }, [zoom, setZoomLevel]);
 
   const zoomOut = useCallback(() => {
-    setZoom((z) => Math.max(0.5, z - 0.25));
-  }, []);
+    setZoomLevel(zoom - 0.25);
+  }, [zoom, setZoomLevel]);
 
-  // ==========================================================================
+  // ===========================================================================
   // CELL HELPERS
-  // ==========================================================================
+  // ===========================================================================
 
   const getCellAt = useCallback(
     (row, col) => {
-      return (
-        cells.find(
-          (c) =>
-            row >= c.row &&
-            row < c.row + (c.rowSpan || 1) &&
-            col >= c.col &&
-            col < c.col + (c.colSpan || 1)
-        ) || null
+      return cells.find(
+        (c) =>
+          row >= c.row &&
+          row < c.row + (c.rowSpan || 1) &&
+          col >= c.col &&
+          col < c.col + (c.colSpan || 1)
       );
     },
     [cells]
@@ -418,54 +367,48 @@ export function useLayoutPanel({ canvasId = null } = {}) {
     [viewport]
   );
 
-  // ==========================================================================
+  // ===========================================================================
   // CELL MANAGEMENT (Server-authoritative)
-  // ==========================================================================
+  // ===========================================================================
 
   const closeView = useCallback(
-    async (cellId) => {
-      const cell = cells.find((c) => c.id === cellId);
-      if (!cell) return;
-      await removePlacement(cellId);
+    async (viewId) => {
+      await removePlacement(viewId);
+      if (expandedViewId === viewId) {
+        setExpandedViewId(null);
+      }
     },
-    [cells, removePlacement]
+    [removePlacement, expandedViewId]
   );
 
   const resizeView = useCallback(
-    async (cellId, colSpan, rowSpan) => {
-      await resizePlacement(cellId, rowSpan, colSpan);
+    async (viewId, colSpan, rowSpan) => {
+      await resizePlacement(viewId, rowSpan, colSpan);
     },
     [resizePlacement]
   );
 
-  const moveView = useCallback(
-    async (cellId, newRow, newCol) => {
-      await movePlacement(cellId, newRow, newCol);
-    },
-    [movePlacement]
-  );
-
-  // ==========================================================================
+  // ===========================================================================
   // LAYOUT MODE (Server-authoritative)
-  // ==========================================================================
+  // ===========================================================================
 
   const setLayoutMode = useCallback(
     async (mode) => {
-      await setLayoutModeAsync(mode);
+      await canvasSetLayoutMode(mode);
     },
-    [setLayoutModeAsync]
+    [canvasSetLayoutMode]
   );
 
   const setFlowDirection = useCallback(
     async (direction) => {
-      await setFlowDirectionAsync(direction);
+      await canvasSetFlowDirection(direction);
     },
-    [setFlowDirectionAsync]
+    [canvasSetFlowDirection]
   );
 
-  // ==========================================================================
+  // ===========================================================================
   // TOOLS STATE
-  // ==========================================================================
+  // ===========================================================================
 
   const toggleEditMode = useCallback(() => {
     setEditMode((prev) => !prev);
@@ -475,42 +418,9 @@ export function useLayoutPanel({ canvasId = null } = {}) {
     setEditMode(false);
   }, []);
 
-  // ==========================================================================
-  // NAVIGATOR STATE
-  // ==========================================================================
-
-  const toggleNavigatorDocked = useCallback(() => {
-    setNavigatorDocked((prev) => !prev);
-  }, []);
-
-  const dockNavigator = useCallback(() => {
-    setNavigatorDocked(true);
-  }, []);
-
-  const undockNavigator = useCallback(() => {
-    setNavigatorDocked(false);
-  }, []);
-
-  // ==========================================================================
-  // UNDO/REDO (Local operations placeholder)
-  // ==========================================================================
-
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
-
-  const undo = useCallback(() => {
-    // TODO: Implement undo via server API or local history
-    console.log("Undo not yet implemented with server-authoritative model");
-  }, []);
-
-  const redo = useCallback(() => {
-    // TODO: Implement redo via server API or local history
-    console.log("Redo not yet implemented with server-authoritative model");
-  }, []);
-
-  // ==========================================================================
-  // VIEWS SUBTAB: Filtering and Grouping
-  // ==========================================================================
+  // ===========================================================================
+  // VIEWS FILTERING
+  // ===========================================================================
 
   const toggleFilter = useCallback((filterId) => {
     setActiveFilters((prev) =>
@@ -522,49 +432,57 @@ export function useLayoutPanel({ canvasId = null } = {}) {
 
   const clearFilters = useCallback(() => {
     setActiveFilters([]);
-    setSearchQuery("");
   }, []);
 
-  // Filtered cells based on search and filters
+  // Filter cells based on search and active filters
   const filteredCells = useMemo(() => {
     let result = cells;
 
     // Apply search filter
-    if (searchQuery) {
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.dataset.toLowerCase().includes(query)
+        (cell) =>
+          cell.title?.toLowerCase().includes(query) ||
+          cell.datasetName?.toLowerCase().includes(query)
       );
     }
 
-    // Apply status filters
+    // Apply active filters
     if (activeFilters.includes("shared")) {
-      result = result.filter((c) => c.isShared);
+      result = result.filter((cell) => cell.isShared);
     }
     if (activeFilters.includes("linked")) {
-      result = result.filter((c) => c.isLinked);
+      result = result.filter((cell) => cell.isLinked);
     }
 
     return result;
   }, [cells, searchQuery, activeFilters]);
 
-  // Grouped cells by dataset
+  // Group cells by dataset
   const groupedCells = useMemo(() => {
-    if (!groupByDataset) {
-      return { ungrouped: filteredCells };
-    }
+    if (!groupByDataset) return null;
 
-    return filteredCells.reduce((acc, cell) => {
-      const key = cell.dataset || "Unknown";
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(cell);
-      return acc;
-    }, {});
+    const groups = {};
+    filteredCells.forEach((cell) => {
+      const datasetId = cell.datasetId || "unknown";
+      if (!groups[datasetId]) {
+        groups[datasetId] = {
+          datasetId,
+          datasetName: cell.datasetName || "Unknown Dataset",
+          cells: [],
+        };
+      }
+      groups[datasetId].cells.push(cell);
+    });
+
+    return Object.values(groups);
   }, [filteredCells, groupByDataset]);
 
-  // View expansion
+  // ===========================================================================
+  // VIEW EXPANSION
+  // ===========================================================================
+
   const toggleViewExpanded = useCallback((viewId) => {
     setExpandedViewId((prev) => (prev === viewId ? null : viewId));
   }, []);
@@ -573,16 +491,27 @@ export function useLayoutPanel({ canvasId = null } = {}) {
     setExpandedViewId(null);
   }, []);
 
-  // ==========================================================================
+  // ===========================================================================
+  // UNDO/REDO (Placeholder)
+  // ===========================================================================
+
+  const undo = useCallback(() => {
+    console.log("Undo not yet implemented");
+  }, []);
+
+  const redo = useCallback(() => {
+    console.log("Redo not yet implemented");
+  }, []);
+
+  // ===========================================================================
   // RETURN API
-  // ==========================================================================
+  // ===========================================================================
 
   return {
-    // Loading/connection state
-    loading: canvasLoading,
-    error: canvasError,
+    // Loading/error state
+    loading,
+    error,
     isConnected,
-    connectionState,
 
     // Panel state
     panelSubtab,
@@ -594,7 +523,7 @@ export function useLayoutPanel({ canvasId = null } = {}) {
     dockNavigator,
     undockNavigator,
 
-    // Canvas state (from real data)
+    // Canvas state (from server)
     canvas,
     canvasSize,
     viewport,
@@ -616,7 +545,6 @@ export function useLayoutPanel({ canvasId = null } = {}) {
     moveViewport,
     navigateToCell,
     setHomepoint,
-    setViewportPosition,
 
     // Zoom
     setZoom: setZoomLevel,
@@ -630,21 +558,18 @@ export function useLayoutPanel({ canvasId = null } = {}) {
     // Cell management (server-authoritative)
     closeView,
     resizeView,
-    moveView,
-    addPlacement,
-    removePlacement,
 
-    // Layout mode
-    layoutMode,
+    // Layout mode (server-authoritative)
+    layoutMode: serverLayoutMode,
     setLayoutMode,
-    flowDirection,
+    flowDirection: serverFlowDirection,
     setFlowDirection,
 
-    // Spawn size
+    // Spawn size (local)
     spawnSize,
     setSpawnSize,
 
-    // Tools state
+    // Tools state (local)
     tool,
     setTool,
     editMode,

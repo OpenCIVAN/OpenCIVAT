@@ -2,7 +2,10 @@
 // Main layout orchestrator for the three-edge panel system
 // CSS Grid layout with separated activity bars and panel content
 
-import React, { useMemo, cloneElement } from 'react';
+import React, { useMemo, cloneElement, useCallback } from 'react';
+import { LayoutPanelProvider } from '@UI/react/components/panels/LayoutPanel/LayoutPanelContext';
+import { LayoutPanel, FloatingCanvasNavigator } from '@UI/react/components/panels/LayoutPanel';
+import { CanvasWorkspace } from '@UI/react/components/workspace';
 import { useLayoutState, usePanelPersistence, PANEL_CONSTRAINTS, useResizeHandler } from './ThreeEdgeLayout.logic.js';
 import './ThreeEdgeLayout.scss';
 
@@ -192,6 +195,11 @@ function GridZonesLayout({
     const { isResizing: leftResizing, handleMouseDown: leftMouseDown } = useResizeHandler('left', setLeftWidth);
     const { isResizing: rightResizing, handleMouseDown: rightMouseDown } = useResizeHandler('right', setRightWidth);
 
+    const handlePopOut = useCallback(() => {
+        // TODO: Integrate with FloatingPanelContext to pop out navigator
+        console.log('Pop out navigator to floating window');
+    }, []);
+
     // Calculate CSS custom properties
     const gridStyles = useGridStyles(leftOpen, rightOpen, leftWidth, rightWidth);
 
@@ -257,6 +265,10 @@ function GridZonesLayout({
             {/* Center Workspace (EXPANDS when panels collapse!) */}
             <div className="three-edge-layout__workspace">
                 {centerPanel}
+
+                {/* FloatingCanvasNavigator renders only when undocked */}
+                {/* It automatically uses shared state from context */}
+                <FloatingCanvasNavigator onPopOut={handlePopOut} />
             </div>
 
             {/* Right Panel Content (hidden when collapsed) */}
