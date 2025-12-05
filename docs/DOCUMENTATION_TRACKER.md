@@ -2,409 +2,231 @@
 
 This document tracks the status of all guides and what needs updating as the architecture evolves.
 
+**Last Updated:** December 2025
+
 ---
 
 ## 📚 Guide Status
 
 ### ✅ Contributor Guide (Comprehensive)
+
 **File:** `docs/guides/CONTRIBUTOR_GUIDE.md`  
-**Status:** Complete for current architecture  
+**Status:** Needs update for v2.0 architecture  
 **Last Updated:** November 2025
 
-**Needs updating when:**
-- [ ] yInstances → yViews refactor complete
-- [ ] Server-generated view IDs implemented
-- [ ] Backend authentication added
-- [ ] Recording system implemented
+**Completed items:**
+
+- [x] yInstances → yViews refactor complete
+- [x] Server-generated view IDs implemented
+- [x] Backend authentication added (Keycloak + dev bypass)
+
+**Still needs updating for:**
+
+- [ ] Recording system (when backend logic implemented)
+- [ ] Canvas Unification (when complete)
 
 ### ✅ Developer Quick Reference
+
 **File:** `docs/guides/QUICK_REFERENCE.md`  
 **Status:** Complete for current architecture  
 **Last Updated:** November 2025
 
-**Needs updating when:**
-- [ ] New manager APIs added
-- [ ] New SASS tokens defined
-- [ ] New debugging commands added
+**Notes:**
+
+- Already documents that `yInstances` is deprecated
+- Already shows server-authority pattern
+- Update when Canvas Unification adds new manager APIs
 
 ### ✅ VR Implementation Guide
+
 **File:** `docs/guides/VR_IMPLEMENTATION.md`  
-**Status:** Foundational (not yet implemented)  
+**Status:** Foundational (guide only, not yet implemented)  
 **Last Updated:** November 2025
 
 **Needs updating when:**
+
 - [ ] VR actually implemented (will need code review)
 - [ ] Collaborative VR features added
 - [ ] VR recording implemented
 - [ ] Testing results documented
 
-**Known gaps:**
-- Integration with server-generated view IDs
-- Collaborative cursors in VR
-- Recording VR sessions
-- Performance optimization specifics
+### ✅ Backend Setup Guide
 
-### ⚠️ Backend Setup Guide
 **File:** `docs/guides/BACKEND_SETUP.md`  
-**Status:** Basic setup only - missing advanced features  
+**Status:** Needs update for completed features  
 **Last Updated:** November 2025
 
-**Needs updating when:**
-- [x] Basic PostgreSQL setup (Done)
-- [x] Basic API server (Done)
-- [x] Dataset upload/download (Done)
-- [ ] Multi-tenant projects table added
-- [ ] User authentication implemented
-- [ ] Y.js persistence to database
-- [ ] MinIO/S3 storage implemented
-- [ ] Session recording tables added
-- [ ] View configurations table updated
-- [ ] WorkspaceLayouts table added
-- [ ] LinkConfiguration system added
+**Completed features to document:**
 
-**Current database schema has:**
+- [x] Basic PostgreSQL setup
+- [x] Basic API server
+- [x] Dataset upload/download
+- [x] Multi-tenant projects table
+- [x] User authentication (Keycloak + JWT)
+- [x] Y.js persistence to database
+- [x] MinIO/S3 storage
+- [x] View configurations (v2.0 server-authority)
+- [x] Canvases & Workspaces tables
+- [x] Folders & Stars
+
+**Still pending:**
+
+- [ ] Session recording backend logic
+- [ ] LinkConfiguration dedicated endpoints
+
+---
+
+## ✅ Completed Architecture Changes
+
+### v2.0 Server-Authority Architecture (COMPLETE)
+
+**Completed:** December 2024
+
+**What changed:**
+
+- ViewConfigurationManager now uses REST API + WebSocket broadcasts
+- Y.js used ONLY for presence data (cursors, avatars, chat)
+- Server generates view IDs for auditing
+- Instances (Layer 3) are ephemeral, client-generated, don't sync
+
+**Files updated:**
+
+- `src/core/data/managers/ViewConfigurationManager.js` - Server-authority
+- `src/core/data/models/ViewConfiguration.js` - v2.0 header
+- `src/collaboration/yjs/yjsSetup.js` - yInstances removed
+- `server.js` - Y.js persistence service
+
+### Database & Backend Infrastructure (COMPLETE)
+
+**Completed:** December 2024
+
+**Current schema includes:**
+
 ```
-✅ sessions
-✅ datasets  
-✅ annotations
-✅ view_configurations (basic)
-✅ analysis_jobs
+✅ organizations          ✅ users
+✅ projects               ✅ project_members
+✅ datasets               ✅ file_versions
+✅ file_project_access    ✅ annotations
+✅ view_configurations    ✅ computation_jobs
+✅ computation_cache      ✅ audit_log
+✅ yjs_documents          ✅ yjs_updates
+✅ chat_messages          ✅ session_recordings (table only)
+✅ folders                ✅ stars
+✅ canvases               ✅ workspaces
+✅ canvas_placements      ✅ subsets
 ```
 
-**Missing from schema:**
-```
-❌ users (authentication)
-❌ projects (multi-tenant)
-❌ project_members (permissions)
-❌ session_recordings
-❌ workspace_layouts
-❌ link_configurations
-❌ y_docs (Y.js persistence)
-```
+### Y.js Persistence (COMPLETE)
+
+**Completed:** December 2024
+
+**Three-table design:**
+
+1. `yjs_documents` - Snapshots for fast client hydration
+2. `yjs_updates` - Incremental updates for recording/playback
+3. `chat_messages` - Denormalized audit trail
+
+**Service:** `server/src/services/yjsPersistence.js`
+
+### Authentication & Multi-Tenancy (COMPLETE)
+
+**Completed:** December 2024
+
+**Implementation:**
+
+- Keycloak JWT validation with dev bypass mode
+- `server/src/middleware/auth.js` - Auth middleware
+- `server/src/routes/auth.js` - Auth endpoints
+- `server/src/routes/projects.js` - Project CRUD with RBAC
+- Organization-scoped queries throughout
 
 ---
 
 ## 🚧 In-Progress Architecture Changes
 
-Track what's changing and when guides need updates.
+### Canvas Unification (IN PROGRESS)
 
-### Sprint 1: Database Migration & MinIO (In Progress)
-**Status:** Active development  
+**Status:** UI Prototyping Phase  
+**Tracking:** `docs/Canvas Unification Progress Log.md`
+
+**Goal:** Merge `WorkspaceGrid` and `CanvasWorkspace` into unified system with:
+
+- **Flow Mode** (default): Auto-layout, fills viewport
+- **Grid Mode**: Manual placement, cell merging
+
 **Affects:**
-- Backend Setup Guide (major update needed)
-- API Reference (new endpoints)
 
-**Changes:**
-- Adding MinIO for file storage
-- Implementing S3 service abstraction
-- Database schema expansion
+- Contributor Guide (workspace section)
+- Quick Reference (new manager APIs)
 
-**Action Items:**
-- [ ] Update Backend Guide with MinIO setup
-- [ ] Document S3 service interface
-- [ ] Update file upload examples
+**Implementation phases:**
 
-### Sprint 2: Projects & Multi-Tenancy (Planned)
-**Status:** Not started  
-**Affects:**
-- Backend Setup Guide (authentication section)
-- Contributor Guide (project scope explanation)
-- Quick Reference (new manager methods)
-
-**Changes:**
-- User authentication with JWT
-- Project CRUD operations
-- Role-based permissions
-
-**Action Items:**
-- [ ] Add authentication guide section
-- [ ] Document project API endpoints
-- [ ] Update React integration examples
-
-### Sprint 3: Y.js Persistence (Planned)
-**Status:** Not started  
-**Affects:**
-- Backend Setup Guide (Y.js storage)
-- Architecture docs (persistence layer)
-
-**Changes:**
-- Store Y.js updates in PostgreSQL
-- Load persisted state on connect
-- Implement snapshot/restore
-
-**Action Items:**
-- [ ] Document Y.js persistence tables
-- [ ] Explain CRDT storage strategy
-- [ ] Update collaboration examples
-
-### Sprint 4: ViewConfigurations Refactor (Planned)
-**Status:** Design phase  
-**Affects:**
-- Contributor Guide (three-layer model)
-- Quick Reference (manager APIs)
-- Backend Guide (view endpoints)
-
-**Changes:**
-- yInstances → yViews rename
-- Server-generated view IDs
-- Enhanced view collaboration
-
-**Action Items:**
-- [ ] Update three-layer model explanation
-- [ ] Document view ID generation flow
-- [ ] Update code examples throughout
-
-### Sprint 5: Recording System (Planned)
-**Status:** Not started  
-**Affects:**
-- Backend Guide (recording tables)
-- API Reference (recording endpoints)
-- Contributor Guide (recording concepts)
-
-**Changes:**
-- Record Y.js events
-- Playback system
-- Recording metadata
-
-**Action Items:**
-- [ ] Document recording architecture
-- [ ] Add recording API examples
-- [ ] Explain playback mechanism
-
-### Sprint 6: Voice Integration (Planned)
-**Status:** Partially implemented (basic LiveKit)  
-**Affects:**
-- Backend Guide (LiveKit production setup)
-- Contributor Guide (voice features)
-
-**Changes:**
-- Breakout rooms
-- Spatial audio in VR
-- Recording voice tracks
-
-**Action Items:**
-- [ ] Update LiveKit configuration
-- [ ] Document breakout room API
-- [ ] Add spatial audio examples
+1. Make CanvasWorkspace default
+2. Implement Flow Mode (FlowLayoutEngine)
+3. Layout Mode Toggle UI
+4. Grid Mode features
+5. Datasets Panel redesign
+6. Visual polish
+7. Delete WorkspaceGrid
 
 ---
 
-## 📋 Update Checklist Template
+## 📋 Pending Features
 
-When implementing a major feature, use this checklist:
+### Session Recording Backend (PARTIAL)
 
-```markdown
-## [Feature Name] - Documentation Update
+**Status:** Schema + UI exist, backend logic NOT implemented
 
-**Date:** YYYY-MM-DD
-**Sprint:** #
-**Implemented by:** @username
+**What exists:**
 
-### Code Changes
-- [ ] Feature implemented and merged
-- [ ] Tests passing
-- [ ] Code reviewed
+- `session_recordings` table in database
+- `RecordingsTab.jsx` UI components (with mock data)
+- `useRecordings.js` hook (stub implementation)
 
-### Documentation Updates Needed
+**What's needed:**
 
-#### Contributor Guide
-- [ ] Update relevant section: [Section name]
-- [ ] Add new examples
-- [ ] Update diagrams if needed
+- [ ] Recording service to capture Y.js events
+- [ ] REST endpoints: start/stop/list/playback
+- [ ] MinIO storage for recording data
+- [ ] Playback reconstruction logic
 
-#### Backend Guide  
-- [ ] Update database schema section
-- [ ] Add new API endpoints
-- [ ] Update setup instructions
+### VR Implementation (NOT STARTED)
 
-#### Quick Reference
-- [ ] Add new manager methods
-- [ ] Update import aliases
-- [ ] Add debugging commands
+**Status:** Comprehensive guide exists, no code
 
-#### API Reference
-- [ ] Document new endpoints
-- [ ] Add request/response examples
-- [ ] Update error codes
+**Guide:** `docs/guides/VR_IMPLEMENTATION.md`
 
-### Verification
-- [ ] Tested examples work
-- [ ] No broken links
-- [ ] Terminology consistent
-- [ ] Claude can find and update docs
-```
+**What's needed:**
+
+- [ ] WebXR integration with VTK.js
+- [ ] InstanceTypeHandler VR methods
+- [ ] Collaborative VR (avatars, controllers)
+- [ ] Spatial audio integration
 
 ---
 
-## 🔄 Update Process
+## 📊 Sprint History
 
-### For Beth (or contributors)
-
-**After implementing a feature:**
-1. Check this tracker for affected docs
-2. Start new Claude chat: "I implemented [feature], need to update docs"
-3. Reference this tracker so Claude knows what changed
-4. Review and commit updated docs
-
-### For Claude
-
-**When asked to update docs:**
-1. Search project knowledge for current doc versions
-2. Search codebase for actual implementation
-3. Identify gaps between docs and code
-4. Update affected sections
-5. Return updated artifacts
-6. Update this tracker
+| Sprint   | Description                        | Status                      |
+| -------- | ---------------------------------- | --------------------------- |
+| Sprint 1 | Database Migration & MinIO         | ✅ Complete                 |
+| Sprint 2 | Projects & Multi-Tenancy           | ✅ Complete                 |
+| Sprint 3 | Y.js Persistence                   | ✅ Complete                 |
+| Sprint 4 | ViewConfigurations Refactor (v2.0) | ✅ Complete                 |
+| Sprint 5 | Recording System                   | 🚧 Partial (schema/UI only) |
+| Sprint 6 | Voice Integration                  | 🚧 Partial (basic LiveKit)  |
+| Current  | Canvas Unification                 | 🚧 In Progress              |
 
 ---
 
-## 📖 Documentation Principles
+## 🔄 When to Update This Document
 
-### Keep These Consistent
+Update this tracker when:
 
-1. **Three-Layer Model** always presented as:
-   ```
-   Dataset (truth) → ViewConfiguration (saved state) → InstanceWindow (ephemeral)
-   ```
+1. A major feature is completed
+2. A new sprint begins
+3. Database schema changes
+4. New guides are added
+5. Existing guides need revision
 
-2. **Plugin Architecture** always explained as:
-   ```
-   Core asks "WHAT" → Handler decides "HOW"
-   ```
-
-3. **Analogies to maintain:**
-   - Restaurant (frontend/backend/database)
-   - Google Docs for 3D data (collaboration)
-   - Browser tabs (instance windows)
-   - Bookmarks (view configurations)
-
-4. **Code style:**
-   - Always heavily commented
-   - Include "Why" not just "How"
-   - Show both good and bad examples
-   - Provide debugging tips
-
----
-
-## 🎯 Future Documentation Needs
-
-### New Guides to Create
-
-- [ ] **Authentication Guide** - JWT, bcrypt, protected routes
-- [ ] **Testing Guide** - Unit tests, integration tests, E2E
-- [ ] **Deployment Guide** - AWS, DigitalOcean, Docker Swarm
-- [ ] **API Reference** - Auto-generated from code
-- [ ] **Debugging Guide** - Common issues and solutions
-- [ ] **Performance Guide** - Optimization techniques
-- [ ] **Security Guide** - Best practices, audit checklist
-- [ ] **Recording System Guide** - Record and playback
-- [ ] **MinIO/S3 Guide** - Cloud storage setup
-
-### Sections to Expand
-
-- [ ] Advanced VTK widgets tutorial
-- [ ] Custom plugin development walkthrough
-- [ ] WebSocket vs Y.js comparison
-- [ ] Database migration strategies
-- [ ] Backup and recovery procedures
-- [ ] Load testing and scaling
-- [ ] CI/CD pipeline setup
-
----
-
-## 📅 Review Schedule
-
-**Monthly:**
-- Check if code changes made docs outdated
-- Update status tracker
-- Plan documentation sprints
-
-**Per Feature:**
-- Update relevant guides immediately after merge
-- Test all code examples
-- Cross-reference with other docs
-
-**Quarterly:**
-- Full documentation review
-- Identify gaps
-- Plan major rewrites if needed
-
----
-
-## 🤝 Contributing to Documentation
-
-### For New Contributors
-
-1. Read guides in this order:
-   - Contributor Guide (concepts)
-   - Quick Reference (patterns)
-   - Specific guides (deep dives)
-
-2. When confused by docs:
-   - Open issue describing confusion
-   - Suggest improvement
-   - Update doc after learning
-
-### For Core Team
-
-1. Update docs with code changes
-2. Review doc PRs carefully
-3. Keep tracker current
-4. Schedule documentation work
-
----
-
-## 📊 Documentation Health Metrics
-
-Track these to know when docs need attention:
-
-- **Coverage:** What % of features are documented?
-- **Freshness:** How old are examples compared to code?
-- **Accuracy:** Do examples still work?
-- **Completeness:** Are all edge cases covered?
-- **Accessibility:** Can beginners understand it?
-
-**Current Status:**
-```
-Coverage:     70% (foundation covered, advanced features pending)
-Freshness:    100% (just created, all examples current)
-Accuracy:     100% (basic examples tested)
-Completeness: 60% (missing advanced features)
-Accessibility: 90% (written for beginners)
-```
-
----
-
-## 💡 Tips for Maintaining Docs
-
-### Do's ✅
-- Write for your past self (what would have helped?)
-- Include real code that runs
-- Explain the "why" behind decisions
-- Use concrete examples
-- Keep language simple
-- Add diagrams where helpful
-
-### Don'ts ❌
-- Don't copy/paste code without testing
-- Don't assume prior knowledge
-- Don't use jargon without explaining
-- Don't let docs drift from code
-- Don't skip error cases
-- Don't forget to update tracker
-
----
-
-## 🔗 Related Files
-
-- `ARCHITECTURE.md` - High-level architecture
-- `MIGRATION_PATTERNS.md` - Code migration guide
-- `README.md` - Project overview
-- `CONTRIBUTING.md` - How to contribute
-- `.github/ISSUE_TEMPLATE/` - Issue templates
-
----
-
-Last Updated: November 2025  
-Maintained by: Beth & Claude  
-Next Review: December 2025
+**Maintainer:** Update after each significant PR merge.
