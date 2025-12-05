@@ -13,6 +13,8 @@ const wsManager = require("./services/websocket");
 const { auditLogger, auditMiddleware } = require("./services/audit");
 const { server: log, db, http: httpLog } = require("./utils/logger");
 
+const { createRecordingService } = require("./services/recordingService");
+
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
@@ -96,6 +98,11 @@ app.use(auditMiddleware);
 
 // Make pool, minio, and services available to routes
 app.locals.pool = pool;
+
+// Initialize recording service
+const recordingService = createRecordingService(pool);
+app.locals.recordingService = recordingService;
+
 app.locals.minioClient = minioClient;
 app.locals.bucketName = BUCKET_NAME;
 app.locals.wsManager = wsManager;
@@ -137,6 +144,8 @@ const chatRouter = require("./routes/chat");
 // Sync routes (Phase 2E - reconciliation)
 const syncRouter = require("./routes/sync");
 
+const recordingsRouter = require("./routes/recordings");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
@@ -159,6 +168,9 @@ app.use("/api/projects/:projectId/stars", optionalAuth, starRoutes);
 
 // Room management routes (Space Navigation system)
 app.use("/api/projects/:projectId/rooms", optionalAuth, roomsRouter);
+
+// Recording routes (nested under projects)
+app.use("/api/projects/:projectId/recordings", optionalAuth, recordingsRouter);
 
 // Chat history routes (Phase 2E - Y.js persistence)
 // Provides REST access to persisted chat messages for audit and history
@@ -185,6 +197,10 @@ app.get("/api/health", async (req, res) => {
         websocket: {
           connected: true,
           clients: wsManager.getClientCount(),
+        },
+        recordings: {
+          activeCount: recordingService.getActiveRecordings().length,
+          active: recordingService.getActiveRecordings(),
         },
         audit: "active",
       },

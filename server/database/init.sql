@@ -749,6 +749,32 @@ CREATE TABLE session_recordings (
 );
 
 -- ============================================================================
+-- RECORDING EVENTS (For session playback)
+-- Captures Y.js events during active recordings
+-- ============================================================================
+
+CREATE TABLE recording_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    recording_id UUID NOT NULL REFERENCES session_recordings(id) ON DELETE CASCADE,
+
+    -- Timing (offset from recording start for playback sync)
+    timestamp_offset_ms INTEGER NOT NULL,
+
+    -- Event classification
+    event_type VARCHAR(50) NOT NULL,       -- 'camera', 'filter', 'widget', 'annotation', 'chat', 'presence'
+    event_source VARCHAR(50),              -- More specific: 'camera:rotate', 'filter:add', etc.
+
+    -- Event payload
+    event_data JSONB NOT NULL,
+
+    -- Attribution
+    user_id UUID REFERENCES users(id),
+    client_id INTEGER,                     -- Y.js awareness client ID
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================================
 -- AUDIT LOG
 -- ============================================================================
 
@@ -901,6 +927,18 @@ CREATE INDEX idx_yjs_updates_room_seq ON yjs_updates(room_id, sequence_num);
 CREATE INDEX idx_yjs_updates_room_time ON yjs_updates(room_id, timestamp);
 CREATE INDEX idx_yjs_updates_origin ON yjs_updates(update_origin) WHERE update_origin IS NOT NULL;
 CREATE INDEX idx_yjs_updates_user ON yjs_updates(user_id) WHERE user_id IS NOT NULL;
+
+-- Indexes for efficient playback queries
+CREATE INDEX idx_recording_events_recording ON recording_events(recording_id);
+CREATE INDEX idx_recording_events_playback ON recording_events(recording_id, timestamp_offset_ms);
+CREATE INDEX idx_recording_events_type ON recording_events(event_type);
+CREATE INDEX idx_recording_events_user ON recording_events(user_id) WHERE user_id IS NOT NULL;
+
+-- Also add index on session_recordings if not exists
+CREATE INDEX IF NOT EXISTS idx_recordings_project ON session_recordings(project_id);
+CREATE INDEX IF NOT EXISTS idx_recordings_user ON session_recordings(user_id);
+CREATE INDEX IF NOT EXISTS idx_recordings_status ON session_recordings(status);
+CREATE INDEX IF NOT EXISTS idx_recordings_started ON session_recordings(started_at DESC);
 
 -- Chat messages (optimized for history queries and audit)
 CREATE INDEX idx_chat_room_time ON chat_messages(room_id, timestamp DESC);
