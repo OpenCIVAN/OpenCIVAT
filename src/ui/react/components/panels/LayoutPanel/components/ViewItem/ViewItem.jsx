@@ -106,9 +106,17 @@ export const ViewItem = memo(function ViewItem({
                 className={`layout-view-item__main ${isActive ? 'layout-view-item__main--active' : ''}`}
                 onClick={handleToggleExpand}
             >
-                {/* Drag Handle */}
-                <div className="layout-view-item__drag-handle">
-                    <GripVertical size={10} />
+                {/* Thumbnail / Preview */}
+                <div
+                    className="layout-view-item__thumbnail"
+                    style={{
+                        '--thumb-color': color,
+                        backgroundImage: view.thumbnailUrl ? `url(${view.thumbnailUrl})` : undefined,
+                    }}
+                >
+                    {!view.thumbnailUrl && (
+                        <Eye size={10} className="layout-view-item__thumbnail-icon" />
+                    )}
                 </div>
 
                 {/* Active Indicator */}

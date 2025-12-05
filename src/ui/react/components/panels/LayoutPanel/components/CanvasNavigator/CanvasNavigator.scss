@@ -1,37 +1,461 @@
+// src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.scss
+// Canvas Navigator component - Moonlight theme
+// Uses design tokens - no hard-coded values
+
 @use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
-// DROP TARGET STYLES - Add these to existing CanvasNavigator.scss
+// CANVAS NAVIGATOR CONTAINER
 // =============================================================================
 
-// Add to the &__cell block:
+.canvas-navigator {
+  background: $color-bg-tertiary;
+  overflow: hidden;
 
-.canvas-navigator__cell {
-  // ... existing styles ...
-
-  // Drop target - valid drop zone
-  &--drop-target {
-    outline: 2px dashed $color-accent-green;
-    outline-offset: -2px;
-    background: rgba($color-accent-green, 0.15) !important;
-
-    // Pulsing animation for visibility
-    animation: drop-pulse 0.8s ease-in-out infinite;
+  &--docked {
+    border-radius: 0;
+    border: none;
   }
 
-  // Drop target - invalid (occupied cell in Add mode)
-  &--drop-invalid {
-    outline-color: $color-accent-red;
-    background: rgba($color-accent-red, 0.15) !important;
-    animation: none;
+  &--floating {
+    border-radius: 6px;
+    border: 1px solid $color-border-default;
   }
 
-  // Empty cell hover during drag
-  &--empty {
+  // Header
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__title {
+    flex: 1;
+    font-size: 10px;
+    font-weight: 600;
+    color: $color-text-secondary;
+  }
+
+  &__header-actions {
+    display: flex;
+    gap: 2px;
+  }
+
+  &__header-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: color 0.15s ease;
+
     &:hover {
-      background: rgba($color-accent-blue, 0.1);
+      color: $color-text-primary;
     }
+  }
+
+  // ==========================================================================
+  // TOOLS BAR (floating only)
+  // ==========================================================================
+
+  &__tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__tool-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled):not(&--active) {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-secondary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: rgba(var(--tool-color-rgb, 96, 165, 250), 0.15);
+      border-color: rgba(var(--tool-color-rgb, 96, 165, 250), 0.3);
+      color: var(--tool-color, $color-accent-blue);
+    }
+
+    // Color variants
+    &--blue {
+      --tool-color: #{$color-accent-blue};
+      --tool-color-rgb: 96, 165, 250;
+    }
+
+    &--teal {
+      --tool-color: #{$color-accent-teal};
+      --tool-color-rgb: 125, 211, 252;
+    }
+
+    &--purple {
+      --tool-color: #{$color-accent-purple};
+      --tool-color-rgb: 192, 132, 252;
+    }
+
+    &--amber {
+      --tool-color: #{$color-accent-amber};
+      --tool-color-rgb: 251, 191, 36;
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 16px;
+    background: $color-border-default;
+    margin: 0 6px;
+    flex-shrink: 0;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  // Drop mode toggle group
+  &__drop-mode {
+    display: inline-flex;
+    border-radius: 4px;
+    overflow: hidden;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.2) 50%,
+      rgba(255, 255, 255, 0.02) 100%
+    );
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  &__drop-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    font-size: 11px;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+
+    &:hover:not(&--active) {
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      &[data-color="green"] {
+        background: rgba($color-accent-green, 0.2);
+        color: $color-accent-green;
+      }
+
+      &[data-color="amber"] {
+        background: rgba($color-accent-amber, 0.2);
+        color: $color-accent-amber;
+      }
+    }
+  }
+
+  // ==========================================================================
+  // MAIN CONTENT AREA
+  // ==========================================================================
+
+  &__main {
+    display: flex;
+  }
+
+  // ==========================================================================
+  // MINIMAP
+  // ==========================================================================
+
+  &__minimap {
+    flex: 1;
+    height: 120px;
+    position: relative;
+    overflow: auto;
+    padding: 8px;
+    background: $color-bg-base;
+  }
+
+  &__grid {
+    display: grid;
+    position: relative;
+  }
+
+  &__cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    overflow: hidden;
+
+    &--filled {
+      background: rgba(var(--cell-color-rgb, 96, 165, 250), 0.6);
+      border: 1px solid var(--cell-color, $color-accent-blue);
+    }
+
+    &--empty {
+      background: $color-bg-secondary;
+      border: 1px solid $color-border-subtle;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    // Drop target - valid drop zone
+    &--drop-target {
+      outline: 2px dashed $color-accent-green;
+      outline-offset: -2px;
+      background: rgba($color-accent-green, 0.15) !important;
+      animation: drop-pulse 0.8s ease-in-out infinite;
+    }
+
+    // Drop target - invalid (occupied cell in Add mode)
+    &--drop-invalid {
+      outline-color: $color-accent-red;
+      background: rgba($color-accent-red, 0.15) !important;
+      animation: none;
+    }
+  }
+
+  &__cell-label {
+    font-size: 7px;
+    color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 2px;
+  }
+
+  // Viewport indicator
+  &__viewport-indicator {
+    position: absolute;
+    border: 2px solid $color-accent-amber;
+    border-radius: 3px;
+    pointer-events: none;
+    box-shadow: 0 0 6px rgba($color-accent-amber, 0.5);
+  }
+
+  // ==========================================================================
+  // CONTROLS PANEL
+  // ==========================================================================
+
+  &__controls {
+    width: 90px;
+    padding: 8px;
+    border-left: 1px solid $color-border-subtle;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  // D-pad navigation
+  &__dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 20px);
+    gap: 1px;
+  }
+
+  &__nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: 3px;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: $color-text-secondary;
+    }
+
+    &--center {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    &--home {
+      background: rgba($color-accent-amber, 0.15);
+      border-color: $color-accent-amber;
+      color: $color-accent-amber;
+    }
+  }
+
+  // Size controls
+  &__size-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+  }
+
+  &__size-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__size-label {
+    font-size: 10px;
+    color: $color-text-muted;
+    width: 28px;
+  }
+
+  &__size-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: 3px;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: $color-text-secondary;
+    }
+  }
+
+  &__size-input {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-default;
+    border-radius: 3px;
+    color: $color-text-primary;
+    font-size: 11px;
+    text-align: center;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-blue;
+    }
+
+    // Hide spinners
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    -moz-appearance: textfield;
+  }
+
+  // Zoom controls
+  &__zoom {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border: 1px solid $color-border-default;
+    border-radius: 3px;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.04);
+      color: $color-text-secondary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &__zoom-label {
+    font-size: 8px;
+    color: $color-text-muted;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  // Position display
+  &__position {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  // ==========================================================================
+  // FOOTER (Size controls)
+  // ==========================================================================
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid $color-border-subtle;
+  }
+
+  &__footer-label {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+  }
+
+  &__size-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__size-x {
+    font-size: 12px;
+    color: $color-text-muted;
   }
 }
 

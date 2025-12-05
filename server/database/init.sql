@@ -1193,6 +1193,23 @@ INSERT INTO organization_members (organization_id, user_id, role)
 VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', 'admin')
 ON CONFLICT (organization_id, user_id) DO NOTHING;
 
+-- Main room for demo project (auto-created for every project)
+INSERT INTO rooms (id, project_id, name, is_main, room_type, is_public, created_by)
+VALUES (
+    '00000000-0000-0000-0000-000000000002',
+    '00000000-0000-0000-0000-000000000001',
+    'Main Room',
+    TRUE,
+    'main',
+    TRUE,
+    '00000000-0000-0000-0000-000000000001'
+) ON CONFLICT DO NOTHING;
+
+-- Demo user as room member (admin of main room)
+INSERT INTO room_members (room_id, user_id, role)
+VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'admin')
+ON CONFLICT (room_id, user_id) DO NOTHING;
+
 -- Demo files: Run ./scripts/load-demo-files.sh to upload VTP samples to MinIO
 
 -- ============================================================================

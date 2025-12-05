@@ -29,12 +29,16 @@ export const WORKSPACE_TYPES = {
  * @param {Object} options
  * @param {Array} options.workspaces - Available workspaces
  * @param {string} options.initialWorkspaceId - Initial selected workspace
+ * @param {string} options.currentRoomId - Current room ID for filtering room workspaces
+ * @param {string} options.currentRoomName - Current room name for display
  * @param {Function} options.onWorkspaceChange - Callback when workspace changes
  * @returns {Object} Workspace selector state and actions
  */
 export function useWorkspaceSelector({
   workspaces = [],
   initialWorkspaceId = null,
+  currentRoomId = null,
+  currentRoomName = "Room",
   onWorkspaceChange,
 } = {}) {
   const [selectedId, setSelectedId] = useState(initialWorkspaceId);
@@ -46,6 +50,13 @@ export function useWorkspaceSelector({
     return workspaces.find((w) => w.id === selectedId) || workspaces[0] || null;
   }, [workspaces, selectedId]);
 
+  // Update presence system when workspace changes
+  useEffect(() => {
+    if (currentWorkspace?.id) {
+      presenceSystem.setWorkspace(currentWorkspace.id);
+    }
+  }, [currentWorkspace?.id]);
+
   // Filter workspaces by search query
   const filteredWorkspaces = useMemo(() => {
     if (!searchQuery.trim()) return workspaces;
@@ -53,20 +64,33 @@ export function useWorkspaceSelector({
     return workspaces.filter((w) => w.name.toLowerCase().includes(query));
   }, [workspaces, searchQuery]);
 
-  // Group workspaces by type
+  // Group workspaces by scope with room awareness
+  // New grouping: Personal (my workspaces), Room (current room), Project (all project-wide)
   const groupedWorkspaces = useMemo(() => {
+    const personal = filteredWorkspaces.filter(
+      (w) => w.type === WORKSPACE_TYPES.PERSONAL
+    );
+
+    // Room workspaces: type is 'breakout' and either matches current room or has no roomId
+    const room = filteredWorkspaces.filter(
+      (w) =>
+        w.type === WORKSPACE_TYPES.BREAKOUT &&
+        (!currentRoomId || w.roomId === currentRoomId || !w.roomId)
+    );
+
+    // Project workspaces: type is 'project'
+    const project = filteredWorkspaces.filter(
+      (w) => w.type === WORKSPACE_TYPES.PROJECT
+    );
+
     return {
-      project: filteredWorkspaces.filter(
-        (w) => w.type === WORKSPACE_TYPES.PROJECT
-      ),
-      breakout: filteredWorkspaces.filter(
-        (w) => w.type === WORKSPACE_TYPES.BREAKOUT
-      ),
-      personal: filteredWorkspaces.filter(
-        (w) => w.type === WORKSPACE_TYPES.PERSONAL
-      ),
+      personal,
+      room,
+      project,
+      // Keep legacy 'breakout' for backwards compatibility
+      breakout: room,
     };
-  }, [filteredWorkspaces]);
+  }, [filteredWorkspaces, currentRoomId]);
 
   // Select workspace handler
   const selectWorkspace = useCallback(
@@ -98,6 +122,7 @@ export function useWorkspaceSelector({
     searchQuery,
     filteredWorkspaces,
     groupedWorkspaces,
+    currentRoomName,
 
     // Actions
     selectWorkspace,

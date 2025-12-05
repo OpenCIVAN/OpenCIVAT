@@ -78,6 +78,11 @@
   flex-wrap: wrap;
 }
 
+.views-subtab__filter-icon {
+  color: $color-text-muted;
+  flex-shrink: 0;
+}
+
 .views-subtab__group-btn {
   display: flex;
   align-items: center;
@@ -98,9 +103,9 @@
   }
 
   &--active {
-    background: rgba($color-accent-purple, 0.15);
-    border-color: $color-accent-purple;
-    color: $color-accent-purple;
+    background: rgba($color-accent-blue, 0.15);
+    border-color: $color-accent-blue;
+    color: $color-accent-blue;
   }
 }
 
@@ -171,12 +176,98 @@
   display: flex;
   align-items: center;
   gap: $spacing-xs;
-  padding: $spacing-xs $spacing-md;
+  padding: $spacing-xs $spacing-sm;
   background: $color-bg-tertiary;
   border-bottom: 1px solid $color-border-subtle;
   position: sticky;
   top: 0;
   z-index: 1;
+  cursor: grab;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-medium;
+
+    .views-subtab__group-drag {
+      opacity: 1;
+    }
+
+    .views-subtab__group-actions {
+      opacity: 1;
+    }
+  }
+
+  &--dragging {
+    opacity: 0.5;
+    background: rgba($color-accent-purple, 0.15);
+    cursor: grabbing;
+  }
+}
+
+.views-subtab__group-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-text-tertiary;
+  opacity: 0;
+  transition: opacity $transition-fast;
+  cursor: grab;
+  flex-shrink: 0;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.views-subtab__group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-xs;
+  flex-shrink: 0;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+}
+
+.views-subtab__group-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity $transition-fast;
+}
+
+.views-subtab__group-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-xs;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-medium;
+    color: $color-accent-green;
+  }
+
+  &--danger:hover {
+    color: $color-accent-red;
+  }
 }
 
 .views-subtab__group-icon {

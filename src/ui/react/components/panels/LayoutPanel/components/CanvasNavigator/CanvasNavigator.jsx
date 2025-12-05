@@ -264,7 +264,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                             return (
                                 <div
                                     key={key}
-                                    className={`canvas-navigator__cell 
+                                    className={`canvas-navigator__cell
                                         ${cell ? 'canvas-navigator__cell--filled' : 'canvas-navigator__cell--empty'}
                                         ${isDropTarget ? 'canvas-navigator__cell--drop-target' : ''}
                                         ${isDropTarget && !isValidDrop ? 'canvas-navigator__cell--drop-invalid' : ''}
@@ -352,64 +352,9 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         <div />
                     </div>
 
-                    {/* Size controls */}
-                    <div className="canvas-navigator__size-controls">
-                        <div className="canvas-navigator__size-row">
-                            <span className="canvas-navigator__size-label">Cols</span>
-                            <button
-                                className="canvas-navigator__size-btn"
-                                onMouseDown={decrementColsHold.start}
-                                onMouseUp={decrementColsHold.stop}
-                                onMouseLeave={decrementColsHold.stop}
-                                title="Remove column"
-                            >
-                                <Minus size={10} />
-                            </button>
-                            <input
-                                type="number"
-                                className="canvas-navigator__size-input"
-                                value={canvasSize.cols}
-                                onChange={(e) => setCanvasCols(parseInt(e.target.value) || 1)}
-                                min={1}
-                            />
-                            <button
-                                className="canvas-navigator__size-btn"
-                                onMouseDown={incrementColsHold.start}
-                                onMouseUp={incrementColsHold.stop}
-                                onMouseLeave={incrementColsHold.stop}
-                                title="Add column"
-                            >
-                                <Plus size={10} />
-                            </button>
-                        </div>
-                        <div className="canvas-navigator__size-row">
-                            <span className="canvas-navigator__size-label">Rows</span>
-                            <button
-                                className="canvas-navigator__size-btn"
-                                onMouseDown={decrementRowsHold.start}
-                                onMouseUp={decrementRowsHold.stop}
-                                onMouseLeave={decrementRowsHold.stop}
-                                title="Remove row"
-                            >
-                                <Minus size={10} />
-                            </button>
-                            <input
-                                type="number"
-                                className="canvas-navigator__size-input"
-                                value={canvasSize.rows}
-                                onChange={(e) => setCanvasRows(parseInt(e.target.value) || 1)}
-                                min={1}
-                            />
-                            <button
-                                className="canvas-navigator__size-btn"
-                                onMouseDown={incrementRowsHold.start}
-                                onMouseUp={incrementRowsHold.stop}
-                                onMouseLeave={incrementRowsHold.stop}
-                                title="Add row"
-                            >
-                                <Plus size={10} />
-                            </button>
-                        </div>
+                    {/* Position display */}
+                    <div className="canvas-navigator__position">
+                        {viewport.col},{viewport.row}
                     </div>
 
                     {/* Zoom controls */}
@@ -434,6 +379,68 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                             <ZoomIn size={12} />
                         </button>
                     </div>
+                </div>
+            </div>
+
+            {/* Footer with size controls */}
+            <div className="canvas-navigator__footer">
+                <span className="canvas-navigator__footer-label">Size</span>
+                <div className="canvas-navigator__size-group">
+                    <span className="canvas-navigator__size-label">Cols</span>
+                    <button
+                        className="canvas-navigator__size-btn"
+                        onMouseDown={decrementColsHold.start}
+                        onMouseUp={decrementColsHold.stop}
+                        onMouseLeave={decrementColsHold.stop}
+                        title="Remove column"
+                    >
+                        <Minus size={10} />
+                    </button>
+                    <input
+                        type="number"
+                        className="canvas-navigator__size-input"
+                        value={canvasSize.cols}
+                        onChange={(e) => setCanvasCols(parseInt(e.target.value) || 1)}
+                        min={1}
+                    />
+                    <button
+                        className="canvas-navigator__size-btn"
+                        onMouseDown={incrementColsHold.start}
+                        onMouseUp={incrementColsHold.stop}
+                        onMouseLeave={incrementColsHold.stop}
+                        title="Add column"
+                    >
+                        <Plus size={10} />
+                    </button>
+                </div>
+                <span className="canvas-navigator__size-x">×</span>
+                <div className="canvas-navigator__size-group">
+                    <span className="canvas-navigator__size-label">Rows</span>
+                    <button
+                        className="canvas-navigator__size-btn"
+                        onMouseDown={decrementRowsHold.start}
+                        onMouseUp={decrementRowsHold.stop}
+                        onMouseLeave={decrementRowsHold.stop}
+                        title="Remove row"
+                    >
+                        <Minus size={10} />
+                    </button>
+                    <input
+                        type="number"
+                        className="canvas-navigator__size-input"
+                        value={canvasSize.rows}
+                        onChange={(e) => setCanvasRows(parseInt(e.target.value) || 1)}
+                        min={1}
+                    />
+                    <button
+                        className="canvas-navigator__size-btn"
+                        onMouseDown={incrementRowsHold.start}
+                        onMouseUp={incrementRowsHold.stop}
+                        onMouseLeave={incrementRowsHold.stop}
+                        title="Add row"
+                    >
+                        <Plus size={10} />
+                    </button>
                 </div>
             </div>
         </div>

@@ -1,0 +1,356 @@
+// src/ui/react/components/navigation/RoomSelector/RoomSelector.scss
+// Styles for RoomSelector component
+// TODO: Refine styles to match design system perfectly
+
+@use "theme" as *;
+
+// =============================================================================
+// ROOM SELECTOR
+// =============================================================================
+
+.room-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  &--loading {
+    opacity: 0.6;
+  }
+}
+
+.room-selector__trigger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 6px 10px;
+  background: $color-glass-light;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-medium;
+    border-color: $color-border-hover;
+  }
+
+  &--compact {
+    padding: 6px;
+    gap: 4px;
+  }
+}
+
+.room-selector__icon {
+  color: $color-accent-green;
+  flex-shrink: 0;
+}
+
+.room-selector__name {
+  font-size: 11px;
+  font-weight: $font-weight-medium;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-selector__count {
+  font-size: 10px;
+  color: $color-text-muted;
+  background: $color-glass-medium;
+  padding: 2px 6px;
+  border-radius: $radius-pill;
+}
+
+.room-selector__chevron {
+  color: $color-text-muted;
+  transition: transform $transition-fast;
+  flex-shrink: 0;
+
+  &--open {
+    transform: rotate(180deg);
+  }
+}
+
+// =============================================================================
+// DROPDOWN
+// =============================================================================
+
+.room-selector__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+.room-selector__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 200px;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.room-selector__divider {
+  height: 1px;
+  background: $color-border-subtle;
+  margin: $spacing-xs 0;
+}
+
+.room-selector__action {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: none;
+  color: $color-text-secondary;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-accent-blue;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+// =============================================================================
+// ROOM ITEM
+// =============================================================================
+
+.room-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: none;
+  color: $color-text-secondary;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+
+    .room-item__delete {
+      opacity: 1;
+    }
+  }
+
+  &--selected {
+    background: rgba($color-accent-green, 0.1);
+    color: $color-text-primary;
+
+    .room-item__name {
+      font-weight: $font-weight-medium;
+    }
+  }
+}
+
+.room-item__indicator {
+  width: 8px;
+  flex-shrink: 0;
+}
+
+.room-item__dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  background: $color-accent-green;
+  border-radius: 50%;
+}
+
+.room-item__name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-item__count {
+  color: $color-text-muted;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.room-item__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  opacity: 0;
+  border-radius: $radius-xs;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba($color-accent-red, 0.1);
+    color: $color-accent-red;
+  }
+}
+
+// =============================================================================
+// CREATE ROOM MODAL
+// TODO: Create proper modal component and styles
+// =============================================================================
+
+.create-room-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.create-room-modal {
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-lg;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: $shadow-xl;
+}
+
+.create-room-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+
+  h3 {
+    font-size: 14px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin: 0;
+  }
+}
+
+.create-room-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-sm;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+}
+
+.create-room-modal__field {
+  padding: $spacing-sm $spacing-md;
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: $color-text-muted;
+    margin-bottom: 4px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    font-size: 12px;
+    color: $color-text-primary;
+    outline: none;
+
+    &:focus {
+      border-color: $color-accent-blue;
+    }
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &--checkbox {
+    label {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      cursor: pointer;
+      font-size: 12px;
+      color: $color-text-secondary;
+    }
+
+    input[type="checkbox"] {
+      cursor: pointer;
+    }
+  }
+}
+
+.create-room-modal__error {
+  padding: $spacing-sm $spacing-md;
+  color: $color-accent-red;
+  font-size: 11px;
+}
+
+.create-room-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  border-top: 1px solid $color-border-subtle;
+}
+
+.create-room-modal__btn {
+  padding: 8px 16px;
+  font-size: 12px;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--secondary {
+    background: transparent;
+    border: 1px solid $color-border-default;
+    color: $color-text-secondary;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-light;
+    }
+  }
+
+  &--primary {
+    background: $color-accent-blue;
+    border: none;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-accent-blue, 5%);
+    }
+  }
+}

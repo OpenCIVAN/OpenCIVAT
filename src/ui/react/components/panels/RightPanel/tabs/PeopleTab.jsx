@@ -1,6 +1,6 @@
 // src/ui/react/components/panels/RightPanel/tabs/PeopleTab.jsx
-// People tab connected to real Y.js presence system
-// Shows online users from the presence system instead of mock data
+// People tab with Room/Workspace subtabs for Space Navigation system
+// Shows users filtered by room or workspace context
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -18,12 +18,15 @@ import {
     Hand,
     MessageSquare,
     Eye,
+    EyeOff,
     Crown,
     Globe,
     User as UserIcon,
     Briefcase,
     ChevronDown,
     ChevronRight,
+    Home,
+    Layout,
 } from 'lucide-react';
 import {
     ResizableSectionsContainer,
@@ -31,6 +34,7 @@ import {
     useSectionStates
 } from "@UI/react/components/common/ResizableSections";
 import { usePresence } from '@UI/react/hooks/usePresence.js';
+import { useRoomPresence, useWorkspacePresence } from '@UI/react/hooks/useRoomPresence.js';
 import { createLogger } from '@Utils/logger.js';
 
 const log = createLogger('presence');
@@ -198,47 +202,270 @@ function EmptyState({ message }) {
 }
 
 // =============================================================================
+// SUBTAB COMPONENTS
+// =============================================================================
+
+/**
+ * SubtabToggle - Toggle between Room and Workspace subtabs
+ */
+function SubtabToggle({ activeTab, onChange }) {
+    return (
+        <div className="subtab-toggle" style={{
+            display: 'flex',
+            gap: '2px',
+            padding: '4px',
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: '6px',
+            margin: '8px 12px',
+        }}>
+            <button
+                className={`subtab-btn ${activeTab === 'room' ? 'subtab-btn--active' : ''}`}
+                onClick={() => onChange('room')}
+                style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '6px 10px',
+                    background: activeTab === 'room' ? 'rgba(96,165,250,0.15)' : 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: activeTab === 'room' ? '#60a5fa' : 'var(--color-text-muted, #666)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                }}
+            >
+                <Home size={12} />
+                Room
+            </button>
+            <button
+                className={`subtab-btn ${activeTab === 'workspace' ? 'subtab-btn--active' : ''}`}
+                onClick={() => onChange('workspace')}
+                style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '6px 10px',
+                    background: activeTab === 'workspace' ? 'rgba(45,212,191,0.15)' : 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: activeTab === 'workspace' ? '#2dd4bf' : 'var(--color-text-muted, #666)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                }}
+            >
+                <Layout size={12} />
+                Workspace
+            </button>
+        </div>
+    );
+}
+
+/**
+ * RoomSubtab - Shows users in current room
+ */
+function RoomSubtab({ roomId, searchQuery, selectedMember, onSelectMember }) {
+    const { users, inVoice, notInVoice, onlineCount } = useRoomPresence(roomId);
+
+    const filteredInVoice = useMemo(() => {
+        if (!searchQuery.trim()) return inVoice;
+        const query = searchQuery.toLowerCase();
+        return inVoice.filter(u => u.userName?.toLowerCase().includes(query));
+    }, [inVoice, searchQuery]);
+
+    const filteredNotInVoice = useMemo(() => {
+        if (!searchQuery.trim()) return notInVoice;
+        const query = searchQuery.toLowerCase();
+        return notInVoice.filter(u => u.userName?.toLowerCase().includes(query));
+    }, [notInVoice, searchQuery]);
+
+    const { states: sectionStates, toggleSection } = useSectionStates({
+        voice: { expanded: true, flexGrow: 1 },
+        room: { expanded: true, flexGrow: 2 },
+    });
+
+    return (
+        <ResizableSectionsContainer
+            className="people-tab__sections"
+            sectionStates={sectionStates}
+            onSectionToggle={toggleSection}
+        >
+            {/* In Voice */}
+            <ResizableSection
+                id="voice"
+                icon={Mic}
+                iconColorClass="icon-green"
+                label="In Voice"
+                count={filteredInVoice.length}
+            >
+                {filteredInVoice.length === 0 ? (
+                    <EmptyState message="No one in voice" />
+                ) : (
+                    filteredInVoice.map(user => (
+                        <MemberRow
+                            key={user.clientId || user.userId}
+                            user={user}
+                            isSelected={selectedMember === (user.clientId || user.userId)}
+                            onSelect={onSelectMember}
+                            showVoice
+                        />
+                    ))
+                )}
+            </ResizableSection>
+
+            {/* In Room (not voice) */}
+            <ResizableSection
+                id="room"
+                icon={Users}
+                iconColorClass="icon-blue"
+                label="In Room"
+                count={filteredNotInVoice.length}
+            >
+                {filteredNotInVoice.length === 0 ? (
+                    <EmptyState message="No other users in room" />
+                ) : (
+                    filteredNotInVoice.map(user => (
+                        <MemberRow
+                            key={user.clientId || user.userId}
+                            user={user}
+                            isSelected={selectedMember === (user.clientId || user.userId)}
+                            onSelect={onSelectMember}
+                            showWorkspace
+                        />
+                    ))
+                )}
+            </ResizableSection>
+        </ResizableSectionsContainer>
+    );
+}
+
+/**
+ * WorkspaceSubtab - Shows users viewing current workspace
+ */
+function WorkspaceSubtab({ workspaceId, searchQuery, selectedMember, onSelectMember }) {
+    const { users, otherUsers, onlineCount } = useWorkspacePresence(workspaceId);
+    const [showMyCursor, setShowMyCursor] = useState(true);
+    const [showAllCursors, setShowAllCursors] = useState(true);
+
+    const filteredUsers = useMemo(() => {
+        if (!searchQuery.trim()) return users;
+        const query = searchQuery.toLowerCase();
+        return users.filter(u => u.userName?.toLowerCase().includes(query));
+    }, [users, searchQuery]);
+
+    return (
+        <div className="workspace-subtab">
+            {/* User List */}
+            <div className="workspace-subtab__users">
+                <div style={{
+                    padding: '8px 12px',
+                    fontSize: '10px',
+                    color: 'var(--color-text-muted, #666)',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                }}>
+                    Viewing This Workspace ({filteredUsers.length})
+                </div>
+
+                {filteredUsers.length === 0 ? (
+                    <EmptyState message="No one else viewing this workspace" />
+                ) : (
+                    <div style={{ flex: 1, overflow: 'auto' }}>
+                        {filteredUsers.map(user => (
+                            <MemberRow
+                                key={user.clientId || user.userId}
+                                user={user}
+                                isSelected={selectedMember === (user.clientId || user.userId)}
+                                onSelect={onSelectMember}
+                                showCursor
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Cursor Settings */}
+            <div className="cursor-settings" style={{
+                padding: '12px',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+                background: 'rgba(0,0,0,0.1)',
+            }}>
+                <div style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: 'var(--color-text-muted, #666)',
+                    marginBottom: '8px',
+                }}>
+                    Cursor Settings
+                </div>
+                <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '11px',
+                    color: 'var(--color-text-secondary, #999)',
+                    cursor: 'pointer',
+                    marginBottom: '6px',
+                }}>
+                    <input
+                        type="checkbox"
+                        checked={showMyCursor}
+                        onChange={(e) => setShowMyCursor(e.target.checked)}
+                    />
+                    Show my cursor to others
+                </label>
+                <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '11px',
+                    color: 'var(--color-text-secondary, #999)',
+                    cursor: 'pointer',
+                }}>
+                    <input
+                        type="checkbox"
+                        checked={showAllCursors}
+                        onChange={(e) => setShowAllCursors(e.target.checked)}
+                    />
+                    Show all cursors
+                </label>
+            </div>
+        </div>
+    );
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
-export function PeoplePanelContent({ workspaceId }) {
+export function PeoplePanelContent({ workspaceId, roomId }) {
     // Get real presence data from Y.js
     const { users, currentUser, onlineCount, usersByStatus, isInitialized } = usePresence();
 
     // Local UI state
+    const [activeSubtab, setActiveSubtab] = useState('room');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMember, setSelectedMember] = useState(null);
 
-    // Section states
-    const { states: sectionStates, toggleSection } = useSectionStates({
-        online: { expanded: true, flexGrow: 2 },
-        offline: { expanded: false, flexGrow: 1 },
-    });
-
-    // Filter users by search
-    const filteredUsers = useMemo(() => {
-        if (!searchQuery.trim()) return users;
-        const query = searchQuery.toLowerCase();
-        return users.filter(u =>
-            u.userName?.toLowerCase().includes(query)
-        );
-    }, [users, searchQuery]);
-
-    // Group by status
-    const activeUsers = filteredUsers.filter(u => u.status === 'active' || u.status === 'online');
-    const idleUsers = filteredUsers.filter(u => u.status === 'idle');
-    const awayUsers = filteredUsers.filter(u => u.status === 'away');
-
-    log.trace('PeopleTab render:', { total: users.length, active: activeUsers.length });
+    log.trace('PeopleTab render:', { total: users.length, subtab: activeSubtab });
 
     return (
-        <div className="people-tab">
+        <div className="people-tab" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Header */}
             <div className="panel-header">
                 <Users size={14} className="panel-header__icon" style={{ color: '#f472b6' }} />
                 <span className="panel-header__title">People</span>
                 <span className="panel-header__count">{onlineCount} online</span>
             </div>
+
+            {/* Subtab Toggle */}
+            <SubtabToggle activeTab={activeSubtab} onChange={setActiveSubtab} />
 
             {/* Search */}
             <div className="panel-search">
@@ -248,7 +475,7 @@ export function PeoplePanelContent({ workspaceId }) {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search people..."
+                        placeholder={activeSubtab === 'room' ? 'Search in room...' : 'Search in workspace...'}
                     />
                     {searchQuery && (
                         <button className="clear-button" onClick={() => setSearchQuery('')}>
@@ -272,68 +499,24 @@ export function PeoplePanelContent({ workspaceId }) {
                 </div>
             )}
 
-            {/* User Sections */}
-            <ResizableSectionsContainer
-                className="people-tab__sections"
-                sectionStates={sectionStates}
-                onSectionToggle={toggleSection}
-            >
-                {/* Online/Active Users */}
-                <ResizableSection
-                    id="online"
-                    icon={Users}
-                    iconColorClass="icon-green"
-                    label="Online"
-                    count={activeUsers.length + idleUsers.length}
-                >
-                    {activeUsers.length === 0 && idleUsers.length === 0 ? (
-                        <EmptyState message="No users online" />
-                    ) : (
-                        <>
-                            {/* Active users first */}
-                            {activeUsers.map(user => (
-                                <MemberRow
-                                    key={user.clientId}
-                                    user={user}
-                                    isSelected={selectedMember === user.clientId}
-                                    onSelect={setSelectedMember}
-                                />
-                            ))}
-                            {/* Then idle users */}
-                            {idleUsers.map(user => (
-                                <MemberRow
-                                    key={user.clientId}
-                                    user={user}
-                                    isSelected={selectedMember === user.clientId}
-                                    onSelect={setSelectedMember}
-                                />
-                            ))}
-                        </>
-                    )}
-                </ResizableSection>
-
-                {/* Away Users */}
-                <ResizableSection
-                    id="offline"
-                    icon={Coffee}
-                    iconColorClass="icon-muted"
-                    label="Away"
-                    count={awayUsers.length}
-                >
-                    {awayUsers.length === 0 ? (
-                        <EmptyState message="No users away" />
-                    ) : (
-                        awayUsers.map(user => (
-                            <MemberRow
-                                key={user.clientId}
-                                user={user}
-                                isSelected={selectedMember === user.clientId}
-                                onSelect={setSelectedMember}
-                            />
-                        ))
-                    )}
-                </ResizableSection>
-            </ResizableSectionsContainer>
+            {/* Subtab Content */}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                {activeSubtab === 'room' ? (
+                    <RoomSubtab
+                        roomId={roomId}
+                        searchQuery={searchQuery}
+                        selectedMember={selectedMember}
+                        onSelectMember={setSelectedMember}
+                    />
+                ) : (
+                    <WorkspaceSubtab
+                        workspaceId={workspaceId}
+                        searchQuery={searchQuery}
+                        selectedMember={selectedMember}
+                        onSelectMember={setSelectedMember}
+                    />
+                )}
+            </div>
 
             {/* Footer */}
             <div className="panel-footer">

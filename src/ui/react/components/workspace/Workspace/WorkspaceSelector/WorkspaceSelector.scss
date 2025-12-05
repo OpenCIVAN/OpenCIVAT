@@ -1,94 +1,125 @@
 // src/ui/react/components/workspace/WorkspaceSelector.scss
-// Styles for WorkspaceSelector component
+// Styles for WorkspaceSelector component - Moonlight theme
+
+@use "theme" as *;
 
 .workspace-selector {
   position: relative;
 
-  // Trigger button
+  // Trigger button - styled like the artifact
   &__trigger {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    min-width: 180px;
     padding: 8px 12px;
-    background: var(--selector-bg, #252538);
-    border: 1px solid var(--border-color, #333);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    color: var(--text-primary, #fff);
+    background: rgba(var(--ws-color-rgb, 96, 165, 250), 0.1);
+    border: 1px solid rgba(var(--ws-color-rgb, 96, 165, 250), 0.3);
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
-    min-width: 200px;
+    color: $color-text-primary;
+
+    // Use CSS custom property for workspace color
+    --ws-color-rgb: 96, 165, 250;
 
     &:hover {
-      border-color: var(--border-hover, #444);
-      background: var(--selector-hover, #2a2a40);
+      background: rgba(var(--ws-color-rgb), 0.15);
+      border-color: rgba(var(--ws-color-rgb), 0.4);
     }
   }
 
   &__icon {
-    font-size: 1rem;
+    color: var(--ws-color, $color-accent-blue);
+    flex-shrink: 0;
+  }
+
+  &__info {
+    flex: 1;
+    text-align: left;
+    min-width: 0;
+  }
+
+  &__label {
+    display: block;
+    font-size: 8px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 2px;
   }
 
   &__name {
-    flex: 1;
-    text-align: left;
+    display: block;
+    font-size: 11px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  &__type {
-    padding: 2px 6px;
-    background: var(--type-bg, #3b3b5c);
-    border-radius: 4px;
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    color: var(--text-muted, #888);
-  }
-
   &__placeholder {
     flex: 1;
     text-align: left;
-    color: var(--text-muted, #888);
+    color: $color-text-muted;
+    font-size: 11px;
   }
 
-  &__arrow {
-    font-size: 0.625rem;
-    color: var(--text-muted, #888);
+  &__chevron {
+    color: $color-text-muted;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+
+    &--open {
+      transform: rotate(180deg);
+    }
   }
 
-  // Dropdown
+  // Backdrop for closing dropdown on click outside
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: $z-dropdown - 1;
+  }
+
+  // Dropdown menu
   &__dropdown {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 6px);
     left: 0;
-    right: 0;
-    min-width: 280px;
-    background: var(--dropdown-bg, #1e1e2e);
-    border: 1px solid var(--border-color, #333);
+    min-width: 220px;
+    background: rgba(30, 30, 30, 0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid $color-border-medium;
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    z-index: $z-dropdown;
     overflow: hidden;
+    padding: 6px;
   }
 
   &__section {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border-color, #333);
-
-    &:last-child {
-      border-bottom: none;
+    &:not(:first-child) {
+      border-top: 1px solid $color-border-subtle;
+      margin-top: 6px;
+      padding-top: 6px;
     }
   }
 
   &__section-header {
-    padding: 4px 12px 8px;
-    font-size: 0.6875rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    font-size: 9px;
     font-weight: 600;
+    color: $color-text-muted;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-muted, #888);
+
+    svg {
+      opacity: 0.7;
+    }
   }
 
   &__item {
@@ -99,25 +130,25 @@
     padding: 10px 12px;
     background: transparent;
     border: none;
-    font-size: 0.875rem;
-    color: var(--text-secondary, #ccc);
+    border-radius: 5px;
+    font-size: 11px;
+    color: $color-text-primary;
     cursor: pointer;
     transition: all 0.15s ease;
     text-align: left;
 
     &:hover {
-      background: var(--item-hover, rgba(255, 255, 255, 0.05));
-      color: var(--text-primary, #fff);
+      background: rgba(255, 255, 255, 0.05);
     }
 
-    &.active {
-      background: var(--item-active, rgba(99, 102, 241, 0.15));
-      color: var(--text-primary, #fff);
+    &--active {
+      background: rgba(var(--ws-color-rgb, 96, 165, 250), 0.15);
     }
   }
 
   &__item-icon {
-    font-size: 1rem;
+    color: var(--ws-color, $color-accent-blue);
+    flex-shrink: 0;
   }
 
   &__item-name {
@@ -127,30 +158,41 @@
     text-overflow: ellipsis;
   }
 
+  &__item-check {
+    color: var(--ws-color, $color-accent-blue);
+    flex-shrink: 0;
+  }
+
   &__item-members {
-    font-size: 0.75rem;
-    color: var(--text-muted, #888);
+    font-size: 10px;
+    color: $color-text-muted;
   }
 
   &__actions {
-    padding: 8px;
+    border-top: 1px solid $color-border-subtle;
+    margin-top: 6px;
+    padding-top: 6px;
   }
 
   &__create-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     width: 100%;
     padding: 10px 12px;
-    background: var(--create-bg, #3b3b5c);
-    border: 1px dashed var(--border-color, #555);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed $color-border-medium;
     border-radius: 6px;
-    font-size: 0.875rem;
-    color: var(--text-secondary, #ccc);
+    font-size: 11px;
+    color: $color-text-secondary;
     cursor: pointer;
     transition: all 0.15s ease;
 
     &:hover {
-      background: var(--create-hover, #4b4b6c);
+      background: rgba(255, 255, 255, 0.08);
       border-style: solid;
-      color: var(--text-primary, #fff);
+      color: $color-text-primary;
     }
   }
 }
@@ -159,8 +201,8 @@
 .create-workspace-dialog {
   width: 100%;
   max-width: 420px;
-  background: var(--dialog-bg, #1e1e2e);
-  border: 1px solid var(--border-color, #333);
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
   border-radius: 12px;
   overflow: hidden;
 
@@ -181,23 +223,24 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color, #333);
+    border-bottom: 1px solid $color-border-default;
 
     h3 {
       margin: 0;
-      font-size: 1.125rem;
-      color: var(--text-primary, #fff);
+      font-size: 14px;
+      font-weight: 600;
+      color: $color-text-primary;
     }
 
     button {
       background: none;
       border: none;
-      font-size: 1.25rem;
-      color: var(--text-muted, #888);
+      font-size: 16px;
+      color: $color-text-muted;
       cursor: pointer;
 
       &:hover {
-        color: var(--text-primary, #fff);
+        color: $color-text-primary;
       }
     }
   }
@@ -216,28 +259,28 @@
     label {
       display: block;
       margin-bottom: 8px;
-      font-size: 0.8125rem;
+      font-size: 11px;
       font-weight: 500;
-      color: var(--text-secondary, #ccc);
+      color: $color-text-secondary;
     }
 
     input,
     textarea {
       width: 100%;
       padding: 10px 12px;
-      background: var(--input-bg, #1a1a2e);
-      border: 1px solid var(--border-color, #333);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid $color-border-default;
       border-radius: 6px;
-      font-size: 0.875rem;
-      color: var(--text-primary, #fff);
+      font-size: 12px;
+      color: $color-text-primary;
 
       &:focus {
         outline: none;
-        border-color: var(--accent-color, #6366f1);
+        border-color: $color-accent-blue;
       }
 
       &::placeholder {
-        color: var(--text-muted, #666);
+        color: $color-text-muted;
       }
     }
 
@@ -253,23 +296,27 @@
 
     button {
       flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       padding: 12px;
-      background: var(--type-btn-bg, #252538);
-      border: 1px solid var(--border-color, #333);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid $color-border-default;
       border-radius: 6px;
-      font-size: 0.875rem;
-      color: var(--text-secondary, #ccc);
+      font-size: 11px;
+      color: $color-text-secondary;
       cursor: pointer;
       transition: all 0.15s ease;
 
       &:hover {
-        border-color: var(--border-hover, #444);
+        border-color: $color-border-medium;
       }
 
       &.active {
-        background: var(--type-btn-active, rgba(99, 102, 241, 0.15));
-        border-color: var(--accent-color, #6366f1);
-        color: var(--text-primary, #fff);
+        background: rgba($color-accent-blue, 0.15);
+        border-color: $color-accent-blue;
+        color: $color-text-primary;
       }
     }
   }
@@ -278,34 +325,34 @@
     display: flex;
     gap: 12px;
     padding: 16px 20px;
-    border-top: 1px solid var(--border-color, #333);
-    background: var(--footer-bg, #1a1a2e);
+    border-top: 1px solid $color-border-default;
+    background: rgba(0, 0, 0, 0.2);
 
     button {
       flex: 1;
       padding: 10px 16px;
       border: none;
       border-radius: 6px;
-      font-size: 0.875rem;
+      font-size: 11px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.15s ease;
 
       &:first-child {
-        background: var(--secondary-bg, #3b3b5c);
-        color: var(--text-secondary, #ccc);
+        background: rgba(255, 255, 255, 0.06);
+        color: $color-text-secondary;
 
         &:hover {
-          background: var(--secondary-hover, #4b4b6c);
+          background: rgba(255, 255, 255, 0.1);
         }
       }
 
       &:last-child {
-        background: var(--primary-color, #6366f1);
+        background: $color-accent-blue;
         color: #fff;
 
         &:hover:not(:disabled) {
-          background: var(--primary-hover, #5558e3);
+          filter: brightness(1.1);
         }
 
         &:disabled {

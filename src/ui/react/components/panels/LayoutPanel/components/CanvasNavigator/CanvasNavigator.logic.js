@@ -257,7 +257,10 @@ export function useCanvasNavigator(parentLogic) {
 
   /**
    * Handle drop on a minimap cell
-   * Repositions the view to the target cell
+   * Supports three drop types:
+   * 1. view-item with move mode - repositions existing view
+   * 2. view-item with linked mode - creates linked copy
+   * 3. dataset - creates new independent view
    */
   const handleCellDrop = useCallback(
     async (e, row, col) => {
@@ -271,45 +274,114 @@ export function useCanvasNavigator(parentLogic) {
 
         const dragData = JSON.parse(jsonData);
 
-        // Validate it's a view-item drag
-        if (dragData.type !== "view-item") {
-          console.warn("Unknown drag type:", dragData.type);
-          return;
-        }
+        // Handle dataset drop - create new independent view
+        if (dragData.type === "dataset") {
+          console.log(
+            `Creating new view for dataset ${dragData.datasetId} at (${row}, ${col})`
+          );
 
-        // Check if drop is valid
-        if (!canDropAt(row, col, dragData)) {
-          console.log("Invalid drop target");
-          return;
-        }
-
-        // Same position - no-op
-        if (dragData.sourceRow === row && dragData.sourceCol === col) {
-          return;
-        }
-
-        // Check for existing placement at target
-        const existingCell = getCellAt(row, col);
-
-        if (existingCell && existingCell.id !== dragData.placementId) {
-          // Replace mode - remove existing placement first
-          if (dropMode === "replace") {
-            await canvasManager.removePlacement(canvas.id, existingCell.id);
-          } else {
-            // Should not reach here due to canDropAt check
+          // Check if target cell is empty
+          const existingCell = getCellAt(row, col);
+          if (existingCell && dropMode !== "replace") {
+            console.log("Cannot drop dataset on occupied cell");
             return;
           }
+
+          // Remove existing if in replace mode
+          if (existingCell && dropMode === "replace") {
+            await canvasManager.removePlacement(canvas.id, existingCell.id);
+          }
+
+          // Dispatch event to create view at specific position
+          window.dispatchEvent(
+            new CustomEvent("cia:request-instance", {
+              detail: {
+                datasetId: dragData.datasetId,
+                spawnNew: true,
+                targetRow: row,
+                targetCol: col,
+                canvasId: canvas.id,
+              },
+            })
+          );
+          return;
         }
 
-        // Update the placement position
-        await canvasManager.updatePlacement(canvas.id, dragData.placementId, {
-          row,
-          col,
-        });
+        // Handle view-item drop
+        if (dragData.type === "view-item") {
+          // Check if this is a linked copy creation or a move
+          const createMode = dragData.createMode || "move";
 
-        console.log(
-          `Moved view ${dragData.placementId} from (${dragData.sourceRow}, ${dragData.sourceCol}) to (${row}, ${col})`
-        );
+          if (createMode === "linked") {
+            // Create linked copy at target position
+            console.log(
+              `Creating linked copy of view ${dragData.viewId} at (${row}, ${col})`
+            );
+
+            // Check if target cell is empty
+            const existingCell = getCellAt(row, col);
+            if (existingCell && dropMode !== "replace") {
+              console.log("Cannot create linked copy on occupied cell");
+              return;
+            }
+
+            // Remove existing if in replace mode
+            if (existingCell && dropMode === "replace") {
+              await canvasManager.removePlacement(canvas.id, existingCell.id);
+            }
+
+            // Dispatch event to create linked view
+            window.dispatchEvent(
+              new CustomEvent("cia:create-linked-view", {
+                detail: {
+                  sourceViewId: dragData.viewConfigurationId || dragData.viewId,
+                  targetRow: row,
+                  targetCol: col,
+                  canvasId: canvas.id,
+                },
+              })
+            );
+            return;
+          }
+
+          // Default: Move existing placement
+          // Check if drop is valid
+          if (!canDropAt(row, col, dragData)) {
+            console.log("Invalid drop target");
+            return;
+          }
+
+          // Same position - no-op
+          if (dragData.sourceRow === row && dragData.sourceCol === col) {
+            return;
+          }
+
+          // Check for existing placement at target
+          const existingCell = getCellAt(row, col);
+
+          if (existingCell && existingCell.id !== dragData.placementId) {
+            // Replace mode - remove existing placement first
+            if (dropMode === "replace") {
+              await canvasManager.removePlacement(canvas.id, existingCell.id);
+            } else {
+              // Should not reach here due to canDropAt check
+              return;
+            }
+          }
+
+          // Update the placement position
+          await canvasManager.updatePlacement(canvas.id, dragData.placementId, {
+            row,
+            col,
+          });
+
+          console.log(
+            `Moved view ${dragData.placementId} from (${dragData.sourceRow}, ${dragData.sourceCol}) to (${row}, ${col})`
+          );
+          return;
+        }
+
+        console.warn("Unknown drag type:", dragData.type);
       } catch (err) {
         console.error("Drop failed:", err);
       }

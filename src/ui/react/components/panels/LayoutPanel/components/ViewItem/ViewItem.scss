@@ -51,6 +51,36 @@
     }
   }
 
+  // Thumbnail
+  &__thumbnail {
+    width: 24px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: $radius-xs;
+    background: linear-gradient(
+      135deg,
+      rgba(var(--view-color-rgb, 96, 165, 250), 0.3) 0%,
+      rgba(var(--view-color-rgb, 96, 165, 250), 0.1) 100%
+    );
+    background-color: var(--thumb-color, $color-bg-tertiary);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(var(--view-color-rgb, 96, 165, 250), 0.2);
+    transition: all $transition-fast;
+
+    &:hover {
+      border-color: rgba(var(--view-color-rgb, 96, 165, 250), 0.4);
+    }
+  }
+
+  &__thumbnail-icon {
+    color: var(--view-color);
+    opacity: 0.6;
+  }
+
   // Active Dot
   &__dot {
     width: 8px;

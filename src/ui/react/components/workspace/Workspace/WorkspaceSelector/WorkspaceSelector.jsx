@@ -4,10 +4,26 @@
 // Allows switching between workspaces and creating new ones
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { Globe, User, Briefcase, ChevronDown, Check, Plus } from 'lucide-react';
 import { workspaceManager } from '@Core/data/managers/WorkspaceManager.js';
 import { WorkspaceType } from '@Core/data/models/Workspace.js';
 import { workspace as log } from '@Utils/logger.js';
 import './WorkspaceSelector.scss';
+
+// Helper to convert hex to RGB values
+const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+        : '96, 165, 250';
+};
+
+// Workspace type configurations
+const WORKSPACE_CONFIG = {
+    [WorkspaceType.PERSONAL]: { icon: User, color: '#4ade80', colorRgb: '74, 222, 128', label: 'Personal' },
+    [WorkspaceType.PROJECT]: { icon: Globe, color: '#60a5fa', colorRgb: '96, 165, 250', label: 'Project Rooms' },
+    [WorkspaceType.BREAKOUT]: { icon: Briefcase, color: '#a78bfa', colorRgb: '167, 139, 250', label: 'Breakout' },
+};
 
 /**
  * WorkspaceSelector - Dropdown for workspace selection
@@ -53,33 +69,19 @@ export function WorkspaceSelector({ userId, onWorkspaceChange }) {
         [onWorkspaceChange]
     );
 
-    // Get workspace icon
-    const getIcon = (type) => {
-        switch (type) {
-            case WorkspaceType.PERSONAL:
-                return '👤';
-            case WorkspaceType.PROJECT:
-                return '📁';
-            case WorkspaceType.BREAKOUT:
-                return '💬';
-            default:
-                return '📋';
-        }
+    // Get workspace config
+    const getConfig = (type) => {
+        return WORKSPACE_CONFIG[type] || { icon: Globe, color: '#60a5fa', colorRgb: '96, 165, 250', label: 'Workspace' };
     };
 
-    // Get workspace type label
-    const getTypeLabel = (type) => {
-        switch (type) {
-            case WorkspaceType.PERSONAL:
-                return 'Personal';
-            case WorkspaceType.PROJECT:
-                return 'Project';
-            case WorkspaceType.BREAKOUT:
-                return 'Breakout';
-            default:
-                return 'Workspace';
-        }
-    };
+    // Helper to create style object with both hex and RGB color variables
+    const getColorStyle = (config) => ({
+        '--ws-color': config.color,
+        '--ws-color-rgb': config.colorRgb,
+    });
+
+    const currentConfig = activeWorkspace ? getConfig(activeWorkspace.type) : null;
+    const CurrentIcon = currentConfig?.icon || Globe;
 
     return (
         <div className="workspace-selector">
@@ -87,82 +89,105 @@ export function WorkspaceSelector({ userId, onWorkspaceChange }) {
             <button
                 className="workspace-selector__trigger"
                 onClick={() => setIsOpen(!isOpen)}
+                style={currentConfig ? getColorStyle(currentConfig) : undefined}
             >
                 {activeWorkspace ? (
                     <>
-                        <span className="workspace-selector__icon">
-                            {getIcon(activeWorkspace.type)}
-                        </span>
-                        <span className="workspace-selector__name">{activeWorkspace.name}</span>
-                        <span className="workspace-selector__type">
-                            {getTypeLabel(activeWorkspace.type)}
-                        </span>
+                        <CurrentIcon size={14} className="workspace-selector__icon" />
+                        <div className="workspace-selector__info">
+                            <span className="workspace-selector__label">Workspace</span>
+                            <span className="workspace-selector__name">{activeWorkspace.name}</span>
+                        </div>
                     </>
                 ) : (
                     <span className="workspace-selector__placeholder">Select Workspace</span>
                 )}
-                <span className="workspace-selector__arrow">{isOpen ? '▲' : '▼'}</span>
+                <ChevronDown
+                    size={12}
+                    className={`workspace-selector__chevron ${isOpen ? 'workspace-selector__chevron--open' : ''}`}
+                />
             </button>
 
             {/* Dropdown menu */}
             {isOpen && (
-                <div className="workspace-selector__dropdown">
-                    {/* Personal workspace */}
-                    {workspaces.personal && (
-                        <div className="workspace-selector__section">
-                            <div className="workspace-selector__section-header">Personal</div>
+                <>
+                    <div
+                        className="workspace-selector__backdrop"
+                        onClick={() => setIsOpen(false)}
+                    />
+                    <div className="workspace-selector__dropdown">
+                        {/* Project workspaces */}
+                        {workspaces.projects.length > 0 && (
+                            <div className="workspace-selector__section">
+                                <div className="workspace-selector__section-header">
+                                    <Globe size={10} />
+                                    <span>Project Rooms</span>
+                                </div>
+                                {workspaces.projects.map((project) => {
+                                    const config = getConfig(project.type);
+                                    const ItemIcon = config.icon;
+                                    const isActive = activeWorkspace?.getEffectiveId() === project.getEffectiveId();
+
+                                    return (
+                                        <button
+                                            key={project.getEffectiveId()}
+                                            className={`workspace-selector__item ${isActive ? 'workspace-selector__item--active' : ''}`}
+                                            onClick={() => handleSelect(project)}
+                                            style={getColorStyle(config)}
+                                        >
+                                            <ItemIcon size={14} className="workspace-selector__item-icon" />
+                                            <span className="workspace-selector__item-name">{project.name}</span>
+                                            {isActive && <Check size={12} className="workspace-selector__item-check" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Personal workspace */}
+                        {workspaces.personal && (
+                            <div className="workspace-selector__section">
+                                <div className="workspace-selector__section-header">
+                                    <User size={10} />
+                                    <span>Personal</span>
+                                </div>
+                                {(() => {
+                                    const config = getConfig(workspaces.personal.type);
+                                    const ItemIcon = config.icon;
+                                    const isActive = activeWorkspace?.getEffectiveId() === workspaces.personal.getEffectiveId();
+
+                                    return (
+                                        <button
+                                            className={`workspace-selector__item ${isActive ? 'workspace-selector__item--active' : ''}`}
+                                            onClick={() => handleSelect(workspaces.personal)}
+                                            style={getColorStyle(config)}
+                                        >
+                                            <ItemIcon size={14} className="workspace-selector__item-icon" />
+                                            <span className="workspace-selector__item-name">
+                                                {workspaces.personal.name}
+                                            </span>
+                                            {isActive && <Check size={12} className="workspace-selector__item-check" />}
+                                        </button>
+                                    );
+                                })()}
+                            </div>
+                        )}
+
+                        {/* Create new workspace */}
+                        <div className="workspace-selector__actions">
                             <button
-                                className={`workspace-selector__item ${activeWorkspace?.getEffectiveId() ===
-                                    workspaces.personal.getEffectiveId()
-                                    ? 'active'
-                                    : ''
-                                    }`}
-                                onClick={() => handleSelect(workspaces.personal)}
+                                className="workspace-selector__create-btn"
+                                onClick={() => {
+                                    setShowCreateDialog(true);
+                                    setIsOpen(false);
+                                }}
                             >
-                                <span className="workspace-selector__item-icon">👤</span>
-                                <span className="workspace-selector__item-name">
-                                    {workspaces.personal.name}
-                                </span>
+                                <Plus size={12} />
+                                <span>Create Workspace</span>
                             </button>
                         </div>
-                    )}
-
-                    {/* Project workspaces */}
-                    {workspaces.projects.length > 0 && (
-                        <div className="workspace-selector__section">
-                            <div className="workspace-selector__section-header">Projects</div>
-                            {workspaces.projects.map((project) => (
-                                <button
-                                    key={project.getEffectiveId()}
-                                    className={`workspace-selector__item ${activeWorkspace?.getEffectiveId() === project.getEffectiveId()
-                                        ? 'active'
-                                        : ''
-                                        }`}
-                                    onClick={() => handleSelect(project)}
-                                >
-                                    <span className="workspace-selector__item-icon">📁</span>
-                                    <span className="workspace-selector__item-name">{project.name}</span>
-                                    <span className="workspace-selector__item-members">
-                                        {project.members.length + 1} members
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Create new workspace */}
-                    <div className="workspace-selector__actions">
-                        <button
-                            className="workspace-selector__create-btn"
-                            onClick={() => {
-                                setShowCreateDialog(true);
-                                setIsOpen(false);
-                            }}
-                        >
-                            + Create Workspace
-                        </button>
                     </div>
-                </div>
+                </>
             )}
 
             {/* Create dialog */}

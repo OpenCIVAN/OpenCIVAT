@@ -69,6 +69,7 @@ function WorkspaceSelector({
     isOpen,
     searchQuery,
     groupedWorkspaces,
+    currentRoomName,
     onToggle,
     onSelect,
     onSearchChange,
@@ -130,33 +131,33 @@ function WorkspaceSelector({
                             )}
                         </div>
 
-                        {/* Workspace Groups */}
+                        {/* Workspace Groups - organized by scope */}
                         <div className="workspace-selector__groups">
-                            {/* Project Workspaces */}
-                            {groupedWorkspaces.project?.length > 0 && (
-                                <WorkspaceGroup
-                                    label="Project Workspaces"
-                                    workspaces={groupedWorkspaces.project}
-                                    currentId={currentWorkspace.id}
-                                    onSelect={onSelect}
-                                />
-                            )}
-
-                            {/* Breakout Rooms */}
-                            {groupedWorkspaces.breakout?.length > 0 && (
-                                <WorkspaceGroup
-                                    label="Breakout Rooms"
-                                    workspaces={groupedWorkspaces.breakout}
-                                    currentId={currentWorkspace.id}
-                                    onSelect={onSelect}
-                                />
-                            )}
-
-                            {/* Personal Workspaces */}
+                            {/* My Workspaces (Personal) */}
                             {groupedWorkspaces.personal?.length > 0 && (
                                 <WorkspaceGroup
-                                    label="Personal"
+                                    label="My Workspaces"
                                     workspaces={groupedWorkspaces.personal}
+                                    currentId={currentWorkspace.id}
+                                    onSelect={onSelect}
+                                />
+                            )}
+
+                            {/* Room Workspaces (scoped to current room) */}
+                            {groupedWorkspaces.room?.length > 0 && (
+                                <WorkspaceGroup
+                                    label={currentRoomName ? `${currentRoomName} (Room)` : 'Room Workspaces'}
+                                    workspaces={groupedWorkspaces.room}
+                                    currentId={currentWorkspace.id}
+                                    onSelect={onSelect}
+                                />
+                            )}
+
+                            {/* Project Workspaces (visible to all) */}
+                            {groupedWorkspaces.project?.length > 0 && (
+                                <WorkspaceGroup
+                                    label="Project"
+                                    workspaces={groupedWorkspaces.project}
                                     currentId={currentWorkspace.id}
                                     onSelect={onSelect}
                                 />

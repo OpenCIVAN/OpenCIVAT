@@ -11,12 +11,19 @@ import {
 import { awareness } from "@Collaboration/yjs/yjsSetup.js";
 import { presence as log } from "@Utils/logger.js";
 
+// Store the current room and workspace IDs
+// These are updated by the RoomSelector and WorkspaceSelector components
+let currentRoomId = null;
+let currentWorkspaceId = null;
+
 class PresenceSystem {
   constructor() {
     this.awareness = awareness;
     this.localPresence = null;
     this.presenceListeners = [];
     this.statusListeners = [];
+    this.roomChangeListeners = [];
+    this.workspaceChangeListeners = [];
     this.heartbeatInterval = null;
     this._initialized = false;
 
@@ -52,6 +59,14 @@ class PresenceSystem {
       cursor: null,
       joinedAt: Date.now(),
       lastSeen: Date.now(),
+      // Room and workspace tracking (Space Navigation system)
+      roomId: currentRoomId,
+      workspaceId: currentWorkspaceId,
+      // Voice state
+      inVoice: false,
+      voiceRoomId: null,
+      isMuted: false,
+      isSpeaking: false,
     };
 
     // Set local presence state in awareness
@@ -123,6 +138,160 @@ class PresenceSystem {
     log.debug("Status update:", status);
     this.setPresence({ status, lastSeen: Date.now() });
     this.notifyStatusListeners(status);
+  }
+
+  // ==========================================================================
+  // ROOM & WORKSPACE METHODS (Space Navigation)
+  // ==========================================================================
+
+  /**
+   * Set the current room ID
+   * Called when user joins/switches rooms
+   */
+  setRoom(roomId) {
+    const previousRoomId = currentRoomId;
+    currentRoomId = roomId;
+
+    log.info("Room changed:", { from: previousRoomId, to: roomId });
+
+    this.setPresence({ roomId });
+    this.notifyRoomChangeListeners(roomId, previousRoomId);
+  }
+
+  /**
+   * Get the current room ID
+   */
+  getRoom() {
+    return currentRoomId;
+  }
+
+  /**
+   * Set the current workspace ID
+   * Called when user switches workspaces
+   */
+  setWorkspace(workspaceId) {
+    const previousWorkspaceId = currentWorkspaceId;
+    currentWorkspaceId = workspaceId;
+
+    log.debug("Workspace changed:", {
+      from: previousWorkspaceId,
+      to: workspaceId,
+    });
+
+    this.setPresence({ workspaceId });
+    this.notifyWorkspaceChangeListeners(workspaceId, previousWorkspaceId);
+  }
+
+  /**
+   * Get the current workspace ID
+   */
+  getWorkspace() {
+    return currentWorkspaceId;
+  }
+
+  /**
+   * Get all users in a specific room
+   */
+  getUsersInRoom(roomId) {
+    return this.getOnlineUsers().filter((user) => user.roomId === roomId);
+  }
+
+  /**
+   * Get all users viewing a specific workspace
+   */
+  getUsersInWorkspace(workspaceId) {
+    return this.getOnlineUsers().filter(
+      (user) => user.workspaceId === workspaceId
+    );
+  }
+
+  /**
+   * Get count of users in a room (for display in room selector)
+   */
+  getRoomUserCount(roomId) {
+    return this.getUsersInRoom(roomId).length;
+  }
+
+  /**
+   * Listen for room changes
+   */
+  onRoomChange(callback) {
+    this.roomChangeListeners.push(callback);
+    return () => {
+      this.roomChangeListeners = this.roomChangeListeners.filter(
+        (cb) => cb !== callback
+      );
+    };
+  }
+
+  /**
+   * Listen for workspace changes
+   */
+  onWorkspaceChange(callback) {
+    this.workspaceChangeListeners.push(callback);
+    return () => {
+      this.workspaceChangeListeners = this.workspaceChangeListeners.filter(
+        (cb) => cb !== callback
+      );
+    };
+  }
+
+  /**
+   * Notify room change listeners
+   */
+  notifyRoomChangeListeners(newRoomId, oldRoomId) {
+    this.roomChangeListeners.forEach((callback) => {
+      try {
+        callback(newRoomId, oldRoomId);
+      } catch (error) {
+        log.error("Error in room change listener:", error);
+      }
+    });
+  }
+
+  /**
+   * Notify workspace change listeners
+   */
+  notifyWorkspaceChangeListeners(newWorkspaceId, oldWorkspaceId) {
+    this.workspaceChangeListeners.forEach((callback) => {
+      try {
+        callback(newWorkspaceId, oldWorkspaceId);
+      } catch (error) {
+        log.error("Error in workspace change listener:", error);
+      }
+    });
+  }
+
+  // ==========================================================================
+  // VOICE STATE METHODS
+  // ==========================================================================
+
+  /**
+   * Update voice state
+   */
+  updateVoiceState(voiceState) {
+    this.setPresence({
+      inVoice: voiceState.inVoice ?? this.localPresence?.inVoice,
+      voiceRoomId: voiceState.voiceRoomId ?? this.localPresence?.voiceRoomId,
+      isMuted: voiceState.isMuted ?? this.localPresence?.isMuted,
+      isSpeaking: voiceState.isSpeaking ?? this.localPresence?.isSpeaking,
+    });
+  }
+
+  /**
+   * Set whether user is speaking (for visual indicators)
+   */
+  setSpeaking(isSpeaking) {
+    this.setPresence({ isSpeaking });
+  }
+
+  /**
+   * Get users in voice for a specific room
+   */
+  getUsersInVoice(voiceRoomId) {
+    return this.getOnlineUsers().filter(
+      (user) => user.inVoice && user.voiceRoomId === voiceRoomId
+    );
   }
 
   /**
@@ -376,6 +545,12 @@ class PresenceSystem {
     // Clear listeners
     this.presenceListeners = [];
     this.statusListeners = [];
+    this.roomChangeListeners = [];
+    this.workspaceChangeListeners = [];
+
+    // Reset room/workspace IDs
+    currentRoomId = null;
+    currentWorkspaceId = null;
 
     this._initialized = false;
   }

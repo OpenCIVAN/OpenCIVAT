@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 
 import { useComputeJobs } from '@UI/react/hooks/useComputeJobs.js';
+import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { config } from '@Core/config/clientConfig.js';
 
 import {
@@ -339,7 +340,7 @@ export function FilesPanelContent({
     // Section states (VS Code-style)
     const { states: sectionStates, toggleSection, resizeSection } = useSectionStates({
         starred: { expanded: true, flexGrow: 1 },
-        recent: { expanded: false, flexGrow: 1 },
+        loaded: { expanded: true, flexGrow: 1 },
         all: { expanded: true, flexGrow: 2 },
     });
 
@@ -352,6 +353,9 @@ export function FilesPanelContent({
 
     // Compute jobs hook
     const { submitJob } = useComputeJobs();
+
+    // Loaded datasets from DatasetManager
+    const loadedDatasets = useDatasets();
 
     // Use mock data if provided, otherwise use hook data
     const serverFiles = mockFiles ?? hookFiles;
@@ -390,12 +394,21 @@ export function FilesPanelContent({
     }, [files]);
 
 
-    const recentFiles = useMemo(() => {
-        // Sort by date and take most recent 4
-        return [...files]
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 4);
-    }, [files]);
+    // Transform loaded datasets to file-like format for display
+    const loadedDatasetsFormatted = useMemo(() => {
+        return loadedDatasets.map(ds => ({
+            id: ds.id,
+            name: ds.name,
+            fileType: ds.fileType,
+            size: ds.pointCount ? `${ds.pointCount.toLocaleString()} pts` : '',
+            starred: false,
+            loaded: true,
+            thumbnail: true,
+            date: ds.uploadedAt,
+            isFolder: false,
+            isDataset: true, // Flag to indicate this is a loaded dataset
+        }));
+    }, [loadedDatasets]);
 
 
     const loadedCount = useMemo(() => {
@@ -626,11 +639,11 @@ export function FilesPanelContent({
                     )}
                 </ResizableSection>
 
-                <ResizableSection id="recent" icon={Clock} iconColorClass="icon-teal" label="Recent" count={recentFiles.length}>
-                    {recentFiles.length > 0 ? (
-                        renderFileItems(recentFiles)
+                <ResizableSection id="loaded" icon={Database} iconColorClass="icon-teal" label="Loaded Datasets" count={loadedDatasetsFormatted.length}>
+                    {loadedDatasetsFormatted.length > 0 ? (
+                        renderFileItems(loadedDatasetsFormatted)
                     ) : (
-                        <div className="resizable-section__empty">No recent files</div>
+                        <div className="resizable-section__empty">No datasets loaded</div>
                     )}
                 </ResizableSection>
 

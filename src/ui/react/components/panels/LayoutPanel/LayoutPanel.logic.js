@@ -18,6 +18,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { viewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
 
 // =============================================================================
 // CONSTANTS
@@ -109,8 +110,89 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     [canvas]
   );
 
-  // Placements are our "cells"
-  const cells = useMemo(() => canvas?.placements || [], [canvas]);
+  // Raw placements from canvas
+  const rawPlacements = useMemo(() => canvas?.placements || [], [canvas]);
+
+  // Enrich placements with ViewConfiguration data for UI components
+  // This merges position data from CanvasPlacement with metadata from ViewConfiguration
+  const cells = useMemo(() => {
+    if (!rawPlacements || rawPlacements.length === 0) return [];
+
+    return rawPlacements.map((placement, index) => {
+      // Get the viewConfigurationId from the placement content
+      const viewId =
+        placement.getViewId?.() ||
+        placement.content?.viewConfigurationId ||
+        null;
+
+      // Look up the ViewConfiguration for this placement
+      const viewConfig = viewId
+        ? viewConfigurationManager.getView(viewId)
+        : null;
+
+      // Determine if view has active links
+      const hasActiveLinks = viewConfig?.links
+        ? Object.values(viewConfig.links).some(
+            (link) => link && (link.isActive?.() || link.status === "active")
+          )
+        : false;
+
+      // Determine if view is shared
+      const isShared =
+        viewConfig?.visibility !== "private" ||
+        (viewConfig?.sharedWith?.length || 0) > 0;
+
+      // Return enriched cell object with both placement position and view metadata
+      return {
+        // Placement position data
+        id: placement.id,
+        row: placement.row,
+        col: placement.col,
+        rowSpan: placement.rowSpan || 1,
+        colSpan: placement.colSpan || 1,
+        content: placement.content,
+        subsetIds: placement.subsetIds || [],
+
+        // ViewConfiguration metadata (with fallbacks)
+        viewConfigurationId: viewId,
+        name: viewConfig?.name || `View ${index + 1}`,
+        title: viewConfig?.name || `View ${index + 1}`,
+        description: viewConfig?.description || "",
+        datasetId: viewConfig?.datasetId,
+        datasetName: viewConfig?.datasetName || "Unknown Dataset",
+        color: index % 6, // Color index for UI
+        instanceColor: index % 6,
+
+        // Sharing and linking status
+        isShared,
+        isLinked: hasActiveLinks,
+        visibility: viewConfig?.visibility || "private",
+        ownerUserId: viewConfig?.ownerUserId,
+        ownerUserName: viewConfig?.ownerUserName,
+
+        // Link targets (for ViewItem link UI)
+        links: viewConfig?.links || {},
+        linkTarget: hasActiveLinks
+          ? Object.values(viewConfig.links).find(
+              (l) => l?.isActive?.() || l?.status === "active"
+            )?.targetViewId
+          : null,
+        linkedParent: hasActiveLinks
+          ? Object.values(viewConfig.links).find(
+              (l) => l?.isActive?.() || l?.status === "active"
+            )?.targetViewName
+          : null,
+
+        // Status flags
+        savedByUser: viewConfig?.savedByUser || false,
+        status: viewConfig?.status || "active",
+
+        // Reference to original objects for advanced use
+        _placement: placement,
+        _viewConfig: viewConfig,
+      };
+    });
+  }, [rawPlacements]);
 
   // Layout mode from canvas (server-authoritative)
   const serverLayoutMode = canvas?.layoutMode || LAYOUT_MODES.GRID;
@@ -389,6 +471,143 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   );
 
   // ===========================================================================
+  // VIEW CREATION (for drag-drop from ViewsSubtab)
+  // ===========================================================================
+
+  /**
+   * Create a new independent view for a dataset
+   * Used when dragging a dataset header to the canvas
+   */
+  const createViewForDataset = useCallback(
+    async (datasetId) => {
+      try {
+        // Create a new ViewConfiguration for this dataset
+        const viewConfig = await viewConfigurationManager.createView(
+          datasetId,
+          {
+            name: "New View",
+          }
+        );
+
+        if (!viewConfig || !canvas) return null;
+
+        // Find first empty cell on canvas
+        const emptyCell = findFirstEmptyCell();
+
+        // Add placement to canvas
+        await canvasManager.addPlacement(canvas.id, {
+          row: emptyCell.row,
+          col: emptyCell.col,
+          rowSpan: 1,
+          colSpan: 1,
+          content: {
+            type: "view",
+            viewConfigurationId: viewConfig.id,
+          },
+        });
+
+        return viewConfig;
+      } catch (error) {
+        console.error("Failed to create view for dataset:", error);
+        return null;
+      }
+    },
+    [canvas]
+  );
+
+  /**
+   * Create a linked copy of an existing view
+   * Used when dragging a view item to the canvas
+   */
+  const createLinkedView = useCallback(
+    async (sourceViewId, targetRow, targetCol) => {
+      try {
+        const sourceView = viewConfigurationManager.getView(sourceViewId);
+        if (!sourceView || !canvas) return null;
+
+        // Duplicate the view with links to source
+        const newView = await viewConfigurationManager.duplicateView(
+          sourceViewId,
+          {
+            name: `${sourceView.name} (linked)`,
+          }
+        );
+
+        if (!newView) return null;
+
+        // Link all properties to source view
+        const linkableProps = ["camera", "filters", "widgets", "colorMaps"];
+        for (const prop of linkableProps) {
+          viewConfigurationManager.linkProperty(
+            newView.id,
+            prop,
+            sourceViewId,
+            "follow"
+          );
+        }
+
+        // Add placement at target position
+        await canvasManager.addPlacement(canvas.id, {
+          row: targetRow,
+          col: targetCol,
+          rowSpan: 1,
+          colSpan: 1,
+          content: {
+            type: "view",
+            viewConfigurationId: newView.id,
+          },
+        });
+
+        return newView;
+      } catch (error) {
+        console.error("Failed to create linked view:", error);
+        return null;
+      }
+    },
+    [canvas]
+  );
+
+  /**
+   * Close all views for a specific dataset
+   */
+  const closeAllViewsForDataset = useCallback(
+    async (datasetId) => {
+      const viewsToClose = cells.filter((cell) => cell.datasetId === datasetId);
+
+      for (const view of viewsToClose) {
+        await removePlacement(view.id);
+      }
+
+      if (viewsToClose.some((v) => v.id === expandedViewId)) {
+        setExpandedViewId(null);
+      }
+    },
+    [cells, removePlacement, expandedViewId]
+  );
+
+  /**
+   * Find the first empty cell on the canvas
+   */
+  const findFirstEmptyCell = useCallback(() => {
+    for (let row = 0; row < canvasSize.rows; row++) {
+      for (let col = 0; col < canvasSize.cols; col++) {
+        const occupied = cells.some(
+          (cell) =>
+            row >= cell.row &&
+            row < cell.row + (cell.rowSpan || 1) &&
+            col >= cell.col &&
+            col < cell.col + (cell.colSpan || 1)
+        );
+        if (!occupied) {
+          return { row, col };
+        }
+      }
+    }
+    // No empty cell found, return next row
+    return { row: canvasSize.rows, col: 0 };
+  }, [cells, canvasSize]);
+
+  // ===========================================================================
   // LAYOUT MODE (Server-authoritative)
   // ===========================================================================
 
@@ -460,24 +679,24 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     return result;
   }, [cells, searchQuery, activeFilters]);
 
-// Group cells by dataset
-const groupedCells = useMemo(() => {
-  if (!groupByDataset) {
-    // Return all cells under 'ungrouped' key when grouping is disabled
-    return { ungrouped: filteredCells };
-  }
-
-  const groups = {};
-  filteredCells.forEach((cell) => {
-    const groupKey = cell.datasetName || "Unknown Dataset";
-    if (!groups[groupKey]) {
-      groups[groupKey] = [];
+  // Group cells by dataset
+  const groupedCells = useMemo(() => {
+    if (!groupByDataset) {
+      // Return all cells under 'ungrouped' key when grouping is disabled
+      return { ungrouped: filteredCells };
     }
-    groups[groupKey].push(cell);
-  });
 
-  return groups;
-}, [filteredCells, groupByDataset]);
+    const groups = {};
+    filteredCells.forEach((cell) => {
+      const groupKey = cell.datasetName || "Unknown Dataset";
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(cell);
+    });
+
+    return groups;
+  }, [filteredCells, groupByDataset]);
 
   // ===========================================================================
   // VIEW EXPANSION
@@ -558,6 +777,12 @@ const groupedCells = useMemo(() => {
     // Cell management (server-authoritative)
     closeView,
     resizeView,
+
+    // View creation (for drag-drop)
+    createViewForDataset,
+    createLinkedView,
+    closeAllViewsForDataset,
+    findFirstEmptyCell,
 
     // Layout mode (server-authoritative)
     layoutMode: serverLayoutMode,
