@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { voiceCommandService } from "@Services/voice/voiceCommandService.js";
 import { voiceFeedbackService } from "@Services/voice/voiceFeedbackService.js";
+import { toast } from "@UI/react/store/toastStore.js";
 import { app as log } from "@Utils/logger.js";
 
 /**
@@ -36,6 +37,7 @@ export function useVoiceCommands(options = {}) {
   // State
   const [isInitialized, setIsInitialized] = useState(false);
   const [isEnabled, setIsEnabled] = useState(false);
+  const [isSupported, setIsSupported] = useState(true);
   const [state, setState] = useState("stopped"); // VoiceState
   const [lastCommand, setLastCommand] = useState(null);
   const [interimTranscript, setInterimTranscript] = useState("");
@@ -51,6 +53,11 @@ export function useVoiceCommands(options = {}) {
   // =========================================================================
 
   useEffect(() => {
+    // Check browser support
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    setIsSupported(!!SpeechRecognition);
+
     if (!autoInitialize) return;
 
     const init = async () => {
@@ -125,10 +132,33 @@ export function useVoiceCommands(options = {}) {
   /**
    * Enable voice commands
    */
-  const enable = useCallback(() => {
-    voiceCommandService.enable();
-    setIsEnabled(true);
-  }, []);
+  const enable = useCallback(async () => {
+    if (!isSupported) {
+      toast.error("Voice commands not supported in this browser");
+      return false;
+    }
+
+    try {
+      // Initialize if needed
+      if (!isInitialized) {
+        const success = await voiceCommandService.initialize();
+        if (!success) {
+          toast.error("Failed to initialize voice commands");
+          return false;
+        }
+        await voiceFeedbackService.initialize();
+        setIsInitialized(true);
+      }
+
+      voiceCommandService.enable();
+      setIsEnabled(true);
+      toast.success('Voice commands enabled. Say "Hey CIA" to activate.');
+      return true;
+    } catch (err) {
+      toast.error(`Voice commands failed: ${err.message}`);
+      return false;
+    }
+  }, [isSupported, isInitialized]);
 
   /**
    * Disable voice commands
@@ -136,6 +166,7 @@ export function useVoiceCommands(options = {}) {
   const disable = useCallback(() => {
     voiceCommandService.disable();
     setIsEnabled(false);
+    toast.info("Voice commands disabled");
   }, []);
 
   /**
@@ -255,6 +286,7 @@ export function useVoiceCommands(options = {}) {
     // State
     isInitialized,
     isEnabled,
+    isSupported,
     state,
     isListening: state === "listening" || state === "awake",
     isAwake: state === "awake",

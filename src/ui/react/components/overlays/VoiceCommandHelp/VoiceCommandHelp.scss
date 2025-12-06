@@ -1,0 +1,327 @@
+// src/ui/react/components/overlays/VoiceCommandHelp/VoiceCommandHelp.scss
+// Voice command help overlay styles
+@use "theme" as *;
+
+// =============================================================================
+// OVERLAY BACKDROP
+// =============================================================================
+
+.voice-help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  animation: voice-help-fade-in 0.2s ease-out;
+}
+
+// =============================================================================
+// MODAL CONTAINER
+// =============================================================================
+
+.voice-help {
+  @include glass-panel;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  overflow: hidden;
+  animation: voice-help-slide-up 0.25s ease-out;
+
+  // ==========================================================================
+  // HEADER
+  // ==========================================================================
+
+  &__header {
+    flex-shrink: 0;
+    padding: $spacing-xl;
+    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  &__icon {
+    color: $color-accent-primary;
+  }
+
+  &__title {
+    flex: 1;
+    margin: 0;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-light;
+      color: $color-text-primary;
+    }
+  }
+
+  &__subtitle {
+    margin: 0 0 $spacing-lg 0;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+
+    strong {
+      color: $color-accent-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  // ==========================================================================
+  // SEARCH
+  // ==========================================================================
+
+  &__search {
+    position: relative;
+  }
+
+  &__search-icon {
+    position: absolute;
+    top: 50%;
+    left: $spacing-md;
+    transform: translateY(-50%);
+    color: $color-text-muted;
+    pointer-events: none;
+  }
+
+  &__search-input {
+    width: 100%;
+    padding: $spacing-sm $spacing-md $spacing-sm $spacing-3xl;
+    background: $color-glass-light;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    transition: all $transition-fast;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-primary;
+      background: $color-glass-medium;
+      box-shadow: 0 0 0 2px rgba($color-accent-primary, 0.2);
+    }
+  }
+
+  // ==========================================================================
+  // CONTENT
+  // ==========================================================================
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-md;
+
+    // Scrollbar styling
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $color-border-default;
+      border-radius: 3px;
+
+      &:hover {
+        background: $color-border-medium;
+      }
+    }
+  }
+
+  // ==========================================================================
+  // CATEGORY
+  // ==========================================================================
+
+  &__category {
+    margin-bottom: $spacing-sm;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__category-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: $color-glass-subtle;
+    border: none;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: all $transition-fast;
+    text-align: left;
+
+    &:hover {
+      background: $color-glass-light;
+    }
+  }
+
+  &__category-icon {
+    flex-shrink: 0;
+    color: $color-accent-blue;
+  }
+
+  &__category-title {
+    flex: 1;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__category-count {
+    padding: 2px $spacing-xs;
+    background: $color-glass-medium;
+    border-radius: $radius-full;
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__category-chevron {
+    font-size: $font-size-lg;
+    color: $color-text-muted;
+    transition: transform $transition-fast;
+
+    &--expanded {
+      transform: rotate(90deg);
+    }
+  }
+
+  // ==========================================================================
+  // COMMAND LIST
+  // ==========================================================================
+
+  &__command-list {
+    list-style: none;
+    margin: $spacing-xs 0 0 0;
+    padding: 0 0 0 $spacing-xl;
+  }
+
+  &__command {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-md;
+    padding: $spacing-xs 0;
+    border-bottom: 1px solid $color-border-subtle;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__phrase {
+    flex-shrink: 0;
+    padding: 2px $spacing-xs;
+    background: rgba($color-accent-primary, 0.15);
+    border-radius: $radius-xs;
+    font-family: $font-family-mono;
+    font-size: $font-size-xs;
+    color: $color-accent-primary;
+  }
+
+  &__description {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  // ==========================================================================
+  // EMPTY STATE
+  // ==========================================================================
+
+  &__empty {
+    padding: $spacing-2xl;
+    text-align: center;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+  }
+
+  // ==========================================================================
+  // FOOTER
+  // ==========================================================================
+
+  &__footer {
+    flex-shrink: 0;
+    padding: $spacing-md $spacing-xl;
+    border-top: 1px solid $color-border-subtle;
+    background: $color-glass-subtle;
+  }
+
+  &__tip {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    text-align: center;
+
+    strong {
+      color: $color-text-secondary;
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 2px $spacing-xs;
+      margin: 0 2px;
+      background: $color-glass-medium;
+      border: 1px solid $color-border-default;
+      border-radius: $radius-xs;
+      font-family: $font-family-mono;
+      font-size: 10px;
+      color: $color-text-secondary;
+    }
+  }
+}
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+@keyframes voice-help-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes voice-help-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

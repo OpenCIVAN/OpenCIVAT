@@ -394,6 +394,19 @@ export async function initializePhase2() {
       log.debug("Workspace manager ready");
     }
 
+    // STEP 9: Voice command handlers
+    // Wire up handlers for voice commands dispatched by voiceCommandService
+    log.debug("Initializing voice command handlers...");
+    try {
+      const { initializeVoiceCommandHandlers } = await import(
+        "@Services/voice/voiceCommandHandlers.js"
+      );
+      initializeVoiceCommandHandlers();
+      log.debug("Voice command handlers ready");
+    } catch (voiceError) {
+      log.warn("Voice command handlers failed to initialize:", voiceError);
+    }
+
     log.info("Phase 2 complete - User services ready");
   } catch (error) {
     log.error("Phase 2 initialization failed:", error);

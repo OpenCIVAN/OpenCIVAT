@@ -21,6 +21,7 @@ import {
 import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
 import { getBottomPanelControls } from '@UI/react/components/panels/BottomPanel';
 import { useAuth } from '@UI/react/hooks/useAuth.js';
+import { VoiceCommandToggle } from '@UI/react/components/common/VoiceCommandToggle';
 import './StatusBar.scss';
 
 // =============================================================================
@@ -387,6 +388,10 @@ export function StatusBar() {
                     visible={cursorsVisible}
                     onToggle={handleToggleCursors}
                 />
+
+                <div className="status-bar__divider" />
+
+                <VoiceCommandToggle size="sm" />
             </div>
 
             {/* Center Zone: Empty or future use */}
