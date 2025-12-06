@@ -36,8 +36,12 @@ import {
     Minus,
     ZoomIn,
     ZoomOut,
+    Minimize2,
+    Maximize2,
+    RotateCcw,
 } from 'lucide-react';
 import { useGridLayoutPreview } from './GridLayoutPreview.logic';
+import { useViewportSize } from '@UI/react/hooks';
 import { DPadController } from './components/DPadController';
 import { GridCell } from './components/GridCell';
 import { ViewportIndicator } from './components/ViewportIndicator';
@@ -144,6 +148,18 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
         onApply,
         onNavigate,
     });
+
+    // Viewport size controls (how many grid cells are visible)
+    const {
+        viewportSize,
+        isMinSize,
+        isMaxSize,
+        isDefaultSize,
+        setViewportSize,
+        incrementViewportSize,
+        decrementViewportSize,
+        resetViewportSize,
+    } = useViewportSize(currentGridSize);
 
     const [layoutMode, setLayoutMode] = useState('grid'); // grid | flow
 
@@ -399,7 +415,11 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                     </div>
 
                     {/* Viewport indicator */}
-                    <ViewportIndicator viewport={viewport} gridSize={currentGridSize} />
+                    <ViewportIndicator
+                        viewport={viewport}
+                        gridSize={currentGridSize}
+                        viewportSize={viewportSize}
+                    />
                 </div>
 
                 {/* D-Pad Controller */}
@@ -451,6 +471,37 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                             disabled={viewport.zoom >= 2}
                         >
                             <ZoomIn size={12} />
+                        </button>
+                    </div>
+
+                    {/* Viewport size controls */}
+                    <div className="grid-layout-preview__viewport-size">
+                        <button
+                            className="grid-layout-preview__viewport-size-btn"
+                            onClick={decrementViewportSize}
+                            disabled={isMinSize}
+                            title="Focus (show fewer cells)"
+                        >
+                            <Minimize2 size={12} />
+                        </button>
+                        <span className="grid-layout-preview__viewport-size-value">
+                            {viewportSize.rows}×{viewportSize.cols}
+                        </span>
+                        <button
+                            className="grid-layout-preview__viewport-size-btn"
+                            onClick={incrementViewportSize}
+                            disabled={isMaxSize}
+                            title="Overview (show more cells)"
+                        >
+                            <Maximize2 size={12} />
+                        </button>
+                        <button
+                            className="grid-layout-preview__viewport-size-btn grid-layout-preview__viewport-size-btn--reset"
+                            onClick={resetViewportSize}
+                            disabled={isDefaultSize}
+                            title="Reset to default size"
+                        >
+                            <RotateCcw size={10} />
                         </button>
                     </div>
 

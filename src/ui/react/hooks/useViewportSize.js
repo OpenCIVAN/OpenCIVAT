@@ -31,7 +31,7 @@
 // }
 // ```
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 
 // Constants
 const STORAGE_KEY = "cia-viewport-size";
@@ -162,20 +162,33 @@ export function useViewportSize(
   canvasDimensions = { rows: 10, cols: 10 },
   initialSize = null
 ) {
+  // Memoize max dimensions to avoid dependency issues with object references
+  const maxRows = canvasDimensions?.rows ?? 10;
+  const maxCols = canvasDimensions?.cols ?? 10;
+  const maxSize = useMemo(
+    () => ({ rows: maxRows, cols: maxCols }),
+    [maxRows, maxCols]
+  );
+
   // Initialize from saved preference, initial override, or default
   const [viewportSize, setViewportSizeState] = useState(() => {
     if (initialSize) {
-      return clampSize(initialSize.rows, initialSize.cols, canvasDimensions);
+      return clampSize(initialSize.rows, initialSize.cols, {
+        rows: maxRows,
+        cols: maxCols,
+      });
     }
     const saved = loadSavedSize();
     if (saved) {
-      return clampSize(saved.rows, saved.cols, canvasDimensions);
+      return clampSize(saved.rows, saved.cols, {
+        rows: maxRows,
+        cols: maxCols,
+      });
     }
-    return clampSize(
-      DEFAULT_VIEWPORT_SIZE.rows,
-      DEFAULT_VIEWPORT_SIZE.cols,
-      canvasDimensions
-    );
+    return clampSize(DEFAULT_VIEWPORT_SIZE.rows, DEFAULT_VIEWPORT_SIZE.cols, {
+      rows: maxRows,
+      cols: maxCols,
+    });
   });
 
   // Track previous size for event emission
@@ -184,13 +197,13 @@ export function useViewportSize(
   // Re-clamp when canvas dimensions change
   useEffect(() => {
     setViewportSizeState((current) => {
-      const clamped = clampSize(current.rows, current.cols, canvasDimensions);
+      const clamped = clampSize(current.rows, current.cols, maxSize);
       if (clamped.rows !== current.rows || clamped.cols !== current.cols) {
         return clamped;
       }
       return current;
     });
-  }, [canvasDimensions.rows, canvasDimensions.cols]);
+  }, [maxSize]);
 
   // Persist and emit events on size change
   useEffect(() => {
@@ -209,10 +222,10 @@ export function useViewportSize(
    */
   const setViewportSize = useCallback(
     (rows, cols) => {
-      const clamped = clampSize(rows, cols, canvasDimensions);
+      const clamped = clampSize(rows, cols, maxSize);
       setViewportSizeState(clamped);
     },
-    [canvasDimensions]
+    [maxSize]
   );
 
   /**
@@ -226,9 +239,9 @@ export function useViewportSize(
       const nextPreset = SIZE_PRESETS[nextIndex];
 
       // Clamp to canvas dimensions
-      return clampSize(nextPreset.rows, nextPreset.cols, canvasDimensions);
+      return clampSize(nextPreset.rows, nextPreset.cols, maxSize);
     });
-  }, [canvasDimensions]);
+  }, [maxSize]);
 
   /**
    * Decrement viewport size (show fewer cells / zoom in / focus)
@@ -240,9 +253,9 @@ export function useViewportSize(
       const prevIndex = Math.max(currentIndex - 1, 0);
       const prevPreset = SIZE_PRESETS[prevIndex];
 
-      return clampSize(prevPreset.rows, prevPreset.cols, canvasDimensions);
+      return clampSize(prevPreset.rows, prevPreset.cols, maxSize);
     });
-  }, [canvasDimensions]);
+  }, [maxSize]);
 
   /**
    * Reset viewport size to default (2x3)
@@ -251,18 +264,17 @@ export function useViewportSize(
     const clamped = clampSize(
       DEFAULT_VIEWPORT_SIZE.rows,
       DEFAULT_VIEWPORT_SIZE.cols,
-      canvasDimensions
+      maxSize
     );
     setViewportSizeState(clamped);
-  }, [canvasDimensions]);
+  }, [maxSize]);
 
   // Computed values
   const cellCount = viewportSize.rows * viewportSize.cols;
   const isMinSize =
     viewportSize.rows <= MIN_SIZE.rows && viewportSize.cols <= MIN_SIZE.cols;
   const isMaxSize =
-    viewportSize.rows >= canvasDimensions.rows &&
-    viewportSize.cols >= canvasDimensions.cols;
+    viewportSize.rows >= maxSize.rows && viewportSize.cols >= maxSize.cols;
   const isDefaultSize =
     viewportSize.rows === DEFAULT_VIEWPORT_SIZE.rows &&
     viewportSize.cols === DEFAULT_VIEWPORT_SIZE.cols;
@@ -285,7 +297,7 @@ export function useViewportSize(
 
     // Constants (for UI display)
     minSize: MIN_SIZE,
-    maxSize: canvasDimensions,
+    maxSize,
     defaultSize: DEFAULT_VIEWPORT_SIZE,
     presets: SIZE_PRESETS,
   };
