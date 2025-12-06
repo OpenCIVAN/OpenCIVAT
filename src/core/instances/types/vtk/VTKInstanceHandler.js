@@ -2677,6 +2677,149 @@ console.log('Tools:', tools);
     // Set up actor with annotation data
     return actor;
   }
+
+  // ===========================================================================
+  // CAMERA CONTROLS (Called via workspaceManager delegation)
+  // ===========================================================================
+
+  /**
+   * Reset camera to fit all data in view
+   * @param {Object} instanceData - Instance data object
+   */
+  resetCamera(instanceData) {
+    if (!instanceData?.sceneObjects) {
+      log.warn("Cannot reset camera: VTK not initialized");
+      return;
+    }
+    instanceTools.resetCamera(instanceData.instanceId);
+  }
+
+  /**
+   * Set camera to a standard view
+   * @param {Object} instanceData - Instance data object
+   * @param {string} viewName - View name ('front', 'back', 'top', 'bottom', 'left', 'right', 'isometric')
+   */
+  setCameraView(instanceData, viewName) {
+    if (!instanceData?.sceneObjects) {
+      log.warn("Cannot set camera view: VTK not initialized");
+      return;
+    }
+    instanceTools.setCameraView(instanceData.instanceId, viewName);
+  }
+
+  /**
+   * Apply zoom to camera
+   * @param {Object} instanceData - Instance data object
+   * @param {number} factor - Zoom factor (> 1 = zoom in, < 1 = zoom out)
+   */
+  zoom(instanceData, factor) {
+    if (!instanceData?.sceneObjects?.camera) {
+      log.warn("Cannot zoom: VTK camera not initialized");
+      return;
+    }
+
+    const { camera, renderer, renderWindow } = instanceData.sceneObjects;
+
+    // VTK zoom: dolly the camera (move closer/farther from focal point)
+    camera.dolly(factor);
+    renderer.resetCameraClippingRange();
+    renderWindow.render();
+
+    log.trace(
+      `Zoomed by factor ${factor} for instance ${instanceData.instanceId}`
+    );
+  }
+
+  /**
+   * Get current camera state
+   * @param {Object} instanceData - Instance data object
+   * @returns {Object|null} Camera state
+   */
+  getCameraState(instanceData) {
+    if (!instanceData?.sceneObjects?.camera) {
+      return null;
+    }
+    return instanceTools.getCameraState(instanceData.instanceId);
+  }
+
+  /**
+   * Register a callback for camera changes on an instance
+   * Used to sync zoom percentage display with actual camera state
+   * Zoom is relative to initial fit view: 100% = data fits in viewport
+   * @param {Object} instanceData - Instance data object
+   * @param {Function} callback - Callback receiving { zoomLevel, parallelScale, distance }
+   * @returns {Function} Unsubscribe function
+   */
+  onCameraChange(instanceData, callback) {
+    if (!instanceData?.sceneObjects?.camera) {
+      log.warn("Cannot subscribe to camera changes: VTK not initialized");
+      return () => {};
+    }
+
+    const { camera } = instanceData.sceneObjects;
+
+    // Store the initial camera state as baseline for zoom calculation (100%)
+    // This is set after resetCamera/fitView is called, representing the "fit" state
+    if (!instanceData._baselineCameraState) {
+      instanceData._baselineCameraState = {
+        parallelScale: camera.getParallelScale(),
+        distance: camera.getDistance(),
+      };
+    }
+
+    // Create the observer function
+    const observer = () => {
+      const baseline = instanceData._baselineCameraState;
+      const currentParallelScale = camera.getParallelScale();
+      const currentDistance = camera.getDistance();
+
+      // Calculate zoom level relative to baseline (100% = fit view)
+      // For parallel projection: zoom = baseline / current (larger parallelScale = zoomed out)
+      // For perspective projection: zoom = baseline / current (larger distance = zoomed out)
+      let zoomLevel;
+      if (camera.getParallelProjection()) {
+        zoomLevel = (baseline.parallelScale / currentParallelScale) * 100;
+      } else {
+        zoomLevel = (baseline.distance / currentDistance) * 100;
+      }
+
+      // No clamping - allow whatever zoom VTK supports
+      callback({
+        zoomLevel,
+        parallelScale: currentParallelScale,
+        distance: currentDistance,
+      });
+    };
+
+    // Subscribe to camera modifications
+    const subscription = camera.onModified(observer);
+
+    // Return unsubscribe function
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }
+
+  /**
+   * Reset the baseline camera state for zoom calculation
+   * Called when fit/reset is triggered to establish new 100% baseline
+   * @param {Object} instanceData - Instance data object
+   */
+  resetZoomBaseline(instanceData) {
+    if (!instanceData?.sceneObjects?.camera) {
+      return;
+    }
+
+    const { camera } = instanceData.sceneObjects;
+    instanceData._baselineCameraState = {
+      parallelScale: camera.getParallelScale(),
+      distance: camera.getDistance(),
+    };
+
+    log.debug(`Zoom baseline reset for instance ${instanceData.instanceId}`);
+  }
 }
 
 // Create and export singleton instance

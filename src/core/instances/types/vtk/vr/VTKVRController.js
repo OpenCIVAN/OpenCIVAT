@@ -8,6 +8,7 @@
 //
 
 import { vr as log } from "@Utils/logger.js";
+import { raycastFromRay } from "@VTK/utils/vtkRaycaster.js";
 
 // VTK imports for controller visualization
 import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
@@ -302,6 +303,9 @@ class VRControllers {
     const data = this.instanceControllers.get(instanceId);
     if (!data) return;
 
+    // Store the reference space for use in raycasting (XRSession doesn't expose it directly)
+    data.referenceSpace = referenceSpace;
+
     const { xrSession, controllers, sceneObjects } = data;
 
     for (const inputSource of xrSession.inputSources) {
@@ -591,27 +595,35 @@ class VRControllers {
 
     if (!inputSource.targetRaySpace) return null;
 
-    // Get reference space from VRManager
-    const referenceSpace = data.xrSession?.referenceSpace;
+    // Use the stored reference space (set by updatePoses each frame)
+    const referenceSpace = data.referenceSpace;
     if (!referenceSpace) return null;
 
     const pose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
     if (!pose) return null;
 
-    // Extract ray origin and direction
+    // Extract ray origin and direction from WebXR pose matrix
     const matrix = pose.transform.matrix;
     const origin = [matrix[12], matrix[13], matrix[14]];
-    const direction = [-matrix[8], -matrix[9], -matrix[10]]; // Forward is -Z
+    const direction = [-matrix[8], -matrix[9], -matrix[10]]; // Forward is -Z in WebXR
 
     log.trace(`Raycast from ${origin} direction ${direction}`);
 
-    // TODO: Integrate with VTK's cell picker for actual intersection testing
-    // For now, return ray information
+    // Use VTK raycaster for actual intersection testing
+    const result = raycastFromRay(sceneObjects, origin, direction, {
+      instanceId,
+      maxDistance: 50, // 50 meter max ray distance for VR
+    });
+
     return {
       origin,
       direction,
-      actor: null, // Would be the hit actor
-      point: null, // Would be the intersection point
+      actor: result.actor,
+      point: result.worldPosition,
+      hit: result.hit,
+      cellId: result.cellId,
+      normal: result.normal,
+      distance: result.distance,
     };
   }
 

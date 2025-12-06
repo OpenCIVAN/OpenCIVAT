@@ -446,5 +446,150 @@ export function disposeAllRaycasters() {
   pickerCache.clear();
 }
 
+/**
+ * Raycast from a 3D origin along a direction (for VR controller picking).
+ *
+ * Unlike screen-based raycasting, this takes a 3D ray directly.
+ * Used for VR controller laser pointer interactions.
+ *
+ * @param {Object} sceneObjects - VTK scene objects from instance
+ * @param {[number, number, number]} origin - Ray origin in world coordinates
+ * @param {[number, number, number]} direction - Ray direction (normalized or will be normalized)
+ * @param {Object} options - Optional configuration
+ * @param {string} options.instanceId - Instance ID for picker caching
+ * @param {number} options.tolerance - Pick tolerance (default: 0.005)
+ * @param {number} options.maxDistance - Maximum ray distance (default: 100)
+ * @returns {{
+ *   worldPosition: [number, number, number] | null,
+ *   normal: [number, number, number] | null,
+ *   hit: boolean,
+ *   cellId: number | null,
+ *   actor: Object | null,
+ *   distance: number | null
+ * }}
+ */
+export function raycastFromRay(sceneObjects, origin, direction, options = {}) {
+  // Validate inputs
+  if (!sceneObjects?.renderer) {
+    log.warn("raycastFromRay: Invalid sceneObjects provided");
+    return {
+      worldPosition: null,
+      normal: null,
+      hit: false,
+      cellId: null,
+      actor: null,
+      distance: null,
+    };
+  }
+
+  if (!origin || !direction || origin.length !== 3 || direction.length !== 3) {
+    log.warn("raycastFromRay: Invalid ray origin or direction");
+    return {
+      worldPosition: null,
+      normal: null,
+      hit: false,
+      cellId: null,
+      actor: null,
+      distance: null,
+    };
+  }
+
+  const { renderer } = sceneObjects;
+  const maxDistance = options.maxDistance || 100;
+
+  // Get or create picker
+  const instanceId = options.instanceId || "default";
+  const picker = getOrCreatePicker(instanceId, options);
+
+  // Normalize direction
+  const dirLength = Math.sqrt(
+    direction[0] ** 2 + direction[1] ** 2 + direction[2] ** 2
+  );
+  if (dirLength === 0) {
+    return {
+      worldPosition: null,
+      normal: null,
+      hit: false,
+      cellId: null,
+      actor: null,
+      distance: null,
+    };
+  }
+  const normDir = [
+    direction[0] / dirLength,
+    direction[1] / dirLength,
+    direction[2] / dirLength,
+  ];
+
+  // Calculate ray end point
+  const endPoint = [
+    origin[0] + normDir[0] * maxDistance,
+    origin[1] + normDir[1] * maxDistance,
+    origin[2] + normDir[2] * maxDistance,
+  ];
+
+  // Add all actors from renderer to picker
+  const actors = renderer.getActors();
+  actors.forEach((actor) => {
+    if (actor.getPickable()) {
+      picker.addPickList(actor);
+    }
+  });
+
+  try {
+    // Use pick3DRay for 3D raycasting (origin to end point)
+    // VTK's CellPicker can pick along a ray using pick method with 3D points
+    picker.pick3DRay(origin, endPoint, renderer);
+
+    // Check if we hit something
+    const pickedPosition = picker.getPickPosition();
+    const pickedNormal = picker.getPickNormal();
+    const cellId = picker.getCellId();
+
+    // cellId of -1 means no intersection
+    if (cellId < 0) {
+      return {
+        worldPosition: null,
+        normal: null,
+        hit: false,
+        cellId: null,
+        actor: null,
+        distance: null,
+      };
+    }
+
+    // Calculate distance from origin to hit point
+    const hitDistance = Math.sqrt(
+      (pickedPosition[0] - origin[0]) ** 2 +
+        (pickedPosition[1] - origin[1]) ** 2 +
+        (pickedPosition[2] - origin[2]) ** 2
+    );
+
+    // Get the picked actor
+    const pickedActor = picker.getActor();
+
+    return {
+      worldPosition: [pickedPosition[0], pickedPosition[1], pickedPosition[2]],
+      normal: pickedNormal
+        ? [pickedNormal[0], pickedNormal[1], pickedNormal[2]]
+        : null,
+      hit: true,
+      cellId,
+      actor: pickedActor,
+      distance: hitDistance,
+    };
+  } catch (error) {
+    log.error("raycastFromRay: Pick operation failed", error);
+    return {
+      worldPosition: null,
+      normal: null,
+      hit: false,
+      cellId: null,
+      actor: null,
+      distance: null,
+    };
+  }
+}
+
 // Export coordinate conversion helpers for external use
 export { screenToNDC, DEFAULT_TOLERANCE };

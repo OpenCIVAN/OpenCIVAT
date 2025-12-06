@@ -512,6 +512,90 @@ class WorkspaceManager {
   }
 
   // =========================================================================
+  // CAMERA CONTROLS (Type-agnostic delegation to handlers)
+  // =========================================================================
+
+  /**
+   * Reset camera to fit all data in view
+   * @param {string} instanceId - Instance to reset camera for
+   */
+  resetCamera(instanceId) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.resetCamera) {
+      log.warn(`Cannot reset camera: no handler for instance ${instanceId}`);
+      return;
+    }
+    instance.handler.resetCamera(instance.instanceData);
+  }
+
+  /**
+   * Fit view to content (alias for resetCamera)
+   * @param {string} instanceId - Instance to fit
+   */
+  fitView(instanceId) {
+    this.resetCamera(instanceId);
+  }
+
+  /**
+   * Set camera to a standard view (front, top, isometric, etc.)
+   * @param {string} instanceId - Instance ID
+   * @param {string} viewName - View name ('front', 'back', 'top', 'bottom', 'left', 'right', 'isometric')
+   */
+  setCameraView(instanceId, viewName) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.setCameraView) {
+      log.warn(`Cannot set camera view: no handler for instance ${instanceId}`);
+      return;
+    }
+    instance.handler.setCameraView(instance.instanceData, viewName);
+  }
+
+  /**
+   * Apply zoom to camera
+   * @param {string} instanceId - Instance ID
+   * @param {number} factor - Zoom factor (> 1 = zoom in, < 1 = zoom out)
+   */
+  zoom(instanceId, factor) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.zoom) {
+      log.warn(`Cannot zoom: no handler for instance ${instanceId}`);
+      return;
+    }
+    instance.handler.zoom(instance.instanceData, factor);
+  }
+
+  /**
+   * Get current camera state
+   * @param {string} instanceId - Instance ID
+   * @returns {Object|null} Camera state object or null
+   */
+  getCameraState(instanceId) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.getCameraState) {
+      return null;
+    }
+    return instance.handler.getCameraState(instance.instanceData);
+  }
+
+  /**
+   * Register a callback for camera changes on an instance
+   * Used to sync zoom percentage display with actual camera state
+   * @param {string} instanceId - Instance ID
+   * @param {Function} callback - Callback receiving { zoomLevel, parallelScale, distance }
+   * @returns {Function} Unsubscribe function
+   */
+  onCameraChange(instanceId, callback) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.onCameraChange) {
+      log.warn(
+        `Cannot subscribe to camera changes: no handler for instance ${instanceId}`
+      );
+      return () => {};
+    }
+    return instance.handler.onCameraChange(instance.instanceData, callback);
+  }
+
+  // =========================================================================
   // LISTENER MANAGEMENT FOR REACT INTEGRATION
   // =========================================================================
 

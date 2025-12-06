@@ -2,10 +2,10 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from 'react-dom';
 import {
-    ChevronDown, Maximize2, Minimize2, Trash2, AlertCircle, ZoomIn, ZoomOut,
-    RotateCcw, Move, LayoutGrid, Wrench, MoreHorizontal, Settings,
-    Glasses, Box, BarChart3, Layers, MousePointer2, Scan, Minus, Plus,
-    Pencil, Eye, Palette, Users, Undo2, Redo2, Copy, X
+    ChevronDown, Maximize2, Minimize2, Trash2, AlertCircle,
+    LayoutGrid, Wrench, MoreHorizontal, Settings,
+    Glasses, Box, BarChart3, Layers, Scan, Minus, Plus,
+    Undo2, Redo2, Copy, X
 } from 'lucide-react';
 
 import { instance as log } from "@Utils/logger.js";
@@ -138,80 +138,48 @@ function TopToolbar({
 
 /**
  * BottomNavBar - Navigation bar at bottom of content area
- * Slides up on focus/click, contains zoom and navigation controls
+ * Slides up on focus/click, contains zoom controls and fit button
+ *
+ * Design rationale:
+ * - Mouse/trackpad already handles rotation, pan, and zoom naturally
+ * - Zoom percentage syncs with actual camera state from all input sources
+ * - Zoom is relative to initial view (100% = fit view after data load)
+ * - Fit button provides quick reset to frame all content
  */
 function BottomNavBar({
     visible,
     zoomLevel,
-    onZoomIn,
-    onZoomOut,
     onZoomChange,
     onFit,
-    onOneToOne,
-    onResetView,
-    navMode,
-    onNavModeChange,
 }) {
     return (
         <div className={`instance-viewport__navbar-overlay ${visible ? 'instance-viewport__navbar-overlay--visible' : ''}`}>
             <div className="instance-navbar">
-                {/* Navigation Mode Buttons */}
-                <div className="instance-navbar__nav-buttons">
-                    <button
-                        className={`instance-navbar__nav-button ${navMode === 'pan' ? 'active' : ''}`}
-                        onClick={() => onNavModeChange('pan')}
-                        title="Pan"
-                    >
-                        <Move size={16} />
-                    </button>
-                    <button
-                        className={`instance-navbar__nav-button ${navMode === 'zoom' ? 'active' : ''}`}
-                        onClick={() => onNavModeChange('zoom')}
-                        title="Zoom"
-                    >
-                        <ZoomIn size={16} />
-                    </button>
-                    <button
-                        className={`instance-navbar__nav-button ${navMode === 'rotate' ? 'active' : ''}`}
-                        onClick={() => onNavModeChange('rotate')}
-                        title="Rotate"
-                    >
-                        <RotateCcw size={16} />
-                    </button>
-                </div>
-
                 {/* Zoom Display with +/- */}
                 <div className="instance-navbar__zoom-display">
                     <button
                         className="instance-navbar__zoom-button"
-                        onClick={() => onZoomChange(zoomLevel - 10)}
+                        onClick={() => onZoomChange(zoomLevel * 0.9)}
                         title="Zoom out 10%"
                     >
                         <Minus size={12} />
                     </button>
-                    <span className="instance-navbar__zoom-value">{zoomLevel}%</span>
+                    <span className="instance-navbar__zoom-value">{Math.round(zoomLevel)}%</span>
                     <button
                         className="instance-navbar__zoom-button"
-                        onClick={() => onZoomChange(zoomLevel + 10)}
+                        onClick={() => onZoomChange(zoomLevel * 1.1)}
                         title="Zoom in 10%"
                     >
                         <Plus size={12} />
                     </button>
                 </div>
 
-                {/* Quick Actions */}
+                {/* Fit Button */}
                 <div className="instance-navbar__quick-actions">
                     <button
                         className="instance-navbar__action-button"
-                        onClick={onOneToOne}
-                        title="1:1 Scale"
-                    >
-                        1:1
-                    </button>
-                    <button
-                        className="instance-navbar__action-button"
                         onClick={onFit}
-                        title="Fit to view"
+                        title="Fit to view (reset to 100%)"
                     >
                         <Scan size={14} />
                         Fit
@@ -561,9 +529,9 @@ export function InstanceViewport({
     const [navbarVisible, setNavbarVisible] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
 
-    // Zoom and navigation state
+    // Zoom state - tracks zoom relative to initial fit view (100%)
     const [zoomLevel, setZoomLevel] = useState(100);
-    const [navMode, setNavMode] = useState('orbit');
+    const zoomFromCameraRef = useRef(false); // Flag to prevent feedback loops
 
     // Span picker state
     const [showSpanPicker, setShowSpanPicker] = useState(false);
@@ -803,6 +771,37 @@ export function InstanceViewport({
     }, [actualInstanceId, initialized, instanceType]);
 
     // =========================================================================
+    // ZOOM SYNC WITH CAMERA
+    // Subscribe to camera changes to sync zoom percentage display
+    // Zoom is relative to initial fit view: 100% = data fits in view
+    // =========================================================================
+
+    useEffect(() => {
+        if (!initialized || !actualInstanceId || !hasData) return;
+
+        // Subscribe to camera changes from the instance
+        const unsubscribe = workspaceManager.onCameraChange(actualInstanceId, (cameraState) => {
+            // Skip if this update was triggered by our own zoom change
+            if (zoomFromCameraRef.current) {
+                zoomFromCameraRef.current = false;
+                return;
+            }
+
+            if (cameraState?.zoomLevel != null) {
+                // Update zoom level from actual camera state
+                // No clamping - allow whatever zoom VTK supports
+                setZoomLevel(Math.round(cameraState.zoomLevel));
+            }
+        });
+
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, [initialized, actualInstanceId, hasData]);
+
+    // =========================================================================
     // UI HELPERS
     // =========================================================================
 
@@ -927,41 +926,38 @@ export function InstanceViewport({
     // =========================================================================
 
     const handleZoomChange = useCallback((newZoom) => {
-        const clampedZoom = Math.max(10, Math.min(500, newZoom));
-        setZoomLevel(clampedZoom);
-        // TODO: Apply zoom to actual view
-    }, []);
+        // No clamping - allow whatever zoom VTK supports
+        // Minimum of 1% to avoid divide-by-zero
+        const safeZoom = Math.max(1, newZoom);
+        const oldZoom = zoomLevel;
 
-    const handleZoomIn = useCallback(() => {
-        handleZoomChange(zoomLevel + 10);
-    }, [zoomLevel, handleZoomChange]);
+        // Set flag to prevent feedback loop from camera change callback
+        zoomFromCameraRef.current = true;
+        setZoomLevel(Math.round(safeZoom));
 
-    const handleZoomOut = useCallback(() => {
-        handleZoomChange(zoomLevel - 10);
-    }, [zoomLevel, handleZoomChange]);
+        // Apply zoom to the actual instance view
+        if (actualInstanceId && oldZoom !== safeZoom && oldZoom > 0) {
+            // Calculate zoom factor: new / old (> 1 = zoom in, < 1 = zoom out)
+            const factor = safeZoom / oldZoom;
+            workspaceManager.zoom(actualInstanceId, factor);
+        }
+    }, [zoomLevel, actualInstanceId]);
 
     const handleFit = useCallback(() => {
+        // Fit resets to 100% (initial view)
+        zoomFromCameraRef.current = true;
         setZoomLevel(100);
-        // TODO: Fit view to content
-    }, []);
-
-    const handleOneToOne = useCallback(() => {
-        setZoomLevel(100);
-        // TODO: Set 1:1 scale
-    }, []);
-
-    const handleResetView = useCallback(() => {
-        setZoomLevel(100);
-        setNavMode('orbit');
-        // TODO: Reset camera
-    }, []);
+        if (actualInstanceId) {
+            workspaceManager.fitView(actualInstanceId);
+        }
+    }, [actualInstanceId]);
 
     // =========================================================================
     // INSTANCE TOOLS PANEL
     // =========================================================================
 
     const handleOpenInstanceTools = useCallback(() => {
-        // TODO: Emit event to open Instance Tools panel in left sidebar
+        // Emit event to open Instance Tools panel in left sidebar
         window.dispatchEvent(new CustomEvent('cia:open-instance-tools', {
             detail: { instanceId: actualInstanceId }
         }));
@@ -1365,14 +1361,8 @@ export function InstanceViewport({
                 <BottomNavBar
                     visible={navbarVisible || isFocused}
                     zoomLevel={zoomLevel}
-                    onZoomIn={handleZoomIn}
-                    onZoomOut={handleZoomOut}
                     onZoomChange={handleZoomChange}
                     onFit={handleFit}
-                    onOneToOne={handleOneToOne}
-                    onResetView={handleResetView}
-                    navMode={navMode}
-                    onNavModeChange={setNavMode}
                 />
             )}
 
