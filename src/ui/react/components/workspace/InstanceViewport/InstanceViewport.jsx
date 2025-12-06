@@ -671,7 +671,7 @@ export function InstanceViewport({
                 instanceIdRef.current = instanceId;
                 setActualInstanceId(instanceId);
                 setInitialized(true);
-                setActiveInstance(instanceId);
+                setActiveInstance(instanceId, viewConfigId);
 
                 // Get the assigned color
                 const color = workspaceManager.getInstanceColor(instanceId);
@@ -887,11 +887,11 @@ export function InstanceViewport({
         setIsFocused(true);
         setNavbarVisible(true);
         if (actualInstanceId) {
-            setActiveInstance(actualInstanceId);
+            setActiveInstance(actualInstanceId, viewConfigId);
             // Also update workspaceManager so the left panel tools update
             workspaceManager.setActiveInstance(actualInstanceId);
         }
-    }, [actualInstanceId]);
+    }, [actualInstanceId, viewConfigId]);
 
     const handleBlur = useCallback(() => {
         setIsFocused(false);

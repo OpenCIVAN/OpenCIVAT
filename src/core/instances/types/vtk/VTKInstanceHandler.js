@@ -17,6 +17,17 @@ import { viewConfigurationManager } from "@Init/appInitializer.js";
 import { syncCameraToYjs } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 
+// Raycasting and cursor collaboration
+import {
+  raycastFromScreen,
+  disposeRaycaster,
+} from "@VTK/utils/vtkRaycaster.js";
+import {
+  updateCursorWorldPosition,
+  clearCursorWorldPosition,
+  setActiveInstance,
+} from "@Collaboration/presence/cursors.js";
+
 // Import manifest data - single source of truth for file type capabilities
 // Note: The manifest is TypeScript but gets transpiled. For now, we'll define
 // a reference here that will be replaced once the build system is fully set up.
@@ -154,7 +165,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     vtkInstanceCursors.setupInstanceCursors(
       instanceData.instanceId,
-      containerElement
+      containerElement,
+      null, // sceneObjects not yet available
+      instanceData.viewConfigId // Pass viewConfigId for collaborative matching
     );
     log.debug(`Cursors initialized for ${instanceData.instanceId}`);
 
@@ -176,6 +189,27 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     vtkInstanceCursors.cleanupInstance(instanceId);
     log.debug(`Cursors cleaned up for ${instanceId}`);
+
+    // Clean up cursor event listeners
+    if (instanceData._cursorHandlers && instanceData.container) {
+      const { handleMouseMove, handleMouseLeave, handleMouseEnter } =
+        instanceData._cursorHandlers;
+      instanceData.container.removeEventListener("mousemove", handleMouseMove);
+      instanceData.container.removeEventListener(
+        "mouseleave",
+        handleMouseLeave
+      );
+      instanceData.container.removeEventListener(
+        "mouseenter",
+        handleMouseEnter
+      );
+      instanceData._cursorHandlers = null;
+      log.debug(`Cursor event listeners removed for ${instanceId}`);
+    }
+
+    // Dispose raycaster for this instance
+    disposeRaycaster(instanceId);
+    log.debug(`Raycaster disposed for ${instanceId}`);
 
     // Clean up instance tools
     instanceTools.cleanupTools(instanceId);
@@ -2253,6 +2287,106 @@ console.log('Tools:', tools);
     instanceData.markDataLoaded = () => {
       hasDataLoaded = true;
     };
+
+    // =========================================================================
+    // PHASE 6: Set up 3D cursor broadcasting via raycasting
+    // =========================================================================
+
+    // Throttle configuration (~30fps)
+    const CURSOR_UPDATE_INTERVAL = 33; // ms
+    let lastCursorUpdate = 0;
+    let cursorUpdatePending = false;
+
+    // Mouse move handler for raycasting
+    const handleMouseMove = (event) => {
+      const now = Date.now();
+
+      // Throttle updates
+      if (now - lastCursorUpdate < CURSOR_UPDATE_INTERVAL) {
+        // Schedule a final update if not already pending
+        if (!cursorUpdatePending) {
+          cursorUpdatePending = true;
+          setTimeout(() => {
+            cursorUpdatePending = false;
+            handleMouseMove(event);
+          }, CURSOR_UPDATE_INTERVAL - (now - lastCursorUpdate));
+        }
+        return;
+      }
+
+      lastCursorUpdate = now;
+
+      // Set this instance as active for cursor tracking (include viewConfigId for collaboration)
+      setActiveInstance(instanceData.instanceId, instanceData.viewConfigId);
+
+      // Only raycast if we have data loaded
+      if (!hasDataLoaded) {
+        return;
+      }
+
+      // Perform raycasting
+      try {
+        const result = raycastFromScreen(
+          sceneObjects,
+          event.clientX,
+          event.clientY,
+          container,
+          { instanceId: instanceData.instanceId }
+        );
+
+        if (result.hit && result.worldPosition) {
+          // Update cursor with 3D world position
+          updateCursorWorldPosition(
+            {
+              x: result.worldPosition[0],
+              y: result.worldPosition[1],
+              z: result.worldPosition[2],
+            },
+            result.normal
+              ? {
+                  x: result.normal[0],
+                  y: result.normal[1],
+                  z: result.normal[2],
+                }
+              : null
+          );
+        } else {
+          // No hit - clear world position (will fall back to screen coords)
+          clearCursorWorldPosition();
+        }
+      } catch (error) {
+        log.trace("Cursor raycasting error (non-critical):", error.message);
+      }
+    };
+
+    // Mouse leave handler - clear world position when leaving container
+    const handleMouseLeave = () => {
+      clearCursorWorldPosition();
+    };
+
+    // Mouse enter handler - set active instance
+    const handleMouseEnter = () => {
+      setActiveInstance(instanceData.instanceId, instanceData.viewConfigId);
+    };
+
+    // Attach event listeners
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("mouseleave", handleMouseLeave);
+    container.addEventListener("mouseenter", handleMouseEnter);
+
+    // Store handlers for cleanup
+    instanceData._cursorHandlers = {
+      handleMouseMove,
+      handleMouseLeave,
+      handleMouseEnter,
+    };
+
+    // Update VTKInstanceCursors with scene objects for 3D rendering
+    vtkInstanceCursors.setSceneObjects(
+      instanceData.instanceId,
+      sceneObjects,
+      instanceData.viewConfigId
+    );
 
     log.info(`VTK pipeline initialized for ${instanceData.instanceId}`);
     return sceneObjects;
