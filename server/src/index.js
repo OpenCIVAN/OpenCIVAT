@@ -106,7 +106,17 @@ const corsOptions = {
   },
   credentials: true, // Allow cookies and auth headers
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    // Dev mode headers for user identification
+    "x-user-id",
+    "x-user-email",
+    "x-user-name",
+    "x-organization-id",
+    "x-project-id",
+  ],
 };
 
 app.use(cors(corsOptions));

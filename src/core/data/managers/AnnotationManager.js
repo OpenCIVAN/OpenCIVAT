@@ -107,9 +107,15 @@ export class AnnotationManager {
   }
 
   // ==================== ANNOTATION LIFECYCLE ====================
+  // Replace the createAnnotation method in src/core/data/managers/AnnotationManager.js
+  //
+  // NOTE: DatasetManager.addAnnotation() already has the correct server implementation.
+  // AnnotationManager should delegate to it rather than duplicate the logic.
 
   /**
    * Create a new annotation on a dataset
+   *
+   * Delegates to DatasetManager which has the correct server API integration.
    *
    * @param {string} datasetId - Dataset to annotate
    * @param {object} config - Annotation configuration
@@ -117,56 +123,128 @@ export class AnnotationManager {
    * @param {string} config.text - Annotation text
    * @param {string} config.type - Annotation type (point, line, region, etc.)
    * @param {array} config.tags - Optional tags for categorization
+   * @param {string} config.visibility - 'public' or 'private'
+   * @param {object} options - { projectId }
    * @returns {Promise<Annotation>} - The created annotation
    */
-  async createAnnotation(datasetId, annotationConfig) {
-    // Get the dataset
+  async createAnnotation(datasetId, annotationConfig, options = {}) {
+    // Delegate to DatasetManager which has correct server API integration
+    const annotation = await this._datasetManager.addAnnotation(
+      datasetId,
+      annotationConfig,
+      getUserId(),
+      options
+    );
+
+    // DatasetManager already emits 'annotationAdded', but we also emit our own
+    // for any listeners subscribed directly to AnnotationManager
+    this._emit("annotationAdded", { datasetId, annotation });
+
+    log.debug(`Annotation created via DatasetManager: ${annotation.id}`);
+    return annotation;
+  }
+
+  /**
+   * Update an annotation
+   *
+   * @param {string} datasetId - Dataset ID
+   * @param {string} annotationId - Annotation ID
+   * @param {object} updates - Updates to apply
+   * @returns {Promise<Annotation>}
+   */
+  async updateAnnotation(datasetId, annotationId, updates) {
     const dataset = this._datasetManager.getDataset(datasetId);
     if (!dataset) {
       throw new Error(`Dataset ${datasetId} not found`);
     }
 
-    // Create annotation locally first
-    const annotation = new Annotation({
-      ...annotationConfig,
-      datasetId,
-      createdBy: getUserId(),
-    });
-
-    // Send to server
-    try {
-      const response = await fetch(
-        `${this._apiBaseUrl}/files/${datasetId}/annotations`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(annotation.toJSON()),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const serverData = await response.json();
-      // Update with server-assigned ID if different
-      if (serverData.annotation?.id) {
-        annotation.id = serverData.annotation.id;
-      }
-    } catch (error) {
-      log.error("Failed to save annotation to server:", error);
-      // Continue with local-only annotation for now
+    const annotation = dataset.getAnnotation(annotationId);
+    if (!annotation) {
+      throw new Error(`Annotation ${annotationId} not found`);
     }
 
-    // Add to dataset
-    dataset.addAnnotation(annotation);
+    try {
+      const result = await apiClient.put(
+        `/annotations/${annotationId}`,
+        updates
+      );
 
-    // Emit event
-    this._emit("annotationAdded", { datasetId, annotation });
+      // Update local copy
+      Object.assign(annotation, updates);
+      annotation.updatedAt = new Date().toISOString();
 
-    log.debug(`Annotation created: ${annotation.id} on dataset ${datasetId}`);
+      this._emit("annotationUpdated", { datasetId, annotation });
+      log.debug(`Annotation ${annotationId} updated`);
 
-    return annotation;
+      return annotation;
+    } catch (error) {
+      log.error("Failed to update annotation:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an annotation
+   *
+   * @param {string} datasetId - Dataset ID
+   * @param {string} annotationId - Annotation ID
+   * @returns {Promise<void>}
+   */
+  async deleteAnnotation(datasetId, annotationId) {
+    const dataset = this._datasetManager.getDataset(datasetId);
+    if (!dataset) {
+      throw new Error(`Dataset ${datasetId} not found`);
+    }
+
+    try {
+      await apiClient.delete(`/annotations/${annotationId}`);
+
+      dataset.removeAnnotation(annotationId);
+      this._emit("annotationRemoved", { datasetId, annotationId });
+      log.debug(`Annotation ${annotationId} deleted`);
+    } catch (error) {
+      log.error("Failed to delete annotation:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch annotations from server for a dataset
+   *
+   * @param {string} datasetId - Dataset ID
+   * @param {object} options - Filter options
+   * @returns {Promise<Annotation[]>}
+   */
+  async fetchAnnotationsForDataset(datasetId, options = {}) {
+    const dataset = this._datasetManager.getDataset(datasetId);
+    if (!dataset) {
+      throw new Error(`Dataset ${datasetId} not found`);
+    }
+
+    try {
+      const params = new URLSearchParams({
+        fileId: datasetId,
+        ...options,
+      });
+
+      const result = await apiClient.get(`/annotations?${params}`);
+
+      // Sync with local dataset
+      const annotations = (result.annotations || []).map((data) =>
+        Annotation.fromJSON(data)
+      );
+
+      // Replace dataset's annotations with server data
+      dataset.annotations = annotations;
+
+      log.info(
+        `Fetched ${annotations.length} annotations for dataset ${datasetId}`
+      );
+      return annotations;
+    } catch (error) {
+      log.error("Failed to fetch annotations:", error);
+      throw error;
+    }
   }
 
   /**

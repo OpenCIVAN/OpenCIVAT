@@ -36,6 +36,7 @@ import {
     ResizableSection,
     useSectionStates
 } from '@UI/react/components/common/ResizableSections';
+import { useAnnotations } from '@UI/react/hooks';
 
 // =============================================================================
 // ANNOTATION TYPES
@@ -250,6 +251,8 @@ function WorkspaceAnnotationItem({ annotation }) {
 
 export function AnnotationsPanelContent({ workspaceId }) {
     // State
+    const { annotations, isLoading, error } = useAnnotations({});
+    console.log('Annotations from hook:', { annotations, isLoading, error });
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilters, setTypeFilters] = useState([]);
 

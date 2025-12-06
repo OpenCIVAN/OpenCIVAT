@@ -50,6 +50,8 @@ import {
   RightPanelContent,
 } from "@UI/react/components/panels/RightPanel";
 import { FloatingPanelProvider, AllFloatingPanels } from "@UI/react/components/panels/FloatingPanel";
+import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
+import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 
 /**
  * Main Application Component
@@ -90,6 +92,10 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   // Workspace selector dropdown state
   const [workspaceSelectorOpen, setWorkspaceSelectorOpen] = useState(false);
+
+  // Get active canvas for LayoutPanelProvider
+  const { canvas } = useCanvas();
+  const canvasId = canvas?.id;
 
   // Handle room change - receives both id and name from RoomSelector
   const handleRoomChange = useCallback((roomId, roomName) => {
@@ -269,109 +275,112 @@ export function CIAWebApp({ username, userId, projectId }) {
     <FloatingPanelProvider>
       <LeftPanelProvider>
         <RightPanelProvider>
-          <ThreeEdgeLayout
-            // Top bar
-            topBar={
-              <TopBar
-                username={username}
-                projectName={projectId ? `Project ${projectId}` : null}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-                vrAvailable={vrAvailable}
-              />
-            }
-
-            // Center workspace
-            centerPanel={renderCenterPanel()}
-
-            // Bottom bar
-            bottomBar={
-              <>
-                <BottomPanel />
-                <StatusBar />
-              </>
-            }
-
-            // Left side - separated activity bar and content
-            leftActivityBar={<LeftActivityBar />}
-            leftPanelContent={<LeftPanelContent workspaceId={workspaceId} />}
-
-            // Right side - separated activity bar and content
-            rightActivityBar={<RightActivityBar />}
-            rightPanelContent={<RightPanelContent workspaceId={workspaceId} roomId={currentRoomId} roomName={currentRoomName} />}
-
-            // Secondary bar zones - distributed across grid cells
-            secondaryTopBarZones={{
-              left: (
-                <WorkspaceSelector
-                  currentWorkspace={workspace.currentWorkspace}
-                  isOpen={workspaceSelectorOpen}
-                  searchQuery={workspace.searchQuery}
-                  groupedWorkspaces={workspace.groupedWorkspaces}
-                  onToggle={() => setWorkspaceSelectorOpen(!workspaceSelectorOpen)}
-                  onSelect={(id) => {
-                    workspace.selectWorkspace(id);
-                    setWorkspaceSelectorOpen(false);
-                  }}
-                  onSearchChange={workspace.setSearchQuery}
-                  onClose={() => setWorkspaceSelectorOpen(false)}
+          {/* LayoutPanelProvider shares state between LayoutPanel and FloatingCanvasNavigator */}
+          <LayoutPanelProvider canvasId={canvasId}>
+            <ThreeEdgeLayout
+              // Top bar
+              topBar={
+                <TopBar
+                  username={username}
+                  projectName={projectId ? `Project ${projectId}` : null}
+                  viewMode={viewMode}
+                  onViewModeChange={handleViewModeChange}
+                  vrAvailable={vrAvailable}
                 />
-              ),
-              center: <SecondaryTopBar />,
-              right: (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <RoomSelector
-                    projectId={projectId}
-                    onRoomChange={transition.initiateRoomChange}
-                  />
-                  <WorkspacePickerModal
-                    isOpen={transition.isPickerOpen}
-                    targetRoom={transition.pendingRoom}
-                    currentWorkspaceId={workspace.currentWorkspace?.id}
+              }
+
+              // Center workspace
+              centerPanel={renderCenterPanel()}
+
+              // Bottom bar
+              bottomBar={
+                <>
+                  <BottomPanel />
+                  <StatusBar />
+                </>
+              }
+
+              // Left side - separated activity bar and content
+              leftActivityBar={<LeftActivityBar />}
+              leftPanelContent={<LeftPanelContent workspaceId={workspaceId} />}
+
+              // Right side - separated activity bar and content
+              rightActivityBar={<RightActivityBar />}
+              rightPanelContent={<RightPanelContent workspaceId={workspaceId} roomId={currentRoomId} roomName={currentRoomName} />}
+
+              // Secondary bar zones - distributed across grid cells
+              secondaryTopBarZones={{
+                left: (
+                  <WorkspaceSelector
+                    currentWorkspace={workspace.currentWorkspace}
+                    isOpen={workspaceSelectorOpen}
+                    searchQuery={workspace.searchQuery}
                     groupedWorkspaces={workspace.groupedWorkspaces}
-                    onConfirm={transition.confirmWithWorkspace}
-                    onSkip={transition.confirmKeepWorkspace}
-                    onCancel={transition.cancel}
-                    onAutoEnter={transition.autoEnter}
-                    onCreateWorkspace={handleCreateWorkspaceForRoom}
+                    onToggle={() => setWorkspaceSelectorOpen(!workspaceSelectorOpen)}
+                    onSelect={(id) => {
+                      workspace.selectWorkspace(id);
+                      setWorkspaceSelectorOpen(false);
+                    }}
+                    onSearchChange={workspace.setSearchQuery}
+                    onClose={() => setWorkspaceSelectorOpen(false)}
                   />
-                  <WorkspacePresence
-                    visibleUsers={presence.visibleUsers}
-                    overflowCount={presence.overflowCount}
-                    totalCount={presence.totalCount}
-                    isHovering={presence.isHovering}
-                    onHoverChange={presence.setIsHovering}
+                ),
+                center: <SecondaryTopBar />,
+                right: (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <RoomSelector
+                      projectId={projectId}
+                      onRoomChange={transition.initiateRoomChange}
+                    />
+                    <WorkspacePickerModal
+                      isOpen={transition.isPickerOpen}
+                      targetRoom={transition.pendingRoom}
+                      currentWorkspaceId={workspace.currentWorkspace?.id}
+                      groupedWorkspaces={workspace.groupedWorkspaces}
+                      onConfirm={transition.confirmWithWorkspace}
+                      onSkip={transition.confirmKeepWorkspace}
+                      onCancel={transition.cancel}
+                      onAutoEnter={transition.autoEnter}
+                      onCreateWorkspace={handleCreateWorkspaceForRoom}
+                    />
+                    <WorkspacePresence
+                      visibleUsers={presence.visibleUsers}
+                      overflowCount={presence.overflowCount}
+                      totalCount={presence.totalCount}
+                      isHovering={presence.isHovering}
+                      onHoverChange={presence.setIsHovering}
+                    />
+                  </div>
+                ),
+              }}
+              secondaryBottomBarZones={{
+                left: (
+                  <LayoutModeToggle
+                    mode={layoutMode}
+                    onModeChange={setLayoutMode}
                   />
-                </div>
-              ),
-            }}
-            secondaryBottomBarZones={{
-              left: (
-                <LayoutModeToggle
-                  mode={layoutMode}
-                  onModeChange={setLayoutMode}
-                />
-              ),
-              center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,
-              right: (
-                <VoiceControls
-                  inVoice={voice.inVoice}
-                  muted={voice.muted}
-                  deafened={voice.deafened}
-                  currentRoom={voice.currentRoom}
-                  showRoomDropdown={voice.showRoomDropdown}
-                  onJoin={voice.joinVoice}
-                  onLeave={voice.leaveVoice}
-                  onToggleMute={voice.toggleMute}
-                  onToggleDeafen={voice.toggleDeafen}
-                  onToggleRoomDropdown={voice.toggleRoomDropdown}
-                />
-              ),
-            }}
-          >
-            {/* Floating panels rendered at app level - persist when docked panels close */}
-            <AllFloatingPanels workspaceId={workspaceId} />
-          </ThreeEdgeLayout>
+                ),
+                center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,
+                right: (
+                  <VoiceControls
+                    inVoice={voice.inVoice}
+                    muted={voice.muted}
+                    deafened={voice.deafened}
+                    currentRoom={voice.currentRoom}
+                    showRoomDropdown={voice.showRoomDropdown}
+                    onJoin={voice.joinVoice}
+                    onLeave={voice.leaveVoice}
+                    onToggleMute={voice.toggleMute}
+                    onToggleDeafen={voice.toggleDeafen}
+                    onToggleRoomDropdown={voice.toggleRoomDropdown}
+                  />
+                ),
+              }}
+            >
+              {/* Floating panels rendered at app level - persist when docked panels close */}
+              <AllFloatingPanels workspaceId={workspaceId} />
+            </ThreeEdgeLayout>
+          </LayoutPanelProvider>
         </RightPanelProvider>
       </LeftPanelProvider>
     </FloatingPanelProvider>
