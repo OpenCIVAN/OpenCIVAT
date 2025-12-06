@@ -19,6 +19,13 @@ import './CanvasMinimap.scss';
 
 /**
  * CanvasMinimap - Overview map of the canvas with navigation controls
+ *
+ * @param {string} canvasId - ID of the canvas to display
+ * @param {boolean} expanded - Whether the minimap is expanded
+ * @param {function} onToggleExpand - Callback to toggle expand state
+ * @param {boolean} showControls - Whether to show navigation controls
+ * @param {number} maxHeight - Maximum height of the grid container
+ * @param {{ rows: number, cols: number }} viewportSize - Override viewport size (from useViewportSize)
  */
 export function CanvasMinimap({
     canvasId,
@@ -26,6 +33,7 @@ export function CanvasMinimap({
     onToggleExpand,
     showControls = true,
     maxHeight = 120,
+    viewportSize: viewportSizeProp,
 }) {
     const {
         canvas,
@@ -33,6 +41,10 @@ export function CanvasMinimap({
         setViewportPosition,
         moveViewport,
     } = useCanvas(canvasId);
+
+    // Use prop viewport size if provided, otherwise use viewport from useCanvas
+    const effectiveViewportRows = viewportSizeProp?.rows ?? viewport.rows;
+    const effectiveViewportCols = viewportSizeProp?.cols ?? viewport.cols;
 
     // Local state for homepoint (could also be persisted in canvas)
     const [homepoint, setHomepoint] = useState(null);
@@ -82,10 +94,10 @@ export function CanvasMinimap({
     // Handle click on minimap to navigate
     const handleCellClick = useCallback((row, col) => {
         // Center the viewport on the clicked cell
-        const newRow = Math.max(0, row - Math.floor(viewport.rows / 2));
-        const newCol = Math.max(0, col - Math.floor(viewport.cols / 2));
+        const newRow = Math.max(0, row - Math.floor(effectiveViewportRows / 2));
+        const newCol = Math.max(0, col - Math.floor(effectiveViewportCols / 2));
         setViewportPosition(newRow, newCol);
-    }, [viewport.rows, viewport.cols, setViewportPosition]);
+    }, [effectiveViewportRows, effectiveViewportCols, setViewportPosition]);
 
     // Navigation handlers
     const handleNavigate = useCallback((direction) => {
@@ -191,9 +203,9 @@ export function CanvasMinimap({
                         // Check if cell is in viewport
                         const inViewport = (
                             row >= viewport.row &&
-                            row < viewport.row + viewport.rows &&
+                            row < viewport.row + effectiveViewportRows &&
                             col >= viewport.col &&
-                            col < viewport.col + viewport.cols
+                            col < viewport.col + effectiveViewportCols
                         );
 
                         // Check if cell is homepoint
@@ -216,8 +228,8 @@ export function CanvasMinimap({
                     <div
                         className="canvas-minimap__viewport-indicator"
                         style={{
-                            gridRow: `${viewport.row + 1} / span ${viewport.rows}`,
-                            gridColumn: `${viewport.col + 1} / span ${viewport.cols}`,
+                            gridRow: `${viewport.row + 1} / span ${effectiveViewportRows}`,
+                            gridColumn: `${viewport.col + 1} / span ${effectiveViewportCols}`,
                         }}
                     />
 

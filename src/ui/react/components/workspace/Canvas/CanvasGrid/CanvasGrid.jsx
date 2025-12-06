@@ -16,6 +16,7 @@ import { GridEditOverlay } from '../GridEditOverlay';
 import { CanvasMinimap } from '../CanvasMinimap';
 import { ConnectionOverlay } from '../ConnectionOverlay';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
+import { useViewportSize } from '@UI/react/hooks';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { viewConfigurationManager, datasetManager } from '@Init/appInitializer.js';
 import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
@@ -70,6 +71,24 @@ export function CanvasGrid({
         isConnected,
     } = useCanvas(canvasId);
 
+    // Viewport size controls - how many cells are visible at once
+    const {
+        viewportSize,
+        isMinSize,
+        isMaxSize,
+        incrementViewportSize,
+        decrementViewportSize,
+        resetViewportSize,
+    } = useViewportSize(canvas?.dimensions);
+
+    // Effective viewport combines position from useCanvas with size from useViewportSize
+    const effectiveViewport = useMemo(() => ({
+        row: viewport.row,
+        col: viewport.col,
+        rows: viewportSize.rows,
+        cols: viewportSize.cols,
+    }), [viewport.row, viewport.col, viewportSize.rows, viewportSize.cols]);
+
     // Retry connection
     const handleRetryConnection = useCallback(() => {
         // Trigger a refresh by reloading the canvas
@@ -95,7 +114,7 @@ export function CanvasGrid({
         activeSubset,
     } = useSubsets(canvasId);
 
-    // Keyboard navigation
+    // Keyboard navigation and viewport size shortcuts
     useEffect(() => {
         const handleKeyDown = (e) => {
             // Only handle if grid is focused or no input is focused
@@ -107,6 +126,7 @@ export function CanvasGrid({
             }
 
             switch (e.key) {
+                // Navigation
                 case 'ArrowUp':
                     e.preventDefault();
                     moveViewport(-1, 0);
@@ -123,6 +143,27 @@ export function CanvasGrid({
                     e.preventDefault();
                     moveViewport(0, 1);
                     break;
+
+                // Viewport size controls
+                case '+':
+                case '=':
+                    e.preventDefault();
+                    if (!isMaxSize) {
+                        incrementViewportSize();
+                    }
+                    break;
+                case '-':
+                case '_':
+                    e.preventDefault();
+                    if (!isMinSize) {
+                        decrementViewportSize();
+                    }
+                    break;
+                case '0':
+                    e.preventDefault();
+                    resetViewportSize();
+                    break;
+
                 default:
                     break;
             }
@@ -130,7 +171,7 @@ export function CanvasGrid({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveViewport]);
+    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, isMinSize, isMaxSize]);
 
     // Handle cell click
     const handleCellClick = useCallback(
@@ -251,20 +292,40 @@ export function CanvasGrid({
         setSelectedCells([]);
     }, []);
 
+    // Filter placements to only those visible in the effective viewport
+    const viewportPlacements = useMemo(() => {
+        if (!canvas?.placements) return [];
+
+        return canvas.placements.filter((placement) => {
+            // Check if placement overlaps with viewport window
+            const pEndRow = placement.row + (placement.rowSpan || 1);
+            const pEndCol = placement.col + (placement.colSpan || 1);
+            const vEndRow = effectiveViewport.row + effectiveViewport.rows;
+            const vEndCol = effectiveViewport.col + effectiveViewport.cols;
+
+            return (
+                placement.row < vEndRow &&
+                pEndRow > effectiveViewport.row &&
+                placement.col < vEndCol &&
+                pEndCol > effectiveViewport.col
+            );
+        });
+    }, [canvas?.placements, effectiveViewport]);
+
     // Build grid cells
     const renderCells = () => {
         const cells = [];
         const placementMap = new Map();
 
         // Map placements to their positions
-        visiblePlacements.forEach((placement) => {
+        viewportPlacements.forEach((placement) => {
             const key = `${placement.row}-${placement.col}`;
             placementMap.set(key, placement);
         });
 
         // Track which cells are covered by spanning placements
         const coveredCells = new Set();
-        visiblePlacements.forEach((placement) => {
+        viewportPlacements.forEach((placement) => {
             for (let r = placement.row; r < placement.row + placement.rowSpan; r++) {
                 for (let c = placement.col; c < placement.col + placement.colSpan; c++) {
                     if (r !== placement.row || c !== placement.col) {
@@ -274,9 +335,9 @@ export function CanvasGrid({
             }
         });
 
-        // Generate cells for the viewport
-        for (let row = viewport.row; row < viewport.row + viewport.rows; row++) {
-            for (let col = viewport.col; col < viewport.col + viewport.cols; col++) {
+        // Generate cells for the effective viewport
+        for (let row = effectiveViewport.row; row < effectiveViewport.row + effectiveViewport.rows; row++) {
+            for (let col = effectiveViewport.col; col < effectiveViewport.col + effectiveViewport.cols; col++) {
                 const key = `${row}-${col}`;
 
                 // Skip cells covered by spanning placements
@@ -289,8 +350,8 @@ export function CanvasGrid({
                 const isHighlighted = placement && highlightedPlacementId === placement.id;
 
                 // Calculate grid position (relative to viewport)
-                const gridRow = row - viewport.row + 1;
-                const gridCol = col - viewport.col + 1;
+                const gridRow = row - effectiveViewport.row + 1;
+                const gridCol = col - effectiveViewport.col + 1;
 
                 // Check if cell is selected in edit mode
                 const isCellSelected = editMode && selectedCells.includes(key);
@@ -407,15 +468,15 @@ export function CanvasGrid({
                 ref={gridRef}
                 className="canvas-grid__container"
                 style={{
-                    '--viewport-rows': viewport.rows,
-                    '--viewport-cols': viewport.cols,
+                    '--viewport-rows': effectiveViewport.rows,
+                    '--viewport-cols': effectiveViewport.cols,
                 }}
             >
                 <div
                     className="canvas-grid__cells"
                     style={{
-                        gridTemplateRows: `repeat(${viewport.rows}, 1fr)`,
-                        gridTemplateColumns: `repeat(${viewport.cols}, 1fr)`,
+                        gridTemplateRows: `repeat(${effectiveViewport.rows}, 1fr)`,
+                        gridTemplateColumns: `repeat(${effectiveViewport.cols}, 1fr)`,
                     }}
                 >
                     {renderCells()}
@@ -442,6 +503,7 @@ export function CanvasGrid({
                 canvasId={canvasId}
                 expanded={minimapExpanded}
                 onToggleExpand={() => setMinimapExpanded(prev => !prev)}
+                viewportSize={viewportSize}
             />
 
             {/* Connection Overlay - shown when disconnected */}
