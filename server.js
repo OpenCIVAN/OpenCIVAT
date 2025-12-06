@@ -544,16 +544,34 @@ function handleSyncMessage(socket, room, decoder, rawMessage) {
  */
 function handleAwarenessMessage(socket, room, decoder, rawMessage) {
   const update = decoding.readVarUint8Array(decoder);
+
+  // Extract client ID from awareness update if not yet set
+  // Awareness update format: [numClients, clientId, clock, stateJSON, ...]
+  if (!socket.clientId && update.length > 0) {
+    try {
+      const updateDecoder = decoding.createDecoder(update);
+      const numClients = decoding.readVarUint(updateDecoder);
+      if (numClients > 0) {
+        const clientId = decoding.readVarUint(updateDecoder);
+        socket.clientId = clientId;
+        wsLog.info(`Set socket.clientId from awareness: ${clientId}`);
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+  }
+
   awarenessProtocol.applyAwarenessUpdate(room.awareness, update, socket);
 
   // Relay to other clients
   broadcastToRoom(room, rawMessage, socket);
 
   // DEBUG: Log recording state
-  recordingLog.debug(
+  recordingLog.info(
     `Awareness update - room.projectId: ${room.projectId}, ` +
       `activeRecordings.has: ${activeRecordings.has(room.projectId)}, ` +
-      `activeRecordings.size: ${activeRecordings.size}`
+      `activeRecordings.size: ${activeRecordings.size}, ` +
+      `socket.clientId: ${socket.clientId}`
   );
 
   // Record cursor if recording is active
@@ -562,16 +580,26 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
       const states = room.awareness.getStates();
       const localState = states.get(socket.clientId);
 
-      if (localState) {
-        recordingLog.debug(
-          `Awareness state keys: ${Object.keys(localState).join(", ")}`
-        );
+      recordingLog.info(
+        `Checking cursor - clientId: ${socket.clientId}, ` +
+          `statesSize: ${states.size}, ` +
+          `hasLocalState: ${!!localState}, ` +
+          `localStateKeys: ${
+            localState ? Object.keys(localState).join(", ") : "none"
+          }`
+      );
+
+      if (localState?.cursor) {
+        recordingLog.info(`Cursor data: ${JSON.stringify(localState.cursor)}`);
       }
 
       if (
         localState?.cursor &&
         shouldRecordCursor(socket.clientId, localState.cursor)
       ) {
+        recordingLog.info(
+          `Recording cursor event for clientId: ${socket.clientId}`
+        );
         // Don't await - fire and forget for performance
         recordEvent(
           room.projectId,
@@ -593,7 +621,7 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
         );
       }
     } catch (err) {
-      // Silent fail for cursor recording
+      recordingLog.error(`Cursor recording error: ${err.message}`);
     }
   }
 }
