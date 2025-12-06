@@ -30,6 +30,14 @@ let mouseMoveTimeout = null;
 let showCursorNames = true;
 const cursorNameListeners = new Set();
 
+// Self-cursor visibility (whether to show your own projected cursor)
+let showSelfCursor = true;
+const selfCursorListeners = new Set();
+
+// Show others' cursors (local preference)
+let showOthersCursors = true;
+const othersCursorsListeners = new Set();
+
 // 3D world position (set by instance handlers like VTK)
 let lastWorldPosition = null; // { x, y, z } or null
 let lastWorldNormal = null; // { x, y, z } or null (surface normal for orientation)
@@ -238,6 +246,122 @@ export function onCursorNamesVisibilityChange(callback) {
   return () => {
     cursorNameListeners.delete(callback);
   };
+}
+
+// ----------------------------------------------------------------------------
+// Self-Cursor Display (Local Preference)
+// ----------------------------------------------------------------------------
+
+/**
+ * Set whether to show your own projected cursor in viewports.
+ * When disabled, only other users' cursors are shown.
+ * @param {boolean} visible - Whether to show self cursor
+ */
+export function setSelfCursorVisible(visible) {
+  showSelfCursor = visible;
+  log.debug(`Self cursor visibility: ${visible}`);
+
+  // Notify all listeners
+  selfCursorListeners.forEach((callback) => {
+    try {
+      callback(visible);
+    } catch (error) {
+      log.error("Error in self cursor visibility listener:", error);
+    }
+  });
+}
+
+/**
+ * Get whether self cursor is currently shown
+ * @returns {boolean}
+ */
+export function getSelfCursorVisible() {
+  return showSelfCursor;
+}
+
+/**
+ * Subscribe to self cursor visibility changes
+ * @param {Function} callback - Called with (visible: boolean)
+ * @returns {Function} Cleanup function
+ */
+export function onSelfCursorVisibilityChange(callback) {
+  selfCursorListeners.add(callback);
+  return () => {
+    selfCursorListeners.delete(callback);
+  };
+}
+
+// ----------------------------------------------------------------------------
+// Show Others' Cursors (Local Preference)
+// ----------------------------------------------------------------------------
+
+/**
+ * Set whether to show other users' cursors in viewports.
+ * @param {boolean} visible - Whether to show others' cursors
+ */
+export function setShowOthersCursors(visible) {
+  showOthersCursors = visible;
+  log.debug(`Show others cursors: ${visible}`);
+
+  // Notify all listeners
+  othersCursorsListeners.forEach((callback) => {
+    try {
+      callback(visible);
+    } catch (error) {
+      log.error("Error in others cursors visibility listener:", error);
+    }
+  });
+}
+
+/**
+ * Get whether others' cursors are currently shown
+ * @returns {boolean}
+ */
+export function getShowOthersCursors() {
+  return showOthersCursors;
+}
+
+/**
+ * Subscribe to others' cursors visibility changes
+ * @param {Function} callback - Called with (visible: boolean)
+ * @returns {Function} Cleanup function
+ */
+export function onShowOthersCursorsChange(callback) {
+  othersCursorsListeners.add(callback);
+  return () => {
+    othersCursorsListeners.delete(callback);
+  };
+}
+
+// ----------------------------------------------------------------------------
+// Cursor Color (Synced via Y.js)
+// ----------------------------------------------------------------------------
+
+/**
+ * Set my cursor color
+ * @param {string} color - Hex color string (e.g., "#60a5fa")
+ */
+export function setMyCursorColor(color) {
+  const prefs = yCursorPrefs.get(getUserId()) || {
+    visible: true,
+    style: "pointer",
+  };
+  prefs.color = color;
+  yCursorPrefs.set(getUserId(), prefs);
+
+  // Update current position with new color
+  broadcastCursorPosition();
+
+  log.debug(`My cursor color: ${color}`);
+}
+
+/**
+ * Get my cursor color
+ * @returns {string} Hex color string
+ */
+export function getMyCursorColor() {
+  const prefs = yCursorPrefs.get(getUserId());
+  return prefs?.color || getUserColor(getUserId());
 }
 
 // ----------------------------------------------------------------------------

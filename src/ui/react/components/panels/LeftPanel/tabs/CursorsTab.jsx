@@ -23,11 +23,27 @@ import {
     Eye,
     EyeOff,
     Tag,
+    Crosshair,
 } from 'lucide-react';
 import {
+    // Cursor name visibility
     getCursorNamesVisible,
     setCursorNamesVisible,
     onCursorNamesVisibilityChange,
+    // My cursor visibility to others
+    getMyCursorVisible,
+    setMyCursorVisible,
+    // My cursor color
+    getMyCursorColor,
+    setMyCursorColor,
+    // Self cursor projection
+    getSelfCursorVisible,
+    setSelfCursorVisible,
+    onSelfCursorVisibilityChange,
+    // Show others' cursors
+    getShowOthersCursors,
+    setShowOthersCursors,
+    onShowOthersCursorsChange,
 } from '@Collaboration/presence/cursors.js';
 
 // =============================================================================
@@ -139,25 +155,54 @@ function LinkCard({ icon: Icon, title, description, color, onClick }) {
 // =============================================================================
 
 export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
-    // My cursor settings
-    const [mySettings, setMySettings] = useState({
-        cursorVisible: true,
-        cursorColor: '#34d399', // green
-        showOthersDefault: true,
-        defaultFollowMode: 'none',
-    });
-
     const [showColorPicker, setShowColorPicker] = useState(false);
+
+    // My cursor visibility to others (synced via Y.js)
+    const [cursorVisible, setCursorVisible] = useState(getMyCursorVisible);
+
+    // My cursor color (synced via Y.js)
+    const [cursorColor, setCursorColor] = useState(() => getMyCursorColor() || '#34d399');
 
     // Cursor names visibility (local preference)
     const [showCursorNames, setShowCursorNames] = useState(getCursorNamesVisible);
 
-    // Listen for external changes to cursor names visibility
+    // Self cursor projection visibility (local preference)
+    const [showSelfCursor, setShowSelfCursor] = useState(getSelfCursorVisible);
+
+    // Show others' cursors (local preference)
+    const [showOthersCursors, setShowOthersCursorsState] = useState(getShowOthersCursors);
+
+    // Default follow mode (UI-only for now)
+    const [defaultFollowMode, setDefaultFollowMode] = useState('none');
+
+    // Listen for external changes
     useEffect(() => {
-        const cleanup = onCursorNamesVisibilityChange((visible) => {
+        const cleanupNames = onCursorNamesVisibilityChange((visible) => {
             setShowCursorNames(visible);
         });
-        return cleanup;
+        const cleanupSelf = onSelfCursorVisibilityChange((visible) => {
+            setShowSelfCursor(visible);
+        });
+        const cleanupOthers = onShowOthersCursorsChange((visible) => {
+            setShowOthersCursorsState(visible);
+        });
+        return () => {
+            cleanupNames();
+            cleanupSelf();
+            cleanupOthers();
+        };
+    }, []);
+
+    // Handle my cursor visibility toggle
+    const handleCursorVisibleToggle = useCallback((visible) => {
+        setMyCursorVisible(visible);
+        setCursorVisible(visible);
+    }, []);
+
+    // Handle cursor color change
+    const handleColorChange = useCallback((color) => {
+        setMyCursorColor(color);
+        setCursorColor(color);
     }, []);
 
     // Handle cursor names toggle
@@ -166,9 +211,16 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
         setShowCursorNames(visible);
     }, []);
 
-    // Update setting
-    const updateSetting = useCallback((key, value) => {
-        setMySettings(prev => ({ ...prev, [key]: value }));
+    // Handle self cursor visibility toggle
+    const handleSelfCursorToggle = useCallback((visible) => {
+        setSelfCursorVisible(visible);
+        setShowSelfCursor(visible);
+    }, []);
+
+    // Handle show others toggle
+    const handleShowOthersToggle = useCallback((visible) => {
+        setShowOthersCursors(visible);
+        setShowOthersCursorsState(visible);
     }, []);
 
     return (
@@ -199,8 +251,8 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                             description="Others can see your cursor in shared views"
                         >
                             <ToggleSwitch
-                                value={mySettings.cursorVisible}
-                                onChange={(v) => updateSetting('cursorVisible', v)}
+                                value={cursorVisible}
+                                onChange={handleCursorVisibleToggle}
                             />
                         </SettingRow>
                     </div>
@@ -208,7 +260,7 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                     {/* Cursor color */}
                     <div className="cursor-setting-card">
                         <div className="cursor-setting-row cursor-setting-row--color">
-                            <div className="cursor-setting-row__icon" style={{ '--icon-color': mySettings.cursorColor }}>
+                            <div className="cursor-setting-row__icon" style={{ '--icon-color': cursorColor }}>
                                 <Palette size={16} />
                             </div>
                             <div className="cursor-setting-row__info">
@@ -217,15 +269,15 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                             </div>
                             <button
                                 className="cursor-color-button"
-                                style={{ '--current-color': mySettings.cursorColor }}
+                                style={{ '--current-color': cursorColor }}
                                 onClick={() => setShowColorPicker(!showColorPicker)}
                             />
                         </div>
                         {showColorPicker && (
                             <ColorPicker
-                                selectedColor={mySettings.cursorColor}
+                                selectedColor={cursorColor}
                                 onSelectColor={(color) => {
-                                    updateSetting('cursorColor', color);
+                                    handleColorChange(color);
                                     setShowColorPicker(false);
                                 }}
                             />
@@ -233,21 +285,21 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                     </div>
                 </div>
 
-                {/* Default Behavior Section */}
+                {/* Display Options Section */}
                 <div className="cursors-tab__section">
-                    <div className="cursors-tab__section-header">Default Behavior</div>
+                    <div className="cursors-tab__section-header">Display Options</div>
 
-                    {/* Show others default */}
+                    {/* Show others' cursors */}
                     <div className="cursor-setting-card">
                         <SettingRow
                             icon={Users}
                             iconColor="var(--color-accent-pink)"
                             title="Show others' cursors"
-                            description="Default for new workspaces/instances"
+                            description="See other users' cursors in your views"
                         >
                             <ToggleSwitch
-                                value={mySettings.showOthersDefault}
-                                onChange={(v) => updateSetting('showOthersDefault', v)}
+                                value={showOthersCursors}
+                                onChange={handleShowOthersToggle}
                             />
                         </SettingRow>
                     </div>
@@ -263,6 +315,21 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                             <ToggleSwitch
                                 value={showCursorNames}
                                 onChange={handleCursorNamesToggle}
+                            />
+                        </SettingRow>
+                    </div>
+
+                    {/* Show my projected cursor */}
+                    <div className="cursor-setting-card">
+                        <SettingRow
+                            icon={Crosshair}
+                            iconColor="var(--color-accent-teal)"
+                            title="Show my projected cursor"
+                            description="See your own cursor rendered in your color"
+                        >
+                            <ToggleSwitch
+                                value={showSelfCursor}
+                                onChange={handleSelfCursorToggle}
                             />
                         </SettingRow>
                     </div>
@@ -284,8 +351,8 @@ export function CursorsPanelContent({ workspaceId, onNavigateToPanel }) {
                                 return (
                                     <button
                                         key={mode.id}
-                                        className={`follow-mode-btn ${mySettings.defaultFollowMode === mode.id ? 'follow-mode-btn--active' : ''}`}
-                                        onClick={() => updateSetting('defaultFollowMode', mode.id)}
+                                        className={`follow-mode-btn ${defaultFollowMode === mode.id ? 'follow-mode-btn--active' : ''}`}
+                                        onClick={() => setDefaultFollowMode(mode.id)}
                                     >
                                         <ModeIcon size={10} />
                                         {mode.label}

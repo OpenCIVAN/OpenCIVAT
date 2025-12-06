@@ -19,6 +19,10 @@ import {
   hasWorldPosition,
   getCursorNamesVisible,
   onCursorNamesVisibilityChange,
+  getSelfCursorVisible,
+  onSelfCursorVisibilityChange,
+  getShowOthersCursors,
+  onShowOthersCursorsChange,
 } from "@Collaboration/presence/cursors.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { worldToScreen } from "@VTK/utils/vtkRaycaster.js";
@@ -64,6 +68,92 @@ class VTKInstanceCursors {
       this._updateAllLabelVisibility(visible);
     });
     this.cleanupFunctions.push(cleanupNameVisibility);
+
+    // Listen for self-cursor visibility changes
+    const cleanupSelfCursor = onSelfCursorVisibilityChange((visible) => {
+      this._updateSelfCursorVisibility(visible);
+    });
+    this.cleanupFunctions.push(cleanupSelfCursor);
+
+    // Listen for show-others visibility changes
+    const cleanupOthersCursors = onShowOthersCursorsChange((visible) => {
+      this._updateOthersCursorsVisibility(visible);
+    });
+    this.cleanupFunctions.push(cleanupOthersCursors);
+  }
+
+  /**
+   * Update visibility of self cursor across all instances
+   * @private
+   */
+  _updateSelfCursorVisibility(visible) {
+    const currentUserId = getUserId();
+
+    this.instanceStates.forEach((state) => {
+      if (visible) {
+        // Self cursor will be rendered on next update
+        return;
+      }
+
+      // Hide/remove self cursor
+      const cursorActor = state.actorCursors.get(currentUserId);
+      if (cursorActor) {
+        cursorActor.actor.setVisibility(false);
+      }
+
+      const cursorEl = state.domCursors.get(currentUserId);
+      if (cursorEl) {
+        cursorEl.style.display = "none";
+        // Restore native cursor
+        state.container.style.cursor = "";
+      }
+
+      // Re-render
+      if (state.sceneObjects?.renderWindow) {
+        state.sceneObjects.renderWindow.render();
+      }
+    });
+
+    log.debug(`Updated self cursor visibility: ${visible}`);
+  }
+
+  /**
+   * Update visibility of others' cursors across all instances
+   * @private
+   */
+  _updateOthersCursorsVisibility(visible) {
+    const currentUserId = getUserId();
+
+    this.instanceStates.forEach((state) => {
+      // Update actor cursors
+      state.actorCursors.forEach((cursorActor, userId) => {
+        if (userId !== currentUserId) {
+          cursorActor.actor.setVisibility(visible);
+        }
+      });
+
+      // Update DOM cursors
+      state.domCursors.forEach((cursorEl, userId) => {
+        if (userId !== currentUserId) {
+          cursorEl.style.display = visible ? "block" : "none";
+        }
+      });
+
+      // Update labels
+      state.labels.forEach((labelEl, userId) => {
+        if (userId !== currentUserId) {
+          labelEl.style.display =
+            visible && getCursorNamesVisible() ? "block" : "none";
+        }
+      });
+
+      // Re-render
+      if (state.sceneObjects?.renderWindow) {
+        state.sceneObjects.renderWindow.render();
+      }
+    });
+
+    log.debug(`Updated others cursors visibility: ${visible}`);
   }
 
   /**
@@ -288,6 +378,21 @@ class VTKInstanceCursors {
 
     // Check if this is the user's own cursor
     const isSelf = userId === getUserId();
+
+    // Check visibility preferences
+    if (isSelf && !getSelfCursorVisible()) {
+      // User has disabled their own projected cursor
+      this.removeCursor(instanceId, userId);
+      // Restore native cursor
+      state.container.style.cursor = "";
+      return;
+    }
+
+    if (!isSelf && !getShowOthersCursors()) {
+      // User has disabled viewing others' cursors
+      this.removeCursor(instanceId, userId);
+      return;
+    }
 
     // Match on viewConfigId (shared across collaborators) if available
     // Fall back to instanceId matching for backward compatibility
