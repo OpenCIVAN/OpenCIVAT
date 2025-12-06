@@ -22,6 +22,8 @@ import {
   raycastFromScreen,
   disposeRaycaster,
 } from "@VTK/utils/vtkRaycaster.js";
+import { vrManager } from "@Core/vr/VRManager.js";
+import { vrControllers } from "@VTK/vr/VTKVRController.js";
 import {
   updateCursorWorldPosition,
   clearCursorWorldPosition,
@@ -1992,27 +1994,291 @@ console.log('Tools:', tools);
   }
 
   /**
-   * Enter VR mode for this instance
+   * Get the WebGL context for this instance
+   * Used by VRButton to pass to VRManager
    */
-  async enterInstanceVR(instanceData, xrSession) {
-    log.info("Entering VR for VTK instance", instanceData.instanceId);
-    // TODO: Implement WebXR integration
-    // This would set up stereo rendering and controller input
-    return {};
+  getWebGLContext(instanceId) {
+    const instanceData = this.instances.get(instanceId);
+    if (!instanceData?.sceneObjects?.openGLRenderWindow) {
+      return null;
+    }
+
+    // Get the WebGL context from VTK's OpenGL render window
+    const openGLRenderWindow = instanceData.sceneObjects.openGLRenderWindow;
+    const canvas = openGLRenderWindow.getCanvas();
+    if (!canvas) return null;
+
+    // Try to get existing WebGL2 context or create XR-compatible one
+    let gl = canvas.getContext("webgl2", { xrCompatible: true });
+    if (!gl) {
+      gl = canvas.getContext("webgl", { xrCompatible: true });
+    }
+
+    return gl;
   }
 
   /**
-   * Update VR state
+   * Enter VR mode for this instance
+   *
+   * Sets up stereo rendering and controller visualization for WebXR
+   *
+   * @param {Object} instanceData - The instance data object
+   * @param {XRSession} xrSession - The active XR session from VRManager
+   * @returns {Object} VR context data
+   */
+  async enterInstanceVR(instanceData, xrSession) {
+    const { instanceId, sceneObjects } = instanceData;
+    log.info(`Entering VR for VTK instance ${instanceId}`);
+
+    if (!sceneObjects) {
+      throw new Error("Cannot enter VR: instance not initialized");
+    }
+
+    const { renderer, renderWindow, openGLRenderWindow, camera } = sceneObjects;
+
+    // Store original camera state for restoration
+    const originalCameraState = {
+      position: camera.getPosition(),
+      focalPoint: camera.getFocalPoint(),
+      viewUp: camera.getViewUp(),
+      parallelScale: camera.getParallelScale(),
+      clippingRange: camera.getClippingRange(),
+      viewAngle: camera.getViewAngle(),
+    };
+
+    // Get WebGL context
+    const canvas = openGLRenderWindow.getCanvas();
+    const gl =
+      canvas.getContext("webgl2", { xrCompatible: true }) ||
+      canvas.getContext("webgl", { xrCompatible: true });
+
+    if (!gl) {
+      throw new Error("Could not get WebGL context for VR");
+    }
+
+    // Make context XR compatible
+    await gl.makeXRCompatible();
+
+    // Create XR WebGL layer
+    const xrLayer = new XRWebGLLayer(xrSession, gl);
+
+    // Update session render state
+    await xrSession.updateRenderState({
+      baseLayer: xrLayer,
+    });
+
+    // Get reference space
+    const referenceSpace = vrManager.getReferenceSpace();
+
+    // Create VR data context
+    const vrData = {
+      xrSession,
+      xrLayer,
+      gl,
+      referenceSpace,
+      originalCameraState,
+      isActive: true,
+      frameHandler: null,
+      scaleMultiplier: 1.0, // Adjust if scene units != meters
+    };
+
+    // Calculate scene scale (VTK units to meters)
+    // If your data is in millimeters, set scaleMultiplier = 0.001
+    const bounds = renderer.computeVisiblePropBounds();
+    const diagonal = Math.sqrt(
+      Math.pow(bounds[1] - bounds[0], 2) +
+        Math.pow(bounds[3] - bounds[2], 2) +
+        Math.pow(bounds[5] - bounds[4], 2)
+    );
+
+    // Auto-scale: try to make the model about 1 meter in VR
+    if (diagonal > 0) {
+      vrData.scaleMultiplier = 1.0 / diagonal;
+      log.debug(
+        `VR scale multiplier: ${vrData.scaleMultiplier} (diagonal: ${diagonal})`
+      );
+    }
+
+    // Initialize controllers for this instance
+    vrControllers.initialize(instanceId, sceneObjects, xrSession);
+
+    // Store VR data on instance
+    instanceData.vrData = vrData;
+
+    // Subscribe to VRManager frame events
+    vrData.frameHandler = (frameData) => {
+      this._renderVRFrame(instanceData, vrData, frameData);
+    };
+    vrManager.on("frame", vrData.frameHandler);
+
+    log.info(`VR initialized for instance ${instanceId}`);
+    return vrData;
+  }
+
+  /**
+   * Render a VR frame (called ~90 times per second)
+   *
+   * Handles stereo rendering by rendering the scene twice,
+   * once for each eye with appropriate camera transforms.
+   *
+   * @private
+   */
+  _renderVRFrame(instanceData, vrData, frameData) {
+    if (!vrData.isActive) return;
+
+    const { frame, viewerPose, referenceSpace } = frameData;
+    const { xrSession, xrLayer, gl, scaleMultiplier } = vrData;
+    const { renderer, renderWindow, camera } = instanceData.sceneObjects;
+
+    if (!viewerPose) {
+      // No tracking - can't render
+      return;
+    }
+
+    // Bind XR framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, xrLayer.framebuffer);
+
+    // Clear the framebuffer
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Render for each eye (left and right)
+    for (const view of viewerPose.views) {
+      const viewport = xrLayer.getViewport(view);
+
+      // Set viewport for this eye
+      gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+      // Update VTK camera for this XR view
+      this._updateCameraForVRView(camera, view, scaleMultiplier);
+
+      // Render the scene
+      renderer.render();
+    }
+
+    // Update controller visualizations
+    vrControllers.updatePoses(instanceData.instanceId, frame, referenceSpace);
+  }
+
+  /**
+   * Update VTK camera to match an XR view (eye)
+   *
+   * Extracts position and orientation from the XR view transform
+   * and applies it to the VTK camera.
+   *
+   * @private
+   */
+  _updateCameraForVRView(camera, xrView, scaleMultiplier = 1.0) {
+    // Get the view transform (inverse gives us the camera position/orientation)
+    const viewMatrix = xrView.transform.inverse.matrix;
+
+    // Extract position from the 4x4 matrix
+    // Column-major order: position is at indices 12, 13, 14
+    const position = [
+      viewMatrix[12] / scaleMultiplier,
+      viewMatrix[13] / scaleMultiplier,
+      viewMatrix[14] / scaleMultiplier,
+    ];
+
+    // Extract forward direction from the matrix
+    // Forward is negative Z in WebXR (-column 2)
+    const forward = [-viewMatrix[8], -viewMatrix[9], -viewMatrix[10]];
+
+    // Extract up direction (column 1)
+    const up = [viewMatrix[4], viewMatrix[5], viewMatrix[6]];
+
+    // Calculate focal point (position + forward direction)
+    const focalDistance = camera.getDistance() || 1.0;
+    const focalPoint = [
+      position[0] + forward[0] * focalDistance,
+      position[1] + forward[1] * focalDistance,
+      position[2] + forward[2] * focalDistance,
+    ];
+
+    // Apply to VTK camera
+    camera.setPosition(...position);
+    camera.setFocalPoint(...focalPoint);
+    camera.setViewUp(...up);
+
+    // Set projection matrix from XR
+    // Note: VTK uses a different matrix format, so we need to convert
+    const projMatrix = xrView.projectionMatrix;
+    camera.setProjectionMatrix(projMatrix);
+  }
+
+  /**
+   * Exit VR mode for this instance
+   *
+   * Restores original camera state and cleans up VR resources
+   */
+  async exitInstanceVR(instanceData) {
+    const { instanceId, vrData, sceneObjects } = instanceData;
+
+    if (!vrData) {
+      log.warn(`No VR data to clean up for instance ${instanceId}`);
+      return;
+    }
+
+    log.info(`Exiting VR for VTK instance ${instanceId}`);
+
+    // Stop frame updates
+    vrData.isActive = false;
+
+    // Unsubscribe from VRManager frame events
+    if (vrData.frameHandler) {
+      vrManager.off("frame", vrData.frameHandler);
+      vrData.frameHandler = null;
+    }
+
+    // Clean up controllers
+    vrControllers.cleanup(instanceId);
+
+    // Restore original camera state
+    if (sceneObjects?.camera && vrData.originalCameraState) {
+      const camera = sceneObjects.camera;
+      const orig = vrData.originalCameraState;
+
+      camera.setPosition(...orig.position);
+      camera.setFocalPoint(...orig.focalPoint);
+      camera.setViewUp(...orig.viewUp);
+      camera.setParallelScale(orig.parallelScale);
+      camera.setClippingRange(...orig.clippingRange);
+      camera.setViewAngle(orig.viewAngle);
+
+      // Clear the projection matrix so VTK computes it normally
+      camera.setProjectionMatrix(null);
+    }
+
+    // Re-render to desktop view
+    if (sceneObjects?.renderWindow) {
+      sceneObjects.renderWindow.render();
+    }
+
+    // Clear VR data
+    instanceData.vrData = null;
+
+    log.info(`VR exited for instance ${instanceId}`);
+  }
+
+  /**
+   * Update VR state (called every frame while in VR)
+   * Most work is done in _renderVRFrame, but this can be used
+   * for additional per-frame updates
    */
   async updateInstanceVR(instanceData, vrData, frame) {
-    // TODO: Update controller positions, head tracking, etc.
+    // Additional per-frame updates can go here
+    // The main rendering is handled by _renderVRFrame
   }
 
   /**
    * Called when application enters VR mode
+   * Prepares instance for VR context (optimize rendering, etc.)
    */
   async onApplicationVREnter(instanceData, vrContext) {
-    // TODO: Prepare instance for VR (optimize rendering, etc.)
+    log.debug(`Application VR enter for instance ${instanceData.instanceId}`);
+    // Could add optimizations here like:
+    // - Reduce polygon count
+    // - Disable expensive effects
+    // - Adjust LOD settings
     return null;
   }
 

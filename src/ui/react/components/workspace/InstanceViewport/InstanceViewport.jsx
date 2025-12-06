@@ -17,6 +17,8 @@ import { CameraViewGridPicker } from '@UI/react/components/workspace/Pickers/Cam
 import { SliderWithPresets } from '@UI/react/components/workspace/Sliders/SliderWithPresets';
 import { ColorSwatchGrid } from '@UI/react/components/workspace/Pickers/ColorSwatchGrid';
 import { PositionGridPicker } from '@UI/react/components/workspace/Pickers/PositionGridPicker';
+import { VRButton } from '@UI/react/components/common/VRButton';
+import { vrManager } from '@Core/vr/VRManager.js';
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 
@@ -64,6 +66,7 @@ function TopToolbar({
     renderTool,
     onOpenInstanceTools,
     instanceToolsTabActive,
+    instanceId,
 }) {
     const tierConfig = getTierConfig(uiMode);
 
@@ -108,6 +111,7 @@ function TopToolbar({
                     >
                         <Wrench size={16} />
                     </button>
+                    <VRButton instanceId={instanceId} size="sm" />
                     <button
                         className="instance-toolbar__tool-button"
                         title="More options"
@@ -224,9 +228,9 @@ function BottomNavBar({
  */
 function CornerControls({
     onOpenInstanceTools,
-    onVRMode,
     onSettings,
     constraintMessage,
+    instanceId,
 }) {
     return (
         <div className="instance-viewport__corner-controls">
@@ -237,13 +241,7 @@ function CornerControls({
             >
                 <Wrench size={16} />
             </button>
-            <button
-                className="instance-viewport__corner-button"
-                onClick={onVRMode}
-                title="VR Mode"
-            >
-                <Glasses size={16} />
-            </button>
+            <VRButton instanceId={instanceId} size="sm" className="instance-viewport__corner-button" />
             <button
                 className="instance-viewport__corner-button"
                 onClick={onSettings}
@@ -263,10 +261,10 @@ function GearOnlyDropdown({
     open,
     onToggle,
     onOpenInstanceTools,
-    onVRMode,
     onMaximize,
     onDuplicate,
     onClose,
+    instanceId,
 }) {
     return (
         <div className="instance-viewport__gear-dropdown">
@@ -286,10 +284,9 @@ function GearOnlyDropdown({
                         <Wrench size={14} />
                         Instance Tools
                     </button>
-                    <button className="instance-viewport__gear-item" onClick={onVRMode}>
-                        <Glasses size={14} />
-                        VR Mode
-                    </button>
+                    <div className="instance-viewport__gear-item">
+                        <VRButton instanceId={instanceId} size="sm" showLabel />
+                    </div>
                     <button className="instance-viewport__gear-item" onClick={onMaximize}>
                         <Maximize2 size={14} />
                         Maximize
@@ -325,6 +322,27 @@ function TooSmallNotice({ constraintMessage, onOpenTools }) {
                 onClick={onOpenTools}
             >
                 Tools
+            </button>
+        </div>
+    );
+}
+
+/**
+ * VRModeIndicator - Shows when viewport is in VR mode
+ */
+function VRModeIndicator({ onExit }) {
+    return (
+        <div className="vr-mode-indicator">
+            <span className="vr-mode-indicator__icon">
+                <Glasses size={12} />
+            </span>
+            <span className="vr-mode-indicator__text">VR Mode</span>
+            <button
+                className="vr-mode-indicator__exit"
+                onClick={onExit}
+                title="Exit VR mode"
+            >
+                Exit
             </button>
         </div>
     );
@@ -555,6 +573,9 @@ export function InstanceViewport({
 
     // Fullscreen state
     const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // VR mode state
+    const [isInVR, setIsInVR] = useState(false);
 
     // Track if Instance Tools tab is active in left panel
     const [instanceToolsTabActive, setInstanceToolsTabActive] = useState(false);
@@ -947,6 +968,42 @@ export function InstanceViewport({
     }, [actualInstanceId]);
 
     // =========================================================================
+    // VR MODE
+    // =========================================================================
+
+    // Track VR session state
+    useEffect(() => {
+        const handleSessionStarted = () => setIsInVR(true);
+        const handleSessionEnded = () => setIsInVR(false);
+
+        vrManager.on('sessionStarted', handleSessionStarted);
+        vrManager.on('sessionEnded', handleSessionEnded);
+
+        // Check initial state
+        setIsInVR(vrManager.isInVR());
+
+        return () => {
+            vrManager.off('sessionStarted', handleSessionStarted);
+            vrManager.off('sessionEnded', handleSessionEnded);
+        };
+    }, []);
+
+    const handleVRMode = useCallback(async () => {
+        // Dispatch event to trigger VR mode - VRButton handles the actual logic
+        window.dispatchEvent(new CustomEvent('cia:toggle-vr-mode', {
+            detail: { instanceId: actualInstanceId }
+        }));
+    }, [actualInstanceId]);
+
+    const handleExitVR = useCallback(async () => {
+        try {
+            await vrManager.exitVR();
+        } catch (err) {
+            console.error('Failed to exit VR:', err);
+        }
+    }, []);
+
+    // =========================================================================
     // TRACK INSTANCE TOOLS TAB STATE
     // =========================================================================
 
@@ -1235,7 +1292,7 @@ export function InstanceViewport({
     return (
         <div
             ref={viewportRef}
-            className={`instance-viewport instance-viewport--${uiMode} ${isFocused ? 'instance-viewport--active' : ''}`}
+            className={`instance-viewport instance-viewport--${uiMode} ${isFocused ? 'instance-viewport--active' : ''} ${isInVR ? 'instance-viewport--vr-mode' : ''}`}
             style={{
                 '--instance-color': colorHex,
                 '--instance-color-rgb': colorRgb,
@@ -1261,6 +1318,9 @@ export function InstanceViewport({
                 onHideToolbar={hideToolbar}
             />
 
+            {/* VR Mode Indicator - Shows when in VR */}
+            {isInVR && <VRModeIndicator onExit={handleExitVR} />}
+
             {/* Top Toolbar - Overlay that slides down on hover */}
             {showFullToolbars && tools.length > 0 && (
                 <TopToolbar
@@ -1278,6 +1338,7 @@ export function InstanceViewport({
                     renderTool={renderTool}
                     onOpenInstanceTools={handleOpenInstanceTools}
                     instanceToolsTabActive={instanceToolsTabActive}
+                    instanceId={actualInstanceId}
                 />
             )}
 
@@ -1320,9 +1381,10 @@ export function InstanceViewport({
                 <>
                     <CornerControls
                         onOpenInstanceTools={handleOpenInstanceTools}
-                        onVRMode={() => { }}
+                        onVRMode={handleVRMode}
                         onSettings={() => { }}
                         constraintMessage={constraintMessage}
+                        instanceId={actualInstanceId}
                     />
                     <TooSmallNotice
                         constraintMessage={constraintMessage}
@@ -1337,10 +1399,11 @@ export function InstanceViewport({
                     open={gearDropdownOpen}
                     onToggle={() => setGearDropdownOpen(!gearDropdownOpen)}
                     onOpenInstanceTools={handleOpenInstanceTools}
-                    onVRMode={() => { }}
+                    onVRMode={handleVRMode}
                     onMaximize={handleFullscreen}
                     onDuplicate={() => { }}
                     onClose={onDelete}
+                    instanceId={actualInstanceId}
                 />
             )}
         </div>

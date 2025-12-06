@@ -1,8 +1,7 @@
 // src/core/vr/VRManager.js
 // Manages VR session lifecycle and mode transitions
 //
-// STUB: Structure only, implementation deferred per DEC-014
-// Architecture designed for VR, implemented desktop-first for debugging
+// WebXR Implementation for immersive VR experiences
 //
 // VR Modes:
 // - 'inactive': Desktop mode, no VR session
@@ -17,6 +16,8 @@ import { vr as log } from "@Utils/logger.js";
  * Responsibilities:
  * - Check WebXR availability and capabilities
  * - Enter/exit VR sessions
+ * - Manage XR render loop and frame timing
+ * - Track input sources (controllers, hands)
  * - Switch between grid and isolation modes
  * - Coordinate with handlers for VR rendering
  */
@@ -27,6 +28,20 @@ export class VRManager {
     this._isolatedViewId = null;
     this._referenceSpace = null;
 
+    // WebXR state
+    this._glContext = null;
+    this._xrLayer = null;
+    this._frameId = null;
+    this._isRendering = false;
+
+    // Input tracking
+    this._inputSources = new Map(); // XRInputSource -> controller data
+    this._hands = { left: null, right: null };
+
+    // Frame timing
+    this._lastFrameTime = 0;
+    this._frameCount = 0;
+
     // Event listeners
     this._listeners = {
       modeChanged: [],
@@ -34,10 +49,29 @@ export class VRManager {
       sessionEnded: [],
       isolationEntered: [],
       isolationExited: [],
+      frame: [],
+      error: [],
+      controllerConnected: [],
+      controllerDisconnected: [],
+      controllerUpdate: [],
+      handConnected: [],
+      handDisconnected: [],
+      handUpdate: [],
+      selectStart: [],
+      selectEnd: [],
+      squeezeStart: [],
+      squeezeEnd: [],
     };
 
     // Bind methods for event handlers
     this._handleSessionEnd = this._handleSessionEnd.bind(this);
+    this._onXRFrame = this._onXRFrame.bind(this);
+    this._handleInputSourcesChange = this._handleInputSourcesChange.bind(this);
+    this._handleSelect = this._handleSelect.bind(this);
+    this._handleSelectStart = this._handleSelectStart.bind(this);
+    this._handleSelectEnd = this._handleSelectEnd.bind(this);
+    this._handleSqueezeStart = this._handleSqueezeStart.bind(this);
+    this._handleSqueezeEnd = this._handleSqueezeEnd.bind(this);
   }
 
   // ===========================================================================
@@ -113,10 +147,11 @@ export class VRManager {
 
   /**
    * Enter VR mode
+   * @param {WebGLRenderingContext} glContext - Optional WebGL context to use
    * @returns {Promise<void>}
    */
-  async enterVR() {
-    log.debug("VRManager.enterVR() - STUB: Not fully implemented");
+  async enterVR(glContext = null) {
+    log.info("VRManager.enterVR() - Starting VR session");
 
     if (this._xrSession) {
       log.warn("VR session already active");
@@ -124,37 +159,106 @@ export class VRManager {
     }
 
     if (!this.isVRSupported()) {
-      throw new Error("WebXR is not supported in this browser");
+      const error = new Error("WebXR is not supported in this browser");
+      this._emit("error", { error, type: "not_supported" });
+      throw error;
     }
-
-    // TODO: Full implementation
-    // 1. Request XR session with required features
-    // 2. Set up XR render loop
-    // 3. Initialize VRGridLayout
-    // 4. Switch handlers to VR mode
-    // 5. Set up input sources (controllers, hands)
 
     try {
-      // Request immersive session
-      // this._xrSession = await navigator.xr.requestSession('immersive-vr', {
-      //   requiredFeatures: ['local-floor'],
-      //   optionalFeatures: ['hand-tracking', 'bounded-floor'],
-      // });
+      // Check if immersive-vr is supported
+      const isSupported = await navigator.xr.isSessionSupported("immersive-vr");
+      if (!isSupported) {
+        throw new Error("Immersive VR not supported on this device");
+      }
 
-      // this._xrSession.addEventListener('end', this._handleSessionEnd);
+      log.debug("Requesting immersive-vr session...");
 
-      // Get reference space
-      // this._referenceSpace = await this._xrSession.requestReferenceSpace('local-floor');
+      // Request immersive session with features
+      this._xrSession = await navigator.xr.requestSession("immersive-vr", {
+        requiredFeatures: ["local-floor"],
+        optionalFeatures: ["bounded-floor", "hand-tracking", "layers"],
+      });
 
+      log.debug("XR session obtained, setting up event listeners...");
+
+      // Set up session event listeners
+      this._xrSession.addEventListener("end", this._handleSessionEnd);
+      this._xrSession.addEventListener(
+        "inputsourceschange",
+        this._handleInputSourcesChange
+      );
+      this._xrSession.addEventListener("select", this._handleSelect);
+      this._xrSession.addEventListener("selectstart", this._handleSelectStart);
+      this._xrSession.addEventListener("selectend", this._handleSelectEnd);
+      this._xrSession.addEventListener(
+        "squeezestart",
+        this._handleSqueezeStart
+      );
+      this._xrSession.addEventListener("squeezeend", this._handleSqueezeEnd);
+
+      // Get reference space (try bounded-floor first, fall back to local-floor)
+      try {
+        this._referenceSpace = await this._xrSession.requestReferenceSpace(
+          "bounded-floor"
+        );
+        log.debug("Using bounded-floor reference space");
+      } catch {
+        this._referenceSpace = await this._xrSession.requestReferenceSpace(
+          "local-floor"
+        );
+        log.debug("Using local-floor reference space");
+      }
+
+      // Set up WebGL layer if context provided
+      if (glContext) {
+        await this._setupWebGLLayer(glContext);
+      }
+
+      // Initialize input sources that may already be connected
+      this._initializeInputSources();
+
+      // Update state
       this._mode = "grid";
-      this._emit("sessionStarted", { session: this._xrSession });
+      this._isRendering = true;
+
+      // Emit events
+      this._emit("sessionStarted", {
+        session: this._xrSession,
+        referenceSpace: this._referenceSpace,
+      });
       this._emit("modeChanged", { mode: this._mode });
 
-      log.info("VR session started (stub mode)");
+      // Start render loop
+      this._frameId = this._xrSession.requestAnimationFrame(this._onXRFrame);
+
+      log.info("VR session started successfully");
     } catch (error) {
       log.error("Failed to enter VR:", error);
+      this._emit("error", { error, type: "session_failed" });
+      this._cleanup();
       throw new Error(`Failed to enter VR: ${error.message}`);
     }
+  }
+
+  /**
+   * Set up WebGL layer for XR rendering
+   * @private
+   */
+  async _setupWebGLLayer(glContext) {
+    this._glContext = glContext;
+
+    // Make XR compatible
+    await glContext.makeXRCompatible();
+
+    // Create XR layer
+    this._xrLayer = new XRWebGLLayer(this._xrSession, glContext);
+
+    // Update session render state
+    this._xrSession.updateRenderState({
+      baseLayer: this._xrLayer,
+    });
+
+    log.debug("WebGL layer configured for XR");
   }
 
   /**
@@ -162,53 +266,432 @@ export class VRManager {
    * @returns {Promise<void>}
    */
   async exitVR() {
-    log.debug("VRManager.exitVR() - STUB: Not fully implemented");
+    log.info("VRManager.exitVR() - Ending VR session");
 
     if (!this._xrSession) {
       log.warn("No VR session to exit");
       return;
     }
 
-    // TODO: Full implementation
-    // 1. End XR session
-    // 2. Restore desktop rendering
-    // 3. Clean up VR resources
-    // 4. Switch handlers back to desktop mode
+    // Stop render loop
+    this._isRendering = false;
+    if (this._frameId) {
+      // Can't cancel XR animation frame directly, but stopping the loop is enough
+      this._frameId = null;
+    }
 
     try {
-      // await this._xrSession.end();
-      this._cleanup();
-
-      log.info("VR session ended");
+      await this._xrSession.end();
+      log.info("VR session ended gracefully");
     } catch (error) {
-      log.error("Error exiting VR:", error);
+      log.error("Error ending VR session:", error);
+      // Clean up anyway
       this._cleanup();
     }
   }
 
   /**
-   * Handle XR session end event
+   * Handle XR session end event (called by system or after exitVR)
+   * @private
    */
-  _handleSessionEnd() {
-    log.info("VR session ended by system");
+  _handleSessionEnd(event) {
+    log.info("VR session ended", event?.reason || "");
     this._cleanup();
   }
 
   /**
    * Clean up after VR session
+   * @private
    */
   _cleanup() {
+    // Remove event listeners
     if (this._xrSession) {
       this._xrSession.removeEventListener("end", this._handleSessionEnd);
+      this._xrSession.removeEventListener(
+        "inputsourceschange",
+        this._handleInputSourcesChange
+      );
+      this._xrSession.removeEventListener("select", this._handleSelect);
+      this._xrSession.removeEventListener(
+        "selectstart",
+        this._handleSelectStart
+      );
+      this._xrSession.removeEventListener("selectend", this._handleSelectEnd);
+      this._xrSession.removeEventListener(
+        "squeezestart",
+        this._handleSqueezeStart
+      );
+      this._xrSession.removeEventListener("squeezeend", this._handleSqueezeEnd);
     }
 
+    // Clear input sources
+    this._inputSources.clear();
+    this._hands = { left: null, right: null };
+
+    // Clear WebXR state
     this._xrSession = null;
     this._referenceSpace = null;
+    this._xrLayer = null;
+    this._glContext = null;
+    this._frameId = null;
+    this._isRendering = false;
+    this._frameCount = 0;
+
+    // Reset mode
+    const wasIsolated = this._mode === "isolated";
     this._mode = "inactive";
     this._isolatedViewId = null;
 
-    this._emit("sessionEnded", {});
+    // Emit events
+    this._emit("sessionEnded", { wasIsolated });
     this._emit("modeChanged", { mode: this._mode });
+  }
+
+  // ===========================================================================
+  // XR RENDER LOOP
+  // ===========================================================================
+
+  /**
+   * XR animation frame callback
+   * @param {DOMHighResTimeStamp} time - Current time
+   * @param {XRFrame} frame - XR frame data
+   * @private
+   */
+  _onXRFrame(time, frame) {
+    // Check if we should continue rendering
+    if (!this._isRendering || !this._xrSession) {
+      return;
+    }
+
+    // Request next frame immediately
+    this._frameId = this._xrSession.requestAnimationFrame(this._onXRFrame);
+
+    // Calculate delta time
+    const deltaTime = this._lastFrameTime ? time - this._lastFrameTime : 16.67;
+    this._lastFrameTime = time;
+    this._frameCount++;
+
+    try {
+      // Get viewer pose
+      const viewerPose = frame.getViewerPose(this._referenceSpace);
+
+      if (!viewerPose) {
+        // No pose available (tracking lost)
+        return;
+      }
+
+      // Update input source poses
+      const controllerPoses = this._updateInputPoses(frame);
+
+      // Update hand tracking if available
+      const handPoses = this._updateHandTracking(frame);
+
+      // Emit frame event with all pose data
+      this._emit("frame", {
+        time,
+        deltaTime,
+        frame,
+        viewerPose,
+        views: viewerPose.views,
+        controllerPoses,
+        handPoses,
+        referenceSpace: this._referenceSpace,
+        session: this._xrSession,
+        frameCount: this._frameCount,
+      });
+    } catch (error) {
+      log.error("Error in XR frame:", error);
+      this._emit("error", { error, type: "frame_error" });
+    }
+  }
+
+  /**
+   * Update input source poses
+   * @private
+   */
+  _updateInputPoses(frame) {
+    const poses = {};
+
+    for (const [source, data] of this._inputSources) {
+      if (source.gripSpace) {
+        const gripPose = frame.getPose(source.gripSpace, this._referenceSpace);
+        if (gripPose) {
+          data.gripPose = gripPose;
+          poses[data.handedness] = {
+            gripPose,
+            targetRayPose: source.targetRaySpace
+              ? frame.getPose(source.targetRaySpace, this._referenceSpace)
+              : null,
+            gamepad: source.gamepad,
+            handedness: data.handedness,
+          };
+
+          // Emit controller update
+          this._emit("controllerUpdate", {
+            source,
+            handedness: data.handedness,
+            gripPose,
+            gamepad: source.gamepad,
+          });
+        }
+      }
+    }
+
+    return poses;
+  }
+
+  /**
+   * Update hand tracking poses
+   * @private
+   */
+  _updateHandTracking(frame) {
+    const handPoses = {};
+
+    // Check if hand tracking is available
+    if (!frame.session.inputSources) return handPoses;
+
+    for (const source of frame.session.inputSources) {
+      if (source.hand) {
+        const handedness = source.handedness;
+        const joints = {};
+
+        // Get pose for each joint
+        for (const joint of source.hand.values()) {
+          const jointPose = frame.getJointPose(joint, this._referenceSpace);
+          if (jointPose) {
+            joints[joint.jointName] = {
+              position: jointPose.transform.position,
+              orientation: jointPose.transform.orientation,
+              radius: jointPose.radius,
+            };
+          }
+        }
+
+        if (Object.keys(joints).length > 0) {
+          handPoses[handedness] = joints;
+          this._hands[handedness] = joints;
+
+          this._emit("handUpdate", {
+            handedness,
+            joints,
+          });
+        }
+      }
+    }
+
+    return handPoses;
+  }
+
+  // ===========================================================================
+  // INPUT SOURCE TRACKING
+  // ===========================================================================
+
+  /**
+   * Initialize input sources already connected when session starts
+   * @private
+   */
+  _initializeInputSources() {
+    if (!this._xrSession?.inputSources) return;
+
+    for (const source of this._xrSession.inputSources) {
+      this._addInputSource(source);
+    }
+  }
+
+  /**
+   * Handle input sources change event
+   * @private
+   */
+  _handleInputSourcesChange(event) {
+    // Handle added sources
+    for (const source of event.added) {
+      this._addInputSource(source);
+    }
+
+    // Handle removed sources
+    for (const source of event.removed) {
+      this._removeInputSource(source);
+    }
+  }
+
+  /**
+   * Add an input source
+   * @private
+   */
+  _addInputSource(source) {
+    const data = {
+      handedness: source.handedness || "none",
+      targetRayMode: source.targetRayMode,
+      profiles: source.profiles,
+      gripPose: null,
+      isHand: !!source.hand,
+    };
+
+    this._inputSources.set(source, data);
+
+    if (source.hand) {
+      this._hands[source.handedness] = null; // Will be populated in frame loop
+      this._emit("handConnected", {
+        source,
+        handedness: source.handedness,
+      });
+      log.debug(`Hand connected: ${source.handedness}`);
+    } else {
+      this._emit("controllerConnected", {
+        source,
+        handedness: data.handedness,
+        profiles: source.profiles,
+      });
+      log.debug(
+        `Controller connected: ${data.handedness} (${
+          source.profiles?.[0] || "unknown"
+        })`
+      );
+    }
+  }
+
+  /**
+   * Remove an input source
+   * @private
+   */
+  _removeInputSource(source) {
+    const data = this._inputSources.get(source);
+    if (!data) return;
+
+    this._inputSources.delete(source);
+
+    if (data.isHand) {
+      this._hands[data.handedness] = null;
+      this._emit("handDisconnected", {
+        source,
+        handedness: data.handedness,
+      });
+      log.debug(`Hand disconnected: ${data.handedness}`);
+    } else {
+      this._emit("controllerDisconnected", {
+        source,
+        handedness: data.handedness,
+      });
+      log.debug(`Controller disconnected: ${data.handedness}`);
+    }
+  }
+
+  // ===========================================================================
+  // INPUT EVENT HANDLERS
+  // ===========================================================================
+
+  /**
+   * Handle select event (trigger fully pressed and released)
+   * @private
+   */
+  _handleSelect(event) {
+    const data = this._inputSources.get(event.inputSource);
+    log.debug(`Select: ${data?.handedness || "unknown"}`);
+  }
+
+  /**
+   * Handle select start event (trigger pressed)
+   * @private
+   */
+  _handleSelectStart(event) {
+    const data = this._inputSources.get(event.inputSource);
+    this._emit("selectStart", {
+      source: event.inputSource,
+      handedness: data?.handedness,
+      frame: event.frame,
+    });
+  }
+
+  /**
+   * Handle select end event (trigger released)
+   * @private
+   */
+  _handleSelectEnd(event) {
+    const data = this._inputSources.get(event.inputSource);
+    this._emit("selectEnd", {
+      source: event.inputSource,
+      handedness: data?.handedness,
+      frame: event.frame,
+    });
+  }
+
+  /**
+   * Handle squeeze start event (grip pressed)
+   * @private
+   */
+  _handleSqueezeStart(event) {
+    const data = this._inputSources.get(event.inputSource);
+    this._emit("squeezeStart", {
+      source: event.inputSource,
+      handedness: data?.handedness,
+      frame: event.frame,
+    });
+  }
+
+  /**
+   * Handle squeeze end event (grip released)
+   * @private
+   */
+  _handleSqueezeEnd(event) {
+    const data = this._inputSources.get(event.inputSource);
+    this._emit("squeezeEnd", {
+      source: event.inputSource,
+      handedness: data?.handedness,
+      frame: event.frame,
+    });
+  }
+
+  // ===========================================================================
+  // CONTROLLER ACCESS
+  // ===========================================================================
+
+  /**
+   * Get connected controllers
+   * @returns {Array<{handedness: string, source: XRInputSource, profiles: string[]}>}
+   */
+  getControllers() {
+    const controllers = [];
+    for (const [source, data] of this._inputSources) {
+      if (!data.isHand) {
+        controllers.push({
+          handedness: data.handedness,
+          source,
+          profiles: source.profiles,
+        });
+      }
+    }
+    return controllers;
+  }
+
+  /**
+   * Get controller by handedness
+   * @param {string} handedness - 'left' | 'right'
+   * @returns {XRInputSource|null}
+   */
+  getController(handedness) {
+    for (const [source, data] of this._inputSources) {
+      if (!data.isHand && data.handedness === handedness) {
+        return source;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get hand tracking data
+   * @param {string} handedness - 'left' | 'right'
+   * @returns {Object|null} Joint poses
+   */
+  getHandTracking(handedness) {
+    return this._hands[handedness];
+  }
+
+  /**
+   * Check if hand tracking is active
+   * @returns {boolean}
+   */
+  hasHandTracking() {
+    return this._hands.left !== null || this._hands.right !== null;
   }
 
   // ===========================================================================
@@ -287,6 +770,10 @@ export class VRManager {
       hasSession: this._xrSession !== null,
       isInVR: this._mode !== "inactive",
       isIsolated: this._mode === "isolated",
+      isRendering: this._isRendering,
+      frameCount: this._frameCount,
+      controllerCount: this.getControllers().length,
+      hasHandTracking: this.hasHandTracking(),
     };
   }
 
@@ -316,6 +803,30 @@ export class VRManager {
    */
   getIsolatedViewId() {
     return this._isolatedViewId;
+  }
+
+  /**
+   * Get the current XR session
+   * @returns {XRSession|null}
+   */
+  getSession() {
+    return this._xrSession;
+  }
+
+  /**
+   * Get the current reference space
+   * @returns {XRReferenceSpace|null}
+   */
+  getReferenceSpace() {
+    return this._referenceSpace;
+  }
+
+  /**
+   * Get the XR WebGL layer
+   * @returns {XRWebGLLayer|null}
+   */
+  getXRLayer() {
+    return this._xrLayer;
   }
 
   // ===========================================================================

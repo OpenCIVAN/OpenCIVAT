@@ -1302,3 +1302,90 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
     min-width: 180px;
   }
 }
+
+// ============================================================================
+// VR MODE STATE
+// ============================================================================
+
+.instance-viewport--vr-mode {
+  // Green VR glow effect
+  border-color: rgba($color-accent-green, 0.5);
+
+  box-shadow: 0 0 30px rgba($color-accent-green, 0.25),
+    0 0 15px rgba($color-accent-green, 0.2), inset 0 0 60px rgba(0, 0, 0, 0.5);
+
+  // Pulsing animation for VR mode
+  animation: vr-mode-pulse 3s ease-in-out infinite;
+}
+
+@keyframes vr-mode-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba($color-accent-green, 0.25),
+      0 0 15px rgba($color-accent-green, 0.2), inset 0 0 60px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba($color-accent-green, 0.35),
+      0 0 20px rgba($color-accent-green, 0.3), inset 0 0 60px rgba(0, 0, 0, 0.5);
+  }
+}
+
+// VR Mode Indicator - positioned at top center
+.vr-mode-indicator {
+  position: absolute;
+  top: 40px; // Below the header
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba($color-accent-green, 0.9);
+  backdrop-filter: blur(8px);
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: $font-weight-semibold;
+  color: white;
+  z-index: $z-dropdown;
+  animation: vr-indicator-slide-down 0.3s ease-out;
+
+  &__icon {
+    display: flex;
+    align-items: center;
+  }
+
+  &__text {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__exit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    margin-left: $spacing-xs;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: $radius-xs;
+    color: white;
+    font-size: 9px;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+@keyframes vr-indicator-slide-down {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
