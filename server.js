@@ -539,68 +539,109 @@ function handleSyncMessage(socket, room, decoder, rawMessage) {
   }
 }
 
+// ============================================================================
+// CURSOR RECORDING FIX for server.js (Y.js WebSocket Server)
+//
+// Replace the handleAwarenessMessage function with this version.
+// This fix properly extracts client IDs from awareness updates to record cursors.
+// ============================================================================
+
+/**
+ * Decode client IDs from an awareness update
+ * The awareness update format is:
+ * - Number of clients (varUint)
+ * - For each client: clientID (varUint), clock (varUint), state (nullable string)
+ *
+ * @param {Uint8Array} update - The awareness update binary
+ * @returns {number[]} Array of client IDs in this update
+ */
+function decodeAwarenessUpdateClientIds(update) {
+  const clientIds = [];
+  try {
+    const decoder = decoding.createDecoder(update);
+    const numClients = decoding.readVarUint(decoder);
+
+    for (let i = 0; i < numClients; i++) {
+      const clientId = decoding.readVarUint(decoder);
+      clientIds.push(clientId);
+      // Skip clock and state - we just need the IDs
+      decoding.readVarUint(decoder); // clock
+      decoding.readVarString(decoder); // state (JSON string or empty)
+    }
+  } catch (err) {
+    recordingLog.debug("Failed to decode awareness update:", err.message);
+  }
+  return clientIds;
+}
+
 /**
  * Handle awareness protocol messages
+ * FIXED: Now properly extracts client IDs and records cursor positions
  */
 function handleAwarenessMessage(socket, room, decoder, rawMessage) {
   const update = decoding.readVarUint8Array(decoder);
 
-  // Extract client ID from awareness update if not yet set
-  // Awareness update format: [numClients, clientId, clock, stateJSON, ...]
-  if (!socket.clientId && update.length > 0) {
-    try {
-      const updateDecoder = decoding.createDecoder(update);
-      const numClients = decoding.readVarUint(updateDecoder);
-      if (numClients > 0) {
-        const clientId = decoding.readVarUint(updateDecoder);
-        socket.clientId = clientId;
-        wsLog.info(`Set socket.clientId from awareness: ${clientId}`);
-      }
-    } catch (e) {
-      // Ignore parsing errors
-    }
-  }
-
+  // Apply the awareness update
   awarenessProtocol.applyAwarenessUpdate(room.awareness, update, socket);
 
   // Relay to other clients
   broadcastToRoom(room, rawMessage, socket);
 
-  // DEBUG: Log recording state
-  recordingLog.info(
-    `Awareness update - room.projectId: ${room.projectId}, ` +
-      `activeRecordings.has: ${activeRecordings.has(room.projectId)}, ` +
-      `activeRecordings.size: ${activeRecordings.size}, ` +
-      `socket.clientId: ${socket.clientId}`
-  );
+  // Extract client IDs from this update
+  const updatedClientIds = decodeAwarenessUpdateClientIds(update);
+
+  // If this socket doesn't have a clientId yet, try to associate it
+  // The first awareness update from a client typically contains their own state
+  if (!socket.clientId && updatedClientIds.length > 0) {
+    // Find which client ID in this update has user info matching this socket
+    const states = room.awareness.getStates();
+    for (const clientId of updatedClientIds) {
+      const state = states.get(clientId);
+      if (
+        state?.user?.name === socket.username ||
+        state?.userId === socket.userId
+      ) {
+        socket.clientId = clientId;
+        recordingLog.debug(
+          `Associated socket with clientId: ${clientId} for user: ${socket.username}`
+        );
+        break;
+      }
+    }
+    // Fallback: just use the first client ID if we can't match
+    if (!socket.clientId && updatedClientIds.length === 1) {
+      socket.clientId = updatedClientIds[0];
+      recordingLog.debug(
+        `Fallback: Associated socket with clientId: ${socket.clientId}`
+      );
+    }
+  }
 
   // Record cursor if recording is active
   if (room.projectId && activeRecordings.has(room.projectId)) {
-    try {
-      const states = room.awareness.getStates();
-      const localState = states.get(socket.clientId);
+    const states = room.awareness.getStates();
 
-      recordingLog.info(
-        `Checking cursor - clientId: ${socket.clientId}, ` +
-          `statesSize: ${states.size}, ` +
-          `hasLocalState: ${!!localState}, ` +
-          `localStateKeys: ${
-            localState ? Object.keys(localState).join(", ") : "none"
-          }`
-      );
+    // Check each updated client for cursor data
+    for (const clientId of updatedClientIds) {
+      const localState = states.get(clientId);
 
-      if (localState?.cursor) {
-        recordingLog.info(`Cursor data: ${JSON.stringify(localState.cursor)}`);
+      if (!localState) continue;
+
+      // Debug: Log what keys are in the awareness state
+      if (recordingLog.isDebugEnabled?.()) {
+        recordingLog.debug(
+          `Client ${clientId} awareness keys: ${Object.keys(localState).join(
+            ", "
+          )}`
+        );
       }
 
+      // Check if this client has cursor data and it passes throttle/delta filter
       if (
-        localState?.cursor &&
-        shouldRecordCursor(socket.clientId, localState.cursor)
+        localState.cursor &&
+        shouldRecordCursor(clientId, localState.cursor)
       ) {
-        recordingLog.info(
-          `Recording cursor event for clientId: ${socket.clientId}`
-        );
-        // Don't await - fire and forget for performance
+        // Record the cursor event
         recordEvent(
           room.projectId,
           "cursor",
@@ -609,6 +650,7 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
             instanceId: localState.cursor.instanceId,
             x: localState.cursor.x,
             y: localState.cursor.y,
+            timestamp: localState.cursor.timestamp,
             user: localState.user
               ? {
                   name: localState.user.userName || localState.user.name,
@@ -617,11 +659,13 @@ function handleAwarenessMessage(socket, room, decoder, rawMessage) {
               : null,
           },
           socket.userId,
-          socket.clientId
+          clientId // Use the actual client ID from the update
+        );
+
+        recordingLog.debug(
+          `Recorded cursor for client ${clientId}: (${localState.cursor.x}, ${localState.cursor.y})`
         );
       }
-    } catch (err) {
-      recordingLog.error(`Cursor recording error: ${err.message}`);
     }
   }
 }
