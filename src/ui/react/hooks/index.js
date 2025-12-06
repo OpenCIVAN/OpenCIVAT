@@ -4,6 +4,13 @@
 // Canvas & Viewport
 export { useCanvas, useViewport, useSubsets } from "./useCanvas.js";
 export { useCanvasSelection } from "./useCanvasSelection.js";
+export {
+  useViewportSize,
+  STORAGE_KEY as VIEWPORT_SIZE_STORAGE_KEY,
+  EVENT_NAME as VIEWPORT_SIZE_EVENT,
+  DEFAULT_VIEWPORT_SIZE,
+  SIZE_PRESETS as VIEWPORT_SIZE_PRESETS,
+} from "./useViewportSize.js";
 
 // Data Management
 export { useDatasets } from "./useDatasets.js";
