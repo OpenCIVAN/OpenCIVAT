@@ -6,17 +6,21 @@ import { auth as log } from "@Utils/logger.js";
 import { hasUserName, getUserName, setUserName, getUserId } from "@Collaboration/presence/userManagement.js";
 import { initializePhase2 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
+import { authService } from "@Services/authService.js";
+import { config } from "@Core/config/clientConfig.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 import { toast } from "@UI/react/store/toastStore.js";
 import { ToastContainer } from "@UI/react/components/common/Toast";
+import { LoginButton } from "@UI/react/components/auth/LoginButton.jsx";
+import { DevModeBanner } from "@UI/react/components/auth/DevModeBanner.jsx";
 
 import "@UI/react/components/auth/Bootstrap.scss";
 
 /**
  * Bootstrap Component
- * 
+ *
  * Gate-keeping layer handling:
- * 1. Authentication checks (future)
+ * 1. Authentication checks (Keycloak SSO)
  * 2. Username collection/validation
  * 3. Phase 2 initialization (user services)
  * 4. License validation (future)
@@ -26,9 +30,14 @@ export function Bootstrap() {
     const [bootstrapState, setBootstrapState] = useState('checking');
     const [username, setUsername] = useState('');
     const [errorMessage, setErrorMessage] = useState(null);
+    const [serverDevModeEnabled, setServerDevModeEnabled] = useState(false);
+    const [isDevMode, setIsDevMode] = useState(false);
 
     const initializationStarted = useRef(false);
     const phase2Complete = useRef(false);
+
+    // Check if client-side dev bypass mode is enabled
+    const isDevBypass = config.devBypassAuth === true || config.devBypassAuth === "true";
 
     useEffect(() => {
         checkPrerequisites();
@@ -42,6 +51,44 @@ export function Bootstrap() {
         log.debug("Bootstrap: Checking prerequisites...");
 
         try {
+            // Step 0: Check if server has dev mode enabled
+            log.debug("Bootstrap: Checking server dev mode...");
+            const serverDevMode = await authService.checkServerDevMode();
+            setServerDevModeEnabled(serverDevMode);
+            if (serverDevMode) {
+                log.info("Bootstrap: Server dev mode is enabled");
+            }
+
+            // Step 1: Initialize auth service and check authentication
+            log.debug("Bootstrap: Initializing auth service...");
+            await authService.initialize();
+
+            const isAuthenticated = authService.isAuthenticated();
+            log.debug(`Bootstrap: Auth status - authenticated: ${isAuthenticated}, devBypass: ${isDevBypass}`);
+
+            // If not authenticated and not in dev bypass mode, show login
+            if (!isAuthenticated && !isDevBypass) {
+                log.debug("Bootstrap: Authentication required");
+                setBootstrapState('login');
+                return;
+            }
+
+            // Step 2: Get username from auth or existing storage
+            if (isAuthenticated && !isDevBypass) {
+                // Use name from auth token
+                const authUser = authService.getUser();
+                const authName = authUser?.name || authUser?.username || authUser?.email?.split('@')[0];
+                if (authName) {
+                    log.info(`Bootstrap: Using authenticated username: ${authName}`);
+                    setUserName(authName);
+                    setUsername(authName);
+                    setBootstrapState('initializing');
+                    await runPhase2Initialization(authName);
+                    return;
+                }
+            }
+
+            // Step 3: Check for existing username (dev mode or fallback)
             if (hasUserName()) {
                 const existingName = getUserName();
                 log.info(`Bootstrap: Found existing username: ${existingName}`);
@@ -83,6 +130,27 @@ export function Bootstrap() {
         setUserName(trimmedName);
         setBootstrapState('initializing');
         await runPhase2Initialization(trimmedName);
+    }
+
+    async function handleDevLogin() {
+        log.info("Bootstrap: Dev login requested");
+        try {
+            await authService.loginAsDev();
+            setIsDevMode(true);
+
+            // Get dev user info
+            const devUser = authService.getUser();
+            const devName = devUser?.name || devUser?.username || 'Developer';
+            setUserName(devName);
+            setUsername(devName);
+
+            setBootstrapState('initializing');
+            await runPhase2Initialization(devName);
+        } catch (error) {
+            log.error("Bootstrap: Dev login failed:", error);
+            setErrorMessage(`Dev login failed: ${error.message}`);
+            setBootstrapState('error');
+        }
     }
 
     async function runPhase2Initialization(validatedUsername) {
@@ -144,6 +212,41 @@ export function Bootstrap() {
                 </div>
             </div>
         );
+    } else if (bootstrapState === 'login') {
+        content = (
+            <div className="bootstrap-login">
+                <div className="login-card">
+                    <h1>Welcome to CIA Web</h1>
+                    <p className="subtitle">Collaborative Immersive Analytics Platform</p>
+                    <p className="description">
+                        Sign in to access your collaborative workspace
+                    </p>
+
+                    <LoginButton variant="full" />
+
+                    {serverDevModeEnabled && (
+                        <div className="dev-login-section">
+                            <div className="divider">
+                                <span>or</span>
+                            </div>
+                            <button
+                                className="dev-login-button"
+                                onClick={handleDevLogin}
+                            >
+                                Continue as Dev User
+                            </button>
+                            <p className="dev-login-info">
+                                Development mode - authentication bypassed
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="login-info">
+                        <p>You will be redirected to your organization's login page</p>
+                    </div>
+                </div>
+            </div>
+        );
     } else if (bootstrapState === 'username') {
         content = (
             <div className="bootstrap-username">
@@ -197,11 +300,14 @@ export function Bootstrap() {
     } else if (bootstrapState === 'ready') {
         // FIX: Pass projectId from sessionManager
         content = (
-            <CIAWebApp
-                username={username}
-                userId={getUserId()}
-                projectId={sessionManager.getRoomId()}
-            />
+            <>
+                {isDevMode && <DevModeBanner />}
+                <CIAWebApp
+                    username={username}
+                    userId={getUserId()}
+                    projectId={sessionManager.getRoomId()}
+                />
+            </>
         );
     }
 

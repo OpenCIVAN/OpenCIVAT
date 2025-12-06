@@ -87,6 +87,30 @@ export const config = Object.freeze({
 
   /** Application version (injected at build time) */
   version: resolveValue("version", "__APP_VERSION__", "dev"),
+
+  // ---------------------------------------------------------------------------
+  // Authentication (Keycloak)
+  // ---------------------------------------------------------------------------
+
+  /** Keycloak server URL */
+  keycloakUrl: resolveValue(
+    "keycloakUrl",
+    "__KEYCLOAK_URL__",
+    "http://localhost:8080"
+  ),
+
+  /** Keycloak realm name */
+  keycloakRealm: resolveValue("keycloakRealm", "__KEYCLOAK_REALM__", "cia-web"),
+
+  /** Keycloak client ID */
+  keycloakClientId: resolveValue(
+    "keycloakClientId",
+    "__KEYCLOAK_CLIENT_ID__",
+    "cia-web-client"
+  ),
+
+  /** Dev bypass auth (skip Keycloak in development) */
+  devBypassAuth: resolveValue("devBypassAuth", "__DEV_BYPASS_AUTH__", false),
 });
 
 // =============================================================================

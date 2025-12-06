@@ -22,6 +22,7 @@ import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
 import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
 import { config } from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
+import { apiClient } from "@Services/apiClient.js";
 
 export class ViewConfigurationManager {
   constructor() {
@@ -92,15 +93,9 @@ export class ViewConfigurationManager {
     log.info("Loading views from server...");
 
     try {
-      const response = await fetch(
-        `${this._apiBaseUrl}/views?projectId=${this._projectId}&status=active`
+      const data = await apiClient.get(
+        `/views?projectId=${this._projectId}&status=active`
       );
-
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const data = await response.json();
       const serverViews = data.views || [];
 
       log.debug(`Found ${serverViews.length} view(s) on server`);
@@ -343,20 +338,7 @@ export class ViewConfigurationManager {
 
     try {
       // Create on server first to get server-generated ID
-      const response = await fetch(`${this._apiBaseUrl}/views`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || `Server returned ${response.status}`
-        );
-      }
-
-      const { view: serverView } = await response.json();
+      const { view: serverView } = await apiClient.post("/views", requestBody);
 
       // Convert server response to client format and create ViewConfiguration
       const viewData = this._serverToClientFormat(serverView);
@@ -572,16 +554,7 @@ export class ViewConfigurationManager {
 
     try {
       // Delete on server (archives the view)
-      const response = await fetch(`${this._apiBaseUrl}/views/${viewId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok && response.status !== 404) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || `Server returned ${response.status}`
-        );
-      }
+      await apiClient.delete(`/views/${viewId}`);
 
       // Remove locally
       this._viewConfigs.delete(viewId);
@@ -1225,24 +1198,12 @@ export class ViewConfigurationManager {
 
       try {
         const updateData = this._clientToServerFormat(view);
-
-        const response = await fetch(`${this._apiBaseUrl}/views/${view.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updateData),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          log.error(
-            `Failed to sync view ${view.id}:`,
-            errorData.error || response.status
-          );
-          return;
-        }
+        const { view: serverView } = await apiClient.put(
+          `/views/${view.id}`,
+          updateData
+        );
 
         // Update server version from response
-        const { view: serverView } = await response.json();
         if (serverView?.server_version) {
           view.serverVersion = serverView.server_version;
         }
@@ -1417,22 +1378,7 @@ export class ViewConfigurationManager {
 
     try {
       // 1. Fetch views from server
-      const response = await fetch(
-        `${this._apiBaseUrl}/views?projectId=${this._projectId}`
-      );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          // No views on server - clear all local
-          log.debug("No views on server");
-          const orphanCount = this._viewConfigs.size;
-          this._viewConfigs.clear();
-          return { orphansRemoved: orphanCount, added: 0, total: 0 };
-        }
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get(`/views?projectId=${this._projectId}`);
       const serverViews = data.views || [];
 
       log.debug(`Server has ${serverViews.length} view(s)`);

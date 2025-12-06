@@ -1,6 +1,9 @@
 // src/ui/react/hooks/index.js
 // React hook exports
 
+// Authentication
+export { useAuth } from "./useAuth.js";
+
 // Canvas & Viewport
 export { useCanvas, useViewport, useSubsets } from "./useCanvas.js";
 export { useCanvasSelection } from "./useCanvasSelection.js";

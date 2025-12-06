@@ -14,10 +14,13 @@ import {
     Zap,
     ChevronUp,
     ChevronDown,
+    Shield,
+    ShieldAlert,
 } from 'lucide-react';
 
 import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
 import { getBottomPanelControls } from '@UI/react/components/panels/BottomPanel';
+import { useAuth } from '@UI/react/hooks/useAuth.js';
 import './StatusBar.scss';
 
 // =============================================================================
@@ -181,11 +184,46 @@ function FPSCounter({ fps }) {
     );
 }
 
+/**
+ * AuthModeIndicator - Shows authentication mode (dev/prod)
+ */
+function AuthModeIndicator({ isDevMode, isAuthenticated, userName }) {
+    if (isDevMode) {
+        return (
+            <div
+                className="status-bar__item status-bar__item--dev-mode"
+                title="Development mode - authentication bypassed"
+            >
+                <ShieldAlert size={10} />
+                <span>Dev Mode</span>
+            </div>
+        );
+    }
+
+    if (isAuthenticated) {
+        return (
+            <div
+                className="status-bar__item status-bar__item--auth"
+                title={userName ? `Signed in as ${userName}` : 'Authenticated'}
+            >
+                <Shield size={10} />
+                <span>Secure</span>
+            </div>
+        );
+    }
+
+    // Not authenticated and not in dev mode - shouldn't normally show
+    return null;
+}
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
 export function StatusBar() {
+    // Auth state
+    const { isDevMode, isAuthenticated, userName } = useAuth();
+
     // Connection state
     const [isConnected, setIsConnected] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -312,8 +350,16 @@ export function StatusBar() {
 
     return (
         <div className="status-bar">
-            {/* Left Zone: Sync, Online, Warnings */}
+            {/* Left Zone: Auth, Sync, Online, Warnings */}
             <div className="status-bar__left">
+                <AuthModeIndicator
+                    isDevMode={isDevMode}
+                    isAuthenticated={isAuthenticated}
+                    userName={userName}
+                />
+
+                <div className="status-bar__divider" />
+
                 <SyncStatus
                     isConnected={isConnected}
                     isSyncing={isSyncing}

@@ -1,8 +1,8 @@
 // src/ui/react/components/layout/TopBar/TopBar.jsx
 // Enhanced TopBar with mode toggle (Desktop/VR), room info, and user controls
-// UPDATED: Removed canvas mode toggle (moved to LayoutModeToggle in bottom bar)
+// UPDATED: Integrated UserMenu for authenticated users
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
     Lock,
     Unlock,
@@ -13,6 +13,9 @@ import {
 
 import { sessionManager } from '@Core/session/sessionManager.js';
 import { ViewModeToggle } from '@UI/react/components/controls/ViewModeToggle';
+import { useAuth } from '@UI/react/hooks/useAuth.js';
+import { UserMenu } from '@UI/react/components/auth/UserMenu.jsx';
+import { LoginButton } from '@UI/react/components/auth/LoginButton.jsx';
 import './TopBar.scss';
 
 
@@ -79,11 +82,11 @@ function UserAvatar({ username, userColor, inVoice = false }) {
 
 /**
  * TopBar - Main application header
- * 
+ *
  * Layout:
  * - Left: CIA logo
  * - Center: Room/Project indicator
- * - Right: VR/Desktop toggle, notifications, settings, avatar
+ * - Right: VR/Desktop toggle, notifications, settings, user menu
  */
 export function TopBar({
     username,
@@ -96,7 +99,11 @@ export function TopBar({
     viewMode = 'desktop',
     onViewModeChange,
     vrAvailable = true,
+    // Callbacks
+    onSettingsClick,
+    onProfileClick,
 }) {
+    const { isAuthenticated, isLoading } = useAuth();
     const roomId = roomName || sessionManager.getRoomId?.() || null;
 
     return (
@@ -115,7 +122,6 @@ export function TopBar({
                     projectName={projectName}
                     isLocked={isRoomLocked}
                 />
-                {/* REMOVED: Canvas mode toggle - now in LayoutModeToggle */}
             </div>
 
             {/* Right: Controls */}
@@ -135,7 +141,7 @@ export function TopBar({
                 </button>
 
                 {/* Settings */}
-                <button className="top-bar__icon-btn" title="Settings">
+                <button className="top-bar__icon-btn" title="Settings" onClick={onSettingsClick}>
                     <Settings size={18} />
                 </button>
 
@@ -144,12 +150,19 @@ export function TopBar({
                     <HelpCircle size={18} />
                 </button>
 
-                {/* User Avatar */}
-                <UserAvatar
-                    username={username}
-                    userColor={userColor}
-                    inVoice={inVoice}
-                />
+                {/* User Menu or Login Button */}
+                {isLoading ? (
+                    <div className="user-avatar user-avatar--loading" />
+                ) : isAuthenticated ? (
+                    <UserMenu
+                        userColor={userColor}
+                        inVoice={inVoice}
+                        onProfileClick={onProfileClick}
+                        onSettingsClick={onSettingsClick}
+                    />
+                ) : (
+                    <LoginButton variant="compact" />
+                )}
             </div>
         </div>
     );

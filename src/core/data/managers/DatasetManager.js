@@ -8,6 +8,7 @@ import { EventEmitter } from "events"; // Node.js events
 import { Dataset } from "@Core/data/models/Dataset.js";
 import { Annotation } from "@Core/data/models/Annotation.js";
 import { config } from "@Core/config/clientConfig.js";
+import { apiClient, ApiError } from "@Services/apiClient.js";
 import { dataset as log } from "@Utils/logger.js";
 
 /**
@@ -402,34 +403,25 @@ export class DatasetManager extends EventEmitter {
       formData.append("orgId", options.orgId);
     }
 
-    const response = await fetch(`${config.apiBaseUrl}/files`, {
-      method: "POST",
-      body: formData,
-      // Note: Don't set Content-Type header - browser sets it with boundary for FormData
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-
+    try {
+      return await apiClient.upload("/files", formData);
+    } catch (error) {
       // Handle duplicate file case
-      if (response.status === 409 && errorData.existingFile) {
-        log.debug(`Server found duplicate: ${errorData.existingFile.id}`);
+      if (
+        error instanceof ApiError &&
+        error.status === 409 &&
+        error.details?.existingFile
+      ) {
+        log.debug(`Server found duplicate: ${error.details.existingFile.id}`);
         // Return the existing file info as if it was just uploaded
         return {
           success: true,
-          file: errorData.existingFile,
+          file: error.details.existingFile,
           duplicate: true,
         };
       }
-
-      throw new Error(
-        errorData.message ||
-          errorData.error ||
-          `Upload failed: ${response.status}`
-      );
+      throw error;
     }
-
-    return await response.json();
   }
 
   getDataset(datasetId) {
@@ -1017,36 +1009,20 @@ export class DatasetManager extends EventEmitter {
    * @returns {Promise<object>} Server response with annotation including ID
    */
   async _createAnnotationOnServer(fileId, annotationConfig, options = {}) {
-    const response = await fetch(`${config.apiBaseUrl}/annotations`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        fileId,
-        projectId: options.projectId,
-        type: annotationConfig.type || "point",
-        coordinates: annotationConfig.position ||
-          annotationConfig.coordinates || [0, 0, 0],
-        position: annotationConfig.position,
-        normal: annotationConfig.normal,
-        text: annotationConfig.text,
-        properties: annotationConfig.metadata,
-        metadata: annotationConfig.metadata,
-        visibility: annotationConfig.visibility || "public",
-      }),
+    const result = await apiClient.post("/annotations", {
+      fileId,
+      projectId: options.projectId,
+      type: annotationConfig.type || "point",
+      coordinates: annotationConfig.position ||
+        annotationConfig.coordinates || [0, 0, 0],
+      position: annotationConfig.position,
+      normal: annotationConfig.normal,
+      text: annotationConfig.text,
+      properties: annotationConfig.metadata,
+      metadata: annotationConfig.metadata,
+      visibility: annotationConfig.visibility || "public",
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.message ||
-          errorData.error ||
-          `Failed to create annotation: ${response.status}`
-      );
-    }
-
-    const result = await response.json();
     return result.annotation;
   }
 

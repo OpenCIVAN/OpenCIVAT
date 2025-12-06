@@ -229,6 +229,21 @@
   &.in-voice {
     border-color: $color-success;
   }
+
+  &--loading {
+    background: $color-glass-medium;
+    animation: avatar-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes avatar-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 // TopBar right section - separator before user info

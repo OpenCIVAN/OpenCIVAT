@@ -96,6 +96,27 @@
         background: $color-glass-light;
       }
     }
+
+    // Dev mode indicator - warning color
+    &--dev-mode {
+      color: $color-accent-amber;
+      padding: 2px $spacing-xs;
+      background: rgba($color-accent-amber, 0.1);
+      border-radius: $radius-xs;
+
+      svg {
+        color: $color-accent-amber;
+      }
+    }
+
+    // Authenticated mode indicator - secure/success color
+    &--auth {
+      color: $color-accent-green;
+
+      svg {
+        color: $color-accent-green;
+      }
+    }
   }
 
   // -------------------------------------------------------------------------

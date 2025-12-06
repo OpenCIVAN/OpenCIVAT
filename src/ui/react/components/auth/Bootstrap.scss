@@ -171,6 +171,110 @@
 }
 
 // ============================================================================
+// LOGIN STATE
+// ============================================================================
+
+.bootstrap-login {
+  @extend %bootstrap-container;
+}
+
+.login-card {
+  @extend %bootstrap-card;
+
+  h1 {
+    margin: 0 0 $spacing-sm 0;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    color: $color-accent-primary;
+    letter-spacing: -0.5px;
+    text-shadow: 0 0 20px $color-accent-primary-glow;
+  }
+
+  .subtitle {
+    margin: 0 0 $spacing-2xl 0;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .description {
+    margin: 0 0 $spacing-2xl 0;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+  }
+
+  .login-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .login-info {
+    margin-top: $spacing-2xl;
+    padding-top: $spacing-lg;
+    border-top: 1px solid $color-border-subtle;
+
+    p {
+      margin: 0;
+      font-size: $font-size-xs;
+      color: $color-text-muted;
+    }
+  }
+
+  // Dev login section
+  .dev-login-section {
+    margin-top: $spacing-xl;
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+      margin-bottom: $spacing-lg;
+
+      &::before,
+      &::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: $color-border-subtle;
+      }
+
+      span {
+        font-size: $font-size-xs;
+        color: $color-text-muted;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+    }
+
+    .dev-login-button {
+      @include glass-button;
+      width: 100%;
+      padding: $spacing-md $spacing-xl;
+      background: color.adjust($color-warning, $alpha: -0.85);
+      color: $color-warning;
+      border: 1px solid color.adjust($color-warning, $alpha: -0.5);
+      border-radius: $radius-md;
+      font-size: $font-size-base;
+      font-weight: $font-weight-medium;
+      transition: all $transition-fast;
+
+      &:hover {
+        background: color.adjust($color-warning, $alpha: -0.7);
+        box-shadow: 0 0 15px color.adjust($color-warning, $alpha: -0.6);
+      }
+    }
+
+    .dev-login-info {
+      margin: $spacing-sm 0 0 0;
+      font-size: $font-size-xs;
+      color: $color-text-muted;
+    }
+  }
+}
+
+// ============================================================================
 // USERNAME STATE
 // ============================================================================
 
@@ -239,6 +343,7 @@
   }
 }
 
+.username-submit,
 .username-button {
   @include glass-button;
   padding: $spacing-lg $spacing-2xl;
