@@ -3,11 +3,11 @@
 
 import React, { useState } from 'react';
 import { Filter, Pin, PinOff, Trash2, Play } from 'lucide-react';
-import { SCOPE_CONFIG } from './ScopeChips';
+import { getScopeConfig } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/constants';
 
 export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
     const [isHovered, setIsHovered] = useState(false);
-    const scopeConfig = SCOPE_CONFIG[filter.scope] || SCOPE_CONFIG.personal;
+    const scopeConfig = getScopeConfig(filter.scope);  // ← Use helper function
 
     return (
         <div

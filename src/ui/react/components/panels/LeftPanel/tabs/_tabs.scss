@@ -4104,65 +4104,6 @@
 }
 
 // =============================================================================
-// SCOPE CHIPS - Shared scope toggle buttons
-// =============================================================================
-
-.scope-chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.scope-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  font-size: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid $color-border-default;
-  border-radius: 999px;
-  color: $color-text-muted;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: $color-text-secondary;
-  }
-
-  &--active {
-    background: rgba(255, 255, 255, 0.08);
-    color: $color-text-primary;
-
-    &[data-color="amber"] {
-      background: rgba($color-accent-amber, 0.15);
-      border-color: rgba($color-accent-amber, 0.4);
-      color: $color-accent-amber;
-    }
-
-    &[data-color="teal"] {
-      background: rgba($color-accent-teal, 0.15);
-      border-color: rgba($color-accent-teal, 0.4);
-      color: $color-accent-teal;
-    }
-
-    &[data-color="blue"] {
-      background: rgba($color-accent-blue, 0.15);
-      border-color: rgba($color-accent-blue, 0.4);
-      color: $color-accent-blue;
-    }
-  }
-
-  &__count {
-    font-size: 9px;
-    padding: 1px 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 999px;
-  }
-}
-
-// =============================================================================
 // SUB-TABS - Tab bar within a panel
 // =============================================================================
 

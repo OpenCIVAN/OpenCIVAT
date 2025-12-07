@@ -20,12 +20,28 @@ import {
     Sliders,
 } from 'lucide-react';
 import { ui as log } from '@Utils/logger.js';
-import { useBookmarks } from '@UI/react/hooks/useBookmarks.js';
-import { useFilters } from '@UI/react/hooks/useFilters.js';
-import { ScopeChips, SCOPE_CONFIG } from './components/ScopeChips';
-import { BookmarkItem } from './components/BookmarkItem';
-import { FilterItem } from './components/FilterItem';
+import { ChipGroup } from '@UI/react/components/common/ChipGroup';
+import { getScopeChips, getScopeConfig } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/constants.js';
+import { ScopedSection } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/components/ScopedSection';
+import { BookmarkItem } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/components/BookmarkItem';
+import { FilterItem } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/components/FilterItem';
 import './BookmarksFiltersTab.scss';
+
+// Build chips with counts
+const scopeChips = useMemo(() => [
+    {
+        id: 'project', label: 'Project', icon: Globe, color: 'amber',
+        count: counts.project
+    },
+    {
+        id: 'room', label: 'This Room', icon: Users, color: 'teal',
+        count: counts.room
+    },
+    {
+        id: 'personal', label: 'Personal', icon: UserCircle, color: 'blue',
+        count: counts.personal
+    },
+], [counts]);
 
 // =============================================================================
 // SUB-TABS (dark etched style)
@@ -55,38 +71,6 @@ function SubTabs({ activeTab, onTabChange }) {
 }
 
 // =============================================================================
-// SCOPED SECTION (Collapsible dark card)
-// =============================================================================
-
-function ScopedSection({ scope, items, isExpanded, onToggle, renderItem }) {
-    const config = SCOPE_CONFIG[scope] || SCOPE_CONFIG.personal;
-    const Icon = config.icon;
-
-    if (items.length === 0) return null;
-
-    return (
-        <div className={`scoped-section ${isExpanded ? 'scoped-section--expanded' : ''}`}>
-            <button
-                className="scoped-section__header"
-                onClick={onToggle}
-            >
-                <span className="scoped-section__chevron">
-                    {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                </span>
-                <Icon size={12} className={`icon-${config.color}`} />
-                <span className="scoped-section__label">{config.label}</span>
-                <span className="scoped-section__count">{items.length}</span>
-            </button>
-            {isExpanded && (
-                <div className="scoped-section__content">
-                    {items.map(item => renderItem(item))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -106,6 +90,12 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
         room: true,
         personal: true,
     });
+
+        // Build scope chips for ChipGroup 
+    const scopeChips = useMemo(() => {
+        const counts = activeSubTab === 'bookmarks' ? bookmarkCounts : filterCounts;
+        return getScopeChips(counts);
+    }, [activeSubTab, bookmarkCounts, filterCounts]);
 
     // Bookmarks hook
     const {
@@ -253,10 +243,11 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
 
             {/* Scope chips */}
             <div className="bookmarks-filters-tab__scope-bar">
-                <ScopeChips
-                    activeScopes={activeScopes}
-                    onToggleScope={toggleScope}
-                    counts={activeSubTab === 'bookmarks' ? bookmarkCounts : filterCounts}
+                <ChipGroup
+                    chips={scopeChips}
+                    activeChips={activeScopes}
+                    onToggle={toggleScope}
+                    size="sm"
                 />
             </div>
 

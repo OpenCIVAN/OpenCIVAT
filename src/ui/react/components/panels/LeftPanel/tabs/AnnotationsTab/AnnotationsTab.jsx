@@ -36,17 +36,19 @@ import {
     ResizableSection,
     useSectionStates
 } from '@UI/react/components/common/ResizableSections';
+import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import './AnnotationsTab.scss';
 
 // =============================================================================
-// SCOPE CONFIG
+// SCOPE CHIPS
 // =============================================================================
 
-const SCOPE_CONFIG = {
-    project: { label: 'Project', icon: Globe, color: 'amber' },
-    workspace: { label: 'Workspace', icon: LayoutGrid, color: 'teal' },
-    instance: { label: 'Instance', icon: Monitor, color: 'blue' },
-};
+// Define chips config (can be outside component or memoized)
+const SCOPE_CHIPS = [
+    { id: 'project', label: 'Project', icon: Globe, color: 'amber' },
+    { id: 'workspace', label: 'Workspace', icon: LayoutGrid, color: 'teal' },
+    { id: 'instance', label: 'Instance', icon: Monitor, color: 'blue' },
+];
 
 // =============================================================================
 // ANNOTATION TYPES
@@ -90,33 +92,6 @@ const SAMPLE_ANNOTATIONS = {
         { id: 'wa2', type: 'region', text: 'Focus area for presentation', linkedInstances: ['Main Analysis'], createdBy: 'Dr. Smith', timestamp: '2d ago', shared: true },
     ]
 };
-
-// =============================================================================
-// SCOPE CHIPS (Shared component - could be extracted)
-// =============================================================================
-
-function ScopeChips({ activeScopes, onToggleScope }) {
-    return (
-        <div className="scope-chips">
-            {Object.entries(SCOPE_CONFIG).map(([scope, config]) => {
-                const isActive = activeScopes.includes(scope);
-                const Icon = config.icon;
-
-                return (
-                    <button
-                        key={scope}
-                        className={`scope-chip ${isActive ? 'scope-chip--active' : ''}`}
-                        data-color={config.color}
-                        onClick={() => onToggleScope(scope)}
-                    >
-                        <Icon size={10} />
-                        <span>{config.label}</span>
-                    </button>
-                );
-            })}
-        </div>
-    );
-}
 
 // =============================================================================
 // TYPE FILTER TOGGLE
@@ -328,7 +303,12 @@ export function AnnotationsPanelContent({ workspaceId }) {
 
             {/* Scope filters */}
             <div className="annotations-tab__scope-bar">
-                <ScopeChips activeScopes={activeScopes} onToggleScope={toggleScope} />
+                <ChipGroup
+                    chips={SCOPE_CHIPS}
+                    activeChips={activeScopes}
+                    onToggle={toggleScope}
+                    size="sm"
+                />
             </div>
 
             {/* Search */}

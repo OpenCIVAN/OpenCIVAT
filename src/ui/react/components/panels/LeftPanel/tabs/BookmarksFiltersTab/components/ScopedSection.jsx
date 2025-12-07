@@ -3,10 +3,10 @@
 
 import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { SCOPE_CONFIG } from './ScopeChips';
+import { getScopeConfig } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/constants';
 
 export function ScopedSection({ scope, items, isExpanded, onToggle, renderItem }) {
-    const config = SCOPE_CONFIG[scope] || SCOPE_CONFIG.personal;
+    const config = getScopeConfig(scope);  // ← Use helper function
     const Icon = config.icon;
 
     if (items.length === 0) return null;
