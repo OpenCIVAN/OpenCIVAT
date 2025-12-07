@@ -149,12 +149,18 @@
 // =============================================================================
 
 .resizable-section__content {
-  flex: 1 1 0; // Fill section space
+  flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  padding: 0 $spacing-xs; // horizontal padding for content
 
-  // Custom scrollbar
+  // Add spacing between items
+  > * + * {
+    margin-top: 1px;
+  }
+
+  // Custom scrollbar (unchanged)
   &::-webkit-scrollbar {
     width: 6px;
   }

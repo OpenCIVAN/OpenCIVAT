@@ -20,27 +20,43 @@ const SUBTABS = [
     { id: 'views', label: 'Views', icon: Layers, color: 'purple' },
 ];
 
+
+
 /**
  * LayoutPanel - Main panel component
+ *
+ * @param {Object} props
+ * @param {string} [props.canvasId] - Target canvas ID (uses active canvas if not provided)
+ * @param {Function} [props.onPopOut] - Callback when user clicks pop-out button
+ * @param {string} [props.className] - Additional CSS classes
  */
 export const LayoutPanel = memo(function LayoutPanel({
     canvasId,
     onPopOut,
     className = '',
 }) {
+    // Check if we're inside a LayoutPanelProvider (shared context)
     const context = useContext(LayoutPanelContext);
-    const standaloneLogic = useLayoutPanel(context ? null : { canvasId });
+
+    // Create standalone logic only if no context is available
+    // This allows LayoutPanel to work both with and without the provider
+    // IMPORTANT: Always pass an object, never null/undefined
+    // Using empty object {} when context exists (hooks must always be called)
+    const standaloneLogic = useLayoutPanel(context ? {} : { canvasId });
+
+    // Use context logic if available, otherwise use standalone
     const logic = context?.logic || standaloneLogic;
 
     const {
         panelSubtab,
         setPanelSubtab,
         navigatorDocked,
+        cells,
         loading,
         error,
         isConnected,
-        cells,
     } = logic;
+
 
     // Loading state
     if (loading) {

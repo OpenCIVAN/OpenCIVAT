@@ -604,6 +604,7 @@ FocusModeOverlay.scss
 index.js
 
 ./src/ui/react/components/panels/LayoutPanel:
+FloatingCanvasNavigator.jsx
 LayoutPanel.jsx
 LayoutPanel.logic.js
 LayoutPanel.scss

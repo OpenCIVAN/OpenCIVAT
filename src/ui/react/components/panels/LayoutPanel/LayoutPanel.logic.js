@@ -65,7 +65,7 @@ export function parseSpawnSize(size) {
 }
 
 // =============================================================================
-// MAIN HOOK
+// MAIN HOOK (with defensive null handling)
 // =============================================================================
 
 /**
@@ -75,7 +75,11 @@ export function parseSpawnSize(size) {
  * @param {string} [options.canvasId] - Target canvas ID (uses active canvas if not provided)
  * @param {Object} [options.__testing] - Mock data for unit tests (bypasses useCanvas)
  */
-export function useLayoutPanel({ canvasId, __testing } = {}) {
+export function useLayoutPanel(options) {
+  // DEFENSIVE: Handle null/undefined explicitly
+  // This fixes the "can't access property 'canvasId', _ref is null" error
+  const { canvasId, __testing } = options ?? {};
+
   // ===========================================================================
   // DATA SOURCE: useCanvas or __testing mock
   // ===========================================================================
@@ -89,7 +93,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     loading,
     error,
     isConnected,
-    // Operations from useCanvas
+    // Operations from useCanvas...
     moveViewport: canvasMoveViewport,
     setViewportPosition,
     addRow: canvasAddRow,

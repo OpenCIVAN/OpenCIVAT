@@ -695,7 +695,13 @@ export function FilesPanelContent({
                             <Upload size={11} /><span>Upload</span>
                         </button>
 
-                        <button className="panel-footer__btn panel-footer__btn--icon" title="Refresh"><RefreshCw size={11} /></button>
+                        <button
+                            className="panel-footer__btn panel-footer__btn--icon"
+                            title="Refresh"
+                            onClick={() => refetch?.()}
+                        >
+                            <RefreshCw size={11} />
+                        </button>
                     </>
                 )}
             </div>

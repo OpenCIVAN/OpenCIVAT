@@ -92,49 +92,39 @@
 // =============================================================================
 
 .panel-footer {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
+  margin-top: auto; // KEY FIX - pushes footer to bottom of flex container
   padding: $spacing-sm $spacing-md;
-  border-top: 1px solid $color-border-default;
-  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid $color-border-subtle;
   flex-shrink: 0;
-  margin-top: auto; // Push to bottom
+  display: flex;
+  gap: $spacing-xs;
+  background: rgba(0, 0, 0, 0.15);
 
   &__btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: $spacing-sm $spacing-md;
+    gap: $spacing-xs;
+    padding: 7px $spacing-md;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid $color-border-default;
     border-radius: $radius-sm;
     color: $color-text-secondary;
-    font-size: 11px;
+    font-size: $font-size-xs;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
       background: rgba(255, 255, 255, 0.08);
-      color: $color-text-primary;
+      border-color: $color-border-medium;
     }
 
     &--primary {
       flex: 1;
-      background: rgba($color-accent-blue, 0.15);
-      border-color: rgba($color-accent-blue, 0.3);
-      color: $color-accent-blue;
-
-      &:hover {
-        background: rgba($color-accent-blue, 0.25);
-        border-color: rgba($color-accent-blue, 0.5);
-      }
     }
 
     &--icon {
-      padding: $spacing-sm;
-      flex: 0 0 auto;
+      padding: 7px $spacing-sm;
     }
   }
 
@@ -145,11 +135,11 @@
     justify-content: center;
     gap: $spacing-sm;
     padding: $spacing-md;
-    border: 2px dashed $color-accent-green;
-    border-radius: $radius-md;
-    background: rgba($color-accent-green, 0.1);
-    color: $color-accent-green;
-    font-size: 11px;
+    background: rgba($color-accent-blue, 0.1);
+    border: 2px dashed rgba($color-accent-blue, 0.4);
+    border-radius: $radius-sm;
+    color: $color-accent-blue;
+    font-size: $font-size-xs;
   }
 }
 
