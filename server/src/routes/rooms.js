@@ -6,8 +6,15 @@ const express = require("express");
 const router = express.Router({ mergeParams: true }); // For :projectId from parent route
 const { createLogger } = require("../utils/logger");
 const { getUserId } = require("../middleware/auth");
+const {
+  validateProjectId,
+  validateRoomId,
+} = require("../middleware/validateUUID");
 
 const log = createLogger("rooms");
+
+// Apply to all routes in this router
+router.use(validateProjectId);
 
 // ============================================================================
 // ROOM ENDPOINTS
@@ -53,7 +60,7 @@ router.get("/", async (req, res, next) => {
  * GET /api/projects/:projectId/rooms/:roomId
  * Get a single room's details
  */
-router.get("/:roomId", async (req, res, next) => {
+router.get("/:roomId", validateRoomId, async (req, res, next) => {
   try {
     const { projectId, roomId } = req.params;
     const userId = getUserId(req);
@@ -177,7 +184,7 @@ router.post("/", async (req, res, next) => {
  * PATCH /api/projects/:projectId/rooms/:roomId
  * Update room settings (name, description, etc.)
  */
-router.patch("/:roomId", async (req, res, next) => {
+router.patch("/:roomId", validateRoomId, async (req, res, next) => {
   try {
     const { projectId, roomId } = req.params;
     const userId = getUserId(req);
@@ -264,7 +271,7 @@ router.patch("/:roomId", async (req, res, next) => {
  * DELETE /api/projects/:projectId/rooms/:roomId
  * Delete a breakout room (cannot delete main room)
  */
-router.delete("/:roomId", async (req, res, next) => {
+router.delete("/:roomId", validateRoomId, async (req, res, next) => {
   const client = await req.app.locals.pool.connect();
 
   try {

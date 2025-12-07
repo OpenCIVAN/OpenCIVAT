@@ -832,15 +832,19 @@ class VRManager extends BaseManager {
   // CLEANUP
   // ===========================================================================
 
-  /**
-   * Dispose of VR manager resources
-   */
   dispose() {
     if (this._xrSession) {
       this.exitVR();
     }
+
+    // Clear VR-specific state
+    this._inputSources.clear();
+    this._hands = { left: null, right: null };
+
+    // Call parent cleanup
     super.dispose();
   }
+
 }
 
 // Singleton instance

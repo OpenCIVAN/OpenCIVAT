@@ -198,7 +198,12 @@ export function useRooms(projectId) {
  * @param {string} currentRoomId - Currently selected room ID
  * @returns {Object} Complete room selector state
  */
-export function useRoomSelector(projectId, currentRoomId) {
+export function useRoomSelector(options = {}) {
+  const { projectId, currentRoomId, onRoomChange } = options;
+
+  // Validate projectId is a string, not an object
+  const validProjectId = typeof projectId === "string" ? projectId : null;
+
   const {
     rooms,
     isLoading,
@@ -210,7 +215,7 @@ export function useRoomSelector(projectId, currentRoomId) {
     refetch,
     isCreating,
     isJoining,
-  } = useRooms(projectId);
+  } = useRooms(validProjectId);
 
   // Get user counts for each room
   const roomUserCounts = useRoomUserCount();
