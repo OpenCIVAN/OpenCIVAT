@@ -36,7 +36,7 @@ function renderLeftTabContent(tabId, workspaceId) {
             return <FilesPanelContent workspaceId={workspaceId} />;
         case 'datasets':
             return <DatasetsPanelContent workspaceId={workspaceId} />;
-        case 'instance-tools':
+        case 'tools':
             return <InstanceToolsPanelContent workspaceId={workspaceId} />;
         case 'layout':
             return <LayoutPanelContent workspaceId={workspaceId} />;

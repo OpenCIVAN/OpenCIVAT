@@ -26,7 +26,8 @@ import { LayersSubtab } from './subtabs/LayersSubtab';
 import { AnnotationsSubtab } from './subtabs/AnnotationsSubtab';
 
 // Import managers
-import { workspaceManager } from "@Core/instances/workspaceManager.js";
+// For instance tools, use the instances workspaceManager:
+import { workspaceManager } from '@Core/instances/workspaceManager.js';
 
 import './InstanceToolsTab.scss';
 
@@ -57,7 +58,7 @@ function NoInstancePlaceholder() {
  * Shows tools, layers, and annotations for the currently focused instance.
  * Updates automatically when user clicks on different instances.
  */
-export function InstanceToolsPanelContent() {
+export function InstanceToolsPanelContent({ workspaceId }) {
     const [activeTab, setActiveTab] = useState('tools');
     const [activeInstance, setActiveInstance] = useState(null);
 

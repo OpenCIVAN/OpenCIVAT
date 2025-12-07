@@ -1,4 +1,4 @@
-// tabs/InstanceToolsTab/index.jsx
+// src/ui/react/components/panels/LeftPanel/tabs/InstanceToolsTab/index.jsx
 // Re-export the main component
 export { InstanceToolsPanelContent } from './InstanceToolsTab';
 export { default } from './InstanceToolsTab';

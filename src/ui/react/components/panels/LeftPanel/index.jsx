@@ -57,7 +57,7 @@ import './LeftPanel.scss';
 const TABS = [
     { id: 'files', icon: FolderOpen, label: 'Files', color: 'blue', implemented: true },
     { id: 'datasets', icon: Database, label: 'Datasets', color: 'teal', implemented: true },
-    { id: 'instance-tools', icon: Wrench, label: 'Instance Tools', color: 'amber', implemented: true },
+    { id: 'tools', icon: Wrench, label: 'Instance Tools', color: 'amber', implemented: true },
     { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
     { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'pink', implemented: true },
     { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: true },
@@ -192,7 +192,7 @@ export function LeftPanel({
         setActiveTab(tabId);
         // Dispatch event so InstanceViewport can track when Instance Tools is active
         window.dispatchEvent(new CustomEvent('cia:left-panel-tab-change', {
-            detail: { tabId, isInstanceToolsActive: tabId === 'instance-tools' }
+            detail: { tabId, isInstanceToolsActive: tabId === 'tools' }
         }));
     }, []);
 
@@ -207,17 +207,17 @@ export function LeftPanel({
     // Dispatch initial tab state on mount so InstanceViewport knows the initial state
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('cia:left-panel-tab-change', {
-            detail: { tabId: activeTab, isInstanceToolsActive: activeTab === 'instance-tools' }
+            detail: { tabId: activeTab, isInstanceToolsActive: activeTab === 'tools' }
         }));
     }, []); // Only on mount
 
     // Listen for instance tools open event (from wrench button in InstanceViewport)
     useEffect(() => {
         const handleOpenInstanceTools = () => {
-            setActiveTab('instance-tools');
+            setActiveTab('tools');
             // Dispatch tab change event
             window.dispatchEvent(new CustomEvent('cia:left-panel-tab-change', {
-                detail: { tabId: 'instance-tools', isInstanceToolsActive: true }
+                detail: { tabId: 'tools', isInstanceToolsActive: true }
             }));
             // Ensure panel is open
             if (isCollapsed && onToggle) {
@@ -238,7 +238,7 @@ export function LeftPanel({
                 return <FilesPanelContent workspaceId={workspaceId} />;
             case 'datasets':
                 return <DatasetsPanelContent workspaceId={workspaceId} />;
-            case 'instance-tools':
+            case 'tools':
                 return <InstanceToolsPanelContent workspaceId={workspaceId} />;
             case 'layout':
                 return <LayoutPanelContent workspaceId={workspaceId} />;
@@ -246,10 +246,8 @@ export function LeftPanel({
                 return <AnnotationsPanelContent workspaceId={workspaceId} />;
             case 'cursors':
                 return <CursorsPanelContent workspaceId={workspaceId} onNavigateToPanel={handleNavigateToPanel} />;
-            case 'filters':
-                return <SavedFiltersPanelContent workspaceId={workspaceId} />;
             case 'bookmarks':
-                return <BookmarksPanelContent workspaceId={workspaceId} />;
+                return <BookmarksFiltersPanelContent workspaceId={workspaceId} />;
             default:
                 return <PlaceholderContent tab={TABS[0]} />;
         }

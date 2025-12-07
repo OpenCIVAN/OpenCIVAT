@@ -647,7 +647,7 @@ CursorsTab
 DatasetsTab
 FilesTab
 InstanceToolsTab
-InstanceToolsTab.old
+InstanceToolsTab.jsx.old
 LayoutTab
 _tabs.scss
 

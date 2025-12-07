@@ -41,9 +41,9 @@ export const LEFT_PANEL_TABS = [
     { id: 'datasets', icon: Database, label: 'Datasets', color: 'teal', implemented: true },
     { id: 'tools', icon: Wrench, label: 'Instance Tools', color: 'amber', implemented: true },
     { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
-    { id: 'cursors', icon: Users, label: 'Cursors', color: 'pink', implemented: true },
-    { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'rose', implemented: true },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks & Filters', color: 'purple', implemented: true },
+    { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'pink', implemented: true },
+    { id: 'cursors', icon: Users, label: 'Cursors', color: 'purple', implemented: true },
+    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks & Filters', color: 'indigo', implemented: true },
 ];
 
 /**
