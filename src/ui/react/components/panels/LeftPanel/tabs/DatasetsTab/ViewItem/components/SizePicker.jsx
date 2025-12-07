@@ -6,7 +6,7 @@
  * Custom: n×n input (1-5 range)
  */
 
-import { memo, useState, useEffect, useRef } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import './SizePicker.scss';
 
 const SIZE_PRESETS = [

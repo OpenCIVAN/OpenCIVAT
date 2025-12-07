@@ -12,7 +12,7 @@
  * Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/components/SlidingPanel.jsx
  */
 
-import { memo, useState, useMemo } from 'react';
+import React, { memo, useState, useMemo } from 'react';
 import {
     Folder,
     Globe,

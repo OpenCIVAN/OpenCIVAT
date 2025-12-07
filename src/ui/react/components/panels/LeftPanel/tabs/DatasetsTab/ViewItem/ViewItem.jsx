@@ -18,7 +18,7 @@
  * - Link property toggles
  */
 
-import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
     GripVertical,
     X,

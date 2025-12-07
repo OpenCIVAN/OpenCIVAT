@@ -42,6 +42,7 @@ import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { viewConfigurationManager } from '@Init/appInitializer.js';
 import { dataset as log } from '@Utils/logger.js';
+import { ViewItem } from './ViewItem/ViewItem.jsx';
 import './DatasetsTab.scss';
 
 // =============================================================================
@@ -85,62 +86,62 @@ const getFilterChips = (counts) => [
 ];
 
 // =============================================================================
-// VIEW ITEM (for tree list)
+// VIEW ITEM WRAPPER (for tree list) - Uses full-featured ViewItem component
 // =============================================================================
 
-function DatasetViewItem({ view, datasetId }) {
-    const [isHovered, setIsHovered] = useState(false);
+function DatasetViewItemWrapper({ view, datasetId }) {
     const isActive = view.status === 'active';
 
-    const handleClick = useCallback((e) => {
-        e.stopPropagation();
-        const spawnNew = e.shiftKey;
-        log.debug(`${spawnNew ? 'Spawning' : 'Opening'} view ${view.id}`);
+    // Handle view selection
+    const handleSelect = useCallback((viewId) => {
+        log.debug(`Selecting view ${viewId}`);
         window.dispatchEvent(new CustomEvent('cia:request-instance', {
-            detail: { viewId: view.id, datasetId, spawnNew }
+            detail: { viewId, datasetId, spawnNew: false }
         }));
-    }, [view.id, datasetId]);
+    }, [datasetId]);
+
+    // Handle view close
+    const handleClose = useCallback((viewId) => {
+        log.debug(`Closing view ${viewId}`);
+        window.dispatchEvent(new CustomEvent('cia:close-view', {
+            detail: { viewId }
+        }));
+    }, []);
+
+    // Handle view rename
+    const handleRename = useCallback((viewId, newName) => {
+        log.debug(`Renaming view ${viewId} to ${newName}`);
+        viewConfigurationManager?.renameView?.(viewId, newName);
+    }, []);
+
+    // Handle navigate to position
+    const handleNavigate = useCallback((position) => {
+        log.debug(`Navigating to position`, position);
+        window.dispatchEvent(new CustomEvent('cia:navigate-to-cell', {
+            detail: { row: position.row, col: position.col }
+        }));
+    }, []);
+
+    // Handle spawn new instance
+    const handleSpawn = useCallback((viewId) => {
+        log.debug(`Spawning new instance from view ${viewId}`);
+        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+            detail: { viewId, datasetId, spawnNew: true }
+        }));
+    }, [datasetId]);
 
     return (
-        <div
-            className={`dataset-view-item ${isActive ? 'dataset-view-item--active' : ''}`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleClick}
-            title="Click to open, Shift+Click for new instance"
-        >
-            <GripVertical size={10} className="dataset-view-item__drag" />
-            <div className={`dataset-view-item__status ${isActive ? 'dataset-view-item__status--active' : 'dataset-view-item__status--inactive'}`} />
-            <span className="dataset-view-item__name">{view.name}</span>
-
-            {view.position && (
-                <span className="dataset-view-item__position">{view.position.row + 1},{view.position.col + 1}</span>
-            )}
-
-            {view.filters?.length > 0 && (
-                <span className="dataset-view-item__badge">
-                    <Filter size={8} />
-                    {view.filters.length}
-                </span>
-            )}
-
-            {view.isShared && (
-                <span className="dataset-view-item__badge dataset-view-item__badge--shared">
-                    <Users size={8} />
-                </span>
-            )}
-
-            {isHovered && (
-                <div className="dataset-view-item__actions">
-                    <button className="dataset-view-item__action" title="Go to view">
-                        <Eye size={10} />
-                    </button>
-                    <button className="dataset-view-item__action dataset-view-item__action--danger" title="Close view">
-                        <Trash2 size={10} />
-                    </button>
-                </div>
-            )}
-        </div>
+        <ViewItem
+            view={view}
+            isActive={isActive}
+            filterCount={view.filters?.length || 0}
+            onSelect={handleSelect}
+            onClose={handleClose}
+            onRename={handleRename}
+            onNavigate={handleNavigate}
+            onSpawn={handleSpawn}
+            className="datasets-tab__view-item"
+        />
     );
 }
 
@@ -195,7 +196,7 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
             {isExpanded && views.length > 0 && (
                 <div className="dataset-parent__children">
                     {views.map(view => (
-                        <DatasetViewItem key={view.id} view={view} datasetId={dataset.id} />
+                        <DatasetViewItemWrapper key={view.id} view={view} datasetId={dataset.id} />
                     ))}
                 </div>
             )}
@@ -204,62 +205,62 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
 }
 
 // =============================================================================
-// CANVAS VIEW ITEM (for position list)
+// CANVAS VIEW ITEM WRAPPER (for position list) - Uses full-featured ViewItem
 // =============================================================================
 
-function CanvasViewItem({ view, dataset }) {
-    const [isHovered, setIsHovered] = useState(false);
+function CanvasViewItemWrapper({ view, dataset }) {
     const isActive = view.status === 'active';
-    const { icon: TypeIcon, color, colorClass } = getDatasetTypeConfig(dataset?.fileType);
 
-    const handleClick = useCallback((e) => {
-        e.stopPropagation();
-        const spawnNew = e.shiftKey;
-        log.debug(`${spawnNew ? 'Spawning' : 'Opening'} view ${view.id}`);
+    // Handle view selection
+    const handleSelect = useCallback((viewId) => {
+        log.debug(`Selecting view ${viewId}`);
         window.dispatchEvent(new CustomEvent('cia:request-instance', {
-            detail: { viewId: view.id, datasetId: dataset?.id, spawnNew }
+            detail: { viewId, datasetId: dataset?.id, spawnNew: false }
         }));
-    }, [view.id, dataset?.id]);
+    }, [dataset?.id]);
+
+    // Handle view close
+    const handleClose = useCallback((viewId) => {
+        log.debug(`Closing view ${viewId}`);
+        window.dispatchEvent(new CustomEvent('cia:close-view', {
+            detail: { viewId }
+        }));
+    }, []);
+
+    // Handle view rename
+    const handleRename = useCallback((viewId, newName) => {
+        log.debug(`Renaming view ${viewId} to ${newName}`);
+        viewConfigurationManager?.renameView?.(viewId, newName);
+    }, []);
+
+    // Handle navigate to position
+    const handleNavigate = useCallback((position) => {
+        log.debug(`Navigating to position`, position);
+        window.dispatchEvent(new CustomEvent('cia:navigate-to-cell', {
+            detail: { row: position.row, col: position.col }
+        }));
+    }, []);
+
+    // Handle spawn new instance
+    const handleSpawn = useCallback((viewId) => {
+        log.debug(`Spawning new instance from view ${viewId}`);
+        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+            detail: { viewId, datasetId: dataset?.id, spawnNew: true }
+        }));
+    }, [dataset?.id]);
 
     return (
-        <div
-            className={`canvas-view-item ${isActive ? 'canvas-view-item--active' : ''}`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleClick}
-            title="Click to open, Shift+Click for new instance"
-        >
-            <span className="canvas-view-item__position">
-                {view.position ? `${view.position.row + 1},${view.position.col + 1}` : '—'}
-            </span>
-            <Circle
-                size={6}
-                fill={isActive ? 'var(--color-accent-green)' : 'transparent'}
-                stroke={isActive ? 'var(--color-accent-green)' : 'var(--color-text-muted)'}
-                className="canvas-view-item__status"
-            />
-            <span className="canvas-view-item__name">{view.name}</span>
-            <span className="canvas-view-item__dataset">
-                <TypeIcon size={10} style={color ? { color } : undefined} className={colorClass || ''} />
-                <span className="canvas-view-item__dataset-name">{dataset?.name || 'Unknown'}</span>
-            </span>
-            {view.filters?.length > 0 && (
-                <span className="canvas-view-item__badge">
-                    <Filter size={8} />
-                    {view.filters.length}
-                </span>
-            )}
-            {isHovered && (
-                <div className="canvas-view-item__actions">
-                    <button className="canvas-view-item__action" title="Go to view">
-                        <Eye size={10} />
-                    </button>
-                    <button className="canvas-view-item__action canvas-view-item__action--danger" title="Close">
-                        <Trash2 size={10} />
-                    </button>
-                </div>
-            )}
-        </div>
+        <ViewItem
+            view={view}
+            isActive={isActive}
+            filterCount={view.filters?.length || 0}
+            onSelect={handleSelect}
+            onClose={handleClose}
+            onRename={handleRename}
+            onNavigate={handleNavigate}
+            onSpawn={handleSpawn}
+            className="datasets-tab__view-item datasets-tab__view-item--canvas"
+        />
     );
 }
 
@@ -561,7 +562,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                             ) : (
                                 <div className="datasets-tab__canvas-list">
                                     {placedViews.map(view => (
-                                        <CanvasViewItem key={view.id} view={view} dataset={view.dataset} />
+                                        <CanvasViewItemWrapper key={view.id} view={view} dataset={view.dataset} />
                                     ))}
                                 </div>
                             )}
@@ -576,7 +577,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                             ) : (
                                 <div className="datasets-tab__canvas-list">
                                     {unplacedViews.map(view => (
-                                        <CanvasViewItem key={view.id} view={view} dataset={view.dataset} />
+                                        <CanvasViewItemWrapper key={view.id} view={view} dataset={view.dataset} />
                                     ))}
                                 </div>
                             )}

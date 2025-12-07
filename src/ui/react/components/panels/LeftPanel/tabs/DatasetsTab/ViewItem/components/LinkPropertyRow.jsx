@@ -11,7 +11,7 @@
  * Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/components/LinkPropertyRow.jsx
  */
 
-import { memo, useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
     Camera,
     Sliders,

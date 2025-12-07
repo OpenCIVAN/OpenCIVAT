@@ -5,7 +5,7 @@
  * Icon only - label shown in tooltip. Supports disabled and broken states.
  */
 
-import { memo } from 'react';
+import React, { memo } from 'react';
 import './LinkPropertyToggle.scss';
 
 export const LinkPropertyToggle = memo(function LinkPropertyToggle({

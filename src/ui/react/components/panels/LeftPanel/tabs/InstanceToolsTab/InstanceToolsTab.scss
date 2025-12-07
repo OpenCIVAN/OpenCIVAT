@@ -9,9 +9,9 @@
 
 .instance-tools-tab {
   display: flex;
-  flex: 1;
+  flex: 1 1 0; // Fill available space in flex parent
   flex-direction: column;
-  height: 100%;
+  min-height: 0; // Allow shrinking below content size
   width: 100%;
   overflow: hidden;
 
@@ -60,13 +60,11 @@
     flex-shrink: 0;
   }
 
-  // Subtabs
+  // Subtabs - Matches DatasetsTab styling pattern
   &__tabs {
     display: flex;
-    gap: 4px;
-    padding: $spacing-sm;
     border-bottom: 1px solid $color-border-subtle;
-    background: rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
   }
 
   &__tab {
@@ -74,38 +72,39 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: $spacing-sm;
-    font-size: 11px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-sm;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
     color: $color-text-muted;
+    font-size: 11px;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover:not(&--active) {
-      background: rgba(0, 0, 0, 0.3);
+      background: $color-glass-light;
       color: $color-text-secondary;
     }
 
     &--active {
+      background: rgba(var(--tab-color-rgb), 0.04);
+      border-bottom-color: var(--tab-color);
+      color: var(--tab-color);
+
       &[data-color="amber"] {
-        background: rgba($color-accent-amber, 0.15);
-        border-color: rgba($color-accent-amber, 0.4);
-        color: $color-accent-amber;
+        --tab-color: #{$color-accent-amber};
+        --tab-color-rgb: 251, 191, 36;
       }
 
       &[data-color="purple"] {
-        background: rgba($color-accent-purple, 0.15);
-        border-color: rgba($color-accent-purple, 0.4);
-        color: $color-accent-purple;
+        --tab-color: #{$color-accent-purple};
+        --tab-color-rgb: 168, 85, 247;
       }
 
       &[data-color="pink"] {
-        background: rgba($color-accent-pink, 0.15);
-        border-color: rgba($color-accent-pink, 0.4);
-        color: $color-accent-pink;
+        --tab-color: #{$color-accent-pink};
+        --tab-color-rgb: 244, 114, 182;
       }
     }
   }

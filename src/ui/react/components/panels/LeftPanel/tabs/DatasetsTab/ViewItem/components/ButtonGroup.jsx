@@ -5,7 +5,7 @@
  * Supports both children pattern and buttons array for backwards compatibility.
  */
 
-import { memo } from 'react';
+import React, { memo } from 'react';
 import './ButtonGroup.scss';
 
 export const ButtonGroup = memo(function ButtonGroup({

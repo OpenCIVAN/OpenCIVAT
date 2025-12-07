@@ -32,42 +32,99 @@ import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import './InstanceToolsTab.scss';
 
 // =============================================================================
+// SUBTAB CONFIGURATION - Matches DatasetsTab pattern
+// =============================================================================
+
+const SUBTABS = [
+    { id: 'tools', label: 'Tools', icon: Zap, color: 'amber' },
+    { id: 'layers', label: 'Layers', icon: Layers, color: 'purple' },
+    { id: 'annotations', label: 'Annotations', icon: MapPin, color: 'pink' },
+];
+
+// =============================================================================
 // TOOLS SUBTAB WRAPPER - Gets tools from instance handler
 // =============================================================================
 
 function ToolsSubtab({ activeInstance }) {
     const [expandedMenus, setExpandedMenus] = useState({});
     const [tools, setTools] = useState([]);
+    const [debugInfo, setDebugInfo] = useState('');
 
     // Get tools from the instance handler
     useEffect(() => {
         if (!activeInstance) {
             setTools([]);
+            setDebugInfo('No active instance');
             return;
         }
 
-        const handler = activeInstance.handler;
-        if (handler && typeof handler.getToolbarConfig === 'function') {
-            try {
-                const toolbarConfig = handler.getToolbarConfig();
-                // Transform toolbar config to tools format
-                const instanceTools = toolbarConfig.map(tool => ({
-                    id: tool.id,
-                    icon: tool.icon,
-                    label: tool.label,
-                    description: tool.tooltip || tool.description,
-                    type: tool.items ? 'menu' : 'button',
-                    active: tool.active,
-                    disabled: tool.disabled,
-                    options: tool.items,
-                    onClick: tool.onClick,
-                }));
-                setTools(instanceTools);
-            } catch (e) {
-                console.warn('Failed to get toolbar config:', e);
-                setTools([]);
+        // Try to get handler from different locations
+        const handler = activeInstance.handler || activeInstance.viewHandler || activeInstance._handler;
+
+        if (!handler) {
+            setDebugInfo(`Instance exists but no handler found. Keys: ${Object.keys(activeInstance).join(', ')}`);
+            setTools([]);
+            return;
+        }
+
+        if (typeof handler.getToolbarConfig !== 'function') {
+            setDebugInfo(`Handler exists but no getToolbarConfig. Handler methods: ${Object.keys(handler).filter(k => typeof handler[k] === 'function').join(', ')}`);
+
+            // Try alternative method names
+            const altMethods = ['getTools', 'getToolConfig', 'toolbarConfig', 'tools'];
+            for (const method of altMethods) {
+                if (typeof handler[method] === 'function') {
+                    try {
+                        const config = handler[method]();
+                        if (Array.isArray(config) && config.length > 0) {
+                            setDebugInfo(`Used alternative method: ${method}`);
+                            setTools(config.map(tool => ({
+                                id: tool.id,
+                                icon: tool.icon,
+                                label: tool.label,
+                                description: tool.tooltip || tool.description,
+                                type: tool.items ? 'menu' : 'button',
+                                active: tool.active,
+                                disabled: tool.disabled,
+                                options: tool.items,
+                                onClick: tool.onClick,
+                            })));
+                            return;
+                        }
+                    } catch (e) {
+                        // Continue to next method
+                    }
+                }
             }
-        } else {
+            setTools([]);
+            return;
+        }
+
+        try {
+            const toolbarConfig = handler.getToolbarConfig();
+            if (!toolbarConfig || toolbarConfig.length === 0) {
+                setDebugInfo('getToolbarConfig returned empty');
+                setTools([]);
+                return;
+            }
+
+            // Transform toolbar config to tools format
+            const instanceTools = toolbarConfig.map(tool => ({
+                id: tool.id,
+                icon: tool.icon,
+                label: tool.label,
+                description: tool.tooltip || tool.description,
+                type: tool.items ? 'menu' : 'button',
+                active: tool.active,
+                disabled: tool.disabled,
+                options: tool.items,
+                onClick: tool.onClick,
+            }));
+            setDebugInfo(`Found ${instanceTools.length} tools`);
+            setTools(instanceTools);
+        } catch (e) {
+            console.warn('Failed to get toolbar config:', e);
+            setDebugInfo(`Error: ${e.message}`);
             setTools([]);
         }
     }, [activeInstance]);
@@ -206,29 +263,25 @@ export function InstanceToolsPanelContent({ workspaceId }) {
 
                     {/* ========================================================
                         SUBTAB BAR - Tools / Layers / Annotations
+                        Matches DatasetsTab styling pattern
                         ======================================================== */}
                     <div className="instance-tools-tab__tabs">
-                        <button
-                            className={`instance-tools-tab__tab ${activeTab === 'tools' ? 'instance-tools-tab__tab--active' : ''}`}
-                            onClick={() => setActiveTab('tools')}
-                            data-color="amber"
-                        >
-                            <Zap size={14} /> Tools
-                        </button>
-                        <button
-                            className={`instance-tools-tab__tab ${activeTab === 'layers' ? 'instance-tools-tab__tab--active' : ''}`}
-                            onClick={() => setActiveTab('layers')}
-                            data-color="purple"
-                        >
-                            <Layers size={14} /> Layers
-                        </button>
-                        <button
-                            className={`instance-tools-tab__tab ${activeTab === 'annotations' ? 'instance-tools-tab__tab--active' : ''}`}
-                            onClick={() => setActiveTab('annotations')}
-                            data-color="pink"
-                        >
-                            <MapPin size={14} /> Annotations
-                        </button>
+                        {SUBTABS.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
+
+                            return (
+                                <button
+                                    key={tab.id}
+                                    className={`instance-tools-tab__tab ${isActive ? 'instance-tools-tab__tab--active' : ''}`}
+                                    data-color={tab.color}
+                                    onClick={() => setActiveTab(tab.id)}
+                                >
+                                    <Icon size={12} />
+                                    <span>{tab.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* ========================================================
