@@ -1,27 +1,33 @@
-// tabs/InstanceToolsTab/InstanceToolsTab.jsx
-// Instance tools tab content for the unified left panel
+// src/ui/react/components/panels/LeftPanel/tabs/InstanceToolsTab/InstanceToolsTab.jsx
+// Instance Tools tab content for the unified left panel
+//
+// FIXED: Added standard panel-header to match Files and Datasets tabs
 //
 // Features:
 // - Shows tools for the currently focused instance
-// - Dynamically updates when active instance changes
-// - Renders tools provided by the instance handler
-// - Tools/Layers/Annotations sub-tabs for organization
+// - 3 subtabs: Tools, Layers, Annotations
+// - Dynamic tool list from instance handler
+// - Layer visibility toggles
+// - Instance-scoped annotation list
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
+    Wrench,
+    Monitor,
     Zap,
     Layers,
     MapPin,
-    Monitor,
-    RotateCcw,
-    Save,
+    Settings,
 } from 'lucide-react';
 
-import { workspaceManager } from '@Core/instances/workspaceManager.js';
-import { workspace as log } from '@Utils/logger.js';
-import { ToolsList } from './ToolsSubtab';
-import { LayersSubtab } from './LayersSubtab';
-import { AnnotationsSubtab } from './AnnotationsSubtab';
+// Import subtab components
+import { ToolsList as ToolsSubtab } from './subtabs/ToolsSubtab';
+import { LayersSubtab } from './subtabs/LayersSubtab';
+import { AnnotationsSubtab } from './subtabs/AnnotationsSubtab';
+
+// Import managers
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
+
 import './InstanceToolsTab.scss';
 
 // =============================================================================
@@ -33,9 +39,9 @@ function NoInstancePlaceholder() {
         <div className="instance-tools-tab__no-instance">
             <Monitor size={32} />
             <h3>No Instance Selected</h3>
-            <p>Click on an instance viewport to select it and see its tools here.</p>
+            <p>Click on an instance viewport to select it and view its tools.</p>
             <span className="instance-tools-tab__no-instance-hint">
-                You can also create a new instance by clicking a dataset in the Files panel.
+                Tip: The mini toolbar appears on hover in each viewport
             </span>
         </div>
     );
@@ -45,75 +51,41 @@ function NoInstancePlaceholder() {
 // MAIN COMPONENT
 // =============================================================================
 
-export function InstanceToolsPanelContent({ workspaceId }) {
-    // State
+/**
+ * InstanceToolsPanelContent - Tools panel for the active instance
+ * 
+ * Shows tools, layers, and annotations for the currently focused instance.
+ * Updates automatically when user clicks on different instances.
+ */
+export function InstanceToolsPanelContent() {
     const [activeTab, setActiveTab] = useState('tools');
     const [activeInstance, setActiveInstance] = useState(null);
-    const [tools, setTools] = useState([]);
-    const [expandedMenus, setExpandedMenus] = useState({});
-    const [layers, setLayers] = useState({
-        cursors: { enabled: true, opacity: 1.0, count: 0, total: 0 },
-        annotations: { enabled: true, opacity: 1.0, count: 0, total: 0 },
-        widgets: { enabled: true, opacity: 1.0, count: 0, total: 0 },
-    });
 
-    // Handler to open full annotations panel
-    const handleOpenFullAnnotations = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('cia:navigate-to-panel', {
-            detail: { panelId: 'annotations' }
-        }));
-    }, []);
-
-    // Subscribe to workspace changes
+    // Subscribe to active instance changes
     useEffect(() => {
-        const updateFromWorkspace = () => {
-            const instance = workspaceManager.getActiveInstance();
-            setActiveInstance(instance);
-
-            if (instance?.handler && instance?.instanceData) {
-                const instanceTools = instance.handler.getTools(instance.instanceData);
-                setTools(instanceTools || []);
-                log.debug(`Updated tools for instance ${instance.instanceId}:`, instanceTools?.length || 0);
-            } else {
-                setTools([]);
-            }
+        const updateActiveInstance = () => {
+            const instance = workspaceManager?.getActiveInstance?.();
+            setActiveInstance(instance || null);
         };
 
-        updateFromWorkspace();
-        workspaceManager.addListener(updateFromWorkspace);
+        // Initial check
+        updateActiveInstance();
 
-        const handleToolsUpdated = (event) => {
-            const { instanceId } = event.detail || {};
-            const currentInstance = workspaceManager.getActiveInstance();
-            if (currentInstance?.instanceId === instanceId) {
-                updateFromWorkspace();
-            }
+        // Listen for instance focus changes
+        const handleInstanceFocus = (event) => {
+            updateActiveInstance();
         };
-        window.addEventListener('cia:tools-updated', handleToolsUpdated);
+
+        window.addEventListener('cia:instance-focused', handleInstanceFocus);
+        window.addEventListener('cia:active-instance-changed', handleInstanceFocus);
 
         return () => {
-            workspaceManager.removeListener(updateFromWorkspace);
-            window.removeEventListener('cia:tools-updated', handleToolsUpdated);
+            window.removeEventListener('cia:instance-focused', handleInstanceFocus);
+            window.removeEventListener('cia:active-instance-changed', handleInstanceFocus);
         };
     }, []);
 
-    // Toggle menu expansion
-    const toggleMenu = useCallback((menuId) => {
-        setExpandedMenus(prev => ({
-            ...prev,
-            [menuId]: !prev[menuId]
-        }));
-    }, []);
-
-    // Toggle layer
-    const toggleLayer = useCallback((layerKey) => {
-        setLayers(prev => ({
-            ...prev,
-            [layerKey]: { ...prev[layerKey], enabled: !prev[layerKey].enabled }
-        }));
-    }, []);
-
-    // Get instance display info
+    // Extract instance info for display
     const instanceInfo = activeInstance ? {
         name: activeInstance.instanceData?.dataset?.filename ||
             activeInstance.instanceData?.dataset?.fileName ||
@@ -125,91 +97,90 @@ export function InstanceToolsPanelContent({ workspaceId }) {
             'No data loaded',
     } : null;
 
-    // If no active instance, show placeholder
-    if (!activeInstance) {
-        return (
-            <div className="instance-tools-tab">
-                <NoInstancePlaceholder />
-            </div>
-        );
-    }
+    // Render content based on active subtab
+    const renderContent = () => {
+        if (!activeInstance) return null;
+
+        switch (activeTab) {
+            case 'tools':
+                return <ToolsSubtab activeInstance={activeInstance} />;
+            case 'layers':
+                return <LayersSubtab activeInstance={activeInstance} />;
+            case 'annotations':
+                return <AnnotationsSubtab activeInstance={activeInstance} />;
+            default:
+                return null;
+        }
+    };
 
     return (
         <div className="instance-tools-tab">
-            {/* Focused Instance Header */}
-            <div
-                className="instance-tools-tab__instance-header"
-                style={{ '--instance-color': activeInstance.color?.hex || 'var(--color-accent-blue)' }}
-            >
-                <Monitor size={14} />
-                <div className="instance-tools-tab__instance-info">
-                    <span className="instance-tools-tab__instance-name">{instanceInfo.name}</span>
-                    <span className="instance-tools-tab__instance-dataset">{instanceInfo.dataset}</span>
-                </div>
-                <span className="instance-tools-tab__instance-type">{instanceInfo.type.toUpperCase()}</span>
-            </div>
-
-            {/* Tab Bar - 3 subtabs */}
-            <div className="instance-tools-tab__tabs">
-                <button
-                    className={`instance-tools-tab__tab ${activeTab === 'tools' ? 'instance-tools-tab__tab--active' : ''}`}
-                    onClick={() => setActiveTab('tools')}
-                    data-color="amber"
-                >
-                    <Zap size={14} /> Tools
-                </button>
-                <button
-                    className={`instance-tools-tab__tab ${activeTab === 'layers' ? 'instance-tools-tab__tab--active' : ''}`}
-                    onClick={() => setActiveTab('layers')}
-                    data-color="purple"
-                >
-                    <Layers size={14} /> Layers
-                </button>
-                <button
-                    className={`instance-tools-tab__tab ${activeTab === 'annotations' ? 'instance-tools-tab__tab--active' : ''}`}
-                    onClick={() => setActiveTab('annotations')}
-                    data-color="pink"
-                >
-                    <MapPin size={14} /> Annotations
-                </button>
-            </div>
-
-            {/* Content */}
-            <div className="instance-tools-tab__content">
-                {activeTab === 'tools' && (
-                    <ToolsList
-                        tools={tools}
-                        expandedMenus={expandedMenus}
-                        onToggleMenu={toggleMenu}
-                    />
-                )}
-
-                {activeTab === 'layers' && (
-                    <LayersSubtab
-                        layers={layers}
-                        onToggleLayer={toggleLayer}
-                    />
-                )}
-
-                {activeTab === 'annotations' && (
-                    <AnnotationsSubtab
-                        instanceId={activeInstance?.instanceId}
-                        onOpenFullPanel={handleOpenFullAnnotations}
-                    />
+            {/* ============================================================
+                PANEL HEADER - Matches Files and Datasets tabs
+                ============================================================ */}
+            <div className="panel-header">
+                <Wrench size={14} className="panel-header__icon file-icon--amber" />
+                <span className="panel-header__title">Instance Tools</span>
+                {activeInstance && (
+                    <span className="panel-header__count">1 active</span>
                 )}
             </div>
 
-            {/* Footer */}
-            <div className="instance-tools-tab__footer">
-                <button className="instance-tools-tab__footer-btn">
-                    <RotateCcw size={11} />
-                    <span>Reset View</span>
-                </button>
-                <button className="instance-tools-tab__footer-btn">
-                    <Save size={11} />
-                    <span>Save State</span>
-                </button>
-            </div>
+            {/* If no active instance, show placeholder */}
+            {!activeInstance ? (
+                <NoInstancePlaceholder />
+            ) : (
+                <>
+                    {/* ========================================================
+                        FOCUSED INSTANCE HEADER - Shows which instance is selected
+                        ======================================================== */}
+                    <div
+                        className="instance-tools-tab__instance-header"
+                        style={{ '--instance-color': activeInstance.color?.hex || 'var(--color-accent-blue)' }}
+                    >
+                        <Monitor size={14} />
+                        <div className="instance-tools-tab__instance-info">
+                            <span className="instance-tools-tab__instance-name">{instanceInfo.name}</span>
+                            <span className="instance-tools-tab__instance-dataset">{instanceInfo.dataset}</span>
+                        </div>
+                        <span className="instance-tools-tab__instance-type">{instanceInfo.type.toUpperCase()}</span>
+                    </div>
+
+                    {/* ========================================================
+                        SUBTAB BAR - Tools / Layers / Annotations
+                        ======================================================== */}
+                    <div className="instance-tools-tab__tabs">
+                        <button
+                            className={`instance-tools-tab__tab ${activeTab === 'tools' ? 'instance-tools-tab__tab--active' : ''}`}
+                            onClick={() => setActiveTab('tools')}
+                            data-color="amber"
+                        >
+                            <Zap size={14} /> Tools
+                        </button>
+                        <button
+                            className={`instance-tools-tab__tab ${activeTab === 'layers' ? 'instance-tools-tab__tab--active' : ''}`}
+                            onClick={() => setActiveTab('layers')}
+                            data-color="purple"
+                        >
+                            <Layers size={14} /> Layers
+                        </button>
+                        <button
+                            className={`instance-tools-tab__tab ${activeTab === 'annotations' ? 'instance-tools-tab__tab--active' : ''}`}
+                            onClick={() => setActiveTab('annotations')}
+                            data-color="pink"
+                        >
+                            <MapPin size={14} /> Annotations
+                        </button>
+                    </div>
+
+                    {/* ========================================================
+                        CONTENT AREA
+                        ======================================================== */}
+                    <div className="instance-tools-tab__content">
+                        {renderContent()}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

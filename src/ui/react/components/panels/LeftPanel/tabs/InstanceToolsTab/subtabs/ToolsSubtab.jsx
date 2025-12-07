@@ -8,7 +8,7 @@ import {
     ChevronRight,
     Box,
 } from 'lucide-react';
-import { getIcon, ICON_MAP } from './iconMap';
+import { getIcon, ICON_MAP } from '../iconMap';
 
 // =============================================================================
 // TOOL BUTTON COMPONENT
