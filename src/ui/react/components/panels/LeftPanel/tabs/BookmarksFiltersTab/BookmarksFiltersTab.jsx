@@ -63,47 +63,43 @@ function SubTabs({ activeTab, onTabChange }) {
 // MAIN COMPONENT
 // =============================================================================
 
-export function BookmarksFiltersPanelContent({ workspaceId }) {
+export function BookmarksFiltersPanelContent() {
     // Sub-tab state
     const [activeSubTab, setActiveSubTab] = useState('bookmarks');
 
-    // Scope filters - all active by default
+    // Scope filter state - all selected by default
     const [activeScopes, setActiveScopes] = useState(['project', 'room', 'personal']);
 
-    // Search
-    const [searchQuery, setSearchQuery] = useState('');
-
-    // Section expansion
+    // Section expansion state
     const [expandedSections, setExpandedSections] = useState({
         project: true,
         room: true,
         personal: true,
     });
 
-    // Bookmarks hook
+    // Search
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Hooks for data
     const {
         bookmarks,
-        isLoading: bookmarksLoading,
+        loading: bookmarksLoading,
         error: bookmarksError,
-        deleteBookmark,
-        togglePin: toggleBookmarkPin,
-        navigateToBookmark,
-        getThumbnailUrl,
         refetch: refetchBookmarks,
-    } = useBookmarks({ workspaceId });
+        deleteBookmark,
+        navigateToBookmark,
+    } = useBookmarks();
 
-    // Filters hook
     const {
         filters,
-        isLoading: filtersLoading,
+        loading: filtersLoading,
         error: filtersError,
-        deleteFilter,
-        togglePin: toggleFilterPin,
-        applyFilter,
         refetch: refetchFilters,
-    } = useFilters({ workspaceId });
+        applyFilter,
+        deleteFilter,
+    } = useFilters();
 
-    // Toggle scope
+    // Toggle scope filter
     const toggleScope = useCallback((scope) => {
         setActiveScopes(prev =>
             prev.includes(scope)
@@ -154,7 +150,7 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
         personal: filteredFilters.filter(f => f.scope === 'personal' || !f.scope),
     }), [filteredFilters]);
 
-        // Counts for scope chips
+    // Counts for scope chips
     const bookmarkCounts = useMemo(() => ({
         project: bookmarks.filter(b => b.scope === 'project').length,
         room: bookmarks.filter(b => b.scope === 'room' || b.scope === 'workspace').length,
@@ -169,32 +165,19 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
 
     const scopeChips = useMemo(() => {
         const counts = activeSubTab === 'bookmarks' ? bookmarkCounts : filterCounts;
-        return [
-            { id: 'project', label: 'Project', icon: Globe, color: 'amber', count: counts.project },
-            { id: 'room', label: 'This Room', icon: Users, color: 'teal', count: counts.room },
-            { id: 'personal', label: 'Personal', icon: UserCircle, color: 'blue', count: counts.personal },
-        ];
+        return getScopeChips(counts);
     }, [activeSubTab, bookmarkCounts, filterCounts]);
 
     // Handlers
-    const handleNavigate = useCallback((bookmarkId) => {
-        const bookmark = navigateToBookmark(bookmarkId);
-        if (bookmark) {
-            log.debug('Navigating to bookmark:', bookmarkId, bookmark);
+    const handleBookmarkNavigate = useCallback(async (bookmark) => {
+        try {
+            await navigateToBookmark(bookmark.id);
+        } catch (err) {
+            log.error('Failed to navigate to bookmark:', err);
         }
     }, [navigateToBookmark]);
 
-    const handleApplyFilter = useCallback((filterId) => {
-        const filterConfig = applyFilter(filterId);
-        if (filterConfig) {
-            log.debug('Applying filter:', filterId, filterConfig);
-            window.dispatchEvent(new CustomEvent('cia:apply-filter', {
-                detail: { filterId, filterConfig },
-            }));
-        }
-    }, [applyFilter]);
-
-    const handleDeleteBookmark = useCallback(async (bookmarkId) => {
+    const handleBookmarkDelete = useCallback(async (bookmarkId) => {
         if (window.confirm('Delete this bookmark?')) {
             try {
                 await deleteBookmark(bookmarkId);
@@ -204,8 +187,16 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
         }
     }, [deleteBookmark]);
 
-    const handleDeleteFilter = useCallback(async (filterId) => {
-        if (window.confirm('Delete this filter?')) {
+    const handleFilterApply = useCallback(async (filter) => {
+        try {
+            await applyFilter(filter.id);
+        } catch (err) {
+            log.error('Failed to apply filter:', err);
+        }
+    }, [applyFilter]);
+
+    const handleFilterDelete = useCallback(async (filterId) => {
+        if (window.confirm('Delete this saved filter?')) {
             try {
                 await deleteFilter(filterId);
             } catch (err) {
@@ -224,16 +215,16 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
 
     return (
         <div className="bookmarks-filters-tab">
-            {/* Header */}
+            {/* Header - proper styling with purple icon */}
             <div className="bookmarks-filters-tab__header">
                 <Bookmark size={14} className="icon-purple" />
-                <span className="bookmarks-filters-tab__title">Bookmarks & Filters</span>
+                <span className="bookmarks-filters-tab__title">Saved</span>
             </div>
 
             {/* Sub-tabs */}
             <SubTabs activeTab={activeSubTab} onTabChange={setActiveSubTab} />
 
-            {/* Scope chips */}
+            {/* Scope chips - centered */}
             <div className="bookmarks-filters-tab__scope-bar">
                 <ChipGroup
                     chips={scopeChips}
@@ -282,75 +273,136 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
             {!isLoading && !error && (
                 <div className="bookmarks-filters-tab__content">
                     {activeSubTab === 'bookmarks' ? (
-                        <>
-                            {Object.entries(bookmarksByScope).map(([scope, items]) => (
-                                <ScopedSection
-                                    key={scope}
-                                    scope={scope}
-                                    items={items}
-                                    isExpanded={expandedSections[scope]}
-                                    onToggle={() => toggleSection(scope)}
-                                    renderItem={(bookmark) => (
-                                        <BookmarkItem
-                                            key={bookmark.id}
-                                            bookmark={bookmark}
-                                            onNavigate={handleNavigate}
-                                            onTogglePin={toggleBookmarkPin}
-                                            onDelete={handleDeleteBookmark}
-                                            getThumbnailUrl={getThumbnailUrl}
-                                        />
-                                    )}
-                                />
-                            ))}
-                        </>
+                        // Bookmarks content
+                        isEmpty ? (
+                            <div className="bookmarks-filters-tab__empty">
+                                No bookmarks found
+                            </div>
+                        ) : (
+                            <>
+                                {activeScopes.includes('project') && bookmarksByScope.project.length > 0 && (
+                                    <ScopedSection
+                                        scope="project"
+                                        count={bookmarksByScope.project.length}
+                                        expanded={expandedSections.project}
+                                        onToggle={() => toggleSection('project')}
+                                    >
+                                        {bookmarksByScope.project.map(bookmark => (
+                                            <BookmarkItem
+                                                key={bookmark.id}
+                                                bookmark={bookmark}
+                                                onNavigate={handleBookmarkNavigate}
+                                                onDelete={handleBookmarkDelete}
+                                            />
+                                        ))}
+                                    </ScopedSection>
+                                )}
+                                {activeScopes.includes('room') && bookmarksByScope.room.length > 0 && (
+                                    <ScopedSection
+                                        scope="room"
+                                        count={bookmarksByScope.room.length}
+                                        expanded={expandedSections.room}
+                                        onToggle={() => toggleSection('room')}
+                                    >
+                                        {bookmarksByScope.room.map(bookmark => (
+                                            <BookmarkItem
+                                                key={bookmark.id}
+                                                bookmark={bookmark}
+                                                onNavigate={handleBookmarkNavigate}
+                                                onDelete={handleBookmarkDelete}
+                                            />
+                                        ))}
+                                    </ScopedSection>
+                                )}
+                                {activeScopes.includes('personal') && bookmarksByScope.personal.length > 0 && (
+                                    <ScopedSection
+                                        scope="personal"
+                                        count={bookmarksByScope.personal.length}
+                                        expanded={expandedSections.personal}
+                                        onToggle={() => toggleSection('personal')}
+                                    >
+                                        {bookmarksByScope.personal.map(bookmark => (
+                                            <BookmarkItem
+                                                key={bookmark.id}
+                                                bookmark={bookmark}
+                                                onNavigate={handleBookmarkNavigate}
+                                                onDelete={handleBookmarkDelete}
+                                            />
+                                        ))}
+                                    </ScopedSection>
+                                )}
+                            </>
+                        )
                     ) : (
-                        <>
-                            {Object.entries(filtersByScope).map(([scope, items]) => (
-                                <ScopedSection
-                                    key={scope}
-                                    scope={scope}
-                                    items={items}
-                                    isExpanded={expandedSections[scope]}
-                                    onToggle={() => toggleSection(scope)}
-                                    renderItem={(filter) => (
-                                        <FilterItem
-                                            key={filter.id}
-                                            filter={filter}
-                                            onApply={handleApplyFilter}
-                                            onTogglePin={toggleFilterPin}
-                                            onDelete={handleDeleteFilter}
-                                        />
-                                    )}
-                                />
-                            ))}
-                        </>
-                    )}
-
-                    {/* Empty state */}
-                    {isEmpty && (
-                        <div className="bookmarks-filters-tab__empty">
-                            {searchQuery
-                                ? `No ${activeSubTab} match your search`
-                                : `No ${activeSubTab} yet`}
-                        </div>
+                        // Filters content
+                        isEmpty ? (
+                            <div className="bookmarks-filters-tab__empty">
+                                No saved filters found
+                            </div>
+                        ) : (
+                            <>
+                                {activeScopes.includes('project') && filtersByScope.project.length > 0 && (
+                                    <ScopedSection
+                                        scope="project"
+                                        count={filtersByScope.project.length}
+                                        expanded={expandedSections.project}
+                                        onToggle={() => toggleSection('project')}
+                                    >
+                                        {filtersByScope.project.map(filter => (
+                                            <FilterItem
+                                                key={filter.id}
+                                                filter={filter}
+                                                onApply={handleFilterApply}
+                                                onDelete={handleFilterDelete}
+                                            />
+                                        ))}
+                                    </ScopedSection>
+                                )}
+                                {activeScopes.includes('room') && filtersByScope.room.length > 0 && (
+                                    <ScopedSection
+                                        scope="room"
+                                        count={filtersByScope.room.length}
+                                        expanded={expandedSections.room}
+                                        onToggle={() => toggleSection('room')}
+                                    >
+                                        {filtersByScope.room.map(filter => (
+                                            <FilterItem
+                                                key={filter.id}
+                                                filter={filter}
+                                                onApply={handleFilterApply}
+                                                onDelete={handleFilterDelete}
+                                            />
+                                        ))}
+                                    </ScopedSection>
+                                )}
+                                {activeScopes.includes('personal') && filtersByScope.personal.length > 0 && (
+                                    <ScopedSection
+                                        scope="personal"
+                                        count={filtersByScope.personal.length}
+                                        expanded={expandedSections.personal}
+                                        onToggle={() => toggleSection('personal')}
+                                    >
+                                        {filtersByScope.personal.map(filter => (
+                                            <FilterItem
+                                                key={filter.id}
+                                                filter={filter}
+                                                onApply={handleFilterApply}
+                                                onDelete={handleFilterDelete}
+                                            />
+                                        ))}
+                                    </ScopedSection>
+                                )}
+                            </>
+                        )
                     )}
                 </div>
             )}
 
-            {/* Footer */}
+            {/* Footer - Add button */}
             <div className="bookmarks-filters-tab__footer">
-                <button
-                    className="bookmarks-filters-tab__add-btn"
-                    onClick={() => {
-                        if (activeSubTab === 'bookmarks') {
-                            log.info('Create new bookmark');
-                        } else {
-                            log.info('Create new filter');
-                        }
-                    }}
-                >
-                    <Plus size={11} />
-                    <span>New {activeSubTab === 'bookmarks' ? 'Bookmark' : 'Filter'}</span>
+                <button className="bookmarks-filters-tab__add-btn">
+                    <Plus size={12} />
+                    {activeSubTab === 'bookmarks' ? 'Add Bookmark' : 'Save Current Filter'}
                 </button>
             </div>
         </div>

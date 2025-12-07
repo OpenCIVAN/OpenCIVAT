@@ -1,26 +1,11 @@
-// src/ui/react/components/panels/LayoutPanel/LayoutPanel.jsx
 /**
  * LayoutPanel Component
  *
  * Main container for the Layout Panel in the left sidebar.
  * Manages canvas navigation, view configuration, and layout tools.
- *
- * ARCHITECTURE:
- * - Uses LayoutPanelContext for shared state with FloatingCanvasNavigator
- * - If used inside LayoutPanelProvider: uses shared context
- * - If used standalone: creates its own useLayoutPanel instance
- *
- * Features:
- * - Subtabs: Canvas (amber) and Views (purple)
- * - Dockable Canvas Navigator at bottom
- * - Conditional UI based on navigator docking state
- * - Loading/error states from server connection
- *
- * FIXES:
- * - Header now uses ALL CAPS styling consistent with Files/Datasets tabs
  */
 
-import React, { memo, useContext } from 'react';
+import React, { memo, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { LayoutGrid, Map, Layers, Loader2, WifiOff, AlertCircle } from 'lucide-react';
 import { useLayoutPanel } from './LayoutPanel.logic';
 import LayoutPanelContext from './LayoutPanelContext';
@@ -37,51 +22,32 @@ const SUBTABS = [
 
 /**
  * LayoutPanel - Main panel component
- *
- * @param {Object} props
- * @param {string} [props.canvasId] - Target canvas ID (uses active canvas if not provided)
- * @param {Function} [props.onPopOut] - Callback when user clicks pop-out button
- * @param {string} [props.className] - Additional CSS classes
  */
 export const LayoutPanel = memo(function LayoutPanel({
     canvasId,
     onPopOut,
     className = '',
 }) {
-    // Check if we're inside a LayoutPanelProvider (shared context)
     const context = useContext(LayoutPanelContext);
+    const standaloneLogic = useLayoutPanel(context ? null : { canvasId });
+    const logic = context?.logic || standaloneLogic;
 
-    // Create standalone logic only if no context is available
-    // IMPORTANT: We always call the hook but useLayoutPanel handles missing canvasId gracefully
-    const standaloneLogic = useLayoutPanel({ canvasId });
-
-    // Use context logic if available, otherwise use standalone
-    const logic = context ? context.logic : standaloneLogic;
-
-    // Destructure what we need from logic
     const {
-        // Canvas data
-        canvas,
-        cells,
-        isLoading,
-        error,
-        isConnected,
-        // UI state
         panelSubtab,
         setPanelSubtab,
         navigatorDocked,
+        loading,
+        error,
+        isConnected,
+        cells,
     } = logic;
 
     // Loading state
-    if (isLoading) {
+    if (loading) {
         return (
             <div className={`layout-panel layout-panel--loading ${className}`}>
-                <div className="panel-header panel-header--amber">
-                    <LayoutGrid size={16} className="panel-header__icon" />
-                    <span className="panel-header__title">Layout</span>
-                </div>
                 <div className="layout-panel__loading">
-                    <Loader2 size={24} className="layout-panel__spinner" />
+                    <Loader2 size={24} className="spin" />
                     <span>Loading canvas...</span>
                 </div>
             </div>
@@ -92,10 +58,6 @@ export const LayoutPanel = memo(function LayoutPanel({
     if (error) {
         return (
             <div className={`layout-panel layout-panel--error ${className}`}>
-                <div className="panel-header panel-header--amber">
-                    <LayoutGrid size={16} className="panel-header__icon" />
-                    <span className="panel-header__title">Layout</span>
-                </div>
                 <div className="layout-panel__error">
                     <AlertCircle size={24} />
                     <span>{error}</span>
@@ -104,39 +66,22 @@ export const LayoutPanel = memo(function LayoutPanel({
         );
     }
 
-    // Disconnected state
-    if (!isConnected) {
-        return (
-            <div className={`layout-panel layout-panel--disconnected ${className}`}>
-                <div className="panel-header panel-header--amber">
-                    <LayoutGrid size={16} className="panel-header__icon" />
-                    <span className="panel-header__title">Layout</span>
-                </div>
-                <div className="layout-panel__disconnected">
-                    <WifiOff size={24} />
-                    <span>Connecting to server...</span>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className={`layout-panel ${className}`}>
-            {/* Header - ALL CAPS like other tabs */}
-            <div className="panel-header panel-header--amber">
-                <LayoutGrid size={16} className="panel-header__icon" />
-                <span className="panel-header__title">Layout</span>
-                {cells.length > 0 && (
-                    <span className="panel-header__count">{cells.length}</span>
+        <div className={`layout-panel ${!isConnected ? 'layout-panel--disabled' : ''} ${className}`}>
+            {/* Header */}
+            <div className="layout-panel__header">
+                <LayoutGrid size={14} className="layout-panel__header-icon" />
+                <span className="layout-panel__title">Layout</span>
+                {!isConnected && (
+                    <WifiOff size={12} className="layout-panel__header-offline" title="Disconnected" />
                 )}
             </div>
 
             {/* Subtabs */}
             <div className="layout-panel__tabs">
-                {SUBTABS.map(tab => {
+                {SUBTABS.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = panelSubtab === tab.id;
-                    // Show badge for views count on Views tab
                     const badge = tab.id === 'views' ? cells.length : null;
 
                     return (
@@ -180,25 +125,71 @@ export const LayoutPanel = memo(function LayoutPanel({
 });
 
 /**
- * Floating Canvas Navigator
- *
- * Renders when navigator is undocked.
- * Should be positioned in the canvas/workspace area.
- *
- * MUST be used inside LayoutPanelProvider to share state with LayoutPanel.
+ * FloatingCanvasNavigator - Draggable floating navigator
  */
 export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     onPopOut,
     className = '',
+    initialPosition = { x: 16, y: null },
 }) {
-    // Get shared logic from context
     const context = useContext(LayoutPanelContext);
 
+    // Drag state
+    const [position, setPosition] = useState(initialPosition);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragOffset = useRef({ x: 0, y: 0 });
+    const containerRef = useRef(null);
+
+    // Calculate initial bottom position on mount
+    useEffect(() => {
+        if (position.y === null && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            setPosition({
+                x: position.x,
+                y: window.innerHeight - rect.height - 16,
+            });
+        }
+    }, [position.y, position.x]);
+
+    // Handle drag start
+    const handleDragStart = useCallback((e) => {
+        if (!e.target.closest('.canvas-navigator__header')) return;
+
+        e.preventDefault();
+        setIsDragging(true);
+
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+            dragOffset.current = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+            };
+        }
+    }, []);
+
+    // Handle drag move
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handleMouseMove = (e) => {
+            const newX = Math.max(0, Math.min(window.innerWidth - 420, e.clientX - dragOffset.current.x));
+            const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.current.y));
+            setPosition({ x: newX, y: newY });
+        };
+
+        const handleMouseUp = () => setIsDragging(false);
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging]);
+
     if (!context) {
-        console.warn(
-            'FloatingCanvasNavigator must be used within a LayoutPanelProvider. ' +
-            'The navigator will not render.'
-        );
+        console.warn('FloatingCanvasNavigator must be used within a LayoutPanelProvider.');
         return null;
     }
 
@@ -207,8 +198,19 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     // Only render when undocked
     if (logic.navigatorDocked) return null;
 
+    const style = {
+        position: 'absolute',
+        left: `${position.x}px`,
+        ...(position.y !== null ? { top: `${position.y}px` } : { bottom: '16px' }),
+    };
+
     return (
-        <div className={`floating-canvas-navigator ${className}`}>
+        <div
+            ref={containerRef}
+            className={`floating-canvas-navigator ${isDragging ? 'floating-canvas-navigator--dragging' : ''} ${className}`}
+            style={style}
+            onMouseDown={handleDragStart}
+        >
             <CanvasNavigator
                 isDocked={false}
                 logic={logic}

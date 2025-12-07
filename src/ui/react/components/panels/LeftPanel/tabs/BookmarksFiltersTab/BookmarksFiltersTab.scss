@@ -15,7 +15,7 @@
   width: 100%;
   overflow: hidden;
 
-  // Header
+  // Header - matches other tabs pattern
   &__header {
     display: flex;
     align-items: center;
@@ -31,8 +31,10 @@
     color: $color-text-primary;
   }
 
-  // Scope filter bar
+  // Scope filter bar - CENTERED chips
   &__scope-bar {
+    display: flex;
+    justify-content: center; // Center the ChipGroup
     padding: $spacing-sm;
     border-bottom: 1px solid $color-border-subtle;
     background: rgba(0, 0, 0, 0.15);
@@ -141,12 +143,8 @@
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 // =============================================================================
@@ -192,70 +190,6 @@
     &[data-color="amber"] {
       --tab-color: #{$color-accent-amber};
       --tab-color-rgb: 251, 191, 36;
-    }
-  }
-}
-
-// =============================================================================
-// SCOPE CHIPS (shared with AnnotationsTab)
-// =============================================================================
-
-.scope-chips {
-  display: inline-flex;
-  border-radius: $radius-sm;
-  overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.2) 50%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.scope-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: $spacing-xs $spacing-sm;
-  background: transparent;
-  border: none;
-  color: $color-text-muted;
-  font-size: 10px;
-  cursor: pointer;
-  transition: all $transition-fast;
-  white-space: nowrap;
-
-  &__count {
-    font-size: 9px;
-    padding: 1px 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: $radius-full;
-  }
-
-  &:hover:not(&--active) {
-    color: $color-text-secondary;
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  &--active {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      0 1px 2px rgba(0, 0, 0, 0.3);
-
-    &[data-color="amber"] {
-      background: rgba($color-accent-amber, 0.2);
-      color: $color-accent-amber;
-    }
-
-    &[data-color="teal"] {
-      background: rgba($color-accent-teal, 0.2);
-      color: $color-accent-teal;
-    }
-
-    &[data-color="blue"] {
-      background: rgba($color-accent-blue, 0.2);
-      color: $color-accent-blue;
     }
   }
 }
@@ -314,328 +248,29 @@
 }
 
 // =============================================================================
-// SCOPED SECTION (dark card style)
-// =============================================================================
-
-.scoped-section {
-  margin-bottom: $spacing-sm;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-md;
-  overflow: hidden;
-
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm;
-    background: transparent;
-    border: none;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.03);
-    }
-  }
-
-  &--expanded .scoped-section__header {
-    background: rgba(255, 255, 255, 0.02);
-    border-bottom: 1px solid $color-border-subtle;
-  }
-
-  &__chevron {
-    color: $color-text-muted;
-    flex-shrink: 0;
-  }
-
-  &__label {
-    flex: 1;
-    font-size: 10px;
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  &__count {
-    font-size: 9px;
-    color: $color-text-muted;
-    padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: $radius-full;
-  }
-
-  &__content {
-    padding: $spacing-xs;
-  }
-}
-
-// =============================================================================
-// BOOKMARK ITEM (dark card style)
-// =============================================================================
-
-.bookmark-item {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm;
-  margin-bottom: $spacing-xs;
-  background: rgba(0, 0, 0, 0.15);
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
-  transition: all $transition-fast;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  &:hover {
-    border-color: $color-border-medium;
-    background: rgba(0, 0, 0, 0.2);
-  }
-
-  &__thumbnail {
-    width: 40px;
-    height: 32px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-xs;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    svg {
-      color: $color-text-muted;
-    }
-  }
-
-  &__content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__name {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    color: $color-text-primary;
-    font-weight: $font-weight-medium;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__meta {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 9px;
-    color: $color-text-muted;
-    margin-top: 2px;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 4px;
-    transition: opacity $transition-fast;
-  }
-
-  &__action-btn {
-    background: none;
-    border: none;
-    padding: 4px;
-    color: $color-text-muted;
-    cursor: pointer;
-    border-radius: $radius-xs;
-
-    &:hover {
-      color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    &.active {
-      color: $color-accent-amber;
-    }
-  }
-
-  &__go-btn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    font-size: 9px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    color: $color-text-secondary;
-    cursor: pointer;
-    transition: all $transition-fast;
-    flex-shrink: 0;
-
-    &:hover {
-      background: rgba($color-accent-green, 0.15);
-      border-color: rgba($color-accent-green, 0.4);
-      color: $color-accent-green;
-    }
-  }
-}
-
-// =============================================================================
-// FILTER ITEM (dark card style)
-// =============================================================================
-
-.filter-item {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm;
-  margin-bottom: $spacing-xs;
-  background: rgba(0, 0, 0, 0.15);
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
-  transition: all $transition-fast;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  &:hover {
-    border-color: $color-border-medium;
-    background: rgba(0, 0, 0, 0.2);
-  }
-
-  &__icon {
-    width: 28px;
-    height: 28px;
-    background: rgba($color-accent-amber, 0.15);
-    border-radius: $radius-sm;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: $color-accent-amber;
-  }
-
-  &__content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__name {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    color: $color-text-primary;
-    font-weight: $font-weight-medium;
-  }
-
-  &__scope-badge {
-    font-size: 8px;
-    padding: 2px 5px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-
-    &[data-color="amber"] {
-      background: rgba($color-accent-amber, 0.15);
-      color: $color-accent-amber;
-    }
-
-    &[data-color="teal"] {
-      background: rgba($color-accent-teal, 0.15);
-      color: $color-accent-teal;
-    }
-
-    &[data-color="blue"] {
-      background: rgba($color-accent-blue, 0.15);
-      color: $color-accent-blue;
-    }
-  }
-
-  &__description {
-    font-size: 9px;
-    color: $color-text-muted;
-    margin-top: 2px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 4px;
-    transition: opacity $transition-fast;
-  }
-
-  &__action-btn {
-    background: none;
-    border: none;
-    padding: 4px;
-    color: $color-text-muted;
-    cursor: pointer;
-    border-radius: $radius-xs;
-
-    &:hover {
-      color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    &.active {
-      color: $color-accent-amber;
-    }
-  }
-
-  &__apply-btn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    font-size: 9px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    color: $color-text-secondary;
-    cursor: pointer;
-    transition: all $transition-fast;
-    flex-shrink: 0;
-
-    &:hover {
-      background: rgba($color-accent-amber, 0.15);
-      border-color: rgba($color-accent-amber, 0.4);
-      color: $color-accent-amber;
-    }
-  }
-}
-
-// =============================================================================
-// ICON HELPERS
+// ICON COLOR HELPERS
 // =============================================================================
 
 .icon-purple {
   color: $color-accent-purple;
 }
+
 .icon-amber {
   color: $color-accent-amber;
 }
-.icon-teal {
-  color: $color-accent-teal;
-}
+
 .icon-blue {
   color: $color-accent-blue;
 }
+
+.icon-teal {
+  color: $color-accent-teal;
+}
+
+.icon-green {
+  color: $color-accent-green;
+}
+
 .icon-pink {
   color: $color-accent-pink;
 }

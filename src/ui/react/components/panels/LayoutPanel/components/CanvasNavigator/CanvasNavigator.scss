@@ -1,8 +1,6 @@
 // src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.scss
 // Canvas Navigator component - Moonlight theme
 // Uses design tokens - no hard-coded values
-//
-// FIX: Changed __main to flex-direction: column so minimap stacks above controls
 
 @use "sass:color";
 @use "theme" as *;
@@ -18,18 +16,28 @@
   &--docked {
     border-radius: 0;
     border: none;
+    border-top: 1px solid $color-border-default;
   }
 
   &--floating {
-    border-radius: 6px;
+    border-radius: $radius-md;
     border: 1px solid $color-border-default;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
 
-  // Header
+  &--disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  // ===========================================================================
+  // HEADER
+  // ===========================================================================
+
   &__header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: $spacing-sm;
     padding: 6px 10px;
     background: rgba(0, 0, 0, 0.3);
     border-bottom: 1px solid $color-border-subtle;
@@ -38,10 +46,9 @@
   &__title {
     flex: 1;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     color: $color-text-secondary;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-family: $font-family-mono;
   }
 
   &__header-actions {
@@ -53,21 +60,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2px;
+    padding: 4px;
     background: none;
     border: none;
     color: $color-text-muted;
     cursor: pointer;
-    transition: color 0.15s ease;
+    border-radius: $radius-xs;
+    transition: all $transition-fast;
 
     &:hover {
       color: $color-text-primary;
+      background: rgba(255, 255, 255, 0.08);
     }
   }
 
-  // ==========================================================================
+  // ===========================================================================
   // TOOLS BAR (floating only)
-  // ==========================================================================
+  // ===========================================================================
 
   &__tools {
     display: flex;
@@ -86,10 +95,10 @@
     justify-content: center;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid $color-border-default;
-    border-radius: 4px;
+    border-radius: $radius-sm;
     color: $color-text-muted;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all $transition-fast;
 
     &:hover:not(:disabled):not(&--active) {
       background: rgba(255, 255, 255, 0.08);
@@ -112,17 +121,14 @@
       --tool-color: #{$color-accent-blue};
       --tool-color-rgb: 96, 165, 250;
     }
-
     &--teal {
       --tool-color: #{$color-accent-teal};
       --tool-color-rgb: 125, 211, 252;
     }
-
     &--purple {
       --tool-color: #{$color-accent-purple};
       --tool-color-rgb: 192, 132, 252;
     }
-
     &--amber {
       --tool-color: #{$color-accent-amber};
       --tool-color-rgb: 251, 191, 36;
@@ -144,7 +150,7 @@
   // Drop mode toggle group
   &__drop-mode {
     display: inline-flex;
-    border-radius: 4px;
+    border-radius: $radius-sm;
     overflow: hidden;
     background: linear-gradient(
       180deg,
@@ -166,7 +172,7 @@
     font-size: 11px;
     color: $color-text-muted;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all $transition-fast;
     white-space: nowrap;
 
     &:hover:not(&--active) {
@@ -178,7 +184,6 @@
         background: rgba($color-accent-green, 0.2);
         color: $color-accent-green;
       }
-
       &[data-color="amber"] {
         background: rgba($color-accent-amber, 0.2);
         color: $color-accent-amber;
@@ -186,26 +191,25 @@
     }
   }
 
-  // ==========================================================================
-  // MAIN CONTENT AREA - FIX: Stack vertically (column)
-  // ==========================================================================
+  // ===========================================================================
+  // MAIN CONTENT AREA
+  // ===========================================================================
 
   &__main {
     display: flex;
-    flex-direction: column; // FIX: Was missing, causing horizontal layout
   }
 
-  // ==========================================================================
+  // ===========================================================================
   // MINIMAP
-  // ==========================================================================
+  // ===========================================================================
 
   &__minimap {
     flex: 1;
     min-height: 100px;
-    max-height: 160px;
+    max-height: 140px;
     position: relative;
     overflow: auto;
-    padding: 8px;
+    padding: $spacing-sm;
     background: $color-bg-base;
   }
 
@@ -220,92 +224,111 @@
     justify-content: center;
     border-radius: 2px;
     cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover:not(&--drop-target) {
-      transform: scale(1.05);
-      z-index: 1;
-    }
+    transition: all $transition-fast;
 
     &--empty {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid $color-border-default;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid $color-border-subtle;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: $color-border-default;
+      }
     }
 
-    &--occupied {
+    &--filled {
       background: rgba(var(--cell-color-rgb, 96, 165, 250), 0.3);
-      border: 1px solid rgba(var(--cell-color-rgb, 96, 165, 250), 0.6);
+      border: 1px solid var(--cell-color, $color-accent-blue);
+
+      // Use CSS custom property for color
+      background: color-mix(in srgb, var(--cell-color) 30%, transparent);
+      border-color: color-mix(in srgb, var(--cell-color) 60%, transparent);
+
+      &:hover {
+        background: color-mix(in srgb, var(--cell-color) 45%, transparent);
+      }
     }
 
     &--in-viewport {
-      box-shadow: 0 0 0 1px $color-accent-green;
+      box-shadow: inset 0 0 0 2px $color-accent-amber;
+
+      &.canvas-navigator__cell--filled {
+        background: color-mix(in srgb, var(--cell-color) 50%, transparent);
+      }
+
+      &.canvas-navigator__cell--empty {
+        background: rgba($color-accent-amber, 0.1);
+      }
     }
 
-    // Drop target states
     &--drop-target {
-      &.canvas-navigator__cell--valid {
-        background: rgba($color-accent-green, 0.3);
-        border: 2px dashed $color-accent-green;
-        transform: scale(1.1);
-      }
+      box-shadow: 0 0 0 2px $color-accent-green;
+      background: rgba($color-accent-green, 0.2) !important;
+    }
 
-      &.canvas-navigator__cell--invalid {
-        background: rgba($color-accent-pink, 0.2);
-        border: 2px dashed $color-accent-pink;
-      }
+    &--drop-invalid {
+      box-shadow: 0 0 0 2px $color-error;
+      background: rgba($color-error, 0.2) !important;
     }
   }
 
-  &__viewport-overlay {
-    position: absolute;
-    border: 2px solid $color-accent-green;
-    border-radius: 2px;
-    pointer-events: none;
-    box-shadow: 0 0 8px rgba($color-accent-green, 0.4);
-  }
-
-  // ==========================================================================
-  // CONTROLS (D-pad, zoom, position)
-  // ==========================================================================
+  // ===========================================================================
+  // CONTROLS PANEL (right side)
+  // ===========================================================================
 
   &__controls {
+    width: 90px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    padding: 8px;
-    gap: 12px;
-    border-top: 1px solid $color-border-subtle;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
     background: rgba(0, 0, 0, 0.15);
+    border-left: 1px solid $color-border-subtle;
   }
 
+  // ===========================================================================
+  // D-PAD NAVIGATION
+  // ===========================================================================
+
   &__dpad {
-    display: grid;
-    grid-template-columns: repeat(3, 24px);
-    grid-template-rows: repeat(3, 24px);
+    display: flex;
+    flex-direction: column;
     gap: 2px;
   }
 
+  &__dpad-row {
+    display: flex;
+    gap: 2px;
+
+    > div {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
   &__nav-btn {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.04);
+    padding: 0;
+    background: rgba(255, 255, 255, 0.06);
     border: 1px solid $color-border-default;
-    border-radius: 4px;
+    border-radius: $radius-xs;
     color: $color-text-muted;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all $transition-fast;
 
     &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.08);
-      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.12);
+      color: $color-text-primary;
     }
 
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+    &:active:not(:disabled) {
+      background: rgba($color-accent-blue, 0.2);
+      color: $color-accent-blue;
     }
 
     &--center {
@@ -317,13 +340,32 @@
         background: rgba($color-accent-amber, 0.25);
       }
     }
+
+    &--active {
+      background: rgba($color-accent-amber, 0.3);
+      border-color: $color-accent-amber;
+    }
   }
 
+  // ===========================================================================
+  // POSITION DISPLAY
+  // ===========================================================================
+
   &__position {
-    font-size: 9px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-family: $font-family-mono;
     color: $color-text-muted;
-    text-align: center;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-xs;
   }
+
+  // ===========================================================================
+  // ZOOM CONTROLS
+  // ===========================================================================
 
   &__zoom {
     display: flex;
@@ -331,22 +373,48 @@
     gap: 4px;
   }
 
+  &__zoom-btn {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
   &__zoom-value {
-    font-size: 10px;
-    color: $color-text-secondary;
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
     min-width: 32px;
     text-align: center;
   }
 
-  // ==========================================================================
-  // BOTTOM BAR (Canvas size controls)
-  // ==========================================================================
+  // ===========================================================================
+  // SIZE CONTROLS BAR
+  // ===========================================================================
 
-  &__bottom {
+  &__size-bar {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: $spacing-sm;
     padding: 6px 10px;
     background: rgba(0, 0, 0, 0.2);
     border-top: 1px solid $color-border-subtle;
@@ -360,48 +428,72 @@
 
   &__size-label {
     font-size: 9px;
+    font-weight: $font-weight-medium;
     color: $color-text-muted;
-    min-width: 24px;
-  }
-
-  &__size-input {
-    width: 36px;
-    height: 22px;
-    padding: 0 4px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid $color-border-default;
-    border-radius: 3px;
-    color: $color-text-secondary;
-    font-size: 11px;
-    text-align: center;
-
-    &:focus {
-      outline: none;
-      border-color: $color-accent-amber;
-    }
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   &__size-btn {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.04);
+    padding: 0;
+    background: rgba(255, 255, 255, 0.06);
     border: 1px solid $color-border-default;
-    border-radius: 3px;
+    border-radius: $radius-xs;
     color: $color-text-muted;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all $transition-fast;
 
     &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.08);
-      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.12);
+      color: $color-text-primary;
+    }
+
+    &:active:not(:disabled) {
+      background: rgba($color-accent-blue, 0.2);
     }
 
     &:disabled {
       opacity: 0.4;
       cursor: not-allowed;
     }
+  }
+
+  &__size-input {
+    width: 36px;
+    height: 20px;
+    padding: 0 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-xs;
+    color: $color-text-primary;
+    font-size: 10px;
+    font-family: $font-family-mono;
+    text-align: center;
+    transition: all $transition-fast;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-blue;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    // Hide number spinners
+    -moz-appearance: textfield;
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  &__size-separator {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin: 0 2px;
   }
 }

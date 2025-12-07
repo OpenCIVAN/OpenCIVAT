@@ -177,6 +177,52 @@
 }
 
 // =============================================================================
+// FLOATING CANVAS NAVIGATOR (Draggable)
+// =============================================================================
+
+.floating-canvas-navigator {
+  position: absolute;
+  bottom: $spacing-md;
+  left: $spacing-md;
+  width: 420px;
+  border-radius: $radius-md;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: $z-popover;
+  overflow: hidden;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  transition: box-shadow 0.15s ease;
+
+  // Dragging state
+  &--dragging {
+    cursor: grabbing;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+    opacity: 0.95;
+    user-select: none;
+  }
+
+  // Accent line at top
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: $color-accent-amber;
+  }
+
+  // Make header draggable
+  .canvas-navigator__header {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+}
+
+// =============================================================================
 // ANIMATIONS
 // =============================================================================
 

@@ -1,11 +1,11 @@
-// Add these to src/ui/react/components/panels/LeftPanel/tabs/_tabs.scss
-// These are ADDITIONS/FIXES - merge into your existing file
-
-// =============================================================================
-// SHARED: PANEL HEADER STYLING (ALL CAPS like Files, Datasets, InstanceTools)
-// =============================================================================
+// Add to tabs/_tabs.scss - shared panel styling
 @use "theme" as *;
 
+// =============================================================================
+// PANEL STRUCTURE (shared across tabs)
+// =============================================================================
+
+// Common header
 .panel-header {
   display: flex;
   align-items: center;
@@ -15,209 +15,205 @@
   flex-shrink: 0;
 
   &__icon {
-    color: var(--header-color, $color-text-muted);
     flex-shrink: 0;
   }
-
   &__title {
-    font-size: 11px;
+    font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  &__count {
-    margin-left: auto;
-    font-size: 10px;
-    color: $color-text-muted;
-    padding: 2px 6px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: $radius-full;
-  }
-
-  // Color variants
-  &--amber {
-    --header-color: #{$color-accent-amber};
-  }
-
-  &--pink {
-    --header-color: #{$color-accent-pink};
-  }
-
-  &--teal {
-    --header-color: #{$color-accent-teal};
-  }
-
-  &--purple {
-    --header-color: #{$color-accent-purple};
-  }
-
-  &--blue {
-    --header-color: #{$color-accent-blue};
-  }
-
-  &--green {
-    --header-color: #{$color-accent-green};
   }
 }
 
-// =============================================================================
-// SHARED: SCOPE CHIPS - CENTER ALIGNED
-// =============================================================================
-
-.scope-chips-wrapper {
-  display: flex;
-  justify-content: center;
+// Common search
+.panel-search {
   padding: $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-shrink: 0;
+
+  &__wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      color: $color-text-muted;
+      pointer-events: none;
+    }
+
+    input {
+      width: 100%;
+      padding: 7px 28px 7px 32px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid $color-border-default;
+      border-radius: $radius-sm;
+      color: $color-text-primary;
+      font-size: 11px;
+
+      &::placeholder {
+        color: $color-text-muted;
+      }
+      &:focus {
+        outline: none;
+        border-color: $color-accent-primary;
+      }
+    }
+
+    .clear-button {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: $color-text-muted;
+      cursor: pointer;
+      padding: 2px;
+
+      &:hover {
+        color: $color-text-secondary;
+      }
+    }
+  }
+}
+
+// Common toolbar
+.panel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
   border-bottom: 1px solid $color-border-subtle;
   background: rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 }
 
-.scope-chips {
-  display: inline-flex;
-  border-radius: $radius-sm;
-  overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.2) 50%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+// =============================================================================
+// PANEL FOOTER - DOCKED TO BOTTOM
+// =============================================================================
+
+.panel-footer {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-top: 1px solid $color-border-default;
+  background: rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  margin-top: auto; // Push to bottom
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: $spacing-sm $spacing-md;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-primary;
+    }
+
+    &--primary {
+      flex: 1;
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.3);
+      color: $color-accent-blue;
+
+      &:hover {
+        background: rgba($color-accent-blue, 0.25);
+        border-color: rgba($color-accent-blue, 0.5);
+      }
+    }
+
+    &--icon {
+      padding: $spacing-sm;
+      flex: 0 0 auto;
+    }
+  }
+
+  &__dropzone {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border: 2px dashed $color-accent-green;
+    border-radius: $radius-md;
+    background: rgba($color-accent-green, 0.1);
+    color: $color-accent-green;
+    font-size: 11px;
+  }
 }
 
-.scope-chip {
+// =============================================================================
+// FILTER TOGGLE (for Datasets tab chip-style filters)
+// =============================================================================
+
+.filter-toggle {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 10px;
+  padding: 3px 8px;
   background: transparent;
-  border: none;
-  font-size: 10px;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-full;
   color: $color-text-muted;
+  font-size: 10px;
   cursor: pointer;
   transition: all $transition-fast;
 
-  &:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
   &:hover:not(&--active) {
+    background: rgba(255, 255, 255, 0.05);
     color: $color-text-secondary;
   }
 
   &--active {
-    color: var(--chip-color, $color-text-primary);
-    background: rgba(var(--chip-color-rgb, 255, 255, 255), 0.1);
-
-    // Color variants
-    &[data-color="blue"] {
-      --chip-color: #{$color-accent-blue};
-      --chip-color-rgb: 96, 165, 250;
-    }
-
-    &[data-color="amber"] {
-      --chip-color: #{$color-accent-amber};
-      --chip-color-rgb: 251, 191, 36;
-    }
-
-    &[data-color="pink"] {
-      --chip-color: #{$color-accent-pink};
-      --chip-color-rgb: 251, 113, 133;
-    }
-
-    &[data-color="purple"] {
-      --chip-color: #{$color-accent-purple};
-      --chip-color-rgb: 192, 132, 252;
-    }
-
     &[data-color="green"] {
-      --chip-color: #{$color-accent-green};
-      --chip-color-rgb: 52, 211, 153;
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
     }
-
-    &[data-color="teal"] {
-      --chip-color: #{$color-accent-teal};
-      --chip-color-rgb: 45, 212, 191;
+    &[data-color="gray"] {
+      background: rgba(128, 128, 128, 0.15);
+      border-color: rgba(128, 128, 128, 0.4);
+      color: $color-text-secondary;
+    }
+    &[data-color="pink"] {
+      background: rgba($color-accent-pink, 0.15);
+      border-color: rgba($color-accent-pink, 0.4);
+      color: $color-accent-pink;
     }
   }
 
-  .scope-chip__count {
+  .count {
     font-size: 9px;
     padding: 1px 4px;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: $radius-full;
   }
 }
 
 // =============================================================================
-// TYPE FILTER GROUP - CENTER ALIGNED
+// RESIZABLE SECTION SPACING FIX
 // =============================================================================
 
-.type-filter-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: $spacing-sm;
-  border-bottom: 1px solid $color-border-subtle;
-  background: rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
+.resizable-section__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-xs $spacing-sm;
 }
 
-.type-filter-group {
-  display: inline-flex;
-  gap: 4px;
-}
-
-.type-filter-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid $color-border-default;
-  border-radius: $radius-sm;
+.resizable-section__empty {
+  padding: $spacing-xl $spacing-md;
+  text-align: center;
   color: $color-text-muted;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover:not(&--active) {
-    background: rgba(255, 255, 255, 0.08);
-    color: $color-text-secondary;
-  }
-
-  &--active {
-    background: rgba(var(--filter-color-rgb, 96, 165, 250), 0.15);
-    border-color: rgba(var(--filter-color-rgb, 96, 165, 250), 0.4);
-    color: var(--filter-color, $color-accent-blue);
-  }
-
-  // Color variants set via style or data attribute
-  &[data-color="blue"] {
-    --filter-color: #{$color-accent-blue};
-    --filter-color-rgb: 96, 165, 250;
-  }
-
-  &[data-color="green"] {
-    --filter-color: #{$color-accent-green};
-    --filter-color-rgb: 52, 211, 153;
-  }
-
-  &[data-color="amber"] {
-    --filter-color: #{$color-accent-amber};
-    --filter-color-rgb: 251, 191, 36;
-  }
-
-  &[data-color="purple"] {
-    --filter-color: #{$color-accent-purple};
-    --filter-color-rgb: 192, 132, 252;
-  }
-
-  &[data-color="pink"] {
-    --filter-color: #{$color-accent-pink};
-    --filter-color-rgb: 251, 113, 133;
-  }
+  font-size: 11px;
 }

@@ -5,22 +5,24 @@
  * Can be docked (in panel) or floating (overlay on canvas).
  *
  * Features:
- * - Minimap with cell visualization
- * - Click-to-navigate
- * - Viewport dragging
+ * - Minimap with cell visualization & click-to-navigate
+ * - D-pad navigation controls
+ * - Viewport position display
+ * - Zoom controls
+ * - Canvas size controls (Cols × Rows)
  * - DROP TARGETS for view repositioning from ViewsSubtab
  *
  * When DOCKED: No tools bar (tools in Canvas subtab)
  * When FLOATING: Shows tools bar
  */
 
-import React, { memo, useMemo, useCallback } from 'react';
+import React, { memo, useMemo, useCallback, useRef } from 'react';
 import {
     ChevronUp,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
-    Crosshair,
+    Home,
     Plus,
     Minus,
     ZoomIn,
@@ -36,6 +38,7 @@ import {
     PanelBottom,
     PanelBottomClose,
     ExternalLink,
+    Crosshair,
 } from 'lucide-react';
 import { useCanvasNavigator } from './CanvasNavigator.logic';
 import { TOOLS, DROP_MODES } from '../../LayoutPanel.logic';
@@ -83,14 +86,18 @@ export const CanvasNavigator = memo(function CanvasNavigator({
         setCanvasCols,
         setCanvasRows,
         moveViewport,
-        handleMinimapClick,
+        navigateToCell,
         getCellAt,
         isInViewport,
+        getCellColor,
         setZoom,
+        zoomIn,
+        zoomOut,
         canUndo,
         canRedo,
         undo,
         redo,
+        isDisabled,
         // Drop handling
         dropTargetCell,
         isValidDrop,
@@ -99,7 +106,22 @@ export const CanvasNavigator = memo(function CanvasNavigator({
         handleCellDrop,
     } = nav;
 
-    // Generate minimap grid with drop target info
+    // Refs for press-and-hold
+    const holdIntervalRef = useRef(null);
+
+    const startHold = useCallback((action) => {
+        action();
+        holdIntervalRef.current = setInterval(action, 150);
+    }, []);
+
+    const stopHold = useCallback(() => {
+        if (holdIntervalRef.current) {
+            clearInterval(holdIntervalRef.current);
+            holdIntervalRef.current = null;
+        }
+    }, []);
+
+    // Generate minimap grid
     const minimapCells = useMemo(() => {
         const result = [];
         for (let row = 0; row < canvasSize.rows; row++) {
@@ -110,9 +132,8 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                 // Skip non-origin cells of spanning placements
                 if (cell && (cell.row !== row || cell.col !== col)) continue;
 
-                // Check if this is the current drop target
-                const isDropTarget =
-                    dropTargetCell?.row === row && dropTargetCell?.col === col;
+                const isDropTarget = dropTargetCell?.row === row && dropTargetCell?.col === col;
+                const color = cell ? getCellColor(cell.colorIndex ?? 0) : null;
 
                 result.push({
                     row,
@@ -120,27 +141,22 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     cell,
                     inVP,
                     isDropTarget,
+                    color,
                     key: `${row}-${col}`,
                 });
             }
         }
         return result;
-    }, [canvasSize, getCellAt, isInViewport, dropTargetCell]);
+    }, [canvasSize, getCellAt, isInViewport, getCellColor, dropTargetCell]);
 
-    // Cell drag handlers - wrapped for row/col context
-    const makeDragOverHandler = useCallback(
-        (row, col) => (e) => handleCellDragOver(e, row, col),
-        [handleCellDragOver]
-    );
-
-    const makeDropHandler = useCallback(
-        (row, col) => (e) => handleCellDrop(e, row, col),
-        [handleCellDrop]
-    );
+    // Minimap click handler
+    const handleMinimapCellClick = useCallback((row, col) => {
+        navigateToCell?.(row, col);
+    }, [navigateToCell]);
 
     return (
         <div
-            className={`canvas-navigator ${isDocked ? 'canvas-navigator--docked' : 'canvas-navigator--floating'} ${className}`}
+            className={`canvas-navigator ${isDocked ? 'canvas-navigator--docked' : 'canvas-navigator--floating'} ${isDisabled ? 'canvas-navigator--disabled' : ''} ${className}`}
         >
             {/* Header */}
             <div className="canvas-navigator__header">
@@ -191,9 +207,6 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     >
                         <Combine size={14} />
                     </button>
-
-                    <div className="canvas-navigator__divider" />
-
                     <button
                         className={`canvas-navigator__tool-btn canvas-navigator__tool-btn--amber ${editMode ? 'canvas-navigator__tool-btn--active' : ''}`}
                         onClick={toggleEditMode}
@@ -202,29 +215,33 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         <Pencil size={14} />
                     </button>
 
-                    {editMode && (
-                        <div className="canvas-navigator__drop-mode">
-                            <button
-                                className={`canvas-navigator__drop-btn ${dropMode === DROP_MODES.ADD ? 'canvas-navigator__drop-btn--active' : ''}`}
-                                onClick={() => setDropMode(DROP_MODES.ADD)}
-                                data-color="green"
-                            >
-                                <PlusCircle size={12} />
-                                <span>Add</span>
-                            </button>
-                            <button
-                                className={`canvas-navigator__drop-btn ${dropMode === DROP_MODES.REPLACE ? 'canvas-navigator__drop-btn--active' : ''}`}
-                                onClick={() => setDropMode(DROP_MODES.REPLACE)}
-                                data-color="amber"
-                            >
-                                <Replace size={12} />
-                                <span>Replace</span>
-                            </button>
-                        </div>
-                    )}
+                    <div className="canvas-navigator__divider" />
+
+                    {/* Drop mode toggle */}
+                    <div className="canvas-navigator__drop-mode">
+                        <button
+                            className={`canvas-navigator__drop-btn ${dropMode === DROP_MODES.ADD ? 'canvas-navigator__drop-btn--active' : ''}`}
+                            data-color="green"
+                            onClick={() => setDropMode(DROP_MODES.ADD)}
+                            title="Add mode"
+                        >
+                            <PlusCircle size={12} />
+                            Add
+                        </button>
+                        <button
+                            className={`canvas-navigator__drop-btn ${dropMode === DROP_MODES.REPLACE ? 'canvas-navigator__drop-btn--active' : ''}`}
+                            data-color="amber"
+                            onClick={() => setDropMode(DROP_MODES.REPLACE)}
+                            title="Replace mode"
+                        >
+                            <Replace size={12} />
+                            Replace
+                        </button>
+                    </div>
 
                     <div className="canvas-navigator__spacer" />
 
+                    {/* Undo/Redo */}
                     <button
                         className="canvas-navigator__tool-btn"
                         onClick={undo}
@@ -256,123 +273,96 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                             gap: `${GAP}px`,
                         }}
                     >
-                        {minimapCells.map(({ row, col, cell, inVP, isDropTarget, key }) => {
-                            const colorIndex = cell?.color ?? 0;
-                            const color = INSTANCE_COLORS[colorIndex % INSTANCE_COLORS.length];
-                            const isEmpty = !cell;
-
-                            return (
-                                <div
-                                    key={key}
-                                    className={`canvas-navigator__cell
-                                        ${cell ? 'canvas-navigator__cell--filled' : 'canvas-navigator__cell--empty'}
-                                        ${isDropTarget ? 'canvas-navigator__cell--drop-target' : ''}
-                                        ${isDropTarget && !isValidDrop ? 'canvas-navigator__cell--drop-invalid' : ''}
-                                    `}
-                                    style={{
-                                        gridRow: cell
-                                            ? `${cell.row + 1} / span ${cell.rowSpan || 1}`
-                                            : 'auto',
-                                        gridColumn: cell
-                                            ? `${cell.col + 1} / span ${cell.colSpan || 1}`
-                                            : 'auto',
-                                        '--cell-color': cell ? color : undefined,
-                                        opacity: inVP ? 1 : 0.6,
-                                    }}
-                                    onClick={() => handleMinimapClick(row, col)}
-                                    onDragOver={makeDragOverHandler(row, col)}
-                                    onDragLeave={handleCellDragLeave}
-                                    onDrop={makeDropHandler(row, col)}
-                                    title={cell?.name || 'Empty cell - drop view here'}
-                                >
-                                    {cell && (
-                                        <span className="canvas-navigator__cell-label">
-                                            {cell.name?.substring(0, 5)}
-                                        </span>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        {minimapCells.map(({ row, col, cell, inVP, isDropTarget, color, key }) => (
+                            <div
+                                key={key}
+                                className={`canvas-navigator__cell ${cell ? 'canvas-navigator__cell--filled' : 'canvas-navigator__cell--empty'} ${inVP ? 'canvas-navigator__cell--in-viewport' : ''} ${isDropTarget ? 'canvas-navigator__cell--drop-target' : ''} ${isDropTarget && !isValidDrop ? 'canvas-navigator__cell--drop-invalid' : ''}`}
+                                style={{
+                                    gridRow: cell ? `${cell.row + 1} / span ${cell.rowSpan || 1}` : 'auto',
+                                    gridColumn: cell ? `${cell.col + 1} / span ${cell.colSpan || 1}` : 'auto',
+                                    '--cell-color': color,
+                                }}
+                                onClick={() => handleMinimapCellClick(row, col)}
+                                onDragOver={(e) => handleCellDragOver(e, row, col)}
+                                onDragLeave={handleCellDragLeave}
+                                onDrop={(e) => handleCellDrop(e, row, col)}
+                                title={cell ? `View at ${row},${col}` : `Empty cell ${row},${col}`}
+                            />
+                        ))}
                     </div>
-
-                    {/* Viewport indicator */}
-                    <div
-                        className="canvas-navigator__viewport-indicator"
-                        style={{
-                            top: `${viewport.row * (CELL_H + GAP)}px`,
-                            left: `${viewport.col * (CELL_W + GAP)}px`,
-                            width: `${viewport.cols * (CELL_W + GAP) - GAP}px`,
-                            height: `${viewport.rows * (CELL_H + GAP) - GAP}px`,
-                        }}
-                    />
                 </div>
 
-                {/* Controls */}
+                {/* Controls Panel */}
                 <div className="canvas-navigator__controls">
-                    {/* D-pad */}
+                    {/* D-Pad Navigation */}
                     <div className="canvas-navigator__dpad">
-                        <div />
-                        <button
-                            className="canvas-navigator__nav-btn"
-                            onClick={() => moveViewport('up')}
-                            title="Pan up"
-                        >
-                            <ChevronUp size={10} />
-                        </button>
-                        <div />
-                        <button
-                            className="canvas-navigator__nav-btn"
-                            onClick={() => moveViewport('left')}
-                            title="Pan left"
-                        >
-                            <ChevronLeft size={10} />
-                        </button>
-                        <button
-                            className={`canvas-navigator__nav-btn canvas-navigator__nav-btn--center ${isAtHome ? 'canvas-navigator__nav-btn--home' : ''}`}
-                            onClick={() => moveViewport('reset')}
-                            title="Go to homepoint"
-                        >
-                            <Crosshair size={10} />
-                        </button>
-                        <button
-                            className="canvas-navigator__nav-btn"
-                            onClick={() => moveViewport('right')}
-                            title="Pan right"
-                        >
-                            <ChevronRight size={10} />
-                        </button>
-                        <div />
-                        <button
-                            className="canvas-navigator__nav-btn"
-                            onClick={() => moveViewport('down')}
-                            title="Pan down"
-                        >
-                            <ChevronDown size={10} />
-                        </button>
-                        <div />
+                        <div className="canvas-navigator__dpad-row">
+                            <div /> {/* spacer */}
+                            <button
+                                className="canvas-navigator__nav-btn"
+                                onClick={() => moveViewport('up')}
+                                title="Move up"
+                            >
+                                <ChevronUp size={14} />
+                            </button>
+                            <div /> {/* spacer */}
+                        </div>
+                        <div className="canvas-navigator__dpad-row">
+                            <button
+                                className="canvas-navigator__nav-btn"
+                                onClick={() => moveViewport('left')}
+                                title="Move left"
+                            >
+                                <ChevronLeft size={14} />
+                            </button>
+                            <button
+                                className={`canvas-navigator__nav-btn canvas-navigator__nav-btn--center ${isAtHome ? 'canvas-navigator__nav-btn--active' : ''}`}
+                                onClick={() => moveViewport('home')}
+                                title="Go to home (0,0)"
+                            >
+                                <Home size={12} />
+                            </button>
+                            <button
+                                className="canvas-navigator__nav-btn"
+                                onClick={() => moveViewport('right')}
+                                title="Move right"
+                            >
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
+                        <div className="canvas-navigator__dpad-row">
+                            <div /> {/* spacer */}
+                            <button
+                                className="canvas-navigator__nav-btn"
+                                onClick={() => moveViewport('down')}
+                                title="Move down"
+                            >
+                                <ChevronDown size={14} />
+                            </button>
+                            <div /> {/* spacer */}
+                        </div>
                     </div>
 
-                    {/* Position display */}
+                    {/* Position Display */}
                     <div className="canvas-navigator__position">
-                        {viewport.col},{viewport.row}
+                        <Crosshair size={10} />
+                        <span>{viewport.row},{viewport.col}</span>
                     </div>
 
-                    {/* Zoom controls */}
+                    {/* Zoom Controls */}
                     <div className="canvas-navigator__zoom">
                         <button
                             className="canvas-navigator__zoom-btn"
-                            onClick={() => setZoom(zoom - 0.25)}
+                            onClick={zoomOut}
                             disabled={zoom <= 0.5}
                             title="Zoom out"
                         >
                             <ZoomOut size={12} />
                         </button>
-                        <span className="canvas-navigator__zoom-label">
-                            {Math.round(zoom * 100)}%
-                        </span>
+                        <span className="canvas-navigator__zoom-value">{Math.round(zoom * 100)}%</span>
                         <button
                             className="canvas-navigator__zoom-btn"
-                            onClick={() => setZoom(zoom + 0.25)}
+                            onClick={zoomIn}
                             disabled={zoom >= 2}
                             title="Zoom in"
                         >
@@ -382,17 +372,17 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                 </div>
             </div>
 
-            {/* Footer with size controls */}
-            <div className="canvas-navigator__footer">
-                <span className="canvas-navigator__footer-label">Size</span>
+            {/* Size Controls */}
+            <div className="canvas-navigator__size-bar">
                 <div className="canvas-navigator__size-group">
                     <span className="canvas-navigator__size-label">Cols</span>
                     <button
                         className="canvas-navigator__size-btn"
-                        onMouseDown={decrementColsHold.start}
-                        onMouseUp={decrementColsHold.stop}
-                        onMouseLeave={decrementColsHold.stop}
-                        title="Remove column"
+                        onMouseDown={() => startHold(decrementColsHold)}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        disabled={canvasSize.cols <= 1}
+                        title="Decrease columns"
                     >
                         <Minus size={10} />
                     </button>
@@ -400,28 +390,33 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         type="number"
                         className="canvas-navigator__size-input"
                         value={canvasSize.cols}
-                        onChange={(e) => setCanvasCols(parseInt(e.target.value) || 1)}
+                        onChange={(e) => setCanvasCols(parseInt(e.target.value, 10) || 1)}
                         min={1}
+                        max={20}
                     />
                     <button
                         className="canvas-navigator__size-btn"
-                        onMouseDown={incrementColsHold.start}
-                        onMouseUp={incrementColsHold.stop}
-                        onMouseLeave={incrementColsHold.stop}
-                        title="Add column"
+                        onMouseDown={() => startHold(incrementColsHold)}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        disabled={canvasSize.cols >= 20}
+                        title="Increase columns"
                     >
                         <Plus size={10} />
                     </button>
                 </div>
-                <span className="canvas-navigator__size-x">×</span>
+
+                <span className="canvas-navigator__size-separator">×</span>
+
                 <div className="canvas-navigator__size-group">
                     <span className="canvas-navigator__size-label">Rows</span>
                     <button
                         className="canvas-navigator__size-btn"
-                        onMouseDown={decrementRowsHold.start}
-                        onMouseUp={decrementRowsHold.stop}
-                        onMouseLeave={decrementRowsHold.stop}
-                        title="Remove row"
+                        onMouseDown={() => startHold(decrementRowsHold)}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        disabled={canvasSize.rows <= 1}
+                        title="Decrease rows"
                     >
                         <Minus size={10} />
                     </button>
@@ -429,15 +424,17 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         type="number"
                         className="canvas-navigator__size-input"
                         value={canvasSize.rows}
-                        onChange={(e) => setCanvasRows(parseInt(e.target.value) || 1)}
+                        onChange={(e) => setCanvasRows(parseInt(e.target.value, 10) || 1)}
                         min={1}
+                        max={20}
                     />
                     <button
                         className="canvas-navigator__size-btn"
-                        onMouseDown={incrementRowsHold.start}
-                        onMouseUp={incrementRowsHold.stop}
-                        onMouseLeave={incrementRowsHold.stop}
-                        title="Add row"
+                        onMouseDown={() => startHold(incrementRowsHold)}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        disabled={canvasSize.rows >= 20}
+                        title="Increase rows"
                     >
                         <Plus size={10} />
                     </button>
