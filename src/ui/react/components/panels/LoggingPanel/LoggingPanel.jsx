@@ -1,4 +1,4 @@
-// src/ui/react/components/LoggingPanel.jsx
+// src/ui/react/components/panels/LoggingPanel/LoggingPanel.jsx
 // System Logs Display Component
 
 import React, { useRef, useEffect } from "react";

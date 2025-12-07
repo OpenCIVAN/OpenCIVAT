@@ -210,7 +210,6 @@ __mocks__
 components
 hooks
 index.js
-layouts
 store
 styles
 
@@ -236,9 +235,6 @@ useProjectFiles.mock.js
 useRooms.mock.js
 
 ./src/ui/react/components:
-FileUploadPrompt.jsx
-FileUploadPrompt.stories.jsx
-LoggingPanel.jsx
 auth
 collaboration
 common
@@ -350,7 +346,6 @@ DockedHeightContext.js
 index.js
 
 ./src/ui/react/components/common/IconOverlay:
-IconOverlay.css
 IconOverlay.jsx
 IconOverlay.scss
 IconOverlay.stories.jsx
@@ -410,14 +405,17 @@ index.js
 ./src/ui/react/components/content/ImageBlock:
 ImageBlock.jsx
 ImageBlock.scss
+index.js
 
 ./src/ui/react/components/content/ImageUploader:
 ImageUploader.jsx
 ImageUploader.scss
+index.js
 
 ./src/ui/react/components/content/NoteBlock:
 NoteBlock.jsx
 NoteBlock.scss
+index.js
 
 ./src/ui/react/components/controls:
 LayoutModeToggle
@@ -546,6 +544,7 @@ FocusModeOverlay.jsx
 FocusModeOverlay.scss
 LayoutPanel
 LeftPanel
+LoggingPanel
 RightPanel
 SelectionToolbar.jsx
 SelectionToolbar.scss
@@ -620,25 +619,7 @@ LeftPanel.stories.jsx
 LeftPanelContent.jsx
 LeftPanelContext.jsx
 index.jsx
-shared
 tabs
-
-./src/ui/react/components/panels/LeftPanel/shared:
-CanvasNavigator
-components
-
-./src/ui/react/components/panels/LeftPanel/shared/CanvasNavigator:
-CanvasNavigator.jsx
-CanvasNavigator.logic.js
-CanvasNavigator.scss
-Minimap.jsx
-NavigatorControls.jsx
-
-./src/ui/react/components/panels/LeftPanel/shared/components:
-CollapsibleSection.jsx
-PanelFooter.jsx
-ScopeChip.jsx
-SearchBar.jsx
 
 ./src/ui/react/components/panels/LeftPanel/tabs:
 AnnotationsTab
@@ -647,7 +628,6 @@ CursorsTab
 DatasetsTab
 FilesTab
 InstanceToolsTab
-InstanceToolsTab.jsx.old
 LayoutTab
 _tabs.scss
 
@@ -737,6 +717,9 @@ LayoutTab.jsx
 LayoutTab.scss
 ViewsSubtab.jsx
 index.jsx
+
+./src/ui/react/components/panels/LoggingPanel:
+LoggingPanel.jsx
 
 ./src/ui/react/components/panels/RightPanel:
 RightActivityBar.jsx
@@ -915,14 +898,17 @@ index.js
 ./src/ui/react/components/workspace/Workspace/BreakoutPanel:
 BreakoutPanel.jsx
 BreakoutPanel.scss
+index.js
 
 ./src/ui/react/components/workspace/Workspace/WorkspaceSelector:
 WorkspaceSelector.jsx
 WorkspaceSelector.scss
+index.js
 
 ./src/ui/react/components/workspace/Workspace/WorkspaceTypeIndicator:
 WorkspaceTypeIndicator.jsx
 WorkspaceTypeIndicator.scss
+index.js
 
 ./src/ui/react/hooks:
 index.js
@@ -949,9 +935,6 @@ useVoice.js
 useVoiceCommands.js
 useWorkspaces.js
 
-./src/ui/react/layouts:
-CIAWebLayout.jsx
-
 ./src/ui/react/store:
 appStore.js
 computeJobStore.js
@@ -960,13 +943,13 @@ errorDismissalStore.js
 toastStore.js
 
 ./src/ui/react/styles:
+_vr-mode.scss
 base
 components
 global.scss
 mixins
 theme.scss
 tokens
-vr-mode.css
 
 ./src/ui/react/styles/base:
 _reset.scss

@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2025-12-06T17:34:07.998Z",
+  "generatedAt": "2025-12-07T03:33:13.603Z",
   "contractVersion": "1.0.0",
   "buildInfo": {
-    "nodeVersion": "v22.21.1",
-    "platform": "linux"
+    "nodeVersion": "v22.19.0",
+    "platform": "darwin"
   },
   "handlers": {
     "vtk": {
@@ -21,7 +21,9 @@
           "color": "#c084fc",
           "priority": 10,
           "magicBytes": "3c3f786d6c",
-          "altMagicBytes": ["3c56544b46696c65"],
+          "altMagicBytes": [
+            "3c56544b46696c65"
+          ],
           "capabilities": {
             "canRender": true,
             "canExtractMetadata": true,
@@ -37,7 +39,9 @@
           "color": "#60a5fa",
           "priority": 10,
           "magicBytes": "3c3f786d6c",
-          "altMagicBytes": ["3c56544b46696c65"],
+          "altMagicBytes": [
+            "3c56544b46696c65"
+          ],
           "capabilities": {
             "canRender": true,
             "canExtractMetadata": true,
@@ -53,7 +57,9 @@
           "color": "#34d399",
           "priority": 10,
           "magicBytes": "3c3f786d6c",
-          "altMagicBytes": ["3c56544b46696c65"],
+          "altMagicBytes": [
+            "3c56544b46696c65"
+          ],
           "capabilities": {
             "canRender": true,
             "canExtractMetadata": true,
@@ -99,7 +105,9 @@
           "color": "#fbbf24",
           "priority": 5,
           "magicBytes": "23",
-          "altMagicBytes": ["76202d"],
+          "altMagicBytes": [
+            "76202d"
+          ],
           "capabilities": {
             "canRender": true,
             "canExtractMetadata": false,
@@ -124,8 +132,14 @@
         }
       ],
       "runtime": {
-        "requires": ["webgl", "webgl2"],
-        "optional": ["webxr", "offscreencanvas"]
+        "requires": [
+          "webgl",
+          "webgl2"
+        ],
+        "optional": [
+          "webxr",
+          "offscreencanvas"
+        ]
       },
       "vr": {
         "supportsInstanceVR": true,
@@ -164,7 +178,12 @@
               "id": "mesh-decimation",
               "name": "Mesh Decimation",
               "description": "Reduce polygon count while preserving shape quality. Uses quadric error metrics for optimal vertex placement.",
-              "inputFormats": ["vtp", "stl", "obj", "ply"],
+              "inputFormats": [
+                "vtp",
+                "stl",
+                "obj",
+                "ply"
+              ],
               "outputFormat": "vtp",
               "requiredForVR": false,
               "cacheable": true,
@@ -194,7 +213,12 @@
               "id": "mesh-smoothing",
               "name": "Mesh Smoothing",
               "description": "Apply Laplacian smoothing to reduce surface noise while preserving features.",
-              "inputFormats": ["vtp", "stl", "obj", "ply"],
+              "inputFormats": [
+                "vtp",
+                "stl",
+                "obj",
+                "ply"
+              ],
               "outputFormat": "vtp",
               "requiredForVR": false,
               "cacheable": true,
@@ -226,7 +250,12 @@
               "id": "lod-generation",
               "name": "LOD Generation",
               "description": "Generate Level-of-Detail hierarchy for progressive rendering. Creates multiple resolution levels for efficient VR streaming.",
-              "inputFormats": ["vtp", "stl", "obj", "ply"],
+              "inputFormats": [
+                "vtp",
+                "stl",
+                "obj",
+                "ply"
+              ],
               "outputFormat": "lod-hierarchy",
               "requiredForVR": true,
               "cacheable": true,
@@ -258,7 +287,9 @@
               "id": "volume-chunking",
               "name": "Volume Chunking",
               "description": "Split volumetric data into streamable octree chunks for progressive VR loading.",
-              "inputFormats": ["vti"],
+              "inputFormats": [
+                "vti"
+              ],
               "outputFormat": "chunked-volume",
               "requiredForVR": true,
               "cacheable": true,
@@ -290,7 +321,9 @@
               "id": "isosurface-extraction",
               "name": "Isosurface Extraction",
               "description": "Extract surface mesh from volumetric data at specified threshold value.",
-              "inputFormats": ["vti"],
+              "inputFormats": [
+                "vti"
+              ],
               "outputFormat": "vtp",
               "requiredForVR": false,
               "cacheable": true,
@@ -320,7 +353,15 @@
               "id": "compute-statistics",
               "name": "Compute Statistics",
               "description": "Calculate statistical properties of the dataset (bounds, point count, data ranges).",
-              "inputFormats": ["vtp", "vti", "vtu", "vtk", "stl", "obj", "ply"],
+              "inputFormats": [
+                "vtp",
+                "vti",
+                "vtu",
+                "vtk",
+                "stl",
+                "obj",
+                "ply"
+              ],
               "outputFormat": "json",
               "requiredForVR": false,
               "cacheable": true,
@@ -332,13 +373,23 @@
           ],
           "workerType": "vtk-python",
           "preferredRuntime": "python",
-          "autoPreprocess": ["compute-statistics"]
+          "autoPreprocess": [
+            "compute-statistics"
+          ]
         },
         "caching": {
           "preprocessResults": true,
-          "cacheKey": ["datasetId", "operation", "parameters", "fileVersion"],
+          "cacheKey": [
+            "datasetId",
+            "operation",
+            "parameters",
+            "fileVersion"
+          ],
           "ttl": "7d",
-          "invalidateOn": ["dataset-update", "dataset-delete"]
+          "invalidateOn": [
+            "dataset-update",
+            "dataset-delete"
+          ]
         }
       },
       "tools": [],

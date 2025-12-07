@@ -2,7 +2,7 @@
 import React from "react";
 import { Mic, Video, Compass, Eye, Wifi, Volume2, Bell } from "lucide-react";
 import { IconOverlay, SlashedIcon, createSlashedIcon } from "./IconOverlay";
-import "./IconOverlay.css";
+import "./IconOverlay.scss";
 
 export default {
     title: "Atoms/IconOverlay",
