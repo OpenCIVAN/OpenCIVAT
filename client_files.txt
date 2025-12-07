@@ -59,6 +59,7 @@ utils
 
 ./src/core/data/managers:
 AnnotationManager.js
+BaseManager.js
 CanvasManager.js
 ContentManager.js
 DatasetManager.js
@@ -995,6 +996,7 @@ _glass-mixins.scss
 _grid.scss
 _layout.scss
 _panels.scss
+_ui-patterns.scss
 
 ./src/ui/react/styles/tokens:
 _colors.scss
