@@ -1,10 +1,31 @@
 // src/ui/react/hooks/index.js
 // React hook exports
+//
+// UPDATED: Added useAsyncData, useWebSocketEvents, and refactored hooks
 
-// Authentication
+// =============================================================================
+// SHARED DATA FETCHING UTILITIES (NEW)
+// =============================================================================
+
+export { useAsyncData, useAsyncMutation } from "./useAsyncData.js";
+
+export {
+  useWebSocketEvents,
+  useWebSocketEvent,
+  useServerSyncEvents,
+  dispatchMockWSEvent,
+} from "./useWebSocketEvents.js";
+
+// =============================================================================
+// AUTHENTICATION
+// =============================================================================
+
 export { useAuth } from "./useAuth.js";
 
-// Canvas & Viewport
+// =============================================================================
+// CANVAS & VIEWPORT
+// =============================================================================
+
 export { useCanvas, useViewport, useSubsets } from "./useCanvas.js";
 export { useCanvasSelection } from "./useCanvasSelection.js";
 export {
@@ -15,25 +36,41 @@ export {
   SIZE_PRESETS as VIEWPORT_SIZE_PRESETS,
 } from "./useViewportSize.js";
 
-// Data Management
+// =============================================================================
+// DATA MANAGEMENT (REFACTORED)
+// =============================================================================
+
 export { useDatasets } from "./useDatasets.js";
 export { useInstances } from "./useInstances.js";
-export { useProjectFiles } from "./useProjectFiles.js";
+export { useProjectFiles, useAllAccessibleFiles } from "./useProjectFiles.js";
 
-// Compute Jobs
+// =============================================================================
+// COMPUTE JOBS
+// =============================================================================
+
 export {
   useComputeJobs,
   useComputeOperations,
   JobStatus,
 } from "./useComputeJobs.js";
 
-// UI Utilities
+// =============================================================================
+// UI UTILITIES
+// =============================================================================
+
 export { useSmartDropdownPosition } from "./useSmartDropdownPosition.js";
 export { useLogging } from "./useLogging.js";
 
-// Dataset Manager (low-level)
+// =============================================================================
+// DATASET MANAGER (LOW-LEVEL)
+// =============================================================================
+
 export { useDatasetManager } from "./useDatasetManager.js";
 
+// =============================================================================
+// FEATURES (REFACTORED - use shared patterns internally)
+// =============================================================================
+
 export { useFilters } from "./useFilters.js";
-export { useBookmarks } from "./useBookmarks.js";
+export { useBookmarks, captureCameraState } from "./useBookmarks.js";
 export { useAnnotations } from "./useAnnotations.js";

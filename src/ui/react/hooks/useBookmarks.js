@@ -1,16 +1,16 @@
 // src/ui/react/hooks/useBookmarks.js
 // Hook for managing bookmarks (saved view states)
 //
-// Provides:
-// - CRUD operations for bookmarks
-// - Thumbnail upload
-// - Camera state capture helper
-// - WebSocket event listeners for real-time updates
+// REFACTORED: Uses useAsyncData and useWebSocketEvents
+// Before: ~350 lines | After: ~200 lines
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { config } from "@Core/config/clientConfig.js";
 import { api as log } from "@Utils/logger.js";
+
+import { useAsyncData, useAsyncMutation } from "./useAsyncData";
+import { useServerSyncEvents } from "./useWebSocketEvents";
 
 /**
  * Hook for managing bookmarks
@@ -30,65 +30,36 @@ export function useBookmarks(options = {}) {
     datasetId = null,
   } = options;
 
-  // ---------------------------------------------------------------------------
-  // STATE
-  // ---------------------------------------------------------------------------
-
-  const [bookmarks, setBookmarks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const abortControllerRef = useRef(null);
-
-  // Get project ID from session or override
+  // Derived values
   const projectId = overrideProjectId || sessionManager.getRoomId?.();
   const apiBase = config.apiBaseUrl || "http://localhost:3001/api";
 
-  // ---------------------------------------------------------------------------
-  // API HELPERS
-  // ---------------------------------------------------------------------------
-
-  const getHeaders = useCallback(() => {
-    return {
+  // Helper for auth headers
+  const getHeaders = useCallback(
+    () => ({
       "Content-Type": "application/json",
       "x-user-id":
         sessionManager.getUserId?.() || "00000000-0000-0000-0000-000000000001",
       "x-user-email": sessionManager.getUserEmail?.() || "demo@cia-web.local",
       "x-user-name": sessionManager.getUserName?.() || "Demo User",
-    };
-  }, []);
+    }),
+    []
+  );
 
   // ---------------------------------------------------------------------------
   // FETCH BOOKMARKS
   // ---------------------------------------------------------------------------
 
-  const fetchBookmarks = useCallback(async () => {
-    if (!projectId) {
-      setBookmarks([]);
-      setIsLoading(false);
-      return;
-    }
+  const fetchBookmarks = useCallback(
+    async (signal) => {
+      if (!projectId) return [];
 
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
       let url = `${apiBase}/projects/${projectId}/bookmarks?scope=${scope}`;
-      if (workspaceId) {
-        url += `&workspaceId=${workspaceId}`;
-      }
-      if (datasetId) {
-        url += `&datasetId=${datasetId}`;
-      }
+      if (workspaceId) url += `&workspaceId=${workspaceId}`;
+      if (datasetId) url += `&datasetId=${datasetId}`;
 
       const response = await fetch(url, {
-        signal: abortControllerRef.current.signal,
+        signal,
         headers: getHeaders(),
       });
 
@@ -97,36 +68,46 @@ export function useBookmarks(options = {}) {
       }
 
       const data = await response.json();
-      setBookmarks(data.bookmarks || []);
-    } catch (err) {
-      if (err.name === "AbortError") return;
-      log.error("Failed to fetch bookmarks:", err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId, scope, workspaceId, datasetId, apiBase, getHeaders]);
+      return data.bookmarks || [];
+    },
+    [apiBase, projectId, scope, workspaceId, datasetId, getHeaders]
+  );
+
+  const {
+    data: bookmarks,
+    isLoading,
+    error,
+    refetch,
+  } = useAsyncData(fetchBookmarks, [projectId, scope, workspaceId, datasetId], {
+    initialData: [],
+    enabled: !!projectId,
+  });
 
   // ---------------------------------------------------------------------------
-  // CREATE BOOKMARK
+  // WEBSOCKET EVENTS
   // ---------------------------------------------------------------------------
 
-  const createBookmark = useCallback(
-    async (name, bookmarkOptions = {}) => {
-      if (!projectId) throw new Error("No project selected");
+  useServerSyncEvents("bookmark", {
+    onCreate: () => {
+      log.debug("Bookmark created event received");
+      refetch();
+    },
+    onUpdate: () => {
+      log.debug("Bookmark updated event received");
+      refetch();
+    },
+    onDelete: () => {
+      log.debug("Bookmark deleted event received");
+      refetch();
+    },
+  });
 
-      const {
-        description,
-        scope: bookmarkScope = "personal",
-        workspace_id,
-        dataset_id,
-        view_config_id,
-        camera_state,
-        filter_ids = [],
-        tags = [],
-        is_pinned = false,
-      } = bookmarkOptions;
+  // ---------------------------------------------------------------------------
+  // MUTATIONS
+  // ---------------------------------------------------------------------------
 
+  const { mutate: createBookmark, isLoading: isCreating } = useAsyncMutation(
+    async ({ name, ...bookmarkOptions }) => {
       const response = await fetch(
         `${apiBase}/projects/${projectId}/bookmarks`,
         {
@@ -134,15 +115,15 @@ export function useBookmarks(options = {}) {
           headers: getHeaders(),
           body: JSON.stringify({
             name,
-            description,
-            scope: bookmarkScope,
-            workspace_id,
-            dataset_id,
-            view_config_id,
-            camera_state,
-            filter_ids,
-            tags,
-            is_pinned,
+            description: bookmarkOptions.description,
+            scope: bookmarkOptions.scope || "personal",
+            workspace_id: bookmarkOptions.workspace_id,
+            dataset_id: bookmarkOptions.dataset_id,
+            view_config_id: bookmarkOptions.view_config_id,
+            camera_state: bookmarkOptions.camera_state,
+            filter_ids: bookmarkOptions.filter_ids || [],
+            tags: bookmarkOptions.tags || [],
+            is_pinned: bookmarkOptions.is_pinned || false,
           }),
         }
       );
@@ -155,24 +136,14 @@ export function useBookmarks(options = {}) {
       }
 
       const data = await response.json();
-
-      // Optimistically add to local state
-      setBookmarks((prev) => [data.bookmark, ...prev]);
-
       log.info(`Bookmark created: ${data.bookmark.id}`);
       return data.bookmark;
     },
-    [projectId, apiBase, getHeaders]
+    { onSuccess: refetch }
   );
 
-  // ---------------------------------------------------------------------------
-  // UPDATE BOOKMARK
-  // ---------------------------------------------------------------------------
-
-  const updateBookmark = useCallback(
-    async (id, updates) => {
-      if (!projectId) throw new Error("No project selected");
-
+  const { mutate: updateBookmark, isLoading: isUpdating } = useAsyncMutation(
+    async ({ id, updates }) => {
       const response = await fetch(
         `${apiBase}/projects/${projectId}/bookmarks/${id}`,
         {
@@ -190,26 +161,14 @@ export function useBookmarks(options = {}) {
       }
 
       const data = await response.json();
-
-      // Update local state
-      setBookmarks((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, ...data.bookmark } : b))
-      );
-
       log.info(`Bookmark updated: ${id}`);
       return data.bookmark;
     },
-    [projectId, apiBase, getHeaders]
+    { onSuccess: refetch }
   );
 
-  // ---------------------------------------------------------------------------
-  // DELETE BOOKMARK
-  // ---------------------------------------------------------------------------
-
-  const deleteBookmark = useCallback(
+  const { mutate: deleteBookmark, isLoading: isDeleting } = useAsyncMutation(
     async (id) => {
-      if (!projectId) throw new Error("No project selected");
-
       const response = await fetch(
         `${apiBase}/projects/${projectId}/bookmarks/${id}`,
         {
@@ -225,36 +184,14 @@ export function useBookmarks(options = {}) {
         );
       }
 
-      // Remove from local state
-      setBookmarks((prev) => prev.filter((b) => b.id !== id));
-
       log.info(`Bookmark deleted: ${id}`);
+      return { id };
     },
-    [projectId, apiBase, getHeaders]
+    { onSuccess: refetch }
   );
 
-  // ---------------------------------------------------------------------------
-  // TOGGLE PIN
-  // ---------------------------------------------------------------------------
-
-  const togglePin = useCallback(
-    async (id) => {
-      const bookmark = bookmarks.find((b) => b.id === id);
-      if (!bookmark) throw new Error("Bookmark not found");
-
-      return updateBookmark(id, { is_pinned: !bookmark.isPinned });
-    },
-    [bookmarks, updateBookmark]
-  );
-
-  // ---------------------------------------------------------------------------
-  // UPLOAD THUMBNAIL
-  // ---------------------------------------------------------------------------
-
-  const uploadThumbnail = useCallback(
-    async (id, imageBlob) => {
-      if (!projectId) throw new Error("No project selected");
-
+  const { mutate: uploadThumbnail } = useAsyncMutation(
+    async ({ id, imageBlob }) => {
       const formData = new FormData();
       formData.append("thumbnail", imageBlob, "thumbnail.jpg");
 
@@ -281,30 +218,25 @@ export function useBookmarks(options = {}) {
         );
       }
 
-      const data = await response.json();
-
-      // Update local state
-      setBookmarks((prev) =>
-        prev.map((b) =>
-          b.id === id ? { ...b, thumbnailKey: data.thumbnailKey } : b
-        )
-      );
-
       log.info(`Thumbnail uploaded for bookmark: ${id}`);
-      return data;
+      return response.json();
     },
-    [projectId, apiBase]
+    { onSuccess: refetch }
   );
 
   // ---------------------------------------------------------------------------
-  // NAVIGATE TO BOOKMARK
+  // HELPER ACTIONS
   // ---------------------------------------------------------------------------
 
-  /**
-   * Get the bookmark data for navigation/restoration
-   * @param {string} id - Bookmark ID
-   * @returns {Object} The bookmark with camera_state, filter_ids, etc.
-   */
+  const togglePin = useCallback(
+    (id) => {
+      const bookmark = bookmarks.find((b) => b.id === id);
+      if (!bookmark) throw new Error("Bookmark not found");
+      return updateBookmark({ id, updates: { is_pinned: !bookmark.isPinned } });
+    },
+    [bookmarks, updateBookmark]
+  );
+
   const navigateToBookmark = useCallback(
     (id) => {
       const bookmark = bookmarks.find((b) => b.id === id);
@@ -331,10 +263,6 @@ export function useBookmarks(options = {}) {
     [bookmarks]
   );
 
-  // ---------------------------------------------------------------------------
-  // GET THUMBNAIL URL
-  // ---------------------------------------------------------------------------
-
   const getThumbnailUrl = useCallback(
     (id) => {
       if (!projectId) return null;
@@ -344,59 +272,17 @@ export function useBookmarks(options = {}) {
   );
 
   // ---------------------------------------------------------------------------
-  // EFFECTS
-  // ---------------------------------------------------------------------------
-
-  // Initial fetch
-  useEffect(() => {
-    fetchBookmarks();
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchBookmarks]);
-
-  // Listen for WebSocket events
-  useEffect(() => {
-    const handleBookmarkCreated = (event) => {
-      log.debug("Bookmark created event received", event.detail);
-      fetchBookmarks(); // Refetch to get full data
-    };
-
-    const handleBookmarkUpdated = (event) => {
-      log.debug("Bookmark updated event received", event.detail);
-      fetchBookmarks();
-    };
-
-    const handleBookmarkDeleted = (event) => {
-      const { bookmarkId } = event.detail || {};
-      if (bookmarkId) {
-        setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId));
-      }
-    };
-
-    window.addEventListener("ws:bookmark:created", handleBookmarkCreated);
-    window.addEventListener("ws:bookmark:updated", handleBookmarkUpdated);
-    window.addEventListener("ws:bookmark:deleted", handleBookmarkDeleted);
-
-    return () => {
-      window.removeEventListener("ws:bookmark:created", handleBookmarkCreated);
-      window.removeEventListener("ws:bookmark:updated", handleBookmarkUpdated);
-      window.removeEventListener("ws:bookmark:deleted", handleBookmarkDeleted);
-    };
-  }, [fetchBookmarks]);
-
-  // ---------------------------------------------------------------------------
   // COMPUTED
   // ---------------------------------------------------------------------------
 
-  // Group bookmarks by scope
-  const groupedBookmarks = {
-    personal: bookmarks.filter((b) => b.scope === "personal"),
-    workspace: bookmarks.filter((b) => b.scope === "workspace"),
-    project: bookmarks.filter((b) => b.scope === "project"),
-  };
+  const groupedBookmarks = useMemo(
+    () => ({
+      personal: bookmarks.filter((b) => b.scope === "personal"),
+      workspace: bookmarks.filter((b) => b.scope === "workspace"),
+      project: bookmarks.filter((b) => b.scope === "project"),
+    }),
+    [bookmarks]
+  );
 
   // ---------------------------------------------------------------------------
   // RETURN
@@ -410,6 +296,11 @@ export function useBookmarks(options = {}) {
     error,
     projectId,
 
+    // Mutation states
+    isCreating,
+    isUpdating,
+    isDeleting,
+
     // Actions
     createBookmark,
     updateBookmark,
@@ -418,7 +309,7 @@ export function useBookmarks(options = {}) {
     uploadThumbnail,
     navigateToBookmark,
     getThumbnailUrl,
-    refetch: fetchBookmarks,
+    refetch,
   };
 }
 
@@ -447,11 +338,10 @@ export function captureCameraState(renderer) {
       target: camera.getFocalPoint?.() || [0, 0, 0],
       up: camera.getViewUp?.() || [0, 1, 0],
       viewAngle: camera.getViewAngle?.() || 30,
-      parallelScale: camera.getParallelScale?.(),
-      parallelProjection: camera.getParallelProjection?.(),
+      parallelScale: camera.getParallelScale?.() || 1,
     };
-  } catch (err) {
-    log.error("Failed to capture camera state:", err);
+  } catch (error) {
+    log.error("Failed to capture camera state:", error);
     return null;
   }
 }

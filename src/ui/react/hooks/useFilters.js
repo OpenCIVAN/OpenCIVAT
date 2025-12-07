@@ -1,15 +1,16 @@
 // src/ui/react/hooks/useFilters.js
 // Hook for managing saved filters
 //
-// Provides:
-// - CRUD operations for saved filters
-// - Scope filtering (personal/workspace/project)
-// - WebSocket event listeners for real-time updates
+// REFACTORED: Uses useAsyncData and useWebSocketEvents
+// Before: ~200 lines | After: ~120 lines
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { config } from "@Core/config/clientConfig.js";
 import { api as log } from "@Utils/logger.js";
+
+import { useAsyncData, useAsyncMutation } from "./useAsyncData";
+import { useServerSyncEvents } from "./useWebSocketEvents";
 
 /**
  * Hook for managing saved filters
@@ -27,62 +28,37 @@ export function useFilters(options = {}) {
     workspaceId = null,
   } = options;
 
-  // ---------------------------------------------------------------------------
-  // STATE
-  // ---------------------------------------------------------------------------
-
-  const [filters, setFilters] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const abortControllerRef = useRef(null);
-
-  // Get project ID from session or override
+  // Derived values
   const projectId = overrideProjectId || sessionManager.getRoomId?.();
   const apiBase = config.apiBaseUrl || "http://localhost:3001/api";
 
-  // ---------------------------------------------------------------------------
-  // API HELPERS
-  // ---------------------------------------------------------------------------
-
-  const getHeaders = useCallback(() => {
-    return {
+  // Helper for auth headers
+  const getHeaders = useCallback(
+    () => ({
       "Content-Type": "application/json",
       "x-user-id":
         sessionManager.getUserId?.() || "00000000-0000-0000-0000-000000000001",
       "x-user-email": sessionManager.getUserEmail?.() || "demo@cia-web.local",
       "x-user-name": sessionManager.getUserName?.() || "Demo User",
-    };
-  }, []);
+    }),
+    []
+  );
 
   // ---------------------------------------------------------------------------
   // FETCH FILTERS
   // ---------------------------------------------------------------------------
 
-  const fetchFilters = useCallback(async () => {
-    if (!projectId) {
-      setFilters([]);
-      setIsLoading(false);
-      return;
-    }
+  const fetchFilters = useCallback(
+    async (signal) => {
+      if (!projectId) return [];
 
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
+      const params = new URLSearchParams();
+      params.append("projectId", projectId);
+      if (scope !== "all") params.append("scope", scope);
+      if (workspaceId) params.append("workspaceId", workspaceId);
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      let url = `${apiBase}/projects/${projectId}/filters?scope=${scope}`;
-      if (workspaceId) {
-        url += `&workspaceId=${workspaceId}`;
-      }
-
-      const response = await fetch(url, {
-        signal: abortControllerRef.current.signal,
+      const response = await fetch(`${apiBase}/filters?${params}`, {
+        signal,
         headers: getHeaders(),
       });
 
@@ -91,41 +67,53 @@ export function useFilters(options = {}) {
       }
 
       const data = await response.json();
-      setFilters(data.filters || []);
-    } catch (err) {
-      if (err.name === "AbortError") return;
-      log.error("Failed to fetch filters:", err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectId, scope, workspaceId, apiBase, getHeaders]);
+      return data.filters || [];
+    },
+    [apiBase, projectId, scope, workspaceId, getHeaders]
+  );
+
+  const {
+    data: filters,
+    isLoading,
+    error,
+    refetch,
+  } = useAsyncData(fetchFilters, [projectId, scope, workspaceId], {
+    initialData: [],
+    enabled: !!projectId,
+  });
 
   // ---------------------------------------------------------------------------
-  // CREATE FILTER
+  // WEBSOCKET EVENTS
   // ---------------------------------------------------------------------------
 
-  const createFilter = useCallback(
-    async (name, filterConfig, filterOptions = {}) => {
-      if (!projectId) throw new Error("No project selected");
+  useServerSyncEvents("filter", {
+    onCreate: () => {
+      log.debug("Filter created event received");
+      refetch();
+    },
+    onUpdate: () => {
+      log.debug("Filter updated event received");
+      refetch();
+    },
+    onDelete: () => {
+      log.debug("Filter deleted event received");
+      refetch();
+    },
+  });
 
-      const {
-        description,
-        scope: filterScope = "personal",
-        workspace_id,
-        is_pinned = false,
-      } = filterOptions;
+  // ---------------------------------------------------------------------------
+  // MUTATIONS
+  // ---------------------------------------------------------------------------
 
-      const response = await fetch(`${apiBase}/projects/${projectId}/filters`, {
+  const { mutate: createFilter, isLoading: isCreating } = useAsyncMutation(
+    async (filterData) => {
+      const response = await fetch(`${apiBase}/filters`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({
-          name,
-          filter_config: filterConfig,
-          description,
-          scope: filterScope,
-          workspace_id,
-          is_pinned,
+          ...filterData,
+          projectId,
+          createdBy: sessionManager.getUserId?.(),
         }),
       });
 
@@ -136,33 +124,18 @@ export function useFilters(options = {}) {
         );
       }
 
-      const data = await response.json();
-
-      // Optimistically add to local state
-      setFilters((prev) => [data.filter, ...prev]);
-
-      log.info(`Filter created: ${data.filter.id}`);
-      return data.filter;
+      return response.json();
     },
-    [projectId, apiBase, getHeaders]
+    { onSuccess: refetch }
   );
 
-  // ---------------------------------------------------------------------------
-  // UPDATE FILTER
-  // ---------------------------------------------------------------------------
-
-  const updateFilter = useCallback(
-    async (id, updates) => {
-      if (!projectId) throw new Error("No project selected");
-
-      const response = await fetch(
-        `${apiBase}/projects/${projectId}/filters/${id}`,
-        {
-          method: "PATCH",
-          headers: getHeaders(),
-          body: JSON.stringify(updates),
-        }
-      );
+  const { mutate: updateFilter, isLoading: isUpdating } = useAsyncMutation(
+    async ({ id, updates }) => {
+      const response = await fetch(`${apiBase}/filters/${id}`, {
+        method: "PATCH",
+        headers: getHeaders(),
+        body: JSON.stringify(updates),
+      });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -171,34 +144,17 @@ export function useFilters(options = {}) {
         );
       }
 
-      const data = await response.json();
-
-      // Update local state
-      setFilters((prev) =>
-        prev.map((f) => (f.id === id ? { ...f, ...data.filter } : f))
-      );
-
-      log.info(`Filter updated: ${id}`);
-      return data.filter;
+      return response.json();
     },
-    [projectId, apiBase, getHeaders]
+    { onSuccess: refetch }
   );
 
-  // ---------------------------------------------------------------------------
-  // DELETE FILTER
-  // ---------------------------------------------------------------------------
-
-  const deleteFilter = useCallback(
+  const { mutate: deleteFilter, isLoading: isDeleting } = useAsyncMutation(
     async (id) => {
-      if (!projectId) throw new Error("No project selected");
-
-      const response = await fetch(
-        `${apiBase}/projects/${projectId}/filters/${id}`,
-        {
-          method: "DELETE",
-          headers: getHeaders(),
-        }
-      );
+      const response = await fetch(`${apiBase}/filters/${id}`, {
+        method: "DELETE",
+        headers: getHeaders(),
+      });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -207,37 +163,22 @@ export function useFilters(options = {}) {
         );
       }
 
-      // Remove from local state
-      setFilters((prev) => prev.filter((f) => f.id !== id));
-
-      log.info(`Filter deleted: ${id}`);
+      return { id };
     },
-    [projectId, apiBase, getHeaders]
+    { onSuccess: refetch }
   );
 
   // ---------------------------------------------------------------------------
-  // TOGGLE PIN
+  // HELPER ACTIONS
   // ---------------------------------------------------------------------------
 
   const togglePin = useCallback(
-    async (id) => {
-      const filter = filters.find((f) => f.id === id);
-      if (!filter) throw new Error("Filter not found");
-
-      return updateFilter(id, { is_pinned: !filter.isPinned });
+    (id, currentPinned) => {
+      return updateFilter({ id, updates: { isPinned: !currentPinned } });
     },
-    [filters, updateFilter]
+    [updateFilter]
   );
 
-  // ---------------------------------------------------------------------------
-  // APPLY FILTER
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Get the filter configuration for applying
-   * @param {string} id - Filter ID
-   * @returns {Object} The filter_config object
-   */
   const applyFilter = useCallback(
     (id) => {
       const filter = filters.find((f) => f.id === id);
@@ -251,59 +192,17 @@ export function useFilters(options = {}) {
   );
 
   // ---------------------------------------------------------------------------
-  // EFFECTS
-  // ---------------------------------------------------------------------------
-
-  // Initial fetch
-  useEffect(() => {
-    fetchFilters();
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchFilters]);
-
-  // Listen for WebSocket events
-  useEffect(() => {
-    const handleFilterCreated = (event) => {
-      log.debug("Filter created event received", event.detail);
-      fetchFilters(); // Refetch to get full data
-    };
-
-    const handleFilterUpdated = (event) => {
-      log.debug("Filter updated event received", event.detail);
-      fetchFilters();
-    };
-
-    const handleFilterDeleted = (event) => {
-      const { filterId } = event.detail || {};
-      if (filterId) {
-        setFilters((prev) => prev.filter((f) => f.id !== filterId));
-      }
-    };
-
-    window.addEventListener("ws:filter:created", handleFilterCreated);
-    window.addEventListener("ws:filter:updated", handleFilterUpdated);
-    window.addEventListener("ws:filter:deleted", handleFilterDeleted);
-
-    return () => {
-      window.removeEventListener("ws:filter:created", handleFilterCreated);
-      window.removeEventListener("ws:filter:updated", handleFilterUpdated);
-      window.removeEventListener("ws:filter:deleted", handleFilterDeleted);
-    };
-  }, [fetchFilters]);
-
-  // ---------------------------------------------------------------------------
   // COMPUTED
   // ---------------------------------------------------------------------------
 
-  // Group filters by scope
-  const groupedFilters = {
-    personal: filters.filter((f) => f.scope === "personal"),
-    workspace: filters.filter((f) => f.scope === "workspace"),
-    project: filters.filter((f) => f.scope === "project"),
-  };
+  const groupedFilters = useMemo(
+    () => ({
+      personal: filters.filter((f) => f.scope === "personal"),
+      workspace: filters.filter((f) => f.scope === "workspace"),
+      project: filters.filter((f) => f.scope === "project"),
+    }),
+    [filters]
+  );
 
   // ---------------------------------------------------------------------------
   // RETURN
@@ -317,13 +216,18 @@ export function useFilters(options = {}) {
     error,
     projectId,
 
+    // Mutation states
+    isCreating,
+    isUpdating,
+    isDeleting,
+
     // Actions
     createFilter,
     updateFilter,
     deleteFilter,
     togglePin,
     applyFilter,
-    refetch: fetchFilters,
+    refetch,
   };
 }
 

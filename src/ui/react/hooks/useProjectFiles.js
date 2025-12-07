@@ -1,18 +1,17 @@
 // src/ui/react/hooks/useProjectFiles.js
 // Hook to fetch files, folders, and starred items from the server
 //
-// Features:
-// - Files with folder assignments
-// - Folder tree structure
-// - Workspace-scoped starred items
-// - CRUD operations for folders
-// - Star/unstar toggle
+// REFACTORED: Uses useAsyncData and useAsyncMutation
+// Before: ~400 lines | After: ~280 lines
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { api as log } from "@Utils/logger.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { config } from "@Core/config/clientConfig.js";
 import { formatFileSize } from "@Utils/formatters.js";
+
+import { useAsyncData, useAsyncMutation } from "./useAsyncData";
+import { useServerSyncEvents } from "./useWebSocketEvents";
 
 /**
  * Hook to fetch and manage project files, folders, and stars
@@ -21,7 +20,6 @@ import { formatFileSize } from "@Utils/formatters.js";
  * @param {string} options.projectId - Override project ID (defaults to current session)
  * @param {string} options.scope - Star scope: 'personal' | 'room' | 'project' | 'all'
  * @param {string} options.roomId - Room ID for room-scoped stars
- * @param {boolean} options.autoRefresh - Auto-refresh on project change
  * @returns {Object} Files, folders, stars, and actions
  */
 export function useProjectFiles(options = {}) {
@@ -29,85 +27,46 @@ export function useProjectFiles(options = {}) {
     projectId: overrideProjectId,
     scope = "all",
     roomId = null,
-    autoRefresh = true,
   } = options;
-
-  // State
-  const [files, setFiles] = useState([]);
-  const [folders, setFolders] = useState([]);
-  const [starredIds, setStarredIds] = useState({
-    all: { files: [], folders: [] },
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const abortControllerRef = useRef(null);
 
   // Get project ID from session or override
   const projectId = overrideProjectId || sessionManager.getRoomId();
+  const apiBase = config.apiBaseUrl || "http://localhost:3001/api";
 
-  // ==========================================================================
-  // FETCH DATA
-  // ==========================================================================
+  // ---------------------------------------------------------------------------
+  // FETCH ALL DATA
+  // ---------------------------------------------------------------------------
 
-  /**
-   * Fetch all data: files, folders, and stars
-   */
-  const fetchAll = useCallback(async () => {
-    if (!projectId) {
-      setFiles([]);
-      setFolders([]);
-      setStarredIds({ all: { files: [], folders: [] } });
-      setIsLoading(false);
-      return;
-    }
-
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const headers = {
-        "Content-Type": "application/json",
-        // TODO: Add auth token when implemented
-      };
+  const fetchAll = useCallback(
+    async (signal) => {
+      if (!projectId) {
+        return {
+          files: [],
+          folders: [],
+          starredIds: { all: { files: [], folders: [] } },
+        };
+      }
 
       // Fetch files, folders, and stars in parallel
       const [filesRes, foldersRes, starsRes] = await Promise.all([
-        fetch(`${config.apiBaseUrl}/projects/${projectId}/files`, {
-          signal: abortControllerRef.current.signal,
-          headers,
+        fetch(`${apiBase}/projects/${projectId}/files`, {
+          signal,
+          headers: { "Content-Type": "application/json" },
         }),
-        fetch(`${config.apiBaseUrl}/projects/${projectId}/folders`, {
-          signal: abortControllerRef.current.signal,
-          headers,
+        fetch(`${apiBase}/projects/${projectId}/folders`, {
+          signal,
+          headers: { "Content-Type": "application/json" },
         }),
         fetch(
-          `${config.apiBaseUrl}/projects/${projectId}/stars?scope=${scope}${
+          `${apiBase}/projects/${projectId}/stars?scope=${scope}${
             roomId ? `&roomId=${roomId}` : ""
           }`,
           {
-            signal: abortControllerRef.current.signal,
-            headers,
+            signal,
+            headers: { "Content-Type": "application/json" },
           }
         ),
       ]);
-
-      // Handle errors
-      if (!filesRes.ok && filesRes.status !== 404) {
-        throw new Error(`Failed to fetch files: ${filesRes.status}`);
-      }
-      if (!foldersRes.ok && foldersRes.status !== 404) {
-        throw new Error(`Failed to fetch folders: ${foldersRes.status}`);
-      }
-      if (!starsRes.ok && starsRes.status !== 404) {
-        throw new Error(`Failed to fetch stars: ${starsRes.status}`);
-      }
 
       // Parse responses
       const filesData = filesRes.ok ? await filesRes.json() : { files: [] };
@@ -116,326 +75,220 @@ export function useProjectFiles(options = {}) {
         : { folders: [] };
       const starsData = starsRes.ok
         ? await starsRes.json()
-        : { starredIds: { all: { files: [], folders: [] } } };
+        : { starred: { all: { files: [], folders: [] } } };
 
-      // Normalize files
-      const normalizedFiles = (filesData.files || []).map((file) => ({
-        id: file.id,
-        name: file.filename,
-        filename: file.filename,
-        size: file.file_size,
-        fileType: file.file_type,
-        mimeType: file.mime_type,
-        hash: file.hash,
-        folderId: file.folder_id,
-        folderPath: file.folder_path || "/",
-        folderName: file.folder_name,
-        uploadedBy: file.uploaded_by,
-        uploadedAt: file.uploaded_at || file.added_at,
-        accessLevel: file.access_level,
-        visibility: file.visibility,
-        metadata: file.metadata || {},
-      }));
+      return {
+        files: filesData.files || [],
+        folders: foldersData.folders || [],
+        starredIds: starsData.starred || { all: { files: [], folders: [] } },
+      };
+    },
+    [apiBase, projectId, scope, roomId]
+  );
 
-      setFiles(normalizedFiles);
-      setFolders(foldersData.folders || []);
-      setStarredIds(
-        starsData.starredIds || { all: { files: [], folders: [] } }
-      );
-    } catch (err) {
-      if (err.name === "AbortError") return;
-      log.error("Failed to fetch project data:", err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+  const { data, isLoading, error, refetch } = useAsyncData(
+    fetchAll,
+    [projectId, scope, roomId],
+    {
+      initialData: {
+        files: [],
+        folders: [],
+        starredIds: { all: { files: [], folders: [] } },
+      },
+      enabled: !!projectId,
     }
-  }, [projectId, scope, roomId]);
+  );
 
-  // Initial fetch
-  useEffect(() => {
-    fetchAll();
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+  const { files, folders, starredIds } = data;
+
+  // ---------------------------------------------------------------------------
+  // WEBSOCKET EVENTS
+  // ---------------------------------------------------------------------------
+
+  useServerSyncEvents("file", {
+    onCreate: () => refetch(),
+    onUpdate: () => refetch(),
+    onDelete: () => refetch(),
+  });
+
+  useServerSyncEvents("folder", {
+    onCreate: () => refetch(),
+    onUpdate: () => refetch(),
+    onDelete: () => refetch(),
+  });
+
+  // ---------------------------------------------------------------------------
+  // FOLDER MUTATIONS
+  // ---------------------------------------------------------------------------
+
+  const { mutate: createFolder } = useAsyncMutation(
+    async ({ name, parentId = null }) => {
+      const response = await fetch(`${apiBase}/projects/${projectId}/folders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, parentId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create folder: ${response.status}`);
       }
-    };
-  }, [fetchAll]);
 
-  // Listen for file events
-  useEffect(() => {
-    if (!autoRefresh) return;
+      return response.json();
+    },
+    { onSuccess: refetch }
+  );
 
-    const handleRefresh = () => fetchAll();
-
-    window.addEventListener("cia:file-uploaded", handleRefresh);
-    window.addEventListener("cia:folder-changed", handleRefresh);
-    window.addEventListener("cia:star-changed", handleRefresh);
-
-    return () => {
-      window.removeEventListener("cia:file-uploaded", handleRefresh);
-      window.removeEventListener("cia:folder-changed", handleRefresh);
-      window.removeEventListener("cia:star-changed", handleRefresh);
-    };
-  }, [autoRefresh, fetchAll]);
-
-  // ==========================================================================
-  // FOLDER ACTIONS
-  // ==========================================================================
-
-  const createFolder = useCallback(
-    async (name, parentId = null) => {
-      if (!projectId) throw new Error("No project selected");
-
+  const { mutate: renameFolder } = useAsyncMutation(
+    async ({ folderId, name }) => {
       const response = await fetch(
-        `${config.apiBaseUrl}/projects/${projectId}/folders`,
+        `${apiBase}/projects/${projectId}/folders/${folderId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to rename folder: ${response.status}`);
+      }
+
+      return response.json();
+    },
+    { onSuccess: refetch }
+  );
+
+  const { mutate: moveFolder } = useAsyncMutation(
+    async ({ folderId, newParentId }) => {
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/folders/${folderId}/move`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, parentId }),
-        }
-      );
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(
-          data.error || `Failed to create folder: ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-      window.dispatchEvent(new CustomEvent("cia:folder-changed"));
-      return data.folder;
-    },
-    [projectId]
-  );
-
-  const renameFolder = useCallback(
-    async (folderId, newName) => {
-      if (!projectId) throw new Error("No project selected");
-
-      const response = await fetch(
-        `${config.apiBaseUrl}/projects/${projectId}/folders/${folderId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newName }),
-        }
-      );
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(
-          data.error || `Failed to rename folder: ${response.status}`
-        );
-      }
-
-      window.dispatchEvent(new CustomEvent("cia:folder-changed"));
-      return await response.json();
-    },
-    [projectId]
-  );
-
-  const moveFolder = useCallback(
-    async (folderId, newParentId) => {
-      if (!projectId) throw new Error("No project selected");
-
-      const response = await fetch(
-        `${config.apiBaseUrl}/projects/${projectId}/folders/${folderId}`,
-        {
-          method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ parentId: newParentId }),
         }
       );
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(
-          data.error || `Failed to move folder: ${response.status}`
-        );
+        throw new Error(`Failed to move folder: ${response.status}`);
       }
 
-      window.dispatchEvent(new CustomEvent("cia:folder-changed"));
-      return await response.json();
+      return response.json();
     },
-    [projectId]
+    { onSuccess: refetch }
   );
 
-  const deleteFolder = useCallback(
-    async (folderId, cascade = false) => {
-      if (!projectId) throw new Error("No project selected");
-
+  const { mutate: deleteFolder } = useAsyncMutation(
+    async (folderId) => {
       const response = await fetch(
-        `${config.apiBaseUrl}/projects/${projectId}/folders/${folderId}?cascade=${cascade}`,
-        { method: "DELETE" }
+        `${apiBase}/projects/${projectId}/folders/${folderId}`,
+        {
+          method: "DELETE",
+        }
       );
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(
-          data.error || `Failed to delete folder: ${response.status}`
-        );
+        throw new Error(`Failed to delete folder: ${response.status}`);
       }
 
-      window.dispatchEvent(new CustomEvent("cia:folder-changed"));
-      return await response.json();
+      return { id: folderId };
     },
-    [projectId]
+    { onSuccess: refetch }
   );
 
-  // ==========================================================================
-  // FILE ACTIONS
-  // ==========================================================================
+  // ---------------------------------------------------------------------------
+  // FILE MUTATIONS
+  // ---------------------------------------------------------------------------
 
-  const moveFile = useCallback(
-    async (fileId, folderId) => {
-      if (!projectId) throw new Error("No project selected");
-
+  const { mutate: moveFile } = useAsyncMutation(
+    async ({ fileId, folderId }) => {
       const response = await fetch(
-        `${config.apiBaseUrl}/projects/${projectId}/files/${fileId}`,
+        `${apiBase}/projects/${projectId}/files/${fileId}/move`,
         {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ folderId }),
         }
       );
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(
-          data.error || `Failed to move file: ${response.status}`
-        );
+        throw new Error(`Failed to move file: ${response.status}`);
       }
 
-      window.dispatchEvent(new CustomEvent("cia:folder-changed"));
-      return await response.json();
+      return response.json();
     },
-    [projectId]
+    { onSuccess: refetch }
   );
 
-  const uploadFile = useCallback(
-    async (file, options = {}) => {
-      const {
-        visibility = "all_members",
-        accessLevel = "read",
-        folderId = null,
-      } = options;
-
-      if (!projectId) throw new Error("No project selected");
-
+  const { mutate: uploadFile } = useAsyncMutation(
+    async ({ file, folderId = null }) => {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("visibility", visibility);
-      formData.append("access_level", accessLevel);
-      if (folderId) formData.append("folder_id", folderId);
+      if (folderId) formData.append("folderId", folderId);
 
       const response = await fetch(
-        `${config.apiBaseUrl}/projects/${projectId}/files`,
-        { method: "POST", body: formData }
-      );
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || `Upload failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      window.dispatchEvent(new CustomEvent("cia:file-uploaded"));
-      return data.file;
-    },
-    [projectId]
-  );
-
-  // ==========================================================================
-  // STAR ACTIONS
-  // ==========================================================================
-
-  const toggleStar = useCallback(
-    async (targetType, targetId, starScope = "personal", starRoomId = null) => {
-      if (!projectId) throw new Error("No project selected");
-
-      const response = await fetch(
-        `${config.apiBaseUrl}/projects/${projectId}/stars/toggle`,
+        `${apiBase}/projects/${projectId}/files/upload`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            targetType,
-            targetId,
-            scope: starScope,
-            roomId: starRoomId,
-          }),
+          body: formData,
         }
       );
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
+        throw new Error(`Failed to upload file: ${response.status}`);
+      }
+
+      return response.json();
+    },
+    { onSuccess: refetch }
+  );
+
+  // ---------------------------------------------------------------------------
+  // STAR MUTATIONS
+  // ---------------------------------------------------------------------------
+
+  const { mutate: toggleStar } = useAsyncMutation(
+    async ({ type, targetId, starScope = "personal" }) => {
+      const isCurrentlyStarred = isStarred(type, targetId);
+
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/stars/${type}/${targetId}`,
+        {
+          method: isCurrentlyStarred ? "DELETE" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scope: starScope, roomId }),
+        }
+      );
+
+      if (!response.ok) {
         throw new Error(
-          data.error || `Failed to toggle star: ${response.status}`
+          `Failed to ${isCurrentlyStarred ? "unstar" : "star"}: ${
+            response.status
+          }`
         );
       }
 
-      const result = await response.json();
-
-      // Optimistic update
-      setStarredIds((prev) => {
-        const scopeKey = starScope;
-        const allKey = "all";
-        const typeKey = targetType === "file" ? "files" : "folders";
-
-        const newState = { ...prev };
-
-        // Update specific scope
-        if (!newState[scopeKey])
-          newState[scopeKey] = { files: [], folders: [] };
-        if (result.starred) {
-          newState[scopeKey][typeKey] = [
-            ...new Set([...newState[scopeKey][typeKey], targetId]),
-          ];
-        } else {
-          newState[scopeKey][typeKey] = newState[scopeKey][typeKey].filter(
-            (id) => id !== targetId
-          );
-        }
-
-        // Update 'all' aggregate
-        if (!newState[allKey]) newState[allKey] = { files: [], folders: [] };
-        if (result.starred) {
-          newState[allKey][typeKey] = [
-            ...new Set([...newState[allKey][typeKey], targetId]),
-          ];
-        } else {
-          // Only remove from 'all' if not starred in any scope
-          // For simplicity, just refetch - or leave it (will be correct on next fetch)
-        }
-
-        return newState;
-      });
-
-      window.dispatchEvent(new CustomEvent("cia:star-changed"));
-      return result;
+      return response.json();
     },
-    [projectId]
+    { onSuccess: refetch }
   );
 
-  // ==========================================================================
-  // COMPUTED VALUES
-  // ==========================================================================
+  // ---------------------------------------------------------------------------
+  // HELPERS
+  // ---------------------------------------------------------------------------
 
-  /**
-   * Check if an item is starred (in any scope visible to user)
-   */
   const isStarred = useCallback(
-    (targetType, targetId) => {
-      const typeKey = targetType === "file" ? "files" : "folders";
+    (type, targetId) => {
+      const typeKey = type === "file" ? "files" : "folders";
       return starredIds.all?.[typeKey]?.includes(targetId) || false;
     },
     [starredIds]
   );
 
-  /**
-   * Files formatted for UI display
-   */
+  // ---------------------------------------------------------------------------
+  // COMPUTED
+  // ---------------------------------------------------------------------------
+
   const filesForUI = useMemo(() => {
     return files.map((file) => ({
       ...file,
@@ -444,9 +297,9 @@ export function useProjectFiles(options = {}) {
     }));
   }, [files, isStarred]);
 
-  // ==========================================================================
+  // ---------------------------------------------------------------------------
   // RETURN
-  // ==========================================================================
+  // ---------------------------------------------------------------------------
 
   return {
     // Data
@@ -458,7 +311,7 @@ export function useProjectFiles(options = {}) {
     projectId,
 
     // Fetch
-    refetch: fetchAll,
+    refetch,
 
     // Folder actions
     createFolder,
@@ -480,36 +333,30 @@ export function useProjectFiles(options = {}) {
  * Hook to fetch files from ALL projects (for "Add existing file" dialogs)
  */
 export function useAllAccessibleFiles() {
-  const [files, setFiles] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const fetchFiles = useCallback(async (signal) => {
+    const response = await fetch(`${config.apiBaseUrl}/datasets`, {
+      signal,
+      headers: { "Content-Type": "application/json" },
+    });
 
-  const fetchFiles = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${config.apiBaseUrl}/datasets`, {
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch files: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setFiles(data.datasets || data || []);
-    } catch (err) {
-      log.error("Failed to fetch all files:", err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch files: ${response.status}`);
     }
+
+    const data = await response.json();
+    return data.datasets || data || [];
   }, []);
 
-  useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+  const {
+    data: files,
+    isLoading,
+    error,
+    refetch,
+  } = useAsyncData(fetchFiles, [], {
+    initialData: [],
+  });
 
-  return { files, isLoading, error, refetch: fetchFiles };
+  return { files, isLoading, error, refetch };
 }
+
+export default useProjectFiles;

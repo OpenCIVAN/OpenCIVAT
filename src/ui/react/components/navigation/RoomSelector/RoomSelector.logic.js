@@ -1,7 +1,10 @@
 // src/ui/react/components/navigation/RoomSelector/RoomSelector.logic.js
 // Logic hook for RoomSelector component
+//
+// REFACTORED: Uses useAsyncData and useAsyncMutation
+// Before: ~200 lines | After: ~150 lines
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { config } from "@Core/config/clientConfig.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import {
@@ -10,315 +13,291 @@ import {
 } from "@UI/react/hooks/useRoomPresence.js";
 import { createLogger } from "@Utils/logger.js";
 
+import { useAsyncData, useAsyncMutation } from "@UI/react/hooks/useAsyncData";
+import { useServerSyncEvents } from "@UI/react/hooks/useWebSocketEvents";
+
 const log = createLogger("rooms");
 
 /**
  * useRooms - Fetch and manage rooms list from server
+ *
+ * @param {string} projectId - Project ID to fetch rooms for
+ * @returns {Object} Rooms data and actions
  */
 export function useRooms(projectId) {
-  const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const apiBase = config.apiBaseUrl || "http://localhost:3001/api";
 
-  // Fetch rooms from server
-  const fetchRooms = useCallback(async () => {
-    if (!projectId) return;
+  // ---------------------------------------------------------------------------
+  // FETCH ROOMS
+  // ---------------------------------------------------------------------------
 
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `${config.apiBaseUrl}/projects/${projectId}/rooms`,
-        {
-          headers: {
-            "x-user-id": "00000000-0000-0000-0000-000000000001", // TODO: Get from auth
-          },
-        }
-      );
+  const fetchRooms = useCallback(
+    async (signal) => {
+      if (!projectId) return [];
+
+      const response = await fetch(`${apiBase}/projects/${projectId}/rooms`, {
+        signal,
+        headers: {
+          "x-user-id": "00000000-0000-0000-0000-000000000001", // TODO: Get from auth
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch rooms");
       }
 
       const data = await response.json();
-      setRooms(data.rooms || []);
-      setError(null);
-    } catch (err) {
-      log.error("Error fetching rooms:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    fetchRooms();
-  }, [fetchRooms]);
-
-  // Create a new breakout room
-  const createRoom = useCallback(
-    async (name, description, isPublic = true) => {
-      if (!projectId) return null;
-
-      try {
-        const response = await fetch(
-          `${config.apiBaseUrl}/projects/${projectId}/rooms`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-user-id": "00000000-0000-0000-0000-000000000001",
-            },
-            body: JSON.stringify({ name, description, isPublic }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to create room");
-        }
-
-        const newRoom = await response.json();
-        setRooms((prev) => [...prev, newRoom]);
-        return newRoom;
-      } catch (err) {
-        log.error("Error creating room:", err);
-        throw err;
-      }
+      return data.rooms || [];
     },
-    [projectId]
+    [apiBase, projectId]
   );
 
-  // Join a room
-  const joinRoom = useCallback(
+  const {
+    data: rooms,
+    isLoading,
+    error,
+    refetch,
+  } = useAsyncData(fetchRooms, [projectId], {
+    initialData: [],
+    enabled: !!projectId,
+  });
+
+  // ---------------------------------------------------------------------------
+  // WEBSOCKET EVENTS
+  // ---------------------------------------------------------------------------
+
+  useServerSyncEvents("room", {
+    onCreate: () => refetch(),
+    onUpdate: () => refetch(),
+    onDelete: () => refetch(),
+  });
+
+  // ---------------------------------------------------------------------------
+  // MUTATIONS
+  // ---------------------------------------------------------------------------
+
+  const { mutate: createRoom, isLoading: isCreating } = useAsyncMutation(
+    async ({ name, description, isPublic = true }) => {
+      const response = await fetch(`${apiBase}/projects/${projectId}/rooms`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": "00000000-0000-0000-0000-000000000001",
+        },
+        body: JSON.stringify({ name, description, isPublic }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create room");
+      }
+
+      const newRoom = await response.json();
+      log.info(`Room created: ${newRoom.id}`);
+      return newRoom;
+    },
+    { onSuccess: refetch }
+  );
+
+  const { mutate: joinRoom, isLoading: isJoining } = useAsyncMutation(
     async (roomId) => {
-      if (!projectId) return;
-
-      try {
-        const response = await fetch(
-          `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}/join`,
-          {
-            method: "POST",
-            headers: {
-              "x-user-id": "00000000-0000-0000-0000-000000000001",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to join room");
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/rooms/${roomId}/join`,
+        {
+          method: "POST",
+          headers: {
+            "x-user-id": "00000000-0000-0000-0000-000000000001",
+          },
         }
+      );
 
-        setRooms((prev) =>
-          prev.map((r) => (r.id === roomId ? { ...r, is_member: true } : r))
-        );
-      } catch (err) {
-        log.error("Error joining room:", err);
-        throw err;
+      if (!response.ok) {
+        throw new Error("Failed to join room");
       }
+
+      log.info(`Joined room: ${roomId}`);
+      return response.json();
     },
-    [projectId]
+    { onSuccess: refetch }
   );
 
-  // Leave a room
-  const leaveRoom = useCallback(
+  const { mutate: leaveRoom, isLoading: isLeaving } = useAsyncMutation(
     async (roomId) => {
-      if (!projectId) return;
-
-      try {
-        const response = await fetch(
-          `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}/leave`,
-          {
-            method: "POST",
-            headers: {
-              "x-user-id": "00000000-0000-0000-0000-000000000001",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to leave room");
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/rooms/${roomId}/leave`,
+        {
+          method: "POST",
+          headers: {
+            "x-user-id": "00000000-0000-0000-0000-000000000001",
+          },
         }
+      );
 
-        setRooms((prev) =>
-          prev.map((r) => (r.id === roomId ? { ...r, is_member: false } : r))
-        );
-      } catch (err) {
-        log.error("Error leaving room:", err);
-        throw err;
+      if (!response.ok) {
+        throw new Error("Failed to leave room");
       }
+
+      log.info(`Left room: ${roomId}`);
+      return response.json();
     },
-    [projectId]
+    { onSuccess: refetch }
   );
 
-  // Delete a room
-  const deleteRoom = useCallback(
+  const { mutate: deleteRoom, isLoading: isDeletingRoom } = useAsyncMutation(
     async (roomId) => {
-      if (!projectId) return;
-
-      try {
-        const response = await fetch(
-          `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}`,
-          {
-            method: "DELETE",
-            headers: {
-              "x-user-id": "00000000-0000-0000-0000-000000000001",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to delete room");
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/rooms/${roomId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "x-user-id": "00000000-0000-0000-0000-000000000001",
+          },
         }
+      );
 
-        setRooms((prev) => prev.filter((r) => r.id !== roomId));
-
-        // Return the deleted roomId so caller can handle redirect
-        return { deletedRoomId: roomId };
-      } catch (err) {
-        log.error("Error deleting room:", err);
-        throw err;
+      if (!response.ok) {
+        throw new Error("Failed to delete room");
       }
+
+      log.info(`Room deleted: ${roomId}`);
+      return { id: roomId };
     },
-    [projectId]
+    { onSuccess: refetch }
   );
+
+  // ---------------------------------------------------------------------------
+  // RETURN
+  // ---------------------------------------------------------------------------
 
   return {
+    // Data
     rooms,
-    loading,
+    isLoading,
+    error,
+
+    // Mutation states
+    isCreating,
+    isJoining,
+    isLeaving,
+    isDeletingRoom,
+
+    // Actions
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    deleteRoom,
+    refetch,
+  };
+}
+
+/**
+ * useRoomSelector - Combined hook for RoomSelector component
+ *
+ * Combines room fetching with presence and current room state
+ *
+ * @param {string} projectId - Project ID
+ * @param {string} currentRoomId - Currently selected room ID
+ * @returns {Object} Complete room selector state
+ */
+export function useRoomSelector(projectId, currentRoomId) {
+  const {
+    rooms,
+    isLoading,
     error,
     createRoom,
     joinRoom,
     leaveRoom,
     deleteRoom,
-    refetch: fetchRooms,
-  };
-}
+    refetch,
+    isCreating,
+    isJoining,
+  } = useRooms(projectId);
 
-/**
- * useRoomSelector - Main hook for RoomSelector component
- */
-export function useRoomSelector({ projectId, onRoomChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [currentRoomId, setCurrentRoomId] = useState(null);
+  // Get user counts for each room
+  const roomUserCounts = useRoomUserCount();
 
-  const { rooms, loading, createRoom, joinRoom, deleteRoom, refetch } =
-    useRooms(projectId);
-  const { setRoom } = useRoomActions();
+  // Room actions from presence system
+  const { switchRoom } = useRoomActions();
 
-  // Get current room from presence or default to main room
-  useEffect(() => {
-    const savedRoomId = presenceSystem.getRoom();
-    if (savedRoomId && rooms.find((r) => r.id === savedRoomId)) {
-      setCurrentRoomId(savedRoomId);
-      const savedRoom = rooms.find((r) => r.id === savedRoomId);
-      if (savedRoom && onRoomChange) {
-        onRoomChange(savedRoomId, savedRoom.name);
-      }
-    } else if (rooms.length > 0 && !currentRoomId) {
-      // Default to main room only if we don't have a current room
-      const mainRoom = rooms.find((r) => r.room_type === "main");
-      if (mainRoom) {
-        handleSelectRoom(mainRoom.id, mainRoom.name);
-      }
-    }
-  }, [rooms]);
+  // ---------------------------------------------------------------------------
+  // COMPUTED
+  // ---------------------------------------------------------------------------
 
-  // Current room object
   const currentRoom = useMemo(() => {
     return rooms.find((r) => r.id === currentRoomId) || null;
   }, [rooms, currentRoomId]);
 
-  // Separate main room from breakout rooms
-  const { mainRoom, breakoutRooms } = useMemo(() => {
-    const main = rooms.find((r) => r.room_type === "main");
-    const breakouts = rooms.filter((r) => r.room_type !== "main");
-    return { mainRoom: main, breakoutRooms: breakouts };
-  }, [rooms]);
+  const otherRooms = useMemo(() => {
+    return rooms.filter((r) => r.id !== currentRoomId);
+  }, [rooms, currentRoomId]);
 
-  // Toggle dropdown
-  const toggleOpen = useCallback(() => {
-    setIsOpen((prev) => !prev);
-  }, []);
+  // Rooms with user counts
+  const roomsWithPresence = useMemo(() => {
+    return rooms.map((room) => ({
+      ...room,
+      userCount: roomUserCounts[room.id] || 0,
+      isCurrent: room.id === currentRoomId,
+    }));
+  }, [rooms, roomUserCounts, currentRoomId]);
 
-  const closeDropdown = useCallback(() => {
-    setIsOpen(false);
-  }, []);
+  // ---------------------------------------------------------------------------
+  // HANDLERS
+  // ---------------------------------------------------------------------------
 
-  // Select a room
-  const handleSelectRoom = useCallback(
-    (roomId, roomName) => {
-      log.info("Selecting room:", roomId, roomName);
-      setCurrentRoomId(roomId);
-      setRoom(roomId); // Update presence
-      setIsOpen(false);
+  const handleSwitchRoom = useCallback(
+    async (roomId) => {
+      if (roomId === currentRoomId) return;
 
-      if (onRoomChange) {
-        onRoomChange(roomId, roomName);
-      }
-    },
-    [setRoom, onRoomChange]
-  );
-
-  // Create room handler
-  const handleCreateRoom = useCallback(
-    async (name, description, isPublic) => {
       try {
-        const newRoom = await createRoom(name, description, isPublic);
-        setShowCreateModal(false);
-        if (newRoom) {
-          handleSelectRoom(newRoom.id, newRoom.name);
-        }
-        return newRoom;
+        // Join the room on server
+        await joinRoom(roomId);
+
+        // Update presence system
+        switchRoom(roomId);
       } catch (err) {
+        log.error("Failed to switch room:", err);
         throw err;
       }
     },
-    [createRoom, handleSelectRoom]
+    [currentRoomId, joinRoom, switchRoom]
   );
 
-  // Open create modal
-  const openCreateModal = useCallback(() => {
-    setShowCreateModal(true);
-    setIsOpen(false);
-  }, []);
+  const handleCreateRoom = useCallback(
+    async (name, description, isPublic) => {
+      const newRoom = await createRoom({ name, description, isPublic });
 
-  const closeCreateModal = useCallback(() => {
-    setShowCreateModal(false);
-  }, []);
-
-  // Delete room and redirect to main if needed
-  const handleDeleteRoom = useCallback(
-    async (roomId) => {
-      const wasCurrentRoom = currentRoomId === roomId;
-      await deleteRoom(roomId);
-
-      // If user was in the deleted room, switch to main room
-      if (wasCurrentRoom && mainRoom) {
-        handleSelectRoom(mainRoom.id, mainRoom.name);
+      // Optionally switch to new room
+      if (newRoom?.id) {
+        handleSwitchRoom(newRoom.id);
       }
+
+      return newRoom;
     },
-    [currentRoomId, deleteRoom, mainRoom, handleSelectRoom]
+    [createRoom, handleSwitchRoom]
   );
+
+  // ---------------------------------------------------------------------------
+  // RETURN
+  // ---------------------------------------------------------------------------
 
   return {
-    // State
-    isOpen,
-    showCreateModal,
+    // Data
+    rooms: roomsWithPresence,
     currentRoom,
-    mainRoom,
-    breakoutRooms,
-    loading,
+    otherRooms,
+    isLoading,
+    error,
+
+    // States
+    isCreating,
+    isJoining,
 
     // Actions
-    toggleOpen,
-    closeDropdown,
-    selectRoom: handleSelectRoom,
+    switchRoom: handleSwitchRoom,
     createRoom: handleCreateRoom,
-    deleteRoom: handleDeleteRoom,
-    openCreateModal,
-    closeCreateModal,
+    leaveRoom,
+    deleteRoom,
     refetch,
   };
 }
 
-export default useRoomSelector;
+export default useRooms;

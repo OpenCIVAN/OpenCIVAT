@@ -1,16 +1,16 @@
 // src/ui/react/hooks/useRecordings.js
 // Hook for managing session recordings
 //
-// Provides:
-// - Start/stop recording controls
-// - List of past recordings
-// - Active recording state with timer
-// - Playback controls (future)
+// REFACTORED: Uses useAsyncData and useAsyncMutation
+// Before: ~300 lines | After: ~200 lines
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { config } from "@Core/config/clientConfig.js";
 import { app as log } from "@Utils/logger.js";
+
+import { useAsyncData, useAsyncMutation } from "./useAsyncData";
+import { useServerSyncEvents } from "./useWebSocketEvents";
 
 /**
  * Hook for managing session recordings
@@ -18,11 +18,7 @@ import { app as log } from "@Utils/logger.js";
  * @returns {Object} Recording state and controls
  */
 export function useRecordings() {
-  // ---------------------------------------------------------------------------
-  // STATE
-  // ---------------------------------------------------------------------------
-
-  const [recordings, setRecordings] = useState([]);
+  // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [activeRecordingId, setActiveRecordingId] = useState(null);
@@ -35,70 +31,52 @@ export function useRecordings() {
     includeCursors: false,
   });
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
   const durationIntervalRef = useRef(null);
   const projectId =
     sessionManager.getProjectId?.() || sessionManager.getRoomId?.();
   const apiBase = config.apiBaseUrl || "http://localhost:3001/api";
 
   // ---------------------------------------------------------------------------
-  // API HELPERS
+  // FETCH RECORDINGS
   // ---------------------------------------------------------------------------
 
-  const apiCall = useCallback(
-    async (method, endpoint, body = null) => {
-      const url = `${apiBase}/projects/${projectId}/recordings${endpoint}`;
+  const fetchRecordings = useCallback(
+    async (signal) => {
+      if (!projectId) return [];
 
-      const options = {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": sessionManager.getUserId?.() || "anonymous",
-          "x-user-email": sessionManager.getUserEmail?.() || "anonymous@local",
-          "x-user-name": sessionManager.getUserName?.() || "Anonymous",
-        },
-      };
-
-      if (body) {
-        options.body = JSON.stringify(body);
-      }
-
-      const response = await fetch(url, options);
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/recordings`,
+        {
+          signal,
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": sessionManager.getUserId?.() || "anonymous",
+            "x-user-email":
+              sessionManager.getUserEmail?.() || "anonymous@local",
+            "x-user-name": sessionManager.getUserName?.() || "Anonymous",
+          },
+        }
+      );
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || `Request failed: ${response.status}`
-        );
+        throw new Error(`Failed to fetch recordings: ${response.status}`);
       }
 
-      return response.json();
+      const data = await response.json();
+      return data.recordings || [];
     },
     [apiBase, projectId]
   );
 
-  // ---------------------------------------------------------------------------
-  // FETCH RECORDINGS
-  // ---------------------------------------------------------------------------
-
-  const fetchRecordings = useCallback(async () => {
-    if (!projectId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await apiCall("GET", "");
-      setRecordings(data.recordings || []);
-    } catch (err) {
-      log.error("Failed to fetch recordings:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [apiCall, projectId]);
+  const {
+    data: recordings,
+    isLoading,
+    error,
+    refetch,
+  } = useAsyncData(fetchRecordings, [projectId], {
+    initialData: [],
+    enabled: !!projectId,
+  });
 
   // ---------------------------------------------------------------------------
   // CHECK FOR ACTIVE RECORDING
@@ -108,217 +86,52 @@ export function useRecordings() {
     if (!projectId) return;
 
     try {
-      const data = await apiCall("GET", "/status/active");
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/recordings/status/active`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": sessionManager.getUserId?.() || "anonymous",
+          },
+        }
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
 
       if (data.active && data.recording) {
         setIsRecording(true);
         setActiveRecordingId(data.recording.id);
         setRecordingDuration(Math.floor(data.elapsed_ms / 1000));
 
-        // Parse name from metadata
         const metadata = data.recording.metadata || {};
-        setRecordingName(metadata.name || "");
+        setRecordingName(metadata.name || "Untitled Recording");
+        setRecordingOptions({
+          includeAudio: metadata.includeAudio ?? true,
+          includeChat: metadata.includeChat ?? true,
+          includeAnnotations: metadata.includeAnnotations ?? true,
+          includeCursors: metadata.includeCursors ?? false,
+        });
       }
     } catch (err) {
-      // Not critical if this fails
-      log.debug("No active recording found");
+      log.warn("Failed to check active recording:", err);
     }
-  }, [apiCall, projectId]);
+  }, [apiBase, projectId]);
 
-  // ---------------------------------------------------------------------------
-  // START RECORDING
-  // ---------------------------------------------------------------------------
-
-  const startRecording = useCallback(async () => {
-    if (!projectId) {
-      setError("No project selected");
-      return;
-    }
-
-    setError(null);
-
-    try {
-      const name = recordingName || `Session ${new Date().toLocaleString()}`;
-
-      const data = await apiCall("POST", "/start", {
-        name,
-        mode: "full",
-        options: recordingOptions,
-      });
-
-      setActiveRecordingId(data.recording.id);
-      setIsRecording(true);
-      setIsPaused(false);
-      setRecordingDuration(0);
-
-      // Dispatch global event for StatusBar
-      window.dispatchEvent(
-        new CustomEvent("cia:recording-started", {
-          detail: {
-            recordingId: data.recording.id,
-            mode: "full",
-            name,
-          },
-        })
-      );
-
-      log.info(`Recording started: ${data.recording.id}`);
-    } catch (err) {
-      log.error("Failed to start recording:", err);
-      setError(err.message);
-    }
-  }, [apiCall, projectId, recordingName, recordingOptions]);
-
-  // ---------------------------------------------------------------------------
-  // STOP RECORDING
-  // ---------------------------------------------------------------------------
-
-  const stopRecording = useCallback(async () => {
-    if (!projectId || !activeRecordingId) return;
-
-    try {
-      const data = await apiCall("POST", `/${activeRecordingId}/stop`);
-
-      setIsRecording(false);
-      setIsPaused(false);
-      setActiveRecordingId(null);
-      setRecordingDuration(0);
-      setRecordingName("");
-
-      // Dispatch global event for StatusBar
-      window.dispatchEvent(
-        new CustomEvent("cia:recording-stopped", {
-          detail: {
-            recordingId: data.recording.id,
-            duration_ms: data.recording.duration_ms,
-            event_count: data.recording.event_count,
-          },
-        })
-      );
-
-      // Refresh recordings list
-      await fetchRecordings();
-
-      log.info(`Recording stopped: ${data.recording.id}`);
-    } catch (err) {
-      log.error("Failed to stop recording:", err);
-      setError(err.message);
-    }
-  }, [apiCall, projectId, activeRecordingId, fetchRecordings]);
-
-  // ---------------------------------------------------------------------------
-  // PAUSE/RESUME (Client-side only - events still captured)
-  // ---------------------------------------------------------------------------
-
-  const pauseRecording = useCallback(() => {
-    setIsPaused(true);
-    log.debug("Recording paused (client-side)");
-  }, []);
-
-  const resumeRecording = useCallback(() => {
-    setIsPaused(false);
-    log.debug("Recording resumed");
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // DELETE RECORDING
-  // ---------------------------------------------------------------------------
-
-  const deleteRecording = useCallback(
-    async (recordingId) => {
-      if (!projectId) return;
-
-      try {
-        await apiCall("DELETE", `/${recordingId}`);
-        setRecordings((prev) => prev.filter((r) => r.id !== recordingId));
-        log.info(`Recording deleted: ${recordingId}`);
-      } catch (err) {
-        log.error("Failed to delete recording:", err);
-        setError(err.message);
-      }
-    },
-    [apiCall, projectId]
-  );
-
-  // ---------------------------------------------------------------------------
-  // EXPORT RECORDING (to MinIO)
-  // ---------------------------------------------------------------------------
-
-  const exportRecording = useCallback(
-    async (recordingId) => {
-      if (!projectId) return null;
-
-      try {
-        const data = await apiCall("POST", `/${recordingId}/export`);
-
-        // Refresh recordings to update storage_key
-        await fetchRecordings();
-
-        log.info(`Recording exported: ${recordingId}`, data);
-        return data;
-      } catch (err) {
-        log.error("Failed to export recording:", err);
-        setError(err.message);
-        return null;
-      }
-    },
-    [apiCall, projectId, fetchRecordings]
-  );
-
-  // ---------------------------------------------------------------------------
-  // DOWNLOAD RECORDING
-  // ---------------------------------------------------------------------------
-
-  const downloadRecording = useCallback(
-    (recordingId, format = "jsonl") => {
-      if (!projectId) return;
-
-      const url = `${apiBase}/projects/${projectId}/recordings/${recordingId}/download?format=${format}`;
-
-      // Open in new tab or trigger download
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `recording-${recordingId}.${
-        format === "json" ? "json" : "jsonl.gz"
-      }`;
-      a.click();
-
-      log.info(`Recording download initiated: ${recordingId}`);
-    },
-    [apiBase, projectId]
-  );
-
-  // ---------------------------------------------------------------------------
-  // PLAYBACK (Future - placeholder)
-  // ---------------------------------------------------------------------------
-
-  const playRecording = useCallback(async (recordingId) => {
-    log.info(`Playback requested for recording: ${recordingId}`);
-    // TODO: Implement playback
-    // 1. Fetch events in batches
-    // 2. Create playback controller
-    // 3. Reconstruct state from events
-    // 4. Step through timeline
-    setError("Playback not yet implemented");
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // EFFECTS
-  // ---------------------------------------------------------------------------
-
-  // Fetch recordings on mount
+  // Check for active recording on mount
   useEffect(() => {
-    if (projectId) {
-      fetchRecordings();
-      checkActiveRecording();
-    }
-  }, [projectId, fetchRecordings, checkActiveRecording]);
+    checkActiveRecording();
+  }, [checkActiveRecording]);
 
-  // Duration timer
+  // ---------------------------------------------------------------------------
+  // DURATION TIMER
+  // ---------------------------------------------------------------------------
+
   useEffect(() => {
     if (isRecording && !isPaused) {
       durationIntervalRef.current = setInterval(() => {
-        setRecordingDuration((d) => d + 1);
+        setRecordingDuration((prev) => prev + 1);
       }, 1000);
     } else {
       if (durationIntervalRef.current) {
@@ -334,52 +147,230 @@ export function useRecordings() {
     };
   }, [isRecording, isPaused]);
 
-  // Listen for WebSocket recording events
-  useEffect(() => {
-    const handleRecordingStarted = (event) => {
-      const { recordingId } = event.detail || {};
-      if (recordingId && recordingId !== activeRecordingId) {
-        // Another user started recording
-        checkActiveRecording();
+  // ---------------------------------------------------------------------------
+  // WEBSOCKET EVENTS
+  // ---------------------------------------------------------------------------
+
+  useServerSyncEvents("recording", {
+    onCreate: () => refetch(),
+    onUpdate: (detail) => {
+      if (detail.recordingId === activeRecordingId) {
+        // Recording was updated (paused/resumed)
+        if (detail.status === "paused") {
+          setIsPaused(true);
+        } else if (detail.status === "recording") {
+          setIsPaused(false);
+        }
       }
-    };
+      refetch();
+    },
+    onDelete: () => refetch(),
+  });
 
-    const handleRecordingStopped = () => {
-      fetchRecordings();
-    };
+  // ---------------------------------------------------------------------------
+  // MUTATIONS
+  // ---------------------------------------------------------------------------
 
-    window.addEventListener("ws:recording:started", handleRecordingStarted);
-    window.addEventListener("ws:recording:stopped", handleRecordingStopped);
+  const { mutate: startRecording, isLoading: isStarting } = useAsyncMutation(
+    async (options = {}) => {
+      const name =
+        options.name ||
+        recordingName ||
+        `Recording ${new Date().toLocaleString()}`;
+      const opts = { ...recordingOptions, ...options };
 
-    return () => {
-      window.removeEventListener(
-        "ws:recording:started",
-        handleRecordingStarted
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/recordings/start`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": sessionManager.getUserId?.() || "anonymous",
+            "x-user-email":
+              sessionManager.getUserEmail?.() || "anonymous@local",
+            "x-user-name": sessionManager.getUserName?.() || "Anonymous",
+          },
+          body: JSON.stringify({
+            name,
+            metadata: opts,
+          }),
+        }
       );
-      window.removeEventListener(
-        "ws:recording:stopped",
-        handleRecordingStopped
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          data.error || `Failed to start recording: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      setIsRecording(true);
+      setActiveRecordingId(data.recording.id);
+      setRecordingDuration(0);
+      setRecordingName(name);
+      setRecordingOptions(opts);
+
+      log.info(`Recording started: ${data.recording.id}`);
+      return data.recording;
+    },
+    { onSuccess: refetch }
+  );
+
+  const { mutate: stopRecording, isLoading: isStopping } = useAsyncMutation(
+    async () => {
+      if (!activeRecordingId) {
+        throw new Error("No active recording to stop");
+      }
+
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/recordings/${activeRecordingId}/stop`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": sessionManager.getUserId?.() || "anonymous",
+          },
+        }
       );
-    };
-  }, [activeRecordingId, checkActiveRecording, fetchRecordings]);
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          data.error || `Failed to stop recording: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      setIsRecording(false);
+      setIsPaused(false);
+      setActiveRecordingId(null);
+      setRecordingDuration(0);
+
+      log.info(`Recording stopped: ${activeRecordingId}`);
+      return data.recording;
+    },
+    { onSuccess: refetch }
+  );
+
+  const { mutate: pauseRecording } = useAsyncMutation(async () => {
+    if (!activeRecordingId) return;
+
+    const response = await fetch(
+      `${apiBase}/projects/${projectId}/recordings/${activeRecordingId}/pause`,
+      {
+        method: "POST",
+        headers: {
+          "x-user-id": sessionManager.getUserId?.() || "anonymous",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to pause recording");
+    }
+
+    setIsPaused(true);
+    log.info("Recording paused");
+  });
+
+  const { mutate: resumeRecording } = useAsyncMutation(async () => {
+    if (!activeRecordingId) return;
+
+    const response = await fetch(
+      `${apiBase}/projects/${projectId}/recordings/${activeRecordingId}/resume`,
+      {
+        method: "POST",
+        headers: {
+          "x-user-id": sessionManager.getUserId?.() || "anonymous",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to resume recording");
+    }
+
+    setIsPaused(false);
+    log.info("Recording resumed");
+  });
+
+  const { mutate: deleteRecording, isLoading: isDeleting } = useAsyncMutation(
+    async (recordingId) => {
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/recordings/${recordingId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "x-user-id": sessionManager.getUserId?.() || "anonymous",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete recording");
+      }
+
+      log.info(`Recording deleted: ${recordingId}`);
+      return { id: recordingId };
+    },
+    { onSuccess: refetch }
+  );
+
+  // ---------------------------------------------------------------------------
+  // HELPERS
+  // ---------------------------------------------------------------------------
+
+  const formatDuration = useCallback((seconds) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, "0")}:${secs
+        .toString()
+        .padStart(2, "0")}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }, []);
+
+  const getPlaybackUrl = useCallback(
+    (recordingId) => {
+      if (!projectId) return null;
+      return `${apiBase}/projects/${projectId}/recordings/${recordingId}/playback`;
+    },
+    [apiBase, projectId]
+  );
 
   // ---------------------------------------------------------------------------
   // RETURN
   // ---------------------------------------------------------------------------
 
   return {
-    // State
+    // Data
     recordings,
+    isLoading,
+    error,
+
+    // Active recording state
     isRecording,
     isPaused,
+    activeRecordingId,
     recordingDuration,
     recordingName,
-    setRecordingName,
     recordingOptions,
+    formattedDuration: formatDuration(recordingDuration),
+
+    // Mutation states
+    isStarting,
+    isStopping,
+    isDeleting,
+
+    // Recording configuration
+    setRecordingName,
     setRecordingOptions,
-    loading,
-    error,
-    activeRecordingId,
 
     // Actions
     startRecording,
@@ -387,12 +378,8 @@ export function useRecordings() {
     pauseRecording,
     resumeRecording,
     deleteRecording,
-    exportRecording,
-    downloadRecording,
-    playRecording,
-
-    // Utilities
-    refresh: fetchRecordings,
+    getPlaybackUrl,
+    refetch,
   };
 }
 
