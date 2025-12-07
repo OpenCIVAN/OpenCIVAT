@@ -23,43 +23,34 @@ import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry
 import { config } from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { apiClient } from "@Services/apiClient.js";
+import { BaseManager } from "@Core/data/managers/BaseManager.js";
 
-export class ViewConfigurationManager {
-  constructor() {
-    this._isReady = false;
+export class ViewConfigurationManager extends BaseManager {
+  constructor(config = {}) {
+    super({
+      events: [
+        "viewCreated",
+        "viewUpdated",
+        "viewDeleted",
+        "viewActivated",
+        "viewDeactivated",
+        "presenceChanged",
+        "cameraChanged",
+        "filterChanged",
+      ],
+      logCategory: "viewConfig",
+    });
 
-    // In-memory cache of ViewConfiguration objects
     this._viewConfigs = new Map();
-
-    // Server API configuration
-    this._apiBaseUrl = config.apiBaseUrl;
-    this._projectId = null; // Set during initialization
-
-    // Throttle server sync to avoid excessive API calls
-    this._syncThrottleMs = 500;
-    this._pendingSyncs = new Map(); // viewId -> timeout
-
-    // Event listeners
-    this._listeners = {
-      viewAdded: [],
-      viewRemoved: [],
-      viewUpdated: [],
-      viewShared: [],
-      linkChanged: [],
-      broadcastChanged: [],
-      presenceChanged: [],
-      reconciled: [], // fired after reconciliation
-      reset: [], // fired after force reset
-    };
+    this._pendingSyncs = new Map();
+    this._syncThrottleMs = config.syncThrottleMs || 100;
+    this._presenceThrottleMs = config.presenceThrottleMs || 50;
+    this._lastPresenceUpdate = new Map(); // viewId -> timestamp
 
     // Cleanup settings
     this._inactiveThresholdMs = 10 * 60 * 1000; // 10 minutes
     this._cleanupIntervalMs = 60 * 1000; // Check every minute
     this._cleanupInterval = null;
-
-    // Presence update throttle
-    this._presenceThrottleMs = 100; // Max 10 updates/second
-    this._lastPresenceUpdate = new Map(); // viewId -> timestamp
 
     // Track which views we're observing for link updates
     this._linkObservers = new Map(); // targetViewId -> Set of subscriberViewIds
@@ -612,7 +603,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.updateCamera(cameraState);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   /**
@@ -623,7 +614,7 @@ export class ViewConfigurationManager {
     if (!view) return null;
 
     const filterId = view.addFilter(filter);
-    this._syncToYjs(view);
+    this._syncToServer(view);
     return filterId;
   }
 
@@ -635,7 +626,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.updateFilter(filterId, updates);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   /**
@@ -646,7 +637,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.removeFilter(filterId);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   /**
@@ -657,7 +648,7 @@ export class ViewConfigurationManager {
     if (!view) return null;
 
     const widgetId = view.addWidget(widget);
-    this._syncToYjs(view);
+    this._syncToServer(view);
     return widgetId;
   }
 
@@ -669,7 +660,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.updateWidget(widgetId, updates);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   /**
@@ -680,7 +671,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.removeWidget(widgetId);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   /**
@@ -691,7 +682,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.updateAnnotationDisplay(updates);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   // ===========================================================================
@@ -722,7 +713,7 @@ export class ViewConfigurationManager {
     }
 
     // Sync changes
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     // Emit event
     this._emit("linkChanged", {
@@ -750,7 +741,7 @@ export class ViewConfigurationManager {
     }
 
     view.unlinkProperty(property);
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("linkChanged", { viewId, property, action: "removed" });
   }
@@ -771,7 +762,7 @@ export class ViewConfigurationManager {
     }
 
     view.unlinkAll();
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("linkChanged", { viewId, action: "all_removed" });
   }
@@ -784,7 +775,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.pauseLink(property);
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("linkChanged", { viewId, property, action: "paused" });
   }
@@ -807,7 +798,7 @@ export class ViewConfigurationManager {
       }
     }
 
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("linkChanged", { viewId, property, action: "resumed" });
   }
@@ -830,7 +821,7 @@ export class ViewConfigurationManager {
     }
 
     view.startBroadcast(options);
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("broadcastChanged", { viewId, action: "started", options });
   }
@@ -843,7 +834,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.stopBroadcast();
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("broadcastChanged", { viewId, action: "stopped" });
   }
@@ -856,7 +847,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.pauseBroadcast();
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("broadcastChanged", { viewId, action: "paused" });
   }
@@ -869,7 +860,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.resumeBroadcast();
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("broadcastChanged", { viewId, action: "resumed" });
   }
@@ -896,8 +887,8 @@ export class ViewConfigurationManager {
       view.linkProperty(property, sourceView, LINK_MODES.BROADCAST);
     }
 
-    this._syncToYjs(view);
-    this._syncToYjs(sourceView);
+    this._syncToServer(view);
+    this._syncToServer(sourceView);
 
     this._emit("broadcastChanged", {
       viewId,
@@ -918,14 +909,14 @@ export class ViewConfigurationManager {
 
     if (sourceView) {
       sourceView.decrementFollowerCount();
-      this._syncToYjs(sourceView);
+      this._syncToServer(sourceView);
     }
 
     // Unlink all properties
     view.unlinkAll();
     view.stopFollowing();
 
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("broadcastChanged", {
       viewId,
@@ -963,8 +954,8 @@ export class ViewConfigurationManager {
     this._viewConfigs.set(forkedView.id, forkedView);
 
     // Sync to Y.js
-    this._syncToYjs(forkedView);
-    this._syncToYjs(view); // Update fork count on original
+    this._syncToServer(forkedView);
+    this._syncToServer(view); // Update fork count on original
 
     // Emit event
     this._emit("viewAdded", forkedView);
@@ -991,7 +982,7 @@ export class ViewConfigurationManager {
       userName: getUserName(),
     });
 
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     return snapshot;
   }
@@ -1004,7 +995,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.restoreSnapshot(snapshotId);
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("viewUpdated", view);
   }
@@ -1017,7 +1008,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.deleteSnapshot(snapshotId);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   // ===========================================================================
@@ -1038,7 +1029,7 @@ export class ViewConfigurationManager {
     }
 
     view.share(targetUserId, targetUserName, options);
-    this._syncToYjs(view);
+    this._syncToServer(view);
 
     this._emit("viewShared", { viewId, targetUserId, options });
   }
@@ -1051,7 +1042,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.unshare(targetUserId);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   /**
@@ -1062,7 +1053,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.setVisibility(visibility);
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   // ===========================================================================
@@ -1120,7 +1111,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.activate();
-    this._syncToYjs(view);
+    this._syncToServer(view);
   }
 
   /**
@@ -1131,51 +1122,7 @@ export class ViewConfigurationManager {
     if (!view) return;
 
     view.deactivate();
-    this._syncToYjs(view);
-  }
-
-  // ===========================================================================
-  // EVENT SYSTEM
-  // ===========================================================================
-
-  on(event, callback) {
-    if (!this._eventListeners) {
-      this._eventListeners = {};
-    }
-    if (!this._eventListeners[event]) {
-      this._eventListeners[event] = [];
-    }
-    this._eventListeners[event].push(callback);
-  }
-
-  off(event, callback) {
-    if (!this._eventListeners?.[event]) return;
-    this._eventListeners[event] = this._eventListeners[event].filter(
-      (cb) => cb !== callback
-    );
-  }
-
-  _emit(event, data) {
-    // Existing listeners array
-    if (this._listeners?.[event]) {
-      this._listeners[event].forEach((callback) => {
-        try {
-          callback(data);
-        } catch (e) {
-          log.error(`Listener error:`, e);
-        }
-      });
-    }
-    // New event listeners
-    if (this._eventListeners?.[event]) {
-      this._eventListeners[event].forEach((callback) => {
-        try {
-          callback(data);
-        } catch (e) {
-          log.error(`Listener error:`, e);
-        }
-      });
-    }
+    this._syncToServer(view);
   }
 
   // ===========================================================================
@@ -1217,14 +1164,6 @@ export class ViewConfigurationManager {
 
     this._pendingSyncs.set(view.id, timeout);
     view.pendingServerSync = true;
-  }
-
-  /**
-   * @deprecated v2.0 - Use _syncToServer instead
-   */
-  _syncToYjs(view) {
-    // Redirect to server sync for v2.0
-    this._syncToServer(view);
   }
 
   _syncPresenceToYjs(viewId, presence) {
@@ -1315,7 +1254,7 @@ export class ViewConfigurationManager {
 
       // Mark links as broken
       subscriberView.handleLinkTargetLost(targetViewId, "target_deleted");
-      this._syncToYjs(subscriberView);
+      this._syncToServer(subscriberView);
 
       this._emit("linkChanged", {
         viewId: subscriberViewId,

@@ -5,17 +5,7 @@
 const express = require("express");
 const router = express.Router();
 const { ws: log } = require("../utils/logger");
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-function getUser(req) {
-  return {
-    id: req.user?.id || "00000000-0000-0000-0000-000000000001",
-    email: req.user?.email || "demo@cia-web.local",
-  };
-}
+const { getUser } = require("../middleware/auth");
 
 // ============================================================================
 // WORKSPACE ANNOTATION ENDPOINTS

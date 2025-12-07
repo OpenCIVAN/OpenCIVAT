@@ -3,18 +3,7 @@
 
 const express = require("express");
 const router = express.Router();
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-function getUserId(req) {
-  return (
-    req.user?.id ||
-    req.get("x-user-id") ||
-    "00000000-0000-0000-0000-000000000001"
-  );
-}
+const { getUserId } = require("../middleware/auth");
 
 // ============================================================================
 // CANVAS ENDPOINTS

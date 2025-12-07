@@ -27,22 +27,6 @@ import { BookmarkItem } from '@UI/react/components/panels/LeftPanel/tabs/Bookmar
 import { FilterItem } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/components/FilterItem';
 import './BookmarksFiltersTab.scss';
 
-// Build chips with counts
-const scopeChips = useMemo(() => [
-    {
-        id: 'project', label: 'Project', icon: Globe, color: 'amber',
-        count: counts.project
-    },
-    {
-        id: 'room', label: 'This Room', icon: Users, color: 'teal',
-        count: counts.room
-    },
-    {
-        id: 'personal', label: 'Personal', icon: UserCircle, color: 'blue',
-        count: counts.personal
-    },
-], [counts]);
-
 // =============================================================================
 // SUB-TABS (dark etched style)
 // =============================================================================
@@ -90,12 +74,6 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
         room: true,
         personal: true,
     });
-
-        // Build scope chips for ChipGroup 
-    const scopeChips = useMemo(() => {
-        const counts = activeSubTab === 'bookmarks' ? bookmarkCounts : filterCounts;
-        return getScopeChips(counts);
-    }, [activeSubTab, bookmarkCounts, filterCounts]);
 
     // Bookmarks hook
     const {
@@ -171,7 +149,7 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
         personal: filteredFilters.filter(f => f.scope === 'personal' || !f.scope),
     }), [filteredFilters]);
 
-    // Counts for scope chips
+        // Counts for scope chips
     const bookmarkCounts = useMemo(() => ({
         project: bookmarks.filter(b => b.scope === 'project').length,
         room: bookmarks.filter(b => b.scope === 'room' || b.scope === 'workspace').length,
@@ -183,6 +161,15 @@ export function BookmarksFiltersPanelContent({ workspaceId }) {
         room: filters.filter(f => f.scope === 'room' || f.scope === 'workspace').length,
         personal: filters.filter(f => f.scope === 'personal' || !f.scope).length,
     }), [filters]);
+
+    const scopeChips = useMemo(() => {
+        const counts = activeSubTab === 'bookmarks' ? bookmarkCounts : filterCounts;
+        return [
+            { id: 'project', label: 'Project', icon: Globe, color: 'amber', count: counts.project },
+            { id: 'room', label: 'This Room', icon: Users, color: 'teal', count: counts.room },
+            { id: 'personal', label: 'Personal', icon: UserCircle, color: 'blue', count: counts.personal },
+        ];
+    }, [activeSubTab, bookmarkCounts, filterCounts]);
 
     // Handlers
     const handleNavigate = useCallback((bookmarkId) => {

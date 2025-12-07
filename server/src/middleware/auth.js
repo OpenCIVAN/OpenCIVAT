@@ -25,6 +25,86 @@ const DEV_USER = {
   roles: ["user", "admin"],
 };
 
+/**
+ * Get user ID from request
+ */
+function getUserId(req) {
+  if (req.user?.id) return req.user.id;
+  
+  if (DEV_BYPASS_AUTH) {
+    const userId = req.get("x-user-id") || DEV_USER.id;
+    if (typeof userId === "object") {
+      log.warn("getUserId received object instead of string");
+      return userId.id || DEV_USER.id;
+    }
+    return userId;
+  }
+  return null;
+}
+
+/**
+ * Get full user info from request
+ */
+function getUser(req) {
+  if (req.user) return req.user;
+  
+  if (DEV_BYPASS_AUTH) {
+    return {
+      id: getUserId(req),
+      email: req.get("x-user-email") || DEV_USER.email,
+      name: req.get("x-user-name") || DEV_USER.name,
+    };
+  }
+  return null;
+}
+
+/**
+ * Check if user has access to project
+ * @returns {string|null} User's role or null if no access
+ */
+async function checkProjectAccess(pool, projectId, userId) {
+  const result = await pool.query(
+    `SELECT pm.role FROM projects p
+     LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
+     WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id IS NOT NULL)`,
+    [projectId, userId]
+  );
+  return result.rows.length > 0 ? result.rows[0].role : null;
+}
+
+/**
+ * Get workspace IDs user can access in a project
+ */
+async function getUserWorkspaceIds(pool, projectId, userId) {
+  const result = await pool.query(
+    `SELECT w.id FROM workspaces w
+     LEFT JOIN workspace_members wm ON w.id = wm.workspace_id
+     WHERE w.project_id = $1
+       AND (w.owner_id = $2 OR wm.user_id = $2 OR w.type = 'project')`,
+    [projectId, userId]
+  );
+  return result.rows.map((r) => r.id);
+}
+
+/**
+ * Extract full user info from request
+ */
+function getUserInfo(req) {
+  if (req.user) {
+    return req.user;
+  }
+
+  if (DEV_BYPASS_AUTH) {
+    return {
+      id: getUserId(req),
+      email: req.headers["x-user-email"] || DEV_USER.email,
+      name: req.headers["x-user-name"] || DEV_USER.name,
+    };
+  }
+
+  return null;
+}
+
 // JWKS client for fetching Keycloak public keys
 const jwksClient = jwksRsa({
   jwksUri: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs`,
@@ -160,4 +240,13 @@ if (DEV_BYPASS_AUTH) {
   log.debug("Realm:", KEYCLOAK_REALM);
 }
 
-module.exports = { authenticate, optionalAuth, requireRole, DEV_BYPASS_AUTH };
+module.exports = {
+  authenticate,
+  optionalAuth,
+  requireRole,
+  getUserId,
+  getUser,
+  checkProjectAccess,
+  getUserWorkspaceIds,
+  DEV_BYPASS_AUTH,
+};

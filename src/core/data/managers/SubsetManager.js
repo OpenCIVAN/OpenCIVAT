@@ -9,6 +9,7 @@
 
 import { Subset } from "@Core/data/models/Subset.js";
 import { workspace as log } from "@Utils/logger.js";
+import { BaseManager } from "@Core/data/managers/BaseManager.js";
 
 /**
  * SubsetManager - Manages subsets and focus mode
@@ -19,35 +20,27 @@ import { workspace as log } from "@Utils/logger.js";
  * - Visibility and sharing management
  * - WebSocket broadcast integration
  */
-export class SubsetManager {
-  constructor(options = {}) {
-    // Configuration
-    this._apiBaseUrl = options.apiBaseUrl || "/api";
-    this._sessionManager = options.sessionManager || null;
-    this._canvasManager = options.canvasManager || null;
+export class SubsetManager extends BaseManager {
+  constructor(config = {}) {
+    super({
+      events: [
+        "subsetCreated",
+        "subsetUpdated",
+        "subsetDeleted",
+        "subsetActivated",
+        "subsetDeactivated",
+        "selectionChanged",
+      ],
+      logCategory: "subset",
+    });
 
-    // Local cache
-    this._subsets = new Map(); // subsetId -> Subset
-
-    // Focus mode state
+    this._apiBaseUrl = config.apiBaseUrl || "http://localhost:3001/api";
+    this._sessionManager = config.sessionManager || null;
+    this._subsets = new Map();
     this._activeSubsetId = null;
-    this._previousViewport = null; // Saved viewport before focus mode
-
-    // Selection mode state (for creating subsets)
-    this._selectionMode = false;
+    this._previousViewport = null;
     this._selectedPlacementIds = new Set();
-
-    // Event listeners
-    this._listeners = {
-      subsetLoaded: [],
-      subsetCreated: [],
-      subsetUpdated: [],
-      subsetDeleted: [],
-      focusModeEntered: [],
-      focusModeExited: [],
-      selectionChanged: [],
-      error: [],
-    };
+    this._selectionMode = false;
 
     // Bind methods
     this.handleServerBroadcast = this.handleServerBroadcast.bind(this);
@@ -544,38 +537,6 @@ export class SubsetManager {
   }
 
   // ===========================================================================
-  // EVENT HANDLING
-  // ===========================================================================
-
-  on(event, callback) {
-    if (!this._listeners[event]) {
-      this._listeners[event] = [];
-    }
-    this._listeners[event].push(callback);
-    return () => this.off(event, callback);
-  }
-
-  off(event, callback) {
-    if (this._listeners[event]) {
-      this._listeners[event] = this._listeners[event].filter(
-        (cb) => cb !== callback
-      );
-    }
-  }
-
-  _emit(event, data) {
-    if (this._listeners[event]) {
-      this._listeners[event].forEach((cb) => {
-        try {
-          cb(data);
-        } catch (error) {
-          log.error(`SubsetManager event error (${event}):`, error);
-        }
-      });
-    }
-  }
-
-  // ===========================================================================
   // HELPERS
   // ===========================================================================
 
@@ -630,10 +591,12 @@ export class SubsetManager {
   }
 
   dispose() {
-    this.clearCache();
-    Object.keys(this._listeners).forEach((event) => {
-      this._listeners[event] = [];
-    });
+    this._subsets.clear();
+    this._activeSubsetId = null;
+    this._previousViewport = null;
+    this._selectedPlacementIds.clear();
+    this._selectionMode = false;
+    super.dispose(); // Call parent
   }
 }
 

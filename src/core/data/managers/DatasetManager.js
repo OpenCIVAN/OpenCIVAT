@@ -1,15 +1,12 @@
 // src/core/data/managers/DatasetManager.js
 // v2.0: Server-authoritative - IDs must come from server
-//
-// NOTE: Y.js sync removed in v2.0 cleanup. Server is source of truth.
-// Real-time updates come via WebSocket (serverSync.js), not Y.js.
-import { EventEmitter } from "events"; // Node.js events
 
 import { Dataset } from "@Core/data/models/Dataset.js";
 import { Annotation } from "@Core/data/models/Annotation.js";
 import { config } from "@Core/config/clientConfig.js";
 import { apiClient, ApiError } from "@Services/apiClient.js";
 import { dataset as log } from "@Utils/logger.js";
+import { BaseManager } from "@Core/data/managers/BaseManager.js";
 
 /**
  * DatasetManager - Format-agnostic dataset management
@@ -18,9 +15,22 @@ import { dataset as log } from "@Utils/logger.js";
  * It knows NOTHING about specific file formats (VTK, JSON, etc).
  * Format-specific parsing is delegated to instance type handlers.
  */
-export class DatasetManager extends EventEmitter {
+export class DatasetManager extends BaseManager {
   constructor(storageProvider, config = {}) {
-    super();
+    super({
+      events: [
+        "datasetAdded",
+        "datasetRemoved",
+        "datasetUpdated",
+        "datasetLoaded",
+        "annotationAdded",
+        "annotationRemoved",
+        "annotationUpdated",
+        "reconciled",
+        "reset",
+      ],
+      logCategory: "dataset",
+    });
 
     this.storageProvider = storageProvider;
     this._datasets = new Map();
@@ -30,18 +40,6 @@ export class DatasetManager extends EventEmitter {
     this._db = null;
 
     log.debug("DatasetManager: Initializing...");
-
-    this._listeners = {
-      datasetAdded: [],
-      datasetRemoved: [],
-      datasetUpdated: [],
-      datasetLoaded: [],
-      annotationAdded: [],
-      annotationRemoved: [],
-      annotationUpdated: [],
-      reconciled: [], // fired after reconciliation
-      reset: [], // fired after force reset
-    };
   }
 
   // ==================== INITIALIZATION ====================
@@ -1114,37 +1112,6 @@ export class DatasetManager extends EventEmitter {
       const request = store.delete(datasetId);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(new Error("Failed to delete dataset"));
-    });
-  }
-
-  // ==================== EVENT SYSTEM ====================
-
-  on(event, callback) {
-    if (!this._listeners[event]) {
-      log.warn(`DatasetManager: Unknown event "${event}"`);
-      return;
-    }
-    this._listeners[event].push(callback);
-  }
-
-  off(event, callback) {
-    if (!this._listeners[event]) return;
-    this._listeners[event] = this._listeners[event].filter(
-      (cb) => cb !== callback
-    );
-  }
-
-  _emit(event, data) {
-    if (!this._listeners[event]) return;
-    this._listeners[event].forEach((callback) => {
-      try {
-        callback(data);
-      } catch (error) {
-        log.error(
-          `DatasetManager: Error in event listener for "${event}":`,
-          error
-        );
-      }
     });
   }
 

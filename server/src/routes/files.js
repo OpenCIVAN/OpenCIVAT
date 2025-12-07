@@ -12,6 +12,7 @@ const router = express.Router();
 const multer = require("multer");
 const crypto = require("crypto");
 const { Readable } = require("stream");
+const { getUser } = require("../middleware/auth");
 
 const {
   validateUploadWithMagicBytes,
@@ -29,20 +30,6 @@ const upload = multer({
     fileSize: 500 * 1024 * 1024, // 500 MB max file size
   },
 });
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Get user info from request
- */
-function getUser(req) {
-  return {
-    id: req.user?.id || "00000000-0000-0000-0000-000000000001",
-    email: req.user?.email || "demo@cia-web.local",
-  };
-}
 
 // ============================================================================
 // FILE ENDPOINTS

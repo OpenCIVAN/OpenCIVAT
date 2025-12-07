@@ -16,52 +16,9 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true });
 const { createLogger } = require("../utils/logger");
+const { getUser, getUserWorkspaceIds, checkProjectAccess } = require("../middleware/auth");
 
 const log = createLogger("filters");
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Get user from request (supports dev mode headers)
- */
-function getUser(req) {
-  return (
-    req.user || {
-      id: req.get("x-user-id") || "00000000-0000-0000-0000-000000000001",
-      email: req.get("x-user-email") || "demo@cia-web.local",
-      name: req.get("x-user-name") || "Demo User",
-    }
-  );
-}
-
-/**
- * Check if user has access to project
- */
-async function checkProjectAccess(pool, projectId, userId) {
-  const result = await pool.query(
-    `SELECT pm.role FROM projects p
-     LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
-     WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id IS NOT NULL)`,
-    [projectId, userId]
-  );
-  return result.rows.length > 0 ? result.rows[0].role : null;
-}
-
-/**
- * Get user's workspace IDs in project
- */
-async function getUserWorkspaceIds(pool, projectId, userId) {
-  const result = await pool.query(
-    `SELECT w.id FROM workspaces w
-     LEFT JOIN workspace_members wm ON w.id = wm.workspace_id
-     WHERE w.project_id = $1
-       AND (w.owner_id = $2 OR wm.user_id = $2 OR w.type = 'project')`,
-    [projectId, userId]
-  );
-  return result.rows.map((r) => r.id);
-}
 
 // ============================================================================
 // ROUTES

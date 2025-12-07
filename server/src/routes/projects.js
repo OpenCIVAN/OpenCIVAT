@@ -7,6 +7,7 @@ const multer = require("multer");
 const crypto = require("crypto");
 const { Readable } = require("stream");
 const { createLogger } = require("../utils/logger");
+const { getUserId } = require("../middleware/auth");
 
 const log = createLogger("files");
 
@@ -55,14 +56,6 @@ async function logAudit(
       req.get("user-agent"),
     ]
   );
-}
-
-/**
- * Get user ID from request headers (placeholder for now)
- */
-function getUserId(req) {
-  // TODO: Replace with actual JWT token parsing
-  return req.get("x-user-id") || "00000000-0000-0000-0000-000000000001";
 }
 
 /**

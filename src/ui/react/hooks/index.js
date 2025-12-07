@@ -72,5 +72,5 @@ export { useDatasetManager } from "./useDatasetManager.js";
 // =============================================================================
 
 export { useFilters } from "./useFilters.js";
-export { useBookmarks, captureCameraState } from "./useBookmarks.js";
+export { useBookmarks } from "./useBookmarks.js";
 export { useAnnotations } from "./useAnnotations.js";

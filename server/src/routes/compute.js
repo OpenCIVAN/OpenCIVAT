@@ -21,22 +21,13 @@ const {
   isRegistryLoaded,
 } = require("../services/handlerCapabilities");
 const { createLogger } = require("../utils/logger");
+const { getUser } = require("../middleware/auth");
 
 const log = createLogger("compute");
 
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
-/**
- * Get user info from request
- */
-function getUser(req) {
-  return {
-    id: req.user?.id || "00000000-0000-0000-0000-000000000001",
-    email: req.user?.email || "demo@cia-web.local",
-  };
-}
 
 /**
  * Generate cache key from operation parameters

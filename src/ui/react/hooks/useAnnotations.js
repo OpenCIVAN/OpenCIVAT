@@ -5,7 +5,8 @@
 // Before: ~250 lines | After: ~180 lines
 
 import { useState, useCallback, useMemo } from "react";
-import { annotationManager, datasetManager } from "@Init/appInitializer.js";
+import { annotationManager } from "@Core/data/managers/AnnotationManager.js";
+import { datasetManager } from "@Init/appInitializer.js";
 import { apiClient } from "@Services/apiClient.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { annotation as log } from "@Utils/logger.js";

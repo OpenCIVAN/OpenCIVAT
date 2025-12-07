@@ -313,37 +313,4 @@ export function useBookmarks(options = {}) {
   };
 }
 
-/**
- * Helper to capture current camera state from VTK
- * Call this when creating a bookmark to capture the current view
- *
- * @param {Object} renderer - VTK renderer instance
- * @returns {Object} Camera state { position, target, up, viewAngle }
- */
-export function captureCameraState(renderer) {
-  if (!renderer) {
-    log.warn("No renderer provided to captureCameraState");
-    return null;
-  }
-
-  try {
-    const camera = renderer.getActiveCamera?.();
-    if (!camera) {
-      log.warn("No active camera found");
-      return null;
-    }
-
-    return {
-      position: camera.getPosition?.() || [0, 0, 1],
-      target: camera.getFocalPoint?.() || [0, 0, 0],
-      up: camera.getViewUp?.() || [0, 1, 0],
-      viewAngle: camera.getViewAngle?.() || 30,
-      parallelScale: camera.getParallelScale?.() || 1,
-    };
-  } catch (error) {
-    log.error("Failed to capture camera state:", error);
-    return null;
-  }
-}
-
 export default useBookmarks;

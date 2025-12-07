@@ -4,20 +4,7 @@
 
 const express = require("express");
 const router = express.Router();
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Get user info from request
- */
-function getUser(req) {
-  return {
-    id: req.user?.id || "00000000-0000-0000-0000-000000000001",
-    email: req.user?.email || "demo@cia-web.local",
-  };
-}
+const { getUser } = require("../middleware/auth");
 
 // ============================================================================
 // ANNOTATION ENDPOINTS

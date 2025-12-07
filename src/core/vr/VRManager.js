@@ -9,6 +9,7 @@
 // - 'isolated': Single view at room-scale, user can walk around
 
 import { vr as log } from "@Utils/logger.js";
+import { BaseManager } from "@Core/data/managers/BaseManager.js";
 
 /**
  * VRManager - Manages VR session lifecycle
@@ -21,47 +22,45 @@ import { vr as log } from "@Utils/logger.js";
  * - Switch between grid and isolation modes
  * - Coordinate with handlers for VR rendering
  */
-export class VRManager {
+class VRManager extends BaseManager {
   constructor() {
+    super({
+      events: [
+        "vrEntered",
+        "vrExited",
+        "modeChanged",
+        "isolationEntered",
+        "isolationExited",
+        "handConnected",
+        "handDisconnected",
+        "controllerConnected",
+        "controllerDisconnected",
+        "selectStart",
+        "selectEnd",
+      ],
+      logCategory: "vr",
+    });
+
     this._mode = "inactive"; // 'inactive' | 'grid' | 'isolated'
+    this._xrSession = null;
+    this._referenceSpace = null;
+    this._xrLayer = null;
+    this._isolatedViewId = null;
+    this._inputSources = new Map(); // XRInputSource -> controller data
+    this._hands = { left: null, right: null };
+    this._mode = "inactive";
     this._xrSession = null;
     this._isolatedViewId = null;
     this._referenceSpace = null;
 
     // WebXR state
     this._glContext = null;
-    this._xrLayer = null;
     this._frameId = null;
     this._isRendering = false;
-
-    // Input tracking
-    this._inputSources = new Map(); // XRInputSource -> controller data
-    this._hands = { left: null, right: null };
 
     // Frame timing
     this._lastFrameTime = 0;
     this._frameCount = 0;
-
-    // Event listeners
-    this._listeners = {
-      modeChanged: [],
-      sessionStarted: [],
-      sessionEnded: [],
-      isolationEntered: [],
-      isolationExited: [],
-      frame: [],
-      error: [],
-      controllerConnected: [],
-      controllerDisconnected: [],
-      controllerUpdate: [],
-      handConnected: [],
-      handDisconnected: [],
-      handUpdate: [],
-      selectStart: [],
-      selectEnd: [],
-      squeezeStart: [],
-      squeezeEnd: [],
-    };
 
     // Bind methods for event handlers
     this._handleSessionEnd = this._handleSessionEnd.bind(this);
@@ -830,52 +829,6 @@ export class VRManager {
   }
 
   // ===========================================================================
-  // EVENT HANDLING
-  // ===========================================================================
-
-  /**
-   * Subscribe to VR events
-   * @param {string} event - Event name
-   * @param {Function} callback - Event handler
-   * @returns {Function} Unsubscribe function
-   */
-  on(event, callback) {
-    if (!this._listeners[event]) {
-      log.warn(`Unknown VR event: ${event}`);
-      return () => {};
-    }
-
-    this._listeners[event].push(callback);
-    return () => this.off(event, callback);
-  }
-
-  /**
-   * Unsubscribe from VR events
-   */
-  off(event, callback) {
-    if (this._listeners[event]) {
-      this._listeners[event] = this._listeners[event].filter(
-        (cb) => cb !== callback
-      );
-    }
-  }
-
-  /**
-   * Emit event to listeners
-   */
-  _emit(event, data) {
-    if (this._listeners[event]) {
-      this._listeners[event].forEach((callback) => {
-        try {
-          callback(data);
-        } catch (error) {
-          log.error(`VR event handler error (${event}):`, error);
-        }
-      });
-    }
-  }
-
-  // ===========================================================================
   // CLEANUP
   // ===========================================================================
 
@@ -886,11 +839,7 @@ export class VRManager {
     if (this._xrSession) {
       this.exitVR();
     }
-
-    // Clear all listeners
-    Object.keys(this._listeners).forEach((event) => {
-      this._listeners[event] = [];
-    });
+    super.dispose();
   }
 }
 

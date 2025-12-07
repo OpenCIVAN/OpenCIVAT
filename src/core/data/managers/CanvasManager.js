@@ -10,6 +10,7 @@
 import { WorkspaceCanvas } from "@Core/data/models/WorkspaceCanvas.js";
 import { CanvasPlacement } from "@Core/data/models/CanvasPlacement.js";
 import { workspace as log } from "@Utils/logger.js";
+import { BaseManager } from "@Core/data/managers/BaseManager.js";
 
 /**
  * CanvasManager - Manages workspace canvases with server sync
@@ -20,35 +21,26 @@ import { workspace as log } from "@Utils/logger.js";
  * - Event emission for UI updates
  * - WebSocket broadcast integration
  */
-export class CanvasManager {
-  constructor(options = {}) {
-    // Configuration
-    this._apiBaseUrl = options.apiBaseUrl || "/api";
-    this._sessionManager = options.sessionManager || null;
+export class CanvasManager extends BaseManager {
+  constructor(config = {}) {
+    super({
+      events: [
+        "canvasCreated",
+        "canvasUpdated",
+        "canvasDeleted",
+        "placementAdded",
+        "placementUpdated",
+        "placementRemoved",
+        "connectionStateChanged",
+      ],
+      logCategory: "canvas",
+    });
 
-    // Local cache
-    this._canvases = new Map(); // canvasId -> WorkspaceCanvas
-    this._activeCanvasId = null;
-
-    // Connection state
-    this._connectionState = "disconnected"; // 'connected', 'disconnected', 'reconnecting'
-    this._lastError = null;
-    this._retryCount = 0;
-    this._maxRetries = 3;
-
-    // Event listeners
-    this._listeners = {
-      canvasLoaded: [],
-      canvasCreated: [],
-      canvasUpdated: [],
-      canvasDeleted: [],
-      placementAdded: [],
-      placementUpdated: [],
-      placementRemoved: [],
-      activeCanvasChanged: [],
-      connectionStateChanged: [],
-      error: [],
-    };
+    this._apiBaseUrl = config.apiBaseUrl || "http://localhost:3001/api";
+    this._sessionManager = config.sessionManager || null;
+    this._canvases = new Map();
+    this._connectionState = "disconnected";
+    this._reconnectAttempts = 0;
 
     // Bind methods for WebSocket handlers
     this.handleServerBroadcast = this.handleServerBroadcast.bind(this);
@@ -681,50 +673,6 @@ export class CanvasManager {
   }
 
   // ===========================================================================
-  // EVENT HANDLING
-  // ===========================================================================
-
-  /**
-   * Subscribe to events
-   * @param {string} event
-   * @param {Function} callback
-   * @returns {Function} Unsubscribe function
-   */
-  on(event, callback) {
-    if (!this._listeners[event]) {
-      this._listeners[event] = [];
-    }
-    this._listeners[event].push(callback);
-    return () => this.off(event, callback);
-  }
-
-  /**
-   * Unsubscribe from events
-   */
-  off(event, callback) {
-    if (this._listeners[event]) {
-      this._listeners[event] = this._listeners[event].filter(
-        (cb) => cb !== callback
-      );
-    }
-  }
-
-  /**
-   * Emit event
-   */
-  _emit(event, data) {
-    if (this._listeners[event]) {
-      this._listeners[event].forEach((cb) => {
-        try {
-          cb(data);
-        } catch (error) {
-          log.error(`CanvasManager event error (${event}):`, error);
-        }
-      });
-    }
-  }
-
-  // ===========================================================================
   // CONNECTION STATE MANAGEMENT
   // ===========================================================================
 
@@ -883,10 +831,8 @@ export class CanvasManager {
    * Dispose of the manager
    */
   dispose() {
-    this.clearCache();
-    Object.keys(this._listeners).forEach((event) => {
-      this._listeners[event] = [];
-    });
+    this._canvases.clear();
+    super.dispose();
   }
 }
 

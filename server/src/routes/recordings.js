@@ -12,21 +12,11 @@ const router = express.Router({ mergeParams: true }); // Access :projectId
 const zlib = require("zlib");
 const { promisify } = require("util");
 const { createLogger } = require("../utils/logger");
+const { getUser } = require("../middleware/auth");
 
 const gzip = promisify(zlib.gzip);
 
 const log = createLogger("recordings");
-
-// Helper to get user from request
-function getUser(req) {
-  return (
-    req.user || {
-      id: req.get("x-user-id") || "00000000-0000-0000-0000-000000000001",
-      email: req.get("x-user-email") || "demo@cia-web.local",
-      name: req.get("x-user-name") || "Demo User",
-    }
-  );
-}
 
 // ============================================================================
 // LIST RECORDINGS

@@ -1,23 +1,8 @@
 // server/src/routes/folders.js
 const express = require("express");
 const router = express.Router({ mergeParams: true });
-
-function getUserId(req) {
-  if (process.env.NODE_ENV === "development") {
-    return req.headers["x-user-id"] || "00000000-0000-0000-0000-000000000001";
-  }
-  return req.user?.id;
-}
-
-async function checkProjectAccess(pool, projectId, userId) {
-  const result = await pool.query(
-    `SELECT pm.role FROM projects p
-     LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
-     WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id IS NOT NULL)`,
-    [projectId, userId]
-  );
-  return result.rows.length > 0 ? result.rows[0].role : null;
-}
+const { getUserId } = require("../middleware/auth");
+const { checkProjectAccess } = require("../middleware/auth");
 
 function buildFolderTree(folders, fileCountMap = {}) {
   const folderMap = new Map();
