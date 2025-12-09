@@ -444,6 +444,35 @@ export class CanvasManager extends BaseManager {
     }
   }
 
+  /**
+   * Remove all placements containing a specific view
+   * Used when a view is closed from the Datasets panel
+   * @param {string} viewId - The view configuration ID to remove
+   * @returns {Promise<void>}
+   */
+  async removeViewPlacements(viewId) {
+    if (!viewId) return;
+
+    // Find all placements with this viewId across all canvases
+    const placementsToRemove = [];
+    for (const canvas of this._canvases.values()) {
+      for (const placement of canvas.placements) {
+        if (placement.isView() && placement.getViewId() === viewId) {
+          placementsToRemove.push(placement.id);
+        }
+      }
+    }
+
+    // Remove each placement
+    for (const placementId of placementsToRemove) {
+      try {
+        await this.removePlacement(placementId);
+      } catch (error) {
+        console.warn(`Failed to remove placement ${placementId}:`, error);
+      }
+    }
+  }
+
   // ===========================================================================
   // ACTIVE CANVAS MANAGEMENT
   // ===========================================================================

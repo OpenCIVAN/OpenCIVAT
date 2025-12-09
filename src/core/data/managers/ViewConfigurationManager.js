@@ -1123,6 +1123,8 @@ export class ViewConfigurationManager extends BaseManager {
 
     view.deactivate();
     this._syncToServer(view);
+    this._emit("viewDeactivated", { viewId, view });
+    this._emit("viewUpdated", view);
   }
 
   // ===========================================================================
@@ -1518,11 +1520,11 @@ export class ViewConfigurationManager extends BaseManager {
     view.activeInstanceCount = 0;
 
     this._viewConfigs.set(viewId, view);
-    this._logAudit("view_trashed", { viewId });
-    this.emit("viewTrashed", { viewId, view });
+    log.info(`View ${viewId} moved to trash`);
+    this._emit("viewTrashed", { viewId, view });
 
     // Sync to server
-    this._syncViewToServer(viewId);
+    this._syncToServer(view);
 
     return true;
   }
@@ -1541,11 +1543,11 @@ export class ViewConfigurationManager extends BaseManager {
     view.updatedAt = Date.now();
 
     this._viewConfigs.set(viewId, view);
-    this._logAudit("view_restored", { viewId });
-    this.emit("viewRestored", { viewId, view });
+    log.info(`View ${viewId} restored from trash`);
+    this._emit("viewRestored", { viewId, view });
 
     // Sync to server
-    this._syncViewToServer(viewId);
+    this._syncToServer(view);
 
     return true;
   }
@@ -1553,20 +1555,31 @@ export class ViewConfigurationManager extends BaseManager {
   /**
    * Permanently delete a view (cannot be undone)
    */
-  permanentlyDeleteView(viewId) {
+  async permanentlyDeleteView(viewId) {
     const view = this._viewConfigs.get(viewId);
     if (!view) return false;
 
-    // Remove from local cache
-    this._viewConfigs.delete(viewId);
+    try {
+      // Delete from server
+      await apiClient.delete(`/views/${viewId}`);
 
-    this._logAudit("view_permanently_deleted", { viewId });
-    this.emit("viewDeleted", { viewId });
+      // Remove from local cache
+      this._viewConfigs.delete(viewId);
 
-    // Delete from server
-    this._deleteViewFromServer(viewId);
+      // Notify linked views
+      this._handleLinkTargetDeleted?.(viewId);
 
-    return true;
+      log.info(`View ${viewId} permanently deleted`);
+      this._emit("viewDeleted", { viewId });
+
+      return true;
+    } catch (error) {
+      log.error(`Failed to permanently delete view ${viewId}:`, error);
+      // Still remove locally even if server fails
+      this._viewConfigs.delete(viewId);
+      this._emit("viewDeleted", { viewId });
+      return true;
+    }
   }
 
   /**

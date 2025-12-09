@@ -8,7 +8,7 @@
 // - Active/Inactive/Shared view filtering with centered chips
 // - Uses Layout tab subtab styling
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     Database,
     Search,
@@ -30,6 +30,7 @@ import {
     Rows3,
     Columns3,
     GripVertical,
+    RotateCcw,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import {
@@ -41,6 +42,7 @@ import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { viewConfigurationManager } from '@Init/appInitializer.js';
+import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { dataset as log } from '@Utils/logger.js';
 import { ViewItem } from './ViewItem/ViewItem.jsx';
 import './DatasetsTab.scss';
@@ -100,12 +102,26 @@ function DatasetViewItemWrapper({ view, datasetId }) {
         }));
     }, [datasetId]);
 
-    // Handle view close
-    const handleClose = useCallback((viewId) => {
-        log.debug(`Closing view ${viewId}`);
+    // Handle view close (deactivate - remove from canvas but keep in list)
+    const handleClose = useCallback(async (viewId) => {
+        log.debug(`Closing view ${viewId} (deactivating)`);
+        // Remove from canvas first
+        await canvasManager?.removeViewPlacements?.(viewId);
+        // Deactivate the view - marks as inactive, keeps in list
+        viewConfigurationManager?.deactivateView?.(viewId);
+        // Dispatch event for any listening components
         window.dispatchEvent(new CustomEvent('cia:close-view', {
             detail: { viewId }
         }));
+    }, []);
+
+    // Handle view trash (move to Recently Deleted)
+    const handleTrash = useCallback(async (viewId) => {
+        log.debug(`Trashing view ${viewId}`);
+        // Remove from canvas first (if placed)
+        await canvasManager?.removeViewPlacements?.(viewId);
+        // Move to Recently Deleted (status = 'trashed')
+        viewConfigurationManager?.trashView?.(viewId);
     }, []);
 
     // Handle view rename
@@ -137,6 +153,7 @@ function DatasetViewItemWrapper({ view, datasetId }) {
             filterCount={view.filters?.length || 0}
             onSelect={handleSelect}
             onClose={handleClose}
+            onTrash={handleTrash}
             onRename={handleRename}
             onNavigate={handleNavigate}
             onSpawn={handleSpawn}
@@ -219,12 +236,26 @@ function CanvasViewItemWrapper({ view, dataset }) {
         }));
     }, [dataset?.id]);
 
-    // Handle view close
-    const handleClose = useCallback((viewId) => {
-        log.debug(`Closing view ${viewId}`);
+    // Handle view close (deactivate - remove from canvas but keep in list)
+    const handleClose = useCallback(async (viewId) => {
+        log.debug(`Closing view ${viewId} (deactivating)`);
+        // Remove from canvas first
+        await canvasManager?.removeViewPlacements?.(viewId);
+        // Deactivate the view - marks as inactive, keeps in list
+        viewConfigurationManager?.deactivateView?.(viewId);
+        // Dispatch event for any listening components
         window.dispatchEvent(new CustomEvent('cia:close-view', {
             detail: { viewId }
         }));
+    }, []);
+
+    // Handle view trash (move to Recently Deleted)
+    const handleTrash = useCallback(async (viewId) => {
+        log.debug(`Trashing view ${viewId}`);
+        // Remove from canvas first (if placed)
+        await canvasManager?.removeViewPlacements?.(viewId);
+        // Move to Recently Deleted (status = 'trashed')
+        viewConfigurationManager?.trashView?.(viewId);
     }, []);
 
     // Handle view rename
@@ -256,6 +287,7 @@ function CanvasViewItemWrapper({ view, dataset }) {
             filterCount={view.filters?.length || 0}
             onSelect={handleSelect}
             onClose={handleClose}
+            onTrash={handleTrash}
             onRename={handleRename}
             onNavigate={handleNavigate}
             onSpawn={handleSpawn}
@@ -297,6 +329,7 @@ function SortToggle({ sortBy, onSortChange }) {
 const DEFAULT_CANVAS_SECTIONS = {
     placed: { expanded: true, flexGrow: 2 },
     unplaced: { expanded: true, flexGrow: 1 },
+    trashed: { expanded: false, flexGrow: 1 },
 };
 
 // =============================================================================
@@ -310,6 +343,26 @@ export function DatasetsPanelContent({ workspaceId }) {
     const [activeFilters, setActiveFilters] = useState(['active', 'inactive', 'shared']);
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedDatasets, setExpandedDatasets] = useState(new Set());
+
+    // Refresh counter to trigger re-computation when views are updated
+    const [viewRefreshCounter, setViewRefreshCounter] = useState(0);
+
+    // Listen for view update events to trigger refresh
+    useEffect(() => {
+        const handleViewUpdate = () => {
+            setViewRefreshCounter(c => c + 1);
+        };
+
+        viewConfigurationManager?.on?.('viewUpdated', handleViewUpdate);
+        viewConfigurationManager?.on?.('viewDeactivated', handleViewUpdate);
+        viewConfigurationManager?.on?.('viewActivated', handleViewUpdate);
+
+        return () => {
+            viewConfigurationManager?.off?.('viewUpdated', handleViewUpdate);
+            viewConfigurationManager?.off?.('viewDeactivated', handleViewUpdate);
+            viewConfigurationManager?.off?.('viewActivated', handleViewUpdate);
+        };
+    }, []);
 
     // Section states for canvas view - destructure resizeSection for drag resizing
     const { states: sectionStates, toggleSection, resizeSection } = useSectionStates(DEFAULT_CANVAS_SECTIONS);
@@ -364,7 +417,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                 views,
             };
         });
-    }, [loadedDatasets, getViewsForDataset, workspaceId]);
+    }, [loadedDatasets, getViewsForDataset, workspaceId, viewRefreshCounter]);
 
     // Flatten all views
     const allViews = useMemo(() => {
@@ -428,6 +481,39 @@ export function DatasetsPanelContent({ workspaceId }) {
         );
     }, [datasets, searchQuery]);
 
+    // Get trashed views from ViewConfigurationManager
+    const [trashedViews, setTrashedViews] = useState([]);
+
+    useEffect(() => {
+        // Initial load
+        const loadTrashedViews = () => {
+            try {
+                const trashed = viewConfigurationManager?.getTrashedViews?.() || [];
+                setTrashedViews(trashed);
+            } catch (e) {
+                log.warn('Failed to get trashed views:', e);
+                setTrashedViews([]);
+            }
+        };
+
+        loadTrashedViews();
+
+        // Listen for view trash/restore events
+        const handleViewTrashed = () => loadTrashedViews();
+        const handleViewRestored = () => loadTrashedViews();
+        const handleViewDeleted = () => loadTrashedViews();
+
+        viewConfigurationManager?.on?.('viewTrashed', handleViewTrashed);
+        viewConfigurationManager?.on?.('viewRestored', handleViewRestored);
+        viewConfigurationManager?.on?.('viewDeleted', handleViewDeleted);
+
+        return () => {
+            viewConfigurationManager?.off?.('viewTrashed', handleViewTrashed);
+            viewConfigurationManager?.off?.('viewRestored', handleViewRestored);
+            viewConfigurationManager?.off?.('viewDeleted', handleViewDeleted);
+        };
+    }, []);
+
     // Canvas position views - placed (active instances on canvas) and unplaced (no active instance)
     // FIXED: Check for active status (has instance on canvas), not just position data
     const { placedViews, unplacedViews } = useMemo(() => {
@@ -441,9 +527,9 @@ export function DatasetsPanelContent({ workspaceId }) {
         }
 
         // Views are "on canvas" if they have an active instance (status === 'active')
-        // Views are "not placed" if they have no active instances (inactive, closed, or never placed)
+        // Views are "not placed" if they are inactive (not trashed, not active)
         const placed = filtered.filter(v => v.status === 'active');
-        const unplaced = filtered.filter(v => v.status !== 'active');
+        const unplaced = filtered.filter(v => v.status === 'inactive');
 
         // Sort placed views by position if available
         placed.sort((a, b) => {

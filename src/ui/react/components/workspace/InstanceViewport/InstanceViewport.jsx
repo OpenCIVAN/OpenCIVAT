@@ -1438,7 +1438,7 @@ export function InstanceViewport({
                     onVRMode={handleVRMode}
                     onMaximize={handleFullscreen}
                     onDuplicate={() => { }}
-                    onClose={onDelete}
+                    onClose={handleClose}
                     instanceId={actualInstanceId}
                 />
             )}

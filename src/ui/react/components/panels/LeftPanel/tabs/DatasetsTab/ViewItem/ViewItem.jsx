@@ -22,6 +22,7 @@ import React, { memo, useState, useCallback, useRef, useEffect, useMemo } from '
 import {
     GripVertical,
     X,
+    Trash2,
     Folder,
     Globe,
     Save,
@@ -56,7 +57,8 @@ export const ViewItem = memo(function ViewItem({
     linkedParent = null, // { id, name } - parent view if spawned from another
     linkTarget = null, // { id, name } - current link target
     onSelect,
-    onClose,
+    onClose,  // Close (deactivate) - remove from canvas, keep in list
+    onTrash,  // Trash - move to Recently Deleted
     onRename,
     onDragStart,
     onDragEnd,
@@ -246,17 +248,31 @@ export const ViewItem = memo(function ViewItem({
                     </span>
                 )}
 
-                {/* Close Button */}
-                <button
-                    className="view-item__close-btn"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onClose?.(view.id);
-                    }}
-                    title="Close view"
-                >
-                    <X size={12} />
-                </button>
+                {/* Action Buttons */}
+                <div className="view-item__actions">
+                    {/* Close Button - deactivate, remove from canvas but keep in list */}
+                    <button
+                        className="view-item__close-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose?.(view.id);
+                        }}
+                        title="Close view (remove from canvas)"
+                    >
+                        <X size={12} />
+                    </button>
+                    {/* Trash Button - move to Recently Deleted */}
+                    <button
+                        className="view-item__trash-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onTrash?.(view.id);
+                        }}
+                        title="Delete view"
+                    >
+                        <Trash2 size={12} />
+                    </button>
+                </div>
             </div>
 
             {/* Sliding Panel */}

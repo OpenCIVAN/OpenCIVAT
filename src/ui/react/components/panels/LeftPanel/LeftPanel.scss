@@ -204,6 +204,7 @@
 .left-panel__content {
   flex: 1;
   min-width: 0; // Allow shrinking
+  min-height: 0; // Critical for flex children to shrink properly
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -211,6 +212,15 @@
   backdrop-filter: $blur-strong saturate(200%);
   overflow: hidden;
   // Colored indicator moved to activity bar
+
+  // Ensure ResizableSections container fills available space
+  > .resizable-sections-container,
+  > * > .resizable-sections-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 // =============================================================================
