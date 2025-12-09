@@ -340,7 +340,8 @@ function HeaderBar({
     instanceColor,
     isFullscreen,
     onFullscreen,
-    onDelete,
+    onClose,       // Close without delete - view goes to inactive
+    onTrash,       // Move to Recently Deleted
     onChangeSpan,
     currentSpan,
     showSpanPicker,
@@ -457,12 +458,23 @@ function HeaderBar({
                     {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 </button>
 
-                {/* Delete button */}
-                {onDelete && (
+                {/* Close button (X) - Removes from canvas, keeps view in list */}
+                {onClose && (
                     <button
-                        onClick={onDelete}
+                        onClick={onClose}
+                        className="instance-viewport__header-button"
+                        title="Close (view stays in Datasets list)"
+                    >
+                        <X size={12} />
+                    </button>
+                )}
+
+                {/* Trash button - Moves to Recently Deleted */}
+                {onTrash && (
+                    <button
+                        onClick={onTrash}
                         className="instance-viewport__header-button instance-viewport__header-button--danger"
-                        title="Delete"
+                        title="Move to Recently Deleted"
                     >
                         <Trash2 size={12} />
                     </button>
@@ -487,7 +499,8 @@ export function InstanceViewport({
     isRemote = false,
     remoteInstanceId = null,
     ownerUserName = null,
-    onDelete,
+    onClose,      // Called when user clicks X (close without delete)
+    onTrash,      // Called when user clicks trash (move to Recently Deleted)
     onChangeSpan,
     currentSpan = '1x1'
 }) {
@@ -1277,6 +1290,38 @@ export function InstanceViewport({
         );
     };
 
+    // Close handler - deactivates view but doesn't delete
+    const handleClose = useCallback(() => {
+        // Clean up the instance
+        if (instanceIdRef.current) {
+            workspaceManager.deleteInstance(instanceIdRef.current);
+        }
+
+        // Deactivate the view (marks as inactive, keeps in Datasets list)
+        if (viewConfigId) {
+            viewConfigurationManager.deactivateView(viewConfigId);
+        }
+
+        // Notify parent to remove from canvas
+        onClose?.();
+    }, [viewConfigId, onClose]);
+
+    // Trash handler - moves to Recently Deleted
+    const handleTrash = useCallback(() => {
+        // Clean up the instance
+        if (instanceIdRef.current) {
+            workspaceManager.deleteInstance(instanceIdRef.current);
+        }
+
+        // Move view to Recently Deleted (recoverable for 24h)
+        if (viewConfigId) {
+            viewConfigurationManager.trashView(viewConfigId);
+        }
+
+        // Notify parent
+        onTrash?.();
+    }, [viewConfigId, onTrash]);
+
     // =========================================================================
     // RENDER
     // =========================================================================
@@ -1304,7 +1349,8 @@ export function InstanceViewport({
                 instanceColor={instanceColor}
                 isFullscreen={isFullscreen}
                 onFullscreen={handleFullscreen}
-                onDelete={onDelete}
+                onClose={handleClose}     // X button
+                onTrash={handleTrash}     // Trash button
                 onChangeSpan={onChangeSpan}
                 currentSpan={currentSpan}
                 showSpanPicker={showSpanPicker}

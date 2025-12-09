@@ -582,6 +582,30 @@ export function DatasetsPanelContent({ workspaceId }) {
                                 </div>
                             )}
                         </ResizableSection>
+
+                        <ResizableSection
+                            id="trashed"
+                            icon={Trash2}
+                            iconColorClass="icon-muted"
+                            label="Recently Deleted"
+                            count={trashedViews.length}
+                            badge={trashedViews.length > 0 ? trashedViews.length : null}
+                        >
+                            {trashedViews.length === 0 ? (
+                                <div className="resizable-section__empty">
+                                    No recently deleted views
+                                </div>
+                            ) : (
+                                trashedViews.map(view => (
+                                    <TrashedViewItem
+                                        key={view.id}
+                                        view={view}
+                                        onRestore={() => viewConfigurationManager.restoreView(view.id)}
+                                        onPermanentDelete={() => viewConfigurationManager.permanentlyDeleteView(view.id)}
+                                    />
+                                ))
+                            )}
+                        </ResizableSection>
                     </ResizableSectionsContainer>
                 )}
             </div>
@@ -597,6 +621,35 @@ export function DatasetsPanelContent({ workspaceId }) {
                 </button>
                 <button className="panel-footer__btn panel-footer__btn--icon" title="Refresh">
                     <RefreshCw size={11} />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function TrashedViewItem({ view, onRestore, onPermanentDelete }) {
+    return (
+        <div className="trashed-view-item">
+            <div className="trashed-view-item__info">
+                <span className="trashed-view-item__name">{view.name}</span>
+                <span className="trashed-view-item__expires">
+                    Expires in {view.expiresInHours}h
+                </span>
+            </div>
+            <div className="trashed-view-item__actions">
+                <button
+                    onClick={onRestore}
+                    className="trashed-view-item__restore"
+                    title="Restore view"
+                >
+                    <RotateCcw size={12} />
+                </button>
+                <button
+                    onClick={onPermanentDelete}
+                    className="trashed-view-item__delete"
+                    title="Delete permanently"
+                >
+                    <X size={12} />
                 </button>
             </div>
         </div>

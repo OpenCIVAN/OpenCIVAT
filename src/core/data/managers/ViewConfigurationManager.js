@@ -1499,6 +1499,115 @@ export class ViewConfigurationManager extends BaseManager {
 
     log.info("Shutdown complete");
   }
+
+  /**
+   * Move a view to Recently Deleted (soft delete)
+   * View is recoverable for 24 hours
+   */
+  trashView(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) return false;
+
+    // Set trashed status with timestamp
+    view.status = "trashed";
+    view.trashedAt = Date.now();
+    view.trashedBy = getUserId();
+    view.updatedAt = Date.now();
+
+    // Deactivate any active instances
+    view.activeInstanceCount = 0;
+
+    this._viewConfigs.set(viewId, view);
+    this._logAudit("view_trashed", { viewId });
+    this.emit("viewTrashed", { viewId, view });
+
+    // Sync to server
+    this._syncViewToServer(viewId);
+
+    return true;
+  }
+
+  /**
+   * Restore a view from Recently Deleted
+   */
+  restoreView(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view || view.status !== "trashed") return false;
+
+    // Restore to inactive status
+    view.status = "inactive";
+    view.trashedAt = null;
+    view.trashedBy = null;
+    view.updatedAt = Date.now();
+
+    this._viewConfigs.set(viewId, view);
+    this._logAudit("view_restored", { viewId });
+    this.emit("viewRestored", { viewId, view });
+
+    // Sync to server
+    this._syncViewToServer(viewId);
+
+    return true;
+  }
+
+  /**
+   * Permanently delete a view (cannot be undone)
+   */
+  permanentlyDeleteView(viewId) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) return false;
+
+    // Remove from local cache
+    this._viewConfigs.delete(viewId);
+
+    this._logAudit("view_permanently_deleted", { viewId });
+    this.emit("viewDeleted", { viewId });
+
+    // Delete from server
+    this._deleteViewFromServer(viewId);
+
+    return true;
+  }
+
+  /**
+   * Get all trashed views (for Recently Deleted section)
+   */
+  getTrashedViews() {
+    const trashed = [];
+    const now = Date.now();
+    const RETENTION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+    this._viewConfigs.forEach((view, id) => {
+      if (view.status === "trashed") {
+        const age = now - view.trashedAt;
+        const expiresIn = RETENTION_MS - age;
+
+        trashed.push({
+          ...view,
+          id,
+          expiresIn,
+          expiresInHours: Math.max(0, Math.floor(expiresIn / (60 * 60 * 1000))),
+        });
+      }
+    });
+
+    // Sort by most recently trashed
+    return trashed.sort((a, b) => b.trashedAt - a.trashedAt);
+  }
+
+  /**
+   * Clean up expired trashed views (call periodically)
+   */
+  purgeExpiredViews() {
+    const now = Date.now();
+    const RETENTION_MS = 24 * 60 * 60 * 1000;
+
+    this._viewConfigs.forEach((view, id) => {
+      if (view.status === "trashed" && now - view.trashedAt > RETENTION_MS) {
+        this.permanentlyDeleteView(id);
+      }
+    });
+  }
 }
 
 // Export singleton

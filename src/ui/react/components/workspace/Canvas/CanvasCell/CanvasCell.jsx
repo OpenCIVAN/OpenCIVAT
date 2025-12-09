@@ -366,7 +366,15 @@ function ViewContent({ viewId, rowSpan, colSpan, placementId, onClose }) {
                 viewConfigId={viewId}
                 isRemote={false}
                 currentSpan={`${colSpan}x${rowSpan}`}
-                onDelete={onClose}
+                onClose={() => {
+                    // Remove placement from canvas, view goes to inactive in DatasetsTab
+                    removePlacement(cell.placementId);
+                }}
+                onTrash={() => {
+                    // Remove placement, view goes to Recently Deleted
+                    removePlacement(cell.placementId);
+                    // View already moved to trash by InstanceViewport
+                }}
             />
         </div>
     );
