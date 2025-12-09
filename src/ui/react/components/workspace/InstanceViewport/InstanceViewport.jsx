@@ -21,6 +21,7 @@ import { VRButton } from '@UI/react/components/common/VRButton';
 import { vrManager } from '@Core/vr/VRManager.js';
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
+import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 
 import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
@@ -190,36 +191,6 @@ function BottomNavBar({
     );
 }
 
-/**
- * CornerControls - Fallback controls for small viewports
- * Shows three buttons in top-right corner
- */
-function CornerControls({
-    onOpenInstanceTools,
-    onSettings,
-    constraintMessage,
-    instanceId,
-}) {
-    return (
-        <div className="instance-viewport__corner-controls">
-            <button
-                className="instance-viewport__corner-button"
-                onClick={onOpenInstanceTools}
-                title="Instance Tools"
-            >
-                <Wrench size={16} />
-            </button>
-            <VRButton instanceId={instanceId} size="sm" className="instance-viewport__corner-button" />
-            <button
-                className="instance-viewport__corner-button"
-                onClick={onSettings}
-                title="Settings"
-            >
-                <Settings size={16} />
-            </button>
-        </div>
-    );
-}
 
 /**
  * GearOnlyDropdown - Minimal controls for super tiny viewports
@@ -270,27 +241,6 @@ function GearOnlyDropdown({
                     </button>
                 </div>
             )}
-        </div>
-    );
-}
-
-/**
- * TooSmallNotice - Subtle banner for undersized viewports
- */
-function TooSmallNotice({ constraintMessage, onOpenTools }) {
-    if (!constraintMessage) return null;
-
-    return (
-        <div className="instance-viewport__size-notice">
-            <span className="instance-viewport__size-notice-text">
-                {constraintMessage}
-            </span>
-            <button
-                className="instance-viewport__size-notice-button"
-                onClick={onOpenTools}
-            >
-                Tools
-            </button>
         </div>
     );
 }
@@ -664,6 +614,17 @@ export function InstanceViewport({
                 setLoading(true);
                 log.debug(`Creating typeless instance (view: ${viewConfigId || 'none'})`);
 
+                // Check if view is trashed or archived before creating instance
+                if (viewConfigId) {
+                    const viewConfig = viewConfigurationManager.getView(viewConfigId);
+                    if (viewConfig && (viewConfig.status === 'trashed' || viewConfig.status === 'archived')) {
+                        log.warn(`Cannot create instance for ${viewConfig.status} view ${viewConfigId}`);
+                        setError(`View has been ${viewConfig.status === 'trashed' ? 'deleted' : 'archived'}`);
+                        setLoading(false);
+                        return;
+                    }
+                }
+
                 const instanceId = await workspaceManager.createInstance(
                     containerRef.current,
                     null,
@@ -727,6 +688,12 @@ export function InstanceViewport({
                     return;
                 }
 
+                // Don't load data for trashed or archived views
+                if (viewConfig.status === 'trashed' || viewConfig.status === 'archived') {
+                    log.warn(`View ${viewConfigId} is ${viewConfig.status}, skipping data load`);
+                    return;
+                }
+
                 if (viewConfig.datasetId) {
                     await workspaceManager.loadDataIntoInstance(
                         actualInstanceId,
@@ -782,6 +749,47 @@ export function InstanceViewport({
         window.addEventListener('cia:tools-updated', handleToolsUpdate);
         return () => window.removeEventListener('cia:tools-updated', handleToolsUpdate);
     }, [actualInstanceId, initialized, instanceType]);
+
+    // =========================================================================
+    // VIEW LIFECYCLE - Listen for view being trashed/deleted
+    // If our view gets trashed or deleted, remove placement and close instance
+    // =========================================================================
+
+    useEffect(() => {
+        if (!viewConfigId) return;
+
+        const handleViewTrashed = async ({ viewId }) => {
+            if (viewId === viewConfigId) {
+                log.info(`View ${viewConfigId} was trashed, removing placement and closing instance`);
+                // Remove the canvas placement - this will cause React to unmount this component
+                try {
+                    await canvasManager?.removeViewPlacements?.(viewId);
+                } catch (err) {
+                    log.warn(`Failed to remove placements for trashed view ${viewId}:`, err);
+                }
+            }
+        };
+
+        const handleViewDeleted = async ({ viewId }) => {
+            if (viewId === viewConfigId) {
+                log.info(`View ${viewConfigId} was permanently deleted, removing placement and closing instance`);
+                // Remove the canvas placement - this will cause React to unmount this component
+                try {
+                    await canvasManager?.removeViewPlacements?.(viewId);
+                } catch (err) {
+                    log.warn(`Failed to remove placements for deleted view ${viewId}:`, err);
+                }
+            }
+        };
+
+        viewConfigurationManager?.on?.('viewTrashed', handleViewTrashed);
+        viewConfigurationManager?.on?.('viewDeleted', handleViewDeleted);
+
+        return () => {
+            viewConfigurationManager?.off?.('viewTrashed', handleViewTrashed);
+            viewConfigurationManager?.off?.('viewDeleted', handleViewDeleted);
+        };
+    }, [viewConfigId]);
 
     // =========================================================================
     // ZOOM SYNC WITH CAMERA
@@ -1410,23 +1418,6 @@ export function InstanceViewport({
                     onZoomChange={handleZoomChange}
                     onFit={handleFit}
                 />
-            )}
-
-            {/* Corner Controls - For small viewports */}
-            {uiMode === 'corner-controls' && (
-                <>
-                    <CornerControls
-                        onOpenInstanceTools={handleOpenInstanceTools}
-                        onVRMode={handleVRMode}
-                        onSettings={() => { }}
-                        constraintMessage={constraintMessage}
-                        instanceId={actualInstanceId}
-                    />
-                    <TooSmallNotice
-                        constraintMessage={constraintMessage}
-                        onOpenTools={handleOpenInstanceTools}
-                    />
-                </>
             )}
 
             {/* Gear Only Dropdown - For super tiny viewports */}

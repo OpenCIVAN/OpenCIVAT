@@ -439,6 +439,22 @@ export class CanvasManager extends BaseManager {
         }
       }
     } catch (error) {
+      // 404 means placement is already gone - that's fine, just update local cache
+      if (error.message?.includes("404")) {
+        // Still try to remove from local cache in case it's out of sync
+        for (const canvas of this._canvases.values()) {
+          const idx = canvas.placements.findIndex((p) => p.id === placementId);
+          if (idx !== -1) {
+            const removed = canvas.placements.splice(idx, 1)[0];
+            this._emit("placementRemoved", {
+              canvasId: canvas.id,
+              placement: removed,
+            });
+            break;
+          }
+        }
+        return; // Don't throw - placement is gone which is what we wanted
+      }
       this._emit("error", { operation: "removePlacement", error });
       throw error;
     }

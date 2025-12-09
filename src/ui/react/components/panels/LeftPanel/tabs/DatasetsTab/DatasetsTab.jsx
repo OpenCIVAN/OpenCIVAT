@@ -31,6 +31,7 @@ import {
     Columns3,
     GripVertical,
     RotateCcw,
+    Plus,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import {
@@ -171,21 +172,23 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
     const { icon: TypeIcon, color, colorClass } = getDatasetTypeConfig(dataset.fileType);
     const activeCount = views.filter(v => v.status === 'active').length;
 
+    // Create a new view for this dataset
+    const handleCreateView = useCallback((e) => {
+        e?.stopPropagation();
+        log.debug(`Creating new view for dataset ${dataset.id}`);
+        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+            detail: { datasetId: dataset.id, spawnNew: true }
+        }));
+    }, [dataset.id]);
+
     const handleClick = useCallback((e) => {
-        if (views.length === 0) {
-            log.debug(`Creating first view for dataset ${dataset.id}`);
-            window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                detail: { datasetId: dataset.id, spawnNew: true }
-            }));
-        } else if (e.shiftKey) {
-            log.debug(`Creating new view for dataset ${dataset.id}`);
-            window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                detail: { datasetId: dataset.id, spawnNew: true }
-            }));
+        if (e.shiftKey) {
+            // Shift+click always creates a new view
+            handleCreateView(e);
         } else {
             onToggle();
         }
-    }, [dataset.id, views.length, onToggle]);
+    }, [handleCreateView, onToggle]);
 
     return (
         <div className="dataset-parent">
@@ -204,17 +207,38 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                     <span className={activeCount > 0 ? 'text-green' : ''}>{activeCount}</span>/{views.length}
                 </span>
                 {isHovered && (
-                    <button className="dataset-parent__more-btn" onClick={(e) => e.stopPropagation()}>
-                        <MoreHorizontal size={12} />
-                    </button>
+                    <>
+                        <button
+                            className="dataset-parent__add-btn"
+                            onClick={handleCreateView}
+                            title="Create new view"
+                        >
+                            <Plus size={12} />
+                        </button>
+                        <button className="dataset-parent__more-btn" onClick={(e) => e.stopPropagation()}>
+                            <MoreHorizontal size={12} />
+                        </button>
+                    </>
                 )}
             </div>
 
-            {isExpanded && views.length > 0 && (
+            {isExpanded && (
                 <div className="dataset-parent__children">
-                    {views.map(view => (
-                        <DatasetViewItemWrapper key={view.id} view={view} datasetId={dataset.id} />
-                    ))}
+                    {views.length > 0 ? (
+                        views.map(view => (
+                            <DatasetViewItemWrapper key={view.id} view={view} datasetId={dataset.id} />
+                        ))
+                    ) : (
+                        <div className="dataset-parent__empty">
+                            <button
+                                className="dataset-parent__create-view-btn"
+                                onClick={handleCreateView}
+                            >
+                                <Plus size={12} />
+                                <span>Create View</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -356,11 +380,15 @@ export function DatasetsPanelContent({ workspaceId }) {
         viewConfigurationManager?.on?.('viewUpdated', handleViewUpdate);
         viewConfigurationManager?.on?.('viewDeactivated', handleViewUpdate);
         viewConfigurationManager?.on?.('viewActivated', handleViewUpdate);
+        viewConfigurationManager?.on?.('viewTrashed', handleViewUpdate);
+        viewConfigurationManager?.on?.('viewRestored', handleViewUpdate);
 
         return () => {
             viewConfigurationManager?.off?.('viewUpdated', handleViewUpdate);
             viewConfigurationManager?.off?.('viewDeactivated', handleViewUpdate);
             viewConfigurationManager?.off?.('viewActivated', handleViewUpdate);
+            viewConfigurationManager?.off?.('viewTrashed', handleViewUpdate);
+            viewConfigurationManager?.off?.('viewRestored', handleViewUpdate);
         };
     }, []);
 
@@ -371,43 +399,35 @@ export function DatasetsPanelContent({ workspaceId }) {
     const loadedDatasets = useDatasets();
 
     // Get real views from ViewConfigurationManager
+    // Filter out trashed/archived views - they're shown in "Recently Deleted" section
     const getViewsForDataset = useCallback((datasetId) => {
         try {
             const views = viewConfigurationManager?.getViewsForDataset?.(datasetId) || [];
-            return views.map(v => ({
-                id: v.id,
-                name: v.name || 'Untitled View',
-                datasetId: datasetId,
-                workspace: v.workspaceId || 'personal',
-                status: v.activeInstanceCount > 0 ? 'active' : 'inactive',
-                instanceColor: v.camera?.color || '#60a5fa',
-                filters: v.filters || [],
-                isShared: v.scope === 'shared' || v.scope === 'project',
-                sharedBy: v.createdBy,
-                position: v.gridPosition || null,
-            }));
+            return views
+                .filter(v => v.status !== 'trashed' && v.status !== 'archived')
+                .map(v => ({
+                    id: v.id,
+                    name: v.name || 'Untitled View',
+                    datasetId: datasetId,
+                    workspace: v.workspaceId || 'personal',
+                    // Use actual status, fall back to activeInstanceCount check for legacy views
+                    status: v.status === 'active' || v.activeInstanceCount > 0 ? 'active' : 'inactive',
+                    instanceColor: v.camera?.color || '#60a5fa',
+                    filters: v.filters || [],
+                    isShared: v.scope === 'shared' || v.scope === 'project',
+                    sharedBy: v.createdBy,
+                    position: v.gridPosition || null,
+                }));
         } catch (e) {
             log.warn('Failed to get views:', e);
             return [];
         }
     }, []);
 
-    // Transform datasets
+    // Transform datasets - no more placeholder views, show actual 0/0 when empty
     const datasets = useMemo(() => {
         return loadedDatasets.map(ds => {
-            const realViews = getViewsForDataset(ds.id);
-            const views = realViews.length > 0 ? realViews : [{
-                id: `placeholder-${ds.id}`,
-                name: 'Default View',
-                datasetId: ds.id,
-                workspace: workspaceId || 'personal',
-                status: 'inactive',
-                instanceColor: '#60a5fa',
-                filters: [],
-                isShared: false,
-                isPlaceholder: true,
-                position: null,
-            }];
+            const views = getViewsForDataset(ds.id);
 
             return {
                 id: ds.id,
@@ -417,7 +437,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                 views,
             };
         });
-    }, [loadedDatasets, getViewsForDataset, workspaceId, viewRefreshCounter]);
+    }, [loadedDatasets, getViewsForDataset, viewRefreshCounter]);
 
     // Flatten all views
     const allViews = useMemo(() => {
@@ -528,8 +548,9 @@ export function DatasetsPanelContent({ workspaceId }) {
 
         // Views are "on canvas" if they have an active instance (status === 'active')
         // Views are "not placed" if they are inactive (not trashed, not active)
-        const placed = filtered.filter(v => v.status === 'active');
-        const unplaced = filtered.filter(v => v.status === 'inactive');
+        // Filter out placeholder views - they're only for the "By Dataset" tree view
+        const placed = filtered.filter(v => v.status === 'active' && !v.isPlaceholder);
+        const unplaced = filtered.filter(v => v.status === 'inactive' && !v.isPlaceholder);
 
         // Sort placed views by position if available
         placed.sort((a, b) => {
@@ -714,6 +735,18 @@ export function DatasetsPanelContent({ workspaceId }) {
 }
 
 function TrashedViewItem({ view, onRestore, onPermanentDelete }) {
+    // Handle permanent delete - must close any instances first
+    const handlePermanentDelete = useCallback(async () => {
+        // Close any lingering instances by removing from canvas
+        await canvasManager?.removeViewPlacements?.(view.id);
+        // Dispatch close event for any listening components
+        window.dispatchEvent(new CustomEvent('cia:close-view', {
+            detail: { viewId: view.id }
+        }));
+        // Now permanently delete the view
+        onPermanentDelete();
+    }, [view.id, onPermanentDelete]);
+
     return (
         <div className="trashed-view-item">
             <div className="trashed-view-item__info">
@@ -731,7 +764,7 @@ function TrashedViewItem({ view, onRestore, onPermanentDelete }) {
                     <RotateCcw size={12} />
                 </button>
                 <button
-                    onClick={onPermanentDelete}
+                    onClick={handlePermanentDelete}
                     className="trashed-view-item__delete"
                     title="Delete permanently"
                 >

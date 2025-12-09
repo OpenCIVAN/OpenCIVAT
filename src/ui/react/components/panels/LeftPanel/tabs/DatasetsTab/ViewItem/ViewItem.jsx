@@ -250,17 +250,19 @@ export const ViewItem = memo(function ViewItem({
 
                 {/* Action Buttons */}
                 <div className="view-item__actions">
-                    {/* Close Button - deactivate, remove from canvas but keep in list */}
-                    <button
-                        className="view-item__close-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onClose?.(view.id);
-                        }}
-                        title="Close view (remove from canvas)"
-                    >
-                        <X size={12} />
-                    </button>
+                    {/* Close Button - only show for active views (deactivate, remove from canvas) */}
+                    {isActive && (
+                        <button
+                            className="view-item__close-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onClose?.(view.id);
+                            }}
+                            title="Close view (remove from canvas)"
+                        >
+                            <X size={12} />
+                        </button>
+                    )}
                     {/* Trash Button - move to Recently Deleted */}
                     <button
                         className="view-item__trash-btn"

@@ -311,6 +311,47 @@
     border-bottom-right-radius: $radius-md;
     padding: $spacing-xs;
   }
+
+  &__add-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+    transition: all $transition-fast;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      color: $color-accent-green;
+      background: rgba($color-accent-green, 0.1);
+    }
+  }
+
+  &__empty {
+    padding: $spacing-sm;
+    text-align: center;
+  }
+
+  &__create-view-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba($color-accent-blue, 0.1);
+    border: 1px solid rgba($color-accent-blue, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-blue;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.2);
+      border-color: rgba($color-accent-blue, 0.5);
+    }
+  }
 }
 
 // =============================================================================

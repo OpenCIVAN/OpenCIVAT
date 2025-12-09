@@ -28,6 +28,7 @@ import { AnnotationsSubtab } from './subtabs/AnnotationsSubtab';
 // Import managers
 // For instance tools, use the instances workspaceManager:
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
+import { viewConfigurationManager } from '@Init/appInitializer.js';
 
 import './InstanceToolsTab.scss';
 
@@ -191,12 +192,28 @@ export function InstanceToolsPanelContent({ workspaceId }) {
             updateActiveInstance();
         };
 
+        // Listen for view closure/deletion - clear active instance if it was deleted
+        const handleViewClosed = () => {
+            // Small delay to allow workspaceManager to update
+            setTimeout(updateActiveInstance, 50);
+        };
+
         window.addEventListener('cia:instance-focused', handleInstanceFocus);
         window.addEventListener('cia:active-instance-changed', handleInstanceFocus);
+        window.addEventListener('cia:close-view', handleViewClosed);
+
+        // Also listen to viewConfigurationManager events
+        viewConfigurationManager?.on?.('viewTrashed', handleViewClosed);
+        viewConfigurationManager?.on?.('viewDeleted', handleViewClosed);
+        viewConfigurationManager?.on?.('viewDeactivated', handleViewClosed);
 
         return () => {
             window.removeEventListener('cia:instance-focused', handleInstanceFocus);
             window.removeEventListener('cia:active-instance-changed', handleInstanceFocus);
+            window.removeEventListener('cia:close-view', handleViewClosed);
+            viewConfigurationManager?.off?.('viewTrashed', handleViewClosed);
+            viewConfigurationManager?.off?.('viewDeleted', handleViewClosed);
+            viewConfigurationManager?.off?.('viewDeactivated', handleViewClosed);
         };
     }, []);
 

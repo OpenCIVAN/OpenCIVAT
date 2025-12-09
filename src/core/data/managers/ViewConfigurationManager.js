@@ -227,6 +227,8 @@ export class ViewConfigurationManager extends BaseManager {
       status: serverView.status || "active",
       activeInstanceCount: serverView.active_instance_count || 0,
       lastActiveTimestamp: serverView.last_active_timestamp,
+      trashedAt: serverView.trashed_at,
+      trashedBy: serverView.trashed_by,
       serverVersion: serverView.server_version || 1,
       createdAt: serverView.created_at,
       updatedAt: serverView.updated_at,
@@ -265,6 +267,8 @@ export class ViewConfigurationManager extends BaseManager {
       applied_presets: view.appliedPresets,
       status: view.status,
       active_instance_count: view.activeInstanceCount,
+      trashed_at: view.trashedAt,
+      trashed_by: view.trashedBy,
     };
   }
 

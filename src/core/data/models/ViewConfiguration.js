@@ -851,16 +851,25 @@ export class ViewConfiguration {
   // ===========================================================================
 
   activate() {
+    // Don't activate trashed or archived views - they must be restored first
+    if (this.status === "trashed" || this.status === "archived") {
+      return false;
+    }
     this.status = "active";
     this.activeInstanceCount++;
     this.lastActiveTimestamp = Date.now();
     this.updatedAt = Date.now();
+    return true;
   }
 
   deactivate() {
     this.activeInstanceCount = Math.max(0, this.activeInstanceCount - 1);
     if (this.activeInstanceCount === 0) {
-      this.status = "inactive";
+      // Only change to inactive if not already trashed or archived
+      // This prevents async cleanup from overwriting trashed/archived status
+      if (this.status !== "trashed" && this.status !== "archived") {
+        this.status = "inactive";
+      }
     }
     this.updatedAt = Date.now();
   }
