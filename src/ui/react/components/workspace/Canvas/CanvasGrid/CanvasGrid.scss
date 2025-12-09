@@ -180,11 +180,16 @@
   display: grid;
   // VIRTUAL SCROLLING: Grid template uses CANVAS dimensions (full grid)
   // This creates scroll area for the entire canvas
-  // 280px min-width ensures toolbar buttons remain usable
-  // 200px min-height ensures content area is visible
-  // Fixed size (not 1fr) so empty cells don't collapse
-  grid-template-columns: repeat(var(--canvas-cols, 10), minmax(280px, 300px));
-  grid-template-rows: repeat(var(--canvas-rows, 10), minmax(200px, 250px));
+  // Cell sizes are calculated by JS to fill visible area while respecting minimums
+  // Using fixed sizes (from CSS vars) ensures:
+  // 1. Cells fill available space (no wasted area)
+  // 2. Minimum sizes are respected (280x200)
+  // 3. No partial cells visible (exact fit)
+  grid-template-columns: repeat(
+    var(--canvas-cols, 10),
+    var(--cell-width, 280px)
+  );
+  grid-template-rows: repeat(var(--canvas-rows, 10), var(--cell-height, 200px));
   gap: $spacing-md;
   min-height: 0;
   overflow: auto; // Enable scrolling for virtual scrolling

@@ -300,6 +300,45 @@ export function CanvasGrid({
         cols: canvas?.dimensions?.cols || 10,
     }), [canvas?.dimensions?.rows, canvas?.dimensions?.cols]);
 
+    // Ref for cells container (for scroll sync and resize observation)
+    const cellsContainerRef = useRef(null);
+
+    // Calculate cell sizes to fill visible area while respecting minimums
+    const [cellSizes, setCellSizes] = useState({ width: 280, height: 200 });
+    const MIN_CELL_WIDTH = 280;
+    const MIN_CELL_HEIGHT = 200;
+    const GAP = 16; // $spacing-md
+
+    // ResizeObserver to recalculate cell sizes when container resizes
+    useEffect(() => {
+        const container = cellsContainerRef.current;
+        if (!container) return;
+
+        const calculateCellSizes = () => {
+            const containerWidth = container.clientWidth - GAP; // Account for padding
+            const containerHeight = container.clientHeight - GAP;
+
+            // Calculate ideal cell size to fit viewport cells in visible area
+            const idealWidth = (containerWidth - (effectiveViewport.cols - 1) * GAP) / effectiveViewport.cols;
+            const idealHeight = (containerHeight - (effectiveViewport.rows - 1) * GAP) / effectiveViewport.rows;
+
+            // Use ideal size if >= minimum, otherwise use minimum (will scroll)
+            const cellWidth = Math.max(MIN_CELL_WIDTH, Math.floor(idealWidth));
+            const cellHeight = Math.max(MIN_CELL_HEIGHT, Math.floor(idealHeight));
+
+            setCellSizes({ width: cellWidth, height: cellHeight });
+        };
+
+        // Initial calculation
+        calculateCellSizes();
+
+        // Observe container size changes
+        const resizeObserver = new ResizeObserver(calculateCellSizes);
+        resizeObserver.observe(container);
+
+        return () => resizeObserver.disconnect();
+    }, [effectiveViewport.cols, effectiveViewport.rows]);
+
     // Filter placements to only those visible in the effective viewport
     const viewportPlacements = useMemo(() => {
         if (!canvas?.placements) return [];
@@ -331,12 +370,9 @@ export function CanvasGrid({
         const container = e.target;
         if (!container) return;
 
-        // Get cell dimensions from first cell or estimate
-        const firstCell = container.querySelector('.canvas-cell');
-        if (!firstCell) return;
-
-        const cellWidth = firstCell.offsetWidth + 16; // Include gap
-        const cellHeight = firstCell.offsetHeight + 16; // Include gap
+        // Use calculated cell sizes (includes gap)
+        const cellWidth = cellSizes.width + GAP;
+        const cellHeight = cellSizes.height + GAP;
 
         // Calculate viewport position based on scroll
         const newCol = Math.round(container.scrollLeft / cellWidth);
@@ -354,20 +390,16 @@ export function CanvasGrid({
                 moveViewport(clampedRow - viewport.row, clampedCol - viewport.col);
             }
         }
-    }, [viewport.row, viewport.col, canvasDimensions, effectiveViewport.rows, effectiveViewport.cols, moveViewport]);
+    }, [viewport.row, viewport.col, canvasDimensions, effectiveViewport.rows, effectiveViewport.cols, moveViewport, cellSizes.width, cellSizes.height]);
 
     // Sync scroll position when viewport changes (from keyboard/minimap)
-    const cellsContainerRef = useRef(null);
     useEffect(() => {
         const container = cellsContainerRef.current;
         if (!container) return;
 
-        // Get cell dimensions
-        const firstCell = container.querySelector('.canvas-cell');
-        if (!firstCell) return;
-
-        const cellWidth = firstCell.offsetWidth + 16; // Include gap
-        const cellHeight = firstCell.offsetHeight + 16; // Include gap
+        // Use calculated cell sizes (includes gap)
+        const cellWidth = cellSizes.width + GAP;
+        const cellHeight = cellSizes.height + GAP;
 
         // Calculate target scroll position
         const targetScrollLeft = viewport.col * cellWidth;
@@ -390,7 +422,7 @@ export function CanvasGrid({
                 isScrollingRef.current = false;
             }, 300);
         }
-    }, [viewport.row, viewport.col]);
+    }, [viewport.row, viewport.col, cellSizes.width, cellSizes.height]);
 
     // Build grid cells
     const renderCells = () => {
@@ -552,6 +584,8 @@ export function CanvasGrid({
                     '--canvas-cols': canvasDimensions.cols,
                     '--viewport-rows': effectiveViewport.rows,
                     '--viewport-cols': effectiveViewport.cols,
+                    '--cell-width': `${cellSizes.width}px`,
+                    '--cell-height': `${cellSizes.height}px`,
                 }}
             >
                 <div
