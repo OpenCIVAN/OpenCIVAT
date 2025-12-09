@@ -11,8 +11,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  min-height: 0;
+  min-width: 280px; // Ensure toolbar remains usable
+  min-height: 200px; // Ensure content area is visible
   overflow: hidden;
   transition: all 0.15s ease;
   cursor: pointer;
@@ -98,45 +98,52 @@
     }
   }
 
+  // Selected state - uses instance color with glow effect
   &--selected {
-    outline: 3px solid $color-accent-primary;
-    outline-offset: -1px;
-    box-shadow: 0 0 0 4px rgba($color-accent-primary, 0.2);
+    // Use CSS variable for instance color, fallback to accent primary
+    --selection-color: var(--instance-color, #{$color-accent-primary});
+    outline: 3px solid var(--selection-color);
+    outline-offset: 2px; // Offset outside cell to prevent cutoff
+    box-shadow: 0 0 12px var(--selection-color),
+      0 0 24px color-mix(in srgb, var(--selection-color) 50%, transparent);
   }
 
-  // Highlight animation
+  // Highlight animation - uses instance color for glow
   &--highlighted {
+    --highlight-color: var(--instance-color, #{$color-accent-primary});
     animation: highlight-pulse 2s ease-in-out;
   }
 
   @keyframes highlight-pulse {
     0% {
       transform: scale(1);
-      box-shadow: 0 0 0 0 rgba($color-accent-primary, 0);
+      outline-width: 0;
+      outline-offset: 0;
     }
     15% {
       transform: scale(1.02);
-      box-shadow: 0 0 0 8px rgba($color-accent-primary, 0.6),
-        0 0 30px rgba($color-accent-primary, 0.4);
+      outline-width: 6px;
+      outline-offset: 4px;
     }
     30% {
       transform: scale(1);
-      box-shadow: 0 0 0 12px rgba($color-accent-primary, 0.4),
-        0 0 40px rgba($color-accent-primary, 0.3);
+      outline-width: 8px;
+      outline-offset: 6px;
     }
     50% {
       transform: scale(1.01);
-      box-shadow: 0 0 0 8px rgba($color-accent-primary, 0.5),
-        0 0 30px rgba($color-accent-primary, 0.3);
+      outline-width: 6px;
+      outline-offset: 4px;
     }
     70% {
       transform: scale(1);
-      box-shadow: 0 0 0 4px rgba($color-accent-primary, 0.3),
-        0 0 20px rgba($color-accent-primary, 0.2);
+      outline-width: 3px;
+      outline-offset: 2px;
     }
     100% {
       transform: scale(1);
-      box-shadow: 0 0 0 0 rgba($color-accent-primary, 0);
+      outline-width: 0;
+      outline-offset: 0;
     }
   }
 

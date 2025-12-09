@@ -600,6 +600,27 @@ export class ViewConfigurationManager extends BaseManager {
   // ===========================================================================
 
   /**
+   * Rename a view
+   * @param {string} viewId - The view to rename
+   * @param {string} newName - The new name
+   */
+  renameView(viewId, newName) {
+    const view = this._viewConfigs.get(viewId);
+    if (!view) {
+      log.warn(`Cannot rename view ${viewId}: not found`);
+      return;
+    }
+
+    view.name = newName;
+    view.updatedAt = Date.now();
+
+    log.debug(`View ${viewId} renamed to "${newName}"`);
+
+    this._syncToServer(view);
+    this._emit("viewUpdated", view);
+  }
+
+  /**
    * Update view camera state
    */
   updateCamera(viewId, cameraState) {

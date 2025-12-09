@@ -3,16 +3,18 @@
  *
  * Glassmorphism frosted glass panel that slides out on hover.
  * Now includes per-property parent dropdown selectors.
+ * Renders in a portal for better visibility in constrained containers.
  *
  * Row 0: Tooltip Area
  * Row 1: Action Button Groups + Size Picker
  * Row 2: Linked Parent Info (conditional)
  * Row 3: Link Properties with Per-Parent Dropdowns (NEW!)
- * 
+ *
  * Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/components/SlidingPanel.jsx
  */
 
-import React, { memo, useState, useMemo } from 'react';
+import React, { memo, useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
     Folder,
     Globe,
@@ -64,6 +66,9 @@ const IconBtn = memo(function IconBtn({
 export const SlidingPanel = memo(function SlidingPanel({
     isVisible,
     view,
+    anchorRef,                // Ref to the ViewItem element for positioning
+    onPanelEnter,             // Called when mouse enters panel
+    onPanelLeave,             // Called when mouse leaves panel
     // Link configuration
     linkConfig = {},          // { camera: { enabled, parentId }, filters: { enabled, parentId }, ... }
     availableViews = [],      // Views that can be linked to (excluding current view)
@@ -84,6 +89,8 @@ export const SlidingPanel = memo(function SlidingPanel({
 }) {
     const [tooltipText, setTooltipText] = useState(null);
     const [showSizePicker, setShowSizePicker] = useState(false);
+    const [position, setPosition] = useState({ top: 0, left: 0 });
+    const panelRef = useRef(null);
 
     // Determine if linking is enabled (has available views to link to)
     const linkingEnabled = availableViews.length > 0;
@@ -93,10 +100,64 @@ export const SlidingPanel = memo(function SlidingPanel({
         return Object.values(linkConfig).some(c => c?.enabled && c?.parentId);
     }, [linkConfig]);
 
+    // Calculate position based on anchor element
+    const updatePosition = useCallback(() => {
+        if (!anchorRef?.current) return;
+
+        const anchorRect = anchorRef.current.getBoundingClientRect();
+        const panelWidth = 280; // Approximate panel width
+        const panelHeight = 200; // Approximate panel height
+        const padding = 8;
+
+        let top = anchorRect.bottom + padding;
+        let left = anchorRect.left;
+
+        // Check if panel would go off-screen bottom
+        if (top + panelHeight > window.innerHeight) {
+            // Position above the anchor instead
+            top = anchorRect.top - panelHeight - padding;
+        }
+
+        // Check if panel would go off-screen right
+        if (left + panelWidth > window.innerWidth) {
+            left = window.innerWidth - panelWidth - padding;
+        }
+
+        // Ensure not off-screen left
+        if (left < padding) {
+            left = padding;
+        }
+
+        // TODO: Add logic for when panel is too small to render below
+        // For now, just position it as best we can
+
+        setPosition({ top, left });
+    }, [anchorRef]);
+
+    // Update position when visibility changes
+    useEffect(() => {
+        if (isVisible) {
+            updatePosition();
+        }
+    }, [isVisible, updatePosition]);
+
     if (!isVisible) return null;
 
-    return (
-        <div className="sliding-panel">
+    const panelContent = (
+        <div
+            ref={panelRef}
+            className="sliding-panel sliding-panel--portal"
+            style={{
+                position: 'fixed',
+                top: position.top,
+                left: position.left,
+                width: 280,
+                maxWidth: 'calc(100vw - 16px)',
+                zIndex: 9999,
+            }}
+            onMouseEnter={onPanelEnter}
+            onMouseLeave={onPanelLeave}
+        >
             {/* Row 0: Tooltip Area */}
             <div className="sliding-panel__tooltip">
                 {tooltipText || (
@@ -223,6 +284,9 @@ export const SlidingPanel = memo(function SlidingPanel({
             />
         </div>
     );
+
+    // Render in a portal for better visibility
+    return createPortal(panelContent, document.body);
 });
 
 export default SlidingPanel;

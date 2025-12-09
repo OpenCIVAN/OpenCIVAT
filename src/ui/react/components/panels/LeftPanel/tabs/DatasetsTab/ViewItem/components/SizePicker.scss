@@ -1,236 +1,199 @@
+// SizePicker.scss
+// Size picker dropdown for selecting view canvas size
+
 @use "theme" as *;
 
-.sliding-panel {
+.size-picker {
   position: absolute;
   top: 100%;
-  left: 0;
   right: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
+  min-width: 160px;
   padding: $spacing-sm;
-  z-index: $z-dropdown;
-
-  // Align border with parent
-  margin-left: 0;
-  border-left: 3px solid var(--view-color);
-
-  // Glassmorphism
-  background: rgba(18, 18, 24, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 0 0 6px 6px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  background: rgba(18, 18, 24, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: $z-dropdown + 1;
 
   // Animation
-  animation: slide-panel-in 0.15s ease-out;
+  animation: size-picker-in 0.15s ease-out;
 
-  @keyframes slide-panel-in {
+  @keyframes size-picker-in {
     from {
       opacity: 0;
-      transform: translateY(-4px);
+      transform: translateY(-4px) scale(0.95);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0) scale(1);
     }
   }
 
-  // Row 0: Tooltip Area
-  &__tooltip {
-    height: 20px;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding-left: $spacing-xs;
-  }
-
-  &__tooltip-label {
-    font-size: 10px;
-    color: $color-text-secondary;
-    font-weight: 500;
-  }
-
-  &__tooltip-desc {
-    font-size: 9px;
-    color: $color-text-tertiary;
-  }
-
-  &__tooltip-hint {
-    font-size: 9px;
-    color: $color-text-tertiary;
-    font-style: italic;
-  }
-
-  // Row 1: Actions row
-  &__actions {
-    display: flex;
-    align-items: center;
+  // Presets grid
+  &__presets {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: $spacing-xs;
-    padding-left: $spacing-xs;
+    margin-bottom: $spacing-sm;
   }
 
-  &__spacer {
-    flex: 1;
-  }
-
-  // Icon button styling
-  &__icon-btn {
+  // Individual preset button
+  &__preset {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: $color-text-tertiary;
+    gap: 4px;
+    padding: $spacing-sm;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $color-border-subtle;
     border-radius: $radius-sm;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
-      background: $color-glass-light;
+      background: rgba(255, 255, 255, 0.06);
+      border-color: $color-border-default;
+    }
+
+    &--selected {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+
+      .size-picker__preset-cell {
+        background: $color-accent-blue;
+      }
+
+      .size-picker__preset-label {
+        color: $color-accent-blue;
+      }
+    }
+  }
+
+  // Visual grid representation
+  &__preset-grid {
+    display: grid;
+    grid-template-rows: repeat(var(--rows, 1), 8px);
+    grid-template-columns: repeat(var(--cols, 1), 12px);
+    gap: 2px;
+  }
+
+  &__preset-cell {
+    background: $color-text-muted;
+    border-radius: 2px;
+    transition: background $transition-fast;
+  }
+
+  &__preset-label {
+    font-size: 9px;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    transition: color $transition-fast;
+  }
+
+  // Custom toggle button
+  &__custom-toggle {
+    display: block;
+    width: 100%;
+    padding: $spacing-xs $spacing-sm;
+    background: transparent;
+    border: 1px dashed $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: $color-border-default;
       color: $color-text-secondary;
     }
 
-    &:active {
-      background: $color-glass-medium;
-      transform: scale(0.95);
-    }
-
     &--active {
-      background: rgba($color-accent-blue, 0.15);
-      color: $color-accent-blue;
-
-      &[data-active-color="purple"] {
-        background: rgba($color-accent-purple, 0.15);
-        color: $color-accent-purple;
-      }
-
-      &[data-active-color="gold"],
-      &[data-active-color="amber"] {
-        background: rgba($color-accent-amber, 0.15);
-        color: $color-accent-amber;
-      }
-
-      &[data-active-color="pink"] {
-        background: rgba($color-accent-pink, 0.15);
-        color: $color-accent-pink;
-      }
-
-      &[data-active-color="teal"] {
-        background: rgba($color-accent-teal, 0.15);
-        color: $color-accent-teal;
-      }
-
-      &[data-active-color="green"] {
-        background: rgba($color-accent-green, 0.15);
-        color: $color-accent-green;
-      }
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+      background: rgba($color-accent-purple, 0.1);
+      border-style: solid;
+      border-color: rgba($color-accent-purple, 0.3);
+      color: $color-accent-purple;
     }
   }
 
-  // Row 2: Linked parent info
-  &__linked-parent {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 8px;
-    padding: 4px 8px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-
-    svg {
-      color: $color-accent-teal;
-    }
-  }
-
-  &__linked-parent-label {
-    font-size: 9px;
-    color: $color-text-tertiary;
-  }
-
-  &__linked-parent-name {
-    font-size: 9px;
-    color: $color-accent-teal;
-    font-weight: 500;
-  }
-
-  // Row 3: Link properties row
-  &__link-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding-left: $spacing-xs;
-    padding-top: $spacing-xs;
+  // Custom size inputs
+  &__custom {
+    margin-top: $spacing-sm;
+    padding-top: $spacing-sm;
     border-top: 1px solid $color-border-subtle;
-
-    &--disabled {
-      opacity: 0.4;
-      pointer-events: none;
-    }
   }
 
-  &__link-label {
-    font-size: 9px;
-    color: $color-text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    flex-shrink: 0;
-  }
-
-  // Toggle All button
-  &__toggle-all {
+  &__custom-inputs {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 26px;
-    padding: 0;
-    border: 1px solid transparent;
-    background: $color-glass-subtle;
-    color: $color-text-muted;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition: all $transition-fast;
-    flex-shrink: 0;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+  }
 
-    &:hover {
-      background: $color-glass-light;
-      border-color: $color-border-default;
-      color: $color-text-tertiary;
+  &__custom-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    span {
+      font-size: 9px;
+      color: $color-text-muted;
+      text-align: center;
     }
 
-    &--active {
-      background: rgba($color-accent-teal, 0.1);
-      border-color: rgba($color-accent-teal, 0.3);
-      color: $color-accent-teal;
+    input {
+      width: 40px;
+      padding: 4px $spacing-xs;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid $color-border-subtle;
+      border-radius: $radius-xs;
+      color: $color-text-primary;
+      font-size: 11px;
+      text-align: center;
 
-      &:hover {
-        background: rgba($color-accent-teal, 0.2);
-        border-color: rgba($color-accent-teal, 0.4);
+      &:focus {
+        outline: none;
+        border-color: $color-accent-blue;
       }
-    }
 
-    &:disabled {
-      cursor: not-allowed;
+      // Hide spinner buttons
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      -moz-appearance: textfield;
     }
   }
 
-  &__link-divider {
-    width: 1px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.08);
-    margin: 0 2px;
-    flex-shrink: 0;
+  &__custom-x {
+    font-size: 12px;
+    color: $color-text-muted;
+    margin-top: 12px; // Align with inputs
+  }
+
+  // Apply button
+  &__apply {
+    display: block;
+    width: 100%;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba($color-accent-blue, 0.15);
+    border: 1px solid rgba($color-accent-blue, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-blue;
+    font-size: 10px;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.25);
+      border-color: rgba($color-accent-blue, 0.5);
+    }
   }
 }

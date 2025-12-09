@@ -274,4 +274,26 @@
       color: $color-accent-red;
     }
   }
+
+  // Settings button (opens settings modal)
+  &__settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: $color-text-muted;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+    flex-shrink: 0;
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.15);
+      color: $color-accent-blue;
+    }
+  }
 }

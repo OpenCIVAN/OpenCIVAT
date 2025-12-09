@@ -446,6 +446,30 @@ class WorkspaceManager {
   }
 
   /**
+   * Get instance by viewConfigId
+   * @param {string} viewConfigId - View configuration ID
+   * @returns {Object|null} Instance object or null if not found
+   */
+  getInstanceByViewConfigId(viewConfigId) {
+    for (const [id, instance] of this.instances.entries()) {
+      if (instance.viewConfigId === viewConfigId) {
+        return instance;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get the color for a view (via its active instance)
+   * @param {string} viewConfigId - View configuration ID
+   * @returns {Object|null} Color object with name and hex, or null if no active instance
+   */
+  getViewColor(viewConfigId) {
+    const instance = this.getInstanceByViewConfigId(viewConfigId);
+    return instance ? instance.color : null;
+  }
+
+  /**
    * Get available tools for an instance
    * Returns empty array if instance has no type/handler yet
    */

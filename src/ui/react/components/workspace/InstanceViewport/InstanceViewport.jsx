@@ -511,6 +511,31 @@ export function InstanceViewport({
     // Track if Instance Tools tab is active in left panel
     const [instanceToolsTabActive, setInstanceToolsTabActive] = useState(false);
 
+    // Refresh counter to re-render when view name/properties change
+    const [viewRefreshCounter, setViewRefreshCounter] = useState(0);
+
+    // =========================================================================
+    // VIEW UPDATE LISTENER
+    // =========================================================================
+
+    // Listen for view updates to refresh display name
+    useEffect(() => {
+        if (!viewConfigId) return;
+
+        const handleViewUpdate = (view) => {
+            // Only re-render if this is our view
+            if (view?.id === viewConfigId || view === viewConfigId) {
+                setViewRefreshCounter(c => c + 1);
+            }
+        };
+
+        viewConfigurationManager?.on?.('viewUpdated', handleViewUpdate);
+
+        return () => {
+            viewConfigurationManager?.off?.('viewUpdated', handleViewUpdate);
+        };
+    }, [viewConfigId]);
+
     // =========================================================================
     // SIZE TRACKING
     // =========================================================================
@@ -848,6 +873,15 @@ export function InstanceViewport({
                 const view = viewConfigurationManager.getView(viewConfigId);
                 if (view) {
                     const dataset = datasetManager.getDataset(view.datasetId);
+                    // Show view name if it's been customized (not default names)
+                    const isDefaultName = !view.name ||
+                        view.name === 'Untitled View' ||
+                        view.name === 'Default View' ||
+                        view.name === dataset?.filename;
+
+                    if (!isDefaultName) {
+                        return view.name;
+                    }
                     return dataset?.filename || view.name || 'View';
                 }
             } catch (e) {

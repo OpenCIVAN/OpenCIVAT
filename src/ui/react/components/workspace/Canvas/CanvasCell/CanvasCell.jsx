@@ -82,7 +82,17 @@ export const CanvasCell = memo(function CanvasCell({
         setIsDragOver(false);
         if (onDrop && isEmpty) {
             try {
-                const data = e.dataTransfer.getData('application/json');
+                // Try ViewItem format first (from Datasets tab)
+                let data = e.dataTransfer.getData('application/x-viewitem');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    // ViewItem data has { id, name, color, size } - convert to expected format
+                    onDrop(row, col, { viewConfigId: parsed.id, ...parsed });
+                    return;
+                }
+
+                // Fall back to generic JSON format (from Files tab)
+                data = e.dataTransfer.getData('application/json');
                 if (data) {
                     const parsed = JSON.parse(data);
                     onDrop(row, col, parsed);

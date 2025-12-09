@@ -144,19 +144,21 @@ export function CanvasGrid({
                     moveViewport(0, 1);
                     break;
 
-                // Viewport size controls
+                // Viewport size controls (zoom semantics)
+                // + = zoom in = fewer cells (focus) = decrementViewportSize
+                // - = zoom out = more cells (overview) = incrementViewportSize
                 case '+':
                 case '=':
                     e.preventDefault();
-                    if (!isMaxSize) {
-                        incrementViewportSize();
+                    if (!isMinSize) {
+                        decrementViewportSize(); // Zoom in = show fewer, larger cells
                     }
                     break;
                 case '-':
                 case '_':
                     e.preventDefault();
-                    if (!isMinSize) {
-                        decrementViewportSize();
+                    if (!isMaxSize) {
+                        incrementViewportSize(); // Zoom out = show more, smaller cells
                     }
                     break;
                 case '0':
@@ -292,6 +294,12 @@ export function CanvasGrid({
         setSelectedCells([]);
     }, []);
 
+    // Canvas dimensions
+    const canvasDimensions = useMemo(() => ({
+        rows: canvas?.dimensions?.rows || 10,
+        cols: canvas?.dimensions?.cols || 10,
+    }), [canvas?.dimensions?.rows, canvas?.dimensions?.cols]);
+
     // Filter placements to only those visible in the effective viewport
     const viewportPlacements = useMemo(() => {
         if (!canvas?.placements) return [];
@@ -311,6 +319,78 @@ export function CanvasGrid({
             );
         });
     }, [canvas?.placements, effectiveViewport]);
+
+    // Track if scroll is being programmatically set (to avoid feedback loop)
+    const isScrollingRef = useRef(false);
+
+    // Handle scroll events to update viewport position (virtual scrolling)
+    const handleScroll = useCallback((e) => {
+        // Skip if this scroll was triggered programmatically
+        if (isScrollingRef.current) return;
+
+        const container = e.target;
+        if (!container) return;
+
+        // Get cell dimensions from first cell or estimate
+        const firstCell = container.querySelector('.canvas-cell');
+        if (!firstCell) return;
+
+        const cellWidth = firstCell.offsetWidth + 16; // Include gap
+        const cellHeight = firstCell.offsetHeight + 16; // Include gap
+
+        // Calculate viewport position based on scroll
+        const newCol = Math.round(container.scrollLeft / cellWidth);
+        const newRow = Math.round(container.scrollTop / cellHeight);
+
+        // Only update if position changed
+        if (newRow !== viewport.row || newCol !== viewport.col) {
+            // Clamp to valid range
+            const maxRow = Math.max(0, canvasDimensions.rows - effectiveViewport.rows);
+            const maxCol = Math.max(0, canvasDimensions.cols - effectiveViewport.cols);
+            const clampedRow = Math.max(0, Math.min(newRow, maxRow));
+            const clampedCol = Math.max(0, Math.min(newCol, maxCol));
+
+            if (clampedRow !== viewport.row || clampedCol !== viewport.col) {
+                moveViewport(clampedRow - viewport.row, clampedCol - viewport.col);
+            }
+        }
+    }, [viewport.row, viewport.col, canvasDimensions, effectiveViewport.rows, effectiveViewport.cols, moveViewport]);
+
+    // Sync scroll position when viewport changes (from keyboard/minimap)
+    const cellsContainerRef = useRef(null);
+    useEffect(() => {
+        const container = cellsContainerRef.current;
+        if (!container) return;
+
+        // Get cell dimensions
+        const firstCell = container.querySelector('.canvas-cell');
+        if (!firstCell) return;
+
+        const cellWidth = firstCell.offsetWidth + 16; // Include gap
+        const cellHeight = firstCell.offsetHeight + 16; // Include gap
+
+        // Calculate target scroll position
+        const targetScrollLeft = viewport.col * cellWidth;
+        const targetScrollTop = viewport.row * cellHeight;
+
+        // Only scroll if position is different (avoid unnecessary scrolls)
+        const scrollThreshold = 5;
+        if (
+            Math.abs(container.scrollLeft - targetScrollLeft) > scrollThreshold ||
+            Math.abs(container.scrollTop - targetScrollTop) > scrollThreshold
+        ) {
+            isScrollingRef.current = true;
+            container.scrollTo({
+                left: targetScrollLeft,
+                top: targetScrollTop,
+                behavior: 'smooth',
+            });
+            // Reset flag after scroll animation
+            setTimeout(() => {
+                isScrollingRef.current = false;
+            }, 300);
+        }
+    }, [viewport.row, viewport.col]);
 
     // Build grid cells
     const renderCells = () => {
@@ -349,9 +429,9 @@ export function CanvasGrid({
                 const isSelected = placement && selectedIds.includes(placement.id);
                 const isHighlighted = placement && highlightedPlacementId === placement.id;
 
-                // Calculate grid position (relative to viewport)
-                const gridRow = row - effectiveViewport.row + 1;
-                const gridCol = col - effectiveViewport.col + 1;
+                // Calculate grid position (absolute position in grid, 1-indexed for CSS Grid)
+                const gridRow = row + 1;
+                const gridCol = col + 1;
 
                 // Check if cell is selected in edit mode
                 const isCellSelected = editMode && selectedCells.includes(key);
@@ -468,16 +548,16 @@ export function CanvasGrid({
                 ref={gridRef}
                 className="canvas-grid__container"
                 style={{
+                    '--canvas-rows': canvasDimensions.rows,
+                    '--canvas-cols': canvasDimensions.cols,
                     '--viewport-rows': effectiveViewport.rows,
                     '--viewport-cols': effectiveViewport.cols,
                 }}
             >
                 <div
+                    ref={cellsContainerRef}
                     className="canvas-grid__cells"
-                    style={{
-                        gridTemplateRows: `repeat(${effectiveViewport.rows}, 1fr)`,
-                        gridTemplateColumns: `repeat(${effectiveViewport.cols}, 1fr)`,
-                    }}
+                    onScroll={handleScroll}
                 >
                     {renderCells()}
                 </div>

@@ -178,18 +178,35 @@
 .canvas-grid__cells {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(var(--viewport-cols, 3), 1fr);
-  grid-template-rows: repeat(var(--viewport-rows, 2), 1fr);
+  // VIRTUAL SCROLLING: Grid template uses CANVAS dimensions (full grid)
+  // This creates scroll area for the entire canvas
+  // 280px min-width ensures toolbar buttons remain usable
+  // 200px min-height ensures content area is visible
+  // Fixed size (not 1fr) so empty cells don't collapse
+  grid-template-columns: repeat(var(--canvas-cols, 10), minmax(280px, 300px));
+  grid-template-rows: repeat(var(--canvas-rows, 10), minmax(200px, 250px));
   gap: $spacing-md;
   min-height: 0;
+  overflow: auto; // Enable scrolling for virtual scrolling
+  // Add padding so scrollbars don't overlap with content
+  padding-right: $spacing-md;
+  padding-bottom: $spacing-md;
+
+  // Scroll-snap: snap to complete grid cells when scrolling
+  // This ensures instance views are always fully visible, not cut in half
+  scroll-snap-type: both mandatory;
+  scroll-padding: $spacing-md;
 
   // Grid cells must constrain their children
+  // These are placed at absolute grid positions via grid-row/grid-column
   > div {
-    min-width: 0;
-    min-height: 0;
+    min-width: 280px;
+    min-height: 200px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    // Snap alignment: each cell snaps to start position
+    scroll-snap-align: start;
   }
 }
 

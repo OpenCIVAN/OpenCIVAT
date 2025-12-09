@@ -303,6 +303,23 @@
     }
   }
 
+  &__settings-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+    transition: all $transition-fast;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      color: $color-accent-blue;
+      background: rgba($color-accent-blue, 0.1);
+    }
+  }
+
   &__children {
     background: rgba(0, 0, 0, 0.15);
     border: 1px solid $color-border-subtle;
@@ -664,4 +681,511 @@
 
 .text-green {
   color: $color-accent-green;
+}
+
+// =============================================================================
+// VIEW SETTINGS MODAL
+// =============================================================================
+
+.view-settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-modal;
+}
+
+.view-settings-modal {
+  width: 360px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: $color-bg-primary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-lg;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid $color-border-subtle;
+    flex-shrink: 0;
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-accent-blue, 0.15);
+    border-radius: $radius-md;
+    color: $color-accent-blue;
+    flex-shrink: 0;
+  }
+
+  &__title-area {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__subtitle {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-md;
+  }
+
+  &__section {
+    margin-bottom: $spacing-md;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &--placeholder {
+      opacity: 0.6;
+    }
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 11px;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+
+    svg {
+      color: $color-text-muted;
+    }
+  }
+
+  &__badge {
+    margin-left: auto;
+    font-size: 9px;
+    padding: 2px 6px;
+    background: rgba($color-accent-teal, 0.15);
+    border-radius: $radius-full;
+    color: $color-accent-teal;
+  }
+
+  &__size-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+
+  &__size-btn {
+    padding: $spacing-xs $spacing-sm;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active) {
+      background: rgba(0, 0, 0, 0.3);
+      border-color: $color-border-default;
+    }
+
+    &--active {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__empty {
+    padding: $spacing-sm;
+    text-align: center;
+    font-size: 10px;
+    color: $color-text-muted;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: $radius-sm;
+  }
+
+  &__link-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__link-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: $radius-sm;
+    font-size: 11px;
+    color: $color-text-secondary;
+
+    svg {
+      color: $color-text-muted;
+      flex-shrink: 0;
+    }
+
+    span {
+      min-width: 60px;
+    }
+  }
+
+  &__link-select {
+    flex: 1;
+    padding: 4px $spacing-xs;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-xs;
+    color: $color-text-primary;
+    font-size: 10px;
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-blue;
+    }
+
+    option {
+      background: $color-bg-primary;
+    }
+  }
+
+  &__placeholder {
+    padding: $spacing-sm;
+    text-align: center;
+    font-size: 10px;
+    color: $color-text-muted;
+    font-style: italic;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-top: 1px solid $color-border-subtle;
+    background: rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: $spacing-xs $spacing-md;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--primary {
+      background: rgba($color-accent-blue, 0.15);
+      border-color: rgba($color-accent-blue, 0.4);
+      color: $color-accent-blue;
+
+      &:hover {
+        background: rgba($color-accent-blue, 0.25);
+      }
+    }
+
+    &--secondary {
+      color: $color-text-muted;
+    }
+  }
+}
+
+// =============================================================================
+// DATASET SETTINGS MODAL
+// =============================================================================
+
+.dataset-settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-modal;
+}
+
+.dataset-settings-modal {
+  width: 380px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: $color-bg-primary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-lg;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid $color-border-subtle;
+    flex-shrink: 0;
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-accent-purple, 0.15);
+    border-radius: $radius-md;
+    color: $color-accent-purple;
+    flex-shrink: 0;
+  }
+
+  &__title-area {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__subtitle {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    padding: 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-md;
+  }
+
+  &__section {
+    margin-bottom: $spacing-md;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &--placeholder {
+      opacity: 0.6;
+    }
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 11px;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+
+    svg {
+      color: $color-text-muted;
+    }
+  }
+
+  &__info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__info-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: $radius-sm;
+  }
+
+  &__info-label {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__info-value {
+    font-size: 11px;
+    color: $color-text-primary;
+  }
+
+  &__empty {
+    padding: $spacing-sm;
+    text-align: center;
+    font-size: 10px;
+    color: $color-text-muted;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: $radius-sm;
+  }
+
+  &__view-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__view-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: $radius-sm;
+  }
+
+  &__view-status {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $color-text-muted;
+    flex-shrink: 0;
+
+    &--active {
+      background: $color-accent-green;
+      box-shadow: 0 0 4px rgba($color-accent-green, 0.5);
+    }
+  }
+
+  &__view-name {
+    font-size: 11px;
+    color: $color-text-secondary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__view-more {
+    font-size: 10px;
+    color: $color-text-muted;
+    padding: $spacing-xs $spacing-sm;
+    text-align: center;
+  }
+
+  &__placeholder {
+    padding: $spacing-sm;
+    text-align: center;
+    font-size: 10px;
+    color: $color-text-muted;
+    font-style: italic;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: $spacing-sm;
+    padding: $spacing-md;
+    border-top: 1px solid $color-border-subtle;
+    background: rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: $spacing-xs $spacing-md;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &--primary {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+
+      &:hover {
+        background: rgba($color-accent-green, 0.25);
+      }
+    }
+
+    &--danger {
+      &:hover {
+        background: rgba($color-error, 0.15);
+        border-color: rgba($color-error, 0.4);
+        color: $color-error;
+      }
+    }
+
+    &--secondary {
+      color: $color-text-muted;
+    }
+  }
 }

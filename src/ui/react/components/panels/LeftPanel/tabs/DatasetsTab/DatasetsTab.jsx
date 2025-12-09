@@ -32,6 +32,7 @@ import {
     GripVertical,
     RotateCcw,
     Plus,
+    Settings,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import {
@@ -44,8 +45,10 @@ import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { viewConfigurationManager } from '@Init/appInitializer.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
+import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { dataset as log } from '@Utils/logger.js';
 import { ViewItem } from './ViewItem/ViewItem.jsx';
+import { DatasetSettingsModal } from './DatasetSettingsModal';
 import './DatasetsTab.scss';
 
 // =============================================================================
@@ -169,6 +172,7 @@ function DatasetViewItemWrapper({ view, datasetId }) {
 
 function DatasetParent({ dataset, views, isExpanded, onToggle }) {
     const [isHovered, setIsHovered] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
     const { icon: TypeIcon, color, colorClass } = getDatasetTypeConfig(dataset.fileType);
     const activeCount = views.filter(v => v.status === 'active').length;
 
@@ -189,6 +193,12 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
             onToggle();
         }
     }, [handleCreateView, onToggle]);
+
+    // Handle unload dataset
+    const handleUnloadDataset = useCallback(() => {
+        log.debug(`Unloading dataset ${dataset.id}`);
+        // TODO: Implement dataset unloading
+    }, [dataset.id]);
 
     return (
         <div className="dataset-parent">
@@ -215,6 +225,16 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                         >
                             <Plus size={12} />
                         </button>
+                        <button
+                            className="dataset-parent__settings-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowSettingsModal(true);
+                            }}
+                            title="Dataset settings"
+                        >
+                            <Settings size={12} />
+                        </button>
                         <button className="dataset-parent__more-btn" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal size={12} />
                         </button>
@@ -240,6 +260,17 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* Settings Modal */}
+            {showSettingsModal && (
+                <DatasetSettingsModal
+                    dataset={dataset}
+                    views={views}
+                    onClose={() => setShowSettingsModal(false)}
+                    onCreateView={handleCreateView}
+                    onUnloadDataset={handleUnloadDataset}
+                />
             )}
         </div>
     );
@@ -361,12 +392,27 @@ const DEFAULT_CANVAS_SECTIONS = {
 // =============================================================================
 
 export function DatasetsPanelContent({ workspaceId }) {
-    // Subtab state
-    const [activeSubTab, setActiveSubTab] = useState('byDataset');
+    // Subtab state - persist across tab switches
+    const [activeSubTab, setActiveSubTab] = useState(() => {
+        try {
+            return localStorage.getItem('cia:datasetsTab:subtab') || 'byDataset';
+        } catch {
+            return 'byDataset';
+        }
+    });
     const [canvasSortBy, setCanvasSortBy] = useState('row');
     const [activeFilters, setActiveFilters] = useState(['active', 'inactive', 'shared']);
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedDatasets, setExpandedDatasets] = useState(new Set());
+
+    // Persist subtab selection
+    useEffect(() => {
+        try {
+            localStorage.setItem('cia:datasetsTab:subtab', activeSubTab);
+        } catch {
+            // Ignore localStorage errors
+        }
+    }, [activeSubTab]);
 
     // Refresh counter to trigger re-computation when views are updated
     const [viewRefreshCounter, setViewRefreshCounter] = useState(0);
@@ -405,19 +451,24 @@ export function DatasetsPanelContent({ workspaceId }) {
             const views = viewConfigurationManager?.getViewsForDataset?.(datasetId) || [];
             return views
                 .filter(v => v.status !== 'trashed' && v.status !== 'archived')
-                .map(v => ({
-                    id: v.id,
-                    name: v.name || 'Untitled View',
-                    datasetId: datasetId,
-                    workspace: v.workspaceId || 'personal',
-                    // Use actual status, fall back to activeInstanceCount check for legacy views
-                    status: v.status === 'active' || v.activeInstanceCount > 0 ? 'active' : 'inactive',
-                    instanceColor: v.camera?.color || '#60a5fa',
-                    filters: v.filters || [],
-                    isShared: v.scope === 'shared' || v.scope === 'project',
-                    sharedBy: v.createdBy,
-                    position: v.gridPosition || null,
-                }));
+                .map(v => {
+                    // Get the instance color from workspaceManager (matches canvas display)
+                    const instanceColor = workspaceManager?.getViewColor?.(v.id);
+                    return {
+                        id: v.id,
+                        name: v.name || 'Untitled View',
+                        datasetId: datasetId,
+                        workspace: v.workspaceId || 'personal',
+                        // Use actual status, fall back to activeInstanceCount check for legacy views
+                        status: v.status === 'active' || v.activeInstanceCount > 0 ? 'active' : 'inactive',
+                        // Use instance color from workspaceManager, fall back to view color or default
+                        color: instanceColor?.hex || v.camera?.color || '#60a5fa',
+                        filters: v.filters || [],
+                        isShared: v.scope === 'shared' || v.scope === 'project',
+                        sharedBy: v.createdBy,
+                        position: v.gridPosition || null,
+                    };
+                });
         } catch (e) {
             log.warn('Failed to get views:', e);
             return [];

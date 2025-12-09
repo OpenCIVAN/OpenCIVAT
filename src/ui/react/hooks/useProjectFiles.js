@@ -226,10 +226,13 @@ export function useProjectFiles(options = {}) {
       formData.append("file", file);
       if (folderId) formData.append("folderId", folderId);
 
-      const response = await fetch(`${apiBase}/projects/${projectId}/files`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `${apiBase}/projects/${projectId}/files`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to upload file: ${response.status}`);
@@ -246,23 +249,23 @@ export function useProjectFiles(options = {}) {
 
   const { mutate: toggleStar } = useAsyncMutation(
     async ({ type, targetId, starScope = "personal" }) => {
-      const isCurrentlyStarred = isStarred(type, targetId);
-
+      // Use the toggle endpoint which handles both star and unstar
       const response = await fetch(
-        `${apiBase}/projects/${projectId}/stars/${type}/${targetId}`,
+        `${apiBase}/projects/${projectId}/stars/toggle`,
         {
-          method: isCurrentlyStarred ? "DELETE" : "POST",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scope: starScope, roomId }),
+          body: JSON.stringify({
+            targetType: type,
+            targetId,
+            scope: starScope,
+            roomId,
+          }),
         }
       );
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to ${isCurrentlyStarred ? "unstar" : "star"}: ${
-            response.status
-          }`
-        );
+        throw new Error(`Failed to toggle star: ${response.status}`);
       }
 
       return response.json();

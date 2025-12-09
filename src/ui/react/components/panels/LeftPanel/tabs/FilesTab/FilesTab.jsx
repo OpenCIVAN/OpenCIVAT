@@ -441,7 +441,7 @@ export function FilesPanelContent({
 
     const handleStar = useCallback(async (id) => {
         try {
-            await toggleStar('file', id);
+            await toggleStar({ type: 'file', targetId: id });
             log.debug('Toggled star for file:', id);
         } catch (err) {
             log.error('Failed to toggle star:', err);

@@ -31,8 +31,10 @@ import {
     Lock,
     Filter,
     MoreHorizontal,
+    Settings,
 } from 'lucide-react';
 import { SlidingPanel } from './components/SlidingPanel';
+import { ViewSettingsModal } from './components/ViewSettingsModal';
 import './ViewItem.scss';
 
 // Status icon configuration (v3 design)
@@ -54,6 +56,8 @@ export const ViewItem = memo(function ViewItem({
     linkedCount = 0,
     filterCount = 0,
     linkProperties = {},
+    linkConfig = {},
+    availableViews = [],
     linkedParent = null, // { id, name } - parent view if spawned from another
     linkTarget = null, // { id, name } - current link target
     onSelect,
@@ -76,9 +80,11 @@ export const ViewItem = memo(function ViewItem({
     className = '',
 }) {
     const [isHovered, setIsHovered] = useState(false);
+    const [isPanelHovered, setIsPanelHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(view.name);
     const [showPanel, setShowPanel] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
     const inputRef = useRef(null);
     const itemRef = useRef(null);
 
@@ -115,15 +121,18 @@ export const ViewItem = memo(function ViewItem({
     }, [isEditing]);
 
     // Show panel with delay on hover (hide when editing or dragging)
+    // Keep panel open if hovering over the panel itself (portal)
     useEffect(() => {
         let timeout;
-        if (isHovered && !isEditing && !isDragging) {
+        const shouldShow = (isHovered || isPanelHovered) && !isEditing && !isDragging;
+        if (shouldShow) {
             timeout = setTimeout(() => setShowPanel(true), 200);
         } else {
-            setShowPanel(false);
+            // Small delay before hiding to allow moving to panel
+            timeout = setTimeout(() => setShowPanel(false), 100);
         }
         return () => clearTimeout(timeout);
-    }, [isHovered, isEditing, isDragging]);
+    }, [isHovered, isPanelHovered, isEditing, isDragging]);
 
     // Build status badges (v3 design) - max 3 visible, rest shown as overflow
     const MAX_VISIBLE_BADGES = 3;
@@ -250,6 +259,17 @@ export const ViewItem = memo(function ViewItem({
 
                 {/* Action Buttons */}
                 <div className="view-item__actions">
+                    {/* Settings Button - opens modal for view configuration */}
+                    <button
+                        className="view-item__settings-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowSettingsModal(true);
+                        }}
+                        title="View settings"
+                    >
+                        <Settings size={12} />
+                    </button>
                     {/* Close Button - only show for active views (deactivate, remove from canvas) */}
                     {isActive && (
                         <button
@@ -277,13 +297,16 @@ export const ViewItem = memo(function ViewItem({
                 </div>
             </div>
 
-            {/* Sliding Panel */}
+            {/* Sliding Panel - renders in portal */}
             <SlidingPanel
                 isVisible={showPanel}
                 view={view}
-                linkProperties={linkProperties}
+                anchorRef={itemRef}
+                onPanelEnter={() => setIsPanelHovered(true)}
+                onPanelLeave={() => setIsPanelHovered(false)}
+                linkConfig={linkConfig}
+                availableViews={availableViews}
                 linkedParent={linkedParent}
-                linkTarget={linkTarget}
                 linkedCount={linkedCount}
                 onStarWorkspace={() => onStarWorkspace?.(view.id)}
                 onStarPersonal={() => onStarPersonal?.(view.id)}
@@ -296,6 +319,19 @@ export const ViewItem = memo(function ViewItem({
                 onSizeChange={(size) => onSizeChange?.(view.id, size)}
                 onLinkPropertyChange={(prop, value) => onLinkPropertyChange?.(view.id, prop, value)}
             />
+
+            {/* Settings Modal - alternative to SlidingPanel for cramped spaces */}
+            {showSettingsModal && (
+                <ViewSettingsModal
+                    view={view}
+                    linkConfig={linkConfig}
+                    availableViews={availableViews}
+                    onClose={() => setShowSettingsModal(false)}
+                    onSizeChange={(size) => onSizeChange?.(view.id, size)}
+                    onLinkPropertyChange={(prop, value) => onLinkPropertyChange?.(view.id, prop, value)}
+                    onToggleAllLinks={(linked) => onToggleAllLinks?.(view.id, linked)}
+                />
+            )}
         </div>
     );
 });

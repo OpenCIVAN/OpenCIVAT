@@ -2,9 +2,10 @@
 // Parent/folder node for a dataset in the tree view
 
 import React, { useState, useCallback } from 'react';
-import { ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoreHorizontal, Settings } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
+import { DatasetSettingsModal } from './DatasetSettingsModal';
 
 /**
  * Get display configuration for a dataset based on its file type
@@ -32,9 +33,22 @@ const getDatasetTypeConfig = (fileType) => {
  * @param {boolean} isExpanded - Whether the node is expanded
  * @param {Function} onToggle - Toggle expansion callback
  * @param {React.ReactNode} children - Child view items
+ * @param {Array} views - Views associated with this dataset
+ * @param {Function} onCreateView - Callback to create a new view
+ * @param {Function} onUnloadDataset - Callback to unload the dataset
  */
-export function DatasetParent({ dataset, isExpanded, onToggle, children, viewCount = 0 }) {
+export function DatasetParent({
+    dataset,
+    isExpanded,
+    onToggle,
+    children,
+    viewCount = 0,
+    views = [],
+    onCreateView,
+    onUnloadDataset,
+}) {
     const [isHovered, setIsHovered] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
     const typeConfig = getDatasetTypeConfig(dataset.fileType);
     const Icon = typeConfig.icon;
 
@@ -72,12 +86,24 @@ export function DatasetParent({ dataset, isExpanded, onToggle, children, viewCou
                 </span>
 
                 {isHovered && (
-                    <button
-                        className="dataset-parent__more-btn"
-                        onClick={(e) => { e.stopPropagation(); handleContextMenu(e); }}
-                    >
-                        <MoreHorizontal size={12} />
-                    </button>
+                    <>
+                        <button
+                            className="dataset-parent__settings-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowSettingsModal(true);
+                            }}
+                            title="Dataset settings"
+                        >
+                            <Settings size={12} />
+                        </button>
+                        <button
+                            className="dataset-parent__more-btn"
+                            onClick={(e) => { e.stopPropagation(); handleContextMenu(e); }}
+                        >
+                            <MoreHorizontal size={12} />
+                        </button>
+                    </>
                 )}
             </div>
 
@@ -85,6 +111,17 @@ export function DatasetParent({ dataset, isExpanded, onToggle, children, viewCou
                 <div className="dataset-parent__children">
                     {children}
                 </div>
+            )}
+
+            {/* Settings Modal */}
+            {showSettingsModal && (
+                <DatasetSettingsModal
+                    dataset={dataset}
+                    views={views}
+                    onClose={() => setShowSettingsModal(false)}
+                    onCreateView={onCreateView}
+                    onUnloadDataset={onUnloadDataset}
+                />
             )}
         </div>
     );
