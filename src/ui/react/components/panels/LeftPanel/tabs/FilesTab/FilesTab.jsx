@@ -682,7 +682,7 @@ export function FilesPanelContent({
                                     const file = e.target.files[0];
                                     if (file) {
                                         try {
-                                            await uploadFile(file);
+                                            await uploadFile({ file });
                                             refetch();
                                         } catch (err) {
                                             log.error('Upload failed:', err);

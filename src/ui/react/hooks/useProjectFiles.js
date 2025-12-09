@@ -226,13 +226,10 @@ export function useProjectFiles(options = {}) {
       formData.append("file", file);
       if (folderId) formData.append("folderId", folderId);
 
-      const response = await fetch(
-        `${apiBase}/projects/${projectId}/files/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch(`${apiBase}/projects/${projectId}/files`, {
+        method: "POST",
+        body: formData,
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to upload file: ${response.status}`);
