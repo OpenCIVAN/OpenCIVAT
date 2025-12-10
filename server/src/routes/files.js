@@ -720,4 +720,96 @@ router.delete("/:id/remove-from-project", async (req, res, next) => {
   }
 });
 
+/**
+ * GET /api/files/:id/thumbnail
+ * Get a thumbnail for a file (uses the default view's thumbnail)
+ *
+ * This endpoint looks up the first/oldest view for the file and returns
+ * that view's thumbnail. Falls back to 404 if no view or thumbnail exists.
+ */
+router.get("/:id/thumbnail", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { pool, minioClient, bucketName } = req.app.locals;
+
+    // Find the default view for this file
+    // The "default" view is typically the oldest/first view created for the file
+    const viewResult = await pool.query(
+      `
+      SELECT vc.id as view_id
+      FROM view_configurations vc
+      WHERE vc.dataset_id = $1
+        AND vc.status = 'active'
+      ORDER BY vc.created_at ASC
+      LIMIT 1
+      `,
+      [id]
+    );
+
+    if (viewResult.rows.length === 0) {
+      return res.status(404).json({ error: "No views found for this file" });
+    }
+
+    const viewId = viewResult.rows[0].view_id;
+
+    // Get the thumbnail for this view
+    const thumbnailResult = await pool.query(
+      `
+      SELECT t.*, v.visibility, v.owner_user_id
+      FROM view_thumbnails t
+      JOIN view_configurations v ON t.view_config_id = v.id
+      WHERE t.view_config_id = $1
+        AND t.snapshot_id IS NULL
+      `,
+      [viewId]
+    );
+
+    if (thumbnailResult.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "No thumbnail available for this file" });
+    }
+
+    const thumbnail = thumbnailResult.rows[0];
+
+    // Set cache headers
+    res.set("Cache-Control", "public, max-age=3600"); // 1 hour
+
+    // Return inline data directly
+    if (thumbnail.inline_data) {
+      const mimeType =
+        thumbnail.format === "svg"
+          ? "image/svg+xml"
+          : `image/${thumbnail.format}`;
+      res.set("Content-Type", mimeType);
+      return res.send(Buffer.from(thumbnail.inline_data, "base64"));
+    }
+
+    // Stream from MinIO
+    if (thumbnail.storage_key && minioClient) {
+      try {
+        const mimeType =
+          thumbnail.format === "svg"
+            ? "image/svg+xml"
+            : `image/${thumbnail.format}`;
+        res.set("Content-Type", mimeType);
+
+        const stream = await minioClient.getObject(
+          bucketName,
+          thumbnail.storage_key
+        );
+        stream.pipe(res);
+      } catch (e) {
+        log.error(`Failed to get thumbnail from storage: ${e.message}`);
+        return res.status(404).json({ error: "Thumbnail file not found" });
+      }
+    } else {
+      return res.status(404).json({ error: "Thumbnail data not available" });
+    }
+  } catch (error) {
+    log.error("Failed to get file thumbnail:", error);
+    next(error);
+  }
+});
+
 module.exports = router;

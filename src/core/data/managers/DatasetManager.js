@@ -1314,7 +1314,7 @@ export class DatasetManager extends BaseManager {
  *
  * // During app initialization (e.g., in your Phase 1 init)
  * import { DatasetManager } from '@Core/data/managers/DatasetManager.js';
- * import { fileCache } from '@Core/services/fileCache.js'; // Your existing cache
+ * import { fileCache } from '@Services/fileCache.js'; // Your existing cache
  *
  * const datasetManager = new DatasetManager();
  * await datasetManager.initialize(fileCache);

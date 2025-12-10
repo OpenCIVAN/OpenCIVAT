@@ -423,3 +423,291 @@
 .icon-gray {
   color: $color-text-muted;
 }
+
+// =============================================================================
+// CONTEXT MENU
+// =============================================================================
+
+.context-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-popover;
+}
+
+.context-menu {
+  position: fixed;
+  min-width: 160px;
+  background: $color-bg-primary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: $z-popover + 1;
+  padding: $spacing-xs 0;
+  overflow: visible;
+
+  &__divider {
+    height: 1px;
+    background: $color-border-subtle;
+    margin: $spacing-xs 0;
+  }
+
+  &__item-wrapper {
+    position: relative;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: none;
+    border: none;
+    color: $color-text-secondary;
+    font-size: 11px;
+    cursor: pointer;
+    text-align: left;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: $color-text-primary;
+    }
+
+    &.has-submenu {
+      justify-content: space-between;
+    }
+
+    .submenu-arrow {
+      margin-left: auto;
+      opacity: 0.5;
+    }
+
+    &--loading,
+    &--disabled {
+      color: $color-text-muted;
+      cursor: default;
+
+      &:hover {
+        background: none;
+        color: $color-text-muted;
+      }
+    }
+
+    svg {
+      flex-shrink: 0;
+    }
+  }
+
+  &__submenu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    min-width: 140px;
+    background: $color-bg-primary;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-md;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    padding: $spacing-xs 0;
+  }
+}
+
+// =============================================================================
+// TREE ITEM (List View File/Folder)
+// =============================================================================
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 4px $spacing-sm;
+  cursor: pointer;
+  border-radius: $radius-xs;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &.selected {
+    background: rgba($color-accent-blue, 0.15);
+  }
+
+  &.loaded {
+    border-left: 2px solid $color-accent-green;
+    padding-left: calc(#{$spacing-sm} - 2px);
+  }
+
+  .chevron {
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  .drag-handle {
+    flex-shrink: 0;
+    color: $color-text-muted;
+    cursor: grab;
+    transition: opacity $transition-fast;
+  }
+
+  .item-name {
+    flex: 1;
+    font-size: 11px;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .star-btn {
+    background: none;
+    border: none;
+    padding: 2px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+    flex-shrink: 0;
+    transition: color $transition-fast;
+
+    &:hover {
+      color: $color-accent-amber;
+    }
+
+    &--starred {
+      color: $color-accent-amber;
+    }
+  }
+
+  .menu-btn {
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+    flex-shrink: 0;
+    transition: color $transition-fast;
+
+    &:hover {
+      color: $color-text-secondary;
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  .status-indicator__dot--active {
+    color: $color-accent-green;
+    flex-shrink: 0;
+  }
+
+  .item-meta {
+    font-size: 9px;
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+}
+
+// =============================================================================
+// FILE CARD (Grid View)
+// =============================================================================
+
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+}
+
+.file-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: $color-border-subtle;
+  }
+
+  &.selected {
+    background: rgba($color-accent-blue, 0.15);
+    border-color: rgba($color-accent-blue, 0.4);
+  }
+
+  .thumbnail {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-sm;
+    position: relative;
+    margin-bottom: $spacing-xs;
+    overflow: hidden;
+
+    &__preview {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: $radius-sm;
+      overflow: hidden;
+    }
+
+    &__image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: $radius-sm;
+    }
+  }
+
+  .thumbnail-actions {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    display: flex;
+    gap: 2px;
+    transition: opacity $transition-fast;
+  }
+
+  .thumbnail-action {
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    padding: 3px;
+    color: $color-text-muted;
+    cursor: pointer;
+    border-radius: $radius-xs;
+
+    &:hover {
+      color: $color-text-primary;
+      background: rgba(0, 0, 0, 0.8);
+    }
+  }
+
+  .file-name {
+    font-size: 10px;
+    color: $color-text-primary;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .file-size {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+}

@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { Plus, Grid3X3, LayoutGrid, FileImage, FileText, Box, X } from 'lucide-react';
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
+import { ProgressiveLoader } from '@UI/react/components/common/ThumbnailPreview';
 import './CanvasCell.scss';
 
 /**
@@ -365,26 +366,35 @@ function EmptyPlaceholder({ row, col, editMode, onAddClick }) {
 
 /**
  * ViewContent - Renders an InstanceViewport for view placements
+ * Uses ProgressiveLoader to show thumbnail while real visualization loads
  */
 function ViewContent({ viewId, rowSpan, colSpan, placementId, onClose }) {
+    const [isReady, setIsReady] = useState(false);
+
     return (
         <div className="canvas-cell__view-content">
-            <InstanceViewport
-                viewConfigId={viewId}
-                isRemote={false}
-                currentSpan={`${colSpan}x${rowSpan}`}
-                onClose={() => {
-                    // Remove placement from canvas, view goes to inactive in DatasetsTab
-                    // removePlacement(cell.placementId);
-                    onClose?.();
-                }}
-                onTrash={() => {
-                    // Remove placement, view goes to Recently Deleted
-                    // removePlacement(cell.placementId);
-                    onClose?.();
-                    // View already moved to trash by InstanceViewport
-                }}
-            />
+            <ProgressiveLoader
+                viewId={viewId}
+                isReady={isReady}
+            >
+                <InstanceViewport
+                    viewConfigId={viewId}
+                    isRemote={false}
+                    currentSpan={`${colSpan}x${rowSpan}`}
+                    onReady={() => setIsReady(true)}
+                    onClose={() => {
+                        // Remove placement from canvas, view goes to inactive in DatasetsTab
+                        // removePlacement(cell.placementId);
+                        onClose?.();
+                    }}
+                    onTrash={() => {
+                        // Remove placement, view goes to Recently Deleted
+                        // removePlacement(cell.placementId);
+                        onClose?.();
+                        // View already moved to trash by InstanceViewport
+                    }}
+                />
+            </ProgressiveLoader>
         </div>
     );
 }

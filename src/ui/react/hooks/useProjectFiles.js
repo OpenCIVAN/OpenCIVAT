@@ -75,12 +75,12 @@ export function useProjectFiles(options = {}) {
         : { folders: [] };
       const starsData = starsRes.ok
         ? await starsRes.json()
-        : { starred: { all: { files: [], folders: [] } } };
+        : { starredIds: { all: { files: [], folders: [] } } };
 
       return {
         files: filesData.files || [],
         folders: foldersData.folders || [],
-        starredIds: starsData.starred || { all: { files: [], folders: [] } },
+        starredIds: starsData.starredIds || { all: { files: [], folders: [] } },
       };
     },
     [apiBase, projectId, scope, roomId]
@@ -226,13 +226,10 @@ export function useProjectFiles(options = {}) {
       formData.append("file", file);
       if (folderId) formData.append("folderId", folderId);
 
-      const response = await fetch(
-        `${apiBase}/projects/${projectId}/files`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch(`${apiBase}/projects/${projectId}/files`, {
+        method: "POST",
+        body: formData,
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to upload file: ${response.status}`);

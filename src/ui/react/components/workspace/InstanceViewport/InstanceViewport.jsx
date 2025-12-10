@@ -22,6 +22,8 @@ import { vrManager } from '@Core/vr/VRManager.js';
 
 import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { thumbnailCaptureService } from "@Services/ThumbnailCaptureService.js";
+import { config } from "@Core/config/clientConfig.js";
 
 import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
@@ -452,6 +454,7 @@ export function InstanceViewport({
     onClose,      // Called when user clicks X (close without delete)
     onTrash,      // Called when user clicks trash (move to Recently Deleted)
     onChangeSpan,
+    onReady,      // Called when instance has loaded data and is ready to display
     currentSpan = '1x1'
 }) {
     // =========================================================================
@@ -740,6 +743,66 @@ export function InstanceViewport({
 
         loadViewData();
     }, [initialized, actualInstanceId, viewConfigId]);
+
+    // =========================================================================
+    // READY CALLBACK
+    // =========================================================================
+
+    // Call onReady when data has loaded (for progressive loading)
+    useEffect(() => {
+        if (hasData && onReady) {
+            onReady();
+        }
+    }, [hasData, onReady]);
+
+    // =========================================================================
+    // THUMBNAIL CAPTURE
+    // =========================================================================
+
+    // Capture and upload thumbnail after visualization has fully rendered
+    useEffect(() => {
+        if (!hasData || !viewConfigId || !containerRef.current) return;
+
+        // Delay capture to ensure visualization has fully rendered
+        const captureTimeout = setTimeout(async () => {
+            try {
+                log.debug(`Capturing thumbnail for view ${viewConfigId}`);
+
+                const thumbnail = await thumbnailCaptureService.capture(
+                    containerRef.current,
+                    { preferFormat: 'auto', quality: 0.7 }
+                );
+
+                if (!thumbnail) {
+                    log.debug(`No thumbnail captured for view ${viewConfigId}`);
+                    return;
+                }
+
+                // Upload thumbnail to server
+                const apiBase = config.apiBaseUrl || 'http://localhost:3001/api';
+                const response = await fetch(`${apiBase}/views/${viewConfigId}/thumbnail`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        format: thumbnail.format,
+                        data: thumbnail.data,
+                        width: thumbnail.width,
+                        height: thumbnail.height,
+                    }),
+                });
+
+                if (response.ok) {
+                    log.info(`Thumbnail uploaded for view ${viewConfigId}`);
+                } else {
+                    log.warn(`Failed to upload thumbnail: ${response.status}`);
+                }
+            } catch (err) {
+                log.warn(`Thumbnail capture failed:`, err.message);
+            }
+        }, 1000); // Wait 1 second for visualization to stabilize
+
+        return () => clearTimeout(captureTimeout);
+    }, [hasData, viewConfigId]);
 
     // =========================================================================
     // TOOLS LOADING

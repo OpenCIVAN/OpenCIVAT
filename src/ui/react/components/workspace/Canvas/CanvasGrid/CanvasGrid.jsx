@@ -322,6 +322,11 @@ export function CanvasGrid({
             const availableWidth = measureContainer.clientWidth;
             const availableHeight = measureContainer.clientHeight;
 
+            // Skip if container has no size yet (initial render before layout)
+            if (availableWidth <= 0 || availableHeight <= 0) {
+                return;
+            }
+
             // Calculate ideal cell size to fit exactly viewport cells in visible area
             // Formula: availableSpace = (cellSize * numCells) + (gap * (numCells - 1))
             // Solving for cellSize: cellSize = (availableSpace - gap * (numCells - 1)) / numCells
@@ -336,11 +341,16 @@ export function CanvasGrid({
             setCellSizes({ width: cellWidth, height: cellHeight });
         };
 
-        // Initial calculation
-        calculateCellSizes();
+        // Initial calculation - use requestAnimationFrame to wait for layout
+        requestAnimationFrame(() => {
+            calculateCellSizes();
+        });
 
         // Observe container size changes
-        const resizeObserver = new ResizeObserver(calculateCellSizes);
+        const resizeObserver = new ResizeObserver(() => {
+            // Use RAF to batch resize calculations
+            requestAnimationFrame(calculateCellSizes);
+        });
         resizeObserver.observe(measureContainer);
 
         return () => resizeObserver.disconnect();

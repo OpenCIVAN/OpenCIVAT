@@ -57,6 +57,7 @@ const DEFAULT_CATEGORIES = {
   files: true, // File operations
   auth: true, // Authentication
   compute: true, // Compute job events
+  thumbnails: true, // Thumbnail capture and progressive loading
 };
 
 // Parse configuration from localStorage or URL
@@ -149,6 +150,7 @@ const CATEGORY_COLORS = {
   files: "#74b9ff",
   auth: "#b2bec3",
   compute: "#e056fd",
+  thumbnails: "#a3cb38",
 };
 
 /**
@@ -223,6 +225,7 @@ const loggers = {
   files: createLogger("files"),
   auth: createLogger("auth"),
   compute: createLogger("compute"),
+  thumbnails: createLogger("thumbnails"),
 };
 
 // Runtime configuration API (exposed on window.log)
@@ -473,6 +476,7 @@ export const {
   files,
   auth,
   compute,
+  thumbnails,
 } = loggers;
 
 // Default export for simple usage

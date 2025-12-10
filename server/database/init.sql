@@ -503,6 +503,49 @@ CREATE INDEX idx_bookmarks_dataset ON bookmarks(dataset_id) WHERE dataset_id IS 
 CREATE INDEX idx_bookmarks_tags ON bookmarks USING GIN(tags);
 
 -- ============================================================================
+-- VIEW THUMBNAILS (Progressive Loading & Snapshots)
+-- ============================================================================
+-- Stores visual thumbnails/previews of views for:
+-- 1. Progressive loading (show thumbnail while real data loads)
+-- 2. Bookmark previews
+-- 3. Snapshot gallery views
+-- 4. Canvas cell placeholders
+
+CREATE TABLE view_thumbnails (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    view_config_id UUID NOT NULL REFERENCES view_configurations(id) ON DELETE CASCADE,
+    snapshot_id UUID,  -- NULL = current state thumbnail, else links to specific snapshot
+
+    -- Thumbnail data (either storage_key OR inline_data, not both)
+    format VARCHAR(10) NOT NULL CHECK (format IN ('svg', 'webp', 'png', 'jpeg')),
+    storage_key VARCHAR(500),     -- MinIO object key for larger thumbnails
+    inline_data TEXT,             -- Base64 encoded data for small thumbnails (< 64KB)
+
+    -- Metadata
+    width INTEGER,
+    height INTEGER,
+    file_size INTEGER,            -- Size in bytes
+
+    -- Lifecycle
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,       -- Optional TTL for auto-cleanup
+
+    -- Ensure either storage_key or inline_data is set
+    CONSTRAINT thumbnail_data_check CHECK (
+        (storage_key IS NOT NULL AND inline_data IS NULL) OR
+        (storage_key IS NULL AND inline_data IS NOT NULL)
+    ),
+
+    -- Unique constraint: one thumbnail per view/snapshot combination
+    CONSTRAINT unique_view_snapshot_thumbnail UNIQUE (view_config_id, snapshot_id)
+);
+
+CREATE INDEX idx_thumbnails_view ON view_thumbnails(view_config_id);
+CREATE INDEX idx_thumbnails_snapshot ON view_thumbnails(snapshot_id) WHERE snapshot_id IS NOT NULL;
+CREATE INDEX idx_thumbnails_expires ON view_thumbnails(expires_at) WHERE expires_at IS NOT NULL;
+
+-- ============================================================================
 -- RECORDING EVENTS
 -- ============================================================================
 

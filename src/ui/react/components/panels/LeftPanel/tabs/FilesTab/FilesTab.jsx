@@ -57,6 +57,7 @@ import { instanceTypeRegistry } from '@Core/instances/types/instanceTypeRegistry
 import { getHandlerForFileType, getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { formatFileSize } from '@Utils/formatters.js';
 import * as LucideIcons from 'lucide-react';
+import { ThumbnailPreview } from '@UI/react/components/common/ThumbnailPreview';
 
 
 // =============================================================================
@@ -274,6 +275,42 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
 // FILE ITEM - GRID VIEW
 // =============================================================================
 
+/**
+ * FileThumbnailImage - Shows actual thumbnail image for a file
+ * Falls back to icon if no thumbnail available
+ */
+function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorClass }) {
+    const [src, setSrc] = useState(null);
+    const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+        // Construct thumbnail URL
+        const apiBase = config.apiBaseUrl || 'http://localhost:3001/api';
+        setSrc(`${apiBase}/files/${fileId}/thumbnail`);
+        setHasError(false);
+    }, [fileId]);
+
+    if (hasError || !src) {
+        return (
+            <FallbackIcon
+                size={20}
+                style={color ? { color, opacity: 0.5 } : { opacity: 0.5 }}
+                className={colorClass || ''}
+            />
+        );
+    }
+
+    return (
+        <img
+            src={src}
+            alt="File thumbnail"
+            className="thumbnail__image"
+            onError={() => setHasError(true)}
+            onLoad={() => setHasError(false)}
+        />
+    );
+}
+
 function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick, onDoubleClick }) {
     const [isHovered, setIsHovered] = useState(false);
     const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
@@ -293,8 +330,13 @@ function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onConte
         >
             <div className="thumbnail">
                 {file.thumbnail ? (
-                    <div className="thumbnail__preview" style={{ background: `linear-gradient(135deg, var(--thumbnail-color, rgba(96,165,250,0.2)) 0%, transparent 100%)` }}>
-                        <TypeIcon size={20} style={color ? { color, opacity: 0.7 } : { opacity: 0.7 }} className={colorClass || ''} />
+                    <div className="thumbnail__preview">
+                        <FileThumbnailImage
+                            fileId={file.id}
+                            fallbackIcon={TypeIcon}
+                            color={color}
+                            colorClass={colorClass}
+                        />
                     </div>
                 ) : (
                     <TypeIcon size={20} style={color ? { color, opacity: 0.5 } : { opacity: 0.5 }} className={colorClass || ''} />

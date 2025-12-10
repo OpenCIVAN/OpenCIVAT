@@ -186,9 +186,13 @@ const recordingsRouter = require("./routes/recordings");
 const filtersRouter = require("./routes/filters");
 const bookmarksRouter = require("./routes/bookmarks");
 
+// View thumbnails routes (progressive loading)
+const thumbnailsRouter = require("./routes/thumbnails");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
+app.use("/api/views", optionalAuth, thumbnailsRouter); // Thumbnail routes nested under views
 app.use("/api/compute", optionalAuth, computeRouter);
 app.use("/api/workspace-annotations", optionalAuth, workspaceAnnotationsRouter);
 
