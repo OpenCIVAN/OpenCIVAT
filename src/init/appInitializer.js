@@ -492,6 +492,7 @@ function setupDebugHelpers() {
   window.CIA.viewConfigurationManager = viewConfigurationManager;
   window.CIA.workspaceManager = workspaceManager;
   window.CIA.sessionManager = sessionManager;
+  window.CIA.canvasManager = canvasManager;
 
   // For debugging only - expose the internal storage provider
   // This violates encapsulation but is useful for development

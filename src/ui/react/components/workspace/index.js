@@ -18,3 +18,4 @@ export { BreakoutPanel } from "./Workspace";
 
 // Full canvas workspace integration
 export { CanvasWorkspace } from "./Canvas";
+export { IsolationOverlay, useIsolationMode } from "./Canvas";

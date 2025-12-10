@@ -217,6 +217,7 @@ const loggers = {
   workspace: createLogger("workspace"),
   instance: createLogger("instance"),
   render: createLogger("render"),
+  canvas: createLogger("canvas"),
   // Collaboration
   presence: createLogger("presence"),
   cursor: createLogger("cursor"),
@@ -479,6 +480,7 @@ export const {
   compute,
   thumbnails,
   embed,
+  canvas,
 } = loggers;
 
 // Default export for simple usage

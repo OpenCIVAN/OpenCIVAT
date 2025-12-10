@@ -1,25 +1,72 @@
-// src/ui/react/components/workspace/CanvasGrid.jsx
+// src/ui/react/components/workspace/Canvas/CanvasGrid/CanvasGrid.jsx
 // Main canvas grid component - renders visible placements
 //
-// ARCHITECTURE:
-// - Only renders placements within the viewport (GPU optimization)
-// - Supports spanning (1-3 rows/cols per placement)
-// - Handles keyboard navigation
-// - Integrates with selection mode for subset creation
-// - Edit mode for grid manipulation (add rows/cols, merge cells)
-// - Minimap for canvas overview and navigation
-// - Supports Grid and Flow layout modes
+// ARCHITECTURE (Updated December 2025):
+// - Separates Canvas Grid (data - can be huge) from Viewport (render - visible cells)
+// - Uses useCanvasDimensions for robust measurement and resize handling
+// - Progressive UI degradation based on cell size (full → compact → thumbnail → snapshot)
+// - Isolation mode overlay for working with tiny cells
+// - Virtual scrolling for large canvases
+// - No minimum cell sizes - true zoom behavior
+//
+// Key components:
+// - Canvas Grid: The actual data grid (can be 100×350 cells)
+// - Viewport: How many cells are visible/rendered at once (e.g., 3×3)
+// - Render Mode: UI complexity based on cell size
 
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { CanvasCell } from '@UI/react/components/workspace';
 import { ConnectionOverlay } from '../ConnectionOverlay';
+import { IsolationOverlay, useIsolationMode } from '@UI/react/components/workspace/Canvas/IsolationOverlay';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { useViewportSize } from '@UI/react/hooks';
+import { useCanvasDimensions, RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { viewConfigurationManager, datasetManager } from '@Init/appInitializer.js';
 import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
 import { workspace as log } from '@Utils/logger.js';
 import './CanvasGrid.scss';
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const GAP = 12; // Gap between cells in pixels
+const PADDING = {
+    top: 8,
+    right: 16,    // Extra for scrollbar
+    bottom: 16,   // Extra for scrollbar
+    left: 8,
+};
+
+// =============================================================================
+// LOADING STATE COMPONENT
+// =============================================================================
+
+function LoadingState({ message = 'Preparing workspace...', error = null }) {
+    return (
+        <div className="canvas-grid__loader">
+            {error ? (
+                <>
+                    <div className="canvas-grid__error-icon">⚠️</div>
+                    <div className="canvas-grid__error-message">{error.message}</div>
+                    <div className="canvas-grid__error-hint">
+                        Try resizing the window or refreshing the page.
+                    </div>
+                </>
+            ) : (
+                <>
+                    <div className="canvas-grid__spinner" />
+                    <div>{message}</div>
+                </>
+            )}
+        </div>
+    );
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 /**
  * CanvasGrid - The main workspace grid
@@ -47,18 +94,22 @@ export function CanvasGrid({
     onFlowDirectionChange,
 }) {
     const gridRef = useRef(null);
-    const containerRef = useRef(null);
+    const scrollRef = useRef(null);
 
     // Edit mode state
     const [editMode, setEditMode] = useState(false);
     const [selectedCells, setSelectedCells] = useState([]);
     const [minimapExpanded, setMinimapExpanded] = useState(false);
-    const [activeTool, setActiveTool] = useState('select'); // 'select', 'pan', 'merge'
+    const [activeTool, setActiveTool] = useState('select');
+
+    // ==========================================================================
+    // CANVAS DATA HOOK
+    // ==========================================================================
 
     const {
         canvas,
-        loading,
-        error,
+        loading: canvasLoading,
+        error: canvasError,
         viewport,
         visiblePlacements,
         moveViewport,
@@ -69,7 +120,10 @@ export function CanvasGrid({
         isConnected,
     } = useCanvas(canvasId);
 
-    // Viewport size controls - how many cells are visible at once
+    // ==========================================================================
+    // VIEWPORT SIZE HOOK (how many cells visible)
+    // ==========================================================================
+
     const {
         viewportSize,
         isMinSize,
@@ -87,22 +141,42 @@ export function CanvasGrid({
         cols: viewportSize.cols,
     }), [viewport.row, viewport.col, viewportSize.rows, viewportSize.cols]);
 
-    // Retry connection
-    const handleRetryConnection = useCallback(() => {
-        // Trigger a refresh by reloading the canvas
-        if (canvasId) {
-            canvasManager.handleReconnecting();
-            canvasManager.loadCanvas(canvasId).catch(() => {
-                // Error will be handled by connection state
-            });
-        }
-    }, [canvasId]);
+    // ==========================================================================
+    // CONTAINER MEASUREMENT HOOK (robust resize handling)
+    // ==========================================================================
 
-    // Use prop layout mode if provided, otherwise use canvas state
-    const layoutMode = propLayoutMode || canvas?.layoutMode || LAYOUT_MODES.FLOW;
-    const flowDirection = propFlowDirection || canvas?.flowDirection || FLOW_DIRECTIONS.ROW;
-    const isFlowMode = layoutMode === LAYOUT_MODES.FLOW;
-    const isGridMode = layoutMode === LAYOUT_MODES.GRID;
+    const {
+        isReady: measurementsReady,
+        measurementError,
+        containerSize,
+        cellSize,
+        renderMode,
+        measureRef,
+        remeasure,
+    } = useCanvasDimensions({
+        viewportCols: effectiveViewport.cols,
+        viewportRows: effectiveViewport.rows,
+        gap: GAP,
+        padding: PADDING,
+    });
+
+    // ==========================================================================
+    // ISOLATION MODE HOOK (for tiny cells)
+    // ==========================================================================
+
+    const {
+        isolatedCell,
+        isIsolationOpen,
+        isolateCell,
+        exitIsolation,
+        shouldTriggerIsolation,
+        renderSize: isolationRenderSize,
+        setRenderSize: setIsolationRenderSize,
+    } = useIsolationMode({ renderMode });
+
+    // ==========================================================================
+    // SUBSET SELECTION (for multi-select operations)
+    // ==========================================================================
 
     const {
         selectionMode,
@@ -112,185 +186,15 @@ export function CanvasGrid({
         activeSubset,
     } = useSubsets(canvasId);
 
-    // Keyboard navigation and viewport size shortcuts
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            // Only handle if grid is focused or no input is focused
-            if (
-                document.activeElement?.tagName === 'INPUT' ||
-                document.activeElement?.tagName === 'TEXTAREA'
-            ) {
-                return;
-            }
+    // ==========================================================================
+    // DERIVED STATE
+    // ==========================================================================
 
-            switch (e.key) {
-                // Navigation
-                case 'ArrowUp':
-                    e.preventDefault();
-                    moveViewport(-1, 0);
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    moveViewport(1, 0);
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    moveViewport(0, -1);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    moveViewport(0, 1);
-                    break;
-
-                // Viewport size controls (zoom semantics)
-                // + = zoom in = fewer cells (focus) = decrementViewportSize
-                // - = zoom out = more cells (overview) = incrementViewportSize
-                case '+':
-                case '=':
-                    e.preventDefault();
-                    if (!isMinSize) {
-                        decrementViewportSize(); // Zoom in = show fewer, larger cells
-                    }
-                    break;
-                case '-':
-                case '_':
-                    e.preventDefault();
-                    if (!isMaxSize) {
-                        incrementViewportSize(); // Zoom out = show more, smaller cells
-                    }
-                    break;
-                case '0':
-                    e.preventDefault();
-                    resetViewportSize();
-                    break;
-
-                default:
-                    break;
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, isMinSize, isMaxSize]);
-
-    // Handle cell click
-    const handleCellClick = useCallback(
-        (placement, row, col) => {
-            // Edit mode: select cells for merging
-            if (editMode && !placement) {
-                const cellId = `${row}-${col}`;
-                setSelectedCells(prev => {
-                    if (prev.includes(cellId)) {
-                        return prev.filter(id => id !== cellId);
-                    }
-                    return [...prev, cellId];
-                });
-                return;
-            }
-
-            if (selectionMode && placement) {
-                toggleSelection(placement.id);
-            } else if (onCellClick) {
-                onCellClick(placement, row, col);
-            }
-        },
-        [editMode, selectionMode, toggleSelection, onCellClick]
-    );
-
-    // Handle cell double click
-    const handleCellDoubleClick = useCallback(
-        (placement, row, col) => {
-            if (onCellDoubleClick) {
-                onCellDoubleClick(placement, row, col);
-            }
-        },
-        [onCellDoubleClick]
-    );
-
-    // Handle dropping content onto a cell
-    const handleCellDrop = useCallback(
-        async (row, col, data) => {
-            if (!canvasId) return;
-
-            try {
-                let viewConfigId = data.viewConfigId;
-
-                // If we have a viewConfigId, use it directly
-                // Otherwise, this is a dataset drop - create a view first
-                if (!viewConfigId) {
-                    const datasetId = data.datasetId || data.id;
-                    if (!datasetId) {
-                        log.error('Drop data missing both viewConfigId and datasetId');
-                        return;
-                    }
-
-                    // Get the dataset to get its name
-                    const dataset = datasetManager.getDataset(datasetId);
-                    const datasetName = dataset?.filename || dataset?.fileName || 'Unknown';
-
-                    log.debug(`Creating view for dropped dataset ${datasetId}`);
-                    const newView = await viewConfigurationManager.createView(datasetId, {
-                        name: `View of ${datasetName}`,
-                        instanceType: dataset?.metadata?.defaultInstanceType || 'vtk'
-                    });
-
-                    if (!newView) {
-                        log.error('Failed to create view for dropped dataset');
-                        return;
-                    }
-                    viewConfigId = newView.id;
-                }
-
-                // Create placement with the view
-                await addPlacement({
-                    row,
-                    col,
-                    rowSpan: 1,
-                    colSpan: 1,
-                    content: {
-                        type: 'view',
-                        viewConfigurationId: viewConfigId,
-                    },
-                });
-            } catch (err) {
-                log.error('Failed to add placement:', err);
-            }
-        },
-        [canvasId, addPlacement]
-    );
-
-    // Handle adding content to a cell
-    const handleAddContent = useCallback(
-        (row, col, type) => {
-            if (onAddContent) {
-                onAddContent(row, col, type);
-            }
-        },
-        [onAddContent]
-    );
-
-    // Toggle edit mode
-    const handleToggleEditMode = useCallback(() => {
-        setEditMode(prev => {
-            if (prev) {
-                // Exiting edit mode - clear selection
-                setSelectedCells([]);
-            }
-            return !prev;
-        });
-    }, []);
-
-    // Merge selected cells
-    const handleMergeCells = useCallback((cells) => {
-        // TODO: Implement cell merging via canvas manager
-        console.log('Merge cells:', cells);
-        setSelectedCells([]);
-    }, []);
-
-    // Clear cell selection
-    const handleClearSelection = useCallback(() => {
-        setSelectedCells([]);
-    }, []);
+    // Use prop layout mode if provided, otherwise use canvas state
+    const layoutMode = propLayoutMode || canvas?.layoutMode || LAYOUT_MODES.FLOW;
+    const flowDirection = propFlowDirection || canvas?.flowDirection || FLOW_DIRECTIONS.ROW;
+    const isFlowMode = layoutMode === LAYOUT_MODES.FLOW;
+    const isGridMode = layoutMode === LAYOUT_MODES.GRID;
 
     // Canvas dimensions
     const canvasDimensions = useMemo(() => ({
@@ -298,120 +202,170 @@ export function CanvasGrid({
         cols: canvas?.dimensions?.cols || 10,
     }), [canvas?.dimensions?.rows, canvas?.dimensions?.cols]);
 
-    // Refs for containers
-    const measureRef = useRef(null);  // For measuring available space (stable)
-    const scrollRef = useRef(null);   // For scroll container
+    // ==========================================================================
+    // RETRY CONNECTION
+    // ==========================================================================
 
-    // Constants - UPDATED VALUES
-    const GAP = 12;               // Gap between cells ($spacing-md or smaller)
+    const handleRetryConnection = useCallback(() => {
+        if (canvasId) {
+            canvasManager.handleReconnecting();
+            canvasManager.loadCanvas(canvasId).catch(() => {
+                // Error will be handled by connection state
+            });
+        }
+    }, [canvasId]);
 
-    // Padding values must match CSS
-    const PADDING_TOP = 8;
-    const PADDING_RIGHT = 16;     // Extra for scrollbar
-    const PADDING_BOTTOM = 16;    // Extra for scrollbar
-    const PADDING_LEFT = 8;
+    // ==========================================================================
+    // KEYBOARD NAVIGATION
+    // ==========================================================================
 
-    // Track whether we have valid measurements (for loading state)
-    const [measurementsReady, setMeasurementsReady] = useState(false);
-
-    // Calculate cell sizes to fill visible area
-    // No minimums - cells scale to fit viewport setting (true zoom behavior)
-    const [cellSizes, setCellSizes] = useState({ width: 300, height: 200 });
-
-    // ResizeObserver to recalculate cell sizes when container resizes
     useEffect(() => {
-        // Don't run if measure container isn't mounted yet
-        if (!measureRef.current) {
+        const handleKeyDown = (e) => {
+            // Only handle if grid is focused
+            if (!gridRef.current?.contains(document.activeElement)) return;
+
+            // Arrow keys for viewport navigation
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                moveViewport(-1, 0);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                moveViewport(1, 0);
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                moveViewport(0, -1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                moveViewport(0, 1);
+            }
+
+            // Viewport size shortcuts
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                incrementViewportSize();
+            } else if (e.key === '-') {
+                e.preventDefault();
+                decrementViewportSize();
+            } else if (e.key === '0') {
+                e.preventDefault();
+                resetViewportSize();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize]);
+
+    // ==========================================================================
+    // VIRTUAL SCROLLING
+    // ==========================================================================
+
+    // Spacer dimensions for virtual scrolling
+    const spacerWidth = canvasDimensions.cols * (cellSize.width + GAP) - GAP;
+    const spacerHeight = canvasDimensions.rows * (cellSize.height + GAP) - GAP;
+
+    // Track if scroll is being programmatically set
+    const isScrollingRef = useRef(false);
+
+    // Handle scroll events to update viewport position
+    const handleScroll = useCallback((e) => {
+        if (isScrollingRef.current) return;
+
+        const container = e.target;
+        if (!container) return;
+
+        const cellWidth = cellSize.width + GAP;
+        const cellHeight = cellSize.height + GAP;
+
+        const newCol = Math.round(container.scrollLeft / cellWidth);
+        const newRow = Math.round(container.scrollTop / cellHeight);
+
+        if (newRow !== viewport.row || newCol !== viewport.col) {
+            const maxRow = Math.max(0, canvasDimensions.rows - effectiveViewport.rows);
+            const maxCol = Math.max(0, canvasDimensions.cols - effectiveViewport.cols);
+            const clampedRow = Math.max(0, Math.min(newRow, maxRow));
+            const clampedCol = Math.max(0, Math.min(newCol, maxCol));
+
+            if (clampedRow !== viewport.row || clampedCol !== viewport.col) {
+                moveViewport(clampedRow - viewport.row, clampedCol - viewport.col);
+            }
+        }
+    }, [viewport.row, viewport.col, canvasDimensions, effectiveViewport, cellSize, moveViewport]);
+
+    // Sync scroll position when viewport changes programmatically
+    useEffect(() => {
+        const scrollContainer = scrollRef.current;
+        if (!scrollContainer || !measurementsReady) return;
+
+        const cellWidth = cellSize.width + GAP;
+        const cellHeight = cellSize.height + GAP;
+        const targetScrollLeft = viewport.col * cellWidth;
+        const targetScrollTop = viewport.row * cellHeight;
+
+        // Only update if significantly different (avoid feedback loops)
+        if (
+            Math.abs(scrollContainer.scrollLeft - targetScrollLeft) > 2 ||
+            Math.abs(scrollContainer.scrollTop - targetScrollTop) > 2
+        ) {
+            isScrollingRef.current = true;
+            scrollContainer.scrollTo({
+                left: targetScrollLeft,
+                top: targetScrollTop,
+                behavior: 'smooth',
+            });
+            setTimeout(() => {
+                isScrollingRef.current = false;
+            }, 100);
+        }
+    }, [viewport.row, viewport.col, cellSize, measurementsReady]);
+
+    // ==========================================================================
+    // CELL CLICK HANDLING
+    // ==========================================================================
+
+    const handleCellClick = useCallback((placement, e) => {
+        // Check if this cell should trigger isolation mode
+        if (shouldTriggerIsolation(renderMode)) {
+            isolateCell({
+                id: placement.id,
+                viewId: placement.content?.viewConfigurationId,
+                name: getPlacementName(placement),
+                row: placement.row,
+                col: placement.col,
+            });
             return;
         }
 
-        const measureContainer = measureRef.current;
-        let attemptCount = 0;
-        const MAX_ATTEMPTS = 20;
+        // Normal click handling
+        if (onCellClick) {
+            onCellClick(placement, e);
+        }
+    }, [renderMode, shouldTriggerIsolation, isolateCell, onCellClick]);
 
-        const calculateCellSizes = () => {
-            attemptCount++;
-            const containerWidth = measureContainer.clientWidth;
-            const containerHeight = measureContainer.clientHeight;
+    // ==========================================================================
+    // HELPER FUNCTIONS
+    // ==========================================================================
 
-            console.log(`Measurement attempt ${attemptCount}: ${containerWidth}x${containerHeight}`);
-
-            // Skip if container has no size yet
-            if (containerWidth <= 0 || containerHeight <= 0) {
-                if (attemptCount < MAX_ATTEMPTS) {
-                    console.warn(`Container has no size yet (attempt ${attemptCount}/${MAX_ATTEMPTS}), will retry...`);
-                    // Retry after a short delay
-                    setTimeout(calculateCellSizes, 50);
-                } else {
-                    console.error('Failed to get valid measurements after max attempts');
+    function getPlacementName(placement) {
+        if (placement.content?.type === 'view') {
+            try {
+                const view = viewConfigurationManager.getView(placement.content.viewConfigurationId);
+                if (view) {
+                    const dataset = datasetManager.getDataset(view.datasetId);
+                    return dataset?.filename || view.name || 'View';
                 }
-                setMeasurementsReady(false);
-                return;
+            } catch (e) {
+                // Fall through to default
             }
+        }
+        return `Cell [${placement.row}, ${placement.col}]`;
+    }
 
-            // Available space after padding (for scrollbar clearance)
-            const availableWidth = containerWidth - PADDING_LEFT - PADDING_RIGHT;
-            const availableHeight = containerHeight - PADDING_TOP - PADDING_BOTTOM;
-
-            // How many cells the user wants to see (from viewport settings)
-            const cols = effectiveViewport.cols;
-            const rows = effectiveViewport.rows;
-
-            // Calculate cell size to fit exactly viewport cells
-            // Formula: availableSpace = (cellSize * numCells) + (gap * (numCells - 1))
-            // Solving: cellSize = (availableSpace - gap * (numCells - 1)) / numCells
-            const cellWidth = (availableWidth - GAP * (cols - 1)) / cols;
-            const cellHeight = (availableHeight - GAP * (rows - 1)) / rows;
-
-            // No minimums - true zoom behavior, cells scale to fit
-            // UI will adapt to small cells (progressive disclosure of tools)
-            // Isolation mode available for working with tiny cells
-
-            // Debug logging
-            console.log('✓ Canvas cell sizing complete:', {
-                container: { width: containerWidth, height: containerHeight },
-                available: { width: availableWidth, height: availableHeight },
-                viewport: { cols, rows },
-                final: { width: cellWidth, height: cellHeight },
-                pixelsPerCell: Math.round(cellWidth * cellHeight)
-            });
-
-            setCellSizes({ width: cellWidth, height: cellHeight });
-            setMeasurementsReady(true);
-        };
-
-        // Initial calculation - use double RAF to ensure layout is complete
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                calculateCellSizes();
-            });
-        });
-
-        // Fallback timer in case RAF timing doesn't work
-        const fallbackTimer = setTimeout(() => {
-            calculateCellSizes();
-        }, 100);
-
-        // ResizeObserver for ongoing size changes
-        const resizeObserver = new ResizeObserver(() => {
-            // Reset attempt count on resize
-            attemptCount = 0;
-            requestAnimationFrame(calculateCellSizes);
-        });
-        resizeObserver.observe(measureContainer);
-
-        return () => {
-            clearTimeout(fallbackTimer);
-            resizeObserver.disconnect();
-        };
-    }, [effectiveViewport.cols, effectiveViewport.rows]);
-
-    // Filter placements to only those visible in the effective viewport
+    // Filter placements to only those visible in the viewport
     const viewportPlacements = useMemo(() => {
         if (!canvas?.placements) return [];
 
         return canvas.placements.filter((placement) => {
-            // Check if placement overlaps with viewport window
             const pEndRow = placement.row + (placement.rowSpan || 1);
             const pEndCol = placement.col + (placement.colSpan || 1);
             const vEndRow = effectiveViewport.row + effectiveViewport.rows;
@@ -426,146 +380,75 @@ export function CanvasGrid({
         });
     }, [canvas?.placements, effectiveViewport]);
 
-    // Track if scroll is being programmatically set (to avoid feedback loop)
-    const isScrollingRef = useRef(false);
+    // ==========================================================================
+    // RENDER CELLS
+    // ==========================================================================
 
-    // Handle scroll events to update viewport position (virtual scrolling)
-    const handleScroll = useCallback((e) => {
-        // Skip if this scroll was triggered programmatically
-        if (isScrollingRef.current) return;
-
-        const container = e.target;
-        if (!container) return;
-
-        // Use calculated cell sizes (includes gap)
-        const cellWidth = cellSizes.width + GAP;
-        const cellHeight = cellSizes.height + GAP;
-
-        // Calculate viewport position based on scroll
-        const newCol = Math.round(container.scrollLeft / cellWidth);
-        const newRow = Math.round(container.scrollTop / cellHeight);
-
-        // Only update if position changed
-        if (newRow !== viewport.row || newCol !== viewport.col) {
-            // Clamp to valid range
-            const maxRow = Math.max(0, canvasDimensions.rows - effectiveViewport.rows);
-            const maxCol = Math.max(0, canvasDimensions.cols - effectiveViewport.cols);
-            const clampedRow = Math.max(0, Math.min(newRow, maxRow));
-            const clampedCol = Math.max(0, Math.min(newCol, maxCol));
-
-            if (clampedRow !== viewport.row || clampedCol !== viewport.col) {
-                moveViewport(clampedRow - viewport.row, clampedCol - viewport.col);
-            }
-        }
-    }, [viewport.row, viewport.col, canvasDimensions, effectiveViewport.rows, effectiveViewport.cols, moveViewport, cellSizes.width, cellSizes.height]);
-
-    // Sync scroll position when viewport changes (from keyboard/minimap)
-    useEffect(() => {
-        const container = scrollRef.current;
-        if (!container) return;
-
-        // Use calculated cell sizes (includes gap)
-        const cellWidth = cellSizes.width + GAP;
-        const cellHeight = cellSizes.height + GAP;
-
-        // Calculate target scroll position
-        const targetScrollLeft = viewport.col * cellWidth;
-        const targetScrollTop = viewport.row * cellHeight;
-
-        // Only scroll if position is different (avoid unnecessary scrolls)
-        const scrollThreshold = 5;
-        if (
-            Math.abs(container.scrollLeft - targetScrollLeft) > scrollThreshold ||
-            Math.abs(container.scrollTop - targetScrollTop) > scrollThreshold
-        ) {
-            isScrollingRef.current = true;
-            container.scrollTo({
-                left: targetScrollLeft,
-                top: targetScrollTop,
-                behavior: 'smooth',
-            });
-            // Reset flag after scroll animation
-            setTimeout(() => {
-                isScrollingRef.current = false;
-            }, 300);
-        }
-    }, [viewport.row, viewport.col, cellSizes.width, cellSizes.height]);
-
-    // Build grid cells with absolute positioning (spacer pattern for virtual scrolling)
-    const renderCells = () => {
+    const renderCells = useCallback(() => {
         const cells = [];
-        const placementMap = new Map();
 
-        // Map placements to their positions
-        viewportPlacements.forEach((placement) => {
-            const key = `${placement.row}-${placement.col}`;
-            placementMap.set(key, placement);
-        });
-
-        // Track which cells are covered by spanning placements
-        const coveredCells = new Set();
-        viewportPlacements.forEach((placement) => {
-            for (let r = placement.row; r < placement.row + placement.rowSpan; r++) {
-                for (let c = placement.col; c < placement.col + placement.colSpan; c++) {
-                    if (r !== placement.row || c !== placement.col) {
-                        coveredCells.add(`${r}-${c}`);
-                    }
+        // Create a map of occupied cells for efficient lookup
+        const occupiedCells = new Map();
+        viewportPlacements.forEach(placement => {
+            for (let r = placement.row; r < placement.row + (placement.rowSpan || 1); r++) {
+                for (let c = placement.col; c < placement.col + (placement.colSpan || 1); c++) {
+                    occupiedCells.set(`${r},${c}`, placement);
                 }
             }
         });
 
-        // Generate cells for the effective viewport
-        for (let row = effectiveViewport.row; row < effectiveViewport.row + effectiveViewport.rows; row++) {
-            for (let col = effectiveViewport.col; col < effectiveViewport.col + effectiveViewport.cols; col++) {
-                const key = `${row}-${col}`;
+        // Render cells for the viewport
+        for (let viewRow = 0; viewRow < effectiveViewport.rows; viewRow++) {
+            for (let viewCol = 0; viewCol < effectiveViewport.cols; viewCol++) {
+                const canvasRow = effectiveViewport.row + viewRow;
+                const canvasCol = effectiveViewport.col + viewCol;
+                const key = `${canvasRow},${canvasCol}`;
 
-                // Skip cells covered by spanning placements
-                if (coveredCells.has(key)) {
+                // Check if this cell is the origin of a placement
+                const placement = viewportPlacements.find(
+                    p => p.row === canvasRow && p.col === canvasCol
+                );
+
+                // Skip if cell is covered by a multi-span placement (but not origin)
+                if (!placement && occupiedCells.has(key)) {
                     continue;
                 }
 
-                const placement = placementMap.get(key);
-                const isSelected = placement && selectedIds.includes(placement.id);
-                const isHighlighted = placement && highlightedPlacementId === placement.id;
+                // Calculate position
+                const left = canvasCol * (cellSize.width + GAP);
+                const top = canvasRow * (cellSize.height + GAP);
 
-                // Calculate absolute position for spacer pattern
-                const cellLeft = col * (cellSizes.width + GAP);
-                const cellTop = row * (cellSizes.height + GAP);
-                const cellWidth = (placement?.colSpan || 1) * cellSizes.width + ((placement?.colSpan || 1) - 1) * GAP;
-                const cellHeight = (placement?.rowSpan || 1) * cellSizes.height + ((placement?.rowSpan || 1) - 1) * GAP;
-
-                // Check if cell is selected in edit mode
-                const isCellSelected = editMode && selectedCells.includes(key);
+                // Calculate size (account for spanning)
+                const colSpan = placement?.colSpan || 1;
+                const rowSpan = placement?.rowSpan || 1;
+                const width = colSpan * cellSize.width + (colSpan - 1) * GAP;
+                const height = rowSpan * cellSize.height + (rowSpan - 1) * GAP;
 
                 cells.push(
                     <div
-                        key={key}
+                        key={placement?.id || key}
                         className="canvas-grid__cell-wrapper"
                         style={{
-                            position: 'absolute',
-                            left: cellLeft,
-                            top: cellTop,
-                            width: cellWidth,
-                            height: cellHeight,
+                            left,
+                            top,
+                            width,
+                            height,
                         }}
                     >
                         <CanvasCell
                             placement={placement}
-                            row={row}
-                            col={col}
-                            gridRow={row + 1}
-                            gridCol={col + 1}
-                            rowSpan={placement?.rowSpan || 1}
-                            colSpan={placement?.colSpan || 1}
-                            isSelected={isSelected || isCellSelected}
-                            isHighlighted={isHighlighted}
-                            selectionMode={selectionMode}
-                            editMode={editMode}
-                            onClick={() => handleCellClick(placement, row, col)}
-                            onDoubleClick={() => handleCellDoubleClick(placement, row, col)}
-                            onDrop={handleCellDrop}
-                            onAddContent={handleAddContent}
-                            onRemovePlacement={onRemovePlacement}
+                            row={canvasRow}
+                            col={canvasCol}
+                            renderMode={renderMode}
+                            cellSize={cellSize}
+                            isHighlighted={placement?.id === highlightedPlacementId}
+                            isSelected={selectedIds.includes(placement?.id)}
+                            inEditMode={editMode}
+                            onSelect={toggleSelection}
+                            onClick={(e) => placement && handleCellClick(placement, e)}
+                            onDoubleClick={(e) => placement && onCellDoubleClick?.(placement, e)}
+                            onAddContent={(type) => onAddContent?.(canvasRow, canvasCol, type)}
+                            onRemove={() => placement && onRemovePlacement?.(placement.id)}
                         />
                     </div>
                 );
@@ -573,84 +456,61 @@ export function CanvasGrid({
         }
 
         return cells;
-    };
+    }, [
+        viewportPlacements,
+        effectiveViewport,
+        cellSize,
+        renderMode,
+        highlightedPlacementId,
+        selectedIds,
+        editMode,
+        toggleSelection,
+        handleCellClick,
+        onCellDoubleClick,
+        onAddContent,
+        onRemovePlacement,
+    ]);
 
-    // Calculate total spacer dimensions (full canvas size)
-    // Spacer dimensions should NOT include padding - that's handled by scroll container
-    // Spacer just needs to be big enough for all cells
-    const spacerWidth = canvasDimensions.cols * cellSizes.width + (canvasDimensions.cols - 1) * GAP;
-    const spacerHeight = canvasDimensions.rows * cellSizes.height + (canvasDimensions.rows - 1) * GAP;
+    // ==========================================================================
+    // RENDER
+    // ==========================================================================
 
-    // Loading state
-    if (loading) {
+    // Show loading if canvas is still loading
+    if (canvasLoading) {
         return (
             <div className="canvas-grid canvas-grid--loading">
-                <div className="canvas-grid__loader">Loading canvas...</div>
+                <LoadingState message="Loading canvas..." />
             </div>
         );
     }
 
-    // Error state
-    if (error) {
+    // Show error if canvas failed to load
+    if (canvasError) {
         return (
             <div className="canvas-grid canvas-grid--error">
-                <div className="canvas-grid__error">
-                    <p>Failed to load canvas</p>
-                    <small>{error.message}</small>
-                </div>
+                <LoadingState error={canvasError} />
             </div>
         );
     }
-
-    // No canvas state
-    if (!canvas) {
-        return (
-            <div className="canvas-grid canvas-grid--empty">
-                <div className="canvas-grid__empty">
-                    <p>No canvas selected</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Build class names
-    const gridClassNames = [
-        'canvas-grid',
-        selectionMode && 'canvas-grid--selection-mode',
-        inFocusMode && 'canvas-grid--focus-mode',
-        editMode && 'canvas-grid--edit-mode',
-        isFlowMode && 'canvas-grid--flow-mode',
-        isGridMode && 'canvas-grid--grid-mode',
-        activeTool === 'pan' && 'canvas-grid--pan-tool',
-        activeTool === 'merge' && 'canvas-grid--merge-tool',
-    ].filter(Boolean).join(' ');
 
     return (
         <div
-            ref={containerRef}
-            className={gridClassNames}
-            tabIndex={0}
-            role="grid"
-            aria-label="Workspace canvas"
+            className={`canvas-grid canvas-grid--${layoutMode} ${inFocusMode ? 'canvas-grid--focus-mode' : ''}`}
+            data-render-mode={renderMode}
         >
-            {/* Focus mode indicator */}
+            {/* Mode banners */}
             {inFocusMode && activeSubset && (
                 <div className="canvas-grid__focus-banner">
                     <span>Focus: {activeSubset.name}</span>
                 </div>
             )}
 
-            {/* Selection mode indicator */}
             {selectionMode && (
                 <div className="canvas-grid__selection-banner">
-                    <span>Selection Mode - Click views to select</span>
-                    <span className="canvas-grid__selection-count">
-                        {selectedIds.length} selected
-                    </span>
+                    <span>Selection Mode - Click cells to add/remove from selection</span>
                 </div>
             )}
 
-            {/* Edit mode indicator */}
             {editMode && (
                 <div className="canvas-grid__edit-banner">
                     <span>
@@ -663,19 +523,17 @@ export function CanvasGrid({
 
             {/* Container - edge-to-edge wrapper */}
             <div className="canvas-grid__container">
-                {/* Measurement container - fills available space, used for cell size calculation */}
+                {/* Measurement container - fills available space */}
                 <div
                     ref={measureRef}
                     className="canvas-grid__measure-container"
                 >
                     {!measurementsReady ? (
-                        /* Loading state while waiting for valid measurements */
-                        <div className="canvas-grid__loader">
-                            <div className="canvas-grid__spinner"></div>
-                            <div>Loading workspace...</div>
-                        </div>
+                        <LoadingState
+                            message="Preparing workspace..."
+                            error={measurementError}
+                        />
                     ) : (
-                        /* Scroll container - matches measurement container, has native scrollbar */
                         <div
                             ref={(el) => {
                                 gridRef.current = el;
@@ -683,8 +541,8 @@ export function CanvasGrid({
                             }}
                             className="canvas-grid__scroll-container"
                             onScroll={handleScroll}
+                            tabIndex={0}
                         >
-                            {/* Spacer - explicit dimensions create scroll area for full canvas */}
                             <div
                                 className="canvas-grid__spacer"
                                 style={{
@@ -693,7 +551,6 @@ export function CanvasGrid({
                                     position: 'relative',
                                 }}
                             >
-                                {/* Cells - absolutely positioned within spacer */}
                                 {renderCells()}
                             </div>
                         </div>
@@ -701,7 +558,44 @@ export function CanvasGrid({
                 </div>
             </div>
 
-            {/* Connection Overlay - shown when disconnected */}
+            {/* Viewport info bar */}
+            {measurementsReady && (
+                <div className="canvas-grid__viewport-info">
+                    <span>
+                        Viewport: {effectiveViewport.rows}×{effectiveViewport.cols}
+                        {' | '}
+                        Position: [{effectiveViewport.row}, {effectiveViewport.col}]
+                        {' | '}
+                        Mode: {renderMode}
+                    </span>
+                    <span>
+                        Cell: {Math.round(cellSize.width)}×{Math.round(cellSize.height)}px
+                    </span>
+                </div>
+            )}
+
+            {/* Isolation Mode Overlay */}
+            <IsolationOverlay
+                isOpen={isIsolationOpen}
+                onClose={exitIsolation}
+                cell={isolatedCell}
+                renderSize={isolationRenderSize}
+            >
+                {isolatedCell && (
+                    <CanvasCell
+                        placement={viewportPlacements.find(p => p.id === isolatedCell.id)}
+                        row={isolatedCell.row}
+                        col={isolatedCell.col}
+                        renderMode={RENDER_MODES.FULL}
+                        cellSize={{ width: 800, height: 600 }}
+                        isHighlighted={false}
+                        isSelected={false}
+                        inEditMode={false}
+                    />
+                )}
+            </IsolationOverlay>
+
+            {/* Connection Overlay */}
             <ConnectionOverlay
                 connectionState={connectionState}
                 error={canvasManager.getLastError()}

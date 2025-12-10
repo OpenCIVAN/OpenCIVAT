@@ -28,6 +28,7 @@ export { useAuth } from "./useAuth.js";
 
 export { useCanvas, useViewport, useSubsets } from "./useCanvas.js";
 export { useCanvasSelection } from "./useCanvasSelection.js";
+export { useCanvasDimensions } from "./useCanvasDimensions.js";
 export {
   useViewportSize,
   STORAGE_KEY as VIEWPORT_SIZE_STORAGE_KEY,

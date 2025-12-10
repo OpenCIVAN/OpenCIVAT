@@ -1,57 +1,151 @@
-// src/ui/react/components/workspace/CanvasCell.jsx
-// Individual cell in the canvas grid
+// src/ui/react/components/workspace/Canvas/CanvasCell/CanvasCell.jsx
+// Individual cell in the canvas grid - Updated December 2025
 //
-// Renders different content types:
-// - view: ViewConfiguration (renders InstanceWindow)
-// - notes: NotesBlock (renders markdown)
-// - image: ImageBlock (renders image)
-// - empty: Empty slot placeholder with interactive UI
+// ARCHITECTURE:
+// - Supports progressive UI degradation via renderMode prop
+// - Four render modes: full, compact, thumbnail, snapshot
+// - No minimum sizes - cells scale with viewport
+// - Isolation mode click handling for tiny cells
+//
+// Render Mode Behavior:
+// - FULL: Full 3D render + complete toolbar + header with all buttons
+// - COMPACT: 3D render + reduced toolbar (wrench icon for overflow)
+// - THUMBNAIL: SVG thumbnail + minimal header (name only)
+// - SNAPSHOT: Static image + tooltip on hover
 
-import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
+import React, { memo, useState, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Grid3X3, LayoutGrid, FileImage, FileText, Box, X } from 'lucide-react';
+import {
+    Plus,
+    Grid3X3,
+    LayoutGrid,
+    FileImage,
+    FileText,
+    Box,
+    X,
+    ZoomIn,
+    Wrench,
+} from 'lucide-react';
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
 import { ProgressiveLoader } from '@UI/react/components/common/ThumbnailPreview';
+import { RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import './CanvasCell.scss';
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const CONTENT_OPTIONS = [
+    { type: 'view', icon: Box, label: 'VTK View', angle: 0 },
+    { type: 'notes', icon: FileText, label: 'Notes', angle: 90 },
+    { type: 'image', icon: FileImage, label: 'Image', angle: 180 },
+    { type: 'grid', icon: LayoutGrid, label: 'Sub-Grid', angle: 270 },
+];
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 /**
  * CanvasCell - A single cell in the canvas grid
  *
- * Supports spanning across multiple rows/columns.
- * Renders appropriate content based on placement type.
+ * Supports:
+ * - Spanning across multiple rows/columns
+ * - Progressive UI degradation based on renderMode
+ * - Isolation mode trigger for small cells
  */
 export const CanvasCell = memo(function CanvasCell({
     placement,
     row,
     col,
-    gridRow,
-    gridCol,
-    rowSpan = 1,
-    colSpan = 1,
+    renderMode = RENDER_MODES.FULL,
+    cellSize = { width: 300, height: 200 },
     isSelected = false,
     isHighlighted = false,
     selectionMode = false,
-    editMode = false,
+    inEditMode = false,
     onClick,
     onDoubleClick,
+    onSelect,
     onDrop,
     onAddContent,
-    onRemovePlacement,
+    onRemove,
 }) {
     const [isDragOver, setIsDragOver] = useState(false);
-    const isEmpty = !placement || placement.content.type === PlacementContentType.EMPTY;
+    const [showTooltip, setShowTooltip] = useState(false);
+
+    const isEmpty = !placement || placement.content?.type === PlacementContentType.EMPTY;
     const contentType = placement?.content?.type || 'empty';
+    const rowSpan = placement?.rowSpan || 1;
+    const colSpan = placement?.colSpan || 1;
+
+    // Determine which UI elements to show based on render mode
+    const uiConfig = useMemo(() => {
+        switch (renderMode) {
+            case RENDER_MODES.FULL:
+                return {
+                    showToolbar: true,
+                    showHeader: true,
+                    showHeaderButtons: true,
+                    showCoords: true,
+                    showSizeBadge: true,
+                    renderContent: 'full', // Full InstanceViewport
+                    showTooltipOnHover: false,
+                };
+            case RENDER_MODES.COMPACT:
+                return {
+                    showToolbar: true,      // Compact toolbar with overflow menu
+                    showHeader: true,
+                    showHeaderButtons: false, // Hide extra buttons
+                    showCoords: false,
+                    showSizeBadge: false,
+                    renderContent: 'full',
+                    showTooltipOnHover: false,
+                };
+            case RENDER_MODES.THUMBNAIL:
+                return {
+                    showToolbar: false,
+                    showHeader: true,       // Minimal header with name only
+                    showHeaderButtons: false,
+                    showCoords: false,
+                    showSizeBadge: false,
+                    renderContent: 'thumbnail', // SVG thumbnail
+                    showTooltipOnHover: true,
+                };
+            case RENDER_MODES.SNAPSHOT:
+                return {
+                    showToolbar: false,
+                    showHeader: false,      // No header
+                    showHeaderButtons: false,
+                    showCoords: false,
+                    showSizeBadge: false,
+                    renderContent: 'snapshot', // Static image
+                    showTooltipOnHover: true,
+                };
+            default:
+                return {
+                    showToolbar: true,
+                    showHeader: true,
+                    showHeaderButtons: true,
+                    showCoords: true,
+                    showSizeBadge: true,
+                    renderContent: 'full',
+                    showTooltipOnHover: false,
+                };
+        }
+    }, [renderMode]);
 
     // Build class names
     const classNames = [
         'canvas-cell',
         `canvas-cell--${contentType}`,
+        `canvas-cell--mode-${renderMode}`,
         isEmpty && 'canvas-cell--empty',
         isSelected && 'canvas-cell--selected',
         isHighlighted && 'canvas-cell--highlighted',
         selectionMode && 'canvas-cell--selectable',
-        editMode && 'canvas-cell--edit-mode',
+        inEditMode && 'canvas-cell--edit-mode',
         isDragOver && 'canvas-cell--drag-over',
         rowSpan > 1 && 'canvas-cell--row-span',
         colSpan > 1 && 'canvas-cell--col-span',
@@ -59,10 +153,10 @@ export const CanvasCell = memo(function CanvasCell({
         .filter(Boolean)
         .join(' ');
 
-    // Style - positioning now handled by parent wrapper in spacer pattern
-    const style = {};
+    // ==========================================================================
+    // DRAG AND DROP
+    // ==========================================================================
 
-    // Drag and drop handlers
     const handleDragOver = useCallback((e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
@@ -80,16 +174,15 @@ export const CanvasCell = memo(function CanvasCell({
         setIsDragOver(false);
         if (onDrop && isEmpty) {
             try {
-                // Try ViewItem format first (from Datasets tab)
+                // Try ViewItem format first
                 let data = e.dataTransfer.getData('application/x-viewitem');
                 if (data) {
                     const parsed = JSON.parse(data);
-                    // ViewItem data has { id, name, color, size } - convert to expected format
                     onDrop(row, col, { viewConfigId: parsed.id, ...parsed });
                     return;
                 }
 
-                // Fall back to generic JSON format (from Files tab)
+                // Fall back to generic JSON
                 data = e.dataTransfer.getData('application/json');
                 if (data) {
                     const parsed = JSON.parse(data);
@@ -101,21 +194,34 @@ export const CanvasCell = memo(function CanvasCell({
         }
     }, [isEmpty, row, col, onDrop]);
 
-    // Handle add content click
+    // ==========================================================================
+    // CLICK HANDLERS
+    // ==========================================================================
+
+    const handleClick = useCallback((e) => {
+        if (onClick) {
+            onClick(e);
+        }
+    }, [onClick]);
+
     const handleAddClick = useCallback((type) => {
         if (onAddContent) {
-            onAddContent(row, col, type);
+            onAddContent(type);
         }
-    }, [row, col, onAddContent]);
+    }, [onAddContent]);
 
-    // Render content based on type
+    // ==========================================================================
+    // RENDER FUNCTIONS
+    // ==========================================================================
+
     const renderContent = () => {
         if (isEmpty) {
             return (
                 <EmptyPlaceholder
                     row={row}
                     col={col}
-                    editMode={editMode}
+                    renderMode={renderMode}
+                    inEditMode={inEditMode}
                     onAddClick={handleAddClick}
                 />
             );
@@ -129,7 +235,9 @@ export const CanvasCell = memo(function CanvasCell({
                         rowSpan={rowSpan}
                         colSpan={colSpan}
                         placementId={placement.id}
-                        onClose={() => onRemovePlacement?.(placement.id)}
+                        renderMode={renderMode}
+                        uiConfig={uiConfig}
+                        onClose={() => onRemove?.()}
                     />
                 );
 
@@ -137,7 +245,8 @@ export const CanvasCell = memo(function CanvasCell({
                 return (
                     <NotesPlaceholder
                         notesId={placement.content.notesBlockId}
-                        onClose={() => onRemovePlacement?.(placement.id)}
+                        renderMode={renderMode}
+                        onClose={() => onRemove?.()}
                     />
                 );
 
@@ -145,50 +254,63 @@ export const CanvasCell = memo(function CanvasCell({
                 return (
                     <ImagePlaceholder
                         imageId={placement.content.imageBlockId}
-                        onClose={() => onRemovePlacement?.(placement.id)}
+                        renderMode={renderMode}
+                        onClose={() => onRemove?.()}
                     />
                 );
 
             default:
                 return (
                     <div className="canvas-cell__unknown">
-                        Unknown content type: {contentType}
+                        Unknown: {contentType}
                     </div>
                 );
         }
     };
 
+    // Get display name for tooltip
+    const getDisplayName = () => {
+        if (!placement) return `Empty [${row}, ${col}]`;
+        if (placement.content?.name) return placement.content.name;
+        return `${contentType} [${row}, ${col}]`;
+    };
+
     return (
         <div
             className={classNames}
-            style={style}
-            onClick={onClick}
+            onClick={handleClick}
             onDoubleClick={onDoubleClick}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            onMouseEnter={() => uiConfig.showTooltipOnHover && setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
             role="gridcell"
             aria-selected={isSelected}
             aria-label={isEmpty ? `Empty cell at ${row}, ${col}` : `${contentType} at ${row}, ${col}`}
             data-row={row}
             data-col={col}
             data-placement-id={placement?.id}
+            data-render-mode={renderMode}
         >
-            {/* Selection checkbox (visible in selection mode) */}
+            {/* Selection indicator (in selection mode) */}
             {selectionMode && !isEmpty && (
                 <div className="canvas-cell__selection-indicator">
                     <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => { }} // Handled by cell click
-                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => { }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSelect?.(placement.id);
+                        }}
                         aria-label={`Select cell at ${row}, ${col}`}
                     />
                 </div>
             )}
 
-            {/* Edit mode selection checkbox (for merging) */}
-            {editMode && isEmpty && (
+            {/* Edit mode selection checkbox */}
+            {inEditMode && isEmpty && (
                 <div className="canvas-cell__edit-select">
                     <input
                         type="checkbox"
@@ -196,145 +318,110 @@ export const CanvasCell = memo(function CanvasCell({
                         onChange={() => { }}
                         onClick={(e) => {
                             e.stopPropagation();
-                            onClick?.();
+                            onClick?.(e);
                         }}
-                        aria-label={`Select cell for merge at ${row}, ${col}`}
+                        aria-label={`Select empty cell at ${row}, ${col}`}
                     />
                 </div>
             )}
 
-            {/* Main content */}
-            <div className="canvas-cell__content">
-                {renderContent()}
-            </div>
-
-            {/* Resize handle (for spanning views) */}
-            {!isEmpty && (
-                <div className="canvas-cell__resize-handle" title="Drag to resize">
-                    <svg width="12" height="12" viewBox="0 0 12 12">
-                        <path d="M10 2L2 10M10 6L6 10M10 10L10 10" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
+            {/* Isolation mode indicator (for small cells) */}
+            {(renderMode === RENDER_MODES.THUMBNAIL || renderMode === RENDER_MODES.SNAPSHOT) && !isEmpty && (
+                <div className="canvas-cell__isolation-hint">
+                    <ZoomIn size={12} />
                 </div>
             )}
 
-            {/* Span indicator */}
-            {(rowSpan > 1 || colSpan > 1) && (
-                <div className="canvas-cell__span-badge">
-                    {colSpan}×{rowSpan}
+            {/* Content */}
+            {renderContent()}
+
+            {/* Coordinates badge (only in full mode) */}
+            {uiConfig.showCoords && (
+                <div className="canvas-cell__coords">
+                    [{row}, {col}]
+                </div>
+            )}
+
+            {/* Tooltip (for small cells) */}
+            {showTooltip && uiConfig.showTooltipOnHover && (
+                <div className="canvas-cell__tooltip">
+                    {getDisplayName()}
+                    {rowSpan > 1 || colSpan > 1 ? ` (${colSpan}×${rowSpan})` : ''}
                 </div>
             )}
         </div>
     );
 });
 
-/**
- * EmptyPlaceholder - Enhanced placeholder for empty cells with radial menu
- */
-function EmptyPlaceholder({ row, col, editMode, onAddClick }) {
-    const [menuOpen, setMenuOpen] = useState(false);
+// =============================================================================
+// EMPTY PLACEHOLDER
+// =============================================================================
+
+function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
+    const [showRadial, setShowRadial] = useState(false);
     const [hoveredOption, setHoveredOption] = useState(null);
-    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-    const containerRef = useRef(null);
-    const menuRef = useRef(null);
+    const radialRef = useRef(null);
+    const buttonRef = useRef(null);
+    const radialRadius = 60;
 
-    // Update menu position when opened
-    useEffect(() => {
-        if (menuOpen && containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            setMenuPosition({
-                x: rect.left + rect.width / 2,
-                y: rect.top + rect.height / 2,
-            });
-        }
-    }, [menuOpen]);
+    // Don't show add button in tiny modes
+    if (renderMode === RENDER_MODES.SNAPSHOT) {
+        return (
+            <div className="canvas-cell__empty-minimal">
+                <div className="canvas-cell__empty-dot" />
+            </div>
+        );
+    }
 
-    // Close menu when clicking outside
-    useEffect(() => {
-        if (!menuOpen) return;
-
-        const handleClickOutside = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
-                setMenuOpen(false);
-                setHoveredOption(null);
-            }
-        };
-
-        // Delay to avoid immediate close from the opening click
-        const timer = setTimeout(() => {
-            document.addEventListener('mousedown', handleClickOutside);
-        }, 0);
-
-        return () => {
-            clearTimeout(timer);
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [menuOpen]);
+    if (renderMode === RENDER_MODES.THUMBNAIL) {
+        return (
+            <div className="canvas-cell__empty-thumbnail">
+                <Plus size={12} />
+            </div>
+        );
+    }
 
     const handleOptionClick = (type) => {
-        setMenuOpen(false);
-        setHoveredOption(null);
+        setShowRadial(false);
         onAddClick?.(type);
     };
 
-    // Radial menu options with positions (angle in degrees, 0 = right, -90 = top, 180 = left)
-    const menuOptions = [
-        { type: 'view', icon: Box, label: 'View', angle: 180 },       // Left
-        { type: 'notes', icon: FileText, label: 'Notes', angle: -90 }, // Top
-        { type: 'image', icon: FileImage, label: 'Image', angle: 0 },  // Right
-    ];
-
-    const radius = 50; // Distance from center
-
     return (
-        <div
-            ref={containerRef}
-            className="canvas-cell__empty-content"
-        >
-            {/* Cell position indicator */}
-            <span className="canvas-cell__position">
-                ({col}, {row})
-            </span>
-
-            {/* Central add button */}
+        <div className="canvas-cell__empty">
+            {/* Add button */}
             <button
-                className={`canvas-cell__add-btn canvas-cell__add-btn--primary ${menuOpen ? 'canvas-cell__add-btn--active' : ''}`}
+                ref={buttonRef}
+                className="canvas-cell__add-btn"
                 onClick={(e) => {
                     e.stopPropagation();
-                    setMenuOpen(!menuOpen);
+                    setShowRadial(!showRadial);
                 }}
                 title="Add content"
             >
-                <Plus size={20} className={menuOpen ? 'rotate-45' : ''} />
+                <Plus size={20} />
             </button>
 
-            {/* Drop hint */}
-            <span className="canvas-cell__drop-hint">
-                {menuOpen ? '' : 'Drop file or click +'}
-            </span>
-
-            {/* Hover label below the + button */}
-            {hoveredOption && menuOpen && (
-                <span className="canvas-cell__option-label">
-                    {hoveredOption}
-                </span>
-            )}
-
-            {/* Radial menu - rendered as portal */}
-            {menuOpen && createPortal(
+            {/* Radial menu */}
+            {showRadial && buttonRef.current && createPortal(
                 <div
-                    ref={menuRef}
+                    ref={radialRef}
                     className="canvas-cell__radial-menu"
                     style={{
-                        position: 'fixed',
-                        left: `${menuPosition.x}px`,
-                        top: `${menuPosition.y}px`,
-                        zIndex: 9999,
+                        '--radial-x': `${buttonRef.current.getBoundingClientRect().left + buttonRef.current.offsetWidth / 2}px`,
+                        '--radial-y': `${buttonRef.current.getBoundingClientRect().top + buttonRef.current.offsetHeight / 2}px`,
                     }}
                 >
-                    {menuOptions.map(({ type, icon: Icon, label, angle }, index) => {
+                    {/* Center label */}
+                    <div className="canvas-cell__radial-center">
+                        {hoveredOption || 'Add content'}
+                    </div>
+
+                    {/* Options */}
+                    {CONTENT_OPTIONS.map((option, index) => {
+                        const { type, icon: Icon, label, angle } = option;
                         const rad = (angle * Math.PI) / 180;
-                        const x = Math.cos(rad) * radius;
-                        const y = Math.sin(rad) * radius;
+                        const x = Math.cos(rad) * radialRadius;
+                        const y = Math.sin(rad) * radialRadius;
 
                         return (
                             <button
@@ -364,45 +451,68 @@ function EmptyPlaceholder({ row, col, editMode, onAddClick }) {
     );
 }
 
-/**
- * ViewContent - Renders an InstanceViewport for view placements
- * Uses ProgressiveLoader to show thumbnail while real visualization loads
- */
-function ViewContent({ viewId, rowSpan, colSpan, placementId, onClose }) {
+// =============================================================================
+// VIEW CONTENT
+// =============================================================================
+
+function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConfig, onClose }) {
     const [isReady, setIsReady] = useState(false);
 
+    // For thumbnail/snapshot modes, show placeholder instead of full render
+    if (uiConfig.renderContent === 'thumbnail') {
+        return (
+            <div className="canvas-cell__thumbnail-content">
+                <ProgressiveLoader viewId={viewId} isReady={false}>
+                    {/* Just show the thumbnail, don't load full view */}
+                    <div className="canvas-cell__thumbnail-placeholder">
+                        <Box size={24} />
+                    </div>
+                </ProgressiveLoader>
+            </div>
+        );
+    }
+
+    if (uiConfig.renderContent === 'snapshot') {
+        return (
+            <div className="canvas-cell__snapshot-content">
+                <div className="canvas-cell__snapshot-placeholder">
+                    <Box size={16} />
+                </div>
+            </div>
+        );
+    }
+
+    // Full or compact mode - render actual InstanceViewport
     return (
         <div className="canvas-cell__view-content">
-            <ProgressiveLoader
-                viewId={viewId}
-                isReady={isReady}
-            >
+            <ProgressiveLoader viewId={viewId} isReady={isReady}>
                 <InstanceViewport
                     viewConfigId={viewId}
                     isRemote={false}
                     currentSpan={`${colSpan}x${rowSpan}`}
+                    uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
                     onReady={() => setIsReady(true)}
-                    onClose={() => {
-                        // Remove placement from canvas, view goes to inactive in DatasetsTab
-                        // removePlacement(cell.placementId);
-                        onClose?.();
-                    }}
-                    onTrash={() => {
-                        // Remove placement, view goes to Recently Deleted
-                        // removePlacement(cell.placementId);
-                        onClose?.();
-                        // View already moved to trash by InstanceViewport
-                    }}
+                    onClose={onClose}
+                    onTrash={onClose}
                 />
             </ProgressiveLoader>
         </div>
     );
 }
 
-/**
- * NotesPlaceholder - Placeholder for notes content
- */
-function NotesPlaceholder({ notesId, onClose }) {
+// =============================================================================
+// NOTES PLACEHOLDER
+// =============================================================================
+
+function NotesPlaceholder({ notesId, renderMode, onClose }) {
+    if (renderMode === RENDER_MODES.SNAPSHOT || renderMode === RENDER_MODES.THUMBNAIL) {
+        return (
+            <div className="canvas-cell__notes-mini">
+                <FileText size={renderMode === RENDER_MODES.SNAPSHOT ? 16 : 20} />
+            </div>
+        );
+    }
+
     return (
         <div className="canvas-cell__notes-placeholder">
             <div className="canvas-cell__notes-header">
@@ -428,10 +538,19 @@ function NotesPlaceholder({ notesId, onClose }) {
     );
 }
 
-/**
- * ImagePlaceholder - Placeholder for image content
- */
-function ImagePlaceholder({ imageId, onClose }) {
+// =============================================================================
+// IMAGE PLACEHOLDER
+// =============================================================================
+
+function ImagePlaceholder({ imageId, renderMode, onClose }) {
+    if (renderMode === RENDER_MODES.SNAPSHOT || renderMode === RENDER_MODES.THUMBNAIL) {
+        return (
+            <div className="canvas-cell__image-mini">
+                <FileImage size={renderMode === RENDER_MODES.SNAPSHOT ? 16 : 20} />
+            </div>
+        );
+    }
+
     return (
         <div className="canvas-cell__image-placeholder">
             <div className="canvas-cell__image-header">
