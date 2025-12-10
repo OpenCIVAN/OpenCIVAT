@@ -240,12 +240,13 @@ export function CanvasGrid({
             }
 
             // Viewport size shortcuts
+            // + = zoom in (fewer cells, larger), - = zoom out (more cells, smaller)
             if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
-                incrementViewportSize();
+                decrementViewportSize(); // Zoom IN = show fewer, larger cells
             } else if (e.key === '-') {
                 e.preventDefault();
-                decrementViewportSize();
+                incrementViewportSize(); // Zoom OUT = show more, smaller cells
             } else if (e.key === '0') {
                 e.preventDefault();
                 resetViewportSize();
