@@ -1,292 +1,230 @@
 /**
- * SlidingPanel Component (v4 - Enhanced)
+ * SlidingPanel Component
  *
- * Glassmorphism frosted glass panel that slides out on hover.
- * Now includes per-property parent dropdown selectors.
- * Renders in a portal for better visibility in constrained containers.
+ * Slides down from beneath the ViewItem row on hover.
+ * Contains quick toggles and a size picker button.
  *
- * Row 0: Tooltip Area
- * Row 1: Action Button Groups + Size Picker
- * Row 2: Linked Parent Info (conditional)
- * Row 3: Link Properties with Per-Parent Dropdowns (NEW!)
- *
- * Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/components/SlidingPanel.jsx
+ * Features:
+ * - Tooltip area showing action descriptions
+ * - Grouped action buttons (Stars, State, Share, Duplicate/Link)
+ * - Size picker button that opens a popover
+ * - Lock toggle
  */
 
-import React, { memo, useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
     Folder,
     Globe,
     Save,
-    Download,
-    Share2,
-    Plus,
+    RefreshCw,
+    Users,
+    Copy,
     Link2,
-    GitBranch,
-    Grid3x3,
+    Lock,
+    Maximize2,
+    ChevronDown,
 } from 'lucide-react';
-import { ButtonGroup } from './ButtonGroup';
-import { SizePicker } from './SizePicker';
-import { LinkPropertyRow } from './LinkPropertyRow';
 import './SlidingPanel.scss';
 
-// =============================================================================
-// ICON BUTTON
-// =============================================================================
-
-const IconBtn = memo(function IconBtn({
-    icon: Icon,
-    isActive = false,
-    activeColor,
-    onClick,
-    onHover,
-    disabled = false,
-    title,
-}) {
-    return (
-        <button
-            className={`sliding-panel__icon-btn ${isActive ? 'sliding-panel__icon-btn--active' : ''}`}
-            data-active-color={isActive ? activeColor : undefined}
-            onClick={onClick}
-            onMouseEnter={() => onHover?.(title)}
-            onMouseLeave={() => onHover?.(null)}
-            disabled={disabled}
-            title={title}
-        >
-            <Icon size={12} />
-        </button>
-    );
-});
-
-// =============================================================================
-// MAIN SLIDING PANEL COMPONENT
-// =============================================================================
-
-export const SlidingPanel = memo(function SlidingPanel({
-    isVisible,
+export function SlidingPanel({
     view,
-    anchorRef,                // Ref to the ViewItem element for positioning
-    onPanelEnter,             // Called when mouse enters panel
-    onPanelLeave,             // Called when mouse leaves panel
-    // Link configuration
-    linkConfig = {},          // { camera: { enabled, parentId }, filters: { enabled, parentId }, ... }
-    availableViews = [],      // Views that can be linked to (excluding current view)
-    linkedParent = null,      // { id, name } - if spawned from another view
-    // Status
-    linkedCount = 0,
-    // Callbacks
+    isOpen,
+    availableViews = [],
+    onPanelEnter,
+    onPanelLeave,
     onStarWorkspace,
     onStarPersonal,
     onSaveState,
     onLoadState,
-    onShareView,
-    onSpawn,
-    onConfigureLinks,
+    onShare,
+    onDuplicate,
+    onLock,
     onSizeChange,
-    onLinkPropertyChange,     // (propertyId, config) => void
-    onToggleAllLinks,         // (allEnabled: boolean) => void
+    onLinkPropertyChange,
 }) {
     const [tooltipText, setTooltipText] = useState(null);
-    const [showSizePicker, setShowSizePicker] = useState(false);
-    const [position, setPosition] = useState({ top: 0, left: 0 });
-    const panelRef = useRef(null);
+    const [showSizeMenu, setShowSizeMenu] = useState(false);
+    const [sizeMenuPos, setSizeMenuPos] = useState({ x: 0, y: 0 });
+    const sizeButtonRef = useRef(null);
 
-    // Determine if linking is enabled (has available views to link to)
-    const linkingEnabled = availableViews.length > 0;
+    const handleSizeClick = (e) => {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        setSizeMenuPos({ x: rect.left, y: rect.bottom + 4 });
+        setShowSizeMenu(true);
+    };
 
-    // Check if any properties are linked
-    const hasActiveLinks = useMemo(() => {
-        return Object.values(linkConfig).some(c => c?.enabled && c?.parentId);
-    }, [linkConfig]);
+    const handleSizeSelect = (rows, cols) => {
+        onSizeChange?.({ rows, cols });
+        setShowSizeMenu(false);
+    };
 
-    // Calculate position based on anchor element
-    const updatePosition = useCallback(() => {
-        if (!anchorRef?.current) return;
-
-        const anchorRect = anchorRef.current.getBoundingClientRect();
-        const panelWidth = 280; // Approximate panel width
-        const panelHeight = 200; // Approximate panel height
-        const padding = 8;
-
-        let top = anchorRect.bottom + padding;
-        let left = anchorRect.left;
-
-        // Check if panel would go off-screen bottom
-        if (top + panelHeight > window.innerHeight) {
-            // Position above the anchor instead
-            top = anchorRect.top - panelHeight - padding;
-        }
-
-        // Check if panel would go off-screen right
-        if (left + panelWidth > window.innerWidth) {
-            left = window.innerWidth - panelWidth - padding;
-        }
-
-        // Ensure not off-screen left
-        if (left < padding) {
-            left = padding;
-        }
-
-        // TODO: Add logic for when panel is too small to render below
-        // For now, just position it as best we can
-
-        setPosition({ top, left });
-    }, [anchorRef]);
-
-    // Update position when visibility changes
-    useEffect(() => {
-        if (isVisible) {
-            updatePosition();
-        }
-    }, [isVisible, updatePosition]);
-
-    if (!isVisible) return null;
-
-    const panelContent = (
+    return (
         <div
-            ref={panelRef}
-            className="sliding-panel sliding-panel--portal"
-            style={{
-                position: 'fixed',
-                top: position.top,
-                left: position.left,
-                width: 280,
-                maxWidth: 'calc(100vw - 16px)',
-                zIndex: 9999,
-            }}
+            className={`sliding-panel ${isOpen ? 'sliding-panel--open' : ''}`}
             onMouseEnter={onPanelEnter}
             onMouseLeave={onPanelLeave}
         >
-            {/* Row 0: Tooltip Area */}
-            <div className="sliding-panel__tooltip">
-                {tooltipText || (
-                    <span className="sliding-panel__tooltip-hint">
-                        Hover actions for details
-                    </span>
-                )}
+            {/* Tooltip Area */}
+            <div className={`sliding-panel__tooltip ${tooltipText ? 'sliding-panel__tooltip--active' : ''}`}>
+                {tooltipText || 'Hover actions for details'}
             </div>
 
-            {/* Row 1: Action Buttons + Size */}
+            {/* Action Groups */}
             <div className="sliding-panel__actions">
-                {/* Save Group */}
-                <ButtonGroup>
-                    <IconBtn
+                {/* Star Group */}
+                <div className="sliding-panel__group">
+                    <PanelButton
                         icon={Folder}
-                        isActive={view?.starredWorkspace}
+                        active={view.starredWorkspace}
                         activeColor="purple"
                         onClick={onStarWorkspace}
-                        onHover={setTooltipText}
-                        title="Save to Workspace"
+                        onHover={() => setTooltipText('Save to Workspace')}
+                        onLeave={() => setTooltipText(null)}
                     />
-                    <IconBtn
+                    <PanelButton
                         icon={Globe}
-                        isActive={view?.starredPersonal}
-                        activeColor="gold"
+                        active={view.starredPersonal}
+                        activeColor="amber"
                         onClick={onStarPersonal}
-                        onHover={setTooltipText}
-                        title="Save to Personal"
+                        onHover={() => setTooltipText('Save to Personal')}
+                        onLeave={() => setTooltipText(null)}
                     />
-                </ButtonGroup>
+                </div>
 
                 {/* State Group */}
-                <ButtonGroup>
-                    <IconBtn
+                <div className="sliding-panel__group">
+                    <PanelButton
                         icon={Save}
-                        isActive={view?.hasSavedState}
+                        active={view.hasSavedState}
                         activeColor="amber"
                         onClick={onSaveState}
-                        onHover={setTooltipText}
-                        title="Save current state"
+                        onHover={() => setTooltipText('Save Current State')}
+                        onLeave={() => setTooltipText(null)}
                     />
-                    <IconBtn
-                        icon={Download}
+                    <PanelButton
+                        icon={RefreshCw}
                         onClick={onLoadState}
-                        onHover={setTooltipText}
-                        title="Load saved state"
+                        onHover={() => setTooltipText('Load Saved State')}
+                        onLeave={() => setTooltipText(null)}
                     />
-                </ButtonGroup>
+                </div>
 
-                {/* Share */}
-                <IconBtn
-                    icon={Share2}
-                    isActive={view?.shared}
-                    activeColor="pink"
-                    onClick={onShareView}
-                    onHover={setTooltipText}
-                    title="Share view"
-                />
-
-                {/* Spawn Group */}
-                <ButtonGroup>
-                    <IconBtn
-                        icon={Plus}
-                        onClick={onSpawn}
-                        onHover={setTooltipText}
-                        title="Spawn linked copy"
+                {/* Share Group */}
+                <div className="sliding-panel__group">
+                    <PanelButton
+                        icon={Users}
+                        active={view.isShared}
+                        activeColor="pink"
+                        onClick={onShare}
+                        onHover={() => setTooltipText('Share View')}
+                        onLeave={() => setTooltipText(null)}
                     />
-                    <IconBtn
+                </div>
+
+                {/* Duplicate/Link Group */}
+                <div className="sliding-panel__group">
+                    <PanelButton
+                        icon={Copy}
+                        onClick={onDuplicate}
+                        onHover={() => setTooltipText('Duplicate View')}
+                        onLeave={() => setTooltipText(null)}
+                    />
+                    <PanelButton
                         icon={Link2}
-                        isActive={hasActiveLinks}
+                        active={view.linkedCount > 0}
                         activeColor="teal"
-                        onClick={onConfigureLinks}
-                        onHover={setTooltipText}
-                        title="Configure link targets"
+                        badge={view.linkedCount > 0 ? view.linkedCount : null}
+                        onHover={() => setTooltipText('Configure Links')}
+                        onLeave={() => setTooltipText(null)}
                     />
-                </ButtonGroup>
+                </div>
+
+                {/* Lock */}
+                <div className="sliding-panel__group">
+                    <PanelButton
+                        icon={Lock}
+                        active={view.isLocked}
+                        activeColor="amber"
+                        onClick={onLock}
+                        onHover={() => setTooltipText(view.isLocked ? 'Unlock View' : 'Lock View')}
+                        onLeave={() => setTooltipText(null)}
+                    />
+                </div>
 
                 {/* Spacer */}
                 <div className="sliding-panel__spacer" />
 
-                {/* Size Picker */}
-                <div className="sliding-panel__size-control">
-                    <button
-                        className={`sliding-panel__size-btn ${showSizePicker ? 'sliding-panel__size-btn--active' : ''}`}
-                        onClick={() => setShowSizePicker(!showSizePicker)}
-                        onMouseEnter={() => setTooltipText('Change view size')}
-                        onMouseLeave={() => setTooltipText(null)}
-                    >
-                        <Grid3x3 size={12} />
-                        <span>
-                            {view?.rowSpan || 1}×{view?.colSpan || 1}
-                        </span>
-                    </button>
-
-                    {showSizePicker && (
-                        <SizePicker
-                            currentSize={{ rows: view?.rowSpan || 1, cols: view?.colSpan || 1 }}
-                            onSelect={(size) => {
-                                onSizeChange?.(size);
-                                setShowSizePicker(false);
-                            }}
-                            onClose={() => setShowSizePicker(false)}
-                        />
-                    )}
-                </div>
+                {/* Size Picker Button */}
+                <button
+                    ref={sizeButtonRef}
+                    className="sliding-panel__size-btn"
+                    onClick={handleSizeClick}
+                    onMouseEnter={() => setTooltipText('Canvas Size')}
+                    onMouseLeave={() => setTooltipText(null)}
+                >
+                    <Maximize2 size={12} />
+                    <span>{view.rowSpan || 1}×{view.colSpan || 1}</span>
+                    <ChevronDown size={10} />
+                </button>
             </div>
 
-            {/* Row 2: Linked Parent Info (if spawned from another view) */}
-            {linkedParent && (
-                <div className="sliding-panel__linked-parent">
-                    <GitBranch size={10} />
-                    <span className="sliding-panel__linked-parent-label">Spawned from:</span>
-                    <span className="sliding-panel__linked-parent-name">{linkedParent.name}</span>
-                </div>
+            {/* Size Menu Popover */}
+            {showSizeMenu && createPortal(
+                <>
+                    <div
+                        className="sliding-panel__size-backdrop"
+                        onClick={() => setShowSizeMenu(false)}
+                    />
+                    <div
+                        className="sliding-panel__size-menu"
+                        style={{
+                            left: Math.min(sizeMenuPos.x, window.innerWidth - 160),
+                            top: sizeMenuPos.y,
+                        }}
+                    >
+                        <div className="sliding-panel__size-menu-title">Canvas Size</div>
+                        <div className="sliding-panel__size-grid">
+                            {[1, 2, 3].map(row =>
+                                [1, 2, 3].map(col => (
+                                    <button
+                                        key={`${row}x${col}`}
+                                        className={`sliding-panel__size-option ${row === (view.rowSpan || 1) && col === (view.colSpan || 1)
+                                                ? 'sliding-panel__size-option--active'
+                                                : ''
+                                            }`}
+                                        onClick={() => handleSizeSelect(row, col)}
+                                    >
+                                        {row}×{col}
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </>,
+                document.body
             )}
-
-            {/* Row 3: Link Properties with Per-Parent Dropdowns */}
-            <LinkPropertyRow
-                linkConfig={linkConfig}
-                availableViews={availableViews}
-                disabled={!linkingEnabled}
-                onPropertyChange={onLinkPropertyChange}
-                onToggleAll={onToggleAllLinks}
-            />
         </div>
     );
+}
 
-    // Render in a portal for better visibility
-    return createPortal(panelContent, document.body);
-});
+// Panel Button Component
+function PanelButton({ icon: Icon, active, activeColor, badge, onClick, onHover, onLeave }) {
+    return (
+        <button
+            className={`sliding-panel__btn ${active ? `sliding-panel__btn--active sliding-panel__btn--${activeColor}` : ''}`}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick?.();
+            }}
+            onMouseEnter={onHover}
+            onMouseLeave={onLeave}
+        >
+            <Icon size={14} />
+            {badge && <span className="sliding-panel__btn-badge">{badge}</span>}
+        </button>
+    );
+}
 
 export default SlidingPanel;

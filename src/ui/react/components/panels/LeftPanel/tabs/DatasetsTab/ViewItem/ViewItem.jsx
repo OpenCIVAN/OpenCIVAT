@@ -1,37 +1,20 @@
 /**
  * ViewItem Component
  *
- * Represents a single view in the views list.
- * 
- * UPDATED December 11, 2025:
- * - Disabled hover sliding panel (was too obstructive)
- * - Added "Place on Canvas" quick action for unplaced views
- * - Added right-click context menu for common actions
- * - Settings modal remains accessible via gear icon
+ * Represents a single view in the views list with three UI surfaces:
+ * - Main Row: Status icons, quick actions on hover (no trash for safety)
+ * - Sliding Panel: Slides down on hover with quick toggles and size picker
+ * - Context Menu: Right-click for actions
+ * - Settings Modal: Full configuration (opened via gear icon)
  *
- * Main Row (Always Visible):
- * - Drag handle (appears on hover)
- * - Status dot (green=active, hollow=inactive)
- * - Editable name (double-click)
- * - Status icons
- * - Grid position badge
- * - Quick actions on hover
- * - Close/Trash buttons
- *
- * Right-click Context Menu:
- * - Place on Canvas (if not placed)
- * - Go to Location (if placed)
- * - Rename
- * - Spawn Copy
- * - Remove from Canvas / Delete
+ * @module ViewItem
  */
 
-import React, { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
     GripVertical,
     X,
-    Trash2,
     Folder,
     Globe,
     Save,
@@ -41,23 +24,21 @@ import {
     Filter,
     Settings,
     LayoutGrid,
-    Navigation,
-    Pencil,
-    Copy,
-    ExternalLink,
 } from 'lucide-react';
+import { SlidingPanel } from './components/SlidingPanel';
+import { ViewItemContextMenu } from './components/ViewItemContextMenu';
 import { ViewSettingsModal } from './components/ViewSettingsModal';
 import './ViewItem.scss';
 
-// Status icon configuration (v3 design)
+// Status icon configuration
 const STATUS_ICONS = {
     starredWorkspace: { icon: Folder, color: 'purple', tooltip: 'Saved to Workspace' },
-    starredPersonal: { icon: Globe, color: 'gold', tooltip: 'Saved to Personal' },
-    hasSavedState: { icon: Save, color: 'amber', tooltip: 'Has saved state preset' },
-    shared: { icon: Users, color: 'pink', tooltip: 'Shared with collaborators' },
-    linked: { icon: Link2, color: 'teal', tooltip: 'Linked properties' },
-    locked: { icon: Lock, color: 'amber', tooltip: 'Locked' },
-    filtered: { icon: Filter, color: 'purple', tooltip: 'Active filters' },
+    starredPersonal: { icon: Globe, color: 'amber', tooltip: 'Saved to Personal' },
+    hasSavedState: { icon: Save, color: 'amber', tooltip: 'Has saved state' },
+    isShared: { icon: Users, color: 'pink', tooltip: 'Shared' },
+    isLocked: { icon: Lock, color: 'amber', tooltip: 'Locked' },
+    hasLinks: { icon: Link2, color: 'teal', tooltip: 'Linked properties' },
+    hasFilters: { icon: Filter, color: 'purple', tooltip: 'Active filters' },
 };
 
 export const ViewItem = memo(function ViewItem({
@@ -65,13 +46,9 @@ export const ViewItem = memo(function ViewItem({
     isActive = false,
     isSelected = false,
     isDragging = false,
-    linkedCount = 0,
-    filterCount = 0,
-    linkProperties = {},
-    linkConfig = {},
     availableViews = [],
-    linkedParent = null,
-    linkTarget = null,
+    dataset = null,
+    sharedUsers = [],
     onSelect,
     onClose,
     onTrash,
@@ -79,55 +56,38 @@ export const ViewItem = memo(function ViewItem({
     onDragStart,
     onDragEnd,
     onNavigate,
+    onPlaceOnCanvas,
     onStarWorkspace,
     onStarPersonal,
     onSaveState,
     onLoadState,
-    onShareView,
-    onSpawn,
-    onConfigureLinks,
-    onToggleAllLinks,
+    onShare,
+    onUpdateSharing,
+    onDuplicate,
+    onLock,
     onSizeChange,
     onLinkPropertyChange,
+    onAnnotationFilterChange,
+    onDisplayOptionChange,
     className = '',
 }) {
+    // Local state
     const [isHovered, setIsHovered] = useState(false);
+    const [isPanelHovered, setIsPanelHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(view.name);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [contextMenu, setContextMenu] = useState(null); // { x, y }
+    const [contextMenu, setContextMenu] = useState(null);
+
     const inputRef = useRef(null);
     const itemRef = useRef(null);
+    const hoverTimeoutRef = useRef(null);
 
-    // Check if view is placed on canvas
-    const isPlaced = !!view.position;
+    // Derived state
+    const isPlaced = view.position != null;
+    const showPanel = isHovered || isPanelHovered;
 
-    // Handle double-click to edit name
-    const handleDoubleClick = useCallback((e) => {
-        e.stopPropagation();
-        setIsEditing(true);
-        setEditValue(view.name);
-    }, [view.name]);
-
-    // Handle name edit completion
-    const handleEditComplete = useCallback(() => {
-        setIsEditing(false);
-        if (editValue.trim() && editValue !== view.name) {
-            onRename?.(view.id, editValue.trim());
-        }
-    }, [editValue, view.name, view.id, onRename]);
-
-    // Handle edit key events
-    const handleEditKeyDown = useCallback((e) => {
-        if (e.key === 'Enter') {
-            handleEditComplete();
-        } else if (e.key === 'Escape') {
-            setIsEditing(false);
-            setEditValue(view.name);
-        }
-    }, [handleEditComplete, view.name]);
-
-    // Focus input when editing starts
+    // Focus input when editing
     useEffect(() => {
         if (isEditing && inputRef.current) {
             inputRef.current.focus();
@@ -135,97 +95,118 @@ export const ViewItem = memo(function ViewItem({
         }
     }, [isEditing]);
 
-    // Handle right-click context menu
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (hoverTimeoutRef.current) {
+                clearTimeout(hoverTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    // Handlers
+    const handleMouseEnter = useCallback(() => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        setIsHovered(true);
+    }, []);
+
+    const handleMouseLeave = useCallback(() => {
+        hoverTimeoutRef.current = setTimeout(() => {
+            setIsHovered(false);
+        }, 150);
+    }, []);
+
+    const handlePanelEnter = useCallback(() => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        setIsPanelHovered(true);
+    }, []);
+
+    const handlePanelLeave = useCallback(() => {
+        hoverTimeoutRef.current = setTimeout(() => {
+            setIsPanelHovered(false);
+        }, 150);
+    }, []);
+
     const handleContextMenu = useCallback((e) => {
         e.preventDefault();
         e.stopPropagation();
         setContextMenu({ x: e.clientX, y: e.clientY });
     }, []);
 
-    // Close context menu
     const closeContextMenu = useCallback(() => {
         setContextMenu(null);
     }, []);
 
-    // Handle "Place on Canvas" action
-    const handlePlaceOnCanvas = useCallback((e) => {
-        e?.stopPropagation();
-        // Select the view which should trigger placement
-        onSelect?.(view.id);
-        // Or explicitly request placement:
-        window.dispatchEvent(new CustomEvent('cia:request-instance', {
-            detail: { viewId: view.id, spawnNew: false }
-        }));
-    }, [view.id, onSelect]);
+    const handleNameSubmit = useCallback(() => {
+        if (editValue.trim() && editValue !== view.name) {
+            onRename?.(view.id, editValue.trim());
+        } else {
+            setEditValue(view.name);
+        }
+        setIsEditing(false);
+    }, [editValue, view.name, view.id, onRename]);
 
-    // Build status badges (v3 design) - max 3 visible, rest shown as overflow
-    const MAX_VISIBLE_BADGES = 3;
+    const handleNameKeyDown = useCallback((e) => {
+        if (e.key === 'Enter') {
+            handleNameSubmit();
+        } else if (e.key === 'Escape') {
+            setEditValue(view.name);
+            setIsEditing(false);
+        }
+    }, [handleNameSubmit, view.name]);
 
-    const allBadges = useMemo(() => {
-        const badges = [];
-        if (view.starredWorkspace) badges.push({ key: 'starredWorkspace', ...STATUS_ICONS.starredWorkspace });
-        if (view.starredPersonal) badges.push({ key: 'starredPersonal', ...STATUS_ICONS.starredPersonal });
-        if (view.hasSavedState) badges.push({ key: 'hasSavedState', ...STATUS_ICONS.hasSavedState });
-        if (view.isShared) badges.push({ key: 'shared', ...STATUS_ICONS.shared });
-        if (linkedCount > 0) badges.push({ key: 'linked', ...STATUS_ICONS.linked, count: linkedCount });
-        if (view.isLocked) badges.push({ key: 'locked', ...STATUS_ICONS.locked });
-        if (filterCount > 0) badges.push({ key: 'filtered', ...STATUS_ICONS.filtered, count: filterCount });
-        return badges;
-    }, [view.starredWorkspace, view.starredPersonal, view.hasSavedState, view.isShared, view.isLocked, linkedCount, filterCount]);
+    const handleDoubleClick = useCallback((e) => {
+        e.stopPropagation();
+        setIsEditing(true);
+    }, []);
 
-    const visibleBadges = allBadges.slice(0, MAX_VISIBLE_BADGES);
-    const overflowCount = allBadges.length - MAX_VISIBLE_BADGES;
-    const overflowBadges = allBadges.slice(MAX_VISIBLE_BADGES);
+    const handlePlaceOnCanvas = useCallback(() => {
+        onPlaceOnCanvas?.(view.id);
+    }, [view.id, onPlaceOnCanvas]);
 
-    const classNames = [
+    // Build status icons to display
+    const statusIcons = [];
+    if (view.starredWorkspace) statusIcons.push({ ...STATUS_ICONS.starredWorkspace, key: 'workspace' });
+    if (view.starredPersonal) statusIcons.push({ ...STATUS_ICONS.starredPersonal, key: 'personal' });
+    if (view.hasSavedState) statusIcons.push({ ...STATUS_ICONS.hasSavedState, key: 'saved' });
+    if (view.isShared) statusIcons.push({ ...STATUS_ICONS.isShared, key: 'shared' });
+    if (view.isLocked) statusIcons.push({ ...STATUS_ICONS.isLocked, key: 'locked' });
+    if (view.linkedCount > 0) statusIcons.push({ ...STATUS_ICONS.hasLinks, key: 'links', count: view.linkedCount });
+    if (view.filterCount > 0) statusIcons.push({ ...STATUS_ICONS.hasFilters, key: 'filters', count: view.filterCount });
+
+    const itemClasses = [
         'view-item',
         isActive && 'view-item--active',
         isSelected && 'view-item--selected',
         isDragging && 'view-item--dragging',
-        isHovered && 'view-item--hovered',
         !isPlaced && 'view-item--not-placed',
+        showPanel && 'view-item--panel-open',
         className,
     ].filter(Boolean).join(' ');
 
     return (
-        <div
-            ref={itemRef}
-            className={classNames}
-            style={{ '--view-color': view.color || '#60a5fa' }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={() => onSelect?.(view.id)}
-            onContextMenu={handleContextMenu}
-        >
+        <div className={itemClasses} ref={itemRef}>
             {/* Main Row */}
-            <div className="view-item__main">
+            <div
+                className="view-item__row"
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                onContextMenu={handleContextMenu}
+                onClick={() => onSelect?.(view.id)}
+            >
                 {/* Drag Handle */}
                 <div
                     className="view-item__drag-handle"
-                    draggable
-                    onDragStart={(e) => {
-                        e.dataTransfer.effectAllowed = 'copyMove';
-                        // Set data for internal reordering
-                        e.dataTransfer.setData('text/plain', view.id);
-                        // Set data for external drop targets (CanvasCell, GridLayoutPreview)
-                        e.dataTransfer.setData('application/x-viewitem', JSON.stringify({
-                            id: view.id,
-                            name: view.name,
-                            color: view.color,
-                            size: view.size,
-                            viewConfigId: view.id,
-                        }));
-                        onDragStart?.(view.id);
-                    }}
-                    onDragEnd={onDragEnd}
+                    onMouseDown={(e) => onDragStart?.(e, view.id)}
+                    onMouseUp={onDragEnd}
                 >
-                    <GripVertical size={12} />
+                    <GripVertical size={14} />
                 </div>
 
                 {/* Status Dot */}
                 <div
-                    className={`view-item__status-dot ${isActive ? 'view-item__status-dot--active' : ''}`}
-                    title={isActive ? 'Active' : 'Inactive'}
+                    className={`view-item__status-dot ${isPlaced ? 'view-item__status-dot--active' : ''}`}
+                    style={isPlaced ? { background: view.color } : undefined}
                 />
 
                 {/* Name */}
@@ -237,109 +218,109 @@ export const ViewItem = memo(function ViewItem({
                             className="view-item__name-input"
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={handleEditComplete}
-                            onKeyDown={handleEditKeyDown}
+                            onBlur={handleNameSubmit}
+                            onKeyDown={handleNameKeyDown}
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
                         <span
                             className="view-item__name"
                             onDoubleClick={handleDoubleClick}
-                            title={`${view.name} (double-click to rename)`}
+                            title={view.name}
                         >
                             {view.name}
                         </span>
                     )}
                 </div>
 
-                {/* Status Icons - truncated with overflow indicator */}
-                <div className="view-item__status-icons">
-                    {visibleBadges.map(({ key, icon: Icon, color, count, tooltip }) => (
-                        <span
-                            key={key}
-                            className="view-item__status-icon"
-                            data-color={color}
-                            title={tooltip}
-                        >
-                            <Icon size={12} />
-                            {count && <span className="view-item__status-count">{count}</span>}
-                        </span>
-                    ))}
-                    {overflowCount > 0 && (
-                        <span
-                            className="view-item__status-overflow"
-                            title={overflowBadges.map(b => b.tooltip).join(', ')}
-                        >
-                            +{overflowCount}
-                        </span>
-                    )}
-                </div>
-
-                {/* Grid Position OR "Place" button for unplaced views */}
-                {isPlaced ? (
-                    <span
-                        className="view-item__position"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onNavigate?.(view.position);
-                        }}
-                        title="Click to navigate"
-                    >
-                        {view.position.row + 1},{view.position.col + 1}
-                    </span>
-                ) : (
-                    /* Quick action for unplaced views - always visible */
-                    <button
-                        className="view-item__place-btn"
-                        onClick={handlePlaceOnCanvas}
-                        title="Place on Canvas"
-                    >
-                        <LayoutGrid size={12} />
-                        <span>Place</span>
-                    </button>
+                {/* Status Icons */}
+                {!showPanel && statusIcons.length > 0 && (
+                    <div className="view-item__status-icons">
+                        {statusIcons.slice(0, 4).map(({ icon: Icon, color, tooltip, key, count }) => (
+                            <span
+                                key={key}
+                                className="view-item__status-icon"
+                                data-color={color}
+                                title={tooltip}
+                            >
+                                <Icon size={12} />
+                                {count && <span className="view-item__status-count">{count}</span>}
+                            </span>
+                        ))}
+                        {statusIcons.length > 4 && (
+                            <span className="view-item__status-overflow">+{statusIcons.length - 4}</span>
+                        )}
+                    </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="view-item__actions">
-                    {/* Settings Button - opens modal for view configuration */}
-                    <button
-                        className="view-item__action-btn view-item__settings-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowSettingsModal(true);
-                        }}
-                        title="View settings"
+                {/* Position Badge */}
+                {isPlaced && view.position && (
+                    <span
+                        className="view-item__position-badge"
+                        style={{ '--view-color': view.color }}
                     >
-                        <Settings size={12} />
-                    </button>
+                        [{view.position.row + 1},{view.position.col + 1}]
+                    </span>
+                )}
 
-                    {/* Close Button - only show for active views (deactivate, remove from canvas) */}
-                    {isActive && (
+                {/* Hover Actions (no trash - only in context menu/modal) */}
+                {isHovered && !showPanel && (
+                    <div className="view-item__hover-actions">
+                        {!isPlaced && (
+                            <button
+                                className="view-item__action-btn view-item__action-btn--place"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePlaceOnCanvas();
+                                }}
+                                title="Place on Canvas"
+                            >
+                                <LayoutGrid size={12} />
+                            </button>
+                        )}
                         <button
-                            className="view-item__action-btn view-item__close-btn"
+                            className="view-item__action-btn view-item__action-btn--settings"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onClose?.(view.id);
+                                setShowSettingsModal(true);
                             }}
-                            title="Close view (remove from canvas)"
+                            title="View Settings"
                         >
-                            <X size={12} />
+                            <Settings size={12} />
                         </button>
-                    )}
-
-                    {/* Trash Button - move to Recently Deleted */}
-                    <button
-                        className="view-item__action-btn view-item__trash-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onTrash?.(view.id);
-                        }}
-                        title="Delete view"
-                    >
-                        <Trash2 size={12} />
-                    </button>
-                </div>
+                        {isPlaced && (
+                            <button
+                                className="view-item__action-btn view-item__action-btn--close"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onClose?.(view.id);
+                                }}
+                                title="Remove from Canvas"
+                            >
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
+
+            {/* Sliding Panel */}
+            <SlidingPanel
+                view={view}
+                isOpen={showPanel}
+                availableViews={availableViews}
+                onPanelEnter={handlePanelEnter}
+                onPanelLeave={handlePanelLeave}
+                onStarWorkspace={() => onStarWorkspace?.(view.id)}
+                onStarPersonal={() => onStarPersonal?.(view.id)}
+                onSaveState={() => onSaveState?.(view.id)}
+                onLoadState={() => onLoadState?.(view.id)}
+                onShare={() => onShare?.(view.id)}
+                onDuplicate={() => onDuplicate?.(view.id)}
+                onLock={() => onLock?.(view.id)}
+                onSizeChange={(size) => onSizeChange?.(view.id, size)}
+                onLinkPropertyChange={(prop, config) => onLinkPropertyChange?.(view.id, prop, config)}
+            />
 
             {/* Context Menu */}
             {contextMenu && createPortal(
@@ -362,8 +343,8 @@ export const ViewItem = memo(function ViewItem({
                         handlePlaceOnCanvas();
                         closeContextMenu();
                     }}
-                    onSpawn={() => {
-                        onSpawn?.(view.id);
+                    onDuplicate={() => {
+                        onDuplicate?.(view.id);
                         closeContextMenu();
                     }}
                     onCloseView={() => {
@@ -386,176 +367,30 @@ export const ViewItem = memo(function ViewItem({
             {showSettingsModal && (
                 <ViewSettingsModal
                     view={view}
-                    linkConfig={linkConfig}
+                    dataset={dataset}
                     availableViews={availableViews}
+                    sharedUsers={sharedUsers}
                     onClose={() => setShowSettingsModal(false)}
+                    onRename={(name) => onRename?.(view.id, name)}
+                    onStarWorkspace={() => onStarWorkspace?.(view.id)}
+                    onStarPersonal={() => onStarPersonal?.(view.id)}
+                    onSaveState={() => onSaveState?.(view.id)}
+                    onLoadState={() => onLoadState?.(view.id)}
+                    onLock={() => onLock?.(view.id)}
+                    onShare={() => onShare?.(view.id)}
+                    onUpdateSharing={onUpdateSharing}
                     onSizeChange={(size) => onSizeChange?.(view.id, size)}
-                    onLinkPropertyChange={(prop, value) => onLinkPropertyChange?.(view.id, prop, value)}
-                    onToggleAllLinks={(linked) => onToggleAllLinks?.(view.id, linked)}
+                    onLinkPropertyChange={(prop, config) => onLinkPropertyChange?.(view.id, prop, config)}
+                    onAnnotationFilterChange={(filter, value) => onAnnotationFilterChange?.(view.id, filter, value)}
+                    onDisplayOptionChange={(option, value) => onDisplayOptionChange?.(view.id, option, value)}
+                    onTrash={() => {
+                        onTrash?.(view.id);
+                        setShowSettingsModal(false);
+                    }}
                 />
             )}
         </div>
     );
 });
-
-// =============================================================================
-// CONTEXT MENU COMPONENT
-// =============================================================================
-
-function ViewItemContextMenu({
-    view,
-    position,
-    isPlaced,
-    onClose,
-    onRename,
-    onNavigate,
-    onPlace,
-    onSpawn,
-    onCloseView,
-    onTrash,
-    onOpenSettings,
-}) {
-    const menuRef = useRef(null);
-
-    // Close on click outside
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
-                onClose();
-            }
-        };
-
-        // Small delay to prevent immediate close from the triggering click
-        const timeoutId = setTimeout(() => {
-            document.addEventListener('mousedown', handleClickOutside);
-        }, 10);
-
-        return () => {
-            clearTimeout(timeoutId);
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [onClose]);
-
-    // Close on escape
-    useEffect(() => {
-        const handleEscape = (e) => {
-            if (e.key === 'Escape') onClose();
-        };
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
-    }, [onClose]);
-
-    // Position the menu (keep in viewport)
-    const style = useMemo(() => {
-        const menuWidth = 200;
-        const menuHeight = 280;
-
-        let x = position.x;
-        let y = position.y;
-
-        // Keep in viewport
-        if (x + menuWidth > window.innerWidth) {
-            x = window.innerWidth - menuWidth - 8;
-        }
-        if (y + menuHeight > window.innerHeight) {
-            y = window.innerHeight - menuHeight - 8;
-        }
-        if (x < 8) x = 8;
-        if (y < 8) y = 8;
-
-        return {
-            position: 'fixed',
-            left: x,
-            top: y,
-            zIndex: 10000,
-        };
-    }, [position]);
-
-    return (
-        <div ref={menuRef} className="view-item-context-menu" style={style}>
-            {/* Header */}
-            <div className="view-item-context-menu__header">
-                <span
-                    className="view-item-context-menu__color-dot"
-                    style={{ background: view.color || '#60a5fa' }}
-                />
-                <span className="view-item-context-menu__title">{view.name}</span>
-            </div>
-
-            <div className="view-item-context-menu__divider" />
-
-            {/* Primary Action - Place or Navigate */}
-            {isPlaced ? (
-                <button
-                    className="view-item-context-menu__item"
-                    onClick={onNavigate}
-                >
-                    <Navigation size={14} />
-                    <span>Go to Location</span>
-                    <span className="view-item-context-menu__shortcut">
-                        [{view.position.row + 1},{view.position.col + 1}]
-                    </span>
-                </button>
-            ) : (
-                <button
-                    className="view-item-context-menu__item view-item-context-menu__item--primary"
-                    onClick={onPlace}
-                >
-                    <LayoutGrid size={14} />
-                    <span>Place on Canvas</span>
-                </button>
-            )}
-
-            <div className="view-item-context-menu__divider" />
-
-            {/* Edit Actions */}
-            <button
-                className="view-item-context-menu__item"
-                onClick={onRename}
-            >
-                <Pencil size={14} />
-                <span>Rename</span>
-                <span className="view-item-context-menu__shortcut">F2</span>
-            </button>
-
-            <button
-                className="view-item-context-menu__item"
-                onClick={onSpawn}
-            >
-                <Copy size={14} />
-                <span>Duplicate View</span>
-            </button>
-
-            <button
-                className="view-item-context-menu__item"
-                onClick={onOpenSettings}
-            >
-                <Settings size={14} />
-                <span>View Settings...</span>
-            </button>
-
-            <div className="view-item-context-menu__divider" />
-
-            {/* Destructive Actions */}
-            {isPlaced && (
-                <button
-                    className="view-item-context-menu__item"
-                    onClick={onCloseView}
-                >
-                    <X size={14} />
-                    <span>Remove from Canvas</span>
-                </button>
-            )}
-
-            <button
-                className="view-item-context-menu__item view-item-context-menu__item--danger"
-                onClick={onTrash}
-            >
-                <Trash2 size={14} />
-                <span>Move to Trash</span>
-            </button>
-        </div>
-    );
-}
 
 export default ViewItem;

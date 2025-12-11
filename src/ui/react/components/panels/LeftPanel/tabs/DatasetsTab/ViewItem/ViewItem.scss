@@ -1,397 +1,253 @@
+// ViewItem.scss
+// Main ViewItem component styles
+// Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/ViewItem.scss
+
 @use "theme" as *;
+
+// =============================================================================
+// MAIN CONTAINER
+// =============================================================================
 
 .view-item {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: transparent;
-  border-radius: 0 $radius-md $radius-md 0;
-  transition: all $transition-fast;
-  overflow: visible;
+  margin-bottom: 2px;
 
-  // Left color border - continuous with sliding panel
-  border-left: 3px solid transparent;
-
-  &:hover,
-  &--hovered {
-    background: $color-glass-subtle;
-    border-left-color: var(--view-color, $color-accent-blue);
-  }
-
+  // States
   &--active {
-    background: rgba(var(--view-color-rgb, 96, 165, 250), 0.08);
-    border-left-color: var(--view-color, $color-accent-blue);
+    .view-item__row {
+      background: $color-glass-light;
+    }
+
+    .view-item__name {
+      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+    }
   }
 
   &--selected {
-    background: rgba($color-accent-blue, 0.1);
-    box-shadow: inset 0 0 0 1px rgba($color-accent-blue, 0.3);
+    .view-item__row {
+      background: rgba($color-accent-primary, 0.1);
+      border-color: rgba($color-accent-primary, 0.3);
+    }
   }
 
   &--dragging {
     opacity: 0.5;
-    transform: scale(0.98);
+    cursor: grabbing;
   }
 
-  // Main row
-  &__main {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    height: 32px;
-    padding: 0 $spacing-xs;
-  }
-
-  // Drag handle
-  &__drag-handle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 24px;
-    color: $color-text-muted;
-    cursor: grab;
-    opacity: 0;
-    transition: opacity $transition-fast;
-    flex-shrink: 0;
-
-    .view-item:hover &,
-    .view-item--hovered & {
-      opacity: 1;
+  &--not-placed {
+    .view-item__row {
+      opacity: 0.85;
     }
 
-    &:active {
-      cursor: grabbing;
+    .view-item__status-dot {
+      background: transparent !important;
+      border: 2px solid $color-text-muted;
     }
 
-    &:hover {
-      color: $color-text-tertiary;
-    }
-  }
-
-  // Status dot - uses view color when active
-  &__status-dot {
-    width: 8px;
-    height: 8px;
-    border: 1.5px solid $color-text-muted;
-    border-radius: 50%;
-    flex-shrink: 0;
-    transition: all $transition-fast;
-
-    &--active {
-      background: var(--view-color, $color-accent-blue);
-      border-color: var(--view-color, $color-accent-blue);
-      box-shadow: 0 0 6px var(--view-color, $color-accent-blue);
-    }
-  }
-
-  // Name
-  &__name-container {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  &__name {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer;
-
-    .view-item--active & {
-      color: $color-text-primary;
-      font-weight: $font-weight-medium;
-    }
-
-    &:hover {
-      color: $color-text-primary;
-    }
-  }
-
-  &__name-input {
-    width: 100%;
-    padding: 2px $spacing-xs;
-    background: $color-bg-primary;
-    border: 1px solid $color-accent-blue;
-    border-radius: $radius-sm;
-    font-size: $font-size-sm;
-    color: $color-text-primary;
-    outline: none;
-
-    &:focus {
-      box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
-    }
-  }
-
-  // Status icons
-  &__status-icons {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    flex-shrink: 0;
-    max-width: 80px; // Limit width to prevent overflow
-  }
-
-  &__status-icon {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 2px;
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-    transition: all $transition-fast;
-
-    &[data-color="blue"] {
-      color: $color-accent-blue;
-    }
-    &[data-color="green"] {
-      color: $color-accent-green;
-    }
-    &[data-color="pink"] {
-      color: $color-accent-pink;
-    }
-    &[data-color="amber"] {
-      color: $color-accent-amber;
-    }
-    &[data-color="gold"] {
-      color: $color-accent-amber;
-    }
-    &[data-color="teal"] {
-      color: $color-accent-teal;
-    }
-    &[data-color="purple"] {
-      color: $color-accent-purple;
-    }
-    &[data-color="indigo"] {
-      color: $color-accent-indigo;
-    }
-
-    &:hover {
-      background: $color-glass-light;
-    }
-  }
-
-  &__status-count {
-    font-size: 9px;
-    font-weight: $font-weight-medium;
-  }
-
-  // Overflow indicator for truncated badges
-  &__status-overflow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px 4px;
-    font-size: 9px;
-    font-weight: $font-weight-medium;
-    color: $color-text-muted;
-    background: $color-glass-subtle;
-    border-radius: $radius-xs;
-    cursor: help;
-
-    &:hover {
-      background: $color-glass-light;
-      color: $color-text-tertiary;
-    }
-  }
-
-  // Grid position
-  &__position {
-    padding: 2px $spacing-xs;
-    background: $color-glass-subtle;
-    border-radius: $radius-xs;
-    font-size: 10px;
-    font-family: $font-family-mono;
-    color: $color-text-muted;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $color-glass-light;
-      color: $color-text-tertiary;
-    }
-  }
-
-  // Action buttons container
-  &__actions {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    flex-shrink: 0;
-    opacity: 0;
-    transition: opacity $transition-fast;
-
-    .view-item:hover &,
-    .view-item--hovered & {
+    &:hover .view-item__row {
       opacity: 1;
     }
   }
 
-  // Close button (deactivate - remove from canvas)
-  &__close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: $color-text-muted;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition: all $transition-fast;
-    flex-shrink: 0;
-
-    &:hover {
-      background: rgba($color-accent-amber, 0.15);
-      color: $color-accent-amber;
-    }
-  }
-
-  // Trash button (move to Recently Deleted)
-  &__trash-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: $color-text-muted;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition: all $transition-fast;
-    flex-shrink: 0;
-
-    &:hover {
-      background: rgba($color-accent-red, 0.15);
-      color: $color-accent-red;
-    }
-  }
-
-  // Settings button (opens settings modal)
-  &__settings-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: $color-text-muted;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition: all $transition-fast;
-    flex-shrink: 0;
-
-    &:hover {
-      background: rgba($color-accent-blue, 0.15);
-      color: $color-accent-blue;
+  &--panel-open {
+    .view-item__row {
+      border-radius: $radius-sm $radius-sm 0 0;
+      border-bottom-color: $color-border-subtle;
     }
   }
 }
 
-.view-item__quick-actions {
+// =============================================================================
+// MAIN ROW
+// =============================================================================
+
+.view-item__row {
   display: flex;
-  gap: 2px;
-  margin-left: auto;
-  padding-left: $spacing-sm;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+  position: relative;
+  z-index: 2;
+
+  &:hover {
+    background: $color-glass-subtle;
+    border-color: $color-border-subtle;
+  }
 }
 
-.view-item__quick-btn {
-  width: 24px;
-  height: 24px;
+// =============================================================================
+// DRAG HANDLE
+// =============================================================================
+
+.view-item__drag-handle {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  border-radius: $radius-sm;
-  background: transparent;
   color: $color-text-muted;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity $transition-fast;
+  flex-shrink: 0;
 
-  &:hover {
-    background: rgba($color-accent-primary, 0.15);
-    color: $color-accent-primary;
+  .view-item:hover & {
+    opacity: 0.5;
   }
 
-  &--place {
-    &:hover {
-      background: rgba($color-accent-green, 0.15);
-      color: $color-accent-green;
-    }
-  }
-}
-
-// =============================================================================
-// ViewItem.scss ADDITIONS - December 11, 2025
-// =============================================================================
-//
-// ADD these styles to the end of your existing ViewItem.scss file
-// (or merge them into the appropriate sections)
-//
-// =============================================================================
-
-// =============================================================================
-// PLACE BUTTON (for unplaced views)
-// =============================================================================
-
-.view-item__place-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  background: rgba($color-accent-green, 0.15);
-  border: 1px solid rgba($color-accent-green, 0.3);
-  border-radius: $radius-sm;
-  color: $color-accent-green;
-  font-size: 10px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-
   &:hover {
-    background: rgba($color-accent-green, 0.25);
-    border-color: rgba($color-accent-green, 0.5);
-    transform: scale(1.02);
+    opacity: 1 !important;
   }
 
   &:active {
-    transform: scale(0.98);
+    cursor: grabbing;
   }
 }
 
 // =============================================================================
-// NOT PLACED STATE
+// STATUS DOT
 // =============================================================================
 
-.view-item--not-placed {
-  // Slightly different styling for unplaced views
-  opacity: 0.85;
+.view-item__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all $transition-fast;
 
-  .view-item__status-dot {
-    // Hollow dot for inactive
-    background: transparent;
-    border: 2px solid $color-text-muted;
+  &--active {
+    box-shadow: 0 0 6px currentColor;
+  }
+}
+
+// =============================================================================
+// NAME
+// =============================================================================
+
+.view-item__name-container {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.view-item__name {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $color-text-primary;
+  }
+}
+
+.view-item__name-input {
+  width: 100%;
+  padding: 2px $spacing-xs;
+  background: $color-bg-primary;
+  border: 1px solid $color-accent-blue;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  outline: none;
+
+  &:focus {
+    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+  }
+}
+
+// =============================================================================
+// STATUS ICONS
+// =============================================================================
+
+.view-item__status-icons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.view-item__status-icon {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: $radius-xs;
+  transition: all $transition-fast;
+
+  &[data-color="blue"] {
+    color: $color-accent-blue;
+  }
+  &[data-color="green"] {
+    color: $color-accent-green;
+  }
+  &[data-color="pink"] {
+    color: $color-accent-pink;
+  }
+  &[data-color="amber"] {
+    color: $color-accent-amber;
+  }
+  &[data-color="teal"] {
+    color: $color-accent-teal;
+  }
+  &[data-color="purple"] {
+    color: $color-accent-purple;
   }
 
   &:hover {
-    opacity: 1;
+    background: $color-glass-light;
   }
 }
 
+.view-item__status-count {
+  font-size: 9px;
+  font-weight: $font-weight-medium;
+}
+
+.view-item__status-overflow {
+  display: flex;
+  align-items: center;
+  padding: 2px 4px;
+  font-size: 9px;
+  color: $color-text-muted;
+  background: $color-glass-subtle;
+  border-radius: $radius-xs;
+}
+
 // =============================================================================
-// ACTION BUTTONS (updated)
+// POSITION BADGE
 // =============================================================================
+
+.view-item__position-badge {
+  padding: 2px 6px;
+  background: rgba(var(--view-color), 0.15);
+  border-radius: $radius-sm;
+  font-size: 10px;
+  font-family: $font-family-mono;
+  color: var(--view-color, $color-accent-blue);
+  flex-shrink: 0;
+}
+
+// =============================================================================
+// HOVER ACTIONS
+// =============================================================================
+
+.view-item__hover-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
 
 .view-item__action-btn {
   display: flex;
@@ -404,170 +260,31 @@
   background: transparent;
   color: $color-text-muted;
   cursor: pointer;
-  opacity: 0;
-  transition: all 0.15s ease;
-
-  .view-item:hover & {
-    opacity: 0.7;
-  }
+  transition: all $transition-fast;
 
   &:hover {
-    opacity: 1 !important;
-    background: rgba(255, 255, 255, 0.08);
+    background: $color-glass-light;
     color: $color-text-primary;
   }
-}
 
-.view-item__settings-btn {
-  &:hover {
-    color: $color-accent-blue;
-    background: rgba($color-accent-blue, 0.15);
-  }
-}
-
-.view-item__close-btn {
-  &:hover {
-    color: $color-accent-amber;
-    background: rgba($color-accent-amber, 0.15);
-  }
-}
-
-.view-item__trash-btn {
-  &:hover {
-    color: $color-error;
-    background: rgba($color-error, 0.15);
-  }
-}
-
-// =============================================================================
-// CONTEXT MENU
-// =============================================================================
-
-.view-item-context-menu {
-  min-width: 200px;
-  background: $color-bg-secondary;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-md;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-  padding: 4px 0;
-  backdrop-filter: blur(12px);
-
-  // Header
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-  }
-
-  &__color-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  &__title {
-    font-size: 11px;
-    font-weight: 600;
-    color: $color-text-secondary;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  // Divider
-  &__divider {
-    height: 1px;
-    background: $color-border-subtle;
-    margin: 4px 0;
-  }
-
-  // Menu items
-  &__item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 8px 12px;
-    background: transparent;
-    border: none;
-    color: $color-text-secondary;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.1s ease;
-    text-align: left;
-
-    svg {
-      flex-shrink: 0;
-      opacity: 0.7;
-    }
-
-    span:first-of-type {
-      flex: 1;
-    }
-
+  &--place {
     &:hover {
-      background: rgba(255, 255, 255, 0.06);
-      color: $color-text-primary;
-
-      svg {
-        opacity: 1;
-      }
-    }
-
-    // Primary action (like "Place on Canvas")
-    &--primary {
+      background: rgba($color-accent-green, 0.15);
       color: $color-accent-green;
-
-      svg {
-        opacity: 1;
-      }
-
-      &:hover {
-        background: rgba($color-accent-green, 0.15);
-        color: $color-accent-green;
-      }
-    }
-
-    // Danger action (like "Move to Trash")
-    &--danger {
-      color: $color-text-muted;
-
-      &:hover {
-        background: rgba($color-error, 0.15);
-        color: $color-error;
-      }
     }
   }
 
-  // Shortcut hint
-  &__shortcut {
-    margin-left: auto;
-    font-size: 10px;
-    font-family: $font-family-mono;
-    color: $color-text-muted;
-    opacity: 0.7;
+  &--settings {
+    &:hover {
+      background: rgba($color-accent-blue, 0.15);
+      color: $color-accent-blue;
+    }
   }
-}
 
-// =============================================================================
-// ANIMATION FOR CONTEXT MENU
-// =============================================================================
-
-@keyframes context-menu-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-4px);
+  &--close {
+    &:hover {
+      background: rgba($color-accent-amber, 0.15);
+      color: $color-accent-amber;
+    }
   }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.view-item-context-menu {
-  animation: context-menu-in 0.15s ease-out;
-  transform-origin: top left;
 }

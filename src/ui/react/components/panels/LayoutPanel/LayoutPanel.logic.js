@@ -19,6 +19,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { viewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
+import {workspace as log } from "@Utils/logger.js"
 
 // =============================================================================
 // CONSTANTS
@@ -614,6 +615,7 @@ export function useLayoutPanel(options) {
    * Find the first empty cell on the canvas
    */
   const findFirstEmptyCell = useCallback(() => {
+    // First try to find empty cell in existing canvas
     for (let row = 0; row < canvasSize.rows; row++) {
       for (let col = 0; col < canvasSize.cols; col++) {
         const occupied = cells.some(
@@ -630,12 +632,11 @@ export function useLayoutPanel(options) {
     }
 
     // Canvas is full - expand by adding a new row
-    console.log("Canvas full, expanding to row", canvasSize.rows);
+    log.info("Canvas full, expanding to row", canvasSize.rows);
 
     // Note: The server should auto-expand, but we return the new position
     return { row: canvasSize.rows, col: 0 };
   }, [cells, canvasSize]);
-
   // ===========================================================================
   // LAYOUT MODE (Server-authoritative)
   // ===========================================================================

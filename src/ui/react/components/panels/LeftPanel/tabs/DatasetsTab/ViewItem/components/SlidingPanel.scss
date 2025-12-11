@@ -1,411 +1,244 @@
+// SlidingPanel.scss
+// Sliding panel that appears below ViewItem on hover
+// Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/components/SlidingPanel.scss
+
+@use "sass:color";
 @use "theme" as *;
 
+// =============================================================================
+// MAIN CONTAINER
+// =============================================================================
+
 .sliding-panel {
-  position: absolute;
-  top: 100%;
-  left: -3px; // Align with ViewItem's 3px left border
-  right: 0;
+  background: rgba($color-bg-secondary, 0.95);
+  backdrop-filter: $blur-medium;
+  border: 1px solid $color-border-default;
+  border-top: none;
+  border-radius: 0 0 $radius-sm $radius-sm;
+  padding: 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  z-index: 1;
+
+  &--open {
+    padding: $spacing-sm;
+    max-height: 120px;
+    opacity: 1;
+  }
+}
+
+// =============================================================================
+// TOOLTIP AREA
+// =============================================================================
+
+.sliding-panel__tooltip {
+  padding: 4px $spacing-sm;
+  margin-bottom: $spacing-sm;
+  background: $color-bg-primary;
+  border-radius: $radius-xs;
+  font-size: 10px;
+  color: $color-text-muted;
+  min-height: 20px;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 8px;
-  z-index: $z-dropdown;
+  align-items: center;
+  transition: color $transition-fast;
 
-  // Left border continuous with ViewItem
-  border-left: 3px solid var(--view-color);
-
-  // Glassmorphism
-  background: rgba(18, 18, 24, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 0 0 6px 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-
-  // Animation
-  animation: slide-panel-in 0.15s ease-out;
-
-  @keyframes slide-panel-in {
-    from {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  // Row 0: Tooltip Area - compact
-  &__tooltip {
-    height: 14px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow: hidden;
-  }
-
-  &__tooltip-label {
-    font-size: 9px;
+  &--active {
     color: $color-text-secondary;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
+}
 
-  &__tooltip-desc {
-    font-size: 9px;
-    color: $color-text-tertiary;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+// =============================================================================
+// ACTIONS ROW
+// =============================================================================
 
-  &__tooltip-hint {
-    font-size: 9px;
-    color: $color-text-muted;
-    font-style: italic;
-  }
+.sliding-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
 
-  // Row 1: Actions row - compact
-  &__actions {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    flex-wrap: nowrap;
-  }
+.sliding-panel__group {
+  display: flex;
+  background: $color-bg-primary;
+  border-radius: $radius-sm;
+  padding: 2px;
+  gap: 2px;
+}
 
-  &__spacer {
-    flex: 1;
-    min-width: 4px;
-  }
+.sliding-panel__spacer {
+  flex: 1;
+}
 
-  // Icon button styling - smaller
-  &__icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: $color-text-tertiary;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition: all $transition-fast;
-    flex-shrink: 0;
+// =============================================================================
+// PANEL BUTTONS
+// =============================================================================
 
-    &:hover {
-      background: $color-glass-light;
-      color: $color-text-secondary;
-    }
+.sliding-panel__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+  position: relative;
 
-    &:active {
-      background: $color-glass-medium;
-      transform: scale(0.95);
-    }
-
-    &--active {
-      background: rgba($color-accent-blue, 0.15);
-      color: $color-accent-blue;
-
-      &[data-active-color="purple"] {
-        background: rgba($color-accent-purple, 0.15);
-        color: $color-accent-purple;
-      }
-
-      &[data-active-color="gold"],
-      &[data-active-color="amber"] {
-        background: rgba($color-accent-amber, 0.15);
-        color: $color-accent-amber;
-      }
-
-      &[data-active-color="pink"] {
-        background: rgba($color-accent-pink, 0.15);
-        color: $color-accent-pink;
-      }
-
-      &[data-active-color="teal"] {
-        background: rgba($color-accent-teal, 0.15);
-        color: $color-accent-teal;
-      }
-
-      &[data-active-color="green"] {
-        background: rgba($color-accent-green, 0.15);
-        color: $color-accent-green;
-      }
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-  }
-
-  // Compact Size Picker
-  &__size-picker {
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  &__size-btn {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 3px 6px;
-    border: none;
-    background: $color-glass-subtle;
-    color: $color-text-tertiary;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition: all $transition-fast;
-    font-size: 9px;
-    font-family: $font-family-mono;
-
-    &:hover {
-      background: $color-glass-light;
-      color: $color-text-secondary;
-    }
-
-    &--active {
-      background: rgba($color-accent-blue, 0.15);
-      color: $color-accent-blue;
-    }
-  }
-
-  &__size-label {
-    font-size: 9px;
-  }
-
-  &__size-dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 6px;
-    background: $color-bg-elevated;
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    box-shadow: $shadow-lg;
-    z-index: 10;
-    min-width: 120px;
-  }
-
-  &__size-presets {
-    display: flex;
-    gap: 2px;
-  }
-
-  &__size-option {
-    padding: 4px 8px;
-    border: none;
-    background: transparent;
-    color: $color-text-tertiary;
-    font-size: 9px;
-    font-family: $font-family-mono;
-    border-radius: $radius-xs;
-    cursor: pointer;
-    transition: all $transition-fast;
-    white-space: nowrap;
-
-    &:hover {
-      background: $color-glass-light;
-      color: $color-text-secondary;
-    }
-
-    &--selected {
-      background: rgba($color-accent-blue, 0.15);
-      color: $color-accent-blue;
-    }
-  }
-
-  &__size-custom-toggle {
-    padding: 4px 8px;
-    border: none;
-    background: transparent;
-    color: $color-text-tertiary;
-    font-size: 9px;
-    cursor: pointer;
-    transition: all $transition-fast;
-    text-align: left;
-    border-top: 1px solid $color-border-subtle;
-    margin-top: 2px;
-    padding-top: 6px;
-
-    &:hover {
-      color: $color-text-secondary;
-    }
-
-    &--active {
-      color: $color-accent-blue;
-    }
-  }
-
-  &__size-custom {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding-top: 4px;
-  }
-
-  &__size-custom-inputs {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  &__size-input {
-    width: 36px;
-    padding: 4px;
-    background: $color-bg-primary;
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    font-size: 10px;
-    font-family: $font-family-mono;
+  &:hover {
+    background: $color-glass-light;
     color: $color-text-primary;
-    text-align: center;
-    outline: none;
-
-    &:focus {
-      border-color: $color-accent-blue;
-      box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
-    }
-
-    // Hide number input spinners
-    -moz-appearance: textfield;
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
   }
 
-  &__size-x {
-    font-size: 10px;
-    color: $color-text-muted;
+  &--active {
+    &.sliding-panel__btn--purple {
+      background: rgba($color-accent-purple, 0.2);
+      color: $color-accent-purple;
+    }
+
+    &.sliding-panel__btn--amber {
+      background: rgba($color-accent-amber, 0.2);
+      color: $color-accent-amber;
+    }
+
+    &.sliding-panel__btn--pink {
+      background: rgba($color-accent-pink, 0.2);
+      color: $color-accent-pink;
+    }
+
+    &.sliding-panel__btn--teal {
+      background: rgba($color-accent-teal, 0.2);
+      color: $color-accent-teal;
+    }
+
+    &.sliding-panel__btn--blue {
+      background: rgba($color-accent-blue, 0.2);
+      color: $color-accent-blue;
+    }
+  }
+}
+
+.sliding-panel__btn-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  background: $color-accent-teal;
+  border-radius: 6px;
+  font-size: 8px;
+  font-weight: $font-weight-semibold;
+  color: $color-bg-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// =============================================================================
+// SIZE BUTTON
+// =============================================================================
+
+.sliding-panel__size-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px $spacing-sm;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    border-color: $color-border-default;
+    color: $color-text-primary;
   }
 
-  &__size-apply {
-    padding: 4px 8px;
-    background: rgba($color-accent-blue, 0.15);
-    border: 1px solid rgba($color-accent-blue, 0.3);
-    border-radius: $radius-sm;
-    color: $color-accent-blue;
-    font-size: 9px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all $transition-fast;
+  svg:last-child {
+    opacity: 0.5;
+  }
+}
+
+// =============================================================================
+// SIZE MENU POPOVER
+// =============================================================================
+
+.sliding-panel__size-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal - 1;
+}
+
+.sliding-panel__size-menu {
+  position: fixed;
+  min-width: 140px;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  padding: $spacing-sm;
+  box-shadow: $shadow-glass-lg;
+  z-index: $z-modal;
+  animation: size-menu-in 0.15s ease-out;
+}
+
+@keyframes size-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sliding-panel__size-menu-title {
+  font-size: 10px;
+  color: $color-text-muted;
+  margin-bottom: $spacing-sm;
+  padding: 0 2px;
+}
+
+.sliding-panel__size-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.sliding-panel__size-option {
+  padding: $spacing-sm 0;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  font-size: 11px;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    border-color: $color-border-default;
+    color: $color-text-primary;
+  }
+
+  &--active {
+    background: $color-accent-blue;
+    border-color: $color-accent-blue;
+    color: white;
 
     &:hover {
-      background: rgba($color-accent-blue, 0.25);
+      background: color.adjust($color-accent-blue, $lightness: 5%)
     }
-  }
-
-  // Row 2: Linked parent info - compact
-  &__linked-parent {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 6px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-
-    svg {
-      color: $color-accent-teal;
-      flex-shrink: 0;
-    }
-  }
-
-  &__linked-parent-label {
-    font-size: 9px;
-    color: $color-text-tertiary;
-  }
-
-  &__linked-parent-name {
-    font-size: 9px;
-    color: $color-accent-teal;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  // Row 3: Link properties row - compact
-  &__link-row {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding-top: 4px;
-    border-top: 1px solid $color-border-subtle;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-
-    &--disabled {
-      opacity: 0.4;
-      pointer-events: none;
-    }
-  }
-
-  &__link-label {
-    font-size: 8px;
-    color: $color-text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    flex-shrink: 0;
-  }
-
-  // Toggle All button - compact
-  &__toggle-all {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: 1px solid transparent;
-    background: $color-glass-subtle;
-    color: $color-text-muted;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition: all $transition-fast;
-    flex-shrink: 0;
-
-    &:hover {
-      background: $color-glass-light;
-      border-color: $color-border-default;
-      color: $color-text-tertiary;
-    }
-
-    &--active {
-      background: rgba($color-accent-teal, 0.1);
-      border-color: rgba($color-accent-teal, 0.3);
-      color: $color-accent-teal;
-
-      &:hover {
-        background: rgba($color-accent-teal, 0.2);
-        border-color: rgba($color-accent-teal, 0.4);
-      }
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-    }
-  }
-
-  &__link-divider {
-    width: 1px;
-    height: 16px;
-    background: rgba(255, 255, 255, 0.08);
-    flex-shrink: 0;
   }
 }
