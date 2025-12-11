@@ -71,9 +71,8 @@ export const ViewItem = memo(function ViewItem({
     onDisplayOptionChange,
     className = '',
 }) {
-    // Local state
+    // Local state - single hover state for entire item including panel
     const [isHovered, setIsHovered] = useState(false);
-    const [isPanelHovered, setIsPanelHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(view.name);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -81,11 +80,9 @@ export const ViewItem = memo(function ViewItem({
 
     const inputRef = useRef(null);
     const itemRef = useRef(null);
-    const hoverTimeoutRef = useRef(null);
 
     // Derived state
     const isPlaced = view.position != null;
-    const showPanel = isHovered || isPanelHovered;
 
     // Focus input when editing
     useEffect(() => {
@@ -95,38 +92,7 @@ export const ViewItem = memo(function ViewItem({
         }
     }, [isEditing]);
 
-    // Cleanup timeout on unmount
-    useEffect(() => {
-        return () => {
-            if (hoverTimeoutRef.current) {
-                clearTimeout(hoverTimeoutRef.current);
-            }
-        };
-    }, []);
-
-    // Handlers
-    const handleMouseEnter = useCallback(() => {
-        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-        setIsHovered(true);
-    }, []);
-
-    const handleMouseLeave = useCallback(() => {
-        hoverTimeoutRef.current = setTimeout(() => {
-            setIsHovered(false);
-        }, 150);
-    }, []);
-
-    const handlePanelEnter = useCallback(() => {
-        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-        setIsPanelHovered(true);
-    }, []);
-
-    const handlePanelLeave = useCallback(() => {
-        hoverTimeoutRef.current = setTimeout(() => {
-            setIsPanelHovered(false);
-        }, 150);
-    }, []);
-
+    // Context menu handlers
     const handleContextMenu = useCallback((e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -137,6 +103,7 @@ export const ViewItem = memo(function ViewItem({
         setContextMenu(null);
     }, []);
 
+    // Name editing handlers
     const handleNameSubmit = useCallback(() => {
         if (editValue.trim() && editValue !== view.name) {
             onRename?.(view.id, editValue.trim());
@@ -180,17 +147,28 @@ export const ViewItem = memo(function ViewItem({
         isSelected && 'view-item--selected',
         isDragging && 'view-item--dragging',
         !isPlaced && 'view-item--not-placed',
-        showPanel && 'view-item--panel-open',
+        isHovered && 'view-item--panel-open',
         className,
     ].filter(Boolean).join(' ');
 
+    // Get dataset info from view or prop
+    const datasetInfo = dataset || view.dataset || {
+        name: view.datasetName || view.name?.replace('View of ', '') || 'Unknown',
+        dimensions: view.dimensions || '---',
+        size: view.size || '---',
+        type: view.instanceType || 'Unknown',
+    };
+
     return (
-        <div className={itemClasses} ref={itemRef}>
+        <div
+            className={itemClasses}
+            ref={itemRef}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
             {/* Main Row */}
             <div
                 className="view-item__row"
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
                 onContextMenu={handleContextMenu}
                 onClick={() => onSelect?.(view.id)}
             >
@@ -233,8 +211,8 @@ export const ViewItem = memo(function ViewItem({
                     )}
                 </div>
 
-                {/* Status Icons */}
-                {!showPanel && statusIcons.length > 0 && (
+                {/* Status Icons - only show when NOT hovered */}
+                {!isHovered && statusIcons.length > 0 && (
                     <div className="view-item__status-icons">
                         {statusIcons.slice(0, 4).map(({ icon: Icon, color, tooltip, key, count }) => (
                             <span
@@ -263,8 +241,8 @@ export const ViewItem = memo(function ViewItem({
                     </span>
                 )}
 
-                {/* Hover Actions (no trash - only in context menu/modal) */}
-                {isHovered && !showPanel && (
+                {/* Hover Actions - show when hovered (Settings always, Close if placed) */}
+                {isHovered && (
                     <div className="view-item__hover-actions">
                         {!isPlaced && (
                             <button
@@ -307,10 +285,8 @@ export const ViewItem = memo(function ViewItem({
             {/* Sliding Panel */}
             <SlidingPanel
                 view={view}
-                isOpen={showPanel}
+                isOpen={isHovered}
                 availableViews={availableViews}
-                onPanelEnter={handlePanelEnter}
-                onPanelLeave={handlePanelLeave}
                 onStarWorkspace={() => onStarWorkspace?.(view.id)}
                 onStarPersonal={() => onStarPersonal?.(view.id)}
                 onSaveState={() => onSaveState?.(view.id)}
@@ -367,7 +343,7 @@ export const ViewItem = memo(function ViewItem({
             {showSettingsModal && (
                 <ViewSettingsModal
                     view={view}
-                    dataset={dataset}
+                    dataset={datasetInfo}
                     availableViews={availableViews}
                     sharedUsers={sharedUsers}
                     onClose={() => setShowSettingsModal(false)}

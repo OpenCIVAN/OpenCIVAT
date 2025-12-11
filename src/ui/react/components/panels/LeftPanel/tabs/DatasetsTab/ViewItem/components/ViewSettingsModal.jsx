@@ -4,21 +4,9 @@
  * Comprehensive settings modal for ViewItem configuration.
  * Acts as the "one-stop shop" where everything from context menu
  * and sliding panel is also accessible.
- *
- * Sections:
- * - Header with double-click rename
- * - Quick Actions bar (toggles)
- * - Source Dataset info
- * - Sharing management
- * - Canvas Size
- * - Link Properties (Camera, Filters, Color Map, Widgets, Cursor)
- * - Annotation Display (separate from links - dataset level)
- * - Display Options (handler-specific)
- * - Advanced (stub)
- * - Danger Zone
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
     X,
@@ -81,6 +69,36 @@ export function ViewSettingsModal({
     const [localSharedUsers, setLocalSharedUsers] = useState(sharedUsers);
     const [newShareEmail, setNewShareEmail] = useState('');
     const nameInputRef = useRef(null);
+
+    // Extract dataset info from view or dataset prop
+    const datasetInfo = useMemo(() => {
+        if (dataset && dataset.name && dataset.name !== 'Unknown') {
+            return dataset;
+        }
+
+        // Try to extract from view name (e.g., "View of LungVessels.vtp" -> "LungVessels.vtp")
+        let name = 'Unknown Dataset';
+        if (view.datasetName) {
+            name = view.datasetName;
+        } else if (view.filename) {
+            name = view.filename;
+        } else if (view.name) {
+            // Extract from "View of X" pattern
+            const match = view.name.match(/^View of (.+)$/i);
+            if (match) {
+                name = match[1];
+            } else {
+                name = view.name;
+            }
+        }
+
+        return {
+            name,
+            dimensions: view.dimensions || dataset?.dimensions || '---',
+            size: view.size || dataset?.size || '---',
+            type: view.instanceType || view.type || dataset?.type || 'VTK',
+        };
+    }, [view, dataset]);
 
     // Focus input when editing name
     useEffect(() => {
@@ -221,10 +239,10 @@ export function ViewSettingsModal({
                             </div>
                             <div className="view-settings-modal__dataset-info">
                                 <div className="view-settings-modal__dataset-name">
-                                    {dataset?.name || 'Unknown Dataset'}
+                                    {datasetInfo.name}
                                 </div>
                                 <div className="view-settings-modal__dataset-meta">
-                                    {dataset?.dimensions || '---'} • {dataset?.size || '---'} • {dataset?.type || 'Unknown'}
+                                    {datasetInfo.dimensions} • {datasetInfo.size} • {datasetInfo.type}
                                 </div>
                             </div>
                             <button className="view-settings-modal__dataset-btn">

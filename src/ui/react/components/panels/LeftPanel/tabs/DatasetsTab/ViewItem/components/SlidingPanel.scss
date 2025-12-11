@@ -15,7 +15,6 @@
   border: 1px solid $color-border-default;
   border-top: none;
   border-radius: 0 0 $radius-sm $radius-sm;
-  padding: 0;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
@@ -23,8 +22,8 @@
   z-index: 1;
 
   &--open {
-    padding: $spacing-sm;
-    max-height: 120px;
+    padding: $spacing-xs $spacing-sm;
+    max-height: 100px;
     opacity: 1;
   }
 }
@@ -34,16 +33,19 @@
 // =============================================================================
 
 .sliding-panel__tooltip {
-  padding: 4px $spacing-sm;
-  margin-bottom: $spacing-sm;
+  padding: 2px $spacing-sm;
+  margin-bottom: $spacing-xs;
   background: $color-bg-primary;
   border-radius: $radius-xs;
-  font-size: 10px;
+  font-size: 9px;
   color: $color-text-muted;
-  min-height: 20px;
+  min-height: 16px;
   display: flex;
   align-items: center;
   transition: color $transition-fast;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &--active {
     color: $color-text-secondary;
@@ -56,9 +58,17 @@
 
 .sliding-panel__actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 4px;
   align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+
+  // Hide scrollbar but allow scroll
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .sliding-panel__group {
@@ -66,11 +76,13 @@
   background: $color-bg-primary;
   border-radius: $radius-sm;
   padding: 2px;
-  gap: 2px;
+  gap: 1px;
+  flex-shrink: 0;
 }
 
 .sliding-panel__spacer {
   flex: 1;
+  min-width: 4px;
 }
 
 // =============================================================================
@@ -81,8 +93,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   background: transparent;
   border: none;
   border-radius: $radius-xs;
@@ -90,6 +102,7 @@
   cursor: pointer;
   transition: all $transition-fast;
   position: relative;
+  flex-shrink: 0;
 
   &:hover {
     background: $color-glass-light;
@@ -126,8 +139,8 @@
 
 .sliding-panel__btn-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 0;
+  right: 0;
   min-width: 12px;
   height: 12px;
   padding: 0 3px;
@@ -150,13 +163,15 @@
   align-items: center;
   gap: 4px;
   padding: 4px $spacing-sm;
-  background: $color-bg-secondary;
+  background: $color-bg-primary;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-sm;
   color: $color-text-secondary;
   font-size: 10px;
   cursor: pointer;
   transition: all $transition-fast;
+  flex-shrink: 0;
+  white-space: nowrap;
 
   &:hover {
     background: $color-glass-light;

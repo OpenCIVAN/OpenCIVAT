@@ -31,8 +31,6 @@ export function SlidingPanel({
     view,
     isOpen,
     availableViews = [],
-    onPanelEnter,
-    onPanelLeave,
     onStarWorkspace,
     onStarPersonal,
     onSaveState,
@@ -51,7 +49,10 @@ export function SlidingPanel({
     const handleSizeClick = (e) => {
         e.stopPropagation();
         const rect = e.currentTarget.getBoundingClientRect();
-        setSizeMenuPos({ x: rect.left, y: rect.bottom + 4 });
+        // Position menu below button, constrain to viewport
+        const x = Math.min(rect.left, window.innerWidth - 160);
+        const y = rect.bottom + 4;
+        setSizeMenuPos({ x, y });
         setShowSizeMenu(true);
     };
 
@@ -60,12 +61,16 @@ export function SlidingPanel({
         setShowSizeMenu(false);
     };
 
+    // Close size menu when panel closes
+    React.useEffect(() => {
+        if (!isOpen) {
+            setShowSizeMenu(false);
+            setTooltipText(null);
+        }
+    }, [isOpen]);
+
     return (
-        <div
-            className={`sliding-panel ${isOpen ? 'sliding-panel--open' : ''}`}
-            onMouseEnter={onPanelEnter}
-            onMouseLeave={onPanelLeave}
-        >
+        <div className={`sliding-panel ${isOpen ? 'sliding-panel--open' : ''}`}>
             {/* Tooltip Area */}
             <div className={`sliding-panel__tooltip ${tooltipText ? 'sliding-panel__tooltip--active' : ''}`}>
                 {tooltipText || 'Hover actions for details'}
@@ -175,14 +180,18 @@ export function SlidingPanel({
                 <>
                     <div
                         className="sliding-panel__size-backdrop"
-                        onClick={() => setShowSizeMenu(false)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowSizeMenu(false);
+                        }}
                     />
                     <div
                         className="sliding-panel__size-menu"
                         style={{
-                            left: Math.min(sizeMenuPos.x, window.innerWidth - 160),
+                            left: sizeMenuPos.x,
                             top: sizeMenuPos.y,
                         }}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <div className="sliding-panel__size-menu-title">Canvas Size</div>
                         <div className="sliding-panel__size-grid">
