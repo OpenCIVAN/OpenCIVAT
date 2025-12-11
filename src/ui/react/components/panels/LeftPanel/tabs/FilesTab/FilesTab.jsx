@@ -563,7 +563,7 @@ export function FilesPanelContent({
         e.dataTransfer.setData('application/json', JSON.stringify({
             type: 'file',
             ...file,
-            isFile: true, // Explicit flag for file drops
+            isFile: true,
         }));
         e.dataTransfer.effectAllowed = 'copy';
     }, []);

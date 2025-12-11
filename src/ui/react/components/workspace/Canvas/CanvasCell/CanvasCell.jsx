@@ -73,7 +73,11 @@ export const CanvasCell = memo(function CanvasCell({
     const [isDragOver, setIsDragOver] = useState(false);
     const [showTooltip, setShowTooltip] = useState(false);
 
-    const isEmpty = !placement || placement.content?.type === PlacementContentType.EMPTY;
+    const isEmpty = !placement ||
+        !placement.content ||
+        placement.content.type === PlacementContentType.EMPTY ||
+        placement.content.type === undefined ||
+        placement.content.type === null;
     const contentType = placement?.content?.type || 'empty';
     const rowSpan = placement?.rowSpan || 1;
     const colSpan = placement?.colSpan || 1;
@@ -295,29 +299,15 @@ export const CanvasCell = memo(function CanvasCell({
                         <span>Unknown content type: {contentType}</span>
                         {onRemove && (
                             <button
-                                className="canvas-cell__close-btn"
+                                className="canvas-cell__remove-invalid-btn"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onRemove();
                                 }}
-                                title="Remove invalid cell"
-                                style={{
-                                    position: 'absolute',
-                                    top: 8,
-                                    right: 8,
-                                    background: 'rgba(239, 68, 68, 0.2)',
-                                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                                    borderRadius: 4,
-                                    padding: '4px 8px',
-                                    color: '#ef4444',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                }}
+                                title="Remove invalid placement"
                             >
                                 <X size={14} />
-                                Remove
+                                <span>Remove</span>
                             </button>
                         )}
                     </div>

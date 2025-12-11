@@ -362,13 +362,49 @@ export function CanvasGrid({
     }, [canvas?.placements, effectiveViewport]);
 
     const handleCellDrop = useCallback(async (row, col, dropData) => {
-        console.log('handleCellDrop', { row, col, dropData });
+        log.debug('handleCellDrop', { row, col, dropData });
 
         try {
-            // Case 1: ViewItem dropped (from datasets tab Views list)
-            if (dropData.viewConfigId || dropData.id) {
-                const viewId = dropData.viewConfigId || dropData.id;
-                console.log(`Creating placement for view ${viewId} at [${row}, ${col}]`);
+            // IMPORTANT: Check type field FIRST before checking for id
+            // Every object has an id, so we must check type to distinguish
+
+            // Case 1: File dropped (from FilesTab)
+            // Check this FIRST because files have both 'id' and other properties
+            if (dropData.type === 'file' || dropData.isFile) {
+                log.debug(`File dropped: ${dropData.name} at [${row}, ${col}]`);
+
+                window.dispatchEvent(new CustomEvent('cia:load-file-to-cell', {
+                    detail: {
+                        file: dropData,
+                        targetRow: row,
+                        targetCol: col,
+                        canvasId,
+                    },
+                }));
+                return;
+            }
+
+            // Case 2: Dataset dropped (create new view)
+            if (dropData.type === 'dataset' || (dropData.datasetId && !dropData.viewConfigId)) {
+                log.debug(`Creating new view for dataset ${dropData.datasetId} at [${row}, ${col}]`);
+
+                window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                    detail: {
+                        datasetId: dropData.datasetId,
+                        spawnNew: true,
+                        targetRow: row,
+                        targetCol: col,
+                        canvasId,
+                    },
+                }));
+                return;
+            }
+
+            // Case 3: ViewItem dropped (from datasets tab Views list)
+            // Only match if we have an explicit viewConfigId or type is 'view'/'view-item'
+            if (dropData.viewConfigId || dropData.type === 'view' || dropData.type === 'view-item') {
+                const viewId = dropData.viewConfigId || dropData.viewId || dropData.id;
+                log.debug(`Creating placement for view ${viewId} at [${row}, ${col}]`);
 
                 await addPlacement({
                     row,
@@ -383,40 +419,12 @@ export function CanvasGrid({
                 return;
             }
 
-            // Case 2: Dataset dropped (create new view)
-            if (dropData.datasetId) {
-                console.log(`Creating new view for dataset ${dropData.datasetId} at [${row}, ${col}]`);
+            // Unknown format - log warning instead of silently failing
+            log.warn('Unknown drop data format:', dropData);
+            log.warn('Expected one of: type="file", type="dataset", type="view", or viewConfigId');
 
-                window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                    detail: {
-                        datasetId: dropData.datasetId,
-                        spawnNew: true,
-                        targetRow: row,
-                        targetCol: col,
-                        canvasId,
-                    },
-                }));
-                return;
-            }
-
-            // Case 3: File dropped (from FilesTab - needs to load first)
-            if (dropData.path || dropData.name) {
-                console.log(`File dropped: ${dropData.name} at [${row}, ${col}]`);
-
-                window.dispatchEvent(new CustomEvent('cia:load-file-to-cell', {
-                    detail: {
-                        file: dropData,
-                        targetRow: row,
-                        targetCol: col,
-                        canvasId,
-                    },
-                }));
-                return;
-            }
-
-            workspace.warn('Unknown drop data format:', dropData);
         } catch (error) {
-            workspace.error('Drop failed:', error);
+            log.error('Drop failed:', error);
         }
     }, [addPlacement, canvasId]);
 
@@ -473,7 +481,7 @@ export function CanvasGrid({
 
                 // Validate placement has valid content
                 if (placement && !isValidPlacement(placement)) {
-                    console.warn(`Invalid placement at [${canvasRow}, ${canvasCol}]:`, placement);
+                    log.warn(`Invalid placement at [${canvasRow}, ${canvasCol}]:`, placement);
                     // Could auto-clean here or render special "invalid" state
                 }
 

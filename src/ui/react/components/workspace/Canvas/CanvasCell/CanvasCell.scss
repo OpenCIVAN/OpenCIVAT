@@ -545,10 +545,31 @@
 // =============================================================================
 
 .canvas-cell__unknown {
-  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: $color-warning;
-  font-size: $font-size-sm;
+  gap: 12px;
+  height: 100%;
+  color: $color-accent-red;
+  font-size: 12px;
+}
+
+.canvas-cell__remove-invalid-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba($color-accent-red, 0.15);
+  border: 1px solid rgba($color-accent-red, 0.3);
+  border-radius: $radius-sm;
+  color: $color-accent-red;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba($color-accent-red, 0.25);
+    border-color: $color-accent-red;
+  }
 }

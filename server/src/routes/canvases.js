@@ -80,15 +80,55 @@ router.get("/:id", async (req, res, next) => {
       return res.status(404).json({ error: "Canvas not found" });
     }
 
-    // Get placements
+    // Get placements with validation
+    // Use LEFT JOIN to check if referenced views still exist
     const placementsResult = await pool.query(
-      `SELECT * FROM placements WHERE canvas_id = $1 ORDER BY row_index, col_index`,
+      `SELECT p.*, 
+              CASE 
+                WHEN p.content_type = 'view' THEN (vc.id IS NOT NULL)
+                WHEN p.content_type = 'note' THEN (n.id IS NOT NULL OR p.content_id IS NULL)
+                WHEN p.content_type = 'image' THEN (i.id IS NOT NULL OR p.content_id IS NULL)
+                ELSE true
+              END as is_valid
+       FROM placements p
+       LEFT JOIN view_configurations vc ON p.content_type = 'view' AND p.content_id = vc.id
+       LEFT JOIN notes n ON p.content_type = 'note' AND p.content_id = n.id
+       LEFT JOIN images i ON p.content_type = 'image' AND p.content_id = i.id
+       WHERE p.canvas_id = $1
+       ORDER BY p.row_index, p.col_index`,
       [id]
     );
 
+    // Separate valid and invalid placements
+    const validPlacements = [];
+    const invalidPlacementIds = [];
+
+    for (const p of placementsResult.rows) {
+      if (p.is_valid) {
+        // Remove the is_valid field before sending to client
+        delete p.is_valid;
+        validPlacements.push(p);
+      } else {
+        invalidPlacementIds.push(p.id);
+        console.warn(
+          `[canvases] Found orphaned placement ${p.id} referencing missing ${p.content_type} ${p.content_id}`
+        );
+      }
+    }
+
+    // Auto-cleanup orphaned placements (optional - can be disabled)
+    if (invalidPlacementIds.length > 0) {
+      console.log(
+        `[canvases] Auto-cleaning ${invalidPlacementIds.length} orphaned placements`
+      );
+      await pool.query(`DELETE FROM placements WHERE id = ANY($1::uuid[])`, [
+        invalidPlacementIds,
+      ]);
+    }
+
     res.json({
       ...canvasResult.rows[0],
-      placements: placementsResult.rows,
+      placements: validPlacements,
     });
   } catch (error) {
     next(error);
@@ -367,6 +407,58 @@ router.post("/:id/placements", async (req, res, next) => {
     if (resolvedContentType === "notes") {
       resolvedContentType = "note";
     }
+
+    // =========================================================================
+    // VALIDATION: Ensure referenced content exists
+    // =========================================================================
+    if (resolvedContentType === "view" && resolvedContentId) {
+      const viewCheck = await pool.query(
+        `SELECT id FROM view_configurations WHERE id = $1`,
+        [resolvedContentId]
+      );
+
+      if (viewCheck.rows.length === 0) {
+        console.warn(
+          `[canvases] Rejected placement: view ${resolvedContentId} does not exist`
+        );
+        return res.status(400).json({
+          error: "InvalidReference",
+          message: `View configuration ${resolvedContentId} does not exist`,
+          code: "VIEW_NOT_FOUND",
+        });
+      }
+    }
+
+    // Add similar checks for notes and images if needed
+    if (resolvedContentType === "note" && resolvedContentId) {
+      const noteCheck = await pool.query(`SELECT id FROM notes WHERE id = $1`, [
+        resolvedContentId,
+      ]);
+
+      if (noteCheck.rows.length === 0) {
+        return res.status(400).json({
+          error: "InvalidReference",
+          message: `Note ${resolvedContentId} does not exist`,
+          code: "NOTE_NOT_FOUND",
+        });
+      }
+    }
+
+    if (resolvedContentType === "image" && resolvedContentId) {
+      const imageCheck = await pool.query(
+        `SELECT id FROM images WHERE id = $1`,
+        [resolvedContentId]
+      );
+
+      if (imageCheck.rows.length === 0) {
+        return res.status(400).json({
+          error: "InvalidReference",
+          message: `Image ${resolvedContentId} does not exist`,
+          code: "IMAGE_NOT_FOUND",
+        });
+      }
+    }
+    // =========================================================================
 
     const result = await pool.query(
       `INSERT INTO placements (canvas_id, row_index, col_index, row_span, col_span, content_type, content_id, created_by)

@@ -67,6 +67,8 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                 if (personalCanvas) {
                     log.debug(`Got personal canvas: ${personalCanvas.id}`);
                     setActiveCanvasId(personalCanvas.id);
+                    // IMPORTANT: Also update the manager so other components can access it
+                    canvasManager.setActiveCanvas(personalCanvas.id);
                 }
             } catch (error) {
                 log.error('Failed to load canvas from server:', error.message);
@@ -262,25 +264,28 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
         };
     }, [activeCanvasId, canvas, addPlacement, navigateTo, findNextEmptyCell]);
 
-    // Handle file drops to specific cells
+    // Listen for file drops to specific cells
     useEffect(() => {
+        if (!activeCanvasId) return;
+
         const handleFileToCell = async (event) => {
             const { file, targetRow, targetCol, canvasId } = event.detail;
 
-            if (canvasId !== activeCanvasId) {
+            // Ignore if for a different canvas
+            if (canvasId && canvasId !== activeCanvasId) {
                 log.debug('File drop for different canvas, ignoring');
                 return;
             }
 
-            log.info(`Loading file ${file.name} into cell [${targetRow}, ${targetCol}]`);
+            log.info(`Loading file "${file.name}" into cell [${targetRow}, ${targetCol}]`);
 
             try {
                 // Check if file is already loaded as a dataset
                 let datasetId = file.id;
-                const existingDataset = window.CIA?.datasetManager?.getDataset(file.id);
+                const existingDataset = datasetManager.getDataset(file.id);
 
                 if (!existingDataset) {
-                    // File not loaded yet - need to load it first
+                    // File not loaded yet - need to fetch and load it first
                     log.debug('File not loaded, fetching from server...');
 
                     const downloadUrl = file.downloadUrl ||
@@ -302,8 +307,8 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                         type: file.mimeType || 'application/octet-stream',
                     });
 
-                    // Add to DatasetManager
-                    const dataset = await window.CIA.datasetManager.addDataset(fileObj, {
+                    // Add to DatasetManager with server ID
+                    const dataset = await datasetManager.addDataset(fileObj, {
                         userId: file.uploadedBy || 'system',
                         serverId: file.id,
                         serverMetadata: {
@@ -317,7 +322,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     log.info(`File loaded into DatasetManager: ${datasetId}`);
                 }
 
-                // Now dispatch instance request with target position
+                // Dispatch instance request with specific target position
                 window.dispatchEvent(new CustomEvent('cia:request-instance', {
                     detail: {
                         datasetId,
@@ -332,7 +337,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
 
             } catch (error) {
                 log.error('Failed to load file to cell:', error);
-                // Optionally show toast
+                // TODO: Show toast notification
             }
         };
 
