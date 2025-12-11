@@ -362,68 +362,81 @@ export function CanvasGrid({
     }, [canvas?.placements, effectiveViewport]);
 
     const handleCellDrop = useCallback(async (row, col, dropData) => {
-    console.log('handleCellDrop', { row, col, dropData });
-    
-    try {
-        // Case 1: ViewItem dropped (from datasets tab Views list)
-        if (dropData.viewConfigId || dropData.id) {
-            const viewId = dropData.viewConfigId || dropData.id;
-            console.log(`Creating placement for view ${viewId} at [${row}, ${col}]`);
-            
-            await addPlacement({
-                row,
-                col,
-                rowSpan: dropData.rowSpan || 1,
-                colSpan: dropData.colSpan || 1,
-                content: {
-                    type: 'view',
-                    viewConfigurationId: viewId,
-                },
-            });
-            return;
+        console.log('handleCellDrop', { row, col, dropData });
+
+        try {
+            // Case 1: ViewItem dropped (from datasets tab Views list)
+            if (dropData.viewConfigId || dropData.id) {
+                const viewId = dropData.viewConfigId || dropData.id;
+                console.log(`Creating placement for view ${viewId} at [${row}, ${col}]`);
+
+                await addPlacement({
+                    row,
+                    col,
+                    rowSpan: dropData.rowSpan || 1,
+                    colSpan: dropData.colSpan || 1,
+                    content: {
+                        type: 'view',
+                        viewConfigurationId: viewId,
+                    },
+                });
+                return;
+            }
+
+            // Case 2: Dataset dropped (create new view)
+            if (dropData.datasetId) {
+                console.log(`Creating new view for dataset ${dropData.datasetId} at [${row}, ${col}]`);
+
+                window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                    detail: {
+                        datasetId: dropData.datasetId,
+                        spawnNew: true,
+                        targetRow: row,
+                        targetCol: col,
+                        canvasId,
+                    },
+                }));
+                return;
+            }
+
+            // Case 3: File dropped (from FilesTab - needs to load first)
+            if (dropData.path || dropData.name) {
+                console.log(`File dropped: ${dropData.name} at [${row}, ${col}]`);
+
+                window.dispatchEvent(new CustomEvent('cia:load-file-to-cell', {
+                    detail: {
+                        file: dropData,
+                        targetRow: row,
+                        targetCol: col,
+                        canvasId,
+                    },
+                }));
+                return;
+            }
+
+            workspace.warn('Unknown drop data format:', dropData);
+        } catch (error) {
+            workspace.error('Drop failed:', error);
         }
-        
-        // Case 2: Dataset dropped (create new view)
-        if (dropData.datasetId) {
-            console.log(`Creating new view for dataset ${dropData.datasetId} at [${row}, ${col}]`);
-            
-            window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                detail: {
-                    datasetId: dropData.datasetId,
-                    spawnNew: true,
-                    targetRow: row,
-                    targetCol: col,
-                    canvasId,
-                },
-            }));
-            return;
-        }
-        
-        // Case 3: File dropped (from FilesTab - needs to load first)
-        if (dropData.path || dropData.name) {
-            console.log(`File dropped: ${dropData.name} at [${row}, ${col}]`);
-            
-            window.dispatchEvent(new CustomEvent('cia:load-file-to-cell', {
-                detail: {
-                    file: dropData,
-                    targetRow: row,
-                    targetCol: col,
-                    canvasId,
-                },
-            }));
-            return;
-        }
-        
-        workspace.warn('Unknown drop data format:', dropData);
-    } catch (error) {
-        workspace.error('Drop failed:', error);
-    }
-}, [addPlacement, canvasId]);
+    }, [addPlacement, canvasId]);
 
 
     // ==========================================================================
     // RENDER CELLS
     // ==========================================================================
+
+    // Helper function to validate placement
+    function isValidPlacement(placement) {
+        if (!placement.content) return false;
+        if (placement.content.type === 'view') {
+            return !!placement.content.viewConfigurationId;
+        }
+        if (placement.content.type === 'notes') {
+            return true; // Notes can exist without content initially
+        }
+        // Add other content type validations as needed
+        return true;
+    }
 
     const renderCells = useMemo(() => {
         const cells = [];
@@ -453,9 +466,16 @@ export function CanvasGrid({
                 const key = `${canvasRow},${canvasCol}`;
 
                 // Check if this cell is the origin of a placement
+                // In renderCells useMemo, before rendering a placement:
                 const placement = viewportPlacements.find(
                     p => p.row === canvasRow && p.col === canvasCol
                 );
+
+                // Validate placement has valid content
+                if (placement && !isValidPlacement(placement)) {
+                    console.warn(`Invalid placement at [${canvasRow}, ${canvasCol}]:`, placement);
+                    // Could auto-clean here or render special "invalid" state
+                }
 
                 // Skip if cell is covered by a multi-span placement (but not origin)
                 if (!placement && occupiedCells.has(key)) {
@@ -507,7 +527,7 @@ export function CanvasGrid({
                             onDoubleClick={(e) => placement && onCellDoubleClick?.(placement, e)}
                             onAddContent={(type) => onAddContent?.(canvasRow, canvasCol, type)}
                             onRemove={() => placement && onRemovePlacement?.(placement.id)}
-                            onDrop={handleCellDrop} 
+                            onDrop={handleCellDrop}
                         />
                     </div>
                 );

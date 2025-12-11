@@ -174,11 +174,11 @@ export const CanvasCell = memo(function CanvasCell({
         if (!onDrop || !isEmpty) return;
 
         try {
-            // Try ViewItem format first (from datasets tab)
+            // Try ViewItem format first (from datasets tab - x-viewitem MIME type)
             let data = e.dataTransfer.getData('application/x-viewitem');
             if (data) {
                 const parsed = JSON.parse(data);
-                console.log('ViewItem drop:', parsed);
+                console.log('ViewItem drop (x-viewitem):', parsed);
                 onDrop(row, col, { viewConfigId: parsed.id, ...parsed });
                 return;
             }
@@ -192,13 +192,15 @@ export const CanvasCell = memo(function CanvasCell({
                 // Determine what type of data this is
                 if (parsed.type === 'dataset') {
                     onDrop(row, col, { datasetId: parsed.datasetId, ...parsed });
-                } else if (parsed.type === 'view-item') {
-                    onDrop(row, col, { viewConfigId: parsed.viewId, ...parsed });
-                } else if (parsed.path || parsed.isFile) {
-                    // File from FilesTab
+                } else if (parsed.type === 'view-item' || parsed.type === 'view') {
+                    // Accept BOTH 'view-item' and 'view' types
+                    onDrop(row, col, { viewConfigId: parsed.viewId || parsed.id, ...parsed });
+                } else if (parsed.type === 'file' || parsed.path || parsed.isFile) {
+                    // File from FilesTab - check type OR legacy path/isFile fields
                     onDrop(row, col, { ...parsed, isFile: true });
                 } else {
                     // Unknown format - pass through
+                    console.warn('Unknown drop data format:', parsed);
                     onDrop(row, col, parsed);
                 }
                 return;
@@ -290,7 +292,34 @@ export const CanvasCell = memo(function CanvasCell({
             default:
                 return (
                     <div className="canvas-cell__unknown">
-                        Unknown content type: {contentType}
+                        <span>Unknown content type: {contentType}</span>
+                        {onRemove && (
+                            <button
+                                className="canvas-cell__close-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemove();
+                                }}
+                                title="Remove invalid cell"
+                                style={{
+                                    position: 'absolute',
+                                    top: 8,
+                                    right: 8,
+                                    background: 'rgba(239, 68, 68, 0.2)',
+                                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                                    borderRadius: 4,
+                                    padding: '4px 8px',
+                                    color: '#ef4444',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                }}
+                            >
+                                <X size={14} />
+                                Remove
+                            </button>
+                        )}
                     </div>
                 );
         }

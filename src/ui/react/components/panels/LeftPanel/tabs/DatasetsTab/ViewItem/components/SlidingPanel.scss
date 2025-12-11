@@ -22,8 +22,8 @@
   z-index: 1;
 
   &--open {
-    padding: $spacing-xs $spacing-sm;
-    max-height: 100px;
+    padding: $spacing-xs;
+    max-height: 120px; // Allow more height for wrapping
     opacity: 1;
   }
 }
@@ -33,13 +33,13 @@
 // =============================================================================
 
 .sliding-panel__tooltip {
-  padding: 2px $spacing-sm;
-  margin-bottom: $spacing-xs;
+  padding: 2px $spacing-xs;
+  margin-bottom: 4px;
   background: $color-bg-primary;
   border-radius: $radius-xs;
   font-size: 9px;
   color: $color-text-muted;
-  min-height: 16px;
+  min-height: 14px;
   display: flex;
   align-items: center;
   transition: color $transition-fast;
@@ -58,31 +58,26 @@
 
 .sliding-panel__actions {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  flex-wrap: wrap;
 
-  // Hide scrollbar but allow scroll
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  // Allow wrapping for small panels
+  row-gap: 4px;
 }
 
 .sliding-panel__group {
   display: flex;
   background: $color-bg-primary;
-  border-radius: $radius-sm;
-  padding: 2px;
+  border-radius: $radius-xs;
+  padding: 1px;
   gap: 1px;
   flex-shrink: 0;
 }
 
 .sliding-panel__spacer {
   flex: 1;
-  min-width: 4px;
+  min-width: 2px;
 }
 
 // =============================================================================
@@ -93,8 +88,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   background: transparent;
   border: none;
   border-radius: $radius-xs;
@@ -109,6 +104,7 @@
     color: $color-text-primary;
   }
 
+  // Active states ONLY - colored background + full color icon
   &--active {
     &.sliding-panel__btn--purple {
       background: rgba($color-accent-purple, 0.2);
@@ -139,14 +135,14 @@
 
 .sliding-panel__btn-badge {
   position: absolute;
-  top: 0;
-  right: 0;
-  min-width: 12px;
-  height: 12px;
-  padding: 0 3px;
+  top: -1px;
+  right: -1px;
+  min-width: 10px;
+  height: 10px;
+  padding: 0 2px;
   background: $color-accent-teal;
-  border-radius: 6px;
-  font-size: 8px;
+  border-radius: 5px;
+  font-size: 7px;
   font-weight: $font-weight-semibold;
   color: $color-bg-primary;
   display: flex;
@@ -161,17 +157,17 @@
 .sliding-panel__size-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px $spacing-sm;
+  gap: 2px;
+  padding: 3px 6px;
   background: $color-bg-primary;
   border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
+  border-radius: $radius-xs;
   color: $color-text-secondary;
-  font-size: 10px;
+  font-size: 9px;
   cursor: pointer;
   transition: all $transition-fast;
-  flex-shrink: 0;
   white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     background: $color-glass-light;

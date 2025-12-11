@@ -81,8 +81,13 @@ export const ViewItem = memo(function ViewItem({
     const inputRef = useRef(null);
     const itemRef = useRef(null);
 
-    // Derived state
-    const isPlaced = view.position != null;
+    // Derived state - check multiple ways a view might be "placed" on canvas
+    const isPlaced = Boolean(
+        view.position != null ||
+        view.isActive ||
+        view.isPlaced ||
+        (view.row != null && view.col != null)
+    );
 
     // Focus input when editing
     useEffect(() => {
@@ -163,6 +168,20 @@ export const ViewItem = memo(function ViewItem({
         <div
             className={itemClasses}
             ref={itemRef}
+            draggable
+            onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('application/x-viewitem', JSON.stringify({
+                    id: view.id,
+                    name: view.name,
+                    color: view.color,
+                    datasetId: view.datasetId,
+                    rowSpan: view.rowSpan || 1,
+                    colSpan: view.colSpan || 1,
+                }));
+                onDragStart?.(e, view.id);
+            }}
+            onDragEnd={onDragEnd}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -231,13 +250,13 @@ export const ViewItem = memo(function ViewItem({
                     </div>
                 )}
 
-                {/* Position Badge */}
-                {isPlaced && view.position && (
+                {/* Position Badge - show if placed */}
+                {isPlaced && (
                     <span
                         className="view-item__position-badge"
                         style={{ '--view-color': view.color }}
                     >
-                        [{view.position.row + 1},{view.position.col + 1}]
+                        [{(view.position?.row ?? view.row ?? 0) + 1},{(view.position?.col ?? view.col ?? 0) + 1}]
                     </span>
                 )}
 

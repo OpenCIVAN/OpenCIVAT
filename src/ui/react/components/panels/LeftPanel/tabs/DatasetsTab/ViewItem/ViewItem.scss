@@ -121,9 +121,12 @@
   border-radius: 50%;
   flex-shrink: 0;
   transition: all $transition-fast;
+  border: 2px solid $color-text-muted;
+  background: transparent;
 
   &--active {
-    box-shadow: 0 0 6px currentColor;
+    border: none;
+    box-shadow: 0 0 8px 2px currentColor;
   }
 }
 

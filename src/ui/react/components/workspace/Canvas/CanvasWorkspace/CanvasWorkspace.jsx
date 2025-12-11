@@ -262,6 +262,84 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
         };
     }, [activeCanvasId, canvas, addPlacement, navigateTo, findNextEmptyCell]);
 
+    // Handle file drops to specific cells
+    useEffect(() => {
+        const handleFileToCell = async (event) => {
+            const { file, targetRow, targetCol, canvasId } = event.detail;
+
+            if (canvasId !== activeCanvasId) {
+                log.debug('File drop for different canvas, ignoring');
+                return;
+            }
+
+            log.info(`Loading file ${file.name} into cell [${targetRow}, ${targetCol}]`);
+
+            try {
+                // Check if file is already loaded as a dataset
+                let datasetId = file.id;
+                const existingDataset = window.CIA?.datasetManager?.getDataset(file.id);
+
+                if (!existingDataset) {
+                    // File not loaded yet - need to load it first
+                    log.debug('File not loaded, fetching from server...');
+
+                    const downloadUrl = file.downloadUrl ||
+                        `${window.CIA_CONFIG?.apiBaseUrl || 'http://localhost:3001'}/api/files/${file.id}/download`;
+
+                    const response = await fetch(downloadUrl, {
+                        credentials: 'include',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to download file: ${response.status}`);
+                    }
+
+                    const blob = await response.blob();
+                    const fileObj = new File([blob], file.name, {
+                        type: file.mimeType || 'application/octet-stream',
+                    });
+
+                    // Add to DatasetManager
+                    const dataset = await window.CIA.datasetManager.addDataset(fileObj, {
+                        userId: file.uploadedBy || 'system',
+                        serverId: file.id,
+                        serverMetadata: {
+                            fileType: file.fileType,
+                            hash: file.hash,
+                            uploadedAt: file.uploadedAt,
+                        },
+                    });
+
+                    datasetId = dataset.id;
+                    log.info(`File loaded into DatasetManager: ${datasetId}`);
+                }
+
+                // Now dispatch instance request with target position
+                window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                    detail: {
+                        datasetId,
+                        spawnNew: true,
+                        targetRow,
+                        targetCol,
+                        canvasId: activeCanvasId,
+                        fileName: file.name,
+                        fileType: file.fileType,
+                    },
+                }));
+
+            } catch (error) {
+                log.error('Failed to load file to cell:', error);
+                // Optionally show toast
+            }
+        };
+
+        window.addEventListener('cia:load-file-to-cell', handleFileToCell);
+        return () => window.removeEventListener('cia:load-file-to-cell', handleFileToCell);
+    }, [activeCanvasId]);
+
     // Handle placement click
     const handlePlacementClick = useCallback((placement) => {
         log.debug('Placement clicked:', placement);

@@ -559,7 +559,12 @@ export function FilesPanelContent({
     }, [toggleStar]);
 
     const handleDragStart = useCallback((e, file) => {
-        e.dataTransfer.setData('application/json', JSON.stringify(file));
+        // Include type field so CanvasCell knows how to handle this drop
+        e.dataTransfer.setData('application/json', JSON.stringify({
+            type: 'file',
+            ...file,
+            isFile: true, // Explicit flag for file drops
+        }));
         e.dataTransfer.effectAllowed = 'copy';
     }, []);
 

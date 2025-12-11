@@ -83,7 +83,7 @@ export function SlidingPanel({
                     <PanelButton
                         icon={Folder}
                         active={view.starredWorkspace}
-                        activeColor="purple"
+                        color="purple"
                         onClick={onStarWorkspace}
                         onHover={() => setTooltipText('Save to Workspace')}
                         onLeave={() => setTooltipText(null)}
@@ -91,7 +91,7 @@ export function SlidingPanel({
                     <PanelButton
                         icon={Globe}
                         active={view.starredPersonal}
-                        activeColor="amber"
+                        color="amber"
                         onClick={onStarPersonal}
                         onHover={() => setTooltipText('Save to Personal')}
                         onLeave={() => setTooltipText(null)}
@@ -103,13 +103,14 @@ export function SlidingPanel({
                     <PanelButton
                         icon={Save}
                         active={view.hasSavedState}
-                        activeColor="amber"
+                        color="amber"
                         onClick={onSaveState}
                         onHover={() => setTooltipText('Save Current State')}
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
                         icon={RefreshCw}
+                        color="blue"
                         onClick={onLoadState}
                         onHover={() => setTooltipText('Load Saved State')}
                         onLeave={() => setTooltipText(null)}
@@ -121,7 +122,7 @@ export function SlidingPanel({
                     <PanelButton
                         icon={Users}
                         active={view.isShared}
-                        activeColor="pink"
+                        color="pink"
                         onClick={onShare}
                         onHover={() => setTooltipText('Share View')}
                         onLeave={() => setTooltipText(null)}
@@ -132,6 +133,7 @@ export function SlidingPanel({
                 <div className="sliding-panel__group">
                     <PanelButton
                         icon={Copy}
+                        color="blue"
                         onClick={onDuplicate}
                         onHover={() => setTooltipText('Duplicate View')}
                         onLeave={() => setTooltipText(null)}
@@ -139,7 +141,7 @@ export function SlidingPanel({
                     <PanelButton
                         icon={Link2}
                         active={view.linkedCount > 0}
-                        activeColor="teal"
+                        color="teal"
                         badge={view.linkedCount > 0 ? view.linkedCount : null}
                         onHover={() => setTooltipText('Configure Links')}
                         onLeave={() => setTooltipText(null)}
@@ -151,17 +153,17 @@ export function SlidingPanel({
                     <PanelButton
                         icon={Lock}
                         active={view.isLocked}
-                        activeColor="amber"
+                        color="amber"
                         onClick={onLock}
                         onHover={() => setTooltipText(view.isLocked ? 'Unlock View' : 'Lock View')}
                         onLeave={() => setTooltipText(null)}
                     />
                 </div>
 
-                {/* Spacer */}
+                {/* Spacer to push size to right */}
                 <div className="sliding-panel__spacer" />
 
-                {/* Size Picker Button */}
+                {/* Size Picker Button - always at end */}
                 <button
                     ref={sizeButtonRef}
                     className="sliding-panel__size-btn"
@@ -169,9 +171,9 @@ export function SlidingPanel({
                     onMouseEnter={() => setTooltipText('Canvas Size')}
                     onMouseLeave={() => setTooltipText(null)}
                 >
-                    <Maximize2 size={12} />
+                    <Maximize2 size={10} />
                     <span>{view.rowSpan || 1}×{view.colSpan || 1}</span>
-                    <ChevronDown size={10} />
+                    <ChevronDown size={8} />
                 </button>
             </div>
 
@@ -219,10 +221,13 @@ export function SlidingPanel({
 }
 
 // Panel Button Component
-function PanelButton({ icon: Icon, active, activeColor, badge, onClick, onHover, onLeave }) {
+function PanelButton({ icon: Icon, active, color, badge, onClick, onHover, onLeave }) {
+    // Only apply color class when active
+    const activeClass = active ? `sliding-panel__btn--active sliding-panel__btn--${color}` : '';
+
     return (
         <button
-            className={`sliding-panel__btn ${active ? `sliding-panel__btn--active sliding-panel__btn--${activeColor}` : ''}`}
+            className={`sliding-panel__btn ${activeClass}`}
             onClick={(e) => {
                 e.stopPropagation();
                 onClick?.();
@@ -230,7 +235,7 @@ function PanelButton({ icon: Icon, active, activeColor, badge, onClick, onHover,
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
         >
-            <Icon size={14} />
+            <Icon size={12} />
             {badge && <span className="sliding-panel__btn-badge">{badge}</span>}
         </button>
     );
