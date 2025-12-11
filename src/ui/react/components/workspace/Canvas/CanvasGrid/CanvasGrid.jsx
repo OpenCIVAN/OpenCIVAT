@@ -94,7 +94,6 @@ export function CanvasGrid({
     onFlowDirectionChange,
 }) {
     const gridRef = useRef(null);
-    const scrollRef = useRef(null);
 
     // Edit mode state
     const [editMode, setEditMode] = useState(false);
@@ -140,6 +139,33 @@ export function CanvasGrid({
         rows: viewportSize.rows,
         cols: viewportSize.cols,
     }), [viewport.row, viewport.col, viewportSize.rows, viewportSize.cols]);
+
+    // ==========================================================================
+    // CLAMP VIEWPORT POSITION WHEN SIZE CHANGES (NEW)
+    // ==========================================================================
+    // When viewport size increases (zoom out), positions at the edge may become
+    // invalid. This effect clamps the position to keep cells accessible.
+
+    useEffect(() => {
+        if (!canvas?.dimensions) return;
+
+        const maxRow = Math.max(0, canvas.dimensions.rows - viewportSize.rows);
+        const maxCol = Math.max(0, canvas.dimensions.cols - viewportSize.cols);
+
+        // Check if current position exceeds new bounds
+        if (viewport.row > maxRow || viewport.col > maxCol) {
+            const clampedRow = Math.min(viewport.row, maxRow);
+            const clampedCol = Math.min(viewport.col, maxCol);
+
+            // Calculate delta to move viewport to valid position
+            const deltaRow = clampedRow - viewport.row;
+            const deltaCol = clampedCol - viewport.col;
+
+            if (deltaRow !== 0 || deltaCol !== 0) {
+                moveViewport(deltaRow, deltaCol);
+            }
+        }
+    }, [viewportSize.rows, viewportSize.cols, canvas?.dimensions, viewport.row, viewport.col, moveViewport]);
 
     // ==========================================================================
     // CONTAINER MEASUREMENT HOOK (robust resize handling)
@@ -244,81 +270,30 @@ export function CanvasGrid({
             if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
                 decrementViewportSize(); // Zoom IN = show fewer, larger cells
+                // FIX: Restore focus after React re-renders
+                requestAnimationFrame(() => {
+                    gridRef.current?.focus();
+                });
             } else if (e.key === '-') {
                 e.preventDefault();
                 incrementViewportSize(); // Zoom OUT = show more, smaller cells
+                // FIX: Restore focus after React re-renders
+                requestAnimationFrame(() => {
+                    gridRef.current?.focus();
+                });
             } else if (e.key === '0') {
                 e.preventDefault();
                 resetViewportSize();
+                // FIX: Restore focus after React re-renders
+                requestAnimationFrame(() => {
+                    gridRef.current?.focus();
+                });
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize]);
-
-    // ==========================================================================
-    // VIRTUAL SCROLLING
-    // ==========================================================================
-
-    // Spacer dimensions for virtual scrolling
-    const spacerWidth = canvasDimensions.cols * (cellSize.width + GAP) - GAP;
-    const spacerHeight = canvasDimensions.rows * (cellSize.height + GAP) - GAP;
-
-    // Track if scroll is being programmatically set
-    const isScrollingRef = useRef(false);
-
-    // Handle scroll events to update viewport position
-    const handleScroll = useCallback((e) => {
-        if (isScrollingRef.current) return;
-
-        const container = e.target;
-        if (!container) return;
-
-        const cellWidth = cellSize.width + GAP;
-        const cellHeight = cellSize.height + GAP;
-
-        const newCol = Math.round(container.scrollLeft / cellWidth);
-        const newRow = Math.round(container.scrollTop / cellHeight);
-
-        if (newRow !== viewport.row || newCol !== viewport.col) {
-            const maxRow = Math.max(0, canvasDimensions.rows - effectiveViewport.rows);
-            const maxCol = Math.max(0, canvasDimensions.cols - effectiveViewport.cols);
-            const clampedRow = Math.max(0, Math.min(newRow, maxRow));
-            const clampedCol = Math.max(0, Math.min(newCol, maxCol));
-
-            if (clampedRow !== viewport.row || clampedCol !== viewport.col) {
-                moveViewport(clampedRow - viewport.row, clampedCol - viewport.col);
-            }
-        }
-    }, [viewport.row, viewport.col, canvasDimensions, effectiveViewport, cellSize, moveViewport]);
-
-    // Sync scroll position when viewport changes programmatically
-    useEffect(() => {
-        const scrollContainer = scrollRef.current;
-        if (!scrollContainer || !measurementsReady) return;
-
-        const cellWidth = cellSize.width + GAP;
-        const cellHeight = cellSize.height + GAP;
-        const targetScrollLeft = viewport.col * cellWidth;
-        const targetScrollTop = viewport.row * cellHeight;
-
-        // Only update if significantly different (avoid feedback loops)
-        if (
-            Math.abs(scrollContainer.scrollLeft - targetScrollLeft) > 2 ||
-            Math.abs(scrollContainer.scrollTop - targetScrollTop) > 2
-        ) {
-            isScrollingRef.current = true;
-            scrollContainer.scrollTo({
-                left: targetScrollLeft,
-                top: targetScrollTop,
-                behavior: 'smooth',
-            });
-            setTimeout(() => {
-                isScrollingRef.current = false;
-            }, 100);
-        }
-    }, [viewport.row, viewport.col, cellSize, measurementsReady]);
 
     // ==========================================================================
     // CELL CLICK HANDLING
@@ -385,15 +360,22 @@ export function CanvasGrid({
     // RENDER CELLS
     // ==========================================================================
 
-    const renderCells = useCallback(() => {
+    const renderCells = useMemo(() => {
         const cells = [];
 
-        // Create a map of occupied cells for efficient lookup
-        const occupiedCells = new Map();
-        viewportPlacements.forEach(placement => {
-            for (let r = placement.row; r < placement.row + (placement.rowSpan || 1); r++) {
-                for (let c = placement.col; c < placement.col + (placement.colSpan || 1); c++) {
-                    occupiedCells.set(`${r},${c}`, placement);
+        // Get placements visible in current viewport
+        const viewportPlacements = visiblePlacements || [];
+
+        // Build occupiedCells map for multi-span placements
+        const occupiedCells = new Set();
+        viewportPlacements.forEach((placement) => {
+            if (placement.colSpan > 1 || placement.rowSpan > 1) {
+                for (let r = 0; r < placement.rowSpan; r++) {
+                    for (let c = 0; c < placement.colSpan; c++) {
+                        if (r !== 0 || c !== 0) {
+                            occupiedCells.add(`${placement.row + r},${placement.col + c}`);
+                        }
+                    }
                 }
             }
         });
@@ -415,15 +397,23 @@ export function CanvasGrid({
                     continue;
                 }
 
-                // Calculate position
-                const left = canvasCol * (cellSize.width + GAP);
-                const top = canvasRow * (cellSize.height + GAP);
+                // ============================================
+                // KEY FIX: Position relative to VIEWPORT, not canvas
+                // This ensures cells always fill the visible container
+                // ============================================
+                const left = viewCol * (cellSize.width + GAP);
+                const top = viewRow * (cellSize.height + GAP);
 
                 // Calculate size (account for spanning)
                 const colSpan = placement?.colSpan || 1;
                 const rowSpan = placement?.rowSpan || 1;
-                const width = colSpan * cellSize.width + (colSpan - 1) * GAP;
-                const height = rowSpan * cellSize.height + (rowSpan - 1) * GAP;
+
+                // Clip spans to viewport boundary (for cells that extend beyond)
+                const visibleColSpan = Math.min(colSpan, effectiveViewport.cols - viewCol);
+                const visibleRowSpan = Math.min(rowSpan, effectiveViewport.rows - viewRow);
+
+                const width = visibleColSpan * cellSize.width + (visibleColSpan - 1) * GAP;
+                const height = visibleRowSpan * cellSize.height + (visibleRowSpan - 1) * GAP;
 
                 cells.push(
                     <div
@@ -458,7 +448,7 @@ export function CanvasGrid({
 
         return cells;
     }, [
-        viewportPlacements,
+        visiblePlacements,
         effectiveViewport,
         cellSize,
         renderMode,
@@ -536,24 +526,11 @@ export function CanvasGrid({
                         />
                     ) : (
                         <div
-                            ref={(el) => {
-                                gridRef.current = el;
-                                scrollRef.current = el;
-                            }}
-                            className="canvas-grid__scroll-container"
-                            onScroll={handleScroll}
+                            ref={gridRef}
+                            className="canvas-grid__viewport"
                             tabIndex={0}
                         >
-                            <div
-                                className="canvas-grid__spacer"
-                                style={{
-                                    width: spacerWidth,
-                                    height: spacerHeight,
-                                    position: 'relative',
-                                }}
-                            >
-                                {renderCells()}
-                            </div>
+                            {renderCells}
                         </div>
                     )}
                 </div>

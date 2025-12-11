@@ -2,15 +2,22 @@
 // Styles for the isolation overlay component
 //
 // Uses glassmorphism design with frosted backdrop and floating content card
+//
+// ARCHITECTURE NOTE (Dec 2025):
+// Changed from `position: fixed` to `position: absolute` so the overlay
+// only covers the canvas area, leaving side panels accessible.
+// This requires the parent canvas container to have `position: relative`.
 
 @use "theme" as *;
 
 // =============================================================================
-// ISOLATION OVERLAY - Full-screen modal for isolated cell interaction
+// ISOLATION OVERLAY - Scoped to canvas container (not full screen)
 // =============================================================================
 
 .isolation-overlay {
-  position: fixed;
+  // KEY FIX: Use absolute instead of fixed to scope to canvas container
+  // The parent .canvas-grid__container must have position: relative
+  position: absolute;
   inset: 0;
   z-index: 1000;
   display: flex;
@@ -61,20 +68,20 @@
   // Animation
   animation: isolation-content-in 0.25s ease-out;
 
-  // Size variants
+  // Size variants - adjusted for canvas-scoped overlay
   &--medium {
-    width: min(600px, 80vw);
-    height: min(450px, 70vh);
+    width: min(600px, 80%);
+    height: min(450px, 70%);
   }
 
   &--large {
-    width: min(900px, 85vw);
-    height: min(675px, 80vh);
+    width: min(900px, 85%);
+    height: min(675px, 80%);
   }
 
   &--fullscreen {
-    width: calc(100vw - #{$spacing-xl * 2});
-    height: calc(100vh - #{$spacing-xl * 2});
+    width: calc(100% - #{$spacing-xl * 2});
+    height: calc(100% - #{$spacing-xl * 2});
     max-width: 1600px;
     max-height: 1000px;
   }
@@ -263,8 +270,8 @@
   .isolation-overlay__content {
     &--medium,
     &--large {
-      width: calc(100vw - #{$spacing-md * 2});
-      height: calc(100vh - #{$spacing-md * 2});
+      width: calc(100% - #{$spacing-md * 2});
+      height: calc(100% - #{$spacing-md * 2});
     }
   }
 

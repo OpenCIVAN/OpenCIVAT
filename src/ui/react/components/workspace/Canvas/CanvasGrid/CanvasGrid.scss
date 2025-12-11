@@ -64,9 +64,9 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
   position: relative;
-  display: flex; /* ← ADD THIS */
-  flex-direction: column; /* ← ADD THIS */
 }
 
 // =============================================================================
@@ -117,6 +117,18 @@
     &:hover {
       background: rgba(255, 255, 255, 0.15);
     }
+  }
+}
+
+.canvas-grid__viewport {
+  position: absolute;
+  inset: 0;
+  padding: 12px 16px 16px 12px;
+
+  // Focus outline for keyboard navigation
+  &:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba($color-accent-primary, 0.3);
   }
 }
 

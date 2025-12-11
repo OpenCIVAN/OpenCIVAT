@@ -5,6 +5,7 @@
 // - Focus on a single cell (1x1) for detailed analysis
 // - Use default view (2x3) for normal work
 // - Expand view (e.g., 3x4) for overview/comparison
+// - Scale up to full canvas view (10x10) for maximum overview
 //
 // USAGE EXAMPLE:
 // ```jsx
@@ -33,7 +34,10 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 
-// Constants
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
 const STORAGE_KEY = "cia-viewport-size";
 const EVENT_NAME = "cia:viewport-size-changed";
 
@@ -47,17 +51,37 @@ const MIN_SIZE = {
   cols: 1,
 };
 
+// =============================================================================
+// SIZE PRESETS - Extended to 10x10
+// =============================================================================
 // Preset size progression for increment/decrement
 // Follows common aspect ratios and useful configurations
+// Each preset roughly doubles the cell count from the previous
 const SIZE_PRESETS = [
-  { rows: 1, cols: 1 }, // Focus mode
-  { rows: 1, cols: 2 }, // Side-by-side
-  { rows: 2, cols: 2 }, // 2x2 grid
-  { rows: 2, cols: 3 }, // Default (6 cells)
+  { rows: 1, cols: 1 }, // Focus mode - 1 cell
+  { rows: 1, cols: 2 }, // Side-by-side - 2 cells
+  { rows: 2, cols: 2 }, // 2x2 grid - 4 cells
+  { rows: 2, cols: 3 }, // Default - 6 cells
   { rows: 3, cols: 3 }, // 9 cells
   { rows: 3, cols: 4 }, // 12 cells
   { rows: 4, cols: 4 }, // 16 cells
+  { rows: 4, cols: 5 }, // 20 cells
+  { rows: 5, cols: 5 }, // 25 cells
+  { rows: 5, cols: 6 }, // 30 cells
+  { rows: 6, cols: 6 }, // 36 cells
+  { rows: 6, cols: 7 }, // 42 cells
+  { rows: 7, cols: 7 }, // 49 cells
+  { rows: 7, cols: 8 }, // 56 cells
+  { rows: 8, cols: 8 }, // 64 cells
+  { rows: 8, cols: 9 }, // 72 cells
+  { rows: 9, cols: 9 }, // 81 cells
+  { rows: 9, cols: 10 }, // 90 cells
+  { rows: 10, cols: 10 }, // Full overview - 100 cells
 ];
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
 
 /**
  * Load saved viewport size from localStorage
@@ -150,6 +174,10 @@ function findPresetIndex(size) {
 
   return closestIndex;
 }
+
+// =============================================================================
+// MAIN HOOK
+// =============================================================================
 
 /**
  * useViewportSize - Hook for managing viewport size with persistence

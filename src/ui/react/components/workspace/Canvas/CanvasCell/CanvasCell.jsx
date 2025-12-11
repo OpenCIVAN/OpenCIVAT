@@ -388,17 +388,17 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
 
     return (
         <div className="canvas-cell__empty">
-            {/* Add button */}
+            {/* Add button - toggles to X when menu is open */}
             <button
                 ref={buttonRef}
-                className="canvas-cell__add-btn"
+                className={`canvas-cell__add-btn ${showRadial ? 'canvas-cell__add-btn--active' : ''}`}
                 onClick={(e) => {
                     e.stopPropagation();
                     setShowRadial(!showRadial);
                 }}
-                title="Add content"
+                title={showRadial ? "Close menu" : "Add content"}
             >
-                <Plus size={20} />
+                {showRadial ? <X size={20} /> : <Plus size={20} />}
             </button>
 
             {/* Radial menu */}
@@ -407,8 +407,9 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
                     ref={radialRef}
                     className="canvas-cell__radial-menu"
                     style={{
-                        '--radial-x': `${buttonRef.current.getBoundingClientRect().left + buttonRef.current.offsetWidth / 2}px`,
-                        '--radial-y': `${buttonRef.current.getBoundingClientRect().top + buttonRef.current.offsetHeight / 2}px`,
+                        position: 'fixed',
+                        left: buttonRef.current.getBoundingClientRect().left + buttonRef.current.offsetWidth / 2,
+                        top: buttonRef.current.getBoundingClientRect().top + buttonRef.current.offsetHeight / 2,
                     }}
                 >
                     {/* Center label */}
