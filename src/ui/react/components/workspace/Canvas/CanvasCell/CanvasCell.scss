@@ -1,25 +1,35 @@
-// CanvasCell.scss
-// Canvas cell styles - matches InstanceViewport aesthetic
+// src/ui/react/components/workspace/Canvas/CanvasCell/CanvasCell.scss
+// Canvas cell styles - Updated December 10, 2025
+//
+// FIXES:
+// - Removed double border on empty cells (only __empty-container has border)
+// - Radial menu positioned relative to cell (no portal needed)
+// - Color-coded radial options with smooth animations
+// - Position badge in bottom-right corner
+
 @use "sass:color";
 @use "theme" as *;
 
-// ============================================================================
-// CANVAS CELL - Base container (matches InstanceViewport styling)
-// ============================================================================
+// =============================================================================
+// CANVAS CELL - Base container
+// =============================================================================
 
 .canvas-cell {
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
-  min-height: 0; // Allow shrinking
+  min-height: 0;
   position: relative;
   border-radius: $radius-md;
   overflow: hidden;
   transition: all 0.15s ease;
   cursor: pointer;
 
-  // View cells - dark background with gradient header
+  // ==========================================================================
+  // VIEW CELLS - Dark background with gradient header
+  // ==========================================================================
+
   &--view {
     background: #0a0a0f;
     border: 1px solid $color-border-default;
@@ -30,7 +40,6 @@
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     }
 
-    // Active/selected state with instance color
     &.canvas-cell--selected {
       border-color: var(--instance-color, $color-accent-primary);
       box-shadow: 0 0 0 1px var(--instance-color, $color-accent-primary),
@@ -38,223 +47,116 @@
     }
   }
 
-  // ============================================================================
-  // EMPTY STATE - Dashed border placeholder
-  // ============================================================================
+  // ==========================================================================
+  // EMPTY STATE - No border on .canvas-cell, only on child container
+  // ==========================================================================
 
   &--empty {
-    background: rgba(255, 255, 255, 0.02);
-    border: 2px dashed rgba(255, 255, 255, 0.08);
-    border-radius: $radius-md;
+    background: transparent;
+    border: none; // KEY FIX: No border here
+    box-shadow: none;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(255, 255, 255, 0.12);
+      // Hover state handled by child
     }
 
-    // Edit mode - more prominent styling
     &.canvas-cell--edit-mode {
       cursor: pointer;
-
-      &:hover {
-        background: rgba($color-accent-primary, 0.08);
-        border-color: rgba($color-accent-primary, 0.3);
-      }
     }
 
-    // Selected state for merging
     &.canvas-cell--selected {
-      background: rgba($color-accent-teal, 0.15);
-      border-color: $color-accent-teal;
-      border-style: dashed;
-    }
-
-    .canvas-cell__empty {
-      flex: 1;
+      .canvas-cell__empty-container {
+        background: rgba($color-accent-teal, 0.15);
+        border-color: $color-accent-teal;
+      }
     }
   }
 
   &--drag-over {
-    background: rgba($color-accent-primary, 0.1) !important;
-    border-color: $color-accent-primary !important;
-    border-style: solid !important;
-    box-shadow: inset 0 0 20px rgba($color-accent-primary, 0.15);
-  }
-
-  &--edit-mode {
-    &.canvas-cell--empty {
-      border-color: rgba($color-accent-primary, 0.4);
-
-      &:hover {
-        background: rgba($color-accent-primary, 0.08);
-      }
+    .canvas-cell__empty-container {
+      background: rgba($color-accent-primary, 0.1) !important;
+      border-color: $color-accent-primary !important;
+      border-style: solid !important;
     }
   }
 
-  // ============================================================================
-  // SELECTION STATES
-  // ============================================================================
+  // ==========================================================================
+  // RENDER MODE MODIFIERS
+  // ==========================================================================
+
+  &--mode-full {
+    // Full render mode - default styles
+  }
+
+  &--mode-compact {
+    // Compact mode - reduced UI
+    .canvas-cell__coords {
+      display: none;
+    }
+  }
+
+  &--mode-thumbnail {
+    // Thumbnail mode - minimal UI
+    cursor: zoom-in;
+  }
+
+  &--mode-snapshot {
+    // Snapshot mode - just image
+    cursor: zoom-in;
+  }
+
+  // ==========================================================================
+  // SELECTION & HIGHLIGHT
+  // ==========================================================================
+
+  &--highlighted {
+    box-shadow: 0 0 0 2px $color-accent-primary,
+      0 4px 20px rgba($color-accent-primary, 0.3);
+  }
 
   &--selectable {
     cursor: pointer;
-
-    &:hover {
-      transform: scale(1.01);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
   }
 
-  // Selected state - uses instance color with glow effect
-  &--selected {
-    // Use CSS variable for instance color, fallback to accent primary
-    --selection-color: var(--instance-color, #{$color-accent-primary});
-    outline: 3px solid var(--selection-color);
-    outline-offset: 2px; // Offset outside cell to prevent cutoff
-    box-shadow: 0 0 12px var(--selection-color),
-      0 0 24px color-mix(in srgb, var(--selection-color) 50%, transparent);
-  }
+  // ==========================================================================
+  // ISOLATION HINT (for small cells)
+  // ==========================================================================
 
-  // Highlight animation - uses instance color for glow
-  &--highlighted {
-    --highlight-color: var(--instance-color, #{$color-accent-primary});
-    animation: highlight-pulse 2s ease-in-out;
-  }
-
-  @keyframes highlight-pulse {
-    0% {
-      transform: scale(1);
-      outline-width: 0;
-      outline-offset: 0;
-    }
-    15% {
-      transform: scale(1.02);
-      outline-width: 6px;
-      outline-offset: 4px;
-    }
-    30% {
-      transform: scale(1);
-      outline-width: 8px;
-      outline-offset: 6px;
-    }
-    50% {
-      transform: scale(1.01);
-      outline-width: 6px;
-      outline-offset: 4px;
-    }
-    70% {
-      transform: scale(1);
-      outline-width: 3px;
-      outline-offset: 2px;
-    }
-    100% {
-      transform: scale(1);
-      outline-width: 0;
-      outline-offset: 0;
-    }
-  }
-
-  // ============================================================================
-  // SELECTION INDICATORS
-  // ============================================================================
-
-  &__selection-indicator,
-  &__edit-select {
+  &__isolation-hint {
     position: absolute;
-    top: $spacing-sm;
-    left: $spacing-sm;
-    z-index: 10;
-
-    input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-      accent-color: $color-accent-primary;
-    }
-  }
-
-  // ============================================================================
-  // CONTENT WRAPPER
-  // ============================================================================
-
-  &__content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  // View content - full bleed for InstanceViewport
-  &__view-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  // ============================================================================
-  // CELL HEADER (for notes/image types - matches InstanceViewport header)
-  // ============================================================================
-
-  &__header {
-    height: 32px;
-    padding: 0 $spacing-sm;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.02) 100%
-    );
-    border-bottom: 1px solid $color-border-default;
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    flex-shrink: 0;
-  }
-
-  &__color-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    background: var(--instance-color, $color-accent-primary);
-    box-shadow: 0 0 6px rgba(var(--instance-color-rgb, 96, 165, 250), 0.5);
-    flex-shrink: 0;
-  }
-
-  &__title {
-    flex: 1;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    color: $color-text-primary;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  // Size badge - shows span dimensions
-  &__size-badge {
-    font-size: 9px;
-    font-family: $font-family-mono;
-    color: $color-text-tertiary;
-    padding: 2px 4px;
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 3px;
-  }
-
-  // ============================================================================
-  // CELL CONTENT AREA (matches InstanceViewport content)
-  // ============================================================================
-
-  &__body {
-    flex: 1;
+    bottom: $spacing-xs;
+    right: $spacing-xs;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
-    position: relative;
-    min-height: 0;
-    overflow: hidden;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+
+    .canvas-cell:hover & {
+      opacity: 1;
+    }
   }
 
-  // Coordinate badge - shows cell position
+  // ==========================================================================
+  // SELECTION OVERLAY
+  // ==========================================================================
+
+  &__selection-overlay {
+    position: absolute;
+    top: $spacing-xs;
+    left: $spacing-xs;
+    z-index: 10;
+  }
+
+  // ==========================================================================
+  // COORDINATES BADGE
+  // ==========================================================================
+
   &__coords {
     position: absolute;
     bottom: $spacing-xs;
@@ -265,478 +167,388 @@
     padding: 2px 5px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 3px;
+    z-index: 5;
   }
 
-  // ============================================================================
-  // TOOLBAR TRAY (shown on selection)
-  // ============================================================================
+  // ==========================================================================
+  // TOOLTIP
+  // ==========================================================================
 
-  &__toolbar-tray {
-    height: 28px;
-    padding: 0 $spacing-sm;
-    background: linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.6) 0%,
-      rgba(0, 0, 0, 0.4) 100%
-    );
-    border-top: 1px solid $color-border-subtle;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-  }
-
-  &__toolbar-btn {
-    width: 22px;
-    height: 22px;
-    border-radius: $radius-sm;
-    background: rgba(255, 255, 255, 0.06);
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: $color-text-secondary;
-    }
-  }
-
-  // ============================================================================
-  // EMPTY CELL CONTENT
-  // ============================================================================
-
-  &__empty-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    color: $color-text-muted;
-    position: relative;
-    padding: $spacing-md;
-  }
-
-  &__position {
-    font-size: $font-size-xs;
-    font-family: $font-family-mono;
-    opacity: 0.4;
-    position: absolute;
-    top: $spacing-sm;
-    right: $spacing-sm;
-  }
-
-  &__drop-hint {
-    font-size: $font-size-xs;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    color: $color-text-tertiary;
-    margin-top: $spacing-sm;
-
-    .canvas-cell--empty:hover & {
-      opacity: 0.7;
-    }
-  }
-
-  // ============================================================================
-  // ADD BUTTON
-  // ============================================================================
-
-  &__add-actions {
-    opacity: 0;
-    transform: scale(0.9);
-    transition: all 0.2s ease;
-
-    &.visible {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  &__add-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: 2px solid $color-border-subtle;
-    background: $color-bg-secondary;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 10;
-
-    &:hover {
-      border-color: $color-accent-primary;
-      background: rgba($color-accent-primary, 0.15);
-      color: $color-accent-primary;
-      transform: scale(1.1);
-      box-shadow: 0 0 20px rgba($color-accent-primary, 0.3);
-    }
-
-    &--primary {
-      background: rgba($color-accent-primary, 0.1);
-      border-color: rgba($color-accent-primary, 0.4);
-      color: $color-accent-primary;
-    }
-
-    &--active {
-      background: rgba($color-accent-primary, 0.2);
-      border-color: $color-accent-primary;
-      color: $color-accent-primary;
-      transform: rotate(0deg);
-      box-shadow: 0 0 24px rgba($color-accent-primary, 0.5);
-
-      svg {
-        transition: transform 0.2s ease;
-      }
-
-      // Rotate icon when active
-      .rotate-45 {
-        transform: rotate(45deg);
-      }
-    }
-  }
-
-  // Option label that appears below + button on hover
-  &__option-label {
-    position: absolute;
-    bottom: $spacing-lg;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-primary;
-    background: $color-bg-tertiary;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-sm;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    animation: fadeIn 0.15s ease;
-  }
-
-  // ============================================================================
-  // RADIAL MENU
-  // ============================================================================
-
-  &__radial-menu {
-    position: fixed;
-    pointer-events: none;
-    // Create a larger hit area container
-    width: 140px;
-    height: 140px;
-    // margin-left: -70px;
-    // margin-top: -70px;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    z-index: 9999;
-  }
-
-  &__radial-option {
+  &__tooltip {
     position: absolute;
     top: 50%;
     left: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid;
-    background: $color-bg-secondary;
-    cursor: pointer;
-    pointer-events: auto;
-    // Use CSS variables for position, set via inline style
-    transform: translate(
-      calc(-50% + var(--x, 0px)),
-      calc(-50% + var(--y, 0px))
-    );
-    animation: radialFadeIn 0.2s ease forwards;
-    animation-delay: var(--delay, 0s);
-    opacity: 0;
-
-    // Hover effect - scale only, position stays the same
-    &:hover {
-      transform: translate(
-          calc(-50% + var(--x, 0px)),
-          calc(-50% + var(--y, 0px))
-        )
-        scale(1.15);
-      box-shadow: 0 0 16px currentColor;
-    }
-
-    // View option - blue (left)
-    &--view {
-      border-color: $color-accent-primary;
-      color: $color-accent-primary;
-
-      &:hover {
-        background: rgba($color-accent-primary, 0.25);
-      }
-    }
-
-    // Notes option - amber/gold (top)
-    &--notes {
-      border-color: $color-accent-amber;
-      color: $color-accent-amber;
-
-      &:hover {
-        background: rgba($color-accent-amber, 0.25);
-      }
-    }
-
-    // Image option - teal (right)
-    &--image {
-      border-color: $color-accent-teal;
-      color: $color-accent-teal;
-
-      &:hover {
-        background: rgba($color-accent-teal, 0.25);
-      }
-    }
-  }
-
-  @keyframes radialFadeIn {
-    from {
-      opacity: 0;
-      transform: translate(-50%, -50%) scale(0.5);
-    }
-    to {
-      opacity: 1;
-      transform: translate(
-        calc(-50% + var(--x, 0px)),
-        calc(-50% + var(--y, 0px))
-      );
-    }
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateX(-50%) translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-  }
-
-  // ============================================================================
-  // CONTENT TYPE OPTIONS
-  // ============================================================================
-
-  &__content-options {
-    position: absolute;
-    bottom: $spacing-sm;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: $spacing-xs;
-    padding: $spacing-xs;
-    background: $color-bg-secondary;
-    border-radius: $radius-md;
-    border: 1px solid $color-border-subtle;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-
-    // Portal version - rendered to document.body
-    &--portal {
-      position: fixed;
-      bottom: auto;
-      left: auto;
-    }
-  }
-
-  &__option-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
+    transform: translate(-50%, -50%);
     padding: $spacing-xs $spacing-sm;
-    border: none;
-    border-radius: $radius-sm;
-    background: transparent;
-    color: $color-text-secondary;
-    font-size: $font-size-xs;
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: $color-text-primary;
-    }
-
-    svg {
-      opacity: 0.7;
-    }
-  }
-
-  // ============================================================================
-  // RESIZE HANDLE
-  // ============================================================================
-
-  &__resize-handle {
-    position: absolute;
-    bottom: $spacing-xs;
-    right: $spacing-xs;
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $color-text-muted;
-    cursor: se-resize;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-
-    .canvas-cell:hover & {
-      opacity: 1;
-    }
-
-    &:hover {
-      color: $color-text-primary;
-    }
-  }
-
-  // ============================================================================
-  // SPAN BADGE
-  // ============================================================================
-
-  &__span-badge {
-    position: absolute;
-    top: $spacing-xs;
-    right: $spacing-xs;
-    padding: 2px $spacing-xs;
     background: $color-bg-tertiary;
-    border-radius: $radius-sm;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-  }
-
-  // ============================================================================
-  // NOTES & IMAGE PLACEHOLDERS (match InstanceViewport style)
-  // ============================================================================
-
-  &__notes-placeholder,
-  &__image-placeholder {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: #0a0a0f;
     border: 1px solid $color-border-default;
-    border-radius: $radius-lg;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  &__notes-header,
-  &__image-header {
-    height: 32px;
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: 0 $spacing-sm;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.02) 100%
-    );
-    border-bottom: 1px solid $color-border-default;
-  }
-
-  &__close-btn {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border: none;
     border-radius: $radius-sm;
-    background: transparent;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    opacity: 0.6;
-
-    &:hover {
-      background: rgba($color-error, 0.15);
-      color: $color-error;
-      opacity: 1;
-    }
-  }
-
-  &__notes-icon,
-  &__image-icon {
-    font-size: $font-size-base;
-  }
-
-  &__notes-title,
-  &__image-title {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-primary;
-  }
-
-  &__notes-body,
-  &__image-body {
-    flex: 1;
-    overflow: hidden;
-    padding: $spacing-sm;
-    background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
-  }
-
-  &__notes-preview {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: $line-height-normal;
-  }
-
-  &__image-preview {
     font-size: $font-size-xs;
-    color: $color-text-muted;
-    font-family: $font-family-mono;
-  }
-
-  // ============================================================================
-  // UNKNOWN CONTENT
-  // ============================================================================
-
-  &__unknown {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: $color-warning;
-    font-size: $font-size-sm;
+    color: $color-text-primary;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
 }
 
-.canvas-cell__empty {
+// =============================================================================
+// EMPTY CONTAINER - The dashed border placeholder
+// =============================================================================
+
+.canvas-cell__empty-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: $spacing-md;
   position: relative;
 
-  // The __empty child handles dashed border for empty cells
+  // THIS is the only border for empty cells
   border: 2px dashed $color-border-subtle;
   border-radius: $radius-md;
   background: transparent;
-  border: none;
-  box-shadow: none;
   transition: all 0.15s ease;
 
   &:hover {
     border-color: $color-border-default;
     background: rgba(255, 255, 255, 0.02);
   }
+}
+
+// =============================================================================
+// ADD BUTTON (Center)
+// =============================================================================
+
+.canvas-cell__add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid $color-border-subtle;
+  background: $color-bg-secondary;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+
+  &:hover {
+    border-color: $color-accent-primary;
+    background: rgba($color-accent-primary, 0.15);
+    color: $color-accent-primary;
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba($color-accent-primary, 0.3);
+  }
+
+  &--active {
+    background: rgba($color-accent-primary, 0.2);
+    border-color: $color-accent-primary;
+    color: $color-accent-primary;
+    box-shadow: 0 0 24px rgba($color-accent-primary, 0.4);
+
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+}
+
+// =============================================================================
+// RADIAL OPTIONS (Positioned around center)
+// =============================================================================
+
+.canvas-cell__radial-options {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.canvas-cell__radial-option {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid $color-border-default;
+  background: $color-bg-secondary;
+  color: $color-text-secondary;
+  cursor: pointer;
+  pointer-events: auto;
+
+  // Animate in
+  opacity: 0;
+  animation: radial-pop-in 0.2s ease-out forwards;
+
+  transition: all 0.15s ease;
+
+  &:hover {
+    transform: translate(
+        calc(-50% + var(--hover-x, 0px)),
+        calc(-50% + var(--hover-y, 0px))
+      )
+      scale(1.15) !important;
+    box-shadow: 0 0 20px var(--option-glow);
+  }
+
+  // ==========================================================================
+  // Color Variants
+  // ==========================================================================
+
+  &--blue {
+    border-color: rgba($color-accent-blue, 0.5);
+    --option-glow: rgba($color-accent-blue, 0.4);
+
+    &:hover {
+      border-color: $color-accent-blue;
+      background: rgba($color-accent-blue, 0.15);
+      color: $color-accent-blue;
+    }
+  }
+
+  &--amber {
+    border-color: rgba($color-accent-amber, 0.5);
+    --option-glow: rgba($color-accent-amber, 0.4);
+
+    &:hover {
+      border-color: $color-accent-amber;
+      background: rgba($color-accent-amber, 0.15);
+      color: $color-accent-amber;
+    }
+  }
+
+  &--teal {
+    border-color: rgba($color-accent-teal, 0.5);
+    --option-glow: rgba($color-accent-teal, 0.4);
+
+    &:hover {
+      border-color: $color-accent-teal;
+      background: rgba($color-accent-teal, 0.15);
+      color: $color-accent-teal;
+    }
+  }
+
+  &--purple {
+    border-color: rgba($color-accent-purple, 0.5);
+    --option-glow: rgba($color-accent-purple, 0.4);
+
+    &:hover {
+      border-color: $color-accent-purple;
+      background: rgba($color-accent-purple, 0.15);
+      color: $color-accent-purple;
+    }
+  }
+}
+
+@keyframes radial-pop-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    // Keep the translated position from inline style
+  }
+}
+
+// =============================================================================
+// POSITION BADGE (Bottom-right corner)
+// =============================================================================
+
+.canvas-cell__position-badge {
+  position: absolute;
+  bottom: $spacing-sm;
+  right: $spacing-sm;
+  font-size: 9px;
+  font-family: $font-family-mono;
+  color: $color-text-muted;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+
+  .canvas-cell__empty-container:hover & {
+    opacity: 0.8;
+  }
+}
+
+// =============================================================================
+// MINIMAL EMPTY STATES (for tiny cells)
+// =============================================================================
+
+.canvas-cell__empty-minimal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-cell__empty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $color-border-subtle;
+}
+
+.canvas-cell__empty-thumbnail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: $color-text-muted;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+// =============================================================================
+// VIEW CONTENT
+// =============================================================================
+
+.canvas-cell__view-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.canvas-cell__thumbnail-content,
+.canvas-cell__snapshot-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+}
+
+.canvas-cell__thumbnail-placeholder,
+.canvas-cell__snapshot-placeholder {
+  color: $color-text-muted;
+  opacity: 0.5;
+}
+
+// =============================================================================
+// NOTES & IMAGE PLACEHOLDERS
+// =============================================================================
+
+.canvas-cell__notes-placeholder,
+.canvas-cell__image-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0f;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.canvas-cell__notes-header,
+.canvas-cell__image-header {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-sm;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border-bottom: 1px solid $color-border-default;
+}
+
+.canvas-cell__close-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0.6;
+
+  &:hover {
+    background: rgba($color-error, 0.15);
+    color: $color-error;
+    opacity: 1;
+  }
+}
+
+.canvas-cell__notes-icon,
+.canvas-cell__image-icon {
+  font-size: $font-size-base;
+}
+
+.canvas-cell__notes-title,
+.canvas-cell__image-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.canvas-cell__notes-body,
+.canvas-cell__image-body {
+  flex: 1;
+  overflow: hidden;
+  padding: $spacing-sm;
+  background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+}
+
+.canvas-cell__notes-preview {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}
+
+.canvas-cell__image-preview {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  font-family: $font-family-mono;
+}
+
+// Mini versions for small cells
+.canvas-cell__notes-mini,
+.canvas-cell__image-mini {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-text-muted;
+  opacity: 0.6;
+}
+
+// =============================================================================
+// UNKNOWN CONTENT
+// =============================================================================
+
+.canvas-cell__unknown {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-warning;
+  font-size: $font-size-sm;
 }

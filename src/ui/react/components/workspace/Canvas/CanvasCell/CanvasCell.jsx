@@ -1,5 +1,5 @@
 // src/ui/react/components/workspace/Canvas/CanvasCell/CanvasCell.jsx
-// Individual cell in the canvas grid - Updated December 2025
+// Individual cell in the canvas grid - Updated December 10, 2025
 //
 // ARCHITECTURE:
 // - Supports progressive UI degradation via renderMode prop
@@ -7,24 +7,21 @@
 // - No minimum sizes - cells scale with viewport
 // - Isolation mode click handling for tiny cells
 //
-// Render Mode Behavior:
-// - FULL: Full 3D render + complete toolbar + header with all buttons
-// - COMPACT: 3D render + reduced toolbar (wrench icon for overflow)
-// - THUMBNAIL: SVG thumbnail + minimal header (name only)
-// - SNAPSHOT: Static image + tooltip on hover
+// FIXES (Dec 10, 2025):
+// - Removed portal for radial menu - now positioned relative to cell
+// - Added X button toggle when menu is open
+// - Added click outside to close menu
+// - Fixed double border on empty cells
 
-import React, { memo, useState, useCallback, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import React, { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
     Plus,
-    Grid3X3,
+    X,
     LayoutGrid,
     FileImage,
     FileText,
     Box,
-    X,
     ZoomIn,
-    Wrench,
 } from 'lucide-react';
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
@@ -36,11 +33,12 @@ import './CanvasCell.scss';
 // CONSTANTS
 // =============================================================================
 
+// Content type options for the radial menu - positioned in cross pattern
 const CONTENT_OPTIONS = [
-    { type: 'view', icon: Box, label: 'VTK View', angle: 0 },
-    { type: 'notes', icon: FileText, label: 'Notes', angle: 90 },
-    { type: 'image', icon: FileImage, label: 'Image', angle: 180 },
-    { type: 'grid', icon: LayoutGrid, label: 'Sub-Grid', angle: 270 },
+    { type: 'view', icon: Box, label: 'Add View', color: 'blue' },
+    { type: 'notes', icon: FileText, label: 'Add Notes', color: 'amber' },
+    { type: 'image', icon: FileImage, label: 'Add Image', color: 'teal' },
+    { type: 'grid', icon: LayoutGrid, label: 'Add Grid', color: 'purple' },
 ];
 
 // =============================================================================
@@ -90,14 +88,14 @@ export const CanvasCell = memo(function CanvasCell({
                     showHeaderButtons: true,
                     showCoords: true,
                     showSizeBadge: true,
-                    renderContent: 'full', // Full InstanceViewport
+                    renderContent: 'full',
                     showTooltipOnHover: false,
                 };
             case RENDER_MODES.COMPACT:
                 return {
-                    showToolbar: true,      // Compact toolbar with overflow menu
+                    showToolbar: true,
                     showHeader: true,
-                    showHeaderButtons: false, // Hide extra buttons
+                    showHeaderButtons: false,
                     showCoords: false,
                     showSizeBadge: false,
                     renderContent: 'full',
@@ -106,21 +104,21 @@ export const CanvasCell = memo(function CanvasCell({
             case RENDER_MODES.THUMBNAIL:
                 return {
                     showToolbar: false,
-                    showHeader: true,       // Minimal header with name only
+                    showHeader: true,
                     showHeaderButtons: false,
                     showCoords: false,
                     showSizeBadge: false,
-                    renderContent: 'thumbnail', // SVG thumbnail
+                    renderContent: 'thumbnail',
                     showTooltipOnHover: true,
                 };
             case RENDER_MODES.SNAPSHOT:
                 return {
                     showToolbar: false,
-                    showHeader: false,      // No header
+                    showHeader: false,
                     showHeaderButtons: false,
                     showCoords: false,
                     showSizeBadge: false,
-                    renderContent: 'snapshot', // Static image
+                    renderContent: 'snapshot',
                     showTooltipOnHover: true,
                 };
             default:
@@ -211,6 +209,18 @@ export const CanvasCell = memo(function CanvasCell({
     }, [onAddContent]);
 
     // ==========================================================================
+    // HELPER FUNCTIONS
+    // ==========================================================================
+
+    const getDisplayName = useCallback(() => {
+        if (isEmpty) return `Empty [${row}, ${col}]`;
+        if (contentType === 'view') return placement.content?.name || 'View';
+        if (contentType === 'notes') return 'Notes';
+        if (contentType === 'image') return 'Image';
+        return `Cell [${row}, ${col}]`;
+    }, [isEmpty, contentType, placement, row, col]);
+
+    // ==========================================================================
     // RENDER FUNCTIONS
     // ==========================================================================
 
@@ -262,63 +272,44 @@ export const CanvasCell = memo(function CanvasCell({
             default:
                 return (
                     <div className="canvas-cell__unknown">
-                        Unknown: {contentType}
+                        Unknown content type: {contentType}
                     </div>
                 );
         }
     };
 
-    // Get display name for tooltip
-    const getDisplayName = () => {
-        if (!placement) return `Empty [${row}, ${col}]`;
-        if (placement.content?.name) return placement.content.name;
-        return `${contentType} [${row}, ${col}]`;
-    };
+    // ==========================================================================
+    // MAIN RENDER
+    // ==========================================================================
 
     return (
         <div
             className={classNames}
+            data-row={row}
+            data-col={col}
+            data-content-type={contentType}
+            data-render-mode={renderMode}
+            style={{
+                '--cell-width': `${cellSize.width}px`,
+                '--cell-height': `${cellSize.height}px`,
+            }}
             onClick={handleClick}
             onDoubleClick={onDoubleClick}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onMouseEnter={() => uiConfig.showTooltipOnHover && setShowTooltip(true)}
+            onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
-            role="gridcell"
-            aria-selected={isSelected}
-            aria-label={isEmpty ? `Empty cell at ${row}, ${col}` : `${contentType} at ${row}, ${col}`}
-            data-row={row}
-            data-col={col}
-            data-placement-id={placement?.id}
-            data-render-mode={renderMode}
         >
-            {/* Selection indicator (in selection mode) */}
-            {selectionMode && !isEmpty && (
-                <div className="canvas-cell__selection-indicator">
+            {/* Selection checkbox (for edit mode) */}
+            {selectionMode && (
+                <div className="canvas-cell__selection-overlay">
                     <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => { }}
-                        onClick={(e) => {
+                        onChange={(e) => {
                             e.stopPropagation();
-                            onSelect?.(placement.id);
-                        }}
-                        aria-label={`Select cell at ${row}, ${col}`}
-                    />
-                </div>
-            )}
-
-            {/* Edit mode selection checkbox */}
-            {inEditMode && isEmpty && (
-                <div className="canvas-cell__edit-select">
-                    <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => { }}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onClick?.(e);
+                            onSelect?.(e);
                         }}
                         aria-label={`Select empty cell at ${row}, ${col}`}
                     />
@@ -354,15 +345,48 @@ export const CanvasCell = memo(function CanvasCell({
 });
 
 // =============================================================================
-// EMPTY PLACEHOLDER
+// EMPTY PLACEHOLDER - With Radial Menu (No Portal)
 // =============================================================================
 
 function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
     const [showRadial, setShowRadial] = useState(false);
-    const [hoveredOption, setHoveredOption] = useState(null);
-    const radialRef = useRef(null);
-    const buttonRef = useRef(null);
-    const radialRadius = 60;
+    const containerRef = useRef(null);
+    const radialRadius = 55; // Distance from center to options
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        if (!showRadial) return;
+
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setShowRadial(false);
+            }
+        };
+
+        // Small delay to prevent immediate close from the same click
+        const timeoutId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 10);
+
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showRadial]);
+
+    // Close on escape key
+    useEffect(() => {
+        if (!showRadial) return;
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                setShowRadial(false);
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [showRadial]);
 
     // Don't show add button in tiny modes
     if (renderMode === RENDER_MODES.SNAPSHOT) {
@@ -386,40 +410,30 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
         onAddClick?.(type);
     };
 
+    const handleCenterClick = (e) => {
+        e.stopPropagation();
+        setShowRadial(!showRadial);
+    };
+
     return (
-        <div className="canvas-cell__empty">
-            {/* Add button - toggles to X when menu is open */}
+        <div ref={containerRef} className="canvas-cell__empty-container">
+            {/* Center button - Plus or X */}
             <button
-                ref={buttonRef}
                 className={`canvas-cell__add-btn ${showRadial ? 'canvas-cell__add-btn--active' : ''}`}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setShowRadial(!showRadial);
-                }}
-                title={showRadial ? "Close menu" : "Add content"}
+                onClick={handleCenterClick}
+                title={showRadial ? 'Close menu' : 'Add content'}
             >
                 {showRadial ? <X size={20} /> : <Plus size={20} />}
             </button>
 
-            {/* Radial menu */}
-            {showRadial && buttonRef.current && createPortal(
-                <div
-                    ref={radialRef}
-                    className="canvas-cell__radial-menu"
-                    style={{
-                        position: 'fixed',
-                        left: buttonRef.current.getBoundingClientRect().left + buttonRef.current.offsetWidth / 2,
-                        top: buttonRef.current.getBoundingClientRect().top + buttonRef.current.offsetHeight / 2,
-                    }}
-                >
-                    {/* Center label */}
-                    <div className="canvas-cell__radial-center">
-                        {hoveredOption || 'Add content'}
-                    </div>
-
-                    {/* Options */}
+            {/* Radial options - positioned around center button */}
+            {showRadial && (
+                <div className="canvas-cell__radial-options">
                     {CONTENT_OPTIONS.map((option, index) => {
-                        const { type, icon: Icon, label, angle } = option;
+                        const { type, icon: Icon, label, color } = option;
+                        // Position in a cross pattern: right, bottom, left, top
+                        const angles = [0, 90, 180, 270];
+                        const angle = angles[index];
                         const rad = (angle * Math.PI) / 180;
                         const x = Math.cos(rad) * radialRadius;
                         const y = Math.sin(rad) * radialRadius;
@@ -427,27 +441,28 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
                         return (
                             <button
                                 key={type}
-                                className={`canvas-cell__radial-option canvas-cell__radial-option--${type}`}
+                                className={`canvas-cell__radial-option canvas-cell__radial-option--${color}`}
                                 style={{
-                                    '--x': `${x}px`,
-                                    '--y': `${y}px`,
-                                    '--delay': `${index * 0.05}s`,
+                                    transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                                    animationDelay: `${index * 0.04}s`,
                                 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     handleOptionClick(type);
                                 }}
-                                onMouseEnter={() => setHoveredOption(label)}
-                                onMouseLeave={() => setHoveredOption(null)}
                                 title={label}
                             >
-                                <Icon size={16} />
+                                <Icon size={18} />
                             </button>
                         );
                     })}
-                </div>,
-                document.body
+                </div>
             )}
+
+            {/* Position indicator - bottom right corner */}
+            <div className="canvas-cell__position-badge">
+                [{row}, {col}]
+            </div>
         </div>
     );
 }
@@ -464,7 +479,6 @@ function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConf
         return (
             <div className="canvas-cell__thumbnail-content">
                 <ProgressiveLoader viewId={viewId} isReady={false}>
-                    {/* Just show the thumbnail, don't load full view */}
                     <div className="canvas-cell__thumbnail-placeholder">
                         <Box size={24} />
                     </div>

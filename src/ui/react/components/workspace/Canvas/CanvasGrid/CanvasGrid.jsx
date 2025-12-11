@@ -183,7 +183,12 @@ export function CanvasGrid({
         viewportCols: effectiveViewport.cols,
         viewportRows: effectiveViewport.rows,
         gap: GAP,
-        padding: PADDING,
+        padding: {
+            top: 12,      // Match the VIEWPORT_PADDING above
+            right: 12,
+            bottom: 12,
+            left: 12,
+        },
     });
 
     // ==========================================================================
@@ -401,8 +406,10 @@ export function CanvasGrid({
                 // KEY FIX: Position relative to VIEWPORT, not canvas
                 // This ensures cells always fill the visible container
                 // ============================================
-                const left = viewCol * (cellSize.width + GAP);
-                const top = viewRow * (cellSize.height + GAP);
+                // Add padding offset so cells don't touch edges
+                const VIEWPORT_PADDING = { top: 12, left: 12 };
+                const left = VIEWPORT_PADDING.left + viewCol * (cellSize.width + GAP);
+                const top = VIEWPORT_PADDING.top + viewRow * (cellSize.height + GAP);
 
                 // Calculate size (account for spanning)
                 const colSpan = placement?.colSpan || 1;
