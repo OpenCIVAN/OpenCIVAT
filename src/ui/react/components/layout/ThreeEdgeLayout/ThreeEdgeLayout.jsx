@@ -4,7 +4,7 @@
 
 import React, { useMemo, cloneElement, useCallback } from 'react';
 import { LayoutPanelProvider } from '@UI/react/components/panels/LayoutPanel/LayoutPanelContext';
-import { LayoutPanel, FloatingCanvasNavigator } from '@UI/react/components/panels/LayoutPanel';
+import { LayoutPanel } from '@UI/react/components/panels/LayoutPanel';
 import { CanvasWorkspace } from '@UI/react/components/workspace';
 import { useLayoutState, usePanelPersistence, PANEL_CONSTRAINTS, useResizeHandler } from './ThreeEdgeLayout.logic.js';
 import './ThreeEdgeLayout.scss';
@@ -265,10 +265,6 @@ function GridZonesLayout({
             {/* Center Workspace (EXPANDS when panels collapse!) */}
             <div className="three-edge-layout__workspace">
                 {centerPanel}
-
-                {/* FloatingCanvasNavigator renders only when undocked */}
-                {/* It automatically uses shared state from context */}
-                <FloatingCanvasNavigator onPopOut={handlePopOut} />
             </div>
 
             {/* Right Panel Content (hidden when collapsed) */}

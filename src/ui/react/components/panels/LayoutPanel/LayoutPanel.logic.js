@@ -10,8 +10,14 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { viewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
-import { canvasManager } from "@Core/data/managers//CanvasManager.js";
+import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { ui as log } from "@Utils/logger.js";
+import {
+  dispatchNavigateTo,
+  dispatchMoveViewport,
+} from "@UI/react/hooks/useViewportSync.js";
+import { EVENT_NAME as VIEWPORT_SIZE_EVENT } from "@UI/react/hooks/useViewportSize.js";
 
 // =============================================================================
 // CONSTANTS
@@ -138,6 +144,26 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     cols: 3,
   });
 
+  // Listen for viewport size changes from CanvasGrid (via useViewportSize events)
+  useEffect(() => {
+    const handleViewportSizeChanged = (e) => {
+      const { size } = e.detail;
+      if (size?.rows && size?.cols) {
+        setLocalViewportSize({
+          rows: Math.max(1, Math.min(10, size.rows)),
+          cols: Math.max(1, Math.min(10, size.cols)),
+        });
+      }
+    };
+
+    window.addEventListener(VIEWPORT_SIZE_EVENT, handleViewportSizeChanged);
+    return () =>
+      window.removeEventListener(
+        VIEWPORT_SIZE_EVENT,
+        handleViewportSizeChanged
+      );
+  }, []);
+
   const viewport = useMemo(
     () => ({
       row: canvasViewport?.row ?? 0,
@@ -160,6 +186,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
   /**
    * Move viewport by delta or direction string
+   * Also dispatches sync events so CanvasGrid can follow
    */
   const moveViewport = useCallback(
     (deltaRowOrDirection, deltaCol) => {
@@ -168,18 +195,23 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         switch (direction) {
           case "up":
             canvasMoveViewport?.(-1, 0);
+            dispatchMoveViewport(-1, 0);
             break;
           case "down":
             canvasMoveViewport?.(1, 0);
+            dispatchMoveViewport(1, 0);
             break;
           case "left":
             canvasMoveViewport?.(0, -1);
+            dispatchMoveViewport(0, -1);
             break;
           case "right":
             canvasMoveViewport?.(0, 1);
+            dispatchMoveViewport(0, 1);
             break;
           case "home":
             canvasSetViewportPosition?.(0, 0);
+            dispatchNavigateTo(0, 0);
             break;
           default:
             log.warn(`Unknown direction: ${direction}`);
@@ -191,12 +223,14 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         typeof deltaRowOrDirection === "number" ? deltaRowOrDirection : 0;
       const dCol = typeof deltaCol === "number" ? deltaCol : 0;
       canvasMoveViewport?.(deltaRow, dCol);
+      dispatchMoveViewport(deltaRow, dCol);
     },
     [canvasMoveViewport, canvasSetViewportPosition]
   );
 
   /**
    * Set viewport position directly
+   * Also dispatches sync events so CanvasGrid can follow
    */
   const setViewportPosition = useCallback(
     (row, col) => {
@@ -210,12 +244,14 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       const clampedCol = Math.max(0, Math.min(targetCol, maxCol));
 
       canvasSetViewportPosition?.(clampedRow, clampedCol);
+      dispatchNavigateTo(clampedRow, clampedCol);
     },
     [canvasSetViewportPosition, canvasSize, viewportSize]
   );
 
   /**
    * Navigate to specific cell
+   * Also dispatches sync events so CanvasGrid can follow
    */
   const navigateToCell = useCallback(
     (row, col) => {
@@ -350,6 +386,16 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         viewConfig?.datasetName ||
         (viewConfig?.datasetId ? `Dataset ${viewConfig.datasetId}` : null);
 
+      // Get the instance color from workspaceManager (matches canvas display)
+      // This ensures the navigator shows the same colors as the main canvas
+      const instanceColorFromManager = viewId
+        ? workspaceManager?.getViewColor?.(viewId)
+        : null;
+      const colorHex =
+        instanceColorFromManager?.hex ||
+        viewConfig?.camera?.color ||
+        INSTANCE_COLORS[index % INSTANCE_COLORS.length];
+
       return {
         // Placement position data
         id: placement.id,
@@ -367,15 +413,16 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         datasetId: viewConfig?.datasetId,
         datasetName: datasetName,
 
-        // Color - use index for consistent coloring
-        color: index % INSTANCE_COLORS.length,
-        instanceColor: index % INSTANCE_COLORS.length,
-        viewColor: INSTANCE_COLORS[index % INSTANCE_COLORS.length],
+        // Color - use workspaceManager color for consistency with canvas
+        color: colorHex,
+        instanceColor: colorHex,
+        viewColor: colorHex,
 
         // Status flags
         isShared: viewConfig?.visibility !== "private",
         isLinked: false, // TODO: check links
         visibility: viewConfig?.visibility || "private",
+        status: viewConfig?.status || "active",
       };
     });
   }, [rawPlacements]);

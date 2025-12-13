@@ -158,6 +158,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
     logic,
     isDocked,
     onClose,
+    isCompact = false,
     className = '',
 }) {
     const nav = useCanvasNavigator(logic);
@@ -542,7 +543,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
     return (
         <div
             ref={containerRef}
-            className={`canvas-navigator canvas-navigator--floating ${className}`}
+            className={`canvas-navigator canvas-navigator--floating ${isCompact ? 'canvas-navigator--compact' : ''} ${className}`}
         >
             {/* Header */}
             <div className="canvas-navigator__header">

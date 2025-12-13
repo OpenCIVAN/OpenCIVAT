@@ -16,10 +16,12 @@
   overflow: hidden;
   font-size: $font-size-xs;
 
-  // Floating mode - has shadow and backdrop
+  // Floating mode - fills container, has shadow and backdrop
   &--floating {
-    width: 480px;
-    max-height: 500px;
+    width: 100%;
+    height: 100%;
+    min-width: 280px;
+    min-height: 200px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px $color-border-default;
     backdrop-filter: blur(12px);
   }
@@ -31,6 +33,30 @@
     border-top: 1px solid $color-border-default;
     box-shadow: none;
     max-height: none;
+  }
+
+  // Compact mode - vertical stacking instead of side-by-side
+  &--compact {
+    .canvas-navigator__body {
+      flex-direction: column;
+    }
+
+    .canvas-navigator__controls {
+      width: 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: $spacing-xs;
+    }
+
+    .canvas-navigator__control-section {
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .canvas-navigator__minimap {
+      max-height: none;
+      flex: 1;
+    }
   }
 }
 
@@ -150,7 +176,13 @@
   position: relative;
   padding: $spacing-sm;
   overflow: auto;
-  max-height: 200px;
+  flex: 1;
+  min-height: 100px;
+
+  // In floating mode, allow minimap to grow
+  .canvas-navigator--floating & {
+    max-height: none;
+  }
 
   &--full-width {
     max-height: 180px;
@@ -314,7 +346,7 @@
   padding: $spacing-sm;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 // =============================================================================

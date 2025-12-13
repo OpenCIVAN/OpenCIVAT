@@ -7,12 +7,19 @@
 // IMPORTANT: DOCK_POSITIONS is managed by LayoutPanelContext.
 // This hook receives dockPosition and setDockPosition from parent logic.
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { ui as log } from "@Utils/logger.js";
 
 // Import DOCK_POSITIONS from context for reference
 // (not for state management - that's done in LayoutPanelContext)
 import { DOCK_POSITIONS } from "../../LayoutPanelContext";
+
+// Import viewport sync for dispatching navigation events
+import {
+  dispatchNavigateTo,
+  dispatchMoveViewport,
+} from "@UI/react/hooks/useViewportSync.js";
+import { EVENT_NAME as VIEWPORT_SIZE_EVENT } from "@UI/react/hooks/useViewportSize.js";
 
 // Re-export for backward compatibility
 export { DOCK_POSITIONS };
@@ -235,6 +242,26 @@ export function useCanvasNavigator(logic) {
   });
   const viewportSize = parentViewportSize || localViewportSize;
 
+  // Listen for viewport size changes from CanvasGrid (via useViewportSize events)
+  useEffect(() => {
+    const handleViewportSizeChanged = (e) => {
+      const { size } = e.detail;
+      if (size?.rows && size?.cols) {
+        setLocalViewportSize({
+          rows: Math.max(1, Math.min(10, size.rows)),
+          cols: Math.max(1, Math.min(10, size.cols)),
+        });
+      }
+    };
+
+    window.addEventListener(VIEWPORT_SIZE_EVENT, handleViewportSizeChanged);
+    return () =>
+      window.removeEventListener(
+        VIEWPORT_SIZE_EVENT,
+        handleViewportSizeChanged
+      );
+  }, []);
+
   // Local homepoint fallback
   const [localHomepoint, setLocalHomepoint] = useState(null);
   const homepoint =
@@ -358,6 +385,26 @@ export function useCanvasNavigator(logic) {
       if (parentMoveViewport) {
         parentMoveViewport(direction);
       }
+      // Also dispatch viewport sync event so CanvasGrid follows
+      switch (direction) {
+        case "up":
+          dispatchMoveViewport(-1, 0);
+          break;
+        case "down":
+          dispatchMoveViewport(1, 0);
+          break;
+        case "left":
+          dispatchMoveViewport(0, -1);
+          break;
+        case "right":
+          dispatchMoveViewport(0, 1);
+          break;
+        case "home":
+          dispatchNavigateTo(0, 0);
+          break;
+        default:
+          break;
+      }
     },
     [parentMoveViewport]
   );
@@ -373,6 +420,8 @@ export function useCanvasNavigator(logic) {
       } else if (setViewportPosition) {
         setViewportPosition(targetRow, targetCol);
       }
+      // Also dispatch viewport sync event so CanvasGrid follows
+      dispatchNavigateTo(targetRow, targetCol);
     },
     [parentNavigateToCell, setViewportPosition]
   );

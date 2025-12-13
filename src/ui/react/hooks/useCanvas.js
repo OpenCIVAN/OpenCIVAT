@@ -13,6 +13,7 @@ import {
   LAYOUT_MODES,
   FLOW_DIRECTIONS,
 } from "@Core/data/models/WorkspaceCanvas.js";
+import { EVENT_NAME as VIEWPORT_SIZE_EVENT } from "./useViewportSize.js";
 
 /**
  * Default viewport configuration
@@ -36,6 +37,11 @@ export function useCanvas(canvasId = null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Track the active canvas ID when no explicit canvasId is provided
+  const [activeCanvasId, setActiveCanvasId] = useState(() =>
+    canvasManager.getActiveCanvasId()
+  );
+
   // Connection state
   const [connectionState, setConnectionState] = useState(
     canvasManager.getConnectionState()
@@ -45,8 +51,23 @@ export function useCanvas(canvasId = null) {
   // Viewport state (local, not persisted)
   const [viewport, setViewport] = useState(DEFAULT_VIEWPORT);
 
-  // Resolve canvas ID
-  const resolvedCanvasId = canvasId || canvasManager.getActiveCanvasId();
+  // Resolve canvas ID - use provided canvasId or fall back to activeCanvasId
+  const resolvedCanvasId = canvasId || activeCanvasId;
+
+  // Listen for active canvas changes (when no explicit canvasId provided)
+  useEffect(() => {
+    if (canvasId) return; // Don't listen if explicit canvasId was provided
+
+    const handleActiveCanvasChanged = ({ canvasId: newActiveId }) => {
+      setActiveCanvasId(newActiveId);
+    };
+
+    const unsub = canvasManager.on(
+      "activeCanvasChanged",
+      handleActiveCanvasChanged
+    );
+    return () => unsub();
+  }, [canvasId]);
 
   // Subscribe to connection state changes
   useEffect(() => {
@@ -182,9 +203,30 @@ export function useCanvas(canvasId = null) {
   const setViewportSize = useCallback((rows, cols) => {
     setViewport((prev) => ({
       ...prev,
-      rows: Math.max(1, Math.min(4, rows)),
-      cols: Math.max(1, Math.min(4, cols)),
+      rows: Math.max(1, Math.min(10, rows)),
+      cols: Math.max(1, Math.min(10, cols)),
     }));
+  }, []);
+
+  // Listen for viewport size changes from useViewportSize hook (shared state)
+  useEffect(() => {
+    const handleViewportSizeChanged = (e) => {
+      const { size } = e.detail;
+      if (size?.rows && size?.cols) {
+        setViewport((prev) => ({
+          ...prev,
+          rows: Math.max(1, Math.min(10, size.rows)),
+          cols: Math.max(1, Math.min(10, size.cols)),
+        }));
+      }
+    };
+
+    window.addEventListener(VIEWPORT_SIZE_EVENT, handleViewportSizeChanged);
+    return () =>
+      window.removeEventListener(
+        VIEWPORT_SIZE_EVENT,
+        handleViewportSizeChanged
+      );
   }, []);
 
   // Placement operations

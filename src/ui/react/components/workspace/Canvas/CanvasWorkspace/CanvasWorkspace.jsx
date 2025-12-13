@@ -14,7 +14,6 @@ import { viewConfigurationManager, datasetManager } from '@Init/appInitializer.j
 import { sessionManager } from '@Core/session/sessionManager.js';
 import { workspace as log } from '@Utils/logger.js';
 import { useViewportEventListener } from '@UI/react/hooks/useViewportSync.js';
-import { FloatingCanvasNavigator, useLayoutPanelContext } from '@UI/react/components/panels/LayoutPanel';
 
 import './CanvasWorkspace.scss';
 
@@ -34,9 +33,6 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
     const [highlightedPlacementId, setHighlightedPlacementId] = useState(null);
     const [loadError, setLoadError] = useState(null);
     const instanceCreationInProgress = useRef(false);
-
-    const layoutContext = useLayoutPanelContext?.() ?? null;
-    const navigatorUndocked = layoutContext?.logic?.navigatorDocked === false;
 
     // Canvas hook for the active canvas
     const {
@@ -495,10 +491,6 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     subset={focusedSubset}
                     onExit={exitFocusMode}
                 />
-            )}
-
-            {navigatorUndocked && (
-                <FloatingCanvasNavigator />
             )}
         </div>
 
