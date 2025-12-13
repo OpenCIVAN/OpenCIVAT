@@ -1,13 +1,78 @@
 /**
  * ViewsSubtab - Shows all active views from the canvas
+ * 
+ * REFACTORED: Now uses the shared ViewItem component instead of custom markup.
+ * This ensures consistent styling and behavior across the app.
+ * 
+ * The ViewItem component handles:
+ * - Drag and drop
+ * - Hover actions (Settings, Close)
+ * - Sliding panel with quick toggles
+ * - Context menu
+ * - Settings modal
+ * 
+ * This subtab adds:
+ * - Search filtering
+ * - Filter chips (Shared, Linked)
+ * - Grouping by dataset
  */
 import React, { memo, useCallback, useState, useMemo } from 'react';
-import { Search, X, Database, Filter, Layers, ChevronDown, ChevronRight, GripVertical, Eye, Trash2 } from 'lucide-react';
-import { FilterChips } from '../components/FilterChips';
+import { Search, X, Database, Filter, Layers, ChevronDown, ChevronRight } from 'lucide-react';
+import { ViewItem } from '@UI/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/ViewItem';
+import { FilterChips } from '@UI/react/components/panels/LayoutPanel/components/FilterChips.jsx';
 import './ViewsSubtab.scss';
 
-// View colors for display
+// View colors for display - matches INSTANCE_COLORS in CanvasNavigator
 const VIEW_COLORS = ['#60a5fa', '#4ade80', '#f472b6', '#fbbf24', '#2dd4bf', '#a78bfa'];
+
+/**
+ * Map a cell (enriched placement) to the view format expected by ViewItem
+ */
+function cellToView(cell, colorIndex) {
+    return {
+        // Core identity
+        id: cell.viewConfigurationId || cell.id,
+        placementId: cell.id, // Keep placement ID for removal
+        name: cell.name || `View ${cell.row + 1},${cell.col + 1}`,
+
+        // Color - use hex value
+        color: VIEW_COLORS[colorIndex % VIEW_COLORS.length],
+
+        // Position on canvas (indicates "placed")
+        position: { row: cell.row, col: cell.col },
+        row: cell.row,
+        col: cell.col,
+
+        // Size
+        rowSpan: cell.rowSpan || 1,
+        colSpan: cell.colSpan || 1,
+
+        // Dataset reference
+        datasetId: cell.datasetId,
+        datasetName: cell.datasetName,
+
+        // Status flags (from ViewConfiguration)
+        starredWorkspace: cell.starredWorkspace || false,
+        starredPersonal: cell.starredPersonal || false,
+        hasSavedState: cell.hasSavedState || false,
+        isShared: cell.isShared || false,
+        isLocked: cell.isLocked || false,
+
+        // Link info
+        linkedCount: cell.isLinked ? 1 : 0,
+        links: cell.links || {},
+
+        // Filter info
+        filterCount: cell.filterCount || 0,
+
+        // Visibility
+        visibility: cell.visibility || 'private',
+
+        // Owner
+        ownerUserId: cell.ownerUserId,
+        ownerUserName: cell.ownerUserName,
+    };
+}
 
 export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
     const {
@@ -20,6 +85,8 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         toggleFilter,
         navigateToCell,
         closeView,
+        removePlacement,
+        resizePlacement,
         toggleViewExpanded,
         expandedViewId,
     } = logic;
@@ -45,14 +112,28 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         );
     }, [cells, searchQuery]);
 
+    // Apply active filters
+    const finalFilteredCells = useMemo(() => {
+        let result = filteredCells;
+
+        if (activeFilters.includes('shared')) {
+            result = result.filter(cell => cell.isShared);
+        }
+        if (activeFilters.includes('linked')) {
+            result = result.filter(cell => cell.isLinked);
+        }
+
+        return result;
+    }, [filteredCells, activeFilters]);
+
     // Group cells by dataset
     const groupedCells = useMemo(() => {
         if (!groupByDataset) {
-            return [{ key: 'all', name: 'All Views', cells: filteredCells }];
+            return [{ key: 'all', name: 'All Views', cells: finalFilteredCells }];
         }
 
         const groups = new Map();
-        filteredCells.forEach(cell => {
+        finalFilteredCells.forEach(cell => {
             const key = cell.datasetId || 'unknown';
             if (!groups.has(key)) {
                 groups.set(key, { key, name: cell.datasetName || 'Unknown Dataset', cells: [] });
@@ -60,7 +141,17 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
             groups.get(key).cells.push(cell);
         });
         return Array.from(groups.values());
-    }, [filteredCells, groupByDataset]);
+    }, [finalFilteredCells, groupByDataset]);
+
+    // Track global color index for consistent coloring across groups
+    const cellColorMap = useMemo(() => {
+        const map = new Map();
+        let colorIndex = 0;
+        cells?.forEach(cell => {
+            map.set(cell.id, colorIndex++);
+        });
+        return map;
+    }, [cells]);
 
     const toggleGroup = useCallback((key) => {
         setCollapsedGroups(prev => {
@@ -70,21 +161,55 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         });
     }, []);
 
-    const handleNavigate = useCallback((cell) => {
-        navigateToCell?.(cell.row, cell.col);
+    // =========================================================================
+    // VIEW ITEM CALLBACKS
+    // =========================================================================
+
+    const handleNavigate = useCallback((position) => {
+        if (position) {
+            navigateToCell?.(position.row, position.col);
+        }
     }, [navigateToCell]);
 
-    const handleClose = useCallback((cellId) => {
-        closeView?.(cellId);
-    }, [closeView]);
+    const handleClose = useCallback((viewId) => {
+        // Find the cell by viewConfigurationId to get the placement ID
+        const cell = cells?.find(c =>
+            c.viewConfigurationId === viewId || c.id === viewId
+        );
+        if (cell) {
+            // Use removePlacement with the placement ID
+            removePlacement?.(cell.id) || closeView?.(cell.id);
+        }
+    }, [cells, removePlacement, closeView]);
 
-    // If cells is empty, show empty state
+    const handleSizeChange = useCallback((viewId, size) => {
+        const cell = cells?.find(c =>
+            c.viewConfigurationId === viewId || c.id === viewId
+        );
+        if (cell && resizePlacement) {
+            resizePlacement(cell.id, size.rows, size.cols);
+        }
+    }, [cells, resizePlacement]);
+
+    const handleSelect = useCallback((viewId) => {
+        toggleViewExpanded?.(viewId);
+    }, [toggleViewExpanded]);
+
+    // =========================================================================
+    // RENDER
+    // =========================================================================
+
+    // Empty state
     if (!cells || cells.length === 0) {
         return (
-            <div className="views-subtab__empty">
-                <Layers size={24} />
-                <p>No views on canvas</p>
-                <span>Drag a dataset to create a view</span>
+            <div className="views-subtab views-subtab--empty">
+                <div className="views-subtab__empty">
+                    <Layers size={24} />
+                    <p>No views on canvas</p>
+                    <p className="views-subtab__empty-hint">
+                        Drag a dataset to the canvas to create a view
+                    </p>
+                </div>
             </div>
         );
     }
@@ -102,7 +227,10 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery && (
-                    <button className="views-subtab__search-clear" onClick={() => setSearchQuery('')}>
+                    <button
+                        className="views-subtab__search-clear"
+                        onClick={() => setSearchQuery('')}
+                    >
                         <X size={10} />
                     </button>
                 )}
@@ -130,7 +258,10 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                     <Database size={10} /> Group
                 </button>
                 {activeFilters.length > 0 && (
-                    <button className="views-subtab__clear-btn" onClick={() => setLocalActiveFilters([])}>
+                    <button
+                        className="views-subtab__clear-btn"
+                        onClick={() => setLocalActiveFilters([])}
+                    >
                         Clear
                     </button>
                 )}
@@ -138,81 +269,96 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
 
             {/* View count */}
             <div className="views-subtab__count">
-                {filteredCells.length} of {cells.length} view{cells.length !== 1 ? 's' : ''}
+                {finalFilteredCells.length} of {cells.length} view{cells.length !== 1 ? 's' : ''}
             </div>
 
             {/* View list */}
             <div className="views-subtab__list">
                 {groupedCells.map(group => (
                     <div key={group.key} className="views-subtab__group">
+                        {/* Group header - only show when grouping by dataset */}
                         {groupByDataset && (
                             <div
                                 className="views-subtab__group-header"
                                 onClick={() => toggleGroup(group.key)}
                             >
                                 <button className="views-subtab__group-toggle">
-                                    {collapsedGroups.has(group.key) ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+                                    {collapsedGroups.has(group.key)
+                                        ? <ChevronRight size={10} />
+                                        : <ChevronDown size={10} />
+                                    }
                                 </button>
                                 <Database size={10} className="views-subtab__group-icon" />
                                 <span className="views-subtab__group-name">{group.name}</span>
-                                <span className="views-subtab__group-count">({group.cells.length})</span>
+                                <span className="views-subtab__group-count">
+                                    ({group.cells.length})
+                                </span>
                             </div>
                         )}
 
+                        {/* Group items - ViewItem components */}
                         {!collapsedGroups.has(group.key) && (
                             <div className="views-subtab__group-items">
-                                {group.cells.map((cell, idx) => (
-                                    <div
-                                        key={cell.id}
-                                        className="views-subtab__item"
-                                        draggable
-                                        onDragStart={(e) => {
-                                            e.dataTransfer.setData('application/json', JSON.stringify({
-                                                type: 'view-item',
-                                                viewId: cell.id,
-                                                placementId: cell.id,
-                                            }));
-                                        }}
-                                    >
-                                        <GripVertical size={10} className="views-subtab__item-drag" />
-                                        <div
-                                            className="views-subtab__item-dot"
-                                            style={{
-                                                '--dot-color': VIEW_COLORS[idx % VIEW_COLORS.length],
-                                                background: VIEW_COLORS[idx % VIEW_COLORS.length]
+                                {group.cells.map((cell) => {
+                                    const colorIndex = cellColorMap.get(cell.id) || 0;
+                                    const view = cellToView(cell, colorIndex);
+
+                                    return (
+                                        <ViewItem
+                                            key={cell.id}
+                                            view={view}
+                                            isActive={expandedViewId === cell.id}
+                                            isSelected={false}
+                                            isDragging={false}
+                                            onSelect={handleSelect}
+                                            onClose={handleClose}
+                                            onTrash={handleClose}
+                                            onNavigate={handleNavigate}
+                                            onSizeChange={handleSizeChange}
+                                            // These pass through to ViewItem's internal handling
+                                            onDragStart={(e, id) => {
+                                                e.dataTransfer.setData('application/json', JSON.stringify({
+                                                    type: 'view-item',
+                                                    viewId: view.id,
+                                                    placementId: cell.id,
+                                                    viewConfigId: cell.viewConfigurationId,
+                                                    name: view.name,
+                                                    row: view.row,
+                                                    col: view.col,
+                                                    rowSpan: view.rowSpan,
+                                                    colSpan: view.colSpan,
+                                                }));
                                             }}
+                                            // Stubs for features not yet wired up
+                                            onStarWorkspace={() => console.log('TODO: Star workspace', view.id)}
+                                            onStarPersonal={() => console.log('TODO: Star personal', view.id)}
+                                            onSaveState={() => console.log('TODO: Save state', view.id)}
+                                            onLoadState={() => console.log('TODO: Load state', view.id)}
+                                            onShare={() => console.log('TODO: Share', view.id)}
+                                            onDuplicate={() => console.log('TODO: Duplicate', view.id)}
+                                            onLock={() => console.log('TODO: Lock', view.id)}
+                                            className="views-subtab__view-item"
                                         />
-                                        <span className="views-subtab__item-name">
-                                            {cell.name || `View ${cell.row},${cell.col}`}
-                                        </span>
-                                        <span className="views-subtab__item-pos">{cell.row},{cell.col}</span>
-                                        <button
-                                            className="views-subtab__item-action"
-                                            onClick={() => handleNavigate(cell)}
-                                            title="Go to view"
-                                        >
-                                            <Eye size={10} />
-                                        </button>
-                                        <button
-                                            className="views-subtab__item-action views-subtab__item-action--danger"
-                                            onClick={() => handleClose(cell.id)}
-                                            title="Close view"
-                                        >
-                                            <Trash2 size={10} />
-                                        </button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
                 ))}
 
-                {cells.length === 0 && (
-                    <div className="views-subtab__empty">
-                        <p>No views on canvas</p>
-                        <p className="views-subtab__empty-hint">
-                            Drag a dataset to the canvas to create a view
-                        </p>
+                {/* No results after filtering */}
+                {finalFilteredCells.length === 0 && cells.length > 0 && (
+                    <div className="views-subtab__no-results">
+                        <p>No views match your filters</p>
+                        <button
+                            className="views-subtab__clear-filters-btn"
+                            onClick={() => {
+                                setSearchQuery('');
+                                setLocalActiveFilters([]);
+                            }}
+                        >
+                            Clear filters
+                        </button>
                     </div>
                 )}
             </div>
