@@ -415,6 +415,55 @@ def get_gpu_metrics():
             'platform': platform.system()
         }), 500
 
+@app.route('/api/parima/model/switch', methods=['POST'])
+def switch_model_endpoint():
+    """
+    Switch the active model
+    """
+    try:
+        data = request.get_json() or {}
+        model_type = data.get('model_type')
+        
+        if not model_type:
+            return jsonify({
+                'success': False,
+                'error': 'Missing model_type parameter'
+            }), 400
+            
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        
+        if model_type == 'lstm':
+            new_model_path = os.path.join(project_root, 'model_comparison', 'lstm_model.pkl')
+        elif model_type == 'random_forest':
+            new_model_path = os.path.join(project_root, 'model_comparison', 'random_forest_model.pkl')
+        else:
+             return jsonify({
+                'success': False,
+                'error': f'Unknown model type: {model_type}'
+            }), 400
+            
+        if load_model(new_model_path):
+            global model_path
+            model_path = new_model_path
+            return jsonify({
+                'success': True,
+                'message': f'Switched to {model_type} model',
+                'model_path': model_path
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to load {model_type} model from {new_model_path}'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Switch model error: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/parima/predict', methods=['POST'])
 def predict():
     """

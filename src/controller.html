@@ -1,28 +1,38 @@
 <table>
-    <tr>
-      <td>
-        <button class='vrbutton' style="width: 100%">Send To VR</button>
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <select class='representations' style="width: 100%">
-          <option value='0'>Points</option>
-          <option value='1'>Wireframe</option>
-          <option value='2' selected>Surface</option>
-        </select>
-      </td>
-    </tr> 
-    <tr>
-      <td>
-        <!--File input for user to upload their file-->
-        <input type="file" id="fileInput" style="width: 100%">
-      </td>
-    </tr>
+  <tr>
+    <td>
+      <button class='vrbutton' style="width: 100%">Send To VR</button>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <select class='representations' style="width: 100%">
+        <option value='0'>Points</option>
+        <option value='1'>Wireframe</option>
+        <option value='2' selected>Surface</option>
+      </select>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <div style="margin-top: 10px; margin-bottom: 5px; color: white; font-size: 12px;">Model Selection:</div>
+      <select id='modelSelect'
+        style="width: 100%; background: #333; color: white; border: 1px solid #555; padding: 5px;">
+        <option value='random_forest' selected>Random Forest (Default)</option>
+        <option value='lstm'>LSTM (Experimental)</option>
+      </select>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <!--File input for user to upload their file-->
+      <input type="file" id="fileInput" style="width: 100%">
+    </td>
+  </tr>
 
-    <!-- <tr>
+  <!-- <tr>
       <td>
         <input class='resolution' type='range' min='4' max='80' value='6' />
       </td>
     </tr> -->
-  </table>
+</table>

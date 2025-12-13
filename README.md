@@ -4,6 +4,10 @@
 
 CIA_Web leverages **VTK.js**, **WebXR**, **TensorFlow.js**, and **PARIMA** (Predictive Adaptive Rendering for Immersive Media Applications) to support multi-user interaction, high-dimensional data exploration, and intelligent Level-of-Detail (LOD) management in both desktop and VR environments.
 
+![Demo](https://github.com/github-pratik/Adaptive_machineLearning_VTK/raw/main/Demo.gif)
+
+<!-- Note: If the GIF is too large for GitHub, host it on Imgur/Giphy and replace the URL above -->
+
 ---
 
 ## ✨ Features
