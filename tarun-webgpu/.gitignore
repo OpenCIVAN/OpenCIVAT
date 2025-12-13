@@ -1,0 +1,16 @@
+# local build / cache
+dist/
+build/
+.cache/
+node_modules/
+
+# OS junk
+.DS_Store
+
+# large outputs
+*.wasm
+*.data
+*.bin
+
+# logs
+*.log
