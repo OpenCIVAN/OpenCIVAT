@@ -10,6 +10,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { viewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
+import { datasetManager } from "@Init/appInitializer";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { ui as log } from "@Utils/logger.js";
@@ -381,10 +382,19 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         ? viewConfigurationManager.getView(viewId)
         : null;
 
-      // Get dataset info
+      // ==== START OF FIX ====
+      // Get dataset info - fetch from datasetManager like other components do
+      const dataset = viewConfig?.datasetId
+        ? datasetManager.getDataset(viewConfig.datasetId)
+        : null;
+      const datasetFilename = dataset?.filename || dataset?.fileName || null;
       const datasetName =
+        datasetFilename ||
         viewConfig?.datasetName ||
-        (viewConfig?.datasetId ? `Dataset ${viewConfig.datasetId}` : null);
+        (viewConfig?.datasetId
+          ? `Dataset ${viewConfig.datasetId.slice(0, 8)}`
+          : null);
+      // ==== END OF FIX ====
 
       // Get the instance color from workspaceManager (matches canvas display)
       // This ensures the navigator shows the same colors as the main canvas
@@ -407,8 +417,17 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
         // ViewConfiguration metadata
         viewConfigurationId: viewId,
-        name: viewConfig?.name || placement.name || `View ${index + 1}`,
-        title: viewConfig?.name || placement.name || `View ${index + 1}`,
+        // ==== UPDATED: Use datasetFilename first ====
+        name:
+          datasetFilename ||
+          viewConfig?.name ||
+          placement.name ||
+          `View ${index + 1}`,
+        title:
+          datasetFilename ||
+          viewConfig?.name ||
+          placement.name ||
+          `View ${index + 1}`,
         description: viewConfig?.description || "",
         datasetId: viewConfig?.datasetId,
         datasetName: datasetName,
