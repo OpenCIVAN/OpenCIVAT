@@ -452,13 +452,17 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   // PLACEMENTS → CELLS (enriched with ViewConfiguration data)
   // ===========================================================================
 
+  // ===========================================================================
+  // PLACEMENTS → CELLS (enriched with ViewConfiguration data)
+  // ===========================================================================
+
   const rawPlacements = useMemo(() => canvas?.placements || [], [canvas]);
 
   const cells = useMemo(() => {
     if (!rawPlacements || rawPlacements.length === 0) return [];
 
     return rawPlacements.map((placement, index) => {
-      // Get viewConfigurationId from placement
+      // Get viewConfigurationId from placement (multiple fallback paths)
       const viewId =
         placement.getViewId?.() ||
         placement.content?.viewConfigurationId ||
@@ -470,22 +474,39 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         ? viewConfigurationManager.getView(viewId)
         : null;
 
-      // ==== START OF FIX ====
-      // Get dataset info - fetch from datasetManager like other components do
+      // =====================================================================
+      // Get dataset info - MUST define these variables before using them
+      // =====================================================================
       const dataset = viewConfig?.datasetId
         ? datasetManager.getDataset(viewConfig.datasetId)
         : null;
+
+      // Extract filename from dataset
       const datasetFilename = dataset?.filename || dataset?.fileName || null;
+
+      // Build datasetName with fallbacks
       const datasetName =
         datasetFilename ||
         viewConfig?.datasetName ||
         (viewConfig?.datasetId
           ? `Dataset ${viewConfig.datasetId.slice(0, 8)}`
           : null);
-      // ==== END OF FIX ====
 
-      // Get the instance color from workspaceManager (matches canvas display)
-      // This ensures the navigator shows the same colors as the main canvas
+      // Extract filename from view name if it follows "View of X.vtp" pattern
+      const extractedFilename = viewConfig?.name?.match(/View of (.+)/)?.[1];
+
+      // Build display name with priority: datasetFilename > extracted > viewConfig name > fallback
+      const displayName =
+        datasetFilename ||
+        extractedFilename ||
+        viewConfig?.name ||
+        placement.content?.name ||
+        placement.name ||
+        `View ${index + 1}`;
+
+      // =====================================================================
+      // Get instance color from workspaceManager (matches canvas display)
+      // =====================================================================
       const instanceColorFromManager = viewId
         ? workspaceManager?.getViewColor?.(viewId)
         : null;
@@ -494,6 +515,9 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         viewConfig?.camera?.color ||
         INSTANCE_COLORS[index % INSTANCE_COLORS.length];
 
+      // =====================================================================
+      // Return enriched cell object
+      // =====================================================================
       return {
         // Placement position data
         id: placement.id,
@@ -505,20 +529,15 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
         // ViewConfiguration metadata
         viewConfigurationId: viewId,
-        // ==== UPDATED: Use datasetFilename first ====
-        name:
-          datasetFilename ||
-          viewConfig?.name ||
-          placement.name ||
-          `View ${index + 1}`,
-        title:
-          datasetFilename ||
-          viewConfig?.name ||
-          placement.name ||
-          `View ${index + 1}`,
+
+        // Display name - use the computed displayName
+        name: displayName,
+        title: displayName,
+
+        // Additional metadata
         description: viewConfig?.description || "",
         datasetId: viewConfig?.datasetId,
-        datasetName: datasetName,
+        datasetName: datasetName, // Now properly defined above
 
         // Color - use workspaceManager color for consistency with canvas
         color: colorHex,

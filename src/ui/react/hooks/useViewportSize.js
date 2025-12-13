@@ -243,6 +243,45 @@ export function useViewportSize(
     }
   }, [viewportSize]);
 
+  // =========================================================================
+  // LISTEN FOR EXTERNAL VIEWPORT SIZE CHANGES
+  // =========================================================================
+  // When other components (like Navigator) dispatch viewport size events,
+  // this hook needs to update its internal state to stay in sync.
+
+  useEffect(() => {
+    const handleExternalSizeChange = (e) => {
+      const { size } = e.detail;
+      if (!size?.rows || !size?.cols) return;
+
+      // Check if this event was triggered by our own state change
+      // to prevent infinite loops
+      const currentSize = previousSizeRef.current;
+      if (size.rows === currentSize.rows && size.cols === currentSize.cols) {
+        return; // Ignore - this is our own event echoing back
+      }
+
+      // Clamp to valid range and update state
+      const clamped = clampSize(size.rows, size.cols, maxSize);
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `[useViewportSize] External change: ${currentSize.rows}×${currentSize.cols} → ${clamped.rows}×${clamped.cols}`
+        );
+      }
+
+      // Update internal state - this will trigger re-render
+      setViewportSizeState(clamped);
+
+      // Update ref to prevent our own emit from triggering another update
+      previousSizeRef.current = clamped;
+    };
+
+    window.addEventListener(EVENT_NAME, handleExternalSizeChange);
+    return () =>
+      window.removeEventListener(EVENT_NAME, handleExternalSizeChange);
+  }, [maxSize]);
+
   /**
    * Set exact viewport size
    * @param {number} rows
