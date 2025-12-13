@@ -11,6 +11,7 @@
 // - Persists float position to localStorage
 
 import React, { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import {
     ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
     Home, Plus, Minus, ZoomIn, ZoomOut, Grid3X3,
@@ -90,29 +91,36 @@ const SectionLabel = memo(function SectionLabel({ children, color }) {
 
 /**
  * SmartTooltip - Rich tooltip showing view details
+ * Uses portal to render at document body level for proper z-index
  */
 const SmartTooltip = memo(function SmartTooltip({ cell, position, visible }) {
     if (!visible || !cell) return null;
 
-    return (
+    const color = cell.instanceColor || cell.color || '#60a5fa';
+
+    // Render using portal to escape any overflow:hidden containers
+    return ReactDOM.createPortal(
         <div
             className="canvas-navigator__tooltip"
             style={{
+                position: 'fixed',
                 left: position.x + 12,
                 top: position.y - 8,
-                '--tooltip-color': cell.instanceColor || '#60a5fa',
+                '--tooltip-color': color,
+                borderColor: color,
+                boxShadow: `0 4px 20px rgba(0, 0, 0, 0.5), 0 0 12px ${color}40`,
             }}
         >
             <div className="canvas-navigator__tooltip-header">
                 <div
                     className="canvas-navigator__tooltip-swatch"
-                    style={{ background: cell.instanceColor || '#60a5fa' }}
+                    style={{ background: color }}
                 />
-                <span className="canvas-navigator__tooltip-name">{cell.name || 'Untitled View'}</span>
+                <span className="canvas-navigator__tooltip-name">{cell.name || cell.viewName || 'Untitled View'}</span>
             </div>
-            {cell.datasetName && (
+            {(cell.datasetName || cell.dataset) && (
                 <div className="canvas-navigator__tooltip-row">
-                    Dataset: <span>{cell.datasetName}</span>
+                    Dataset: <span>{cell.datasetName || cell.dataset || 'Unknown'}</span>
                 </div>
             )}
             <div className="canvas-navigator__tooltip-row">
@@ -123,7 +131,8 @@ const SmartTooltip = memo(function SmartTooltip({ cell, position, visible }) {
                     </span>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 });
 
@@ -213,7 +222,9 @@ const DockPositionPicker = memo(function DockPositionPicker({
 
 export const CanvasNavigator = memo(function CanvasNavigator({
     logic,
+    isDocked, // Optional override - used when rendered by LayoutPanel
     onClose,
+    onPopOut, // Legacy prop
     className = '',
 }) {
     const nav = useCanvasNavigator(logic);
@@ -225,7 +236,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
         cells,
         homepoint,
         minimapZoom,
-        dockPosition,
+        dockPosition: logicDockPosition,
         mode,
         displayMode,
         selectedCells,
@@ -268,6 +279,11 @@ export const CanvasNavigator = memo(function CanvasNavigator({
         handleDragOver,
         handleDrop,
     } = nav;
+
+    // Determine actual dock position - isDocked prop overrides logic
+    const dockPosition = isDocked !== undefined
+        ? (isDocked ? DOCK_POSITIONS.LEFT_PANEL : DOCK_POSITIONS.FLOAT)
+        : logicDockPosition;
 
     // Local UI state
     const [showDockPicker, setShowDockPicker] = useState(false);
@@ -452,7 +468,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                 </div>
 
                 {!isDockedInPanel && (
-                    <NavBtn size="sm" onClick={onClose} title="Close">
+                    <NavBtn size="sm" onClick={onClose || onPopOut || (() => setDockPosition(DOCK_POSITIONS.MINIMIZED))} title="Close">
                         <X size={12} />
                     </NavBtn>
                 )}
@@ -651,7 +667,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         <SectionLabel color="var(--color-accent-green)">View Size</SectionLabel>
                         <div className="canvas-navigator__size-controls">
                             <NumberSpinner
-                                label="R"
+                                label="Rows"
                                 value={viewportSize.rows}
                                 onChange={setViewportSizeRows}
                                 min={1}
@@ -660,7 +676,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                             />
                             <span className="canvas-navigator__size-x">×</span>
                             <NumberSpinner
-                                label="C"
+                                label="Cols"
                                 value={viewportSize.cols}
                                 onChange={setViewportSizeCols}
                                 min={1}
@@ -698,7 +714,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
             <div className="canvas-navigator__footer">
                 <SectionLabel color="var(--color-accent-purple)">Canvas</SectionLabel>
                 <NumberSpinner
-                    label="R"
+                    label="Rows"
                     value={canvasSize.rows}
                     onChange={setCanvasRows}
                     min={1}
@@ -707,7 +723,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                 />
                 <span className="canvas-navigator__size-x">×</span>
                 <NumberSpinner
-                    label="C"
+                    label="Cols"
                     value={canvasSize.cols}
                     onChange={setCanvasCols}
                     min={1}

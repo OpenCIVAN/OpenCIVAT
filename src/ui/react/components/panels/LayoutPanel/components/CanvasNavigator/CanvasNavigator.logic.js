@@ -146,14 +146,14 @@ export const DOCK_POSITIONS = {
   MINIMIZED: "minimized",
 };
 
-// Instance colors for view color coding
+// Instance colors for view color coding (matches _colors.scss)
 export const INSTANCE_COLORS = [
-  "#60a5fa", // blue
-  "#34d399", // green
-  "#fb7185", // pink
-  "#fbbf24", // amber
-  "#2dd4bf", // teal
-  "#c084fc", // purple
+  "#60a5fa", // blue - $color-instance-1
+  "#34d399", // green - $color-instance-2
+  "#7dd3fc", // teal - $color-instance-3
+  "#fb7185", // pink - $color-instance-4
+  "#c084fc", // purple - $color-instance-5
+  "#fbbf24", // amber - $color-instance-6
 ];
 
 // LocalStorage keys
@@ -476,15 +476,50 @@ export function useCanvasNavigator(logic) {
     [viewport, viewportSize]
   );
 
-  // Get cell color
+  // Get cell color - handles multiple possible data formats
   const getCellColor = useCallback((cell) => {
     if (!cell) return null;
-    if (cell.instanceColor) return cell.instanceColor;
-    if (cell.color !== undefined)
+
+    // If instanceColor is a hex string, use it directly
+    if (
+      typeof cell.instanceColor === "string" &&
+      cell.instanceColor.startsWith("#")
+    ) {
+      return cell.instanceColor;
+    }
+
+    // If viewColor is a hex string, use it
+    if (typeof cell.viewColor === "string" && cell.viewColor.startsWith("#")) {
+      return cell.viewColor;
+    }
+
+    // If instanceColor is a number, use as index
+    if (typeof cell.instanceColor === "number") {
+      return INSTANCE_COLORS[cell.instanceColor % INSTANCE_COLORS.length];
+    }
+
+    // If color is a number, use as index into INSTANCE_COLORS
+    if (typeof cell.color === "number") {
       return INSTANCE_COLORS[cell.color % INSTANCE_COLORS.length];
-    if (cell.colorIndex !== undefined)
+    }
+    if (typeof cell.colorIndex === "number") {
       return INSTANCE_COLORS[cell.colorIndex % INSTANCE_COLORS.length];
-    return INSTANCE_COLORS[0];
+    }
+
+    // If color is already a string (hex color), use it
+    if (typeof cell.color === "string" && cell.color.startsWith("#")) {
+      return cell.color;
+    }
+
+    // Fallback: use id hash to generate consistent color
+    if (cell.id) {
+      const hash = cell.id
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return INSTANCE_COLORS[hash % INSTANCE_COLORS.length];
+    }
+
+    return INSTANCE_COLORS[0]; // Default blue
   }, []);
 
   // Get display text for cell based on display mode
@@ -496,11 +531,15 @@ export function useCanvasNavigator(logic) {
         case DISPLAY_MODES.NUMBERS:
           return index + 1;
         case DISPLAY_MODES.NAMES: {
-          const name = cell.name || cell.viewName || "View";
-          const maxLen = Math.max(
-            3,
-            Math.floor((26 * (cell.colSpan || 1)) / 7)
-          );
+          // Try different possible name properties
+          const name =
+            cell.name ||
+            cell.viewName ||
+            cell.title ||
+            cell.label ||
+            `View ${index + 1}`;
+          const cellWidth = (cell.colSpan || 1) * 26; // Approximate cell width
+          const maxLen = Math.max(3, Math.floor(cellWidth / 7));
           return name.length <= maxLen
             ? name
             : name.substring(0, maxLen - 1) + "…";

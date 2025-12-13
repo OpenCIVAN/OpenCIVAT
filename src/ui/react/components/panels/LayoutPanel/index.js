@@ -7,7 +7,8 @@
 
 import { LayoutPanel } from "./LayoutPanel";
 
-export { LayoutPanel, FloatingCanvasNavigator } from "./LayoutPanel";
+export { LayoutPanel } from "./LayoutPanel";
+export { FloatingCanvasNavigator } from "./FloatingCanvasNavigator";
 export default LayoutPanel;
 
 // =============================================================================
