@@ -25,6 +25,7 @@ import {
 import { useSecondaryBottomBar } from './SecondaryBottomBar.logic.js';
 import { WORKSPACE_TYPES } from '../SecondaryTopBar/SecondaryTopBar.logic.js';
 import { SecondaryBarDivider } from '../SecondaryBarZone';
+
 import './SecondaryBottomBar.scss';
 
 // =============================================================================

@@ -1,5 +1,10 @@
 // src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.scss
 // Canvas Navigator - Responsive styles for docked and floating modes
+//
+// FIX APPLIED: Controls panel always visible in floating mode
+// - Body uses overflow: hidden (not auto)
+// - Minimap has flex: 1 1 auto (can shrink)
+// - Controls has flex: 0 0 130px (never shrinks)
 
 @use "sass:color";
 @use "theme" as *;
@@ -9,8 +14,6 @@
 // =============================================================================
 
 .canvas-navigator {
-  container-name: canvas-navigator;
-  container-type: inline-size;
   display: flex;
   flex-direction: column;
   background: $color-bg-secondary;
@@ -45,9 +48,14 @@
 
     .canvas-navigator__controls {
       width: 100%;
+      max-width: 100%;
+      min-width: unset;
+      flex: 0 0 auto;
       flex-direction: row;
       flex-wrap: wrap;
       gap: $spacing-xs;
+      border-left: none;
+      border-top: 1px solid $color-border-subtle;
     }
 
     .canvas-navigator__control-section {
@@ -56,8 +64,8 @@
     }
 
     .canvas-navigator__minimap {
-      max-height: none;
-      flex: 1;
+      max-height: 200px;
+      flex: 1 1 auto;
     }
   }
 }
@@ -74,6 +82,7 @@
   background: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid $color-border-subtle;
   min-height: 36px;
+  flex-shrink: 0;
 
   &--compact {
     min-height: 32px;
@@ -111,6 +120,7 @@
 .canvas-navigator__mode-tabs {
   display: flex;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 // Display mode toggle
@@ -120,6 +130,7 @@
   padding: 2px;
   background: $color-bg-tertiary;
   border-radius: $radius-sm;
+  flex-shrink: 0;
 }
 
 // =============================================================================
@@ -171,47 +182,173 @@
 }
 
 // =============================================================================
-// MINIMAP
+// BODY - FIXED LAYOUT
+// =============================================================================
+
+.canvas-navigator__body {
+  display: flex;
+  flex-direction: row;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+
+  // KEY FIX: Don't let body scroll - let minimap scroll instead
+  overflow: hidden;
+}
+
+// =============================================================================
+// MINIMAP - TAKES REMAINING SPACE
 // =============================================================================
 
 .canvas-navigator__minimap {
   position: relative;
   padding: $spacing-sm;
-  overflow: auto;
+
+  // KEY FIX: Minimap can shrink to make room for controls
+  flex: 1 1 auto;
+  min-width: 120px;
   min-height: 100px;
-  min-width: 150px;
 
-  // In floating mode, minimap flexes to fill available space
-  .canvas-navigator--floating & {
-    flex: 1 1 auto;
-    max-height: none;
-    // Don't let it grow too much - leave room for controls
-    max-width: calc(100% - 160px);
-  }
-
-  // In docked mode, minimap has limited height
-  .canvas-navigator--docked &,
-  .canvas-navigator--compact & {
-    flex: 0 0 auto;
-    max-height: 200px;
-    max-width: 100%;
-  }
-
-  // Full width variant (when stacked vertically)
-  &--full-width {
-    max-height: 180px;
-    max-width: 100%;
-  }
+  // Minimap scrolls if content is larger
+  overflow: auto;
 
   &--setting-home {
     background: rgba(244, 114, 182, 0.05);
-    cursor: crosshair;
+
+    .canvas-navigator__cell--empty {
+      cursor: crosshair;
+
+      &:hover {
+        background: rgba(244, 114, 182, 0.2) !important;
+        border-color: #f472b6 !important;
+      }
+    }
   }
 }
 
 .canvas-navigator__grid {
   display: grid;
   position: relative;
+}
+
+// =============================================================================
+// CONTROLS PANEL - FIXED WIDTH, NEVER SHRINKS
+// =============================================================================
+
+.canvas-navigator__controls {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-xs;
+  background: rgba(0, 0, 0, 0.15);
+  border-left: 1px solid $color-border-subtle;
+
+  // KEY FIX: Fixed width, never shrink
+  flex: 0 0 130px;
+  min-width: 130px;
+  width: 130px;
+
+  // Scroll if too many controls
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.canvas-navigator__control-section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-sm;
+}
+
+.canvas-navigator__section-label {
+  font-size: 9px;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// =============================================================================
+// D-PAD
+// =============================================================================
+
+.canvas-navigator__dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2px;
+  width: fit-content;
+  margin: 0 auto;
+
+  > :nth-child(1) {
+    grid-area: 1 / 2;
+  } // up
+  > :nth-child(2) {
+    grid-area: 2 / 1;
+  } // left
+  > :nth-child(3) {
+    grid-area: 2 / 2;
+  } // home
+  > :nth-child(4) {
+    grid-area: 2 / 3;
+  } // right
+  > :nth-child(5) {
+    grid-area: 3 / 2;
+  } // down
+}
+
+.canvas-navigator__position-display {
+  font-family: $font-family-mono;
+  font-size: 10px;
+  color: $color-text-secondary;
+  text-align: center;
+  margin-top: $spacing-xs;
+}
+
+// Home controls
+.canvas-navigator__home-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  justify-content: center;
+}
+
+.canvas-navigator__home-value {
+  font-family: $font-family-mono;
+  font-size: 10px;
+  color: #f472b6;
+}
+
+// Size controls
+.canvas-navigator__size-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-wrap: nowrap;
+}
+
+.canvas-navigator__size-x {
+  color: $color-text-tertiary;
+  font-size: 10px;
+}
+
+// Zoom controls
+.canvas-navigator__zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  justify-content: center;
+}
+
+.canvas-navigator__zoom-value {
+  font-family: $font-family-mono;
+  font-size: 10px;
+  color: #60a5fa;
+  min-width: 36px;
+  text-align: center;
 }
 
 // =============================================================================
@@ -344,179 +481,6 @@
 }
 
 // =============================================================================
-// BODY (floating mode)
-// =============================================================================
-
-.canvas-navigator__body {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-
-  // Default: side-by-side layout
-  flex-direction: row;
-
-  // In floating mode, maintain side-by-side
-  .canvas-navigator--floating & {
-    flex-direction: row;
-  }
-
-  // In docked/compact mode, stack vertically
-  .canvas-navigator--docked &,
-  .canvas-navigator--compact & {
-    flex-direction: column;
-  }
-}
-
-// =============================================================================
-// CONTROLS PANEL (floating mode)
-// =============================================================================
-
-.canvas-navigator__controls {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-  padding: $spacing-md;
-  background: rgba(0, 0, 0, 0.15);
-  border-left: 1px solid $color-border-subtle;
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  // KEY FIX: Give controls panel a proper minimum width
-  min-width: 160px;
-  flex-shrink: 0;
-
-  // In floating mode, controls take fixed width on the side
-  .canvas-navigator--floating & {
-    width: 160px;
-    min-width: 160px;
-    max-width: 180px;
-    border-left: 1px solid $color-border-subtle;
-    border-top: none;
-  }
-
-  // In docked/compact mode, controls go below minimap
-  .canvas-navigator--docked &,
-  .canvas-navigator--compact & {
-    width: 100%;
-    min-width: unset;
-    max-width: unset;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-    padding: $spacing-sm;
-    border-left: none;
-    border-top: 1px solid $color-border-subtle;
-  }
-}
-
-.canvas-navigator__control-section {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-
-  // In compact/docked mode, become inline groups
-  .canvas-navigator--docked &,
-  .canvas-navigator--compact & {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: $spacing-xs;
-  }
-}
-
-.canvas-navigator__section-label {
-  font-size: 9px;
-  font-weight: $font-weight-semibold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: $color-text-tertiary;
-  margin-bottom: 2px;
-
-  // In compact mode, labels are inline
-  .canvas-navigator--docked &,
-  .canvas-navigator--compact & {
-    margin-bottom: 0;
-    margin-right: $spacing-xs;
-  }
-}
-
-// D-pad
-.canvas-navigator__dpad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 2px;
-  width: fit-content;
-
-  > :nth-child(1) {
-    grid-area: 1 / 2;
-  } // up
-  > :nth-child(2) {
-    grid-area: 2 / 1;
-  } // left
-  > :nth-child(3) {
-    grid-area: 2 / 2;
-  } // home
-  > :nth-child(4) {
-    grid-area: 2 / 3;
-  } // right
-  > :nth-child(5) {
-    grid-area: 3 / 2;
-  } // down
-}
-
-.canvas-navigator__position-display {
-  font-family: $font-family-mono;
-  font-size: 10px;
-  color: $color-text-secondary;
-  text-align: center;
-}
-
-// Home controls
-.canvas-navigator__home-controls {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-}
-
-.canvas-navigator__home-value {
-  font-family: $font-family-mono;
-  font-size: 10px;
-  color: #f472b6;
-}
-
-.canvas-navigator__size-controls {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  flex-wrap: nowrap; // Never wrap the individual controls
-
-  // Ensure the "Rows" and "Cols" text doesn't get cut off
-  white-space: nowrap;
-}
-
-.canvas-navigator__size-x {
-  color: $color-text-tertiary;
-  font-size: 10px;
-}
-
-// Zoom controls
-.canvas-navigator__zoom-controls {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-}
-
-.canvas-navigator__zoom-value {
-  font-family: $font-family-mono;
-  font-size: 10px;
-  color: #60a5fa;
-  min-width: 36px;
-  text-align: center;
-}
-
-// =============================================================================
 // COMPACT CONTROLS (docked mode)
 // =============================================================================
 
@@ -528,6 +492,7 @@
   background: rgba(0, 0, 0, 0.2);
   border-top: 1px solid $color-border-subtle;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .canvas-navigator__dpad-mini {
@@ -569,8 +534,8 @@
 .canvas-navigator__expanded-controls {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xs;
-  padding: $spacing-xs $spacing-sm $spacing-sm;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
   background: rgba(0, 0, 0, 0.15);
   border-top: 1px solid $color-border-subtle;
 }
@@ -579,7 +544,6 @@
   display: flex;
   align-items: center;
   gap: $spacing-xs;
-  flex-wrap: wrap;
 }
 
 .canvas-navigator__control-label {
@@ -590,119 +554,8 @@
 
 .canvas-navigator__home-coords {
   font-family: $font-family-mono;
-  font-size: 10px;
+  font-size: 9px;
   color: #f472b6;
-}
-
-.canvas-navigator__view-count,
-.canvas-navigator__selection-count {
-  font-size: 9px;
-  color: $color-text-tertiary;
-  margin-left: auto;
-}
-
-// =============================================================================
-// SPINNERS
-// =============================================================================
-
-.canvas-navigator__spinner {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-
-  &--compact {
-    gap: 1px;
-
-    .canvas-navigator__spinner-label {
-      font-size: 8px;
-      min-width: 28px;
-    }
-
-    .canvas-navigator__spinner-value {
-      min-width: 20px;
-      font-size: 10px;
-    }
-
-    .canvas-navigator__btn {
-      width: 18px;
-      height: 18px;
-    }
-  }
-}
-
-.canvas-navigator__spinner-label {
-  font-size: 9px;
-  color: $color-text-muted;
-  min-width: 32px; // Ensure "Rows" and "Cols" fit
-}
-
-.canvas-navigator__spinner-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
-  color: $color-text-secondary;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover:not(:disabled) {
-    background: $color-glass-light;
-    color: $color-text-primary;
-  }
-
-  &:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-}
-
-.canvas-navigator__spinner-value {
-  font-family: $font-family-mono;
-  font-size: 11px;
-  color: $color-text-primary;
-  min-width: 24px;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 2px 4px;
-  border-radius: $radius-xs;
-}
-
-// =============================================================================
-// EDIT TOOLBAR
-// =============================================================================
-
-.canvas-navigator__edit-toolbar {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-xs $spacing-sm;
-  background: rgba(192, 132, 252, 0.1);
-  border-bottom: 1px solid rgba(192, 132, 252, 0.2);
-}
-
-.canvas-navigator__edit-info {
-  font-size: 10px;
-  color: #c084fc;
-  margin-right: auto;
-}
-
-.canvas-navigator__edit-clear {
-  font-size: 9px;
-  color: $color-text-tertiary;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: $radius-sm;
-
-  &:hover {
-    background: $color-glass-light;
-    color: $color-text-secondary;
-  }
 }
 
 // =============================================================================
@@ -713,13 +566,15 @@
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: $spacing-xs $spacing-sm;
+  padding: $spacing-sm;
   background: rgba(0, 0, 0, 0.2);
   border-top: 1px solid $color-border-subtle;
+  flex-shrink: 0;
 }
 
 .canvas-navigator__footer-label {
-  font-size: 9px;
+  font-size: 10px;
+  color: $color-text-secondary;
   font-weight: $font-weight-semibold;
 }
 
@@ -727,82 +582,72 @@
   flex: 1;
 }
 
+.canvas-navigator__view-count {
+  font-size: 10px;
+  color: $color-text-muted;
+}
+
+// =============================================================================
+// SPINNER
+// =============================================================================
+
+.canvas-navigator__spinner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  &--compact {
+    gap: 1px;
+  }
+}
+
+.canvas-navigator__spinner-label {
+  font-size: 9px;
+  color: $color-text-muted;
+  min-width: 28px;
+}
+
+.canvas-navigator__spinner-value {
+  font-family: $font-family-mono;
+  font-size: 11px;
+  color: $color-text-primary;
+  min-width: 20px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 4px;
+  border-radius: $radius-xs;
+}
+
 // =============================================================================
 // TOOLTIP
 // =============================================================================
 
 .canvas-navigator__tooltip {
-  background: $color-bg-primary;
-  border: 2px solid var(--tooltip-color, #60a5fa);
-  border-radius: $radius-md;
-  padding: $spacing-xs $spacing-sm;
+  position: fixed;
   z-index: 10000;
-  min-width: 160px;
-  max-width: 260px;
+  padding: $spacing-sm;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   pointer-events: none;
-  animation: tooltip-fade-in 0.12s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5),
-    0 0 12px color-mix(in srgb, var(--tooltip-color, #60a5fa) 30%, transparent);
+  font-size: $font-size-xs;
+  max-width: 200px;
 }
 
-.canvas-navigator__tooltip-header {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
+.canvas-navigator__tooltip-title {
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
   margin-bottom: $spacing-xs;
 }
 
-.canvas-navigator__tooltip-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.canvas-navigator__tooltip-name {
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  font-size: 11px;
-}
-
 .canvas-navigator__tooltip-row {
-  font-size: 10px;
-  color: $color-text-secondary;
-
-  span {
-    color: $color-text-primary;
-  }
+  color: $color-text-muted;
+  display: flex;
+  gap: $spacing-xs;
 
   .mono {
     font-family: $font-family-mono;
-  }
-}
-
-@keyframes tooltip-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@container canvas-navigator (max-width: 450px) {
-  .canvas-navigator__body {
-    flex-direction: column;
-  }
-
-  .canvas-navigator__controls {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    border-left: none;
-    border-top: 1px solid $color-border-subtle;
-  }
-
-  .canvas-navigator__minimap {
-    max-width: 100%;
+    color: $color-text-secondary;
   }
 }

@@ -3,12 +3,22 @@
 //
 // IMPORTANT: Import DOCK_POSITIONS from LayoutPanelContext, NOT from
 // CanvasNavigator.logic.js to ensure consistent comparisons.
+//
+// SIZE CONSTRAINTS UPDATED:
+// - MIN_SIZE: 400x300 (was 280x200) - ensures controls always fit
+// - DEFAULT_SIZE: 580x400 (was 520x380) - comfortable default
+// - MAX_SIZE: 900x700 - prevents over-sizing
+// - COMPACT_THRESHOLD: 480 (was 350) - switch to compact layout
 
 import React, { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { useLayoutPanelContext, DOCK_POSITIONS } from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';
 import { Grid3X3, Maximize2 } from 'lucide-react';
 import './FloatingCanvasNavigator.scss';
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
 
 // Corner position styles
 const CORNER_POSITIONS = {
@@ -22,11 +32,15 @@ const CORNER_POSITIONS = {
 const FLOAT_POSITION_KEY = 'cia-navigator-float-position';
 const FLOAT_SIZE_KEY = 'cia-navigator-float-size';
 
-// Default and minimum sizes
-const DEFAULT_SIZE = { width: 600, height: 420 };  // Larger default to fit all controls
-const MIN_SIZE = { width: 400, height: 280 };      // Larger minimum - usable size
-const MAX_SIZE = { width: 900, height: 700 };       // Maximum size cap
-const COMPACT_THRESHOLD = 450; // Width below which to use compact mode
+// Size constraints - UPDATED for better usability
+const DEFAULT_SIZE = { width: 580, height: 400 };   // Comfortable default
+const MIN_SIZE = { width: 400, height: 300 };       // Ensures controls always fit
+const MAX_SIZE = { width: 900, height: 700 };       // Prevents over-sizing
+const COMPACT_THRESHOLD = 480;                       // Width to switch to compact mode
+
+// =============================================================================
+// HELPERS
+// =============================================================================
 
 /**
  * Load float position from localStorage
@@ -38,8 +52,8 @@ function loadFloatPosition() {
             const parsed = JSON.parse(stored);
             if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
                 return {
-                    x: Math.max(0, Math.min(window.innerWidth - 300, parsed.x)),
-                    y: Math.max(60, Math.min(window.innerHeight - 200, parsed.y)),
+                    x: Math.max(0, Math.min(window.innerWidth - MIN_SIZE.width, parsed.x)),
+                    y: Math.max(60, Math.min(window.innerHeight - MIN_SIZE.height, parsed.y)),
                 };
             }
         }
@@ -50,7 +64,7 @@ function loadFloatPosition() {
 }
 
 /**
- * Load float size from localStorage
+ * Load float size from localStorage with MIN/MAX bounds
  */
 function loadFloatSize() {
     try {
@@ -59,7 +73,6 @@ function loadFloatSize() {
             const parsed = JSON.parse(stored);
             if (typeof parsed.width === 'number' && typeof parsed.height === 'number') {
                 return {
-                    // Clamp to min/max bounds
                     width: Math.max(MIN_SIZE.width, Math.min(MAX_SIZE.width, parsed.width)),
                     height: Math.max(MIN_SIZE.height, Math.min(MAX_SIZE.height, parsed.height)),
                 };
@@ -70,6 +83,10 @@ function loadFloatSize() {
     }
     return { ...DEFAULT_SIZE };
 }
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 /**
  * FloatingCanvasNavigator
@@ -137,7 +154,10 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         }
     }, [floatSize, dockPosition, isResizing]);
 
-    // Drag start handler
+    // ==========================================================================
+    // DRAG HANDLERS
+    // ==========================================================================
+
     const handleDragStart = useCallback((e) => {
         // Only allow dragging in float mode
         if (dockPosition !== DOCK_POSITIONS.FLOAT) return;
@@ -161,7 +181,6 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         document.body.style.userSelect = 'none';
     }, [dockPosition, floatPosition]);
 
-    // Drag move handler
     const handleDragMove = useCallback((e) => {
         if (!isDragging || !dragStartRef.current) return;
 
@@ -169,12 +188,11 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         const dy = e.clientY - dragStartRef.current.mouseY;
 
         setFloatPosition({
-            x: Math.max(0, Math.min(window.innerWidth - 200, dragStartRef.current.posX + dx)),
-            y: Math.max(60, Math.min(window.innerHeight - 100, dragStartRef.current.posY + dy)),
+            x: Math.max(0, Math.min(window.innerWidth - MIN_SIZE.width, dragStartRef.current.posX + dx)),
+            y: Math.max(60, Math.min(window.innerHeight - MIN_SIZE.height, dragStartRef.current.posY + dy)),
         });
     }, [isDragging]);
 
-    // Drag end handler
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
         dragStartRef.current = null;
@@ -196,7 +214,10 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         }
     }, [isDragging, handleDragMove, handleDragEnd]);
 
-    // Resize start handler
+    // ==========================================================================
+    // RESIZE HANDLERS
+    // ==========================================================================
+
     const handleResizeStart = useCallback((direction, e) => {
         if (dockPosition !== DOCK_POSITIONS.FLOAT) return;
 
@@ -216,7 +237,6 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         document.body.style.userSelect = 'none';
     }, [dockPosition, floatSize, floatPosition]);
 
-    // Resize move handler
     const handleResizeMove = useCallback((e) => {
         if (!isResizing || !resizeStartRef.current) return;
 
@@ -259,7 +279,6 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         }
     }, [isResizing, resizeDirection]);
 
-    // Resize end handler
     const handleResizeEnd = useCallback(() => {
         setIsResizing(false);
         setResizeDirection(null);
@@ -323,6 +342,9 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         positionStyle = {
             position: 'fixed',
             ...CORNER_POSITIONS[dockPosition],
+            // Corner positions use default size
+            width: DEFAULT_SIZE.width,
+            height: DEFAULT_SIZE.height,
         };
     }
 
@@ -386,10 +408,13 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     );
 });
 
+// =============================================================================
+// HOOK EXPORT - For secondary bottom bar integration
+// =============================================================================
+
 /**
  * Hook for rendering the Navigator button in the secondary bottom bar
- * Instead of using the minimized floating button, this provides the button
- * component and control methods for external use.
+ * Provides state and methods to control the navigator from external components.
  */
 export function useNavigatorButton() {
     const context = useLayoutPanelContext();
@@ -399,6 +424,7 @@ export function useNavigatorButton() {
 
     const isMinimized = dockPosition === DOCK_POSITIONS.MINIMIZED;
     const isDocked = dockPosition === DOCK_POSITIONS.LEFT_PANEL;
+    const isFloating = !isMinimized && !isDocked;
 
     const openNavigator = useCallback(() => {
         setDockPosition(DOCK_POSITIONS.FLOAT);
@@ -419,7 +445,7 @@ export function useNavigatorButton() {
     return {
         isMinimized,
         isDocked,
-        isFloating: !isMinimized && !isDocked,
+        isFloating,
         openNavigator,
         minimizeNavigator,
         toggleNavigator,
