@@ -1280,10 +1280,16 @@ function interpolateResults(allPoints, sampledPoints, sampledResult, numComponen
 // ----------------------------------------------------------------------------
 // Standard VTK.js Setup
 // ----------------------------------------------------------------------------
+const canUseWebGPU = !!navigator.gpu; // true if browser supports WebGPU
 
 const fullScreenRenderer = vtkFullScreenRenderWindow.newInstance({
   background: [0, 0, 0],
+  defaultViewAPI: canUseWebGPU ? 'WebGPU' : 'WebGL',
 });
+
+console.log("RenderWindow class:", fullScreenRenderer.getApiSpecificRenderWindow().getClassName());
+
+
 enableWebGPUApp({ fullScreenRenderer });
 const renderer = fullScreenRenderer.getRenderer();
 const renderWindow = fullScreenRenderer.getRenderWindow();
