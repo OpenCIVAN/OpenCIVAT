@@ -1,0 +1,32 @@
+{
+  "name": "vtk-js-webpack-project",
+  "version": "1.0.0",
+  "description": "vtk.js visualization setup with Webpack and Babel",
+  "main": "index.js",
+  "scripts": {
+    "start": "webpack serve --mode development --open",
+    "build": "webpack --mode production"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "@babel/preset-env": "^7.20.0",
+    "babel-loader": "^8.4.1",
+    "css-loader": "^7.1.2",
+    "html-loader": "^5.1.0",
+    "html-webpack-plugin": "^5.6.4",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^4.10.0",
+    "webpack-dev-server": "^4.15.2",
+    "webpack-glsl-loader": "^1.0.1"
+  },
+  "dependencies": {
+    "@kitware/vtk.js": "^34.15.4",
+    "three": "^0.175.0",
+    "vtk.js": "^24.19.2",
+    "webxr-polyfill": "^2.0.3",
+    "ws": "^8.18.1",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27"
+  }
+}
