@@ -23,18 +23,18 @@
 
   &--open {
     padding: $spacing-xs;
-    max-height: 120px; // Allow more height for wrapping
+    max-height: 80px; // Reduced - we want single line
     opacity: 1;
   }
 }
 
 // =============================================================================
-// TOOLTIP AREA
+// TOOLTIP AREA - Compact
 // =============================================================================
 
 .sliding-panel__tooltip {
   padding: 2px $spacing-xs;
-  margin-bottom: 4px;
+  margin-bottom: 2px; // Reduced from 4px
   background: $color-bg-primary;
   border-radius: $radius-xs;
   font-size: 9px;
@@ -58,12 +58,16 @@
 
 .sliding-panel__actions {
   display: flex;
-  gap: 3px;
+  gap: 2px; // Reduced from 3px
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; // CHANGED: prevent wrapping
+  overflow-x: auto; // Allow horizontal scroll if needed
 
-  // Allow wrapping for small panels
-  row-gap: 4px;
+  // Hide scrollbar but allow scrolling
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .sliding-panel__group {
@@ -71,13 +75,14 @@
   background: $color-bg-primary;
   border-radius: $radius-xs;
   padding: 1px;
-  gap: 1px;
+  gap: 0; // Reduced from 1px - buttons touch
   flex-shrink: 0;
 }
 
 .sliding-panel__spacer {
   flex: 1;
-  min-width: 2px;
+  min-width: 4px; // Minimum spacer
+  max-width: 20px; // Don't push too far
 }
 
 // =============================================================================
@@ -88,8 +93,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px; // Reduced from 24px
+  height: 22px;
   background: transparent;
   border: none;
   border-radius: $radius-xs;
@@ -104,7 +109,7 @@
     color: $color-text-primary;
   }
 
-  // Active states ONLY - colored background + full color icon
+  // Active states
   &--active {
     &.sliding-panel__btn--purple {
       background: rgba($color-accent-purple, 0.2);
@@ -158,16 +163,16 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 3px 6px;
+  padding: 2px 5px; // Reduced padding
   background: $color-bg-primary;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-xs;
   color: $color-text-secondary;
-  font-size: 9px;
+  font-size: 9px; // Smaller font
   cursor: pointer;
   transition: all $transition-fast;
-  white-space: nowrap;
   flex-shrink: 0;
+  white-space: nowrap;
 
   &:hover {
     background: $color-glass-light;
@@ -175,8 +180,8 @@
     color: $color-text-primary;
   }
 
-  svg:last-child {
-    opacity: 0.5;
+  svg {
+    flex-shrink: 0;
   }
 }
 
@@ -249,7 +254,7 @@
     color: white;
 
     &:hover {
-      background: color.adjust($color-accent-blue, $lightness: 5%)
+      background: color.adjust($color-accent-blue, $lightness: 5%);
     }
   }
 }

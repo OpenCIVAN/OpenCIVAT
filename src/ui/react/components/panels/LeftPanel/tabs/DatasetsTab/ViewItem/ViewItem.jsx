@@ -260,9 +260,10 @@ export const ViewItem = memo(function ViewItem({
                     </span>
                 )}
 
-                {/* Hover Actions - show when hovered (Settings always, Close if placed) */}
+                {/* Hover Actions - show when hovered */}
                 {isHovered && (
                     <div className="view-item__hover-actions">
+                        {/* Place button - only when NOT placed */}
                         {!isPlaced && (
                             <button
                                 className="view-item__action-btn view-item__action-btn--place"
@@ -275,6 +276,8 @@ export const ViewItem = memo(function ViewItem({
                                 <LayoutGrid size={12} />
                             </button>
                         )}
+
+                        {/* Settings button - always visible on hover */}
                         <button
                             className="view-item__action-btn view-item__action-btn--settings"
                             onClick={(e) => {
@@ -285,18 +288,23 @@ export const ViewItem = memo(function ViewItem({
                         >
                             <Settings size={12} />
                         </button>
-                        {isPlaced && (
-                            <button
-                                className="view-item__action-btn view-item__action-btn--close"
-                                onClick={(e) => {
-                                    e.stopPropagation();
+
+                        {/* Close/Remove button - ALWAYS visible on hover */}
+                        <button
+                            className="view-item__action-btn view-item__action-btn--close"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (isPlaced) {
                                     onClose?.(view.id);
-                                }}
-                                title="Remove from Canvas"
-                            >
-                                <X size={12} />
-                            </button>
-                        )}
+                                } else {
+                                    // Not placed - this could trash or just close
+                                    onTrash?.(view.id) || onClose?.(view.id);
+                                }
+                            }}
+                            title={isPlaced ? "Remove from Canvas" : "Close View"}
+                        >
+                            <X size={12} />
+                        </button>
                     </div>
                 )}
             </div>
