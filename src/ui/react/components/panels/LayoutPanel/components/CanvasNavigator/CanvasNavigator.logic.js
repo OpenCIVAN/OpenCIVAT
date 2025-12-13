@@ -1,18 +1,16 @@
-/**
- * CanvasNavigator Logic Hook
- *
- * Headless logic for the canvas navigator component.
- * Wraps parent LayoutPanel logic and adds navigator-specific functionality.
- *
- * Features:
- * - Press-and-hold for canvas size controls
- * - Minimap click-to-navigate
- * - Viewport dragging
- * - DROP HANDLERS for view repositioning from ViewsSubtab
- */
+// src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.logic.js
+// Canvas Navigator Logic Hook
+//
+// Headless logic for the Canvas Navigator component.
+// Supports:
+// - Navigate mode: viewport panning
+// - Edit mode: selection, drag-drop, merge/unmerge, delete
+// - Display modes: names, numbers, colors
+// - Dock positions with localStorage persistence
+// - Homepoint management
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { workspace as log } from "@Utils/logger.js";
 
 // =============================================================================
 // PRESS-AND-HOLD HOOK
@@ -21,6 +19,10 @@ import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 /**
  * Hook for press-and-hold button behavior
  * Fires action immediately, then repeatedly after delay
+ *
+ * @param {Function} action - Action to perform
+ * @param {Object} options - { delay: ms before repeat, interval: ms between repeats }
+ * @returns {{ start: Function, stop: Function }}
  */
 export function usePressAndHold(action, { delay = 400, interval = 100 } = {}) {
   const timeoutRef = useRef(null);
@@ -53,6 +55,9 @@ export function usePressAndHold(action, { delay = 400, interval = 100 } = {}) {
 
 /**
  * Hook for dragging the viewport rectangle on the minimap
+ *
+ * @param {Function} onMove - Callback when viewport is dragged to new position (row, col)
+ * @returns {Object} - { isDragging, handleMouseDown, handleMouseMove, handleMouseUp }
  */
 export function useViewportDrag(onMove) {
   const [isDragging, setIsDragging] = useState(false);
@@ -83,7 +88,7 @@ export function useViewportDrag(onMove) {
       const cellDeltaY = Math.round(deltaY / (cellHeight + gap));
 
       if (cellDeltaX !== 0 || cellDeltaY !== 0) {
-        onMove(cellDeltaY, cellDeltaX);
+        onMove?.(cellDeltaY, cellDeltaX);
         dragStartRef.current.startX = e.clientX;
         dragStartRef.current.startY = e.clientY;
       }
@@ -96,6 +101,7 @@ export function useViewportDrag(onMove) {
     dragStartRef.current = null;
   }, []);
 
+  // Cleanup on unmount
   useEffect(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
@@ -110,7 +116,80 @@ export function useViewportDrag(onMove) {
   return {
     isDragging,
     handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
   };
+}
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+export const DISPLAY_MODES = {
+  NAMES: "names",
+  NUMBERS: "numbers",
+  COLORS: "colors",
+};
+
+export const NAV_MODES = {
+  NAVIGATE: "navigate",
+  EDIT: "edit",
+};
+
+export const DOCK_POSITIONS = {
+  LEFT_PANEL: "left-panel",
+  TOP_LEFT: "top-left",
+  TOP_RIGHT: "top-right",
+  BOTTOM_LEFT: "bottom-left",
+  BOTTOM_RIGHT: "bottom-right",
+  FLOAT: "float",
+  MINIMIZED: "minimized",
+};
+
+// Instance colors for view color coding
+export const INSTANCE_COLORS = [
+  "#60a5fa", // blue
+  "#34d399", // green
+  "#fb7185", // pink
+  "#fbbf24", // amber
+  "#2dd4bf", // teal
+  "#c084fc", // purple
+];
+
+// LocalStorage keys
+const STORAGE_KEYS = {
+  DOCK_POSITION: "cia-navigator-dock-position",
+  FLOAT_POSITION: "cia-navigator-float-position",
+  DISPLAY_MODE: "cia-navigator-display-mode",
+  MINIMAP_ZOOM: "cia-navigator-zoom",
+};
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Load value from localStorage with fallback
+ */
+function loadFromStorage(key, fallback) {
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) return JSON.parse(stored);
+  } catch (e) {
+    log.warn(`Failed to load ${key} from localStorage:`, e);
+  }
+  return fallback;
+}
+
+/**
+ * Save value to localStorage
+ */
+function saveToStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    log.warn(`Failed to save ${key} to localStorage:`, e);
+  }
 }
 
 // =============================================================================
@@ -118,406 +197,563 @@ export function useViewportDrag(onMove) {
 // =============================================================================
 
 /**
- * useCanvasNavigator - Navigator-specific logic
+ * useCanvasNavigator - Main logic hook for Canvas Navigator
  *
- * @param {Object} parentLogic - Logic object from useLayoutPanel
+ * @param {Object} logic - Parent logic from useLayoutPanel
  */
-export function useCanvasNavigator(parentLogic) {
+export function useCanvasNavigator(logic) {
   const {
-    canvas,
-    canvasSize,
-    viewport,
-    cells,
-    zoom,
-    homepoint,
-    isAtHome,
-    navigatorDocked,
-    loading,
-    error,
-    isConnected,
-    // Size controls
-    incrementCols,
-    decrementCols,
-    incrementRows,
-    decrementRows,
-    setCanvasCols,
-    setCanvasRows,
-    checkCanReduceSize,
-    // Navigation
-    moveViewport,
-    navigateToCell,
-    setHomepoint,
-    // Zoom
-    setZoom,
-    zoomIn,
-    zoomOut,
-    // Cell helpers
-    getCellAt,
-    isInViewport,
-    // Tools
-    tool,
-    setTool,
-    editMode,
-    setEditMode,
-    toggleEditMode,
-    dropMode,
-    setDropMode,
-    // Docking
-    toggleNavigatorDocked,
-    // Undo/redo
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-  } = parentLogic;
+    // From useLayoutPanel
+    canvasSize = { rows: 3, cols: 3 },
+    viewport = { row: 0, col: 0 },
+    viewportSize: parentViewportSize,
+    cells = [],
+    homepoint: parentHomepoint,
+    zoom: parentZoom,
+    isConnected = true,
+    loading = false,
+    // Actions from parent
+    moveViewport: parentMoveViewport,
+    navigateToCell: parentNavigateToCell,
+    setViewportPosition,
+    setCanvasRows: parentSetCanvasRows,
+    setCanvasCols: parentSetCanvasCols,
+    setViewportSizeRows: parentSetViewportSizeRows,
+    setViewportSizeCols: parentSetViewportSizeCols,
+    setHomepoint: parentSetHomepoint,
+    // Cell operations
+    removePlacement,
+    mergeCells: parentMergeCells,
+    unmergeCells: parentUnmergeCells,
+    movePlacement,
+  } = logic || {};
 
-  // ===========================================================================
-  // DROP STATE
-  // ===========================================================================
+  // =========================================================================
+  // LOCAL STATE
+  // =========================================================================
 
-  const [dropTargetCell, setDropTargetCell] = useState(null);
-  const [isValidDrop, setIsValidDrop] = useState(false);
+  // Navigator mode
+  const [mode, setMode] = useState(NAV_MODES.NAVIGATE);
 
-  // ===========================================================================
-  // PRESS-AND-HOLD CONTROLS
-  // ===========================================================================
-
-  const incrementColsHold = usePressAndHold(incrementCols);
-  const decrementColsHold = usePressAndHold(decrementCols);
-  const incrementRowsHold = usePressAndHold(incrementRows);
-  const decrementRowsHold = usePressAndHold(decrementRows);
-
-  // ===========================================================================
-  // MINIMAP INTERACTIONS
-  // ===========================================================================
-
-  const handleMinimapClick = useCallback(
-    (row, col) => {
-      navigateToCell(row, col);
-    },
-    [navigateToCell]
+  // Display mode (with persistence)
+  const [displayMode, setDisplayModeState] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.DISPLAY_MODE, DISPLAY_MODES.NAMES)
   );
 
-  const viewportDrag = useViewportDrag((newRow, newCol) => {
-    navigateToCell(newRow, newCol);
+  // Dock position (with persistence)
+  const [dockPosition, setDockPositionState] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.DOCK_POSITION, DOCK_POSITIONS.FLOAT)
+  );
+
+  // Float position (with persistence)
+  const [floatPosition, setFloatPositionState] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.FLOAT_POSITION, { x: 100, y: 100 })
+  );
+
+  // Minimap zoom (with persistence)
+  const [minimapZoom, setMinimapZoomState] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.MINIMAP_ZOOM, 1)
+  );
+
+  // Local viewport size (fallback if parent doesn't provide)
+  const [localViewportSize, setLocalViewportSize] = useState({
+    rows: 2,
+    cols: 3,
   });
+  const viewportSize = parentViewportSize || localViewportSize;
 
-  // ===========================================================================
-  // DROP HANDLERS
-  // ===========================================================================
+  // Local homepoint (fallback if parent doesn't provide)
+  const [localHomepoint, setLocalHomepoint] = useState(null);
+  const homepoint =
+    parentHomepoint !== undefined ? parentHomepoint : localHomepoint;
 
-  /**
-   * Check if a cell can accept a drop
-   * Valid if: empty, or same placement (no-op), or in replace mode
-   */
-  const canDropAt = useCallback(
-    (row, col, dragData) => {
-      const existingCell = getCellAt(row, col);
+  // Edit mode state
+  const [selectedCells, setSelectedCells] = useState([]);
+  const [settingHomepoint, setSettingHomepoint] = useState(false);
 
-      // Empty cell - always valid
-      if (!existingCell) return true;
+  // Drag state
+  const [draggedCell, setDraggedCell] = useState(null);
+  const [dragOverCell, setDragOverCell] = useState(null);
 
-      // Same placement - no-op but valid
-      if (existingCell.id === dragData.placementId) return true;
+  // =========================================================================
+  // PERSISTENCE EFFECTS
+  // =========================================================================
 
-      // Different placement - only valid in replace mode
-      return dropMode === "replace";
+  // Persist display mode
+  const setDisplayMode = useCallback((mode) => {
+    setDisplayModeState(mode);
+    saveToStorage(STORAGE_KEYS.DISPLAY_MODE, mode);
+  }, []);
+
+  // Persist dock position
+  const setDockPosition = useCallback((position) => {
+    setDockPositionState(position);
+    saveToStorage(STORAGE_KEYS.DOCK_POSITION, position);
+  }, []);
+
+  // Persist float position
+  const setFloatPosition = useCallback((position) => {
+    setFloatPositionState(position);
+    saveToStorage(STORAGE_KEYS.FLOAT_POSITION, position);
+  }, []);
+
+  // Persist minimap zoom
+  const setMinimapZoom = useCallback((zoom) => {
+    const clamped = Math.max(0.5, Math.min(2, zoom));
+    setMinimapZoomState(clamped);
+    saveToStorage(STORAGE_KEYS.MINIMAP_ZOOM, clamped);
+  }, []);
+
+  // =========================================================================
+  // VIEWPORT SIZE CONTROLS
+  // =========================================================================
+
+  const setViewportSizeRows = useCallback(
+    (rows) => {
+      const value = Math.max(1, Math.min(10, rows));
+      if (parentSetViewportSizeRows) {
+        parentSetViewportSizeRows(value);
+      } else {
+        setLocalViewportSize((prev) => ({ ...prev, rows: value }));
+      }
     },
-    [getCellAt, dropMode]
+    [parentSetViewportSizeRows]
   );
 
-  /**
-   * Handle drag over a minimap cell
-   */
-  const handleCellDragOver = useCallback((e, row, col) => {
-    e.preventDefault();
-
-    // Parse drag data to check validity
-    try {
-      const jsonData = e.dataTransfer.types.includes("application/json");
-      if (jsonData) {
-        e.dataTransfer.dropEffect = "move";
-        setDropTargetCell({ row, col });
-        // We can't read data during dragOver, so assume valid for now
-        // Actual validation happens on drop
-        setIsValidDrop(true);
+  const setViewportSizeCols = useCallback(
+    (cols) => {
+      const value = Math.max(1, Math.min(10, cols));
+      if (parentSetViewportSizeCols) {
+        parentSetViewportSizeCols(value);
+      } else {
+        setLocalViewportSize((prev) => ({ ...prev, cols: value }));
       }
-    } catch (err) {
-      console.warn("Drag over error:", err);
+    },
+    [parentSetViewportSizeCols]
+  );
+
+  // =========================================================================
+  // CANVAS SIZE CONTROLS
+  // =========================================================================
+
+  const setCanvasRows = useCallback(
+    (rows) => {
+      parentSetCanvasRows?.(Math.max(1, Math.min(50, rows)));
+    },
+    [parentSetCanvasRows]
+  );
+
+  const setCanvasCols = useCallback(
+    (cols) => {
+      parentSetCanvasCols?.(Math.max(1, Math.min(50, cols)));
+    },
+    [parentSetCanvasCols]
+  );
+
+  // =========================================================================
+  // HOMEPOINT CONTROLS
+  // =========================================================================
+
+  const setHomepoint = useCallback(
+    (row, col) => {
+      setSettingHomepoint(false);
+      if (parentSetHomepoint) {
+        parentSetHomepoint({ row, col });
+      } else {
+        setLocalHomepoint({ row, col });
+      }
+      log.debug(`Homepoint set to (${row}, ${col})`);
+    },
+    [parentSetHomepoint]
+  );
+
+  const clearHomepoint = useCallback(() => {
+    if (parentSetHomepoint) {
+      parentSetHomepoint(null);
+    } else {
+      setLocalHomepoint(null);
+    }
+  }, [parentSetHomepoint]);
+
+  // =========================================================================
+  // VIEWPORT NAVIGATION
+  // =========================================================================
+
+  // Check if at home position
+  const isAtHome = useMemo(() => {
+    if (!homepoint) return false;
+    return viewport.row === homepoint.row && viewport.col === homepoint.col;
+  }, [viewport, homepoint]);
+
+  // Move viewport by direction or delta
+  const moveViewport = useCallback(
+    (directionOrDeltaRow, deltaCol) => {
+      let dRow = 0;
+      let dCol = 0;
+
+      if (typeof directionOrDeltaRow === "string") {
+        switch (directionOrDeltaRow) {
+          case "up":
+            dRow = -1;
+            break;
+          case "down":
+            dRow = 1;
+            break;
+          case "left":
+            dCol = -1;
+            break;
+          case "right":
+            dCol = 1;
+            break;
+          case "home":
+          case "reset":
+            if (homepoint) {
+              parentNavigateToCell?.(homepoint.row, homepoint.col);
+              setViewportPosition?.(homepoint.row, homepoint.col);
+            }
+            return;
+          default:
+            log.warn(`Unknown viewport direction: ${directionOrDeltaRow}`);
+            return;
+        }
+      } else {
+        dRow = directionOrDeltaRow || 0;
+        dCol = deltaCol || 0;
+      }
+
+      if (parentMoveViewport) {
+        parentMoveViewport(dRow, dCol);
+      }
+    },
+    [parentMoveViewport, parentNavigateToCell, setViewportPosition, homepoint]
+  );
+
+  // Navigate to specific cell
+  const navigateToCell = useCallback(
+    (row, col) => {
+      const maxRow = Math.max(0, canvasSize.rows - viewportSize.rows);
+      const maxCol = Math.max(0, canvasSize.cols - viewportSize.cols);
+      const targetRow = Math.max(0, Math.min(maxRow, row));
+      const targetCol = Math.max(0, Math.min(maxCol, col));
+
+      if (parentNavigateToCell) {
+        parentNavigateToCell(targetRow, targetCol);
+      }
+      setViewportPosition?.(targetRow, targetCol);
+    },
+    [parentNavigateToCell, setViewportPosition, canvasSize, viewportSize]
+  );
+
+  // =========================================================================
+  // CELL HELPERS
+  // =========================================================================
+
+  // Get cell at position (including spanned cells)
+  const getCellAt = useCallback(
+    (row, col) => {
+      return cells.find(
+        (c) =>
+          c &&
+          row >= c.row &&
+          row < c.row + (c.rowSpan || 1) &&
+          col >= c.col &&
+          col < c.col + (c.colSpan || 1)
+      );
+    },
+    [cells]
+  );
+
+  // Check if position is in viewport
+  const isInViewport = useCallback(
+    (row, col) => {
+      return (
+        row >= viewport.row &&
+        row < viewport.row + viewportSize.rows &&
+        col >= viewport.col &&
+        col < viewport.col + viewportSize.cols
+      );
+    },
+    [viewport, viewportSize]
+  );
+
+  // Get cell color
+  const getCellColor = useCallback((cell) => {
+    if (!cell) return null;
+    if (cell.instanceColor) return cell.instanceColor;
+    if (cell.color !== undefined)
+      return INSTANCE_COLORS[cell.color % INSTANCE_COLORS.length];
+    if (cell.colorIndex !== undefined)
+      return INSTANCE_COLORS[cell.colorIndex % INSTANCE_COLORS.length];
+    return INSTANCE_COLORS[0];
+  }, []);
+
+  // Get display text for cell based on display mode
+  const getCellDisplay = useCallback(
+    (cell, index) => {
+      if (!cell) return null;
+
+      switch (displayMode) {
+        case DISPLAY_MODES.NUMBERS:
+          return index + 1;
+        case DISPLAY_MODES.NAMES: {
+          const name = cell.name || cell.viewName || "View";
+          const maxLen = Math.max(
+            3,
+            Math.floor((26 * (cell.colSpan || 1)) / 7)
+          );
+          return name.length <= maxLen
+            ? name
+            : name.substring(0, maxLen - 1) + "…";
+        }
+        case DISPLAY_MODES.COLORS:
+          return null;
+        default:
+          return null;
+      }
+    },
+    [displayMode]
+  );
+
+  // =========================================================================
+  // EDIT MODE - SELECTION
+  // =========================================================================
+
+  // Select a cell (with optional multi-select via shift)
+  const selectCell = useCallback((row, col, isMultiSelect = false) => {
+    const key = `${row}-${col}`;
+
+    if (isMultiSelect) {
+      setSelectedCells((prev) =>
+        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+      );
+    } else {
+      setSelectedCells([key]);
     }
   }, []);
 
-  /**
-   * Handle drag leave from minimap cell
-   */
-  const handleCellDragLeave = useCallback(() => {
-    setDropTargetCell(null);
-    setIsValidDrop(false);
+  // Clear selection
+  const clearSelection = useCallback(() => {
+    setSelectedCells([]);
   }, []);
 
-  /**
-   * Handle drop on a minimap cell
-   * Supports three drop types:
-   * 1. view-item with move mode - repositions existing view
-   * 2. view-item with linked mode - creates linked copy
-   * 3. dataset - creates new independent view
-   */
-  const handleCellDrop = useCallback(
-    async (e, row, col) => {
-      e.preventDefault();
-      setDropTargetCell(null);
-      setIsValidDrop(false);
-
-      try {
-        const jsonData = e.dataTransfer.getData("application/json");
-        if (!jsonData) return;
-
-        const dragData = JSON.parse(jsonData);
-
-        // Handle dataset drop - create new independent view
-        if (dragData.type === "dataset") {
-          console.log(
-            `Creating new view for dataset ${dragData.datasetId} at (${row}, ${col})`
-          );
-
-          // Check if target cell is empty
-          const existingCell = getCellAt(row, col);
-          if (existingCell && dropMode !== "replace") {
-            console.log("Cannot drop dataset on occupied cell");
-            return;
-          }
-
-          // Remove existing if in replace mode
-          if (existingCell && dropMode === "replace") {
-            await canvasManager.removePlacement(canvas.id, existingCell.id);
-          }
-
-          // Dispatch event to create view at specific position
-          window.dispatchEvent(
-            new CustomEvent("cia:request-instance", {
-              detail: {
-                datasetId: dragData.datasetId,
-                spawnNew: true,
-                targetRow: row,
-                targetCol: col,
-                canvasId: canvas.id,
-              },
-            })
-          );
-          return;
-        }
-
-        // Handle view-item drop
-        if (dragData.type === "view-item") {
-          // Check if this is a linked copy creation or a move
-          const createMode = dragData.createMode || "move";
-
-          if (createMode === "linked") {
-            // Create linked copy at target position
-            console.log(
-              `Creating linked copy of view ${dragData.viewId} at (${row}, ${col})`
-            );
-
-            // Check if target cell is empty
-            const existingCell = getCellAt(row, col);
-            if (existingCell && dropMode !== "replace") {
-              console.log("Cannot create linked copy on occupied cell");
-              return;
-            }
-
-            // Remove existing if in replace mode
-            if (existingCell && dropMode === "replace") {
-              await canvasManager.removePlacement(canvas.id, existingCell.id);
-            }
-
-            // Dispatch event to create linked view
-            window.dispatchEvent(
-              new CustomEvent("cia:create-linked-view", {
-                detail: {
-                  sourceViewId: dragData.viewConfigurationId || dragData.viewId,
-                  targetRow: row,
-                  targetCol: col,
-                  canvasId: canvas.id,
-                },
-              })
-            );
-            return;
-          }
-
-          // Default: Move existing placement
-          // Check if drop is valid
-          if (!canDropAt(row, col, dragData)) {
-            console.log("Invalid drop target");
-            return;
-          }
-
-          // Same position - no-op
-          if (dragData.sourceRow === row && dragData.sourceCol === col) {
-            return;
-          }
-
-          // Check for existing placement at target
-          const existingCell = getCellAt(row, col);
-
-          if (existingCell && existingCell.id !== dragData.placementId) {
-            // Replace mode - remove existing placement first
-            if (dropMode === "replace") {
-              await canvasManager.removePlacement(canvas.id, existingCell.id);
-            } else {
-              // Should not reach here due to canDropAt check
-              return;
-            }
-          }
-
-          // Update the placement position
-          await canvasManager.updatePlacement(canvas.id, dragData.placementId, {
-            row,
-            col,
-          });
-
-          console.log(
-            `Moved view ${dragData.placementId} from (${dragData.sourceRow}, ${dragData.sourceCol}) to (${row}, ${col})`
-          );
-          return;
-        }
-
-        console.warn("Unknown drag type:", dragData.type);
-      } catch (err) {
-        console.error("Drop failed:", err);
+  // Select all cells
+  const selectAll = useCallback(() => {
+    const allKeys = [];
+    for (let row = 0; row < canvasSize.rows; row++) {
+      for (let col = 0; col < canvasSize.cols; col++) {
+        allKeys.push(`${row}-${col}`);
       }
-    },
-    [canvas, getCellAt, canDropAt, dropMode]
-  );
+    }
+    setSelectedCells(allKeys);
+  }, [canvasSize]);
 
-  // ===========================================================================
-  // CELL HELPERS
-  // ===========================================================================
+  // =========================================================================
+  // EDIT MODE - MERGE/UNMERGE
+  // =========================================================================
 
-  /**
-   * Get cell color for minimap display
-   */
-  const getCellColor = useCallback((cell) => {
-    if (!cell) return null;
-    // Use instance color or default to index-based color
-    return cell.color || cell.instanceColor || 0;
+  // Check if merge is possible (need 2+ cells selected)
+  const canMerge = useMemo(() => {
+    return selectedCells.length >= 2;
+  }, [selectedCells]);
+
+  // Check if unmerge is possible (single merged cell selected)
+  const canUnmerge = useMemo(() => {
+    if (selectedCells.length !== 1) return false;
+    const [row, col] = selectedCells[0].split("-").map(Number);
+    const cell = getCellAt(row, col);
+    return cell && ((cell.colSpan || 1) > 1 || (cell.rowSpan || 1) > 1);
+  }, [selectedCells, getCellAt]);
+
+  // Handle merge - works on both empty cells and cells with views
+  const handleMerge = useCallback(async () => {
+    if (!canMerge) return;
+
+    // Parse selected cells to get bounds
+    const coords = selectedCells.map((k) => {
+      const [row, col] = k.split("-").map(Number);
+      return { row, col };
+    });
+
+    const minRow = Math.min(...coords.map((c) => c.row));
+    const maxRow = Math.max(...coords.map((c) => c.row));
+    const minCol = Math.min(...coords.map((c) => c.col));
+    const maxCol = Math.max(...coords.map((c) => c.col));
+
+    const mergeData = {
+      row: minRow,
+      col: minCol,
+      rowSpan: maxRow - minRow + 1,
+      colSpan: maxCol - minCol + 1,
+    };
+
+    log.debug(`Merging cells:`, mergeData);
+
+    if (parentMergeCells) {
+      await parentMergeCells(mergeData);
+    }
+
+    clearSelection();
+  }, [canMerge, selectedCells, parentMergeCells, clearSelection]);
+
+  // Handle unmerge
+  const handleUnmerge = useCallback(async () => {
+    if (!canUnmerge) return;
+
+    const [row, col] = selectedCells[0].split("-").map(Number);
+    const cell = getCellAt(row, col);
+
+    if (cell && parentUnmergeCells) {
+      log.debug(`Unmerging cell at (${row}, ${col})`);
+      await parentUnmergeCells(cell.id);
+    }
+
+    clearSelection();
+  }, [
+    canUnmerge,
+    selectedCells,
+    getCellAt,
+    parentUnmergeCells,
+    clearSelection,
+  ]);
+
+  // Handle delete
+  const handleDelete = useCallback(async () => {
+    if (selectedCells.length === 0) return;
+
+    for (const key of selectedCells) {
+      const [row, col] = key.split("-").map(Number);
+      const cell = getCellAt(row, col);
+      if (cell && removePlacement) {
+        log.debug(`Deleting cell at (${row}, ${col})`);
+        await removePlacement(cell.id);
+      }
+    }
+
+    clearSelection();
+  }, [selectedCells, getCellAt, removePlacement, clearSelection]);
+
+  // =========================================================================
+  // EDIT MODE - DRAG AND DROP
+  // =========================================================================
+
+  const handleDragStart = useCallback((cell, e) => {
+    if (!cell) return;
+    setDraggedCell(cell);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", cell.id);
   }, []);
 
-  // ===========================================================================
-  // MINIMAP CALCULATIONS
-  // ===========================================================================
+  const handleDragEnd = useCallback(() => {
+    setDraggedCell(null);
+    setDragOverCell(null);
+  }, []);
 
-  const MINIMAP_CELL_WIDTH = 28;
-  const MINIMAP_CELL_HEIGHT = 20;
-  const MINIMAP_GAP = 2;
+  const handleDragOver = useCallback((row, col, e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverCell({ row, col });
+  }, []);
 
-  const minimapDimensions = useMemo(
-    () => ({
-      width:
-        canvasSize.cols * MINIMAP_CELL_WIDTH +
-        (canvasSize.cols - 1) * MINIMAP_GAP,
-      height:
-        canvasSize.rows * MINIMAP_CELL_HEIGHT +
-        (canvasSize.rows - 1) * MINIMAP_GAP,
-      cellWidth: MINIMAP_CELL_WIDTH,
-      cellHeight: MINIMAP_CELL_HEIGHT,
-      gap: MINIMAP_GAP,
-    }),
-    [canvasSize]
+  const handleDrop = useCallback(
+    async (row, col, e) => {
+      e.preventDefault();
+
+      if (draggedCell && movePlacement) {
+        // Don't move to same position
+        if (draggedCell.row === row && draggedCell.col === col) {
+          handleDragEnd();
+          return;
+        }
+
+        log.debug(
+          `Moving cell from (${draggedCell.row}, ${draggedCell.col}) to (${row}, ${col})`
+        );
+        await movePlacement(draggedCell.id, row, col);
+      }
+
+      handleDragEnd();
+    },
+    [draggedCell, movePlacement, handleDragEnd]
   );
 
-  const viewportRect = useMemo(
-    () => ({
-      x: viewport.col * (MINIMAP_CELL_WIDTH + MINIMAP_GAP),
-      y: viewport.row * (MINIMAP_CELL_HEIGHT + MINIMAP_GAP),
-      width:
-        viewport.cols * MINIMAP_CELL_WIDTH + (viewport.cols - 1) * MINIMAP_GAP,
-      height:
-        viewport.rows * MINIMAP_CELL_HEIGHT + (viewport.rows - 1) * MINIMAP_GAP,
-    }),
-    [viewport]
-  );
-
-  // ===========================================================================
-  // CONNECTION STATE
-  // ===========================================================================
+  // =========================================================================
+  // COMPUTED STATE
+  // =========================================================================
 
   const isDisabled = loading || !isConnected;
 
-  // ===========================================================================
+  // =========================================================================
   // RETURN API
-  // ===========================================================================
+  // =========================================================================
 
   return {
     // State
     canvasSize,
     viewport,
+    viewportSize,
     cells,
-    zoom,
     homepoint,
+    minimapZoom,
+    dockPosition,
+    floatPosition,
+    mode,
+    displayMode,
+    selectedCells,
+    settingHomepoint,
     isAtHome,
-    navigatorDocked,
-    loading,
-    error,
-    isConnected,
     isDisabled,
+    loading,
+    isConnected,
 
-    // Size controls with press-and-hold
-    incrementColsHold,
-    decrementColsHold,
-    incrementRowsHold,
-    decrementRowsHold,
-    setCanvasCols,
-    setCanvasRows,
-    checkCanReduceSize,
+    // Mode setters
+    setMode,
+    setDisplayMode,
+    setSettingHomepoint,
+    setDockPosition,
+    setFloatPosition,
+    setMinimapZoom,
 
     // Navigation
     moveViewport,
     navigateToCell,
-    handleMinimapClick,
+
+    // Homepoint
     setHomepoint,
+    clearHomepoint,
 
-    // Viewport dragging
-    viewportDrag,
+    // Viewport size (Rows × Cols)
+    setViewportSizeRows,
+    setViewportSizeCols,
 
-    // Drop handling
-    dropTargetCell,
-    isValidDrop,
-    handleCellDragOver,
-    handleCellDragLeave,
-    handleCellDrop,
-    canDropAt,
+    // Canvas size (Rows × Cols)
+    setCanvasRows,
+    setCanvasCols,
 
-    // Zoom
-    setZoom,
-    zoomIn,
-    zoomOut,
+    // Edit mode - selection
+    selectCell,
+    clearSelection,
+    selectAll,
+
+    // Edit mode - merge/unmerge/delete
+    handleMerge,
+    handleUnmerge,
+    handleDelete,
+    canMerge,
+    canUnmerge,
 
     // Cell helpers
     getCellAt,
     isInViewport,
+    getCellDisplay,
     getCellColor,
 
-    // Minimap calculations
-    minimapDimensions,
-    viewportRect,
-
-    // Tools
-    tool,
-    setTool,
-    editMode,
-    setEditMode,
-    toggleEditMode,
-    dropMode,
-    setDropMode,
-
-    // Docking
-    toggleNavigatorDocked,
-
-    // Undo/redo
-    canUndo,
-    canRedo,
-    undo,
-    redo,
+    // Drag and drop
+    draggedCell,
+    dragOverCell,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop,
   };
 }
 

@@ -1,0 +1,68 @@
+// src/ui/react/components/panels/LayoutPanel/FloatingCanvasNavigator.scss
+// Styles for the floating/corner canvas navigator wrapper
+
+@use "theme" as *;
+
+.floating-canvas-navigator {
+  z-index: $z-floating;
+  transition: opacity 0.2s ease;
+
+  // Dragging state
+  &--dragging {
+    cursor: grabbing !important;
+    user-select: none;
+
+    * {
+      cursor: grabbing !important;
+    }
+  }
+
+  // Corner docked - semi-transparent until hovered
+  &--corner {
+    opacity: 0.85;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  // Minimized button state
+  &--minimized {
+    position: fixed;
+    bottom: 70px;
+    left: 16px;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-accent-amber;
+    border-radius: $radius-md;
+    color: $color-accent-amber;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    cursor: pointer;
+    z-index: $z-floating;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    transition: all $transition-fast;
+    backdrop-filter: blur(8px);
+
+    &:hover {
+      background: #{$color-accent-amber}15;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5),
+        0 0 16px #{$color-accent-amber}30;
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    span {
+      @media (max-width: 600px) {
+        display: none; // Hide text on small screens
+      }
+    }
+  }
+}

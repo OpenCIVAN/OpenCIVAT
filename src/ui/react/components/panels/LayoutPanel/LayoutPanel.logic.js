@@ -59,6 +59,20 @@ export const VIEW_MODES = {
 
 export const SPAWN_SIZES = ["1x1", "2x1", "1x2", "2x2"];
 
+// =============================================================================
+// DOCK POSITIONS (for CanvasNavigator)
+// =============================================================================
+
+export const DOCK_POSITIONS = {
+  LEFT_PANEL: "left-panel",
+  TOP_LEFT: "top-left",
+  TOP_RIGHT: "top-right",
+  BOTTOM_LEFT: "bottom-left",
+  BOTTOM_RIGHT: "bottom-right",
+  FLOAT: "float",
+  MINIMIZED: "minimized",
+};
+
 /**
  * Parse spawn size string to object
  * @param {string|object} size - Size string like "2x1" or object {cols, rows}

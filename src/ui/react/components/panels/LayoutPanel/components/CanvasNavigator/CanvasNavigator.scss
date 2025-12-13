@@ -1,510 +1,729 @@
 // src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.scss
-// Canvas Navigator component - Moonlight theme
-// Uses design tokens - no hard-coded values
+// Canvas Navigator Styles - Colorful glassmorphism theme
+//
+// Uses design tokens from theme.scss
+// Features: color-coded sections, glowing viewport, smooth animations
 
 @use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
-// CANVAS NAVIGATOR CONTAINER
+// CSS CUSTOM PROPERTIES FOR DYNAMIC COLORS
+// =============================================================================
+
+.canvas-navigator {
+  --color-accent-amber: #{$color-accent-amber};
+  --color-accent-pink: #{$color-accent-pink};
+  --color-accent-green: #{$color-accent-green};
+  --color-accent-blue: #{$color-accent-blue};
+  --color-accent-purple: #{$color-accent-purple};
+  --color-accent-teal: #{$color-accent-teal};
+  --color-accent-red: #{$color-accent-red};
+}
+
+// =============================================================================
+// BASE CONTAINER
 // =============================================================================
 
 .canvas-navigator {
   background: $color-bg-tertiary;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: $font-family-base;
 
-  &--docked {
+  // Floating state
+  &--floating {
+    position: fixed;
+    border-radius: $radius-lg;
+    border: 1px solid $color-border-default;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    width: 480px;
+    max-height: calc(100vh - 100px);
+    z-index: $z-floating;
+    backdrop-filter: blur(10px);
+  }
+
+  // Docked in left panel (bottom)
+  &--docked-panel {
     border-radius: 0;
     border: none;
     border-top: 1px solid $color-border-default;
+    width: 100%;
+    min-width: 420px;
   }
 
-  &--floating {
-    position: absolute;
-    bottom: $spacing-md;
-    right: $spacing-md;
-    max-height: calc(100vh - 200px); // Prevent overflow
-    overflow: hidden;
-    z-index: $z-floating;
-    border-radius: $radius-md;
+  // Corner docked - semi-transparent until hovered
+  &--corner {
+    position: fixed;
+    border-radius: $radius-lg;
     border: 1px solid $color-border-default;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    width: 460px;
+    z-index: $z-floating;
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
 
-    .canvas-navigator__body {
-      max-height: 400px;
-      overflow-y: auto;
+    &:hover {
+      opacity: 1;
     }
   }
 
+  // Disabled state
   &--disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     pointer-events: none;
   }
 
-  // ===========================================================================
-  // HEADER
-  // ===========================================================================
-
-  &__header {
+  // Minimized button state
+  &--minimized {
     display: flex;
     align-items: center;
     gap: $spacing-sm;
-    padding: 6px 10px;
-    background: rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid $color-border-subtle;
-  }
-
-  &__title {
-    flex: 1;
-    font-size: 10px;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-accent-amber;
+    border-radius: $radius-md;
+    color: $color-accent-amber;
+    font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-    font-family: $font-family-mono;
-  }
-
-  &__header-actions {
-    display: flex;
-    gap: 2px;
-  }
-
-  &__header-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    background: none;
-    border: none;
-    color: $color-text-muted;
     cursor: pointer;
-    border-radius: $radius-xs;
     transition: all $transition-fast;
 
     &:hover {
-      color: $color-text-primary;
-      background: rgba(255, 255, 255, 0.08);
+      background: #{$color-accent-amber}15;
+      box-shadow: 0 0 12px #{$color-accent-amber}30;
     }
   }
+}
 
-  // ===========================================================================
-  // TOOLS BAR (floating only)
-  // ===========================================================================
+// =============================================================================
+// HEADER
+// =============================================================================
 
-  &__tools {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid $color-border-subtle;
-  }
+.canvas-navigator__header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid $color-border-subtle;
+  min-height: 40px;
+}
 
-  &__tool-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
+.canvas-navigator__drag-handle {
+  color: $color-text-tertiary;
+  cursor: move;
+  flex-shrink: 0;
+}
 
-    &:hover:not(:disabled):not(&--active) {
-      background: rgba(255, 255, 255, 0.08);
-      color: $color-text-secondary;
-    }
+.canvas-navigator__icon {
+  color: $color-accent-amber;
+  flex-shrink: 0;
+}
 
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
+.canvas-navigator__title {
+  flex: 1;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+}
 
-    &--active {
-      background: rgba(var(--tool-color-rgb, 96, 165, 250), 0.15);
-      border-color: rgba(var(--tool-color-rgb, 96, 165, 250), 0.3);
-      color: var(--tool-color, $color-accent-blue);
-    }
+// Mode tabs
+.canvas-navigator__mode-tabs {
+  display: flex;
+  gap: 2px;
+  margin-right: $spacing-sm;
+}
 
-    // Color variants
-    &--blue {
-      --tool-color: #{$color-accent-blue};
-      --tool-color-rgb: 96, 165, 250;
-    }
-    &--teal {
-      --tool-color: #{$color-accent-teal};
-      --tool-color-rgb: 125, 211, 252;
-    }
-    &--purple {
-      --tool-color: #{$color-accent-purple};
-      --tool-color-rgb: 192, 132, 252;
-    }
-    &--amber {
-      --tool-color: #{$color-accent-amber};
-      --tool-color-rgb: 251, 191, 36;
-    }
-  }
+// Display mode toggle
+.canvas-navigator__display-toggle {
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+  background: $color-bg-secondary;
+  border-radius: $radius-sm;
+}
 
-  &__divider {
-    width: 1px;
-    height: 16px;
-    background: $color-border-default;
-    margin: 0 6px;
-    flex-shrink: 0;
-  }
+.canvas-navigator__color-swatch {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: $color-accent-blue;
+}
 
-  &__spacer {
-    flex: 1;
-  }
+// Dock wrapper
+.canvas-navigator__dock-wrapper {
+  position: relative;
+}
 
-  // Drop mode toggle group
-  &__drop-mode {
-    display: inline-flex;
-    border-radius: $radius-sm;
-    overflow: hidden;
-    background: linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.4) 0%,
-      rgba(0, 0, 0, 0.2) 50%,
-      rgba(255, 255, 255, 0.02) 100%
-    );
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-  }
+// =============================================================================
+// BUTTON STYLES
+// =============================================================================
 
-  &__drop-btn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background: transparent;
-    border: none;
-    font-size: 11px;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
-    white-space: nowrap;
+.canvas-navigator__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
 
-    &:hover:not(&--active) {
-      color: $color-text-secondary;
-    }
-
-    &--active {
-      &[data-color="green"] {
-        background: rgba($color-accent-green, 0.2);
-        color: $color-accent-green;
-      }
-      &[data-color="amber"] {
-        background: rgba($color-accent-amber, 0.2);
-        color: $color-accent-amber;
-      }
-    }
-  }
-
-  // ===========================================================================
-  // MAIN CONTENT AREA
-  // ===========================================================================
-
-  &__main {
-    display: flex;
-  }
-
-  // ===========================================================================
-  // MINIMAP
-  // ===========================================================================
-
-  &__minimap {
-    flex: 1;
-    min-height: 100px;
-    max-height: 140px;
-    position: relative;
-    overflow: auto;
-    padding: $spacing-sm;
-    background: $color-bg-base;
-  }
-
-  &__grid {
-    display: grid;
-    position: relative;
-  }
-
-  &__cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &--empty {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid $color-border-subtle;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: $color-border-default;
-      }
-    }
-
-    &--filled {
-      background: rgba(var(--cell-color-rgb, 96, 165, 250), 0.3);
-      border: 1px solid var(--cell-color, $color-accent-blue);
-
-      // Use CSS custom property for color
-      background: color-mix(in srgb, var(--cell-color) 30%, transparent);
-      border-color: color-mix(in srgb, var(--cell-color) 60%, transparent);
-
-      &:hover {
-        background: color-mix(in srgb, var(--cell-color) 45%, transparent);
-      }
-    }
-
-    &--in-viewport {
-      box-shadow: inset 0 0 0 2px $color-accent-amber;
-
-      &.canvas-navigator__cell--filled {
-        background: color-mix(in srgb, var(--cell-color) 50%, transparent);
-      }
-
-      &.canvas-navigator__cell--empty {
-        background: rgba($color-accent-amber, 0.1);
-      }
-    }
-
-    &--drop-target {
-      box-shadow: 0 0 0 2px $color-accent-green;
-      background: rgba($color-accent-green, 0.2) !important;
-    }
-
-    &--drop-invalid {
-      box-shadow: 0 0 0 2px $color-error;
-      background: rgba($color-error, 0.2) !important;
-    }
-  }
-
-  // ===========================================================================
-  // CONTROLS PANEL (right side)
-  // ===========================================================================
-
-  &__controls {
-    width: 90px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm;
-    background: rgba(0, 0, 0, 0.15);
-    border-left: 1px solid $color-border-subtle;
-  }
-
-  // ===========================================================================
-  // D-PAD NAVIGATION
-  // ===========================================================================
-
-  &__dpad {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  &__dpad-row {
-    display: flex;
-    gap: 2px;
-
-    > div {
-      width: 22px;
-      height: 22px;
-    }
-  }
-
-  &__nav-btn {
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.12);
-      color: $color-text-primary;
-    }
-
-    &:active:not(:disabled) {
-      background: rgba($color-accent-blue, 0.2);
-      color: $color-accent-blue;
-    }
-
-    &--center {
-      background: rgba($color-accent-amber, 0.15);
-      border-color: rgba($color-accent-amber, 0.3);
-      color: $color-accent-amber;
-
-      &:hover {
-        background: rgba($color-accent-amber, 0.25);
-      }
-    }
-
-    &--active {
-      background: rgba($color-accent-amber, 0.3);
-      border-color: $color-accent-amber;
-    }
-  }
-
-  // ===========================================================================
-  // POSITION DISPLAY
-  // ===========================================================================
-
-  &__position {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    font-family: $font-family-mono;
-    color: $color-text-muted;
-    padding: 2px 6px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: $radius-xs;
-  }
-
-  // ===========================================================================
-  // ZOOM CONTROLS
-  // ===========================================================================
-
-  &__zoom {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  &__zoom-btn {
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.12);
-      color: $color-text-primary;
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-  }
-
-  &__zoom-value {
-    font-size: 9px;
-    font-family: $font-family-mono;
-    color: $color-text-muted;
-    min-width: 32px;
-    text-align: center;
-  }
-
-  // ===========================================================================
-  // SIZE CONTROLS BAR
-  // ===========================================================================
-
-  &__size-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    padding: 6px 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border-top: 1px solid $color-border-subtle;
-  }
-
-  &__size-group {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  &__size-label {
-    font-size: 9px;
-    font-weight: $font-weight-medium;
-    color: $color-text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  &__size-btn {
+  &--xs {
     width: 18px;
     height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
+    font-size: 8px;
+  }
 
-    &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.12);
-      color: $color-text-primary;
-    }
+  &--sm {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+  }
 
-    &:active:not(:disabled) {
-      background: rgba($color-accent-blue, 0.2);
-    }
+  &--md {
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+  }
 
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+  &--lg {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  &:hover:not(:disabled) {
+    color: $color-text-secondary;
+    background: $color-glass-light;
+    border-color: $color-border-default;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  &--active {
+    background: var(--btn-color, #{$color-accent-blue}) 20;
+    border-color: var(--btn-color, #{$color-accent-blue});
+    color: var(--btn-color, #{$color-accent-blue});
+  }
+}
+
+// =============================================================================
+// DOCK POSITION PICKER
+// =============================================================================
+
+.canvas-navigator__dock-picker {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: $spacing-xs;
+  background: $color-bg-primary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  padding: $spacing-sm;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  min-width: 160px;
+}
+
+.canvas-navigator__dock-picker-label {
+  font-size: 9px;
+  color: $color-text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: $spacing-xs;
+}
+
+.canvas-navigator__dock-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+}
+
+.canvas-navigator__dock-picker-options {
+  border-top: 1px solid $color-border-subtle;
+  padding-top: $spacing-sm;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.canvas-navigator__dock-option {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: #{$color-accent-blue}15;
+    border-color: $color-accent-blue;
+    color: $color-accent-blue;
+  }
+}
+
+// =============================================================================
+// EDIT MODE TOOLBAR
+// =============================================================================
+
+.canvas-navigator__edit-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  background: #{$color-accent-purple}10;
+  border-bottom: 1px solid #{$color-accent-purple}30;
+}
+
+.canvas-navigator__edit-icon {
+  color: $color-accent-purple;
+  flex-shrink: 0;
+}
+
+.canvas-navigator__edit-hint {
+  flex: 1;
+  font-size: 10px;
+  color: $color-accent-purple;
+}
+
+.canvas-navigator__edit-clear {
+  padding: 2px $spacing-sm;
+  font-size: 9px;
+  background: transparent;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+}
+
+// =============================================================================
+// MAIN BODY
+// =============================================================================
+
+.canvas-navigator__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// =============================================================================
+// MINIMAP
+// =============================================================================
+
+.canvas-navigator__minimap {
+  flex: 1;
+  padding: $spacing-sm;
+  position: relative;
+  overflow: auto;
+  max-height: 280px;
+  transition: background 0.2s ease;
+
+  &--setting-home {
+    background: #{$color-accent-pink}08;
+  }
+}
+
+.canvas-navigator__home-hint {
+  position: absolute;
+  top: $spacing-xs;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: $color-accent-pink;
+  background: #{$color-accent-pink}20;
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-sm;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.canvas-navigator__grid {
+  display: grid;
+  position: relative;
+}
+
+// =============================================================================
+// MINIMAP CELLS - COLORFUL!
+// =============================================================================
+
+.canvas-navigator__cell {
+  border-radius: $radius-xs;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: $font-weight-medium;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+  transition: all 0.15s ease;
+  position: relative;
+
+  // Empty cell
+  &--empty {
+    background: $color-bg-secondary;
+    border: 1px solid $color-border-subtle;
+    opacity: 0.6;
+
+    &:hover {
+      opacity: 1;
+      border-color: $color-border-default;
+      background: $color-glass-light;
     }
   }
 
-  &__size-input {
-    width: 36px;
-    height: 20px;
-    padding: 0 4px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-xs;
-    color: $color-text-primary;
-    font-size: 10px;
+  // Filled cell - uses --cell-color custom property
+  &--filled {
+    background: color.adjust(#60a5fa, $alpha: -0.7);
+    background: var(--cell-color, #{$color-accent-blue}) 40;
+    border: 1px solid var(--cell-color, #{$color-accent-blue});
+    color: var(--cell-color, #{$color-accent-blue});
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+      box-shadow: 0 0 8px var(--cell-color, #{$color-accent-blue}) 40;
+    }
+  }
+
+  // In viewport - brighter
+  &--in-viewport {
+    opacity: 1 !important;
+
+    &.canvas-navigator__cell--filled {
+      background: var(--cell-color, #{$color-accent-blue}) 60;
+      box-shadow: 0 0 4px var(--cell-color, #{$color-accent-blue}) 30;
+    }
+  }
+
+  // Homepoint cell
+  &--home {
+    border-color: $color-accent-pink !important;
+
+    &.canvas-navigator__cell--empty {
+      background: #{$color-accent-pink}20;
+    }
+  }
+
+  // Selected (edit mode)
+  &--selected {
+    border-width: 2px !important;
+    border-color: $color-accent-purple !important;
+    box-shadow: 0 0 0 1px #{$color-accent-purple}40,
+      0 0 8px #{$color-accent-purple}30 !important;
+    z-index: 2;
+  }
+
+  // Drag over target
+  &--drag-over {
+    border-color: $color-accent-green !important;
+    background: #{$color-accent-green}30 !important;
+    box-shadow: 0 0 12px #{$color-accent-green}40 !important;
+  }
+}
+
+// Home icon in empty home cell
+.canvas-navigator__home-icon {
+  color: $color-accent-pink;
+}
+
+// Home dot indicator on filled cell
+.canvas-navigator__home-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  background: $color-accent-pink;
+  border-radius: 50%;
+  box-shadow: 0 0 4px $color-accent-pink;
+}
+
+// =============================================================================
+// VIEWPORT RECTANGLE - GLOWING AMBER
+// =============================================================================
+
+.canvas-navigator__viewport-rect {
+  position: absolute;
+  border: 2px solid $color-accent-amber;
+  border-radius: $radius-sm;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 12px #{$color-accent-amber}50,
+    inset 0 0 20px #{$color-accent-amber}15;
+  transition: all 0.2s ease;
+}
+
+// =============================================================================
+// CONTROLS PANEL
+// =============================================================================
+
+.canvas-navigator__controls {
+  width: 140px;
+  padding: $spacing-sm;
+  border-left: 1px solid $color-border-subtle;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  background: rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+}
+
+.canvas-navigator__control-section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.canvas-navigator__section-label {
+  font-size: 8px;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: $color-text-tertiary;
+  margin-bottom: 2px;
+}
+
+// =============================================================================
+// D-PAD
+// =============================================================================
+
+.canvas-navigator__dpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.canvas-navigator__dpad-row {
+  display: grid;
+  grid-template-columns: repeat(3, 24px);
+  gap: 2px;
+}
+
+.canvas-navigator__position-display {
+  font-size: 9px;
+  font-family: $font-family-mono;
+  color: $color-text-muted;
+  background: $color-glass-light;
+  padding: 2px $spacing-sm;
+  border-radius: $radius-xs;
+  margin-top: $spacing-xs;
+  text-align: center;
+}
+
+// =============================================================================
+// HOMEPOINT CONTROLS
+// =============================================================================
+
+.canvas-navigator__home-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  justify-content: center;
+}
+
+.canvas-navigator__home-coords {
+  font-size: 9px;
+  font-family: $font-family-mono;
+  color: $color-accent-pink;
+}
+
+.canvas-navigator__home-empty {
+  font-size: 8px;
+  color: $color-text-tertiary;
+}
+
+// =============================================================================
+// SIZE CONTROLS (Rows × Cols)
+// =============================================================================
+
+.canvas-navigator__size-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.canvas-navigator__size-x {
+  color: $color-text-tertiary;
+  font-size: 10px;
+}
+
+// =============================================================================
+// NUMBER SPINNER
+// =============================================================================
+
+.canvas-navigator__spinner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.canvas-navigator__spinner-label {
+  font-size: 9px;
+  color: $color-text-muted;
+  min-width: 12px;
+}
+
+.canvas-navigator__spinner-input {
+  width: 28px;
+  padding: 2px;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-secondary;
+  font-size: 10px;
+  text-align: center;
+  font-family: $font-family-mono;
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent-blue;
+  }
+
+  // Hide spinners
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  -moz-appearance: textfield;
+}
+
+// =============================================================================
+// ZOOM CONTROLS
+// =============================================================================
+
+.canvas-navigator__zoom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+}
+
+.canvas-navigator__zoom-value {
+  font-size: 9px;
+  font-family: $font-family-mono;
+  color: $color-accent-blue;
+  min-width: 36px;
+  text-align: center;
+}
+
+// =============================================================================
+// FOOTER
+// =============================================================================
+
+.canvas-navigator__footer {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  border-top: 1px solid $color-border-subtle;
+  background: rgba(0, 0, 0, 0.2);
+  min-height: 36px;
+}
+
+.canvas-navigator__footer-spacer {
+  flex: 1;
+}
+
+.canvas-navigator__view-count {
+  font-size: 9px;
+  color: $color-text-muted;
+  padding: 2px $spacing-sm;
+  background: $color-glass-light;
+  border-radius: $radius-xs;
+}
+
+// =============================================================================
+// SMART TOOLTIP
+// =============================================================================
+
+.canvas-navigator__tooltip {
+  position: fixed;
+  background: $color-bg-primary;
+  border: 1px solid var(--tooltip-color, #{$color-accent-blue});
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-md;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 8px var(--tooltip-color, #{$color-accent-blue}) 30;
+  min-width: 160px;
+  pointer-events: none;
+  animation: tooltip-fade-in 0.15s ease;
+}
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.canvas-navigator__tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-xs;
+}
+
+.canvas-navigator__tooltip-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.canvas-navigator__tooltip-name {
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.canvas-navigator__tooltip-row {
+  font-size: 9px;
+  color: $color-text-muted;
+  margin-top: 2px;
+
+  span {
+    color: $color-text-secondary;
+  }
+
+  .mono {
     font-family: $font-family-mono;
-    text-align: center;
-    transition: all $transition-fast;
-
-    &:focus {
-      outline: none;
-      border-color: $color-accent-blue;
-      background: rgba(0, 0, 0, 0.4);
-    }
-
-    // Hide number spinners
-    -moz-appearance: textfield;
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-  }
-
-  &__size-separator {
-    font-size: 10px;
-    color: $color-text-muted;
-    margin: 0 2px;
   }
 }

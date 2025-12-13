@@ -51,10 +51,10 @@ import {
 } from "@UI/react/components/panels/RightPanel";
 import { FloatingPanelProvider, AllFloatingPanels } from "@UI/react/components/panels/FloatingPanel";
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
+import { FloatingCanvasNavigator } from "@UI/react/components/panels/LayoutPanel";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 
 // Canvas controls (moved from CanvasGrid to secondary bars)
-import { CanvasMinimap } from "@UI/react/components/workspace/Canvas/CanvasMinimap";
 import { GridEditOverlay } from "@UI/react/components/workspace/Canvas/GridEditOverlay";
 
 /**
@@ -102,7 +102,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   const canvasId = canvas?.id;
 
   // Canvas controls state (minimap, edit mode)
-  const [minimapExpanded, setMinimapExpanded] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedCells, setSelectedCells] = useState([]);
   const [activeTool, setActiveTool] = useState('select');
@@ -370,15 +369,6 @@ export function CIAWebApp({ username, userId, projectId }) {
                       mode={layoutMode}
                       onModeChange={setLayoutMode}
                     />
-                    {/* Canvas Minimap - moved from CanvasGrid */}
-                    {canvasId && (
-                      <CanvasMinimap
-                        canvasId={canvasId}
-                        expanded={minimapExpanded}
-                        onToggleExpand={() => setMinimapExpanded(prev => !prev)}
-                        viewportSize={undefined}
-                      />
-                    )}
                   </div>
                 ),
                 center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,
@@ -400,6 +390,8 @@ export function CIAWebApp({ username, userId, projectId }) {
             >
               {/* Floating panels rendered at app level - persist when docked panels close */}
               <AllFloatingPanels workspaceId={workspaceId} />
+              {/* Canvas Navigator - floating/corner/minimized positions */}
+              <FloatingCanvasNavigator />
             </ThreeEdgeLayout>
           </LayoutPanelProvider>
         </RightPanelProvider>

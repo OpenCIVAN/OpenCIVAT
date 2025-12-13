@@ -33,6 +33,7 @@ export {
   DROP_MODES,
   VIEW_MODES,
   SPAWN_SIZES,
+  DOCK_POSITIONS,
   parseSpawnSize,
 } from "./LayoutPanel.logic";
 
