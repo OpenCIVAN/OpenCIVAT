@@ -177,7 +177,10 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                                         <GripVertical size={10} className="views-subtab__item-drag" />
                                         <div
                                             className="views-subtab__item-dot"
-                                            style={{ background: VIEW_COLORS[idx % VIEW_COLORS.length] }}
+                                            style={{
+                                                '--dot-color': VIEW_COLORS[idx % VIEW_COLORS.length],
+                                                background: VIEW_COLORS[idx % VIEW_COLORS.length]
+                                            }}
                                         />
                                         <span className="views-subtab__item-name">
                                             {cell.name || `View ${cell.row},${cell.col}`}
