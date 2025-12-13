@@ -34,7 +34,7 @@ const FLOAT_SIZE_KEY = 'cia-navigator-float-size';
 
 // Size constraints - UPDATED for better usability
 const DEFAULT_SIZE = { width: 580, height: 400 };   // Comfortable default
-const MIN_SIZE = { width: 400, height: 300 };       // Ensures controls always fit
+const MIN_SIZE = { width: 430, height: 300 };      // Ensures controls always fit
 const MAX_SIZE = { width: 900, height: 700 };       // Prevents over-sizing
 const COMPACT_THRESHOLD = 480;                       // Width to switch to compact mode
 

@@ -145,6 +145,33 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     cols: 3,
   });
 
+  const [enrichmentRefreshKey, setEnrichmentRefreshKey] = useState(0);
+
+  // Listen for view/dataset updates to trigger re-enrichment
+  useEffect(() => {
+    const handleViewsUpdated = () => {
+      setEnrichmentRefreshKey((k) => k + 1);
+    };
+
+    const handleDatasetsUpdated = () => {
+      setEnrichmentRefreshKey((k) => k + 1);
+    };
+
+    window.addEventListener("cia:views-loaded", handleViewsUpdated);
+    window.addEventListener("cia:view-added", handleViewsUpdated);
+    window.addEventListener("cia:view-updated", handleViewsUpdated);
+    window.addEventListener("cia:datasets-loaded", handleDatasetsUpdated);
+    window.addEventListener("cia:dataset-added", handleDatasetsUpdated);
+
+    return () => {
+      window.removeEventListener("cia:views-loaded", handleViewsUpdated);
+      window.removeEventListener("cia:view-added", handleViewsUpdated);
+      window.removeEventListener("cia:view-updated", handleViewsUpdated);
+      window.removeEventListener("cia:datasets-loaded", handleDatasetsUpdated);
+      window.removeEventListener("cia:dataset-added", handleDatasetsUpdated);
+    };
+  }, []);
+
   // Listen for viewport size changes from CanvasGrid (via useViewportSize events)
   useEffect(() => {
     const handleViewportSizeChanged = (e) => {
@@ -264,23 +291,84 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   // ===========================================================================
   // VIEWPORT SIZE CONTROLS
   // ===========================================================================
-
   const setViewportSizeRows = useCallback(
     (rows) => {
       const value = Math.max(1, Math.min(10, rows));
+      const previousSize = {
+        rows: localViewportSize.rows,
+        cols: localViewportSize.cols,
+      };
+      const newSize = { rows: value, cols: localViewportSize.cols };
+
+      // Update local state
       setLocalViewportSize((prev) => ({ ...prev, rows: value }));
+
+      // Update useCanvas state
       canvasSetViewportSize?.(value, localViewportSize.cols);
+
+      // CRITICAL: Dispatch event so CanvasGrid's useViewportSize receives update
+      window.dispatchEvent(
+        new CustomEvent(VIEWPORT_SIZE_EVENT, {
+          detail: {
+            size: newSize,
+            previousSize: previousSize,
+            cellCount: newSize.rows * newSize.cols,
+            previousCellCount: previousSize.rows * previousSize.cols,
+          },
+          bubbles: true,
+        })
+      );
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[LayoutPanel.logic] Viewport size rows changed:",
+          previousSize.rows,
+          "→",
+          value
+        );
+      }
     },
-    [canvasSetViewportSize, localViewportSize.cols]
+    [canvasSetViewportSize, localViewportSize]
   );
 
   const setViewportSizeCols = useCallback(
     (cols) => {
       const value = Math.max(1, Math.min(10, cols));
+      const previousSize = {
+        rows: localViewportSize.rows,
+        cols: localViewportSize.cols,
+      };
+      const newSize = { rows: localViewportSize.rows, cols: value };
+
+      // Update local state
       setLocalViewportSize((prev) => ({ ...prev, cols: value }));
+
+      // Update useCanvas state
       canvasSetViewportSize?.(localViewportSize.rows, value);
+
+      // CRITICAL: Dispatch event so CanvasGrid's useViewportSize receives update
+      window.dispatchEvent(
+        new CustomEvent(VIEWPORT_SIZE_EVENT, {
+          detail: {
+            size: newSize,
+            previousSize: previousSize,
+            cellCount: newSize.rows * newSize.cols,
+            previousCellCount: previousSize.rows * previousSize.cols,
+          },
+          bubbles: true,
+        })
+      );
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[LayoutPanel.logic] Viewport size cols changed:",
+          previousSize.cols,
+          "→",
+          value
+        );
+      }
     },
-    [canvasSetViewportSize, localViewportSize.rows]
+    [canvasSetViewportSize, localViewportSize]
   );
 
   // ===========================================================================
@@ -444,7 +532,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         status: viewConfig?.status || "active",
       };
     });
-  }, [rawPlacements]);
+  }, [rawPlacements, enrichmentRefreshKey]);
 
   // ===========================================================================
   // PANEL UI STATE

@@ -722,10 +722,15 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     {/* View Size */}
                     <div className="canvas-navigator__control-section">
                         <div className="canvas-navigator__section-label" style={{ color: '#34d399' }}>View Size</div>
-                        <div className="canvas-navigator__size-controls">
-                            <NumberSpinner label="Rows" value={viewportSize.rows} onChange={setViewportSizeRows} min={1} max={10} color="#34d399" />
-                            <span className="canvas-navigator__size-x">×</span>
-                            <NumberSpinner label="Cols" value={viewportSize.cols} onChange={setViewportSizeCols} min={1} max={10} color="#34d399" />
+                        <div className="canvas-navigator__size-controls canvas-navigator__size-controls--stacked">
+                            <div className="canvas-navigator__size-row">
+                                <span className="canvas-navigator__size-label">Rows</span>
+                                <NumberSpinner value={viewportSize.rows} onChange={setViewportSizeRows} min={1} max={10} color="#34d399" compact />
+                            </div>
+                            <div className="canvas-navigator__size-row">
+                                <span className="canvas-navigator__size-label">Cols</span>
+                                <NumberSpinner value={viewportSize.cols} onChange={setViewportSizeCols} min={1} max={10} color="#34d399" compact />
+                            </div>
                         </div>
                     </div>
 

@@ -245,12 +245,11 @@
   background: rgba(0, 0, 0, 0.15);
   border-left: 1px solid $color-border-subtle;
 
-  // KEY FIX: Fixed width, never shrink
-  flex: 0 0 130px;
-  min-width: 130px;
-  width: 130px;
+  // UPDATED: 160px to fit View Size spinners with labels
+  flex: 0 0 160px;
+  min-width: 160px;
+  width: 160px;
 
-  // Scroll if too many controls
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -330,9 +329,29 @@
   flex-wrap: nowrap;
 }
 
+.canvas-navigator__size-controls--stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.canvas-navigator__size-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.canvas-navigator__size-label {
+  font-size: 9px;
+  color: $color-text-muted;
+  min-width: 28px;
+}
+
 .canvas-navigator__size-x {
-  color: $color-text-tertiary;
   font-size: 10px;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+  padding: 0 2px;
 }
 
 // Zoom controls
@@ -616,6 +635,32 @@
   background: rgba(0, 0, 0, 0.2);
   padding: 2px 4px;
   border-radius: $radius-xs;
+}
+
+.canvas-navigator__spinner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
 }
 
 // =============================================================================
