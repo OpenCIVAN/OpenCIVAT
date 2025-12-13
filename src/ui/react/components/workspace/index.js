@@ -4,7 +4,6 @@
 // Canvas components
 export { CanvasGrid } from "./Canvas";
 export { CanvasCell } from "./Canvas";
-export { MiniMap } from "./Canvas";
 export { ViewportNavigator } from "./Canvas";
 
 // Workspace hierarchy components

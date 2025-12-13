@@ -242,22 +242,6 @@
   overflow: hidden;
 
   // Hide elements progressively as space shrinks
-  @container (max-width: 400px) {
-    .canvas-minimap__size {
-      display: none;
-    }
-  }
-
-  @container (max-width: 300px) {
-    .canvas-minimap {
-      display: none;
-    }
-
-    // Also hide the divider after canvas
-    .canvas-minimap + .secondary-bar-divider {
-      display: none;
-    }
-  }
 
   @container (max-width: 200px) {
     .workspace-indicator__name {

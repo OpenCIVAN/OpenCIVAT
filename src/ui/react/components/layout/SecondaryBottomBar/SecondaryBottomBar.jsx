@@ -44,59 +44,6 @@ const getWorkspaceIcon = (type) => {
 };
 
 /**
- * CanvasMinimap - Hover minimap showing viewport position
- * Only renders when canvas data is available
- */
-function CanvasMinimap({
-    positionString,
-    sizeString,
-    minimapCells,
-    canvasSize,
-    isHovering,
-    onHoverChange,
-    show = true,
-}) {
-    // Don't render if no canvas or explicitly hidden
-    if (!show || !canvasSize || !positionString) {
-        return null;
-    }
-
-    return (
-        <div
-            className="canvas-minimap"
-            onMouseEnter={() => onHoverChange(true)}
-            onMouseLeave={() => onHoverChange(false)}
-        >
-            <Navigation size={10} className="canvas-minimap__icon" />
-            <span className="canvas-minimap__position">{positionString}</span>
-            <span className="canvas-minimap__size">of {sizeString}</span>
-
-            {/* Hover tooltip with visual minimap */}
-            {isHovering && minimapCells?.length > 0 && (
-                <div className="canvas-minimap__tooltip">
-                    <div className="canvas-minimap__tooltip-header">CANVAS POSITION</div>
-                    <div
-                        className="canvas-minimap__grid"
-                        style={{
-                            gridTemplateColumns: `repeat(${canvasSize.cols}, 16px)`,
-                            gridTemplateRows: `repeat(${canvasSize.rows}, 12px)`,
-                        }}
-                    >
-                        {minimapCells.map((cell, idx) => (
-                            <div
-                                key={idx}
-                                className={`canvas-minimap__cell ${cell.inViewport ? 'canvas-minimap__cell--in-viewport' : ''}`}
-                            />
-                        ))}
-                    </div>
-                    <div className="canvas-minimap__tooltip-footer">You are here</div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-/**
  * WorkspaceIndicator - Shows current workspace in center zone
  */
 function WorkspaceIndicator({ name, color, type }) {

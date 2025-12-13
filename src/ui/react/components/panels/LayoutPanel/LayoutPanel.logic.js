@@ -1,8 +1,11 @@
 // src/ui/react/components/panels/LayoutPanel/LayoutPanel.logic.js
 // Headless logic hook for LayoutPanel
 //
-// IMPORTANT: This file should NOT manage navigatorDocked or dockPosition state.
-// Those are managed by LayoutPanelContext to ensure single source of truth.
+// This hook wraps useCanvas and exposes all the functions needed by:
+// - LayoutPanel subtabs (Canvas, Views)
+// - CanvasNavigator (via useCanvasNavigator)
+//
+// IMPORTANT: This is the bridge between useCanvas and the UI components.
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
@@ -53,8 +56,6 @@ export const SPAWN_SIZES = {
   "3x3": { rows: 3, cols: 3 },
 };
 
-// DOCK_POSITIONS is now exported from LayoutPanelContext
-// Re-export here for backward compatibility
 export const DOCK_POSITIONS = {
   LEFT_PANEL: "left-panel",
   TOP_LEFT: "top-left",
@@ -65,12 +66,19 @@ export const DOCK_POSITIONS = {
   MINIMIZED: "minimized",
 };
 
-/**
- * Parse spawn size string to dimensions
- */
 export function parseSpawnSize(sizeStr) {
   return SPAWN_SIZES[sizeStr] || SPAWN_SIZES["1x1"];
 }
+
+// Instance colors for views
+export const INSTANCE_COLORS = [
+  "#60a5fa", // blue
+  "#34d399", // green
+  "#7dd3fc", // cyan
+  "#fb7185", // pink
+  "#c084fc", // purple
+  "#fbbf24", // amber
+];
 
 // =============================================================================
 // MAIN HOOK
@@ -86,174 +94,64 @@ export function parseSpawnSize(sizeStr) {
  */
 export function useLayoutPanel({ canvasId, __testing } = {}) {
   // ===========================================================================
-  // DATA SOURCE: useCanvas or __testing mock
+  // DATA SOURCE: useCanvas
   // ===========================================================================
 
-  const realCanvasData = useCanvas(canvasId);
+  const canvasData = useCanvas(canvasId);
 
-  // Allow tests to inject mock data
   const {
     canvas,
     viewport: canvasViewport,
     loading,
     error,
     isConnected,
-    // Operations from useCanvas...
+    // Canvas operations
     moveViewport: canvasMoveViewport,
-    setViewportPosition,
+    setViewportPosition: canvasSetViewportPosition,
+    setViewportSize: canvasSetViewportSize,
+    addPlacement,
+    updatePlacement,
+    removePlacement,
+    movePlacement,
+    resizePlacement,
     addRow: canvasAddRow,
     addColumn: canvasAddColumn,
-    removePlacement,
-    resizePlacement,
-    setLayoutMode: canvasSetLayoutMode,
-    setFlowDirection: canvasSetFlowDirection,
-  } = __testing || realCanvasData;
+  } = __testing || canvasData;
 
   // ===========================================================================
-  // DERIVED STATE FROM CANVAS
+  // CANVAS DIMENSIONS
   // ===========================================================================
 
-  // Canvas dimensions (with fallback for loading state)
   const canvasSize = useMemo(
     () => canvas?.dimensions || { rows: 4, cols: 5 },
     [canvas]
   );
 
-  // Raw placements from canvas
-  const rawPlacements = useMemo(() => canvas?.placements || [], [canvas]);
-
-  // Enrich placements with ViewConfiguration data for UI components
-  const cells = useMemo(() => {
-    if (!rawPlacements || rawPlacements.length === 0) return [];
-
-    return rawPlacements.map((placement, index) => {
-      // Get the viewConfigurationId from the placement content
-      const viewId =
-        placement.getViewId?.() ||
-        placement.content?.viewConfigurationId ||
-        null;
-
-      // Look up the ViewConfiguration for this placement
-      const viewConfig = viewId
-        ? viewConfigurationManager.getView(viewId)
-        : null;
-
-      // Determine if view has active links
-      const hasActiveLinks = viewConfig?.links
-        ? Object.values(viewConfig.links).some(
-            (link) => link && (link.isActive?.() || link.status === "active")
-          )
-        : false;
-
-      // Determine if view is shared
-      const isShared =
-        viewConfig?.visibility !== "private" ||
-        (viewConfig?.sharedWith?.length || 0) > 0;
-
-      // Return enriched cell object with both placement position and view metadata
-      return {
-        // Placement position data
-        id: placement.id,
-        row: placement.row,
-        col: placement.col,
-        rowSpan: placement.rowSpan || 1,
-        colSpan: placement.colSpan || 1,
-        content: placement.content,
-        subsetIds: placement.subsetIds || [],
-
-        // ViewConfiguration metadata (with fallbacks)
-        viewConfigurationId: viewId,
-        name: viewConfig?.name || `View ${index + 1}`,
-        title: viewConfig?.name || `View ${index + 1}`,
-        description: viewConfig?.description || "",
-        datasetId: viewConfig?.datasetId,
-        datasetName: viewConfig?.datasetName || "Unknown Dataset",
-        color: index % 6, // Color index for UI
-        instanceColor: index % 6,
-
-        // Sharing and linking status
-        isShared,
-        isLinked: hasActiveLinks,
-        visibility: viewConfig?.visibility || "private",
-        ownerUserId: viewConfig?.ownerUserId,
-        ownerUserName: viewConfig?.ownerUserName,
-
-        // Link targets (for ViewItem link UI)
-        links: viewConfig?.links || {},
-        linkTarget: hasActiveLinks
-          ? Object.values(viewConfig.links).find(
-              (l) => l?.isActive?.() || l?.status === "active"
-            )?.targetViewId
-          : null,
-        linkedParent: hasActiveLinks
-          ? Object.values(viewConfig.links).find(
-              (l) => l?.isActive?.() || l?.status === "active"
-            )?.sourceViewId
-          : null,
-      };
-    });
-  }, [rawPlacements]);
-
   // ===========================================================================
-  // PANEL UI STATE (local to this panel, not shared)
+  // VIEWPORT STATE
   // ===========================================================================
 
-  // Panel subtab state (canvas vs views)
-  const [panelSubtab, setPanelSubtab] = useState("views");
-
-  // View list mode (detailed, compact, minimal)
-  const [viewMode, setViewMode] = useState(VIEW_MODES.DETAILED);
-
-  // Active filters for views list
-  const [activeFilters, setActiveFilters] = useState(["active"]);
-
-  // View list grouping mode
-  const [groupBy, setGroupBy] = useState("none");
-
-  // Search/filter text
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Spawn size for new views
-  const [spawnSize, setSpawnSize] = useState("1x1");
-
-  // Edit mode for canvas
-  const [editMode, setEditMode] = useState(false);
-
-  // Current tool
-  const [tool, setTool] = useState(TOOLS.SELECT);
-
-  // Drop mode
-  const [dropMode, setDropMode] = useState(DROP_MODES.REPLACE);
-
-  // Expanded view (for settings panel)
-  const [expandedViewId, setExpandedViewId] = useState(null);
-
-  // ===========================================================================
-  // NOTE: navigatorDocked and dockPosition are NOT managed here!
-  // They are managed by LayoutPanelContext to ensure single source of truth.
-  // The context will merge these values into the logic object.
-  // ===========================================================================
-
-  // ===========================================================================
-  // VIEWPORT STATE (derived from canvas)
-  // ===========================================================================
+  // Viewport position comes from useCanvas
+  // Viewport SIZE we manage locally for more control
+  const [localViewportSize, setLocalViewportSize] = useState({
+    rows: 2,
+    cols: 3,
+  });
 
   const viewport = useMemo(
     () => ({
       row: canvasViewport?.row ?? 0,
       col: canvasViewport?.col ?? 0,
-      rows: canvasViewport?.rows ?? 2,
-      cols: canvasViewport?.cols ?? 2,
     }),
     [canvasViewport]
   );
 
   const viewportSize = useMemo(
     () => ({
-      rows: viewport.rows,
-      cols: viewport.cols,
+      rows: canvasViewport?.rows ?? localViewportSize.rows,
+      cols: canvasViewport?.cols ?? localViewportSize.cols,
     }),
-    [viewport]
+    [canvasViewport, localViewportSize]
   );
 
   // ===========================================================================
@@ -261,12 +159,10 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   // ===========================================================================
 
   /**
-   * Move viewport by delta rows/cols
-   * Handles both string directions and numeric deltas
+   * Move viewport by delta or direction string
    */
   const moveViewport = useCallback(
     (deltaRowOrDirection, deltaCol) => {
-      // Handle string directions (legacy support)
       if (typeof deltaRowOrDirection === "string") {
         const direction = deltaRowOrDirection;
         switch (direction) {
@@ -283,7 +179,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
             canvasMoveViewport?.(0, 1);
             break;
           case "home":
-            setViewportPosition?.(0, 0);
+            canvasSetViewportPosition?.(0, 0);
             break;
           default:
             log.warn(`Unknown direction: ${direction}`);
@@ -291,80 +187,216 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         return;
       }
 
-      // Handle numeric deltas
       const deltaRow =
         typeof deltaRowOrDirection === "number" ? deltaRowOrDirection : 0;
       const dCol = typeof deltaCol === "number" ? deltaCol : 0;
-
-      if (canvasMoveViewport) {
-        canvasMoveViewport(deltaRow, dCol);
-      }
+      canvasMoveViewport?.(deltaRow, dCol);
     },
-    [canvasMoveViewport, setViewportPosition]
+    [canvasMoveViewport, canvasSetViewportPosition]
   );
 
   /**
-   * Navigate to specific cell position
+   * Set viewport position directly
    */
-  const navigateToCell = useCallback(
+  const setViewportPosition = useCallback(
     (row, col) => {
-      // Validate inputs
       const targetRow = typeof row === "number" && !isNaN(row) ? row : 0;
       const targetCol = typeof col === "number" && !isNaN(col) ? col : 0;
 
       // Clamp to canvas bounds
-      const clampedRow = Math.max(
-        0,
-        Math.min(targetRow, canvasSize.rows - viewport.rows)
-      );
-      const clampedCol = Math.max(
-        0,
-        Math.min(targetCol, canvasSize.cols - viewport.cols)
-      );
+      const maxRow = Math.max(0, canvasSize.rows - viewportSize.rows);
+      const maxCol = Math.max(0, canvasSize.cols - viewportSize.cols);
+      const clampedRow = Math.max(0, Math.min(targetRow, maxRow));
+      const clampedCol = Math.max(0, Math.min(targetCol, maxCol));
 
-      if (setViewportPosition) {
-        setViewportPosition(clampedRow, clampedCol);
-      }
+      canvasSetViewportPosition?.(clampedRow, clampedCol);
     },
-    [setViewportPosition, canvasSize, viewport]
+    [canvasSetViewportPosition, canvasSize, viewportSize]
+  );
+
+  /**
+   * Navigate to specific cell
+   */
+  const navigateToCell = useCallback(
+    (row, col) => {
+      setViewportPosition(row, col);
+    },
+    [setViewportPosition]
   );
 
   // ===========================================================================
-  // CANVAS SIZE OPERATIONS
+  // VIEWPORT SIZE CONTROLS
   // ===========================================================================
 
+  const setViewportSizeRows = useCallback(
+    (rows) => {
+      const value = Math.max(1, Math.min(10, rows));
+      setLocalViewportSize((prev) => ({ ...prev, rows: value }));
+      canvasSetViewportSize?.(value, localViewportSize.cols);
+    },
+    [canvasSetViewportSize, localViewportSize.cols]
+  );
+
+  const setViewportSizeCols = useCallback(
+    (cols) => {
+      const value = Math.max(1, Math.min(10, cols));
+      setLocalViewportSize((prev) => ({ ...prev, cols: value }));
+      canvasSetViewportSize?.(localViewportSize.rows, value);
+    },
+    [canvasSetViewportSize, localViewportSize.rows]
+  );
+
+  // ===========================================================================
+  // CANVAS SIZE CONTROLS
+  // ===========================================================================
+
+  const setCanvasRows = useCallback(
+    async (rows) => {
+      if (!canvas?.id) return;
+      const value = Math.max(1, Math.min(50, rows));
+
+      // Check if reduction would orphan views
+      const maxOccupiedRow = (canvas.placements || []).reduce(
+        (max, p) => Math.max(max, p.row + (p.rowSpan || 1)),
+        0
+      );
+
+      if (value < maxOccupiedRow) {
+        log.warn(
+          `Cannot reduce rows to ${value}: views occupy up to row ${maxOccupiedRow}`
+        );
+        return;
+      }
+
+      await canvasManager.updateCanvas(canvas.id, {
+        dimensions: { ...canvas.dimensions, rows: value },
+      });
+    },
+    [canvas]
+  );
+
+  const setCanvasCols = useCallback(
+    async (cols) => {
+      if (!canvas?.id) return;
+      const value = Math.max(1, Math.min(50, cols));
+
+      // Check if reduction would orphan views
+      const maxOccupiedCol = (canvas.placements || []).reduce(
+        (max, p) => Math.max(max, p.col + (p.colSpan || 1)),
+        0
+      );
+
+      if (value < maxOccupiedCol) {
+        log.warn(
+          `Cannot reduce cols to ${value}: views occupy up to col ${maxOccupiedCol}`
+        );
+        return;
+      }
+
+      await canvasManager.updateCanvas(canvas.id, {
+        dimensions: { ...canvas.dimensions, cols: value },
+      });
+    },
+    [canvas]
+  );
+
+  // Legacy addRow/addColumn
   const addRow = useCallback(async () => {
-    if (canvasAddRow) {
-      await canvasAddRow();
-    }
-  }, [canvasAddRow]);
+    await setCanvasRows(canvasSize.rows + 1);
+  }, [setCanvasRows, canvasSize.rows]);
 
   const addColumn = useCallback(async () => {
-    if (canvasAddColumn) {
-      await canvasAddColumn();
-    }
-  }, [canvasAddColumn]);
+    await setCanvasCols(canvasSize.cols + 1);
+  }, [setCanvasCols, canvasSize.cols]);
 
   // ===========================================================================
-  // LAYOUT MODE (Server-authoritative)
+  // HOMEPOINT
   // ===========================================================================
 
-  const setLayoutMode = useCallback(
-    async (mode) => {
-      await canvasSetLayoutMode?.(mode);
-    },
-    [canvasSetLayoutMode]
-  );
+  const [homepoint, setHomepointState] = useState(null);
 
-  const setFlowDirection = useCallback(
-    async (direction) => {
-      await canvasSetFlowDirection?.(direction);
-    },
-    [canvasSetFlowDirection]
-  );
+  const setHomepoint = useCallback((row, col) => {
+    setHomepointState({ row, col });
+  }, []);
+
+  const clearHomepoint = useCallback(() => {
+    setHomepointState(null);
+  }, []);
 
   // ===========================================================================
-  // VIEWS FILTERING
+  // PLACEMENTS → CELLS (enriched with ViewConfiguration data)
+  // ===========================================================================
+
+  const rawPlacements = useMemo(() => canvas?.placements || [], [canvas]);
+
+  const cells = useMemo(() => {
+    if (!rawPlacements || rawPlacements.length === 0) return [];
+
+    return rawPlacements.map((placement, index) => {
+      // Get viewConfigurationId from placement
+      const viewId =
+        placement.getViewId?.() ||
+        placement.content?.viewConfigurationId ||
+        placement.viewConfigurationId ||
+        null;
+
+      // Look up ViewConfiguration for metadata
+      const viewConfig = viewId
+        ? viewConfigurationManager.getView(viewId)
+        : null;
+
+      // Get dataset info
+      const datasetName =
+        viewConfig?.datasetName ||
+        (viewConfig?.datasetId ? `Dataset ${viewConfig.datasetId}` : null);
+
+      return {
+        // Placement position data
+        id: placement.id,
+        row: placement.row,
+        col: placement.col,
+        rowSpan: placement.rowSpan || 1,
+        colSpan: placement.colSpan || 1,
+        content: placement.content,
+
+        // ViewConfiguration metadata
+        viewConfigurationId: viewId,
+        name: viewConfig?.name || placement.name || `View ${index + 1}`,
+        title: viewConfig?.name || placement.name || `View ${index + 1}`,
+        description: viewConfig?.description || "",
+        datasetId: viewConfig?.datasetId,
+        datasetName: datasetName,
+
+        // Color - use index for consistent coloring
+        color: index % INSTANCE_COLORS.length,
+        instanceColor: index % INSTANCE_COLORS.length,
+        viewColor: INSTANCE_COLORS[index % INSTANCE_COLORS.length],
+
+        // Status flags
+        isShared: viewConfig?.visibility !== "private",
+        isLinked: false, // TODO: check links
+        visibility: viewConfig?.visibility || "private",
+      };
+    });
+  }, [rawPlacements]);
+
+  // ===========================================================================
+  // PANEL UI STATE
+  // ===========================================================================
+
+  const [panelSubtab, setPanelSubtab] = useState("views");
+  const [viewMode, setViewMode] = useState(VIEW_MODES.DETAILED);
+  const [activeFilters, setActiveFilters] = useState(["active"]);
+  const [groupBy, setGroupBy] = useState("none");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [spawnSize, setSpawnSize] = useState("1x1");
+  const [editMode, setEditMode] = useState(false);
+  const [tool, setTool] = useState(TOOLS.SELECT);
+  const [dropMode, setDropMode] = useState(DROP_MODES.REPLACE);
+  const [expandedViewId, setExpandedViewId] = useState(null);
+
+  // ===========================================================================
+  // FILTERS
   // ===========================================================================
 
   const toggleFilter = useCallback((filterId) => {
@@ -375,11 +407,9 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     );
   }, []);
 
-  // Filter cells based on active filters and search query
   const filteredCells = useMemo(() => {
     let result = [...cells];
 
-    // Apply text search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -389,87 +419,32 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       );
     }
 
-    // Apply filters
-    if (
-      activeFilters.includes("active") &&
-      !activeFilters.includes("inactive")
-    ) {
-      // Only show active (on canvas)
-      result = result.filter((cell) => cell.row !== undefined);
-    }
-    if (
-      activeFilters.includes("inactive") &&
-      !activeFilters.includes("active")
-    ) {
-      // Only show inactive (not on canvas)
-      result = result.filter((cell) => cell.row === undefined);
-    }
-    if (activeFilters.includes("shared")) {
-      result = result.filter((cell) => cell.isShared);
-    }
-    if (activeFilters.includes("linked")) {
-      result = result.filter((cell) => cell.isLinked);
-    }
-
     return result;
-  }, [cells, searchQuery, activeFilters]);
+  }, [cells, searchQuery]);
 
   // ===========================================================================
   // VIEW ACTIONS
   // ===========================================================================
 
-  /**
-   * Close a view (remove from canvas but keep configuration)
-   */
   const closeView = useCallback(
     async (viewId) => {
       const cell = cells.find(
         (c) => c.viewConfigurationId === viewId || c.id === viewId
       );
-      if (cell && removePlacement) {
+      if (cell) {
         await removePlacement(cell.id);
       }
-      if (expandedViewId === viewId) {
-        setExpandedViewId(null);
-      }
     },
-    [cells, removePlacement, expandedViewId]
+    [cells, removePlacement]
   );
 
-  /**
-   * Delete a view permanently
-   */
   const deleteView = useCallback(
     async (viewId) => {
-      // First close it
       await closeView(viewId);
-      // Then delete the configuration
       await viewConfigurationManager.deleteView(viewId);
     },
     [closeView]
   );
-
-  /**
-   * Find the first empty cell on the canvas
-   */
-  const findFirstEmptyCell = useCallback(() => {
-    for (let row = 0; row < canvasSize.rows; row++) {
-      for (let col = 0; col < canvasSize.cols; col++) {
-        const occupied = cells.some(
-          (cell) =>
-            row >= cell.row &&
-            row < cell.row + (cell.rowSpan || 1) &&
-            col >= cell.col &&
-            col < cell.col + (cell.colSpan || 1)
-        );
-        if (!occupied) {
-          return { row, col };
-        }
-      }
-    }
-    // Canvas is full - expand by adding a new row
-    return { row: canvasSize.rows, col: 0 };
-  }, [cells, canvasSize]);
 
   // ===========================================================================
   // EDIT MODE
@@ -484,7 +459,47 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   }, []);
 
   // ===========================================================================
-  // RETURN VALUE
+  // MERGE/UNMERGE CELLS
+  // ===========================================================================
+
+  const mergeCells = useCallback(
+    async (cellIds) => {
+      if (cellIds.length < 2) return;
+
+      // Find bounds of selected cells
+      const selectedCells = cells.filter((c) => cellIds.includes(c.id));
+      const minRow = Math.min(...selectedCells.map((c) => c.row));
+      const maxRow = Math.max(
+        ...selectedCells.map((c) => c.row + (c.rowSpan || 1))
+      );
+      const minCol = Math.min(...selectedCells.map((c) => c.col));
+      const maxCol = Math.max(
+        ...selectedCells.map((c) => c.col + (c.colSpan || 1))
+      );
+
+      // Keep first cell, resize it, remove others
+      const primaryCell = selectedCells[0];
+      await resizePlacement(primaryCell.id, maxRow - minRow, maxCol - minCol);
+
+      for (let i = 1; i < selectedCells.length; i++) {
+        await removePlacement(selectedCells[i].id);
+      }
+    },
+    [cells, resizePlacement, removePlacement]
+  );
+
+  const unmergeCells = useCallback(
+    async (cellId) => {
+      const cell = cells.find((c) => c.id === cellId);
+      if (!cell || (cell.rowSpan === 1 && cell.colSpan === 1)) return;
+
+      await resizePlacement(cellId, 1, 1);
+    },
+    [cells, resizePlacement]
+  );
+
+  // ===========================================================================
+  // RETURN API
   // ===========================================================================
 
   return {
@@ -494,6 +509,8 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     cells,
     filteredCells,
     rawPlacements,
+
+    // Viewport state
     viewport,
     viewportSize,
 
@@ -501,6 +518,33 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     loading,
     error,
     isConnected,
+
+    // Viewport navigation
+    moveViewport,
+    navigateToCell,
+    setViewportPosition,
+
+    // Viewport size controls (FOR CANVAS NAVIGATOR)
+    setViewportSizeRows,
+    setViewportSizeCols,
+
+    // Canvas size controls (FOR CANVAS NAVIGATOR)
+    setCanvasRows,
+    setCanvasCols,
+    addRow,
+    addColumn,
+
+    // Homepoint (FOR CANVAS NAVIGATOR)
+    homepoint,
+    setHomepoint,
+    clearHomepoint,
+
+    // Cell operations (FOR CANVAS NAVIGATOR)
+    removePlacement,
+    movePlacement,
+    resizePlacement,
+    mergeCells,
+    unmergeCells,
 
     // Panel UI state
     panelSubtab,
@@ -529,31 +573,9 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     dropMode,
     setDropMode,
 
-    // Viewport navigation
-    moveViewport,
-    navigateToCell,
-    setViewportPosition,
-
-    // Canvas operations
-    addRow,
-    addColumn,
-    setLayoutMode,
-    setFlowDirection,
-    removePlacement,
-    resizePlacement,
-
     // View actions
     closeView,
     deleteView,
-    findFirstEmptyCell,
-
-    // NOTE: The following are NOT included here - they come from LayoutPanelContext:
-    // - navigatorDocked
-    // - dockPosition
-    // - setDockPosition
-    // - dockNavigator
-    // - undockNavigator
-    // - toggleNavigatorDocked
   };
 }
 
