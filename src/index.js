@@ -18,6 +18,7 @@ import vtkRemoteView from '@kitware/vtk.js/Rendering/Misc/RemoteView';
 import vtkOrientationMarkerWidget from '@kitware/vtk.js/Interaction/Widgets/OrientationMarkerWidget';
 import vtkAnnotatedCubeActor from '@kitware/vtk.js/Rendering/Core/AnnotatedCubeActor';
 import vtkInteractorStyleTrackballCamera from '@kitware/vtk.js/Interaction/Style/InteractorStyleTrackballCamera';
+import { enableWebGPUApp } from "../tarun-webgpu/src/webgpuEntry";
 
 import { AttributeTypes } from '@kitware/vtk.js/Common/DataModel/DataSetAttributes/Constants';
 import { FieldDataTypes } from '@kitware/vtk.js/Common/DataModel/DataSet/Constants';
@@ -1283,6 +1284,7 @@ function interpolateResults(allPoints, sampledPoints, sampledResult, numComponen
 const fullScreenRenderer = vtkFullScreenRenderWindow.newInstance({
   background: [0, 0, 0],
 });
+enableWebGPUApp({ fullScreenRenderer });
 const renderer = fullScreenRenderer.getRenderer();
 const renderWindow = fullScreenRenderer.getRenderWindow();
 const XRHelper = vtkWebXRRenderWindowHelper.newInstance({
@@ -1295,7 +1297,7 @@ const camera = renderer.getActiveCamera();
 // -----------------------------------------------------
 // Rendering backend state: 'webgl' (default) or 'wasm'
 // -----------------------------------------------------
-let currentBackend = 'wasm';
+let currentBackend = 'webgpu';
 function isWasmBackend() {
   return currentBackend === 'wasm';
 }
