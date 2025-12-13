@@ -1,100 +1,36 @@
 // src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.scss
-// Canvas Navigator Styles - Colorful glassmorphism theme
-//
-// Uses design tokens from theme.scss
-// Features: color-coded sections, glowing viewport, smooth animations
+// Canvas Navigator - Responsive styles for docked and floating modes
 
 @use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
-// CSS CUSTOM PROPERTIES FOR DYNAMIC COLORS
+// BASE COMPONENT
 // =============================================================================
 
 .canvas-navigator {
-  --color-accent-amber: #{$color-accent-amber};
-  --color-accent-pink: #{$color-accent-pink};
-  --color-accent-green: #{$color-accent-green};
-  --color-accent-blue: #{$color-accent-blue};
-  --color-accent-purple: #{$color-accent-purple};
-  --color-accent-teal: #{$color-accent-teal};
-  --color-accent-red: #{$color-accent-red};
-}
-
-// =============================================================================
-// BASE CONTAINER
-// =============================================================================
-
-.canvas-navigator {
-  background: $color-bg-tertiary;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  font-family: $font-family-base;
+  background: $color-bg-secondary;
+  border-radius: $radius-md;
+  overflow: hidden;
+  font-size: $font-size-xs;
 
-  // Floating state
+  // Floating mode - has shadow and backdrop
   &--floating {
-    position: fixed;
-    border-radius: $radius-lg;
-    border: 1px solid $color-border-default;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
-      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
     width: 480px;
-    max-height: calc(100vh - 100px);
-    z-index: $z-floating;
-    backdrop-filter: blur(10px);
+    max-height: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px $color-border-default;
+    backdrop-filter: blur(12px);
   }
 
-  // Docked in left panel (bottom)
-  &--docked-panel {
-    border-radius: 0;
-    border: none;
-    border-top: 1px solid $color-border-default;
+  // Docked mode - fills panel width, no shadow
+  &--docked {
     width: 100%;
-    min-width: 420px;
-  }
-
-  // Corner docked - semi-transparent until hovered
-  &--corner {
-    position: fixed;
-    border-radius: $radius-lg;
-    border: 1px solid $color-border-default;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    width: 460px;
-    z-index: $z-floating;
-    opacity: 0.85;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 1;
-    }
-  }
-
-  // Disabled state
-  &--disabled {
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  // Minimized button state
-  &--minimized {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    background: $color-bg-tertiary;
-    border: 1px solid $color-accent-amber;
-    border-radius: $radius-md;
-    color: $color-accent-amber;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: #{$color-accent-amber}15;
-      box-shadow: 0 0 12px #{$color-accent-amber}30;
-    }
+    border-radius: 0;
+    border-top: 1px solid $color-border-default;
+    box-shadow: none;
+    max-height: none;
   }
 }
 
@@ -109,13 +45,23 @@
   padding: $spacing-sm $spacing-md;
   background: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid $color-border-subtle;
-  min-height: 40px;
+  min-height: 36px;
+
+  &--compact {
+    min-height: 32px;
+    padding: $spacing-xs $spacing-sm;
+    gap: $spacing-xs;
+  }
 }
 
 .canvas-navigator__drag-handle {
   color: $color-text-tertiary;
   cursor: move;
   flex-shrink: 0;
+
+  .canvas-navigator--docked & {
+    display: none;
+  }
 }
 
 .canvas-navigator__icon {
@@ -125,16 +71,18 @@
 
 .canvas-navigator__title {
   flex: 1;
-  font-size: $font-size-xs;
+  font-size: 11px;
   font-weight: $font-weight-semibold;
   color: $color-text-secondary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // Mode tabs
 .canvas-navigator__mode-tabs {
   display: flex;
   gap: 2px;
-  margin-right: $spacing-sm;
 }
 
 // Display mode toggle
@@ -142,24 +90,12 @@
   display: flex;
   gap: 1px;
   padding: 2px;
-  background: $color-bg-secondary;
+  background: $color-bg-tertiary;
   border-radius: $radius-sm;
 }
 
-.canvas-navigator__color-swatch {
-  width: 6px;
-  height: 6px;
-  border-radius: 2px;
-  background: $color-accent-blue;
-}
-
-// Dock wrapper
-.canvas-navigator__dock-wrapper {
-  position: relative;
-}
-
 // =============================================================================
-// BUTTON STYLES
+// BUTTONS
 // =============================================================================
 
 .canvas-navigator__btn {
@@ -167,40 +103,15 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-xs;
-  color: $color-text-muted;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
   cursor: pointer;
   transition: all $transition-fast;
 
-  &--xs {
-    width: 18px;
-    height: 18px;
-    font-size: 8px;
-  }
-
-  &--sm {
-    width: 22px;
-    height: 22px;
-    font-size: 9px;
-  }
-
-  &--md {
-    width: 26px;
-    height: 26px;
-    font-size: 10px;
-  }
-
-  &--lg {
-    width: 30px;
-    height: 30px;
-    font-size: 11px;
-  }
-
   &:hover:not(:disabled) {
-    color: $color-text-secondary;
     background: $color-glass-light;
-    border-color: $color-border-default;
+    color: $color-text-primary;
   }
 
   &:disabled {
@@ -209,127 +120,26 @@
   }
 
   &--active {
-    background: var(--btn-color, #{$color-accent-blue}) 20;
-    border-color: var(--btn-color, #{$color-accent-blue});
-    color: var(--btn-color, #{$color-accent-blue});
-  }
-}
-
-// =============================================================================
-// DOCK POSITION PICKER
-// =============================================================================
-
-.canvas-navigator__dock-picker {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: $spacing-xs;
-  background: $color-bg-primary;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-md;
-  padding: $spacing-sm;
-  z-index: 100;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  min-width: 160px;
-}
-
-.canvas-navigator__dock-picker-label {
-  font-size: 9px;
-  color: $color-text-tertiary;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: $spacing-xs;
-}
-
-.canvas-navigator__dock-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-xs;
-  margin-bottom: $spacing-sm;
-}
-
-.canvas-navigator__dock-picker-options {
-  border-top: 1px solid $color-border-subtle;
-  padding-top: $spacing-sm;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-}
-
-.canvas-navigator__dock-option {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-xs $spacing-sm;
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
-  color: $color-text-muted;
-  font-size: $font-size-xs;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-glass-light;
-    color: $color-text-secondary;
+    background: $color-glass-medium !important;
+    color: $color-text-primary !important;
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
-  &--active {
-    background: #{$color-accent-blue}15;
-    border-color: $color-accent-blue;
-    color: $color-accent-blue;
+  // Sizes
+  &--xs {
+    width: 22px;
+    height: 22px;
   }
-}
 
-// =============================================================================
-// EDIT MODE TOOLBAR
-// =============================================================================
-
-.canvas-navigator__edit-toolbar {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-xs $spacing-md;
-  background: #{$color-accent-purple}10;
-  border-bottom: 1px solid #{$color-accent-purple}30;
-}
-
-.canvas-navigator__edit-icon {
-  color: $color-accent-purple;
-  flex-shrink: 0;
-}
-
-.canvas-navigator__edit-hint {
-  flex: 1;
-  font-size: 10px;
-  color: $color-accent-purple;
-}
-
-.canvas-navigator__edit-clear {
-  padding: 2px $spacing-sm;
-  font-size: 9px;
-  background: transparent;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-xs;
-  color: $color-text-muted;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-glass-light;
-    color: $color-text-secondary;
+  &--sm {
+    width: 26px;
+    height: 26px;
   }
-}
 
-// =============================================================================
-// MAIN BODY
-// =============================================================================
-
-.canvas-navigator__body {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  &--md {
+    width: 32px;
+    height: 32px;
+  }
 }
 
 // =============================================================================
@@ -337,30 +147,27 @@
 // =============================================================================
 
 .canvas-navigator__minimap {
-  flex: 1;
-  padding: $spacing-sm;
   position: relative;
+  padding: $spacing-sm;
   overflow: auto;
-  max-height: 280px;
-  transition: background 0.2s ease;
+  max-height: 200px;
+
+  &--full-width {
+    max-height: 180px;
+  }
 
   &--setting-home {
-    background: #{$color-accent-pink}08;
-  }
-}
+    background: rgba(244, 114, 182, 0.05);
 
-.canvas-navigator__home-hint {
-  position: absolute;
-  top: $spacing-xs;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  color: $color-accent-pink;
-  background: #{$color-accent-pink}20;
-  padding: $spacing-xs $spacing-md;
-  border-radius: $radius-sm;
-  z-index: 10;
-  pointer-events: none;
+    .canvas-navigator__cell--empty {
+      cursor: crosshair;
+
+      &:hover {
+        background: rgba(244, 114, 182, 0.2) !important;
+        border-color: #f472b6 !important;
+      }
+    }
+  }
 }
 
 .canvas-navigator__grid {
@@ -369,220 +176,225 @@
 }
 
 // =============================================================================
-// MINIMAP CELLS - COLORFUL!
+// CELLS - with proper color handling
 // =============================================================================
 
 .canvas-navigator__cell {
-  border-radius: $radius-xs;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  font-weight: $font-weight-medium;
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  border: 1px solid transparent;
+  transition: all 0.12s ease;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0 2px;
-  transition: all 0.15s ease;
-  position: relative;
 
   // Empty cell
   &--empty {
-    background: $color-bg-secondary;
-    border: 1px solid $color-border-subtle;
-    opacity: 0.6;
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.06);
 
     &:hover {
-      opacity: 1;
-      border-color: $color-border-default;
-      background: $color-glass-light;
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.1);
     }
   }
 
-  // Filled cell - uses --cell-color custom property
+  // Filled cell - uses CSS custom property --cell-color
   &--filled {
-    background: var(--cell-color, #{$color-accent-blue});
-    background: linear-gradient(
-      135deg,
-      color.change(#60a5fa, $alpha: 0.5) 0%,
-      color.change(#60a5fa, $alpha: 0.3) 100%
-    );
-    background: var(--cell-color, #{$color-accent-blue}) 50; // 50% opacity - more vibrant
-    border: 1px solid var(--cell-color, #{$color-accent-blue});
-    color: var(--cell-color, #{$color-accent-blue});
-    font-weight: $font-weight-semibold;
-    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-    opacity: 0.85;
+    background: color-mix(in srgb, var(--cell-color, #60a5fa) 35%, transparent);
+    border-color: var(--cell-color, #60a5fa);
+    color: var(--cell-color, #60a5fa);
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 
     &:hover {
-      opacity: 1;
-      background: var(--cell-color, #{$color-accent-blue}) 65;
-      box-shadow: 0 0 8px var(--cell-color, #{$color-accent-blue}) 50,
-        inset 0 0 8px var(--cell-color, #{$color-accent-blue}) 20;
+      background: color-mix(
+        in srgb,
+        var(--cell-color, #60a5fa) 50%,
+        transparent
+      );
+      box-shadow: 0 0 8px
+        color-mix(in srgb, var(--cell-color, #60a5fa) 40%, transparent);
     }
   }
 
-  // In viewport - brighter and more saturated
+  // In viewport - brighter
   &--in-viewport {
-    opacity: 1 !important;
-
     &.canvas-navigator__cell--filled {
-      background: var(--cell-color, #{$color-accent-blue}) 70;
-      box-shadow: 0 0 6px var(--cell-color, #{$color-accent-blue}) 40,
-        inset 0 0 12px var(--cell-color, #{$color-accent-blue}) 15;
+      background: color-mix(
+        in srgb,
+        var(--cell-color, #60a5fa) 55%,
+        transparent
+      );
       border-width: 2px;
+      box-shadow: 0 0 6px
+          color-mix(in srgb, var(--cell-color, #60a5fa) 35%, transparent),
+        inset 0 0 8px
+          color-mix(in srgb, var(--cell-color, #60a5fa) 15%, transparent);
     }
-  }
-
-  // Homepoint cell
-  &--home {
-    border-color: $color-accent-pink !important;
 
     &.canvas-navigator__cell--empty {
-      background: #{$color-accent-pink}20;
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  // Homepoint
+  &--home {
+    border-color: #f472b6 !important;
+
+    &.canvas-navigator__cell--empty {
+      background: rgba(244, 114, 182, 0.15);
     }
   }
 
   // Selected (edit mode)
   &--selected {
     border-width: 2px !important;
-    border-color: $color-accent-purple !important;
-    box-shadow: 0 0 0 1px #{$color-accent-purple}40,
-      0 0 8px #{$color-accent-purple}30 !important;
+    border-color: #c084fc !important;
+    box-shadow: 0 0 0 1px rgba(192, 132, 252, 0.3),
+      0 0 8px rgba(192, 132, 252, 0.25) !important;
     z-index: 2;
   }
 
-  // Drag over target
+  // Drag over
   &--drag-over {
-    border-color: $color-accent-green !important;
-    background: #{$color-accent-green}30 !important;
-    box-shadow: 0 0 12px #{$color-accent-green}40 !important;
+    border-color: #34d399 !important;
+    background: rgba(52, 211, 153, 0.25) !important;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.35) !important;
   }
 }
 
-// Home icon in empty home cell
-.canvas-navigator__home-icon {
-  color: $color-accent-pink;
+.canvas-navigator__cell-text {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-// Home dot indicator on filled cell
+.canvas-navigator__home-icon {
+  color: #f472b6;
+}
+
 .canvas-navigator__home-dot {
   position: absolute;
   bottom: 2px;
   right: 2px;
-  width: 5px;
-  height: 5px;
-  background: $color-accent-pink;
+  width: 4px;
+  height: 4px;
+  background: #f472b6;
   border-radius: 50%;
-  box-shadow: 0 0 4px $color-accent-pink;
+  box-shadow: 0 0 4px rgba(244, 114, 182, 0.5);
 }
 
 // =============================================================================
-// VIEWPORT RECTANGLE - GLOWING AMBER
+// VIEWPORT RECTANGLE
 // =============================================================================
 
 .canvas-navigator__viewport-rect {
   position: absolute;
-  border: 2px solid $color-accent-amber;
-  border-radius: $radius-sm;
+  border: 2px solid #fbbf24;
+  border-radius: 3px;
   pointer-events: none;
-  z-index: 5;
-  box-shadow: 0 0 12px #{$color-accent-amber}50,
-    inset 0 0 20px #{$color-accent-amber}15;
-  transition: all 0.2s ease;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.4),
+    inset 0 0 12px rgba(251, 191, 36, 0.1);
+  z-index: 10;
 }
 
 // =============================================================================
-// CONTROLS PANEL
+// BODY (floating mode)
+// =============================================================================
+
+.canvas-navigator__body {
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// =============================================================================
+// CONTROLS PANEL (floating mode)
 // =============================================================================
 
 .canvas-navigator__controls {
-  width: 140px;
-  padding: $spacing-sm;
-  border-left: 1px solid $color-border-subtle;
   display: flex;
   flex-direction: column;
-  gap: $spacing-md;
-  background: rgba(0, 0, 0, 0.2);
-  overflow-y: auto;
+  gap: $spacing-sm;
+  width: 110px;
+  flex-shrink: 0;
 }
 
 .canvas-navigator__control-section {
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
+  padding: $spacing-xs;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-sm;
 }
 
 .canvas-navigator__section-label {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: $color-text-tertiary;
-  margin-bottom: 2px;
 }
 
-// =============================================================================
-// D-PAD
-// =============================================================================
-
+// D-pad
 .canvas-navigator__dpad {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.canvas-navigator__dpad-row {
   display: grid;
-  grid-template-columns: repeat(3, 24px);
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   gap: 2px;
+  width: fit-content;
+
+  > :nth-child(1) {
+    grid-area: 1 / 2;
+  } // up
+  > :nth-child(2) {
+    grid-area: 2 / 1;
+  } // left
+  > :nth-child(3) {
+    grid-area: 2 / 2;
+  } // home
+  > :nth-child(4) {
+    grid-area: 2 / 3;
+  } // right
+  > :nth-child(5) {
+    grid-area: 3 / 2;
+  } // down
 }
 
 .canvas-navigator__position-display {
-  font-size: 9px;
   font-family: $font-family-mono;
-  color: $color-text-muted;
-  background: $color-glass-light;
-  padding: 2px $spacing-sm;
-  border-radius: $radius-xs;
-  margin-top: $spacing-xs;
+  font-size: 10px;
+  color: $color-text-secondary;
   text-align: center;
 }
 
-// =============================================================================
-// HOMEPOINT CONTROLS
-// =============================================================================
-
+// Home controls
 .canvas-navigator__home-controls {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
-  justify-content: center;
 }
 
-.canvas-navigator__home-coords {
-  font-size: 9px;
+.canvas-navigator__home-value {
   font-family: $font-family-mono;
-  color: $color-accent-pink;
+  font-size: 10px;
+  color: #f472b6;
 }
 
-.canvas-navigator__home-empty {
-  font-size: 8px;
-  color: $color-text-tertiary;
-}
-
-// =============================================================================
-// SIZE CONTROLS (Rows × Cols)
-// =============================================================================
-
+// Size controls
 .canvas-navigator__size-controls {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
-  justify-content: center;
-  flex-wrap: wrap;
 }
 
 .canvas-navigator__size-x {
@@ -590,64 +402,196 @@
   font-size: 10px;
 }
 
+// Zoom controls
+.canvas-navigator__zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.canvas-navigator__zoom-value {
+  font-family: $font-family-mono;
+  font-size: 10px;
+  color: #60a5fa;
+  min-width: 36px;
+  text-align: center;
+}
+
 // =============================================================================
-// NUMBER SPINNER
+// COMPACT CONTROLS (docked mode)
+// =============================================================================
+
+.canvas-navigator__compact-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid $color-border-subtle;
+  flex-wrap: wrap;
+}
+
+.canvas-navigator__dpad-mini {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.canvas-navigator__position-mini {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.canvas-navigator__position-label,
+.canvas-navigator__viewsize-label {
+  font-size: 9px;
+  color: $color-text-tertiary;
+}
+
+.canvas-navigator__position-value {
+  font-family: $font-family-mono;
+  font-size: 10px;
+  color: #fbbf24;
+}
+
+.canvas-navigator__viewsize-mini {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  span {
+    color: $color-text-tertiary;
+    font-size: 9px;
+  }
+}
+
+// Expanded controls section
+.canvas-navigator__expanded-controls {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm $spacing-sm;
+  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid $color-border-subtle;
+}
+
+.canvas-navigator__control-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+}
+
+.canvas-navigator__control-label {
+  font-size: 9px;
+  font-weight: $font-weight-semibold;
+  min-width: 40px;
+}
+
+.canvas-navigator__home-coords {
+  font-family: $font-family-mono;
+  font-size: 10px;
+  color: #f472b6;
+}
+
+.canvas-navigator__view-count,
+.canvas-navigator__selection-count {
+  font-size: 9px;
+  color: $color-text-tertiary;
+  margin-left: auto;
+}
+
+// =============================================================================
+// SPINNERS
 // =============================================================================
 
 .canvas-navigator__spinner {
   display: flex;
   align-items: center;
   gap: 2px;
+
+  &--compact {
+    .canvas-navigator__spinner-label {
+      display: none;
+    }
+
+    .canvas-navigator__spinner-value {
+      min-width: 20px;
+    }
+  }
 }
 
 .canvas-navigator__spinner-label {
   font-size: 9px;
   color: $color-text-muted;
-  min-width: 32px; // Enough for "Rows" and "Cols"
+  min-width: 28px;
 }
 
-.canvas-navigator__spinner-input {
-  width: 28px;
-  padding: 2px;
-  background: $color-bg-secondary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-xs;
-  color: $color-text-secondary;
-  font-size: 10px;
-  text-align: center;
-  font-family: $font-family-mono;
-
-  &:focus {
-    outline: none;
-    border-color: $color-accent-blue;
-  }
-
-  // Hide spinners
-  &::-webkit-inner-spin-button,
-  &::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  -moz-appearance: textfield;
-}
-
-// =============================================================================
-// ZOOM CONTROLS
-// =============================================================================
-
-.canvas-navigator__zoom-controls {
+.canvas-navigator__spinner-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: $spacing-xs;
+  width: 18px;
+  height: 18px;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: $color-glass-light;
+    color: $color-text-primary;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
 }
 
-.canvas-navigator__zoom-value {
-  font-size: 9px;
+.canvas-navigator__spinner-value {
   font-family: $font-family-mono;
-  color: $color-accent-blue;
-  min-width: 36px;
+  font-size: 10px;
+  min-width: 24px;
   text-align: center;
+  color: inherit;
+}
+
+// =============================================================================
+// EDIT TOOLBAR
+// =============================================================================
+
+.canvas-navigator__edit-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(192, 132, 252, 0.1);
+  border-bottom: 1px solid rgba(192, 132, 252, 0.2);
+}
+
+.canvas-navigator__edit-info {
+  font-size: 10px;
+  color: #c084fc;
+  margin-right: auto;
+}
+
+.canvas-navigator__edit-clear {
+  font-size: 9px;
+  color: $color-text-tertiary;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: $radius-sm;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
 }
 
 // =============================================================================
@@ -658,57 +602,42 @@
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: $spacing-xs $spacing-md;
-  border-top: 1px solid $color-border-subtle;
+  padding: $spacing-xs $spacing-sm;
   background: rgba(0, 0, 0, 0.2);
-  min-height: 36px;
+  border-top: 1px solid $color-border-subtle;
+}
+
+.canvas-navigator__footer-label {
+  font-size: 9px;
+  font-weight: $font-weight-semibold;
 }
 
 .canvas-navigator__footer-spacer {
   flex: 1;
 }
 
-.canvas-navigator__view-count {
-  font-size: 9px;
-  color: $color-text-muted;
-  padding: 2px $spacing-sm;
-  background: $color-glass-light;
-  border-radius: $radius-xs;
-}
-
 // =============================================================================
-// SMART TOOLTIP - PORTAL RENDERED
+// TOOLTIP
 // =============================================================================
 
 .canvas-navigator__tooltip {
-  position: fixed;
   background: $color-bg-primary;
-  border: 2px solid var(--tooltip-color, #{$color-accent-blue});
+  border: 2px solid var(--tooltip-color, #60a5fa);
   border-radius: $radius-md;
-  padding: $spacing-sm $spacing-md;
-  z-index: 10000; // Very high for portal
-  min-width: 180px;
-  max-width: 280px;
+  padding: $spacing-xs $spacing-sm;
+  z-index: 10000;
+  min-width: 160px;
+  max-width: 260px;
   pointer-events: none;
-  animation: tooltip-fade-in 0.15s ease;
-  backdrop-filter: blur(8px);
-}
-
-@keyframes tooltip-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: tooltip-fade-in 0.12s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5),
+    0 0 12px color-mix(in srgb, var(--tooltip-color, #60a5fa) 30%, transparent);
 }
 
 .canvas-navigator__tooltip-header {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
+  gap: $spacing-xs;
   margin-bottom: $spacing-xs;
 }
 
@@ -720,21 +649,31 @@
 }
 
 .canvas-navigator__tooltip-name {
-  font-size: 11px;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
+  font-size: 11px;
 }
 
 .canvas-navigator__tooltip-row {
-  font-size: 9px;
-  color: $color-text-muted;
-  margin-top: 2px;
+  font-size: 10px;
+  color: $color-text-secondary;
 
   span {
-    color: $color-text-secondary;
+    color: $color-text-primary;
   }
 
   .mono {
     font-family: $font-family-mono;
+  }
+}
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
