@@ -377,14 +377,44 @@ export function useLayoutPanel(options) {
 
   // Viewport navigation - wraps useCanvas moveViewport and dispatches sync event
   const moveViewport = useCallback(
-    (deltaRow, deltaCol) => {
-      // Update local viewport
-      canvasMoveViewport?.(deltaRow, deltaCol);
+    (directionOrDeltaRow, deltaCol) => {
+      let dRow = 0;
+      let dCol = 0;
 
-      // Dispatch event for CanvasGrid to sync
-      dispatchMoveViewport(deltaRow, deltaCol, canvas?.id);
+      // Handle string direction format
+      if (typeof directionOrDeltaRow === "string") {
+        switch (directionOrDeltaRow) {
+          case "up":
+            dRow = -1;
+            break;
+          case "down":
+            dRow = 1;
+            break;
+          case "left":
+            dCol = -1;
+            break;
+          case "right":
+            dCol = 1;
+            break;
+          case "home":
+          case "reset":
+            setViewportPosition?.(homepoint.row, homepoint.col);
+            dispatchNavigateTo(homepoint.row, homepoint.col, canvas?.id);
+            return;
+          default:
+            console.warn(`Unknown viewport direction: ${directionOrDeltaRow}`);
+            return;
+        }
+      } else {
+        // Handle numeric delta format
+        dRow = directionOrDeltaRow || 0;
+        dCol = deltaCol || 0;
+      }
+
+      canvasMoveViewport?.(dRow, dCol);
+      dispatchMoveViewport(dRow, dCol, canvas?.id);
     },
-    [canvasMoveViewport, canvas?.id]
+    [canvasMoveViewport, canvas?.id, setViewportPosition, homepoint]
   );
 
   // Navigate to specific cell
