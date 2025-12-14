@@ -13,7 +13,7 @@ import { instanceTools } from "@VTK/vtkInstanceTools.js";
 import { VTKReductionFeature } from "@VTK/features/VTKReductionFeature";
 import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget";
 import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
-import { viewConfigurationManager } from "@Init/appInitializer.js";
+import { getViewConfigurationManager } from "@Init/appInitializer.js";
 import { syncCameraToYjs } from "@Collaboration/yjs/yjsSetup.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 
@@ -449,7 +449,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
       // Restore saved camera state from ViewConfiguration if reopening an existing view
       if (instanceData.viewConfigId) {
-        const viewConfig = viewConfigurationManager.getView(
+        const viewConfig = getViewConfigurationManager()?.getView(
           instanceData.viewConfigId
         );
         if (viewConfig?.camera) {
@@ -2404,7 +2404,7 @@ console.log('Tools:', tools);
           }
 
           // PERSISTENCE: Sync to server via ViewConfigurationManager (throttled)
-          viewConfigurationManager.updateCamera(
+          getViewConfigurationManager()?.updateCamera(
             instanceData.viewConfigId,
             cameraState
           );

@@ -77,13 +77,13 @@ export const useDatasetStore = create((set, get) => ({
   refresh: () => {
     // Import dynamically to avoid circular dependency
     import("@Init/appInitializer.js")
-      .then(({ datasetManager }) => {
-        if (!datasetManager) {
+      .then(({ getDatasetManager }) => {
+        if (!getDatasetManager()) {
           log.warn("DatasetManager not available yet");
           return;
         }
 
-        const datasets = datasetManager.getAllDatasets();
+        const datasets = getDatasetManager()?.getAllDatasets();
         const ids = datasets.map((ds) => ds.id);
 
         set({
@@ -130,8 +130,8 @@ export const useDatasetStore = create((set, get) => ({
     log.debug("React: Adding dataset to store:", dataset.id);
 
     // Import dynamically to avoid circular dependency
-    import("@Init/appInitializer.js").then(({ datasetManager }) => {
-      if (!datasetManager) {
+    import("@Init/appInitializer.js").then(({ getDatasetManager }) => {
+      if (!getDatasetManager()) {
         log.warn("DatasetManager not available yet");
         return;
       }
@@ -179,13 +179,13 @@ export const useDatasetStore = create((set, get) => ({
     log.debug("React: Updating annotations for dataset:", datasetId);
 
     // Import dynamically to avoid circular dependency
-    import("@Init/appInitializer.js").then(({ datasetManager }) => {
-      if (!datasetManager) {
+    import("@Init/appInitializer.js").then(({ getDatasetManager }) => {
+      if (!getDatasetManager()) {
         log.warn("DatasetManager not available yet");
         return;
       }
 
-      const dataset = datasetManager.getDataset(datasetId);
+      const dataset = getDatasetManager()?.getDataset(datasetId);
       if (dataset) {
         // Update annotations in the dataset
         dataset.annotations = annotations;
@@ -203,7 +203,7 @@ export const useDatasetStore = create((set, get) => ({
  * USAGE EXAMPLE IN REACT COMPONENTS:
  *
  * import { useDatasetStore } from '@UI/react/store/datasetStore.js';
- * import { datasetManager } from '@Init/appInitializer.js';
+ * import { getDatasetManager } from '@Init/appInitializer.js';
  *
  * function DatasetList() {
  *   // Get dataset IDs from store (triggers re-render on change)
@@ -213,7 +213,7 @@ export const useDatasetStore = create((set, get) => ({
  *     <div>
  *       {datasetIds.map(id => {
  *         // Get actual dataset data from manager
- *         const dataset = datasetManager.getDataset(id);
+ *         const dataset = getDatasetManager()?.getDataset(id);
  *
  *         return (
  *           <div key={id}>

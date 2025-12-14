@@ -43,7 +43,7 @@ import {
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
-import { viewConfigurationManager } from '@Init/appInitializer.js';
+import { getViewConfigurationManager } from '@Init/appInitializer.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { dataset as log } from '@Utils/logger.js';
@@ -112,7 +112,7 @@ function DatasetViewItemWrapper({ view, datasetId }) {
         // Remove from canvas first
         await canvasManager?.removeViewPlacements?.(viewId);
         // Deactivate the view - marks as inactive, keeps in list
-        viewConfigurationManager?.deactivateView?.(viewId);
+        getViewConfigurationManager()?.deactivateView?.(viewId);
         // Dispatch event for any listening components
         window.dispatchEvent(new CustomEvent('cia:close-view', {
             detail: { viewId }
@@ -125,13 +125,13 @@ function DatasetViewItemWrapper({ view, datasetId }) {
         // Remove from canvas first (if placed)
         await canvasManager?.removeViewPlacements?.(viewId);
         // Move to Recently Deleted (status = 'trashed')
-        viewConfigurationManager?.trashView?.(viewId);
+        getViewConfigurationManager()?.trashView?.(viewId);
     }, []);
 
     // Handle view rename
     const handleRename = useCallback((viewId, newName) => {
         log.debug(`Renaming view ${viewId} to ${newName}`);
-        viewConfigurationManager?.renameView?.(viewId, newName);
+        getViewConfigurationManager()?.renameView?.(viewId, newName);
     }, []);
 
     // Handle navigate to position
@@ -297,7 +297,7 @@ function CanvasViewItemWrapper({ view, dataset }) {
         // Remove from canvas first
         await canvasManager?.removeViewPlacements?.(viewId);
         // Deactivate the view - marks as inactive, keeps in list
-        viewConfigurationManager?.deactivateView?.(viewId);
+        getViewConfigurationManager()?.deactivateView?.(viewId);
         // Dispatch event for any listening components
         window.dispatchEvent(new CustomEvent('cia:close-view', {
             detail: { viewId }
@@ -310,13 +310,13 @@ function CanvasViewItemWrapper({ view, dataset }) {
         // Remove from canvas first (if placed)
         await canvasManager?.removeViewPlacements?.(viewId);
         // Move to Recently Deleted (status = 'trashed')
-        viewConfigurationManager?.trashView?.(viewId);
+        getViewConfigurationManager()?.trashView?.(viewId);
     }, []);
 
     // Handle view rename
     const handleRename = useCallback((viewId, newName) => {
         log.debug(`Renaming view ${viewId} to ${newName}`);
-        viewConfigurationManager?.renameView?.(viewId, newName);
+        getViewConfigurationManager()?.renameView?.(viewId, newName);
     }, []);
 
     // Handle navigate to position
@@ -423,18 +423,18 @@ export function DatasetsPanelContent({ workspaceId }) {
             setViewRefreshCounter(c => c + 1);
         };
 
-        viewConfigurationManager?.on?.('viewUpdated', handleViewUpdate);
-        viewConfigurationManager?.on?.('viewDeactivated', handleViewUpdate);
-        viewConfigurationManager?.on?.('viewActivated', handleViewUpdate);
-        viewConfigurationManager?.on?.('viewTrashed', handleViewUpdate);
-        viewConfigurationManager?.on?.('viewRestored', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewUpdated', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewDeactivated', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewActivated', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewTrashed', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewRestored', handleViewUpdate);
 
         return () => {
-            viewConfigurationManager?.off?.('viewUpdated', handleViewUpdate);
-            viewConfigurationManager?.off?.('viewDeactivated', handleViewUpdate);
-            viewConfigurationManager?.off?.('viewActivated', handleViewUpdate);
-            viewConfigurationManager?.off?.('viewTrashed', handleViewUpdate);
-            viewConfigurationManager?.off?.('viewRestored', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewUpdated', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewDeactivated', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewActivated', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewTrashed', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewRestored', handleViewUpdate);
         };
     }, []);
 
@@ -448,7 +448,7 @@ export function DatasetsPanelContent({ workspaceId }) {
     // Filter out trashed/archived views - they're shown in "Recently Deleted" section
     const getViewsForDataset = useCallback((datasetId) => {
         try {
-            const views = viewConfigurationManager?.getViewsForDataset?.(datasetId) || [];
+            const views = getViewConfigurationManager()?.getViewsForDataset?.(datasetId) || [];
             return views
                 .filter(v => v.status !== 'trashed' && v.status !== 'archived')
                 .map(v => {
@@ -559,7 +559,7 @@ export function DatasetsPanelContent({ workspaceId }) {
         // Initial load
         const loadTrashedViews = () => {
             try {
-                const trashed = viewConfigurationManager?.getTrashedViews?.() || [];
+                const trashed = getViewConfigurationManager()?.getTrashedViews?.() || [];
                 setTrashedViews(trashed);
             } catch (e) {
                 log.warn('Failed to get trashed views:', e);
@@ -574,14 +574,14 @@ export function DatasetsPanelContent({ workspaceId }) {
         const handleViewRestored = () => loadTrashedViews();
         const handleViewDeleted = () => loadTrashedViews();
 
-        viewConfigurationManager?.on?.('viewTrashed', handleViewTrashed);
-        viewConfigurationManager?.on?.('viewRestored', handleViewRestored);
-        viewConfigurationManager?.on?.('viewDeleted', handleViewDeleted);
+        getViewConfigurationManager()?.on?.('viewTrashed', handleViewTrashed);
+        getViewConfigurationManager()?.on?.('viewRestored', handleViewRestored);
+        getViewConfigurationManager()?.on?.('viewDeleted', handleViewDeleted);
 
         return () => {
-            viewConfigurationManager?.off?.('viewTrashed', handleViewTrashed);
-            viewConfigurationManager?.off?.('viewRestored', handleViewRestored);
-            viewConfigurationManager?.off?.('viewDeleted', handleViewDeleted);
+            getViewConfigurationManager()?.off?.('viewTrashed', handleViewTrashed);
+            getViewConfigurationManager()?.off?.('viewRestored', handleViewRestored);
+            getViewConfigurationManager()?.off?.('viewDeleted', handleViewDeleted);
         };
     }, []);
 
@@ -758,8 +758,8 @@ export function DatasetsPanelContent({ workspaceId }) {
                                     <TrashedViewItem
                                         key={view.id}
                                         view={view}
-                                        onRestore={() => viewConfigurationManager.restoreView(view.id)}
-                                        onPermanentDelete={() => viewConfigurationManager.permanentlyDeleteView(view.id)}
+                                        onRestore={() => getViewConfigurationManager().restoreView(view.id)}
+                                        onPermanentDelete={() => getViewConfigurationManager().permanentlyDeleteView(view.id)}
                                     />
                                 ))
                             )}

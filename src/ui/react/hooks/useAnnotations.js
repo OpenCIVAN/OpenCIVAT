@@ -6,7 +6,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { annotationManager } from "@Core/data/managers/AnnotationManager.js";
-import { datasetManager } from "@Init/appInitializer.js";
+import { getDatasetManager } from "@Init/appInitializer.js";
 import { apiClient } from "@Services/apiClient.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { annotation as log } from "@Utils/logger.js";
@@ -38,7 +38,7 @@ export function useAnnotations(options = {}) {
 
   const fetchAnnotations = useCallback(
     async (signal) => {
-      if (!datasetManager) {
+      if (!getDatasetManager()) {
         log.warn("DatasetManager not initialized");
         return [];
       }
@@ -55,14 +55,14 @@ export function useAnnotations(options = {}) {
         } catch (err) {
           // Fall back to local cache if server fails
           log.warn("Server fetch failed, using local cache:", err.message);
-          const dataset = datasetManager.getDataset(datasetId);
+          const dataset = getDatasetManager()?.getDataset(datasetId);
           if (dataset) {
             allAnnotations = dataset.annotations || [];
           }
         }
       } else {
         // Get all annotations from all loaded datasets
-        const datasets = datasetManager.getAllDatasets();
+        const datasets = getDatasetManager()?.getAllDatasets();
         for (const dataset of datasets) {
           if (dataset.annotations) {
             allAnnotations.push(

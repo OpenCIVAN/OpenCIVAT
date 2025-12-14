@@ -20,7 +20,7 @@ import { PositionGridPicker } from '@UI/react/components/workspace/Pickers/Posit
 import { VRButton } from '@UI/react/components/common/VRButton';
 import { vrManager } from '@Core/vr/VRManager.js';
 
-import { viewConfigurationManager, datasetManager } from "@Init/appInitializer.js";
+import { getViewConfigurationManager, getDatasetManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 
 import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
@@ -530,10 +530,10 @@ export function InstanceViewport({
             }
         };
 
-        viewConfigurationManager?.on?.('viewUpdated', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewUpdated', handleViewUpdate);
 
         return () => {
-            viewConfigurationManager?.off?.('viewUpdated', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewUpdated', handleViewUpdate);
         };
     }, [viewConfigId]);
 
@@ -642,7 +642,7 @@ export function InstanceViewport({
 
                 // Check if view is trashed or archived before creating instance
                 if (viewConfigId) {
-                    const viewConfig = viewConfigurationManager.getView(viewConfigId);
+                    const viewConfig = getViewConfigurationManager()?.getView(viewConfigId);
                     if (viewConfig && (viewConfig.status === 'trashed' || viewConfig.status === 'archived')) {
                         log.warn(`Cannot create instance for ${viewConfig.status} view ${viewConfigId}`);
                         setError(`View has been ${viewConfig.status === 'trashed' ? 'deleted' : 'archived'}`);
@@ -667,7 +667,7 @@ export function InstanceViewport({
                 setInstanceColor(color);
 
                 if (viewConfigId) {
-                    viewConfigurationManager.activateView(viewConfigId);
+                    getViewConfigurationManager()?.activateView(viewConfigId);
                 }
 
                 const instanceHeader = workspaceManager.getInstanceHeaderInfo(instanceId);
@@ -692,7 +692,7 @@ export function InstanceViewport({
             }
 
             if (viewConfigId) {
-                viewConfigurationManager.deactivateView(viewConfigId);
+                getViewConfigurationManager()?.deactivateView(viewConfigId);
             }
         };
     }, [viewConfigId]);
@@ -708,7 +708,7 @@ export function InstanceViewport({
             try {
                 log.debug(`Loading view ${viewConfigId} into instance ${actualInstanceId}`);
 
-                const viewConfig = viewConfigurationManager.getView(viewConfigId);
+                const viewConfig = getViewConfigurationManager()?.getView(viewConfigId);
                 if (!viewConfig) {
                     log.warn(`View ${viewConfigId} not found`);
                     return;
@@ -819,12 +819,12 @@ export function InstanceViewport({
             }
         };
 
-        viewConfigurationManager?.on?.('viewTrashed', handleViewTrashed);
-        viewConfigurationManager?.on?.('viewDeleted', handleViewDeleted);
+        getViewConfigurationManager()?.on?.('viewTrashed', handleViewTrashed);
+        getViewConfigurationManager()?.on?.('viewDeleted', handleViewDeleted);
 
         return () => {
-            viewConfigurationManager?.off?.('viewTrashed', handleViewTrashed);
-            viewConfigurationManager?.off?.('viewDeleted', handleViewDeleted);
+            getViewConfigurationManager()?.off?.('viewTrashed', handleViewTrashed);
+            getViewConfigurationManager()?.off?.('viewDeleted', handleViewDeleted);
         };
     }, [viewConfigId]);
 
@@ -867,9 +867,9 @@ export function InstanceViewport({
         if (isRemote && ownerUserName) {
             if (viewConfigId) {
                 try {
-                    const view = viewConfigurationManager.getView(viewConfigId);
+                    const view = getViewConfigurationManager()?.getView(viewConfigId);
                     if (view) {
-                        const dataset = datasetManager.getDataset(view.datasetId);
+                        const dataset = getDatasetManager()?.getDataset(view.datasetId);
                         const filename = dataset?.filename || 'Unknown';
                         return `${ownerUserName}'s view of ${filename}`;
                     }
@@ -882,9 +882,9 @@ export function InstanceViewport({
 
         if (viewConfigId) {
             try {
-                const view = viewConfigurationManager.getView(viewConfigId);
+                const view = getViewConfigurationManager()?.getView(viewConfigId);
                 if (view) {
-                    const dataset = datasetManager.getDataset(view.datasetId);
+                    const dataset = getDatasetManager()?.getDataset(view.datasetId);
                     // Show view name if it's been customized (not default names)
                     const isDefaultName = !view.name ||
                         view.name === 'Untitled View' ||
@@ -1353,7 +1353,7 @@ export function InstanceViewport({
 
         // Deactivate the view (marks as inactive, keeps in Datasets list)
         if (viewConfigId) {
-            viewConfigurationManager.deactivateView(viewConfigId);
+            getViewConfigurationManager()?.deactivateView(viewConfigId);
         }
 
         // Notify parent to remove from canvas
@@ -1369,7 +1369,7 @@ export function InstanceViewport({
 
         // Move view to Recently Deleted (recoverable for 24h)
         if (viewConfigId) {
-            viewConfigurationManager.trashView(viewConfigId);
+            getViewConfigurationManager()?.trashView(viewConfigId);
         }
 
         // Notify parent

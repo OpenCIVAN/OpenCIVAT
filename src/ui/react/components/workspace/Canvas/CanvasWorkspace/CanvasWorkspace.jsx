@@ -10,7 +10,7 @@ import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay';
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
-import { viewConfigurationManager, datasetManager } from '@Init/appInitializer.js';
+import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
 import { workspace as log } from '@Utils/logger.js';
 import { useViewportEventListener } from '@UI/react/hooks/useViewportSync.js';
@@ -190,12 +190,12 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
 
             try {
                 // Get the dataset
-                let dataset = datasetManager.getDataset(datasetId);
+                let dataset = getDatasetManager()?.getDataset(datasetId);
 
                 if (!dataset) {
                     log.info(`Dataset ${datasetId} not found locally, syncing from server...`);
-                    await datasetManager.syncDatasetsFromServer();
-                    dataset = datasetManager.getDataset(datasetId);
+                    await getDatasetManager()?.syncDatasetsFromServer();
+                    dataset = getDatasetManager()?.getDataset(datasetId);
                 }
 
                 if (!dataset) {
@@ -226,14 +226,14 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                 // Handle view duplication
                 if (duplicateViewId) {
                     log.debug(`Duplicating view ${duplicateViewId}`);
-                    const newViewConfig = await viewConfigurationManager.duplicateView(duplicateViewId);
+                    const newViewConfig = await getViewConfigurationManager()?.duplicateView(duplicateViewId);
                     if (newViewConfig) {
                         finalViewConfigId = newViewConfig.id;
                     }
                 } else if (!viewConfigId || isPlaceholder || spawnNew) {
                     // Create new view configuration
                     log.debug(`Creating new view for dataset ${datasetId}`);
-                    const newViewConfig = await viewConfigurationManager.createView(datasetId, {
+                    const newViewConfig = await getViewConfigurationManager()?.createView(datasetId, {
                         name: `View of ${dataset.filename || dataset.fileName || 'Unknown'}`,
                         instanceType: dataset.metadata?.defaultInstanceType || 'vtk'
                     });
@@ -301,7 +301,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
             try {
                 // Check if file is already loaded as a dataset
                 let datasetId = file.id;
-                const existingDataset = datasetManager.getDataset(file.id);
+                const existingDataset = getDatasetManager()?.getDataset(file.id);
 
                 if (!existingDataset) {
                     // File not loaded yet - need to fetch and load it first
@@ -327,7 +327,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     });
 
                     // Add to DatasetManager with server ID
-                    const dataset = await datasetManager.addDataset(fileObj, {
+                    const dataset = await getDatasetManager()?.addDataset(fileObj, {
                         userId: file.uploadedBy || 'system',
                         serverId: file.id,
                         serverMetadata: {

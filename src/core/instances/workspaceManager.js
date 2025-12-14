@@ -5,8 +5,8 @@ import { generateInstanceId } from "@Utils/idGenerator.js";
 import { getHandlerForType } from "@Core/instances/types/instanceTypesInit.js";
 import { getUserId } from "@Collaboration/presence/userManagement.js";
 import {
-  datasetManager,
-  viewConfigurationManager,
+  getDatasetManager,
+  getViewConfigurationManager
 } from "@Init/appInitializer.js";
 import { onCameraChange } from "@Collaboration/yjs/yjsObservers.js";
 import { instance as log } from "@Utils/logger.js";
@@ -95,8 +95,8 @@ class WorkspaceManager {
     log.debug("Y.js camera sync listener registered (real-time)");
 
     // PERSISTENCE: Listen for server view updates (fallback + durability)
-    if (viewConfigurationManager) {
-      viewConfigurationManager.on("viewUpdated", (view) => {
+    if (getViewConfigurationManager()) {
+      getViewConfigurationManager()?.on("viewUpdated", (view) => {
         this._handleRemoteViewUpdate(view);
       });
       log.debug("Server view sync listener registered (persistence)");
@@ -294,7 +294,7 @@ class WorkspaceManager {
       log.debug(`Loading dataset ${datasetId} into instance ${instanceId}`);
 
       // Get the dataset
-      const dataset = datasetManager.getDataset(datasetId);
+      const dataset = getDatasetManager()?.getDataset(datasetId);
       if (!dataset) {
         throw new Error(`Dataset ${datasetId} not found`);
       }
@@ -309,7 +309,7 @@ class WorkspaceManager {
       }
 
       // Load the data through the handler
-      // The handler will call datasetManager.loadFile() internally if needed
+      // The handler will call getDatasetManager()?.loadFile() internally if needed
       await instance.handler.loadData(instance.instanceData, dataset);
 
       // Update instance metadata

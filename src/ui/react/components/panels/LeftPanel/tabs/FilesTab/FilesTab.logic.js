@@ -8,7 +8,7 @@
 // 3. Then create the instance with the correct datasetId
 
 import { useCallback } from "react";
-import { datasetManager } from "@Init/appInitializer.js";
+import { getDatasetManager } from "@Init/appInitializer.js";
 import { files as log } from "@Utils/logger.js";
 
 /**
@@ -48,7 +48,7 @@ export function useFileLoader({
       try {
         // Step 1: Check if file is already loaded as a dataset
         // In v2.0, file.id from the server equals dataset.id after sync
-        let dataset = datasetManager.getDataset(file.id);
+        let dataset = getDatasetManager()?.getDataset(file.id);
 
         if (dataset) {
           log.debug(`File already loaded as dataset: ${dataset.id}`);
@@ -85,7 +85,7 @@ export function useFileLoader({
 
             // Step 3: Add to DatasetManager with server ID
             // This registers the dataset with the correct server-provided ID
-            dataset = await datasetManager.addDataset(fileObj, {
+            dataset = await getDatasetManager()?.addDataset(fileObj, {
               userId: file.uploadedBy || "system",
               serverId: file.id, // Use server's file ID as dataset ID
               serverMetadata: {
@@ -133,7 +133,7 @@ export function useFileLoader({
    * @returns {boolean}
    */
   const isFileLoaded = useCallback((fileId) => {
-    return datasetManager.getDataset(fileId) !== null;
+    return getDatasetManager()?.getDataset(fileId) !== null;
   }, []);
 
   /**
@@ -142,7 +142,7 @@ export function useFileLoader({
    * @returns {Dataset|null}
    */
   const getDatasetForFile = useCallback((fileId) => {
-    return datasetManager.getDataset(fileId);
+    return getDatasetManager()?.getDataset(fileId);
   }, []);
 
   return {

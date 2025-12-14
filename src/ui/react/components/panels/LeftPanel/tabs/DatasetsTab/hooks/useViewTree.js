@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useDatasets } from "@UI/react/hooks/useDatasets.js";
-import { viewConfigurationManager } from "@Init/appInitializer.js";
+import { getViewConfigurationManager } from "@Init/appInitializer.js";
 
 /**
  * Hook to manage the datasets/views tree structure
@@ -58,7 +58,7 @@ export function useViewTree({ workspaceId }) {
   // Get views for a dataset from ViewConfigurationManager
   const getViewsForDataset = useCallback((datasetId) => {
     try {
-      return viewConfigurationManager?.getViewsForDataset(datasetId) || [];
+      return getViewConfigurationManager()?.getViewsForDataset(datasetId) || [];
     } catch (e) {
       return [];
     }

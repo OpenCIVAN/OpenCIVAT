@@ -22,7 +22,7 @@ import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { useViewportSize } from '@UI/react/hooks';
 import { useCanvasDimensions, RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
-import { viewConfigurationManager, datasetManager } from '@Init/appInitializer.js';
+import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { useViewportEventListener } from '@UI/react/hooks/useViewportSync';
 import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
 import { workspace as log } from '@Utils/logger.js';
@@ -382,9 +382,9 @@ export function CanvasGrid({
     function getPlacementName(placement) {
         if (placement.content?.type === 'view') {
             try {
-                const view = viewConfigurationManager.getView(placement.content.viewConfigurationId);
+                const view = getViewConfigurationManager()?.getView(placement.content.viewConfigurationId);
                 if (view) {
-                    const dataset = datasetManager.getDataset(view.datasetId);
+                    const dataset = getDatasetManager()?.getDataset(view.datasetId);
                     return dataset?.filename || view.name || 'View';
                 }
             } catch (e) {

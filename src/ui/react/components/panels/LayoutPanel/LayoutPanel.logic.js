@@ -476,9 +476,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         null;
 
       // Look up ViewConfiguration for metadata
-      const viewConfig = viewId
-        ? vcManager.getView(viewId)
-        : null;
+      const viewConfig = viewId ? vcManager.getView(viewId) : null;
 
       // =====================================================================
       // Get dataset info - MUST define these variables before using them
@@ -620,7 +618,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   const deleteView = useCallback(
     async (viewId) => {
       await closeView(viewId);
-      await viewConfigurationManager.deleteView(viewId);
+      await getViewConfigurationManager()?.deleteView(viewId);
     },
     [closeView]
   );
