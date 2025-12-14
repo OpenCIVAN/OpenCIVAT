@@ -42,6 +42,29 @@ export let dataCacheAdapter = null;
 export let viewConfigurationManager = null;
 
 /**
+ * Get the DatasetManager instance
+ * Use this instead of importing datasetManager directly.
+ */
+export function getDatasetManager() {
+  return datasetManager;
+}
+
+/**
+ * Get the ViewConfigurationManager instance
+ * Use this instead of importing viewConfigurationManager directly.
+ */
+export function getViewConfigurationManager() {
+  return viewConfigurationManager;
+}
+
+/**
+ * Get the DataCacheAdapter instance
+ */
+export function getDataCacheAdapter() {
+  return dataCacheAdapter;
+}
+
+/**
  * Phase 0: Server Sync Check
  *
  * Runs BEFORE Phase 1 to detect server resets and prepare for reconciliation.

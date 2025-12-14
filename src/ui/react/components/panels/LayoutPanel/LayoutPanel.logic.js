@@ -9,8 +9,10 @@
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
-import { viewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
-import { datasetManager } from "@Init/appInitializer";
+import {
+  getDatasetManager,
+  getViewConfigurationManager,
+} from "@Init/appInitializer";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { ui as log } from "@Utils/logger.js";
@@ -461,6 +463,10 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   const cells = useMemo(() => {
     if (!rawPlacements || rawPlacements.length === 0) return [];
 
+    // Get manager references at call time (not import time!)
+    const vcManager = getViewConfigurationManager();
+    const dsManager = getDatasetManager();
+
     return rawPlacements.map((placement, index) => {
       // Get viewConfigurationId from placement (multiple fallback paths)
       const viewId =
@@ -471,14 +477,14 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
       // Look up ViewConfiguration for metadata
       const viewConfig = viewId
-        ? viewConfigurationManager.getView(viewId)
+        ? vcManager.getView(viewId)
         : null;
 
       // =====================================================================
       // Get dataset info - MUST define these variables before using them
       // =====================================================================
       const dataset = viewConfig?.datasetId
-        ? datasetManager.getDataset(viewConfig.datasetId)
+        ? dsManager.getDataset(viewConfig.datasetId)
         : null;
 
       // Extract filename from dataset
