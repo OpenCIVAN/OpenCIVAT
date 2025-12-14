@@ -189,10 +189,17 @@ const bookmarksRouter = require("./routes/bookmarks");
 // View thumbnails routes (progressive loading)
 const thumbnailsRouter = require("./routes/thumbnails");
 
+// Thumbnail callback (worker-to-server communication)
+const thumbnailCallbackRouter = require("./routes/thumbnailCallback");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
-app.use("/api/views", optionalAuth, thumbnailsRouter); // Thumbnail routes nested under views
+app.use("/api/views", optionalAuth, thumbnailsRouter);
+// Thumbnail callback - mounted at /api/thumbnails for worker callbacks
+// Note: This is separate from thumbnailsRouter which is mounted at /api/views
+// because the worker needs a stable URL that doesn't include viewId
+app.use("/api/thumbnails", thumbnailCallbackRouter);
 app.use("/api/compute", optionalAuth, computeRouter);
 app.use("/api/workspace-annotations", optionalAuth, workspaceAnnotationsRouter);
 

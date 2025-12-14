@@ -135,13 +135,21 @@ async function captureThumbnail(job) {
 
   try {
     // Build URL to the visualization embed page
-    // Use query parameters which work with webpack dev server without additional routing config
-    let url;
-    if (viewId) {
-      url = `${config.app.baseUrl}/embed.html?mode=view&id=${viewId}`;
-    } else {
-      url = `${config.app.baseUrl}/embed.html?mode=file&id=${fileId}`;
+    // Include handlerType so embed page knows which handler to use
+    // The handlerType is server-determined and passed via job data
+    const params = new URLSearchParams({
+      mode: viewId ? "view" : "file",
+      id: viewId || fileId,
+      width: config.thumbnail.width.toString(),
+      height: config.thumbnail.height.toString(),
+    });
+
+    // Add handlerType if provided (server-authoritative)
+    if (job.handlerType) {
+      params.set("handlerType", job.handlerType);
     }
+
+    const url = `${config.app.baseUrl}/embed.html?${params.toString()}`;
 
     log.info(`Navigating to: ${url}`);
 
@@ -165,16 +173,20 @@ async function captureThumbnail(job) {
     // Give extra time for WebGL to finish rendering
     await page.waitForTimeout(500);
 
-    // Capture screenshot
-    const screenshot = await page.screenshot({
+    // Find the canvas element specifically - we only want the 3D render, not any UI chrome
+    const canvas = await page.$("canvas");
+
+    if (!canvas) {
+      throw new Error("No canvas element found on page");
+    }
+
+    // Screenshot ONLY the canvas element
+    // This captures just the WebGL visualization, not headers/toolbars/etc.
+    const screenshot = await canvas.screenshot({
       type: "png",
-      clip: {
-        x: 0,
-        y: 0,
-        width: config.thumbnail.width * 2,
-        height: config.thumbnail.height * 2,
-      },
     });
+
+    log.info("Captured canvas element screenshot");
 
     // Optimize with sharp
     const optimized = await sharp(screenshot)
@@ -217,15 +229,21 @@ async function captureThumbnail(job) {
 /**
  * Report job completion back to API server
  */
-async function reportCompletion(jobId, result) {
+async function reportCompletion(callbackUrl, jobId, result) {
   try {
-    const response = await fetch(`${config.app.apiUrl}/api/compute/internal`, {
+    log.debug(`Reporting completion to: ${callbackUrl}`);
+
+    const response = await fetch(callbackUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         jobId,
-        status: result.success ? "completed" : "failed",
-        result: result,
+        success: result.success,
+        storageKey: result.storageKey,
+        format: result.format,
+        width: result.width,
+        height: result.height,
+        error: result.error,
       }),
     });
 
@@ -257,7 +275,7 @@ async function startWorker() {
 
         // Report back to API
         if (job.data.callbackUrl) {
-          await reportCompletion(job.data.jobId, result);
+          await reportCompletion(job.data.callbackUrl, job.id, result);
         }
 
         return result;
@@ -266,7 +284,7 @@ async function startWorker() {
 
         // Report failure
         if (job.data.callbackUrl) {
-          await reportCompletion(job.data.jobId, {
+          await reportCompletion(job.data.callbackUrl, job.id, {
             success: false,
             error: error.message,
           });

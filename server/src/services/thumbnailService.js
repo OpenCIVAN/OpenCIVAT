@@ -36,18 +36,43 @@ function getQueue() {
  *
  * @param {object} options
  * @param {string} options.fileId - The file ID
+ * @param {object} options.pool - Database pool
  * @param {string} options.viewId - Optional view configuration ID
  * @param {string} options.projectId - Optional project ID for access control
  * @param {number} options.priority - Job priority (1-10, higher = more urgent)
  * @returns {Promise<object>} - The queued job
  */
-async function queueThumbnailJob({ fileId, viewId, projectId, priority = 5 }) {
+async function queueThumbnailJob({
+  fileId,
+  pool,
+  viewId = null,
+  projectId = null,
+  priority = 5,
+}) {
   const queue = getQueue();
+
+  // Look up handler type from database (server-authoritative)
+  let handlerType = null;
+  if (pool && fileId) {
+    try {
+      const result = await pool.query(
+        "SELECT handler_type FROM datasets WHERE id = $1",
+        [fileId]
+      );
+      handlerType = result.rows[0]?.handler_type;
+    } catch (err) {
+      log.warn(
+        `Could not look up handler_type for file ${fileId}:`,
+        err.message
+      );
+    }
+  }
 
   const jobData = {
     fileId,
     viewId: viewId || null,
     projectId: projectId || null,
+    handlerType, // Server-determined handler type
     callbackUrl: `${
       process.env.API_URL || "http://localhost:3001"
     }/api/thumbnails/callback`,
@@ -61,16 +86,19 @@ async function queueThumbnailJob({ fileId, viewId, projectId, priority = 5 }) {
       type: "exponential",
       delay: 5000,
     },
-    removeOnComplete: 100, // Keep last 100 completed jobs
-    removeOnFail: 50, // Keep last 50 failed jobs
+    removeOnComplete: 100,
+    removeOnFail: 50,
   });
 
-  log.info(`Queued thumbnail job ${job.id} for file=${fileId}, view=${viewId}`);
+  log.info(
+    `Queued thumbnail job ${job.id} for file=${fileId}, view=${viewId}, type=${handlerType}`
+  );
 
   return {
     jobId: job.id,
     fileId,
     viewId,
+    handlerType,
     status: "queued",
   };
 }
@@ -94,6 +122,7 @@ async function queueThumbnailsForFile(pool, fileId) {
   for (const row of result.rows) {
     const job = await queueThumbnailJob({
       fileId,
+      pool,
       viewId: row.id,
       priority: 3, // Lower priority for batch jobs
     });
@@ -103,7 +132,7 @@ async function queueThumbnailsForFile(pool, fileId) {
   // If no views exist, queue a job for the file itself
   // (will create a default view when rendered)
   if (jobs.length === 0) {
-    const job = await queueThumbnailJob({ fileId, priority: 5 });
+    const job = await queueThumbnailJob({ fileId, pool, priority: 5 });
     jobs.push(job);
   }
 

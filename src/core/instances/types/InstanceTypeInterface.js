@@ -357,6 +357,60 @@ export class InstanceTypeHandler {
     throw new Error("Export not supported for this instance type");
   }
 
+  // ===========================================================================
+  // THUMBNAIL RENDERING (for server-side capture)
+  // ===========================================================================
+
+  /**
+   * Render a minimal visualization for thumbnail capture
+   *
+   * This method is called by the embed page (loaded by the thumbnail worker)
+   * to render ONLY the visualization without any UI chrome. The handler must:
+   *
+   * 1. Fetch the dataset file data (via API, not managers - embed mode is minimal)
+   * 2. Parse the data in the appropriate format
+   * 3. Create a rendering pipeline and render to the container
+   * 4. Call onReady() when the visualization is complete and ready for screenshot
+   * 5. Call onError(message) if anything fails
+   *
+   * IMPORTANT: The WebGL context MUST be created with preserveDrawingBuffer: true
+   * or the screenshot will capture a blank/black canvas.
+   *
+   * IMPORTANT: This runs in a minimal environment (headless browser, no auth,
+   * no managers initialized). Fetch data directly via API endpoints.
+   *
+   * @param {HTMLElement} container - DOM element to render into
+   * @param {string} datasetId - Dataset/file ID to render
+   * @param {Object} options - Render options
+   * @param {number} options.width - Target width in pixels
+   * @param {number} options.height - Target height in pixels
+   * @param {Function} options.onReady - Callback when visualization is ready for screenshot
+   * @param {Function} options.onError - Callback with error message if rendering fails
+   * @returns {Function} Cleanup function to release resources when done
+   *
+   * @example
+   * // In embed.js (handler-agnostic):
+   * const cleanup = handler.renderForThumbnail(container, datasetId, {
+   *   width: 800,
+   *   height: 600,
+   *   onReady: () => document.body.setAttribute('data-testid', 'visualization-ready'),
+   *   onError: (msg) => console.error(msg),
+   * });
+   *
+   * // Later, to clean up:
+   * cleanup();
+   */
+  renderForThumbnail(container, datasetId, options) {
+    // Default implementation: not supported
+    const { onError } = options;
+    onError?.(
+      `Thumbnail rendering not implemented for handler type: ${this.getType()}`
+    );
+
+    // Return no-op cleanup function
+    return () => {};
+  }
+
   // =========================================================================
   // COLLABORATIVE FEATURES
   // These methods handle how collaborative features work for this type

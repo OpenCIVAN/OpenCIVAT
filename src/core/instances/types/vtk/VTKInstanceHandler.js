@@ -1649,6 +1649,192 @@ console.log('Tools:', tools);
   }
 
   // ===========================================================================
+  // THUMBNAIL RENDERING
+  // ===========================================================================
+
+  /**
+   * Render a minimal VTK visualization for thumbnail capture
+   *
+   * This creates a standalone VTK rendering pipeline specifically for
+   * the embed page / thumbnail worker. It does NOT use the normal instance
+   * lifecycle (no managers, no collaboration, no tools).
+   *
+   * Key differences from normal rendering:
+   * - Fetches data directly via API (no DatasetManager)
+   * - Creates minimal pipeline (no interactor, no widgets)
+   * - Uses preserveDrawingBuffer for screenshot capture
+   * - No resize observers or event handlers needed
+   *
+   * @param {HTMLElement} container - DOM element to render into
+   * @param {string} datasetId - Dataset/file ID to render
+   * @param {Object} options - Render options
+   * @returns {Function} Cleanup function
+   */
+  renderForThumbnail(container, datasetId, options) {
+    const { width = 800, height = 600, onReady, onError } = options;
+
+    // Track VTK objects for cleanup
+    let vtkObjects = null;
+    let mounted = true;
+
+    // API base for fetching data
+    const API_BASE = window.API_BASE_URL || "http://localhost:3001/api";
+
+    const render = async () => {
+      try {
+        log.info(`[Thumbnail] Starting render for dataset ${datasetId}`);
+
+        // ---------------------------------------------------------------------
+        // Step 1: Fetch the raw file data via API
+        // ---------------------------------------------------------------------
+        // We can't use DatasetManager here because embed mode doesn't initialize
+        // the full app. Direct API fetch is simpler and more reliable.
+
+        const response = await fetch(`${API_BASE}/files/${datasetId}/download`);
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch file: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+
+        if (!mounted) return;
+
+        log.info(`[Thumbnail] Fetched ${arrayBuffer.byteLength} bytes`);
+
+        // ---------------------------------------------------------------------
+        // Step 2: Parse the VTP file
+        // ---------------------------------------------------------------------
+        // Import VTK modules dynamically to avoid issues if this code path
+        // isn't always needed. These are the same imports used elsewhere.
+
+        const vtkXMLPolyDataReader = (
+          await import("@kitware/vtk.js/IO/XML/XMLPolyDataReader")
+        ).default;
+
+        const reader = vtkXMLPolyDataReader.newInstance();
+        reader.parseAsArrayBuffer(arrayBuffer);
+        const polyData = reader.getOutputData(0);
+
+        if (!polyData) {
+          throw new Error("Failed to parse VTP file - no output data");
+        }
+
+        const pointCount = polyData.getNumberOfPoints();
+        if (pointCount === 0) {
+          throw new Error("VTP file contains no points");
+        }
+
+        log.info(`[Thumbnail] Parsed polydata: ${pointCount} points`);
+
+        if (!mounted) return;
+
+        // ---------------------------------------------------------------------
+        // Step 3: Create minimal VTK rendering pipeline
+        // ---------------------------------------------------------------------
+        // This is a stripped-down version of _initializeVTKPipeline
+        // No interactor, no widgets, no resize observer - just render once
+
+        // Import VTK rendering modules
+        const vtkRenderer = (
+          await import("@kitware/vtk.js/Rendering/Core/Renderer")
+        ).default;
+        const vtkRenderWindow = (
+          await import("@kitware/vtk.js/Rendering/Core/RenderWindow")
+        ).default;
+        const vtkOpenGLRenderWindow = (
+          await import("@kitware/vtk.js/Rendering/OpenGL/RenderWindow")
+        ).default;
+        const vtkMapper = (
+          await import("@kitware/vtk.js/Rendering/Core/Mapper")
+        ).default;
+        const vtkActor = (await import("@kitware/vtk.js/Rendering/Core/Actor"))
+          .default;
+
+        // Create renderer with same background as main app
+        const renderer = vtkRenderer.newInstance();
+        renderer.setBackground(0.04, 0.04, 0.04);
+
+        // Create render window
+        const renderWindow = vtkRenderWindow.newInstance();
+        renderWindow.addRenderer(renderer);
+
+        // Create OpenGL view - MUST have preserveDrawingBuffer!
+        // Without this, screenshots capture blank/black canvas
+        const openGLRenderWindow = vtkOpenGLRenderWindow.newInstance({
+          preserveDrawingBuffer: true,
+        });
+        openGLRenderWindow.setContainer(container);
+        openGLRenderWindow.setSize(width, height);
+        renderWindow.addView(openGLRenderWindow);
+
+        // Create mapper and actor
+        const mapper = vtkMapper.newInstance();
+        mapper.setInputData(polyData);
+
+        const actor = vtkActor.newInstance();
+        actor.setMapper(mapper);
+
+        // Add to scene
+        renderer.addActor(actor);
+
+        // Reset camera to fit the data in view
+        renderer.resetCamera();
+
+        // Render!
+        renderWindow.render();
+
+        // Store for cleanup
+        vtkObjects = {
+          renderer,
+          renderWindow,
+          openGLRenderWindow,
+          mapper,
+          actor,
+        };
+
+        log.info("[Thumbnail] Render complete");
+
+        // ---------------------------------------------------------------------
+        // Step 4: Signal ready for screenshot
+        // ---------------------------------------------------------------------
+        if (mounted) {
+          onReady?.();
+        }
+      } catch (err) {
+        log.error("[Thumbnail] Render failed:", err);
+        if (mounted) {
+          onError?.(err.message);
+        }
+      }
+    };
+
+    // Start the async render process
+    render();
+
+    // Return cleanup function
+    return () => {
+      mounted = false;
+
+      if (vtkObjects) {
+        try {
+          // Clean up VTK objects in reverse order of creation
+          vtkObjects.actor?.delete();
+          vtkObjects.mapper?.delete();
+          vtkObjects.openGLRenderWindow?.delete();
+          vtkObjects.renderWindow?.delete();
+          vtkObjects.renderer?.delete();
+        } catch (err) {
+          log.warn("[Thumbnail] Cleanup error:", err);
+        }
+        vtkObjects = null;
+      }
+    };
+  }
+
+  // ===========================================================================
   // COLLABORATION METHODS
   // ===========================================================================
 
@@ -2338,7 +2524,11 @@ console.log('Tools:', tools);
     // =========================================================================
 
     // Create the OpenGL render window (creates WebGL context)
-    const openGLRenderWindow = vtkOpenGLRenderWindow.newInstance();
+    // IMPORTANT: preserveDrawingBuffer is required for thumbnail capture
+    // Without it, WebGL clears the canvas after each frame and screenshots show black
+    const openGLRenderWindow = vtkOpenGLRenderWindow.newInstance({
+      preserveDrawingBuffer: true, // Required for screenshots/thumbnails
+    });
     openGLRenderWindow.setContainer(container);
 
     // CRITICAL: Connect the OpenGL window to the render window

@@ -474,6 +474,7 @@ router.post("/:viewId/thumbnail/queue", async (req, res, next) => {
     // Queue the job
     const job = await thumbnailService.queueThumbnailJob({
       fileId: view.dataset_id,
+      pool: pool,
       viewId: viewId,
       priority: priority || 5,
     });
