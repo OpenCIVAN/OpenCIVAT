@@ -111,6 +111,75 @@
   }
 }
 
+.view-item__thumbnail-wrapper {
+  position: relative;
+  flex-shrink: 0;
+
+  // The Thumbnail component uses size="xs" (32x24px)
+  // Perfect for the compact view item row
+
+  // Ensure thumbnail doesn't overflow
+  .thumbnail {
+    border-radius: $radius-xs;
+  }
+}
+
+.view-item__status-ring {
+  position: absolute;
+  inset: -2px;
+  border: 2px solid transparent;
+  border-radius: $radius-sm;
+  pointer-events: none;
+  transition: border-color $transition-fast;
+
+  &--active {
+    // Border color is set inline via style prop to match view.color
+    border-style: solid;
+  }
+}
+
+// When view is not placed, show a subtle dashed ring
+.view-item--not-placed {
+  .view-item__status-ring {
+    border: 1px dashed $color-border-subtle;
+  }
+
+  // Dim the thumbnail slightly when not placed
+  .view-item__thumbnail-wrapper .thumbnail {
+    opacity: 0.7;
+  }
+
+  &:hover .view-item__thumbnail-wrapper .thumbnail {
+    opacity: 1;
+  }
+}
+
+// Active/selected states
+.view-item--active,
+.view-item--selected {
+  .view-item__thumbnail-wrapper .thumbnail {
+    box-shadow: 0 0 0 1px rgba($color-accent-primary, 0.3);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ALTERNATIVE: If you kept the status dot and want hover thumbnail preview
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// .view-item__hover-preview {
+//   margin-right: $spacing-sm;
+//   opacity: 0;
+//   transform: scale(0.95);
+//   animation: hover-preview-in 0.15s ease forwards;
+// }
+//
+// @keyframes hover-preview-in {
+//   to {
+//     opacity: 1;
+//     transform: scale(1);
+//   }
+// }
+
 // =============================================================================
 // STATUS DOT
 // =============================================================================

@@ -1,8 +1,8 @@
 /**
- * ViewItem Component
+ * ViewItem Component (with Thumbnail Integration)
  *
  * Represents a single view in the views list with three UI surfaces:
- * - Main Row: Status icons, quick actions on hover (no trash for safety)
+ * - Main Row: Thumbnail, status icons, quick actions on hover
  * - Sliding Panel: Slides down on hover with quick toggles and size picker
  * - Context Menu: Right-click for actions
  * - Settings Modal: Full configuration (opened via gear icon)
@@ -28,6 +28,10 @@ import {
 import { SlidingPanel } from './components/SlidingPanel';
 import { ViewItemContextMenu } from './components/ViewItemContextMenu';
 import { ViewSettingsModal } from './components/ViewSettingsModal';
+// ═══════════════════════════════════════════════════════════════════════════════
+// NEW: Import Thumbnail component for view previews
+// ═══════════════════════════════════════════════════════════════════════════════
+import { Thumbnail } from '@UI/react/components/common/Thumbnail';
 import './ViewItem.scss';
 
 // Status icon configuration
@@ -200,11 +204,25 @@ export const ViewItem = memo(function ViewItem({
                     <GripVertical size={14} />
                 </div>
 
-                {/* Status Dot */}
-                <div
-                    className={`view-item__status-dot ${isPlaced ? 'view-item__status-dot--active' : ''}`}
-                    style={isPlaced ? { background: view.color } : undefined}
-                />
+                {/* ═══════════════════════════════════════════════════════════════
+                    NEW: Thumbnail with Status Ring (replaces plain status dot)
+                    
+                    The thumbnail shows a preview of the view. The status ring
+                    around it indicates whether the view is placed on canvas.
+                    Falls back to an icon if no thumbnail exists yet.
+                ═══════════════════════════════════════════════════════════════ */}
+                <div className="view-item__thumbnail-wrapper">
+                    <Thumbnail
+                        viewId={view.id}
+                        size="xs"
+                        instanceType={view.instanceType || datasetInfo?.type || 'vtk'}
+                    />
+                    {/* Status ring shows placement state with view color */}
+                    <div
+                        className={`view-item__status-ring ${isPlaced ? 'view-item__status-ring--active' : ''}`}
+                        style={isPlaced ? { borderColor: view.color } : undefined}
+                    />
+                </div>
 
                 {/* Name */}
                 <div className="view-item__name-container">
@@ -322,10 +340,10 @@ export const ViewItem = memo(function ViewItem({
                 onDuplicate={() => onDuplicate?.(view.id)}
                 onLock={() => onLock?.(view.id)}
                 onSizeChange={(size) => onSizeChange?.(view.id, size)}
-                onLinkPropertyChange={(prop, config) => onLinkPropertyChange?.(view.id, prop, config)}
+                onLinkPropertyChange={(prop, targetViewId) => onLinkPropertyChange?.(view.id, prop, targetViewId)}
             />
 
-            {/* Context Menu */}
+            {/* Context Menu (Portal) */}
             {contextMenu && createPortal(
                 <ViewItemContextMenu
                     view={view}
@@ -337,60 +355,51 @@ export const ViewItem = memo(function ViewItem({
                         setIsEditing(true);
                     }}
                     onNavigate={() => {
-                        if (view.position) {
-                            onNavigate?.(view.position);
-                        }
                         closeContextMenu();
+                        onNavigate?.(view.id);
                     }}
                     onPlace={() => {
-                        handlePlaceOnCanvas();
                         closeContextMenu();
+                        handlePlaceOnCanvas();
                     }}
                     onDuplicate={() => {
-                        onDuplicate?.(view.id);
                         closeContextMenu();
+                        onDuplicate?.(view.id);
                     }}
                     onCloseView={() => {
-                        onClose?.(view.id);
                         closeContextMenu();
+                        onClose?.(view.id);
                     }}
                     onTrash={() => {
-                        onTrash?.(view.id);
                         closeContextMenu();
+                        onTrash?.(view.id);
                     }}
                     onOpenSettings={() => {
-                        setShowSettingsModal(true);
                         closeContextMenu();
+                        setShowSettingsModal(true);
                     }}
                 />,
                 document.body
             )}
 
-            {/* Settings Modal */}
-            {showSettingsModal && (
+            {/* Settings Modal (Portal) */}
+            {showSettingsModal && createPortal(
                 <ViewSettingsModal
                     view={view}
                     dataset={datasetInfo}
-                    availableViews={availableViews}
                     sharedUsers={sharedUsers}
                     onClose={() => setShowSettingsModal(false)}
-                    onRename={(name) => onRename?.(view.id, name)}
-                    onStarWorkspace={() => onStarWorkspace?.(view.id)}
-                    onStarPersonal={() => onStarPersonal?.(view.id)}
-                    onSaveState={() => onSaveState?.(view.id)}
-                    onLoadState={() => onLoadState?.(view.id)}
-                    onLock={() => onLock?.(view.id)}
-                    onShare={() => onShare?.(view.id)}
-                    onUpdateSharing={onUpdateSharing}
+                    onRename={(newName) => onRename?.(view.id, newName)}
                     onSizeChange={(size) => onSizeChange?.(view.id, size)}
-                    onLinkPropertyChange={(prop, config) => onLinkPropertyChange?.(view.id, prop, config)}
-                    onAnnotationFilterChange={(filter, value) => onAnnotationFilterChange?.(view.id, filter, value)}
-                    onDisplayOptionChange={(option, value) => onDisplayOptionChange?.(view.id, option, value)}
-                    onTrash={() => {
-                        onTrash?.(view.id);
-                        setShowSettingsModal(false);
-                    }}
-                />
+                    onShare={onShare}
+                    onUpdateSharing={onUpdateSharing}
+                    onDuplicate={() => onDuplicate?.(view.id)}
+                    onTrash={() => onTrash?.(view.id)}
+                    onLinkPropertyChange={onLinkPropertyChange}
+                    onAnnotationFilterChange={onAnnotationFilterChange}
+                    onDisplayOptionChange={onDisplayOptionChange}
+                />,
+                document.body
             )}
         </div>
     );

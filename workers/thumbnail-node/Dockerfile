@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user FIRST
+RUN useradd -m worker
+
 WORKDIR /app
 
 # Copy package files
@@ -33,14 +36,20 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --only=production
 
-# Install Playwright browsers (Chromium only)
-RUN npx playwright install chromium
+# Set Playwright to use a shared cache directory
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+
+# Install Playwright browsers to shared location (as root, but accessible to all)
+RUN npx playwright install chromium \
+    && chmod -R 755 /opt/playwright-browsers
 
 # Copy worker code
 COPY worker.js ./
 
+# Change ownership of app directory
+RUN chown -R worker:worker /app
+
 # Run as non-root user for security
-RUN useradd -m worker
 USER worker
 
 CMD ["node", "worker.js"]
