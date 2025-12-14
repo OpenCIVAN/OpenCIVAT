@@ -33,7 +33,7 @@ const API_BASE = window.API_BASE_URL || "http://localhost:3001/api";
 
 /**
  * Extract parameters from URL
- * 
+ *
  * Expected parameters (set by thumbnail worker):
  * - mode: "view" or "file"
  * - id: view ID or file ID depending on mode
@@ -46,7 +46,7 @@ function getParams() {
   return {
     mode: params.get("mode") || "view",
     id: params.get("id"),
-    handlerType: params.get("handlerType"),  // Server-authoritative!
+    handlerType: params.get("handlerType"), // Server-authoritative!
     width: parseInt(params.get("width")) || 800,
     height: parseInt(params.get("height")) || 600,
   };
@@ -58,21 +58,23 @@ function getParams() {
 
 /**
  * Fetch view configuration from server
- * Returns dataset ID and handler type (if not provided in URL)
+ * Returns dataset ID, handler type, and camera state
  */
 async function fetchViewConfig(viewId) {
   const response = await fetch(`${API_BASE}/views/${viewId}`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch view: ${response.status}`);
   }
-  
+
   const data = await response.json();
-  
+
   // Handle both camelCase and snake_case responses
   return {
     datasetId: data.datasetId || data.dataset_id,
     handlerType: data.handlerType || data.handler_type,
+    // Camera state for restoring saved view position
+    camera: data.camera || null,
   };
 }
 
@@ -81,13 +83,13 @@ async function fetchViewConfig(viewId) {
  */
 async function fetchDatasetInfo(datasetId) {
   const response = await fetch(`${API_BASE}/files/${datasetId}`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch dataset: ${response.status}`);
   }
-  
+
   const data = await response.json();
-  
+
   return {
     id: data.id,
     handlerType: data.handlerType || data.handler_type,
@@ -100,18 +102,24 @@ async function fetchDatasetInfo(datasetId) {
 
 /**
  * EmbedVisualization - Handler-agnostic visualization renderer
- * 
+ *
  * This component:
  * 1. Resolves the dataset ID and handler type
  * 2. Gets the handler from the registry
  * 3. Calls handler.renderForThumbnail() to do the actual rendering
- * 
+ *
  * All type-specific rendering code lives in the handler, not here.
  */
-function EmbedVisualization({ mode, id, handlerType: urlHandlerType, width, height }) {
+function EmbedVisualization({
+  mode,
+  id,
+  handlerType: urlHandlerType,
+  width,
+  height,
+}) {
   const containerRef = useRef(null);
   const cleanupRef = useRef(null);
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -126,25 +134,36 @@ function EmbedVisualization({ mode, id, handlerType: urlHandlerType, width, heig
 
     async function initialize() {
       try {
-        log.info(`Embed initializing: mode=${mode}, id=${id}, handlerType=${urlHandlerType}`);
+        log.info(
+          `Embed initializing: mode=${mode}, id=${id}, handlerType=${urlHandlerType}`
+        );
 
-        // Step 1: Resolve dataset ID and handler type
+        // Step 1: Resolve dataset ID, handler type, and camera state
         let datasetId;
-        let handlerType = urlHandlerType;  // Prefer URL param (from server)
+        let handlerType = urlHandlerType; // Prefer URL param (from server)
+        let cameraState = null; // For restoring saved view position
 
         if (mode === "view") {
-          // Fetch view config to get dataset ID
+          // Fetch view config to get dataset ID and saved camera state
           const viewConfig = await fetchViewConfig(id);
           datasetId = viewConfig.datasetId;
-          
+          cameraState = viewConfig.camera; // May be null for default views
+
           // Use handler type from view if not in URL
           if (!handlerType) {
             handlerType = viewConfig.handlerType;
           }
+
+          log.debug(
+            `View has camera state: ${
+              cameraState ? "yes" : "no (using default)"
+            }`
+          );
         } else {
           // mode === "file" - id is the dataset ID directly
           datasetId = id;
-          
+          // No camera state for raw files - use default
+
           // Fetch dataset info if we don't have handler type
           if (!handlerType) {
             const datasetInfo = await fetchDatasetInfo(datasetId);
@@ -158,12 +177,14 @@ function EmbedVisualization({ mode, id, handlerType: urlHandlerType, width, heig
         if (!datasetId) {
           throw new Error("Could not determine dataset ID");
         }
-        
+
         if (!handlerType) {
           throw new Error("Could not determine handler type");
         }
 
-        log.info(`Resolved: datasetId=${datasetId}, handlerType=${handlerType}`);
+        log.info(
+          `Resolved: datasetId=${datasetId}, handlerType=${handlerType}`
+        );
 
         // Step 2: Get handler from registry (use the singleton)
         const handler = instanceTypeRegistry.getHandler(handlerType);
@@ -173,37 +194,45 @@ function EmbedVisualization({ mode, id, handlerType: urlHandlerType, width, heig
         }
 
         if (typeof handler.renderForThumbnail !== "function") {
-          throw new Error(`Handler ${handlerType} does not support thumbnail rendering`);
+          throw new Error(
+            `Handler ${handlerType} does not support thumbnail rendering`
+          );
         }
 
         log.info(`Using handler: ${handlerType}`);
 
         // Step 3: Let the handler render the visualization
-        // The handler does ALL type-specific work - we just provide the container
+        // The handler creates ONLY the canvas - no headers, no tools
         setLoading(false);
-        
+
         cleanupRef.current = handler.renderForThumbnail(
           containerRef.current,
           datasetId,
           {
             width,
             height,
+            camera: cameraState, // Pass saved camera state (or null for default)
             onReady: () => {
               if (mounted) {
                 log.info("Visualization ready for capture");
-                document.body.setAttribute("data-testid", "visualization-ready");
+                document.body.setAttribute(
+                  "data-testid",
+                  "visualization-ready"
+                );
               }
             },
             onError: (msg) => {
               if (mounted) {
                 log.error("Handler reported error:", msg);
                 setError(msg);
-                document.body.setAttribute("data-testid", "visualization-error");
+                document.body.setAttribute(
+                  "data-testid",
+                  "visualization-error"
+                );
               }
             },
           }
         );
-
       } catch (err) {
         log.error("Embed initialization failed:", err);
         if (mounted) {
