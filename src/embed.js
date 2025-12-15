@@ -24,8 +24,25 @@ import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry
 // Import handler registration - this registers VTK and other handlers
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 
-// API base URL - can be overridden by environment
-const API_BASE = window.API_BASE_URL || "http://localhost:3001/api";
+// API base URL - Can be passed via query parameter or defaults to relative URL
+// The worker passes the API URL explicitly to avoid webpack proxy issues in Docker
+// CORS is configured on the API server to allow requests from host.docker.internal
+function getApiBase() {
+  const params = new URLSearchParams(window.location.search);
+  const apiUrl = params.get("apiUrl");
+  if (apiUrl) {
+    // Worker provided explicit API URL - use it directly
+    // Remove trailing slash if present
+    return apiUrl.replace(/\/$/, "");
+  }
+  // Default to relative URL (works when webpack proxy is available)
+  return "/api";
+}
+
+const API_BASE = getApiBase();
+
+// Set global API_BASE_URL for handlers (like VTK) that need it
+window.API_BASE_URL = API_BASE;
 
 // =============================================================================
 // URL PARAMETER PARSING
@@ -61,39 +78,69 @@ function getParams() {
  * Returns dataset ID, handler type, and camera state
  */
 async function fetchViewConfig(viewId) {
-  const response = await fetch(`${API_BASE}/views/${viewId}`);
+  const url = `${API_BASE}/views/${viewId}`;
+  log.info(`Fetching view config from: ${url}`);
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch view: ${response.status}`);
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch view: ${response.status}`);
+    }
+
+    const data = await response.json();
+    log.info(`View config received:`, data);
+
+    // API returns { view: { ... } } - unwrap it
+    const view = data.view || data;
+
+    // Handle both camelCase and snake_case responses
+    return {
+      datasetId: view.datasetId || view.dataset_id,
+      handlerType: view.handlerType || view.handler_type,
+      // Camera state for restoring saved view position
+      camera: view.camera || null,
+    };
+  } catch (err) {
+    log.error(`Failed to fetch view config from ${url}:`, err.message);
+    throw err;
   }
-
-  const data = await response.json();
-
-  // Handle both camelCase and snake_case responses
-  return {
-    datasetId: data.datasetId || data.dataset_id,
-    handlerType: data.handlerType || data.handler_type,
-    // Camera state for restoring saved view position
-    camera: data.camera || null,
-  };
 }
 
 /**
  * Fetch dataset info (including handler type) from server
  */
 async function fetchDatasetInfo(datasetId) {
-  const response = await fetch(`${API_BASE}/files/${datasetId}`);
+  const url = `${API_BASE}/files/${datasetId}`;
+  log.info(`Fetching dataset info from: ${url}`);
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch dataset: ${response.status}`);
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch dataset: ${response.status}`);
+    }
+
+    const data = await response.json();
+    log.info(`Dataset info received:`, data);
+
+    // API returns { file: { ... } } - unwrap it
+    const file = data.file || data;
+
+    // The handler type field can be named differently in different contexts
+    // Check all possible field names
+    return {
+      id: file.id,
+      handlerType:
+        file.handlerType ||
+        file.handler_type ||
+        file.fileType ||
+        file.file_type,
+    };
+  } catch (err) {
+    log.error(`Failed to fetch dataset info from ${url}:`, err.message);
+    throw err;
   }
-
-  const data = await response.json();
-
-  return {
-    id: data.id,
-    handlerType: data.handlerType || data.handler_type,
-  };
 }
 
 // =============================================================================
@@ -149,11 +196,6 @@ function EmbedVisualization({
           datasetId = viewConfig.datasetId;
           cameraState = viewConfig.camera; // May be null for default views
 
-          // Use handler type from view if not in URL
-          if (!handlerType) {
-            handlerType = viewConfig.handlerType;
-          }
-
           log.debug(
             `View has camera state: ${
               cameraState ? "yes" : "no (using default)"
@@ -163,12 +205,13 @@ function EmbedVisualization({
           // mode === "file" - id is the dataset ID directly
           datasetId = id;
           // No camera state for raw files - use default
+        }
 
-          // Fetch dataset info if we don't have handler type
-          if (!handlerType) {
-            const datasetInfo = await fetchDatasetInfo(datasetId);
-            handlerType = datasetInfo.handlerType;
-          }
+        // Handler type is stored on the dataset, not the view
+        // Fetch it from the dataset if not provided in URL
+        if (!handlerType && datasetId) {
+          const datasetInfo = await fetchDatasetInfo(datasetId);
+          handlerType = datasetInfo.handlerType;
         }
 
         if (!mounted) return;
@@ -186,11 +229,28 @@ function EmbedVisualization({
           `Resolved: datasetId=${datasetId}, handlerType=${handlerType}`
         );
 
-        // Step 2: Get handler from registry (use the singleton)
-        const handler = instanceTypeRegistry.getHandler(handlerType);
+        // Step 2: Get handler from registry
+        // Try direct handler lookup first, then try file type mapping
+        // (file_type stores extensions like 'vtp', but handlers are registered as 'vtk')
+        let handler = null;
+        try {
+          handler = instanceTypeRegistry.getHandler(handlerType);
+        } catch (e) {
+          // Handler not found by name, try looking up by file type
+          // This maps extensions like 'vtp' -> 'vtk' handler
+          log.debug(
+            `Handler '${handlerType}' not found, trying file type lookup...`
+          );
+          handler = instanceTypeRegistry.getHandlerForFileType(handlerType);
+        }
 
         if (!handler) {
-          throw new Error(`No handler registered for type: ${handlerType}`);
+          const availableTypes = Array.from(
+            instanceTypeRegistry.handlers?.keys?.() || []
+          ).join(", ");
+          throw new Error(
+            `No handler registered for type: ${handlerType}. Available types: ${availableTypes}`
+          );
         }
 
         if (typeof handler.renderForThumbnail !== "function") {
@@ -316,6 +376,7 @@ async function initializeEmbed() {
   const params = getParams();
 
   log.info("Embed mode starting...", params);
+  log.info(`API base URL: ${API_BASE}`);
 
   // Validate required parameters
   if (!params.id) {

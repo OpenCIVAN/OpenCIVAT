@@ -94,6 +94,12 @@ const corsOptions = {
       return callback(null, true);
     }
 
+    // Allow host.docker.internal for Docker-based thumbnail worker
+    // The thumbnail worker's headless browser accesses the frontend from Docker
+    if (origin.match(/^https?:\/\/host\.docker\.internal(:\d+)?$/)) {
+      return callback(null, true);
+    }
+
     // Allow specific production origins if needed
     const allowedOrigins = (process.env.CORS_ORIGINS || "")
       .split(",")

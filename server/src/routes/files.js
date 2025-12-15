@@ -310,9 +310,22 @@ router.post("/", upload.single("file"), async (req, res, next) => {
       wsManager.fileAdded(projectId, newFile.rows[0]);
     }
 
-    // Note: Thumbnails are queued when views are created (in views.js),
-    // not on file upload, because the thumbnail worker needs a viewId
-    // to render the visualization correctly.
+    // Queue a default file-level thumbnail (async, don't wait)
+    // This generates the thumbnail shown in file lists.
+    // View-specific thumbnails are queued separately when views are created.
+    thumbnailService
+      .queueThumbnailJob({
+        fileId,
+        pool,
+        viewId: null, // File-level thumbnail, no specific view
+        projectId: projectId || null,
+        priority: 3, // Lower priority than view thumbnails
+      })
+      .catch((err) => {
+        log.warn(
+          `Failed to queue default thumbnail for file ${fileId}: ${err.message}`
+        );
+      });
 
     res.status(201).json({
       success: true,

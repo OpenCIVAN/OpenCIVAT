@@ -28,6 +28,7 @@ module.exports = {
     port: 8081,
     host: "0.0.0.0",
     hot: true,
+    // HTTPS for secure contexts (WebRTC, service workers, etc.)
     server: {
       type: "https",
       options: {
@@ -36,6 +37,15 @@ module.exports = {
       },
     },
     allowedHosts: "all",
+    // Proxy API requests to the backend - eliminates CORS issues
+    proxy: [
+      {
+        context: ["/api"],
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        secure: false,
+      },
+    ],
   },
   module: {
     rules: [

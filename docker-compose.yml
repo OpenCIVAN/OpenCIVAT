@@ -192,8 +192,8 @@ services:
       MINIO_SECURE: "false"
       # The URL the headless browser will navigate to for rendering
       # In Docker, this should point to the frontend service or host
-      # Note: webpack dev server uses HTTPS by default
       APP_BASE_URL: ${APP_BASE_URL:-https://host.docker.internal:8081}
+      # API URL for worker callbacks (internal Docker network)
       API_URL: http://api:3001
     depends_on:
       redis:

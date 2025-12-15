@@ -232,6 +232,7 @@ router.post("/", async (req, res, next) => {
     thumbnailService
       .queueThumbnailJob({
         fileId,
+        pool, // IMPORTANT: Pass pool so handler_type can be looked up
         viewId: view.id,
         projectId: projectId || null,
         priority: 5,

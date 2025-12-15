@@ -1750,13 +1750,69 @@ console.log('Tools:', tools);
         const renderWindow = vtkRenderWindow.newInstance();
         renderWindow.addRenderer(renderer);
 
-        // CRITICAL: preserveDrawingBuffer must be true!
+        // CRITICAL: preserveDrawingBuffer must be true for screenshots!
         // Without this, WebGL clears the framebuffer after compositing
-        // and Playwright captures an empty/black canvas
-        const openGLRenderWindow = vtkOpenGLRenderWindow.newInstance({
-          preserveDrawingBuffer: true,
-        });
-        openGLRenderWindow.setContainer(container);
+        // and canvas.toDataURL() returns black.
+        //
+        // WebGL context attributes are set at creation time and CANNOT be changed.
+        // We must create the canvas ourselves with the right attributes FIRST,
+        // then tell VTK.js to use our existing canvas.
+
+        // Step A: Create canvas element
+        const glCanvas = document.createElement("canvas");
+        glCanvas.width = width;
+        glCanvas.height = height;
+        glCanvas.style.width = "100%";
+        glCanvas.style.height = "100%";
+        container.appendChild(glCanvas);
+
+        // Step B: Create WebGL context WITH preserveDrawingBuffer BEFORE VTK.js touches it
+        const gl =
+          glCanvas.getContext("webgl2", {
+            preserveDrawingBuffer: true,
+            alpha: true,
+            antialias: true,
+            depth: true,
+            stencil: false,
+            premultipliedAlpha: true,
+            powerPreference: "default",
+          }) ||
+          glCanvas.getContext("webgl", {
+            preserveDrawingBuffer: true,
+            alpha: true,
+            antialias: true,
+            depth: true,
+            stencil: false,
+            premultipliedAlpha: true,
+            powerPreference: "default",
+          });
+
+        if (!gl) {
+          throw new Error("Failed to create WebGL context");
+        }
+
+        // Verify preserveDrawingBuffer is set
+        const attrs = gl.getContextAttributes();
+        log.debug(`[Thumbnail] WebGL context attributes:`, attrs);
+        if (!attrs?.preserveDrawingBuffer) {
+          log.warn("[Thumbnail] WARNING: preserveDrawingBuffer is false!");
+        }
+
+        // Step C: Create VTK OpenGL render window and give it our pre-configured canvas
+        const openGLRenderWindow = vtkOpenGLRenderWindow.newInstance();
+
+        // Use setCanvas if available (newer VTK.js), otherwise setContainer
+        if (typeof openGLRenderWindow.setCanvas === "function") {
+          openGLRenderWindow.setCanvas(glCanvas);
+          log.debug(
+            "[Thumbnail] Using setCanvas() - canvas with preserveDrawingBuffer"
+          );
+        } else {
+          // Fallback: set container but canvas already exists with our context
+          openGLRenderWindow.setContainer(container);
+          log.debug("[Thumbnail] Using setContainer() - canvas pre-created");
+        }
+
         openGLRenderWindow.setSize(width, height);
         renderWindow.addView(openGLRenderWindow);
 
@@ -1795,7 +1851,7 @@ console.log('Tools:', tools);
         }
 
         // ---------------------------------------------------------------------
-        // Step 5: Render
+        // Step 5: Render and synchronize WebGL
         // ---------------------------------------------------------------------
         renderWindow.render();
 
@@ -1809,6 +1865,46 @@ console.log('Tools:', tools);
           reader,
           camera,
         };
+
+        // ---------------------------------------------------------------------
+        // Step 6: Synchronize WebGL for screenshot capture
+        // ---------------------------------------------------------------------
+        // WebGL commands are asynchronous. After render(), the GPU commands
+        // are queued but may not have executed. For screenshot capture, we need
+        // to ensure the framebuffer is fully rendered.
+
+        // Get the WebGL context from the VTK OpenGL render window
+        const canvas = container.querySelector("canvas");
+        if (canvas) {
+          const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+          if (gl) {
+            // gl.finish() blocks until all queued WebGL commands have completed
+            // This ensures the framebuffer has actual content
+            gl.finish();
+            log.debug("[Thumbnail] WebGL synchronized via gl.finish()");
+          }
+        }
+
+        // Wait for next animation frame to ensure browser compositing is complete
+        // This is the final step to ensure the canvas pixel data is readable
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            // Do a second render to be absolutely sure content is visible
+            renderWindow.render();
+
+            // Synchronize again after the second render
+            if (canvas) {
+              const gl =
+                canvas.getContext("webgl2") || canvas.getContext("webgl");
+              if (gl) {
+                gl.finish();
+              }
+            }
+
+            // Give browser a moment to composite
+            setTimeout(resolve, 50);
+          });
+        });
 
         log.info("[Thumbnail] Render complete, signaling ready");
 
