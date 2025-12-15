@@ -381,6 +381,44 @@ router.put("/:id", async (req, res, next) => {
       }
     }
 
+    // Queue thumbnail regeneration if visual state changed
+    // These fields affect how the visualization looks in the thumbnail
+    const visualFields = [
+      "camera",
+      "filters",
+      "widgets",
+      "colorMaps",
+      "color_maps",
+    ];
+    const visualStateChanged = visualFields.some(
+      (field) => updates[field] !== undefined
+    );
+
+    if (visualStateChanged && view.dataset_id) {
+      // Use debounced queuing to avoid excessive regeneration during rapid edits
+      thumbnailService
+        .queueThumbnailJobDebounced({
+          fileId: view.dataset_id,
+          pool,
+          viewId: id,
+          priority: 3, // Lower priority than user-initiated requests
+        })
+        .then((job) => {
+          if (job) {
+            log.debug(
+              `Queued thumbnail regeneration for view ${id} after state change`
+            );
+          } else {
+            log.debug(`Thumbnail regeneration for view ${id} debounced`);
+          }
+        })
+        .catch((err) => {
+          log.warn(
+            `Failed to queue thumbnail regeneration for view ${id}: ${err.message}`
+          );
+        });
+    }
+
     res.json({
       success: true,
       view,

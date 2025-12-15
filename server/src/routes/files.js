@@ -807,7 +807,22 @@ router.get("/:id/thumbnail", async (req, res, next) => {
     );
 
     if (thumbnailResult.rows.length === 0) {
-      log.debug(`No thumbnail for view ${viewId} (file ${id})`);
+      log.debug(
+        `No thumbnail for view ${viewId} (file ${id}) - queuing generation`
+      );
+
+      // Auto-queue thumbnail generation (fire and forget, debounced)
+      thumbnailService
+        .queueThumbnailJobDebounced({
+          fileId: id,
+          pool,
+          viewId,
+          priority: 3, // Lower priority for auto-generated
+        })
+        .catch((err) =>
+          log.warn(`Failed to auto-queue thumbnail for ${id}: ${err.message}`)
+        );
+
       // Return 204 No Content - signals no thumbnail but avoids CORS issues
       return res.status(204).end();
     }

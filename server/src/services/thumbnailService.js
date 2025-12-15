@@ -195,10 +195,112 @@ async function hasThumbnail(pool, viewId) {
   return result.rows.length > 0;
 }
 
+/**
+ * Get thumbnail info including last update time
+ *
+ * @param {object} pool - Database pool
+ * @param {string} viewId - View configuration ID
+ * @returns {Promise<object|null>} - Thumbnail info or null
+ */
+async function getThumbnailInfo(pool, viewId) {
+  const result = await pool.query(
+    `SELECT id, updated_at, created_at
+     FROM view_thumbnails
+     WHERE view_config_id = $1 AND snapshot_id IS NULL
+     LIMIT 1`,
+    [viewId]
+  );
+  return result.rows[0] || null;
+}
+
+/**
+ * Check if thumbnail is stale (older than specified minutes)
+ *
+ * @param {object} pool - Database pool
+ * @param {string} viewId - View configuration ID
+ * @param {number} maxAgeMinutes - Max age in minutes before considered stale
+ * @returns {Promise<boolean>} - true if stale or missing
+ */
+async function isThumbnailStale(pool, viewId, maxAgeMinutes = 30) {
+  const info = await getThumbnailInfo(pool, viewId);
+  if (!info) return true; // No thumbnail = stale
+
+  const lastUpdate = new Date(info.updated_at || info.created_at);
+  const ageMs = Date.now() - lastUpdate.getTime();
+  const ageMinutes = ageMs / (1000 * 60);
+
+  return ageMinutes > maxAgeMinutes;
+}
+
+// In-memory debounce tracking (cleared on server restart)
+const recentlyQueued = new Map();
+const DEBOUNCE_MS = 30000; // 30 seconds minimum between queue requests
+
+/**
+ * Queue thumbnail with debouncing to prevent excessive regeneration
+ *
+ * @param {object} options - Same as queueThumbnailJob
+ * @param {number} debounceMs - Minimum ms between queue requests (default 30s)
+ * @returns {Promise<object|null>} - Job info or null if debounced
+ */
+async function queueThumbnailJobDebounced(options, debounceMs = DEBOUNCE_MS) {
+  const key = options.viewId || options.fileId;
+  const now = Date.now();
+
+  const lastQueued = recentlyQueued.get(key);
+  if (lastQueued && now - lastQueued < debounceMs) {
+    log.debug(
+      `Debounced thumbnail queue for ${key} (last queued ${
+        (now - lastQueued) / 1000
+      }s ago)`
+    );
+    return null;
+  }
+
+  recentlyQueued.set(key, now);
+
+  // Clean up old entries periodically
+  if (recentlyQueued.size > 1000) {
+    const cutoff = now - debounceMs * 2;
+    for (const [k, v] of recentlyQueued) {
+      if (v < cutoff) recentlyQueued.delete(k);
+    }
+  }
+
+  return queueThumbnailJob(options);
+}
+
+/**
+ * Queue thumbnail generation only if thumbnail is missing or stale
+ *
+ * @param {object} options - Same as queueThumbnailJob plus maxAgeMinutes
+ * @returns {Promise<object|null>} - Job info or null if not needed
+ */
+async function queueThumbnailIfNeeded(options) {
+  const { viewId, pool, maxAgeMinutes = 30 } = options;
+
+  if (!viewId || !pool) {
+    log.warn("queueThumbnailIfNeeded requires viewId and pool");
+    return null;
+  }
+
+  const stale = await isThumbnailStale(pool, viewId, maxAgeMinutes);
+  if (!stale) {
+    log.debug(`Thumbnail for view ${viewId} is fresh, skipping regeneration`);
+    return null;
+  }
+
+  return queueThumbnailJobDebounced(options);
+}
+
 module.exports = {
   queueThumbnailJob,
+  queueThumbnailJobDebounced,
+  queueThumbnailIfNeeded,
   queueThumbnailsForFile,
   handleThumbnailCallback,
   hasThumbnail,
+  getThumbnailInfo,
+  isThumbnailStale,
   getQueue,
 };
