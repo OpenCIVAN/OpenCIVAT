@@ -55,6 +55,9 @@ router.post("/callback", async (req, res, next) => {
       jobId: result.jobId,
       success: result.success,
       storageKey: result.storageKey,
+      thumbnailType: result.thumbnailType,
+      fileId: result.fileId,
+      viewId: result.viewId,
     });
 
     // Validate required fields
@@ -63,10 +66,22 @@ router.post("/callback", async (req, res, next) => {
       return res.status(400).json({ error: "jobId required" });
     }
 
-    // Handle the callback - creates/updates database record
-    const saved = await thumbnailService.handleThumbnailCallback(pool, result);
+    // Create broadcast function to pass to callback handler
+    const broadcastFn = wsManager
+      ? (eventType, data) => {
+          log.debug(`Broadcasting ${eventType}:`, data);
+          wsManager.broadcast({ type: eventType, ...data });
+        }
+      : null;
 
-    // If successful, broadcast to connected clients so they can refresh
+    // Handle the callback - creates/updates database record
+    const saved = await thumbnailService.handleThumbnailCallback(
+      pool,
+      result,
+      broadcastFn
+    );
+
+    // Also broadcast legacy event for backward compatibility
     if (saved.success && saved.viewId && wsManager) {
       log.debug(`Broadcasting thumbnail:ready for view ${saved.viewId}`);
       wsManager.broadcast({

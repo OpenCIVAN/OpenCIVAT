@@ -281,10 +281,27 @@ function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragSta
  *
  * Uses fetch to properly handle 204 No Content responses which img tags
  * don't handle well (neither onLoad nor onError fires for 204).
+ *
+ * Listens for 'cia:file-thumbnail-updated' events to auto-refresh when
+ * server generates/updates the thumbnail.
  */
 function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorClass }) {
     const [status, setStatus] = useState('loading'); // 'loading' | 'loaded' | 'error' | 'no-thumbnail'
     const [objectUrl, setObjectUrl] = useState(null);
+    const [revision, setRevision] = useState(0); // Increment to force refetch
+
+    // Listen for file thumbnail updates from WebSocket
+    useEffect(() => {
+        const handleThumbnailUpdate = (event) => {
+            if (event.detail?.fileId === fileId) {
+                log.debug(`File thumbnail updated for ${fileId}, refetching...`);
+                setRevision(r => r + 1);
+            }
+        };
+
+        window.addEventListener('cia:file-thumbnail-updated', handleThumbnailUpdate);
+        return () => window.removeEventListener('cia:file-thumbnail-updated', handleThumbnailUpdate);
+    }, [fileId]);
 
     // Fetch thumbnail using fetch API to handle 204 properly
     useEffect(() => {
@@ -295,12 +312,22 @@ function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorCl
 
         let cancelled = false;
         setStatus('loading');
-        setObjectUrl(null);
+
+        // Clean up previous object URL
+        if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            setObjectUrl(null);
+        }
 
         const loadThumbnail = async () => {
             try {
                 const apiBase = config.apiBaseUrl || 'http://localhost:3001/api';
-                const response = await fetch(`${apiBase}/files/${fileId}/thumbnail`, {
+                // Add cache-busting param on revision to force fresh fetch
+                const url = revision > 0
+                    ? `${apiBase}/files/${fileId}/thumbnail?_=${revision}`
+                    : `${apiBase}/files/${fileId}/thumbnail`;
+
+                const response = await fetch(url, {
                     credentials: 'include',
                 });
 
@@ -326,8 +353,8 @@ function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorCl
                     return;
                 }
 
-                const url = URL.createObjectURL(blob);
-                setObjectUrl(url);
+                const blobUrl = URL.createObjectURL(blob);
+                setObjectUrl(blobUrl);
                 setStatus('loaded');
             } catch (err) {
                 if (!cancelled) {
@@ -341,11 +368,17 @@ function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorCl
 
         return () => {
             cancelled = true;
+        };
+    }, [fileId, revision]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Cleanup object URL on unmount
+    useEffect(() => {
+        return () => {
             if (objectUrl) {
                 URL.revokeObjectURL(objectUrl);
             }
         };
-    }, [fileId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [objectUrl]);
 
     // Show fallback for error or no-thumbnail states
     if (status === 'error' || status === 'no-thumbnail') {
@@ -369,12 +402,17 @@ function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorCl
         );
     }
 
-    // Show actual thumbnail
+    // Show actual thumbnail - scaled to fit container
     return (
         <img
             src={objectUrl}
             alt="File thumbnail"
             className="thumbnail__image"
+            style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+            }}
         />
     );
 }

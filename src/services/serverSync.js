@@ -228,6 +228,41 @@ class ServerSyncService {
     this.on("member:joined", (msg) => log.debug(`User ${msg.userId} joined`));
     this.on("member:left", (msg) => log.debug(`User ${msg.userId} left`));
 
+    // Thumbnail events - dispatch custom events for UI components to listen to
+    this.on("thumbnail:ready", (msg) => {
+      log.debug(`Thumbnail ready for view ${msg.viewId}`);
+      // Dispatch event for useThumbnail hook and other listeners
+      window.dispatchEvent(
+        new CustomEvent("cia:thumbnail-ready", {
+          detail: { viewId: msg.viewId, snapshotId: msg.snapshotId },
+        })
+      );
+    });
+
+    this.on("thumbnail:file-updated", (msg) => {
+      log.info(`File thumbnail updated: ${msg.fileId}`);
+      // Dispatch event for FilesTab and other file thumbnail displays
+      window.dispatchEvent(
+        new CustomEvent("cia:file-thumbnail-updated", {
+          detail: { fileId: msg.fileId, storageKey: msg.storageKey },
+        })
+      );
+      // Also update dataset manager if available
+      if (this.datasetManager) {
+        this.datasetManager.notifyThumbnailUpdated(msg.fileId);
+      }
+    });
+
+    this.on("thumbnail:view-updated", (msg) => {
+      log.debug(`View thumbnail updated: ${msg.viewId}`);
+      // Dispatch event for view thumbnail displays
+      window.dispatchEvent(
+        new CustomEvent("cia:thumbnail-ready", {
+          detail: { viewId: msg.viewId, fileId: msg.fileId },
+        })
+      );
+    });
+
     // Compute job events
     this.on("compute:progress", (msg) => {
       log.debug(`Compute progress: ${msg.jobId} - ${msg.progress}%`);

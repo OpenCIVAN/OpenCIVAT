@@ -131,6 +131,9 @@ CREATE TABLE datasets (
     current_version_id UUID,
     derived_from UUID REFERENCES datasets(id) ON DELETE SET NULL,
     derivation_info JSONB,
+    -- File-level thumbnail (static, only changes on version update or admin action)
+    thumbnail_key VARCHAR(500),        -- MinIO object key for file thumbnail
+    thumbnail_updated_at TIMESTAMPTZ,  -- When thumbnail was last generated
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

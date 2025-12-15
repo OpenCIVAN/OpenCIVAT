@@ -748,124 +748,80 @@ router.delete("/:id/remove-from-project", async (req, res, next) => {
 
 /**
  * GET /api/files/:id/thumbnail
- * Get a thumbnail for a file (uses the default view's thumbnail)
+ * Get a thumbnail for a file (stored directly in datasets table)
  *
- * This endpoint looks up the first/oldest view for the file and returns
- * that view's thumbnail. Returns 204 No Content if no thumbnail exists
- * (instead of 404 JSON, which causes CORS issues with <img> tags).
+ * File thumbnails are STATIC - they only change on:
+ * 1. Admin explicitly regenerates from file options
+ * 2. Version changes (new version gets new thumbnail)
+ *
+ * Returns 204 No Content if no thumbnail exists (avoids CORS issues with <img> tags).
  */
 router.get("/:id/thumbnail", async (req, res, next) => {
   try {
     const { id } = req.params;
     const { pool, minioClient, bucketName } = req.app.locals;
 
-    log.debug(`Getting thumbnail for file ${id}`);
+    log.debug(`Getting file thumbnail for ${id}`);
 
-    // Find the default view for this file
-    // The "default" view is typically the oldest/first view created for the file
-    const viewResult = await pool.query(
-      `
-      SELECT vc.id as view_id, vc.status
-      FROM view_configurations vc
-      WHERE vc.dataset_id = $1
-        AND vc.status = 'active'
-      ORDER BY vc.created_at ASC
-      LIMIT 1
-      `,
+    // Get file's own thumbnail from datasets table
+    const result = await pool.query(
+      `SELECT thumbnail_key, thumbnail_updated_at, status
+       FROM datasets
+       WHERE id = $1`,
       [id]
     );
 
-    if (viewResult.rows.length === 0) {
-      // Check if there are ANY views for this file (including non-active)
-      const anyViews = await pool.query(
-        `SELECT id, status FROM view_configurations WHERE dataset_id = $1`,
-        [id]
-      );
-      log.debug(
-        `No active views for file ${id}. Total views: ${
-          anyViews.rows.length
-        }, statuses: ${anyViews.rows.map((r) => r.status).join(", ")}`
-      );
-      // Return 204 No Content - signals no thumbnail but avoids CORS issues
-      return res.status(204).end();
+    if (result.rows.length === 0) {
+      log.debug(`File ${id} not found`);
+      return res.status(404).json({ error: "File not found" });
     }
 
-    log.debug(`Found view ${viewResult.rows[0].view_id} for file ${id}`);
+    const file = result.rows[0];
 
-    const viewId = viewResult.rows[0].view_id;
+    // If no thumbnail exists, auto-queue generation
+    if (!file.thumbnail_key) {
+      log.debug(`No thumbnail for file ${id} - queuing generation`);
 
-    // Get the thumbnail for this view
-    const thumbnailResult = await pool.query(
-      `
-      SELECT t.*, v.visibility, v.owner_user_id
-      FROM view_thumbnails t
-      JOIN view_configurations v ON t.view_config_id = v.id
-      WHERE t.view_config_id = $1
-        AND t.snapshot_id IS NULL
-      `,
-      [viewId]
-    );
-
-    if (thumbnailResult.rows.length === 0) {
-      log.debug(
-        `No thumbnail for view ${viewId} (file ${id}) - queuing generation`
-      );
-
-      // Auto-queue thumbnail generation (fire and forget, debounced)
+      // Queue file-level thumbnail (not view-level)
       thumbnailService
-        .queueThumbnailJobDebounced({
+        .queueFileThumbnailJob({
           fileId: id,
           pool,
-          viewId,
-          priority: 3, // Lower priority for auto-generated
+          priority: 3,
         })
         .catch((err) =>
-          log.warn(`Failed to auto-queue thumbnail for ${id}: ${err.message}`)
+          log.warn(
+            `Failed to auto-queue file thumbnail for ${id}: ${err.message}`
+          )
         );
 
       // Return 204 No Content - signals no thumbnail but avoids CORS issues
       return res.status(204).end();
     }
 
-    const thumbnail = thumbnailResult.rows[0];
-    log.debug(
-      `Found thumbnail for view ${viewId}: format=${
-        thumbnail.format
-      }, inline=${!!thumbnail.inline_data}, storage_key=${
-        thumbnail.storage_key
-      }`
-    );
+    log.debug(`Found file thumbnail: ${file.thumbnail_key}`);
 
-    // Set cache headers
-    res.set("Cache-Control", "public, max-age=3600"); // 1 hour
-
-    // Return inline data directly
-    if (thumbnail.inline_data) {
-      const mimeType =
-        thumbnail.format === "svg"
-          ? "image/svg+xml"
-          : `image/${thumbnail.format}`;
-      res.set("Content-Type", mimeType);
-      log.debug(`Returning inline thumbnail for file ${id}`);
-      return res.send(Buffer.from(thumbnail.inline_data, "base64"));
-    }
+    // Set cache headers (file thumbnails are stable - cache longer)
+    res.set("Cache-Control", "public, max-age=86400"); // 24 hours
 
     // Stream from MinIO
-    if (thumbnail.storage_key && minioClient) {
+    if (minioClient) {
       try {
-        const mimeType =
-          thumbnail.format === "svg"
-            ? "image/svg+xml"
-            : `image/${thumbnail.format}`;
+        // Determine MIME type from storage key
+        const mimeType = file.thumbnail_key.endsWith(".webp")
+          ? "image/webp"
+          : file.thumbnail_key.endsWith(".png")
+          ? "image/png"
+          : "image/jpeg";
         res.set("Content-Type", mimeType);
 
         const stream = await minioClient.getObject(
           bucketName,
-          thumbnail.storage_key
+          file.thumbnail_key
         );
         stream.pipe(res);
       } catch (e) {
-        log.error(`Failed to get thumbnail from storage: ${e.message}`);
+        log.error(`Failed to get file thumbnail from storage: ${e.message}`);
         return res.status(204).end();
       }
     } else {

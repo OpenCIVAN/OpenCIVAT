@@ -145,37 +145,92 @@ async function queueThumbnailsForFile(pool, fileId) {
  *
  * @param {object} pool - Database pool
  * @param {object} result - Job result from worker
+ * @param {function} broadcastFn - Optional function to broadcast updates via WebSocket
  */
-async function handleThumbnailCallback(pool, result) {
-  const { jobId, success, storageKey, format, width, height, error } = result;
+async function handleThumbnailCallback(pool, result, broadcastFn = null) {
+  const {
+    jobId,
+    success,
+    storageKey,
+    format,
+    width,
+    height,
+    error,
+    thumbnailType,
+    fileId,
+    viewId,
+  } = result;
 
   if (!success) {
     log.error(`Thumbnail job ${jobId} failed: ${error}`);
     return { success: false, error };
   }
 
-  // Extract viewId from job data (we need to look it up or pass it in result)
-  // For now, parse from storage key: thumbnails/{viewId}/thumbnail.webp
-  const match = storageKey?.match(/thumbnails\/([^/]+)\//);
-  const viewId = match ? match[1] : null;
+  // Handle file-level thumbnails (stored in datasets table)
+  if (thumbnailType === "file" && fileId) {
+    await pool.query(
+      `UPDATE datasets
+       SET thumbnail_key = $1, thumbnail_updated_at = NOW(), updated_at = NOW()
+       WHERE id = $2`,
+      [storageKey, fileId]
+    );
 
-  if (!viewId) {
-    log.error(`Cannot determine viewId from storage key: ${storageKey}`);
+    log.info(`File thumbnail saved for ${fileId}: ${storageKey}`);
+
+    // Broadcast file thumbnail update to all connected clients
+    if (broadcastFn) {
+      broadcastFn("thumbnail:file-updated", { fileId, storageKey });
+    }
+
+    return { success: true, fileId, storageKey, type: "file" };
+  }
+
+  // Handle view-level thumbnails (stored in view_thumbnails table)
+  if (thumbnailType === "view" && viewId) {
+    // Upsert thumbnail record (replace existing)
+    await pool.query(
+      `INSERT INTO view_thumbnails (view_config_id, storage_key, format, width, height)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (view_config_id, snapshot_id)
+       DO UPDATE SET storage_key = $2, format = $3, width = $4, height = $5, updated_at = NOW()`,
+      [viewId, storageKey, format, width, height]
+    );
+
+    log.info(`View thumbnail saved for ${viewId}: ${storageKey}`);
+
+    // Broadcast view thumbnail update to all connected clients
+    if (broadcastFn) {
+      broadcastFn("thumbnail:view-updated", { viewId, storageKey, fileId });
+    }
+
+    return { success: true, viewId, storageKey, type: "view" };
+  }
+
+  // Fallback: parse from storage key (legacy behavior)
+  const match = storageKey?.match(/thumbnails\/([^/]+)\//);
+  const extractedId = match ? match[1] : null;
+
+  if (!extractedId) {
+    log.error(`Cannot determine ID from storage key: ${storageKey}`);
     return { success: false, error: "Invalid storage key" };
   }
 
-  // Upsert thumbnail record
+  // Assume it's a view thumbnail for backward compatibility
   await pool.query(
     `INSERT INTO view_thumbnails (view_config_id, storage_key, format, width, height)
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (view_config_id, snapshot_id)
      DO UPDATE SET storage_key = $2, format = $3, width = $4, height = $5, updated_at = NOW()`,
-    [viewId, storageKey, format, width, height]
+    [extractedId, storageKey, format, width, height]
   );
 
-  log.info(`Thumbnail saved for view ${viewId}: ${storageKey}`);
+  log.info(`Thumbnail saved (legacy) for ${extractedId}: ${storageKey}`);
 
-  return { success: true, viewId, storageKey };
+  if (broadcastFn) {
+    broadcastFn("thumbnail:view-updated", { viewId: extractedId, storageKey });
+  }
+
+  return { success: true, viewId: extractedId, storageKey };
 }
 
 /**
@@ -193,6 +248,60 @@ async function hasThumbnail(pool, viewId) {
     [viewId]
   );
   return result.rows.length > 0;
+}
+
+/**
+ * Check if a file has a thumbnail
+ *
+ * @param {object} pool - Database pool
+ * @param {string} fileId - File/dataset ID
+ * @returns {Promise<boolean>}
+ */
+async function hasFileThumbnail(pool, fileId) {
+  const result = await pool.query(
+    `SELECT 1 FROM datasets
+     WHERE id = $1 AND thumbnail_key IS NOT NULL
+     LIMIT 1`,
+    [fileId]
+  );
+  return result.rows.length > 0;
+}
+
+/**
+ * Get file thumbnail info
+ *
+ * @param {object} pool - Database pool
+ * @param {string} fileId - File/dataset ID
+ * @returns {Promise<object|null>}
+ */
+async function getFileThumbnailInfo(pool, fileId) {
+  const result = await pool.query(
+    `SELECT id, thumbnail_key, thumbnail_updated_at
+     FROM datasets
+     WHERE id = $1`,
+    [fileId]
+  );
+  return result.rows[0] || null;
+}
+
+/**
+ * Queue a file-level thumbnail (not view-specific)
+ * Used when a file is uploaded and needs its initial thumbnail
+ *
+ * @param {object} options
+ * @param {string} options.fileId - File ID
+ * @param {object} options.pool - Database pool
+ * @param {number} options.priority - Job priority
+ * @returns {Promise<object>}
+ */
+async function queueFileThumbnailJob({ fileId, pool, priority = 5 }) {
+  // File thumbnails don't have a viewId - they're rendered with default view
+  return queueThumbnailJob({
+    fileId,
+    pool,
+    viewId: null, // Important: null means this is a file-level thumbnail
+    priority,
+  });
 }
 
 /**
@@ -294,13 +403,25 @@ async function queueThumbnailIfNeeded(options) {
 }
 
 module.exports = {
+  // Queue operations
   queueThumbnailJob,
   queueThumbnailJobDebounced,
   queueThumbnailIfNeeded,
   queueThumbnailsForFile,
+  queueFileThumbnailJob,
+
+  // Callback handling
   handleThumbnailCallback,
+
+  // View thumbnail queries
   hasThumbnail,
   getThumbnailInfo,
   isThumbnailStale,
+
+  // File thumbnail queries
+  hasFileThumbnail,
+  getFileThumbnailInfo,
+
+  // Queue access
   getQueue,
 };

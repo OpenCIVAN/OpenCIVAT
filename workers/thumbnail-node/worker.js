@@ -410,9 +410,13 @@ async function captureThumbnail(job) {
 /**
  * Report job completion back to API server
  */
-async function reportCompletion(callbackUrl, jobId, result) {
+async function reportCompletion(callbackUrl, jobId, jobData, result) {
   try {
     log.debug(`Reporting completion to: ${callbackUrl}`);
+
+    // Determine thumbnail type based on job data
+    // If viewId is set, it's a view thumbnail; otherwise it's a file thumbnail
+    const thumbnailType = jobData.viewId ? "view" : "file";
 
     const response = await fetch(callbackUrl, {
       method: "POST",
@@ -425,6 +429,10 @@ async function reportCompletion(callbackUrl, jobId, result) {
         width: result.width,
         height: result.height,
         error: result.error,
+        // Include IDs and type for proper handling
+        thumbnailType,
+        fileId: jobData.fileId,
+        viewId: jobData.viewId,
       }),
     });
 
@@ -456,7 +464,12 @@ async function startWorker() {
 
         // Report back to API
         if (job.data.callbackUrl) {
-          await reportCompletion(job.data.callbackUrl, job.id, result);
+          await reportCompletion(
+            job.data.callbackUrl,
+            job.id,
+            job.data,
+            result
+          );
         }
 
         return result;
@@ -465,7 +478,7 @@ async function startWorker() {
 
         // Report failure
         if (job.data.callbackUrl) {
-          await reportCompletion(job.data.callbackUrl, job.id, {
+          await reportCompletion(job.data.callbackUrl, job.id, job.data, {
             success: false,
             error: error.message,
           });
