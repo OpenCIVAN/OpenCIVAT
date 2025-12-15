@@ -52,19 +52,17 @@ async function queueThumbnailJob({
   const queue = getQueue();
 
   // Look up handler type from database (server-authoritative)
+  // The column is 'file_type' which stores the file extension (e.g., 'vtp', 'nii')
   let handlerType = null;
   if (pool && fileId) {
     try {
       const result = await pool.query(
-        "SELECT handler_type FROM datasets WHERE id = $1",
+        "SELECT file_type FROM datasets WHERE id = $1",
         [fileId]
       );
-      handlerType = result.rows[0]?.handler_type;
+      handlerType = result.rows[0]?.file_type;
     } catch (err) {
-      log.warn(
-        `Could not look up handler_type for file ${fileId}:`,
-        err.message
-      );
+      log.warn(`Could not look up file_type for file ${fileId}:`, err.message);
     }
   }
 
@@ -305,6 +303,59 @@ async function queueFileThumbnailJob({ fileId, pool, priority = 5 }) {
 }
 
 /**
+ * Check for files missing thumbnails and queue generation
+ * Call this on server startup and periodically to catch missing thumbnails
+ *
+ * @param {object} pool - Database pool
+ * @param {number} limit - Max files to process at once (default 50)
+ * @returns {Promise<{queued: number, total: number}>}
+ */
+async function queueMissingFileThumbnails(pool, limit = 50) {
+  try {
+    // Find active files without thumbnails
+    const result = await pool.query(
+      `SELECT id, filename FROM datasets
+       WHERE status = 'active'
+         AND thumbnail_key IS NULL
+       ORDER BY uploaded_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    if (result.rows.length === 0) {
+      log.debug("No files missing thumbnails");
+      return { queued: 0, total: 0 };
+    }
+
+    log.info(
+      `Found ${result.rows.length} files missing thumbnails, queuing...`
+    );
+
+    let queued = 0;
+    for (const file of result.rows) {
+      try {
+        await queueFileThumbnailJob({
+          fileId: file.id,
+          pool,
+          priority: 2, // Low priority for background catch-up
+        });
+        queued++;
+      } catch (err) {
+        log.warn(
+          `Failed to queue thumbnail for file ${file.id}: ${err.message}`
+        );
+      }
+    }
+
+    log.info(`Queued ${queued}/${result.rows.length} missing file thumbnails`);
+    return { queued, total: result.rows.length };
+  } catch (err) {
+    log.error("Failed to check for missing thumbnails:", err.message);
+    return { queued: 0, total: 0, error: err.message };
+  }
+}
+
+/**
  * Get thumbnail info including last update time
  *
  * @param {object} pool - Database pool
@@ -409,6 +460,7 @@ module.exports = {
   queueThumbnailIfNeeded,
   queueThumbnailsForFile,
   queueFileThumbnailJob,
+  queueMissingFileThumbnails,
 
   // Callback handling
   handleThumbnailCallback,

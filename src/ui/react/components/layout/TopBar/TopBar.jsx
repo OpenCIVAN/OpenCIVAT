@@ -113,15 +113,14 @@ export function TopBar({
                 <div className="top-bar__logo">
                     <div className="top-bar__logo-icon">CIA</div>
                 </div>
-            </div>
-
-            {/* Center: Room/Project Name */}
-            <div className="top-bar__center">
-                <RoomIndicator
-                    roomName={roomId}
-                    projectName={projectName}
-                    isLocked={isRoomLocked}
-                />
+                {/* Room/Project Name */}
+                <div className="top-bar__center">
+                    <RoomIndicator
+                        roomName={roomId}
+                        projectName={projectName}
+                        isLocked={isRoomLocked}
+                    />
+                </div>
             </div>
 
             {/* Right: Controls */}

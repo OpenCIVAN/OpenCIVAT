@@ -435,18 +435,16 @@ function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onConte
             onContextMenu={(e) => onContextMenu?.(e, file)}
         >
             <div className="thumbnail">
-                {file.thumbnail ? (
-                    <div className="thumbnail__preview">
-                        <FileThumbnailImage
-                            fileId={file.id}
-                            fallbackIcon={TypeIcon}
-                            color={color}
-                            colorClass={colorClass}
-                        />
-                    </div>
-                ) : (
-                    <TypeIcon size={20} style={color ? { color, opacity: 0.5 } : { opacity: 0.5 }} className={colorClass || ''} />
-                )}
+                {/* Always use FileThumbnailImage - it handles missing thumbnails with fallback icons
+                    and listens for WebSocket updates to auto-refresh */}
+                <div className="thumbnail__preview">
+                    <FileThumbnailImage
+                        fileId={file.id}
+                        fallbackIcon={TypeIcon}
+                        color={color}
+                        colorClass={colorClass}
+                    />
+                </div>
                 <div className="thumbnail-actions" style={{ opacity: isHovered ? 1 : 0 }}>
                     <button className="thumbnail-action" onClick={(e) => { e.stopPropagation(); onStar(file.id); }}>
                         <Star size={10} fill={file.starred ? 'currentColor' : 'none'} />

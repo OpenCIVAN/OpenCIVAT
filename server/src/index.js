@@ -14,6 +14,7 @@ const { auditLogger, auditMiddleware } = require("./services/audit");
 const { server: log, db, http: httpLog } = require("./utils/logger");
 
 const { createRecordingService } = require("./services/recordingService");
+const thumbnailService = require("./services/thumbnailService");
 
 const app = express();
 const server = http.createServer(app);
@@ -375,7 +376,7 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 // START SERVER
 // ============================================================================
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   log.info(`CIA Web API server v2.0 running on port ${PORT}`);
   log.info(`Architecture: Server-Authority`);
   log.info(`Environment: ${process.env.NODE_ENV || "development"}`);
@@ -395,6 +396,18 @@ server.listen(PORT, () => {
       process.env.LOG_LEVEL || "debug"
     }, Categories: LOG_CATEGORIES env to filter`
   );
+
+  // Check for files missing thumbnails on startup (delayed to allow DB to settle)
+  setTimeout(async () => {
+    try {
+      const result = await thumbnailService.queueMissingFileThumbnails(pool);
+      if (result.queued > 0) {
+        log.info(`Startup: queued ${result.queued} missing file thumbnails`);
+      }
+    } catch (err) {
+      log.warn(`Startup thumbnail check failed: ${err.message}`);
+    }
+  }, 5000); // Wait 5 seconds for everything to initialize
 });
 
 module.exports = { app, server, pool };

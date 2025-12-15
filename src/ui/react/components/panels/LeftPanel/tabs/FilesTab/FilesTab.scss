@@ -617,7 +617,8 @@
 
 .files-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  // Fixed 2 columns with equal width
+  grid-template-columns: repeat(2, 1fr);
   gap: $spacing-sm;
   padding: $spacing-sm;
 }
@@ -644,8 +645,10 @@
   }
 
   .thumbnail {
-    width: 48px;
-    height: 48px;
+    // Fill available width, maintain aspect ratio
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    max-height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
