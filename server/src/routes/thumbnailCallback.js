@@ -67,10 +67,11 @@ router.post("/callback", async (req, res, next) => {
     }
 
     // Create broadcast function to pass to callback handler
+    // Use broadcastAll to send to all connected clients (not project-specific)
     const broadcastFn = wsManager
       ? (eventType, data) => {
           log.debug(`Broadcasting ${eventType}:`, data);
-          wsManager.broadcast({ type: eventType, ...data });
+          wsManager.broadcastAll({ type: eventType, ...data });
         }
       : null;
 
@@ -84,7 +85,7 @@ router.post("/callback", async (req, res, next) => {
     // Also broadcast legacy event for backward compatibility
     if (saved.success && saved.viewId && wsManager) {
       log.debug(`Broadcasting thumbnail:ready for view ${saved.viewId}`);
-      wsManager.broadcast({
+      wsManager.broadcastAll({
         type: "thumbnail:ready",
         viewId: saved.viewId,
         snapshotId: null, // Current state thumbnail (not a snapshot)

@@ -223,6 +223,10 @@ router.post(
  * GET /api/views/:viewId/thumbnail
  * Get the current state thumbnail for a view
  *
+ * Falls back to file thumbnail if view-specific thumbnail doesn't exist yet.
+ * This provides a smooth experience where new views show the file's default
+ * thumbnail until their own view-specific thumbnail is generated.
+ *
  * Query params:
  * - snapshotId: Optional UUID to get a specific snapshot's thumbnail
  * - metadata: If 'true', return metadata only (not the image data)
@@ -236,7 +240,7 @@ router.get("/:viewId/thumbnail", async (req, res, next) => {
     // Get thumbnail
     const result = await pool.query(
       `
-      SELECT t.*, v.visibility, v.owner_user_id
+      SELECT t.*, v.visibility, v.owner_user_id, v.dataset_id
       FROM view_thumbnails t
       JOIN view_configurations v ON t.view_config_id = v.id
       WHERE t.view_config_id = $1
@@ -245,7 +249,56 @@ router.get("/:viewId/thumbnail", async (req, res, next) => {
       [viewId, snapshotId || null]
     );
 
+    // If no view-specific thumbnail, try to fall back to file thumbnail
     if (result.rows.length === 0) {
+      // Get the view's dataset_id to look up file thumbnail
+      const viewResult = await pool.query(
+        `SELECT dataset_id FROM view_configurations WHERE id = $1`,
+        [viewId]
+      );
+
+      if (viewResult.rows.length > 0 && viewResult.rows[0].dataset_id) {
+        const datasetId = viewResult.rows[0].dataset_id;
+
+        // Check if file has a thumbnail
+        const fileResult = await pool.query(
+          `SELECT thumbnail_key FROM datasets WHERE id = $1 AND thumbnail_key IS NOT NULL`,
+          [datasetId]
+        );
+
+        if (fileResult.rows.length > 0 && fileResult.rows[0].thumbnail_key) {
+          // Serve the file thumbnail as fallback
+          const thumbnailKey = fileResult.rows[0].thumbnail_key;
+
+          log.debug(
+            `View ${viewId} has no thumbnail, falling back to file thumbnail: ${thumbnailKey}`
+          );
+
+          // Set cache headers (shorter for fallback since view thumbnail may come soon)
+          res.set("Cache-Control", "public, max-age=60"); // 1 minute
+
+          if (minioClient) {
+            try {
+              const mimeType = thumbnailKey.endsWith(".webp")
+                ? "image/webp"
+                : thumbnailKey.endsWith(".png")
+                ? "image/png"
+                : "image/jpeg";
+              res.set("Content-Type", mimeType);
+
+              const stream = await minioClient.getObject(
+                bucketName,
+                thumbnailKey
+              );
+              return stream.pipe(res);
+            } catch (e) {
+              log.error(`Failed to get fallback file thumbnail: ${e.message}`);
+            }
+          }
+        }
+      }
+
+      // No view thumbnail and no file thumbnail fallback available
       return res.status(404).json({ error: "Thumbnail not found" });
     }
 
