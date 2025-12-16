@@ -1,5 +1,5 @@
 // src/ui/react/components/workspace/InstanceViewport/InstanceViewport.jsx
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { createPortal } from 'react-dom';
 import {
     ChevronDown, Maximize2, Minimize2, Trash2, AlertCircle,
@@ -449,6 +449,7 @@ export function InstanceViewport({
     isRemote = false,
     remoteInstanceId = null,
     ownerUserName = null,
+    displayName: propDisplayName,
     onClose,      // Called when user clicks X (close without delete)
     onTrash,      // Called when user clicks trash (move to Recently Deleted)
     onChangeSpan,
@@ -862,47 +863,6 @@ export function InstanceViewport({
     // =========================================================================
     // UI HELPERS
     // =========================================================================
-
-    const getDisplayName = () => {
-        if (isRemote && ownerUserName) {
-            if (viewConfigId) {
-                try {
-                    const view = getViewConfigurationManager()?.getView(viewConfigId);
-                    if (view) {
-                        const dataset = getDatasetManager()?.getDataset(view.datasetId);
-                        const filename = dataset?.filename || 'Unknown';
-                        return `${ownerUserName}'s view of ${filename}`;
-                    }
-                } catch (e) {
-                    return `${ownerUserName}'s view`;
-                }
-            }
-            return `${ownerUserName}'s view`;
-        }
-
-        if (viewConfigId) {
-            try {
-                const view = getViewConfigurationManager()?.getView(viewConfigId);
-                if (view) {
-                    const dataset = getDatasetManager()?.getDataset(view.datasetId);
-                    // Show view name if it's been customized (not default names)
-                    const isDefaultName = !view.name ||
-                        view.name === 'Untitled View' ||
-                        view.name === 'Default View' ||
-                        view.name === dataset?.filename;
-
-                    if (!isDefaultName) {
-                        return view.name;
-                    }
-                    return dataset?.filename || view.name || 'View';
-                }
-            } catch (e) {
-                return `View ${viewConfigId.slice(0, 8)}`;
-            }
-        }
-
-        return `Instance ${actualInstanceId ? actualInstanceId.slice(0, 12) : 'Loading'}...`;
-    };
 
     const handleFullscreen = useCallback(() => {
         if (!viewportRef.current) return;
@@ -1380,7 +1340,58 @@ export function InstanceViewport({
     // RENDER
     // =========================================================================
 
-    const displayName = getDisplayName();
+    const displayName = useMemo(() => {
+        // If we have a display name prop from parent, use it
+        if (propDisplayName) {
+            return propDisplayName;
+        }
+
+        if (isRemote && ownerUserName) {
+            if (viewConfigId) {
+                try {
+                    const view = getViewConfigurationManager()?.getView(viewConfigId);
+                    if (view) {
+                        const dataset = getDatasetManager()?.getDataset(view.datasetId);
+                        const filename = dataset?.filename || 'Unknown';
+                        return `${ownerUserName}'s view of ${filename}`;
+                    }
+                } catch (e) {
+                    return `${ownerUserName}'s view`;
+                }
+            }
+            return `${ownerUserName}'s view`;
+        }
+
+        if (viewConfigId) {
+            try {
+                const view = getViewConfigurationManager()?.getView(viewConfigId);
+                if (view) {
+                    const dataset = getDatasetManager()?.getDataset(view.datasetId);
+                    // Show view name if it's been customized
+                    const isDefaultName = !view.name ||
+                        view.name === 'Untitled View' ||
+                        view.name === 'Default View' ||
+                        view.name === dataset?.filename;
+
+                    if (!isDefaultName) {
+                        return view.name;
+                    }
+                    return dataset?.filename || view.name || 'View';
+                }
+            } catch (e) {
+                // Fall through
+            }
+        }
+
+        // Show "Loading..." while data is loading, not the instance ID
+        if (!hasData) {
+            return 'Loading...';
+        }
+
+        // Final fallback - should rarely hit this now
+        return `View ${viewConfigId?.slice(0, 8) || 'Unknown'}`;
+    }, [viewConfigId, hasData, isRemote, ownerUserName, propDisplayName]);
+
     const colorHex = instanceColor?.hex || '#60a5fa';
     const colorRgb = hexToRgb(colorHex);
 

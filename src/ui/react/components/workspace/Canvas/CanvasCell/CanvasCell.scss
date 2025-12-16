@@ -427,7 +427,30 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
+
+.canvas-cell__thumbnail-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+}
+
+.canvas-cell__instance-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+// =============================================================================
+// THUMBNAIL & SNAPSHOT CONTENT
+// =============================================================================
 
 .canvas-cell__thumbnail-content,
 .canvas-cell__snapshot-content {
@@ -436,6 +459,21 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+  overflow: hidden;
+  position: relative;
+
+  // The Thumbnail component with size="fill" needs this
+  .thumbnail {
+    width: 100%;
+    height: 100%;
+  }
+
+  .thumbnail__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
 }
 
 .canvas-cell__thumbnail-placeholder,

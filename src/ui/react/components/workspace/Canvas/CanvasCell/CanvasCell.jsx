@@ -27,6 +27,7 @@ import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
 import { ProgressiveLoader } from '@UI/react/components/common/ThumbnailPreview';
 import { RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
+import { Thumbnail } from '@UI/react/components/common/Thumbnail';
 import './CanvasCell.scss';
 
 // =============================================================================
@@ -510,44 +511,55 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
 
 function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConfig, onClose }) {
     const [isReady, setIsReady] = useState(false);
+    
+    // Determine if we should show thumbnail overlay vs live render
+    const showThumbnailOverlay = 
+        uiConfig.renderContent === 'thumbnail' || 
+        uiConfig.renderContent === 'snapshot';
+    
+    const showLiveRender = 
+        uiConfig.renderContent === 'full' || 
+        uiConfig.renderContent === 'compact' ||
+        // Keep instance alive even when showing thumbnail
+        (showThumbnailOverlay && isReady);
 
-    // For thumbnail/snapshot modes, show placeholder instead of full render
-    if (uiConfig.renderContent === 'thumbnail') {
-        return (
-            <div className="canvas-cell__thumbnail-content">
-                <ProgressiveLoader viewId={viewId} isReady={false}>
-                    <div className="canvas-cell__thumbnail-placeholder">
-                        <Box size={24} />
-                    </div>
-                </ProgressiveLoader>
-            </div>
-        );
-    }
-
-    if (uiConfig.renderContent === 'snapshot') {
-        return (
-            <div className="canvas-cell__snapshot-content">
-                <div className="canvas-cell__snapshot-placeholder">
-                    <Box size={16} />
-                </div>
-            </div>
-        );
-    }
-
-    // Full or compact mode - render actual InstanceViewport
     return (
         <div className="canvas-cell__view-content">
-            <ProgressiveLoader viewId={viewId} isReady={isReady}>
-                <InstanceViewport
-                    viewConfigId={viewId}
-                    isRemote={false}
-                    currentSpan={`${colSpan}x${rowSpan}`}
-                    uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
-                    onReady={() => setIsReady(true)}
-                    onClose={onClose}
-                    onTrash={onClose}
-                />
-            </ProgressiveLoader>
+            {/* Thumbnail overlay - shows when in small mode */}
+            {showThumbnailOverlay && (
+                <div className="canvas-cell__thumbnail-overlay">
+                    <Thumbnail 
+                        viewId={viewId}
+                        className="canvas-cell__thumbnail-image"
+                        fallback={
+                            <div className="canvas-cell__thumbnail-placeholder">
+                                <Box size={uiConfig.renderContent === 'snapshot' ? 16 : 24} />
+                            </div>
+                        }
+                    />
+                </div>
+            )}
+            
+            {/* Instance container - hidden but alive when in thumbnail mode */}
+            <div 
+                className="canvas-cell__instance-container"
+                style={{ 
+                    visibility: showThumbnailOverlay ? 'hidden' : 'visible',
+                    pointerEvents: showThumbnailOverlay ? 'none' : 'auto',
+                }}
+            >
+                <ProgressiveLoader viewId={viewId} isReady={isReady}>
+                    <InstanceViewport
+                        viewConfigId={viewId}
+                        isRemote={false}
+                        currentSpan={`${colSpan}x${rowSpan}`}
+                        uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
+                        onReady={() => setIsReady(true)}
+                        onClose={onClose}
+                        onTrash={onClose}
+                    />
+                </ProgressiveLoader>
+            </div>
         </div>
     );
 }

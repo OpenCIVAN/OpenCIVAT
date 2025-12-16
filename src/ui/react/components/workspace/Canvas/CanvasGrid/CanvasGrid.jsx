@@ -160,6 +160,7 @@ export function CanvasGrid({
         isMaxSize,
         incrementViewportSize,
         decrementViewportSize,
+        setViewportSize,
         resetViewportSize,
     } = useViewportSize(canvas?.dimensions);
 
@@ -304,53 +305,73 @@ export function CanvasGrid({
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            // Only handle if grid is focused
-            if (!gridRef.current?.contains(document.activeElement)) return;
-
-            // Arrow keys for viewport navigation
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                moveViewport(-1, 0);
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                moveViewport(1, 0);
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                moveViewport(0, -1);
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                moveViewport(0, 1);
+            // Skip if typing in an input or textarea
+            if (e.target.tagName === 'INPUT' ||
+                e.target.tagName === 'TEXTAREA' ||
+                e.target.isContentEditable) {
+                return;
             }
 
-            // Viewport size shortcuts
-            // + = zoom in (fewer cells, larger), - = zoom out (more cells, smaller)
+            // Arrow keys - require grid focus for directional navigation
+            if (gridRef.current?.contains(document.activeElement)) {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    moveViewport(-1, 0);
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    moveViewport(1, 0);
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    moveViewport(0, -1);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    moveViewport(0, 1);
+                }
+            }
+
+            // ZOOM KEYS - Work globally (anywhere on page)
+            // + / = : Zoom IN (fewer cells, larger)
+            // - / _ : Zoom OUT (more cells, smaller - bird's eye)
             if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
-                decrementViewportSize(); // Zoom IN = show fewer, larger cells
-                // FIX: Restore focus after React re-renders
-                requestAnimationFrame(() => {
-                    gridRef.current?.focus();
-                });
-            } else if (e.key === '-') {
+                decrementViewportSize(); // Zoom IN = fewer cells = decrement
+                requestAnimationFrame(() => gridRef.current?.focus());
+            } else if (e.key === '-' || e.key === '_') {
                 e.preventDefault();
-                incrementViewportSize(); // Zoom OUT = show more, smaller cells
-                // FIX: Restore focus after React re-renders
-                requestAnimationFrame(() => {
-                    gridRef.current?.focus();
-                });
-            } else if (e.key === '0') {
+                incrementViewportSize(); // Zoom OUT = more cells = increment
+                requestAnimationFrame(() => gridRef.current?.focus());
+            }
+
+            // Number key presets - work globally
+            if (e.key === '1' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
-                resetViewportSize();
-                // FIX: Restore focus after React re-renders
-                requestAnimationFrame(() => {
-                    gridRef.current?.focus();
-                });
+                // 1x1 focus mode
+                setViewportSize?.(1, 1);
+            } else if (e.key === '2' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                // 2x2 
+                setViewportSize?.(2, 2);
+            } else if (e.key === '3' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                // 3x3
+                setViewportSize?.(3, 3);
+            } else if (e.key === '0' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                // 10x10 bird's eye (max)
+                setViewportSize?.(10, 10);
+            }
+
+            // Home key - reset to default viewport
+            if (e.key === 'Home') {
+                e.preventDefault();
+                resetViewportSize?.();
+                requestAnimationFrame(() => gridRef.current?.focus());
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize]);
+    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize]);
 
     // ==========================================================================
     // CELL CLICK HANDLING
