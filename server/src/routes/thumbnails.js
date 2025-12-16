@@ -328,8 +328,19 @@ router.get("/:viewId/thumbnail", async (req, res, next) => {
       });
     }
 
-    // Set cache headers (thumbnails can be cached for a while)
-    res.set("Cache-Control", "public, max-age=3600"); // 1 hour
+    // Set cache headers with ETag for proper cache validation
+    // Using updated_at as ETag ensures clients get fresh data when thumbnail changes
+    const etag = `"${thumbnail.id}-${new Date(
+      thumbnail.updated_at
+    ).getTime()}"`;
+    res.set("Cache-Control", "public, max-age=300, must-revalidate"); // 5 minutes, then revalidate
+    res.set("ETag", etag);
+
+    // Check if client has current version (304 Not Modified)
+    const ifNoneMatch = req.get("If-None-Match");
+    if (ifNoneMatch === etag) {
+      return res.status(304).end();
+    }
 
     // Return inline data directly
     if (thumbnail.inline_data) {

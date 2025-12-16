@@ -185,12 +185,17 @@ async function handleThumbnailCallback(pool, result, broadcastFn = null) {
 
   // Handle view-level thumbnails (stored in view_thumbnails table)
   if (thumbnailType === "view" && viewId) {
-    // Upsert thumbnail record (replace existing)
+    // PostgreSQL UNIQUE constraint treats NULL as distinct, so ON CONFLICT won't work
+    // for snapshot_id = NULL. Use atomic upsert with CTE to prevent race conditions
+    // where a GET request could happen between DELETE and INSERT.
     await pool.query(
-      `INSERT INTO view_thumbnails (view_config_id, storage_key, format, width, height)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (view_config_id, snapshot_id)
-       DO UPDATE SET storage_key = $2, format = $3, width = $4, height = $5, updated_at = NOW()`,
+      `WITH deleted AS (
+        DELETE FROM view_thumbnails
+        WHERE view_config_id = $1 AND snapshot_id IS NULL
+        RETURNING id
+      )
+      INSERT INTO view_thumbnails (view_config_id, storage_key, format, width, height)
+      VALUES ($1, $2, $3, $4, $5)`,
       [viewId, storageKey, format, width, height]
     );
 
@@ -214,11 +219,15 @@ async function handleThumbnailCallback(pool, result, broadcastFn = null) {
   }
 
   // Assume it's a view thumbnail for backward compatibility
+  // Same atomic upsert pattern for NULL snapshot_id
   await pool.query(
-    `INSERT INTO view_thumbnails (view_config_id, storage_key, format, width, height)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (view_config_id, snapshot_id)
-     DO UPDATE SET storage_key = $2, format = $3, width = $4, height = $5, updated_at = NOW()`,
+    `WITH deleted AS (
+      DELETE FROM view_thumbnails
+      WHERE view_config_id = $1 AND snapshot_id IS NULL
+      RETURNING id
+    )
+    INSERT INTO view_thumbnails (view_config_id, storage_key, format, width, height)
+    VALUES ($1, $2, $3, $4, $5)`,
     [extractedId, storageKey, format, width, height]
   );
 
@@ -394,7 +403,7 @@ async function isThumbnailStale(pool, viewId, maxAgeMinutes = 30) {
 
 // In-memory debounce tracking (cleared on server restart)
 const recentlyQueued = new Map();
-const DEBOUNCE_MS = 30000; // 30 seconds minimum between queue requests
+const DEBOUNCE_MS = 10000; // 10 seconds minimum between queue requests
 
 /**
  * Queue thumbnail with debouncing to prevent excessive regeneration

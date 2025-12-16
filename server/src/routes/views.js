@@ -228,20 +228,38 @@ router.post("/", async (req, res, next) => {
     }
 
     // Queue server-side thumbnail generation for the new view
-    // This runs async and doesn't block the response
-    thumbnailService
-      .queueThumbnailJob({
-        fileId,
-        pool, // IMPORTANT: Pass pool so handler_type can be looked up
-        viewId: view.id,
-        projectId: projectId || null,
-        priority: 5,
-      })
-      .catch((err) => {
-        log.warn(
-          `Failed to queue thumbnail job for view ${view.id}: ${err.message}`
-        );
-      });
+    // IMPORTANT: Delay initial thumbnail generation by 5 seconds to allow
+    // the client time to set up initial camera state. Without this delay,
+    // the thumbnail is captured before the user has panned/zoomed, resulting
+    // in the default view instead of their actual view state.
+    //
+    // Using queueThumbnailJobDebounced ensures that if the user updates
+    // the view's camera before this runs, the debounce mechanism will
+    // prevent duplicate jobs.
+    setTimeout(() => {
+      thumbnailService
+        .queueThumbnailJobDebounced({
+          fileId,
+          pool, // IMPORTANT: Pass pool so handler_type can be looked up
+          viewId: view.id,
+          projectId: projectId || null,
+          priority: 4, // Slightly lower priority than immediate requests
+        })
+        .then((job) => {
+          if (job) {
+            log.debug(`Initial thumbnail queued for view ${view.id}`);
+          } else {
+            log.debug(
+              `Initial thumbnail for view ${view.id} debounced (camera update already queued)`
+            );
+          }
+        })
+        .catch((err) => {
+          log.warn(
+            `Failed to queue thumbnail job for view ${view.id}: ${err.message}`
+          );
+        });
+    }, 5000); // 5 second delay
 
     res.status(201).json({
       success: true,
