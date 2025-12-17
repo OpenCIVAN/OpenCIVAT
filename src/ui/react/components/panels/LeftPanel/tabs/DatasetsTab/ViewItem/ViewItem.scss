@@ -359,4 +359,11 @@
       color: $color-accent-amber;
     }
   }
+
+  &--trash {
+    &:hover {
+      background: rgba($color-error, 0.15);
+      color: $color-error;
+    }
+  }
 }

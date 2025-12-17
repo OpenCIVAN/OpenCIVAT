@@ -225,7 +225,7 @@ export function useRoomSelector(options = {}) {
   const roomUserCounts = useRoomUserCount();
 
   // Room actions from presence system
-  const { switchRoom } = useRoomActions();
+  const { setRoom } = useRoomActions();
 
   // ---------------------------------------------------------------------------
   // COMPUTED
@@ -261,13 +261,13 @@ export function useRoomSelector(options = {}) {
         await joinRoom(roomId);
 
         // Update presence system
-        switchRoom(roomId);
+        setRoom(roomId);
       } catch (err) {
         log.error("Failed to switch room:", err);
         throw err;
       }
     },
-    [currentRoomId, joinRoom, switchRoom]
+    [currentRoomId, joinRoom, setRoom]
   );
 
   const handleCreateRoom = useCallback(

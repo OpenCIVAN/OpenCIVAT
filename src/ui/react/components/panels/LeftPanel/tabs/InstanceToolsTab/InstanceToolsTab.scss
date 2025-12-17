@@ -200,29 +200,23 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 
   &__empty {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: $spacing-xl;
-    text-align: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
     color: $color-text-muted;
+    font-size: 11px;
 
     svg {
       opacity: 0.5;
-      margin-bottom: $spacing-sm;
-    }
-
-    p {
-      font-size: 11px;
-      margin-bottom: $spacing-xs;
-    }
-
-    span {
-      font-size: 10px;
-      color: $color-text-tertiary;
+      flex-shrink: 0;
     }
   }
 
@@ -237,11 +231,14 @@
     align-items: center;
     gap: $spacing-sm;
     padding: $spacing-xs;
+    width: 100%;
   }
 
   &__item-label {
     font-size: 11px;
     color: $color-text-secondary;
+    flex: 1;
+    min-width: 0;
   }
 }
 
@@ -296,6 +293,8 @@
   border: 1px solid $color-border-subtle;
   border-radius: $radius-md;
   overflow: hidden;
+  width: 100%;
+  flex-shrink: 0;
 
   &--expanded {
     border-color: $color-border-medium;
@@ -328,8 +327,15 @@
     }
   }
 
-  &__title {
+  &__header-content {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__title {
     font-size: 11px;
     font-weight: $font-weight-medium;
   }
@@ -344,6 +350,8 @@
     border-top: 1px solid $color-border-subtle;
     padding: $spacing-xs;
     background: rgba(0, 0, 0, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
   }
 
   &__separator {

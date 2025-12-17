@@ -15,10 +15,7 @@ import { ui as log } from "@Utils/logger.js";
 import { DOCK_POSITIONS } from "../../LayoutPanelContext";
 
 // Import viewport sync for dispatching navigation events
-import {
-  dispatchNavigateTo,
-  dispatchMoveViewport,
-} from "@UI/react/hooks/useViewportSync.js";
+import { dispatchNavigateTo } from "@UI/react/hooks/useViewportSync.js";
 import { EVENT_NAME as VIEWPORT_SIZE_EVENT } from "@UI/react/hooks/useViewportSize.js";
 
 // Re-export for backward compatibility
@@ -382,28 +379,10 @@ export function useCanvasNavigator(logic) {
 
   const moveViewport = useCallback(
     (direction) => {
+      // parentMoveViewport (from LayoutPanel.logic.js) already dispatches
+      // the viewport sync event, so we only need to call it - no double dispatch
       if (parentMoveViewport) {
         parentMoveViewport(direction);
-      }
-      // Also dispatch viewport sync event so CanvasGrid follows
-      switch (direction) {
-        case "up":
-          dispatchMoveViewport(-1, 0);
-          break;
-        case "down":
-          dispatchMoveViewport(1, 0);
-          break;
-        case "left":
-          dispatchMoveViewport(0, -1);
-          break;
-        case "right":
-          dispatchMoveViewport(0, 1);
-          break;
-        case "home":
-          dispatchNavigateTo(0, 0);
-          break;
-        default:
-          break;
       }
     },
     [parentMoveViewport]

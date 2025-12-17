@@ -80,9 +80,9 @@ export const LayoutPanel = memo(function LayoutPanel({
     if (loading) {
         return (
             <div className={`layout-panel layout-panel--loading ${className}`}>
-                <div className="layout-panel__header">
-                    <LayoutGrid size={16} className="layout-panel__icon" />
-                    <span className="layout-panel__title">LAYOUT</span>
+                <div className="panel-header panel-header--indigo">
+                    <LayoutGrid size={14} className="panel-header__icon" />
+                    <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-panel__loading">
                     <Loader2 className="layout-panel__spinner" size={24} />
@@ -99,9 +99,9 @@ export const LayoutPanel = memo(function LayoutPanel({
     if (error) {
         return (
             <div className={`layout-panel layout-panel--error ${className}`}>
-                <div className="layout-panel__header">
-                    <LayoutGrid size={16} className="layout-panel__icon" />
-                    <span className="layout-panel__title">LAYOUT</span>
+                <div className="panel-header panel-header--indigo">
+                    <LayoutGrid size={14} className="panel-header__icon" />
+                    <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-panel__error">
                     <AlertCircle size={24} />
@@ -119,13 +119,13 @@ export const LayoutPanel = memo(function LayoutPanel({
     return (
         <div className={`layout-panel ${className}`}>
             {/* Header */}
-            <div className="layout-panel__header">
-                <LayoutGrid size={16} className="layout-panel__icon" />
-                <span className="layout-panel__title">LAYOUT</span>
+            <div className="panel-header panel-header--indigo">
+                <LayoutGrid size={14} className="panel-header__icon" />
+                <span className="panel-header__title">Layout</span>
 
                 {/* Connection indicator */}
                 {!isConnected && (
-                    <div className="layout-panel__offline" title="Offline - changes will sync when reconnected">
+                    <div className="panel-header__offline" title="Offline - changes will sync when reconnected">
                         <WifiOff size={12} />
                     </div>
                 )}

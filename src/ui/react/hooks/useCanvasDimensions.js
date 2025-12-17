@@ -184,6 +184,8 @@ export function useCanvasDimensions(config = {}) {
   const retryTimeoutRef = useRef(null);
   const measurementTimeoutRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
+  // Track if we've ever successfully measured (survives effect re-runs)
+  const hasInitializedRef = useRef(false);
 
   /**
    * Calculate cell sizes and render mode from container dimensions
@@ -289,6 +291,9 @@ export function useCanvasDimensions(config = {}) {
       return null;
     });
 
+    // Mark as initialized (ref survives effect re-runs)
+    hasInitializedRef.current = true;
+
     // Only log success once when transitioning to ready state
     if (process.env.NODE_ENV === "development") {
       log.debug("✓ Canvas dimensions measured:", {
@@ -327,57 +332,69 @@ export function useCanvasDimensions(config = {}) {
       return;
     }
 
-    // Clear any existing state
-    setIsReady(false);
-    setMeasurementError(null);
+    // IMPORTANT: If we've already successfully initialized, skip the retry logic
+    // This preserves VTK instances when viewport settings change
+    // We only need the ResizeObserver to handle future size changes
+    // Using ref instead of state to avoid stale closure issues
+    const alreadyHasMeasurements = hasInitializedRef.current;
 
-    // Track retry attempts
-    let retryCount = 0;
-    const maxRetries = Math.ceil(measurementTimeout / retryInterval);
+    if (!alreadyHasMeasurements) {
+      // First time setup - need to measure from scratch
+      setIsReady(false);
+      setMeasurementError(null);
 
-    // Function to retry measurement
-    const retryMeasurement = () => {
-      if (attemptMeasurement()) {
-        // Success! Clear the timeout
-        if (measurementTimeoutRef.current) {
-          clearTimeout(measurementTimeoutRef.current);
+      // Track retry attempts
+      let retryCount = 0;
+      const maxRetries = Math.ceil(measurementTimeout / retryInterval);
+
+      // Function to retry measurement
+      const retryMeasurement = () => {
+        if (attemptMeasurement()) {
+          // Success! Clear the timeout
+          if (measurementTimeoutRef.current) {
+            clearTimeout(measurementTimeoutRef.current);
+          }
+          return;
         }
-        return;
-      }
 
-      retryCount++;
+        retryCount++;
 
-      if (retryCount < maxRetries) {
-        // Schedule another retry
-        retryTimeoutRef.current = setTimeout(retryMeasurement, retryInterval);
-      } else {
-        // Give up
-        setMeasurementError(
-          new Error(
-            `Failed to measure canvas container after ${measurementTimeout}ms. ` +
-              "Container may have zero dimensions."
-          )
-        );
-      }
-    };
+        if (retryCount < maxRetries) {
+          // Schedule another retry
+          retryTimeoutRef.current = setTimeout(retryMeasurement, retryInterval);
+        } else {
+          // Give up
+          setMeasurementError(
+            new Error(
+              `Failed to measure canvas container after ${measurementTimeout}ms. ` +
+                "Container may have zero dimensions."
+            )
+          );
+        }
+      };
 
-    // Start initial measurement attempts using rAF for layout stability
-    requestAnimationFrame(() => {
+      // Start initial measurement attempts using rAF for layout stability
       requestAnimationFrame(() => {
-        retryMeasurement();
+        requestAnimationFrame(() => {
+          retryMeasurement();
+        });
       });
-    });
 
-    // Set up overall timeout
-    measurementTimeoutRef.current = setTimeout(() => {
-      if (!isReady) {
-        setMeasurementError(
-          new Error(
-            `Canvas measurement timed out after ${measurementTimeout}ms`
-          )
-        );
-      }
-    }, measurementTimeout);
+      // Set up overall timeout
+      measurementTimeoutRef.current = setTimeout(() => {
+        if (!isReady) {
+          setMeasurementError(
+            new Error(
+              `Canvas measurement timed out after ${measurementTimeout}ms`
+            )
+          );
+        }
+      }, measurementTimeout);
+    } else {
+      // Already have measurements - just recalculate with new viewport settings
+      // This is synchronous and doesn't reset isReady
+      attemptMeasurement();
+    }
 
     // Create ResizeObserver for the container
     resizeObserverRef.current = new ResizeObserver((entries) => {

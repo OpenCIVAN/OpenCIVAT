@@ -44,6 +44,7 @@
   &--compact {
     .canvas-navigator__body {
       flex-direction: column;
+      overflow: hidden;
     }
 
     .canvas-navigator__controls {
@@ -56,6 +57,9 @@
       gap: $spacing-xs;
       border-left: none;
       border-top: 1px solid $color-border-subtle;
+      max-height: 140px;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
     .canvas-navigator__control-section {
@@ -66,6 +70,33 @@
     .canvas-navigator__minimap {
       max-height: 200px;
       flex: 1 1 auto;
+      min-height: 80px;
+    }
+
+    // Combine Position and Zoom into one row when very compact
+    .canvas-navigator__control-section:has(.canvas-navigator__dpad),
+    .canvas-navigator__control-section:has(.canvas-navigator__zoom-controls) {
+      flex: 1 1 auto;
+      min-width: 80px;
+    }
+  }
+
+  // Very compact mode - when both narrow and short
+  &--very-compact {
+    .canvas-navigator__controls {
+      max-height: 100px;
+    }
+
+    .canvas-navigator__minimap {
+      min-height: 60px;
+    }
+
+    .canvas-navigator__control-section {
+      padding: 4px;
+    }
+
+    .canvas-navigator__section-label {
+      font-size: 8px;
     }
   }
 }
@@ -360,6 +391,13 @@
   align-items: center;
   gap: $spacing-xs;
   justify-content: center;
+
+  // Inline version for very compact mode
+  &--inline {
+    margin-top: $spacing-xs;
+    padding-top: $spacing-xs;
+    border-top: 1px solid $color-border-subtle;
+  }
 }
 
 .canvas-navigator__zoom-value {
@@ -368,6 +406,16 @@
   color: #60a5fa;
   min-width: 36px;
   text-align: center;
+}
+
+// Size controls inline version for very compact mode
+.canvas-navigator__size-controls--inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: $spacing-xs;
+  padding-top: $spacing-xs;
+  border-top: 1px solid $color-border-subtle;
 }
 
 // =============================================================================
@@ -514,10 +562,35 @@
   flex-shrink: 0;
 }
 
+// Navigation group - contains dpad and zoom in a row
+.canvas-navigator__nav-group {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
 .canvas-navigator__dpad-mini {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+// Zoom controls for compact mode
+.canvas-navigator__zoom-mini {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: $spacing-xs;
+  border-left: 1px solid $color-border-subtle;
+}
+
+.canvas-navigator__zoom-mini-value {
+  font-family: $font-family-mono;
+  font-size: 9px;
+  color: #60a5fa;
+  min-width: 28px;
+  text-align: center;
 }
 
 .canvas-navigator__position-mini {

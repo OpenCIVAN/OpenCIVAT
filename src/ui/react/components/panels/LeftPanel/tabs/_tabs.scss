@@ -116,6 +116,14 @@
     }
   }
 
+  &__offline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $color-accent-amber;
+    margin-left: auto;
+  }
+
   // Color variants - apply to header for icon coloring
   &--blue .panel-header__icon {
     color: $color-accent-blue;

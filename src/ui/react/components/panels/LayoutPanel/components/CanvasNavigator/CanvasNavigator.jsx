@@ -159,6 +159,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
     isDocked,
     onClose,
     isCompact = false,
+    isVeryCompact = false,
     className = '',
 }) {
     const nav = useCanvasNavigator(logic);
@@ -446,13 +447,21 @@ export const CanvasNavigator = memo(function CanvasNavigator({
 
                 {/* Compact Controls Row */}
                 <div className="canvas-navigator__compact-controls">
-                    {/* Navigation D-pad (mini) */}
-                    <div className="canvas-navigator__dpad-mini">
-                        <NavBtn size="xs" onClick={() => moveViewport('up')} title="Up"><ChevronUp size={10} /></NavBtn>
-                        <NavBtn size="xs" onClick={() => moveViewport('left')} title="Left"><ChevronLeft size={10} /></NavBtn>
-                        <NavBtn size="xs" onClick={() => moveViewport('home')} active={isAtHome} title="Home"><Home size={10} /></NavBtn>
-                        <NavBtn size="xs" onClick={() => moveViewport('right')} title="Right"><ChevronRight size={10} /></NavBtn>
-                        <NavBtn size="xs" onClick={() => moveViewport('down')} title="Down"><ChevronDown size={10} /></NavBtn>
+                    {/* Navigation D-pad with Home + Zoom */}
+                    <div className="canvas-navigator__nav-group">
+                        <div className="canvas-navigator__dpad-mini">
+                            <NavBtn size="xs" onClick={() => moveViewport('up')} title="Up"><ChevronUp size={10} /></NavBtn>
+                            <NavBtn size="xs" onClick={() => moveViewport('left')} title="Left"><ChevronLeft size={10} /></NavBtn>
+                            <NavBtn size="xs" onClick={() => moveViewport('home')} active={isAtHome} title="Home"><Home size={10} /></NavBtn>
+                            <NavBtn size="xs" onClick={() => moveViewport('right')} title="Right"><ChevronRight size={10} /></NavBtn>
+                            <NavBtn size="xs" onClick={() => moveViewport('down')} title="Down"><ChevronDown size={10} /></NavBtn>
+                        </div>
+                        {/* Zoom controls - shares row with dpad */}
+                        <div className="canvas-navigator__zoom-mini">
+                            <NavBtn size="xs" onClick={() => setMinimapZoom(Math.max(0.5, minimapZoom - 0.25))} title="Zoom Out"><ZoomOut size={10} /></NavBtn>
+                            <span className="canvas-navigator__zoom-mini-value">{Math.round(minimapZoom * 100)}%</span>
+                            <NavBtn size="xs" onClick={() => setMinimapZoom(Math.min(2, minimapZoom + 0.25))} title="Zoom In"><ZoomIn size={10} /></NavBtn>
+                        </div>
                     </div>
 
                     {/* Position display */}
@@ -543,7 +552,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
     return (
         <div
             ref={containerRef}
-            className={`canvas-navigator canvas-navigator--floating ${isCompact ? 'canvas-navigator--compact' : ''} ${className}`}
+            className={`canvas-navigator canvas-navigator--floating ${isCompact ? 'canvas-navigator--compact' : ''} ${isVeryCompact ? 'canvas-navigator--very-compact' : ''} ${className}`}
         >
             {/* Header */}
             <div className="canvas-navigator__header">
@@ -685,7 +694,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
 
                 {/* Controls Panel */}
                 <div className="canvas-navigator__controls">
-                    {/* Position/Navigation */}
+                    {/* Position/Navigation - combined with Zoom when very compact */}
                     <div className="canvas-navigator__control-section">
                         <div className="canvas-navigator__section-label" style={{ color: '#fbbf24' }}>Position</div>
                         <div className="canvas-navigator__dpad">
@@ -696,9 +705,17 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                             <NavBtn size="sm" onClick={() => moveViewport('down')}><ChevronDown size={12} /></NavBtn>
                         </div>
                         <div className="canvas-navigator__position-display">{viewport.row},{viewport.col}</div>
+                        {/* Zoom controls inline when very compact */}
+                        {isVeryCompact && (
+                            <div className="canvas-navigator__zoom-controls canvas-navigator__zoom-controls--inline">
+                                <NavBtn size="sm" onClick={() => setMinimapZoom(Math.max(0.5, minimapZoom - 0.25))}><ZoomOut size={12} /></NavBtn>
+                                <span className="canvas-navigator__zoom-value">{Math.round(minimapZoom * 100)}%</span>
+                                <NavBtn size="sm" onClick={() => setMinimapZoom(Math.min(2, minimapZoom + 0.25))}><ZoomIn size={12} /></NavBtn>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Homepoint */}
+                    {/* Homepoint - combined with View Size when very compact */}
                     <div className="canvas-navigator__control-section">
                         <div className="canvas-navigator__section-label" style={{ color: '#f472b6' }}>Home</div>
                         <div className="canvas-navigator__home-controls">
@@ -717,32 +734,45 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 <NavBtn size="sm" onClick={clearHomepoint} title="Clear"><Trash2 size={10} /></NavBtn>
                             )}
                         </div>
-                    </div>
-
-                    {/* View Size */}
-                    <div className="canvas-navigator__control-section">
-                        <div className="canvas-navigator__section-label" style={{ color: '#34d399' }}>View Size</div>
-                        <div className="canvas-navigator__size-controls canvas-navigator__size-controls--stacked">
-                            <div className="canvas-navigator__size-row">
-                                <span className="canvas-navigator__size-label">Rows</span>
+                        {/* View Size inline when very compact */}
+                        {isVeryCompact && (
+                            <div className="canvas-navigator__size-controls canvas-navigator__size-controls--inline">
+                                <span className="canvas-navigator__size-label">View</span>
                                 <NumberSpinner value={viewportSize.rows} onChange={setViewportSizeRows} min={1} max={10} color="#34d399" compact />
-                            </div>
-                            <div className="canvas-navigator__size-row">
-                                <span className="canvas-navigator__size-label">Cols</span>
+                                <span>×</span>
                                 <NumberSpinner value={viewportSize.cols} onChange={setViewportSizeCols} min={1} max={10} color="#34d399" compact />
                             </div>
-                        </div>
+                        )}
                     </div>
 
-                    {/* Zoom */}
-                    <div className="canvas-navigator__control-section">
-                        <div className="canvas-navigator__section-label" style={{ color: '#60a5fa' }}>Zoom</div>
-                        <div className="canvas-navigator__zoom-controls">
-                            <NavBtn size="sm" onClick={() => setMinimapZoom(Math.max(0.5, minimapZoom - 0.25))}><ZoomOut size={12} /></NavBtn>
-                            <span className="canvas-navigator__zoom-value">{Math.round(minimapZoom * 100)}%</span>
-                            <NavBtn size="sm" onClick={() => setMinimapZoom(Math.min(2, minimapZoom + 0.25))}><ZoomIn size={12} /></NavBtn>
+                    {/* View Size - hidden when very compact (shown inline above) */}
+                    {!isVeryCompact && (
+                        <div className="canvas-navigator__control-section">
+                            <div className="canvas-navigator__section-label" style={{ color: '#34d399' }}>View Size</div>
+                            <div className="canvas-navigator__size-controls canvas-navigator__size-controls--stacked">
+                                <div className="canvas-navigator__size-row">
+                                    <span className="canvas-navigator__size-label">Rows</span>
+                                    <NumberSpinner value={viewportSize.rows} onChange={setViewportSizeRows} min={1} max={10} color="#34d399" compact />
+                                </div>
+                                <div className="canvas-navigator__size-row">
+                                    <span className="canvas-navigator__size-label">Cols</span>
+                                    <NumberSpinner value={viewportSize.cols} onChange={setViewportSizeCols} min={1} max={10} color="#34d399" compact />
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Zoom - hidden when very compact (shown inline above) */}
+                    {!isVeryCompact && (
+                        <div className="canvas-navigator__control-section">
+                            <div className="canvas-navigator__section-label" style={{ color: '#60a5fa' }}>Zoom</div>
+                            <div className="canvas-navigator__zoom-controls">
+                                <NavBtn size="sm" onClick={() => setMinimapZoom(Math.max(0.5, minimapZoom - 0.25))}><ZoomOut size={12} /></NavBtn>
+                                <span className="canvas-navigator__zoom-value">{Math.round(minimapZoom * 100)}%</span>
+                                <NavBtn size="sm" onClick={() => setMinimapZoom(Math.min(2, minimapZoom + 0.25))}><ZoomIn size={12} /></NavBtn>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

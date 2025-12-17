@@ -491,13 +491,16 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 .instance-viewport__navbar-overlay {
   position: absolute;
   bottom: $spacing-sm;
-  left: $spacing-sm;
-  right: $spacing-sm;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
   z-index: 150;
+
+  // Ensure it only takes the width of its content
+  display: inline-flex;
+  width: auto;
 
   // Hidden state
   opacity: 0;
-  transform: translateY(10px);
   pointer-events: none;
   transition: opacity $animation-duration $animation-easing,
     transform $animation-duration $animation-easing;
@@ -505,7 +508,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   // Visible state
   &--visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
     pointer-events: auto;
   }
 }

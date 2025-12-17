@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { createPortal } from 'react-dom';
 import {
-    ChevronDown, Maximize2, Minimize2, Trash2, AlertCircle,
+    ChevronDown, Maximize2, Minimize2, AlertCircle,
     LayoutGrid, Wrench, MoreHorizontal, Settings,
     Glasses, Box, BarChart3, Layers, Scan, Minus, Plus,
     Undo2, Redo2, Copy, X
@@ -291,7 +291,6 @@ function HeaderBar({
     isFullscreen,
     onFullscreen,
     onClose,       // Close without delete - view goes to inactive
-    onTrash,       // Move to Recently Deleted
     onChangeSpan,
     currentSpan,
     showSpanPicker,
@@ -416,17 +415,6 @@ function HeaderBar({
                         title="Close (view stays in Datasets list)"
                     >
                         <X size={12} />
-                    </button>
-                )}
-
-                {/* Trash button - Moves to Recently Deleted */}
-                {onTrash && (
-                    <button
-                        onClick={onTrash}
-                        className="instance-viewport__header-button instance-viewport__header-button--danger"
-                        title="Move to Recently Deleted"
-                    >
-                        <Trash2 size={12} />
                     </button>
                 )}
             </div>
@@ -1415,7 +1403,6 @@ export function InstanceViewport({
                 isFullscreen={isFullscreen}
                 onFullscreen={handleFullscreen}
                 onClose={handleClose}     // X button
-                onTrash={handleTrash}     // Trash button
                 onChangeSpan={onChangeSpan}
                 currentSpan={currentSpan}
                 showSpanPicker={showSpanPicker}

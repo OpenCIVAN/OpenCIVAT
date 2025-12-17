@@ -585,8 +585,9 @@ export function CanvasGrid({
 
                 cells.push(
                     <div
-                        key={placement?.id || key}
+                        key={`cell-${canvasRow}-${canvasCol}`}
                         className="canvas-grid__cell-wrapper"
+                        data-placement-id={placement?.id}
                         style={{
                             left,
                             top,
@@ -688,20 +689,24 @@ export function CanvasGrid({
                     ref={measureRef}
                     className="canvas-grid__measure-container"
                 >
-                    {!measurementsReady ? (
-                        <LoadingState
-                            message="Preparing workspace..."
-                            error={measurementError}
-                        />
-                    ) : (
-                        <div
-                            ref={gridRef}
-                            className="canvas-grid__viewport"
-                            tabIndex={0}
-                        >
-                            {renderCells}
+                    {/* Loading overlay - shows OVER the grid, doesn't unmount it */}
+                    {!measurementsReady && (
+                        <div className="canvas-grid__loading-overlay">
+                            <LoadingState
+                                message="Preparing workspace..."
+                                error={measurementError}
+                            />
                         </div>
                     )}
+
+                    {/* Grid viewport - ALWAYS rendered to preserve VTK instances */}
+                    <div
+                        ref={gridRef}
+                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''}`}
+                        tabIndex={0}
+                    >
+                        {renderCells}
+                    </div>
                 </div>
             </div>
 

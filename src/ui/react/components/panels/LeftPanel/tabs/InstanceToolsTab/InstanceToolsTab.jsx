@@ -43,92 +43,57 @@ const SUBTABS = [
 ];
 
 // =============================================================================
-// TOOLS SUBTAB WRAPPER - Gets tools from instance handler
+// TOOLS SUBTAB WRAPPER - Gets tools from workspaceManager (same as InstanceViewport)
 // =============================================================================
 
 function ToolsSubtab({ activeInstance }) {
     const [expandedMenus, setExpandedMenus] = useState({});
     const [tools, setTools] = useState([]);
-    const [debugInfo, setDebugInfo] = useState('');
 
-    // Get tools from the instance handler
+    // Get tools from workspaceManager - same method as InstanceViewport uses
     useEffect(() => {
-        if (!activeInstance) {
-            setTools([]);
-            setDebugInfo('No active instance');
-            return;
-        }
-
-        // Try to get handler from different locations
-        const handler = activeInstance.handler || activeInstance.viewHandler || activeInstance._handler;
-
-        if (!handler) {
-            setDebugInfo(`Instance exists but no handler found. Keys: ${Object.keys(activeInstance).join(', ')}`);
+        if (!activeInstance?.instanceId) {
             setTools([]);
             return;
         }
 
-        if (typeof handler.getToolbarConfig !== 'function') {
-            setDebugInfo(`Handler exists but no getToolbarConfig. Handler methods: ${Object.keys(handler).filter(k => typeof handler[k] === 'function').join(', ')}`);
+        const loadTools = () => {
+            try {
+                // Use the same method as InstanceViewport for consistency
+                const toolsList = workspaceManager.getInstanceTools(activeInstance.instanceId);
 
-            // Try alternative method names
-            const altMethods = ['getTools', 'getToolConfig', 'toolbarConfig', 'tools'];
-            for (const method of altMethods) {
-                if (typeof handler[method] === 'function') {
-                    try {
-                        const config = handler[method]();
-                        if (Array.isArray(config) && config.length > 0) {
-                            setDebugInfo(`Used alternative method: ${method}`);
-                            setTools(config.map(tool => ({
-                                id: tool.id,
-                                icon: tool.icon,
-                                label: tool.label,
-                                description: tool.tooltip || tool.description,
-                                type: tool.items ? 'menu' : 'button',
-                                active: tool.active,
-                                disabled: tool.disabled,
-                                options: tool.items,
-                                onClick: tool.onClick,
-                            })));
-                            return;
-                        }
-                    } catch (e) {
-                        // Continue to next method
-                    }
-                }
-            }
-            setTools([]);
-            return;
-        }
+                // Transform to the format expected by ToolsList component
+                const formattedTools = toolsList.map(tool => ({
+                    id: tool.id,
+                    icon: tool.icon,
+                    label: tool.label,
+                    description: tool.tooltip || tool.description,
+                    type: tool.items || tool.options ? 'menu' : 'button',
+                    active: tool.active,
+                    disabled: tool.disabled,
+                    options: tool.items || tool.options,
+                    onClick: tool.onClick,
+                }));
 
-        try {
-            const toolbarConfig = handler.getToolbarConfig();
-            if (!toolbarConfig || toolbarConfig.length === 0) {
-                setDebugInfo('getToolbarConfig returned empty');
+                setTools(formattedTools);
+            } catch (err) {
+                console.warn('Failed to load tools:', err);
                 setTools([]);
-                return;
             }
+        };
 
-            // Transform toolbar config to tools format
-            const instanceTools = toolbarConfig.map(tool => ({
-                id: tool.id,
-                icon: tool.icon,
-                label: tool.label,
-                description: tool.tooltip || tool.description,
-                type: tool.items ? 'menu' : 'button',
-                active: tool.active,
-                disabled: tool.disabled,
-                options: tool.items,
-                onClick: tool.onClick,
-            }));
-            setDebugInfo(`Found ${instanceTools.length} tools`);
-            setTools(instanceTools);
-        } catch (e) {
-            console.warn('Failed to get toolbar config:', e);
-            setDebugInfo(`Error: ${e.message}`);
-            setTools([]);
-        }
-    }, [activeInstance]);
+        loadTools();
+
+        // Listen for tool updates (same event as InstanceViewport)
+        const handleToolsUpdate = (event) => {
+            if (event.detail?.instanceId === activeInstance.instanceId) {
+                loadTools();
+            }
+        };
+
+        window.addEventListener('cia:tools-updated', handleToolsUpdate);
+        return () => window.removeEventListener('cia:tools-updated', handleToolsUpdate);
+    }, [activeInstance?.instanceId]);
 
     const handleToggleMenu = useCallback((menuId) => {
         setExpandedMenus(prev => ({

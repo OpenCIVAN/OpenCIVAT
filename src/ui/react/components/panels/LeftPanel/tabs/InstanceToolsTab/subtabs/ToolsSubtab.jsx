@@ -8,7 +8,7 @@ import {
     ChevronRight,
     Box,
 } from 'lucide-react';
-import { getIcon, ICON_MAP } from '../iconMap';
+import { getIcon, ICON_MAP } from '../iconMap.js';
 
 // =============================================================================
 // TOOL BUTTON COMPONENT
@@ -206,7 +206,6 @@ function CameraGridMenu({ views, onViewSelect, disabled }) {
 // =============================================================================
 
 function ToolMenu({ tool, expanded, onToggle }) {
-    const Icon = getIcon(tool.icon);
     const isDisabled = tool.disabled || false;
     const hasActiveOption = tool.options?.some(opt => opt.active);
 
@@ -217,11 +216,12 @@ function ToolMenu({ tool, expanded, onToggle }) {
                 onClick={() => !isDisabled && onToggle?.()}
                 disabled={isDisabled}
             >
-                <Icon size={14} />
-                <span className="tool-menu__title">{tool.label}</span>
-                {tool.description && !expanded && (
-                    <span className="tool-menu__hint">{tool.description}</span>
-                )}
+                <div className="tool-menu__header-content">
+                    <span className="tool-menu__title">{tool.label}</span>
+                    {tool.description && !expanded && (
+                        <span className="tool-menu__hint">{tool.description}</span>
+                    )}
+                </div>
                 {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </button>
             {expanded && tool.options && (
@@ -247,9 +247,8 @@ export function ToolsList({ tools, expandedMenus, onToggleMenu }) {
     if (!tools || tools.length === 0) {
         return (
             <div className="tools-list__empty">
-                <Wrench size={24} />
-                <p>No tools available</p>
-                <span>Load data into an instance to see available tools</span>
+                <Wrench size={14} />
+                <span>No tools available - load data to see tools</span>
             </div>
         );
     }
@@ -272,8 +271,13 @@ export function ToolsList({ tools, expandedMenus, onToggleMenu }) {
                     );
                 }
 
+                // Skip invalid tools (no label or id)
+                if (!tool.label && !tool.id) {
+                    return null;
+                }
+
                 return (
-                    <div key={tool.id} className="tools-list__item">
+                    <div key={tool.id || index} className="tools-list__item">
                         <ToolButton
                             tool={tool}
                             onClick={() => tool.onClick?.()}

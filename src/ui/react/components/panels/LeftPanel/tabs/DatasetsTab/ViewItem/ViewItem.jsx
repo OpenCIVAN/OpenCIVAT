@@ -15,6 +15,7 @@ import { createPortal } from 'react-dom';
 import {
     GripVertical,
     X,
+    Trash2,
     Folder,
     Globe,
     Save,
@@ -86,7 +87,9 @@ export const ViewItem = memo(function ViewItem({
     const itemRef = useRef(null);
 
     // Derived state - check multiple ways a view might be "placed" on canvas
+    // Primary check: status === 'active' means the view has an active instance on canvas
     const isPlaced = Boolean(
+        view.status === 'active' ||
         view.position != null ||
         view.isActive ||
         view.isPlaced ||
@@ -307,21 +310,21 @@ export const ViewItem = memo(function ViewItem({
                             <Settings size={12} />
                         </button>
 
-                        {/* Close/Remove button - ALWAYS visible on hover */}
+                        {/* Close/Trash button - X to close when placed, Trash to delete when not placed */}
                         <button
-                            className="view-item__action-btn view-item__action-btn--close"
+                            className={`view-item__action-btn ${isPlaced ? 'view-item__action-btn--close' : 'view-item__action-btn--trash'}`}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (isPlaced) {
                                     onClose?.(view.id);
                                 } else {
-                                    // Not placed - this could trash or just close
-                                    onTrash?.(view.id) || onClose?.(view.id);
+                                    // Not placed - trash the view
+                                    onTrash?.(view.id);
                                 }
                             }}
-                            title={isPlaced ? "Remove from Canvas" : "Close View"}
+                            title={isPlaced ? "Remove from Canvas" : "Trash View"}
                         >
-                            <X size={12} />
+                            {isPlaced ? <X size={12} /> : <Trash2 size={12} />}
                         </button>
                     </div>
                 )}

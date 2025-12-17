@@ -37,6 +37,7 @@ const DEFAULT_SIZE = { width: 580, height: 400 };   // Comfortable default
 const MIN_SIZE = { width: 430, height: 300 };      // Ensures controls always fit
 const MAX_SIZE = { width: 900, height: 700 };       // Prevents over-sizing
 const COMPACT_THRESHOLD = 480;                       // Width to switch to compact mode
+const VERY_COMPACT_HEIGHT = 360;                     // Height threshold for very compact
 
 // =============================================================================
 // HELPERS
@@ -119,8 +120,9 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     const [resizeDirection, setResizeDirection] = useState(null);
     const resizeStartRef = useRef(null);
 
-    // Compact mode based on width
+    // Compact mode based on width, very compact when both narrow AND short
     const isCompact = floatSize.width < COMPACT_THRESHOLD;
+    const isVeryCompact = isCompact && floatSize.height < VERY_COMPACT_HEIGHT;
 
     // Extract values from context (with safe defaults)
     const logic = context?.logic;
@@ -358,7 +360,7 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
     return (
         <div
             ref={containerRef}
-            className={`floating-canvas-navigator ${isDragging ? 'floating-canvas-navigator--dragging' : ''} ${isResizing ? 'floating-canvas-navigator--resizing' : ''} ${isCornerDocked ? 'floating-canvas-navigator--corner' : ''} ${isCompact ? 'floating-canvas-navigator--compact' : ''} ${className}`}
+            className={`floating-canvas-navigator ${isDragging ? 'floating-canvas-navigator--dragging' : ''} ${isResizing ? 'floating-canvas-navigator--resizing' : ''} ${isCornerDocked ? 'floating-canvas-navigator--corner' : ''} ${isCompact ? 'floating-canvas-navigator--compact' : ''} ${isVeryCompact ? 'floating-canvas-navigator--very-compact' : ''} ${className}`}
             style={positionStyle}
             onMouseDown={handleDragStart}
         >
@@ -366,6 +368,7 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
                 logic={logic}
                 onClose={() => setDockPosition(DOCK_POSITIONS.MINIMIZED)}
                 isCompact={isCompact}
+                isVeryCompact={isVeryCompact}
             />
 
             {/* Resize handles - only in float mode */}

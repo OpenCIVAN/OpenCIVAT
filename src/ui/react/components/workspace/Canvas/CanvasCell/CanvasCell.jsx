@@ -22,6 +22,7 @@ import {
     FileText,
     Box,
     ZoomIn,
+    MoreVertical,
 } from 'lucide-react';
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
@@ -109,7 +110,8 @@ export const CanvasCell = memo(function CanvasCell({
             case RENDER_MODES.THUMBNAIL:
                 return {
                     showToolbar: false,
-                    showHeader: true,
+                    showHeader: false,        // Regular header hidden
+                    showMiniHeader: true,     // Show mini header instead
                     showHeaderButtons: false,
                     showCoords: false,
                     showSizeBadge: false,
@@ -120,6 +122,7 @@ export const CanvasCell = memo(function CanvasCell({
                 return {
                     showToolbar: false,
                     showHeader: false,
+                    showMiniHeader: true,     // Show mini header
                     showHeaderButtons: false,
                     showCoords: false,
                     showSizeBadge: false,
@@ -273,6 +276,8 @@ export const CanvasCell = memo(function CanvasCell({
                         renderMode={renderMode}
                         uiConfig={uiConfig}
                         onClose={() => onRemove?.()}
+                        viewName={placement.content?.name || placement.content?.viewName}
+                        viewColor={placement.content?.color?.hex || placement.content?.colorHex}
                     />
                 );
 
@@ -506,31 +511,76 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
 }
 
 // =============================================================================
+// MINI HEADER - For thumbnail/snapshot modes
+// =============================================================================
+
+function MiniHeader({ name, color, onClose, onOpenMenu, viewId }) {
+    const [showName, setShowName] = useState(false);
+
+    return (
+        <div
+            className="canvas-cell__mini-header"
+            onMouseEnter={() => setShowName(true)}
+            onMouseLeave={() => setShowName(false)}
+        >
+            <div
+                className="canvas-cell__mini-header-dot"
+                style={{ backgroundColor: color || '#60a5fa' }}
+            />
+            {showName && (
+                <div className="canvas-cell__mini-header-name">{name || 'View'}</div>
+            )}
+            <div style={{ flex: 1 }} />
+            <button
+                className="canvas-cell__mini-header-btn"
+                onClick={(e) => { e.stopPropagation(); onOpenMenu?.(e); }}
+                title="Options"
+            >
+                <MoreVertical size={12} />
+            </button>
+            <button
+                className="canvas-cell__mini-header-btn canvas-cell__mini-header-close"
+                onClick={(e) => { e.stopPropagation(); onClose?.(); }}
+                title="Remove from canvas"
+            >
+                <X size={12} />
+            </button>
+        </div>
+    );
+}
+
+// =============================================================================
 // VIEW CONTENT
 // =============================================================================
 
-function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConfig, onClose }) {
+function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConfig, onClose, onOpenMenu, viewName, viewColor }) {
     const [isReady, setIsReady] = useState(false);
-    
+
     // Determine if we should show thumbnail overlay vs live render
-    const showThumbnailOverlay = 
-        uiConfig.renderContent === 'thumbnail' || 
+    const showThumbnailOverlay =
+        uiConfig.renderContent === 'thumbnail' ||
         uiConfig.renderContent === 'snapshot';
-    
-    const showLiveRender = 
-        uiConfig.renderContent === 'full' || 
-        uiConfig.renderContent === 'compact' ||
-        // Keep instance alive even when showing thumbnail
-        (showThumbnailOverlay && isReady);
 
     return (
         <div className="canvas-cell__view-content">
-            {/* Thumbnail overlay - shows when in small mode */}
+            {/* Mini header for small modes */}
+            {uiConfig.showMiniHeader && (
+                <MiniHeader
+                    name={viewName}
+                    color={viewColor}
+                    onClose={onClose}
+                    onOpenMenu={onOpenMenu}
+                    viewId={viewId}
+                />
+            )}
+
+            {/* Thumbnail overlay - shows OVER the instance */}
             {showThumbnailOverlay && (
                 <div className="canvas-cell__thumbnail-overlay">
-                    <Thumbnail 
+                    <Thumbnail
                         viewId={viewId}
-                        className="canvas-cell__thumbnail-image"
+                        size="fill"
+                        instanceType="vtk"
                         fallback={
                             <div className="canvas-cell__thumbnail-placeholder">
                                 <Box size={uiConfig.renderContent === 'snapshot' ? 16 : 24} />
@@ -539,12 +589,12 @@ function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConf
                     />
                 </div>
             )}
-            
-            {/* Instance container - hidden but alive when in thumbnail mode */}
-            <div 
+
+            {/* ALWAYS render InstanceViewport - it's behind thumbnail overlay via z-index */}
+            {/* We keep it visible (not visibility:hidden) to preserve WebGL context */}
+            <div
                 className="canvas-cell__instance-container"
-                style={{ 
-                    visibility: showThumbnailOverlay ? 'hidden' : 'visible',
+                style={{
                     pointerEvents: showThumbnailOverlay ? 'none' : 'auto',
                 }}
             >
@@ -556,7 +606,6 @@ function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConf
                         uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
                         onReady={() => setIsReady(true)}
                         onClose={onClose}
-                        onTrash={onClose}
                     />
                 </ProgressiveLoader>
             </div>

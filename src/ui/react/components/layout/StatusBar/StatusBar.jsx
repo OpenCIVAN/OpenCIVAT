@@ -391,7 +391,6 @@ export function StatusBar() {
 
                 <div className="status-bar__divider" />
 
-                <VoiceCommandToggle size="sm" />
             </div>
 
             {/* Center Zone: Empty or future use */}
@@ -408,6 +407,10 @@ export function StatusBar() {
                 />
 
                 <FPSCounter fps={fps} />
+
+                <div className="status-bar__divider" />
+
+                <VoiceCommandToggle size="sm" />
 
                 {/* Panel toggle button - at the right end */}
                 <button
