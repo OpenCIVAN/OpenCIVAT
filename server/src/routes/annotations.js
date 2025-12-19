@@ -275,7 +275,6 @@ router.put("/:id", async (req, res, next) => {
       "content",
       "metadata",
       "visibility",
-      "visible",
       "locked",
     ];
 
@@ -283,6 +282,7 @@ router.put("/:id", async (req, res, next) => {
     const fieldMapping = {
       coordinates: "position",
       properties: "content",
+      visible: "visibility",
     };
 
     const setClauses = [];

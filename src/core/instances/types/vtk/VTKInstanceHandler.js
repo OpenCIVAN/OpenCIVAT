@@ -22,6 +22,7 @@ import {
   raycastFromScreen,
   raycastFromScreenWithFallback,
   disposeRaycaster,
+  worldToScreen,
 } from "@VTK/utils/vtkRaycaster.js";
 import { vrManager } from "@Core/vr/VRManager.js";
 import { vrControllers } from "@VTK/vr/VTKVRController.js";
@@ -204,6 +205,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         handleMouseLeave,
         handleMouseEnter,
         handleClick,
+        handleContextMenu,
       } = instanceData._cursorHandlers;
       instanceData.container.removeEventListener("mousemove", handleMouseMove);
       instanceData.container.removeEventListener(
@@ -218,6 +220,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         instanceData.container.removeEventListener("click", handleClick, {
           capture: true,
         });
+      }
+      if (handleContextMenu) {
+        instanceData.container.removeEventListener(
+          "contextmenu",
+          handleContextMenu
+        );
       }
       instanceData._cursorHandlers = null;
       log.debug(`Cursor event listeners removed for ${instanceId}`);
@@ -3174,12 +3182,76 @@ console.log('Tools:', tools);
       }
     };
 
+    // Find the nearest annotation to a screen position
+    // Returns the annotation data if found within threshold, null otherwise
+    const findNearestAnnotation = (screenX, screenY, threshold = 30) => {
+      if (!instanceData.annotations || instanceData.annotations.size === 0) {
+        return null;
+      }
+
+      let nearest = null;
+      let minDistance = Infinity;
+
+      instanceData.annotations.forEach((entry) => {
+        const { data } = entry;
+        if (!data || !data.position) return;
+
+        // Get screen position of the annotation
+        const position = data.position;
+        const worldPos = Array.isArray(position)
+          ? position
+          : [position.x, position.y, position.z];
+
+        const screenPos = worldToScreen(sceneObjects, worldPos, container);
+        if (!screenPos) return;
+
+        // Calculate distance from click to annotation
+        const dx = screenX - screenPos.x;
+        const dy = screenY - screenPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < threshold && distance < minDistance) {
+          minDistance = distance;
+          nearest = data;
+        }
+      });
+
+      return nearest;
+    };
+
+    // Context menu (right-click) handler for annotations
+    const handleContextMenu = (event) => {
+      // Find if we clicked near an annotation
+      const annotation = findNearestAnnotation(event.clientX, event.clientY);
+
+      if (annotation) {
+        // Prevent default context menu
+        event.preventDefault();
+        event.stopPropagation();
+
+        log.info(`Annotation right-clicked: ${annotation.id}`);
+
+        // Emit annotation context menu event
+        window.dispatchEvent(
+          new CustomEvent("cia:annotation-context-menu", {
+            detail: {
+              instanceId: instanceData.instanceId,
+              annotation: annotation,
+              screenX: event.clientX,
+              screenY: event.clientY,
+            },
+          })
+        );
+      }
+    };
+
     // Attach event listeners
     // Use capture phase for click to ensure we get the event before VTK's interactor
     container.addEventListener("mousemove", handleMouseMoveWithRaycast);
     container.addEventListener("mouseleave", handleMouseLeave);
     container.addEventListener("mouseenter", handleMouseEnter);
     container.addEventListener("click", handleClick, { capture: true });
+    container.addEventListener("contextmenu", handleContextMenu);
 
     // Store handlers for cleanup
     instanceData._cursorHandlers = {
@@ -3187,6 +3259,7 @@ console.log('Tools:', tools);
       handleMouseLeave,
       handleMouseEnter,
       handleClick,
+      handleContextMenu,
     };
 
     // Update VTKInstanceCursors with scene objects for 3D rendering

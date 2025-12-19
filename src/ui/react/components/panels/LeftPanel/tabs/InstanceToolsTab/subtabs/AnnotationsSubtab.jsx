@@ -5,6 +5,7 @@
 // FIXED: "Open Full Annotations Panel" button is in a proper footer
 // FIXED: Renders annotations in 3D view via workspaceManager
 // ADDED: Click-to-annotate with floating annotation creator
+// ADDED: Right-click context menu for edit/move/delete
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
@@ -20,9 +21,11 @@ import {
     Loader,
     TextCursor,
     Crosshair,
+    Move,
 } from 'lucide-react';
 import { useAnnotations } from '@UI/react/hooks/useAnnotations.js';
 import { FloatingAnnotationCreator } from '@UI/react/components/modals/FloatingAnnotationCreator';
+import { AnnotationContextMenu } from '@UI/react/components/modals/AnnotationContextMenu';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { logInfo, logSuccess, logWarning } from '@Utils/logger.js';
 
@@ -87,6 +90,18 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
     const [clickPosition, setClickPosition] = useState({ x: 0, y: 0, z: 0 });
     const [screenPosition, setScreenPosition] = useState({ x: 200, y: 200 });
 
+    // Context menu state
+    const [showContextMenu, setShowContextMenu] = useState(false);
+    const [contextMenuAnnotation, setContextMenuAnnotation] = useState(null);
+    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+
+    // Move mode state
+    const [moveMode, setMoveMode] = useState(false);
+    const [movingAnnotation, setMovingAnnotation] = useState(null);
+
+    // Edit mode state
+    const [editingAnnotation, setEditingAnnotation] = useState(null);
+
     // Fetch real annotations for this dataset
     const {
         annotations,
@@ -94,6 +109,7 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
         error,
         createAnnotation,
         updateAnnotation,
+        deleteAnnotation,
     } = useAnnotations({ datasetId });
 
     // Render annotations in 3D view when annotations change
@@ -123,22 +139,47 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
         };
     }, [instanceId, annotationMode]);
 
-    // Listen for annotation click events
+    // Listen for annotation click events (for creating new annotations)
     useEffect(() => {
         const handleAnnotationClick = (event) => {
             const { position, screenX, screenY, instanceId: clickInstanceId } = event.detail;
 
-            if (clickInstanceId === instanceId && position) {
-                setClickPosition(position);
-                setScreenPosition({ x: screenX + 20, y: screenY - 150 });
-                setShowCreator(true);
-                setAnnotationMode(false); // Exit annotation mode after click
+            if (clickInstanceId !== instanceId || !position) return;
+
+            // If we're in move mode, move the annotation to the new position
+            if (moveMode && movingAnnotation) {
+                handleMoveAnnotationToPosition(position);
+                return;
             }
+
+            // Otherwise, show the creator for a new annotation
+            setClickPosition(position);
+            setScreenPosition({ x: screenX + 20, y: screenY - 150 });
+            setShowCreator(true);
+            setAnnotationMode(false); // Exit annotation mode after click
         };
 
         window.addEventListener('cia:annotation-click', handleAnnotationClick);
         return () => window.removeEventListener('cia:annotation-click', handleAnnotationClick);
-    }, [instanceId]);
+    }, [instanceId, moveMode, movingAnnotation]);
+
+    // Listen for annotation context menu events (right-click on annotation)
+    useEffect(() => {
+        const handleContextMenu = (event) => {
+            const { annotation, screenX, screenY, instanceId: clickInstanceId } = event.detail;
+
+            if (clickInstanceId === instanceId && annotation) {
+                // Find the full annotation from our list
+                const fullAnnotation = annotations.find(a => a.id === annotation.id) || annotation;
+                setContextMenuAnnotation(fullAnnotation);
+                setContextMenuPosition({ x: screenX, y: screenY });
+                setShowContextMenu(true);
+            }
+        };
+
+        window.addEventListener('cia:annotation-context-menu', handleContextMenu);
+        return () => window.removeEventListener('cia:annotation-context-menu', handleContextMenu);
+    }, [instanceId, annotations]);
 
     // Toggle annotation visibility
     const handleToggleVisibility = useCallback(async (annotation) => {
@@ -158,13 +199,155 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
         }
     }, [updateAnnotation, annotations, instanceId]);
 
-    // Handle creating a new annotation with position
+    // Handle edit annotation (opens the creator with existing data)
+    const handleEditAnnotation = useCallback(() => {
+        if (!contextMenuAnnotation) return;
+
+        // Set up the creator with existing annotation data
+        const pos = contextMenuAnnotation.position;
+        const position = Array.isArray(pos)
+            ? { x: pos[0], y: pos[1], z: pos[2] }
+            : pos;
+
+        setClickPosition(position);
+        setScreenPosition(contextMenuPosition);
+        setEditingAnnotation(contextMenuAnnotation);
+        setShowCreator(true);
+    }, [contextMenuAnnotation, contextMenuPosition]);
+
+    // Handle start moving an annotation
+    const handleStartMoveAnnotation = useCallback(() => {
+        if (!contextMenuAnnotation) return;
+
+        setMovingAnnotation(contextMenuAnnotation);
+        setMoveMode(true);
+        setAnnotationMode(true); // Enable annotation mode to capture clicks
+
+        logInfo(`Move mode enabled. Click on the 3D model to move annotation "${contextMenuAnnotation.label || contextMenuAnnotation.text || 'Annotation'}"`);
+    }, [contextMenuAnnotation]);
+
+    // Handle moving annotation to new position
+    const handleMoveAnnotationToPosition = useCallback(async (newPosition) => {
+        if (!movingAnnotation) return;
+
+        logInfo(`Moving annotation to (${newPosition.x.toFixed(2)}, ${newPosition.y.toFixed(2)}, ${newPosition.z.toFixed(2)})`);
+
+        try {
+            await updateAnnotation({
+                id: movingAnnotation.id,
+                targetDatasetId: movingAnnotation.datasetId || datasetId,
+                updates: {
+                    position: [newPosition.x, newPosition.y, newPosition.z]
+                }
+            });
+
+            logSuccess('Annotation moved');
+
+            // Re-render annotations with the new position
+            if (instanceId) {
+                const updatedAnnotations = annotations.map(a =>
+                    a.id === movingAnnotation.id
+                        ? { ...a, position: [newPosition.x, newPosition.y, newPosition.z] }
+                        : a
+                );
+                const visibleAnnotations = updatedAnnotations.filter(a => a.visible !== false);
+                await workspaceManager.updateInstanceAnnotations(instanceId, visibleAnnotations.length > 0, visibleAnnotations);
+            }
+        } catch (err) {
+            console.error('Failed to move annotation:', err);
+        } finally {
+            // Exit move mode
+            setMoveMode(false);
+            setMovingAnnotation(null);
+            setAnnotationMode(false);
+        }
+    }, [movingAnnotation, updateAnnotation, datasetId, annotations, instanceId]);
+
+    // Cancel move mode
+    const handleCancelMove = useCallback(() => {
+        setMoveMode(false);
+        setMovingAnnotation(null);
+        setAnnotationMode(false);
+    }, []);
+
+    // Handle delete annotation
+    const handleDeleteAnnotation = useCallback(async () => {
+        if (!contextMenuAnnotation) return;
+
+        const confirmDelete = window.confirm(
+            `Delete annotation "${contextMenuAnnotation.label || contextMenuAnnotation.text || 'this annotation'}"?`
+        );
+
+        if (!confirmDelete) return;
+
+        try {
+            await deleteAnnotation({
+                id: contextMenuAnnotation.id,
+                targetDatasetId: contextMenuAnnotation.datasetId || datasetId,
+            });
+
+            logSuccess('Annotation deleted');
+
+            // Re-render annotations without the deleted one
+            if (instanceId) {
+                const remainingAnnotations = annotations
+                    .filter(a => a.id !== contextMenuAnnotation.id && a.visible !== false);
+                await workspaceManager.updateInstanceAnnotations(
+                    instanceId,
+                    remainingAnnotations.length > 0,
+                    remainingAnnotations
+                );
+            }
+        } catch (err) {
+            console.error('Failed to delete annotation:', err);
+        }
+    }, [contextMenuAnnotation, deleteAnnotation, datasetId, annotations, instanceId]);
+
+    // Handle creating or updating an annotation with position
     const handleCreateAnnotation = useCallback(async (text, type, position) => {
         if (!datasetId) {
             console.warn('No dataset ID available for annotation');
             return;
         }
 
+        const positionArray = [position.x, position.y, position.z];
+
+        // If editing an existing annotation, update it
+        if (editingAnnotation) {
+            logInfo(`Updating annotation: ${editingAnnotation.id}`);
+
+            try {
+                await updateAnnotation({
+                    id: editingAnnotation.id,
+                    targetDatasetId: editingAnnotation.datasetId || datasetId,
+                    updates: {
+                        text,
+                        type: type === 'note' ? 'point' : type,
+                        position: positionArray,
+                        label: text.substring(0, 50),
+                    }
+                });
+
+                logSuccess('Annotation updated');
+                setShowCreator(false);
+                setEditingAnnotation(null);
+
+                // Re-render annotations with the updated data
+                if (instanceId) {
+                    const updatedAnnotations = annotations.map(a =>
+                        a.id === editingAnnotation.id
+                            ? { ...a, text, type: type === 'note' ? 'point' : type, position: positionArray, label: text.substring(0, 50) }
+                            : a
+                    ).filter(a => a.visible !== false);
+                    await workspaceManager.updateInstanceAnnotations(instanceId, updatedAnnotations.length > 0, updatedAnnotations);
+                }
+            } catch (err) {
+                console.error('Failed to update annotation:', err);
+            }
+            return;
+        }
+
+        // Creating a new annotation
         logInfo(`Creating annotation: ${type} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
 
         try {
@@ -172,7 +355,7 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
                 targetDatasetId: datasetId,
                 type: type === 'note' ? 'point' : type,
                 text,
-                position: [position.x, position.y, position.z],
+                position: positionArray,
                 label: text.substring(0, 50),
             });
             logSuccess('Annotation created');
@@ -194,7 +377,7 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
         } catch (err) {
             console.error('Failed to create annotation:', err);
         }
-    }, [datasetId, createAnnotation, instanceId, annotations]);
+    }, [datasetId, createAnnotation, updateAnnotation, instanceId, annotations, editingAnnotation]);
 
     // Handle position change from the floating creator
     const handlePositionChange = useCallback((newPosition) => {
@@ -280,8 +463,8 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
                 </button>
             </div>
 
-            {/* Annotation mode indicator */}
-            {annotationMode && (
+            {/* Annotation mode indicator - for creating new annotations */}
+            {annotationMode && !moveMode && (
                 <div className="annotations-subtab__mode-indicator">
                     <Crosshair size={12} className="pulse" />
                     <span>Click on the 3D model to place annotation</span>
@@ -289,14 +472,38 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
                 </div>
             )}
 
+            {/* Move mode indicator */}
+            {moveMode && movingAnnotation && (
+                <div className="annotations-subtab__mode-indicator annotations-subtab__mode-indicator--move">
+                    <Move size={12} className="pulse" />
+                    <span>Click to move: {movingAnnotation.label || movingAnnotation.text || 'Annotation'}</span>
+                    <button onClick={handleCancelMove}>Cancel</button>
+                </div>
+            )}
+
             {/* Floating Annotation Creator */}
             <FloatingAnnotationCreator
                 isOpen={showCreator}
-                onClose={() => setShowCreator(false)}
+                onClose={() => {
+                    setShowCreator(false);
+                    setEditingAnnotation(null);
+                }}
                 onSubmit={handleCreateAnnotation}
                 position={clickPosition}
                 screenPosition={screenPosition}
                 onPositionChange={handlePositionChange}
+            />
+
+            {/* Annotation Context Menu */}
+            <AnnotationContextMenu
+                isOpen={showContextMenu}
+                onClose={() => setShowContextMenu(false)}
+                annotation={contextMenuAnnotation}
+                screenPosition={contextMenuPosition}
+                onEdit={handleEditAnnotation}
+                onMove={handleStartMoveAnnotation}
+                onDelete={handleDeleteAnnotation}
+                onToggleVisibility={() => handleToggleVisibility(contextMenuAnnotation)}
             />
         </div>
     );
