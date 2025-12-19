@@ -20,6 +20,7 @@ import { getUserId } from "@Collaboration/presence/userManagement.js";
 // Raycasting and cursor collaboration
 import {
   raycastFromScreen,
+  raycastFromScreenWithFallback,
   disposeRaycaster,
 } from "@VTK/utils/vtkRaycaster.js";
 import { vrManager } from "@Core/vr/VRManager.js";
@@ -198,8 +199,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     // Clean up cursor event listeners
     if (instanceData._cursorHandlers && instanceData.container) {
-      const { handleMouseMove, handleMouseLeave, handleMouseEnter } =
-        instanceData._cursorHandlers;
+      const {
+        handleMouseMove,
+        handleMouseLeave,
+        handleMouseEnter,
+        handleClick,
+      } = instanceData._cursorHandlers;
       instanceData.container.removeEventListener("mousemove", handleMouseMove);
       instanceData.container.removeEventListener(
         "mouseleave",
@@ -209,6 +214,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         "mouseenter",
         handleMouseEnter
       );
+      if (handleClick) {
+        instanceData.container.removeEventListener("click", handleClick, {
+          capture: true,
+        });
+      }
       instanceData._cursorHandlers = null;
       log.debug(`Cursor event listeners removed for ${instanceId}`);
     }
@@ -489,6 +499,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     instanceData.dataset = dataset;
     instanceData.polydata = polydata;
     instanceData.hasData = true;
+
+    // Mark data as loaded for raycasting/annotation support
+    if (instanceData.markDataLoaded) {
+      instanceData.markDataLoaded();
+    }
 
     log.info(`Data loaded successfully`);
   }
@@ -2982,6 +2997,7 @@ console.log('Tools:', tools);
     // Mouse leave handler - clear world position when leaving container
     const handleMouseLeave = () => {
       clearCursorWorldPosition();
+      lastRaycastResult = null;
     };
 
     // Mouse enter handler - set active instance
@@ -2989,16 +3005,145 @@ console.log('Tools:', tools);
       setActiveInstance(instanceData.instanceId, instanceData.viewConfigId);
     };
 
+    // Track last raycast result for click-to-annotate
+    let lastRaycastResult = null;
+
+    // Enhanced mouse move to store raycast result
+    const handleMouseMoveWithRaycast = (event) => {
+      handleMouseMove(event);
+
+      // Store last raycast result for annotation clicks
+      // Use raycastFromScreenWithFallback for better hit detection
+      if (hasDataLoaded) {
+        try {
+          const result = raycastFromScreenWithFallback(
+            sceneObjects,
+            event.clientX,
+            event.clientY,
+            container,
+            { instanceId: instanceData.instanceId }
+          );
+          if (result.hit) {
+            lastRaycastResult = {
+              position: {
+                x: result.worldPosition[0],
+                y: result.worldPosition[1],
+                z: result.worldPosition[2],
+              },
+              normal: result.normal
+                ? {
+                    x: result.normal[0],
+                    y: result.normal[1],
+                    z: result.normal[2],
+                  }
+                : null,
+              screenX: event.clientX,
+              screenY: event.clientY,
+            };
+          } else {
+            lastRaycastResult = null;
+          }
+        } catch (e) {
+          // Ignore raycast errors
+        }
+      }
+    };
+
+    // Click handler for annotation mode
+    // Uses capture phase to fire before VTK's interactor consumes the event
+    const handleClick = (event) => {
+      log.info(
+        `Click detected on instance ${instanceData.instanceId}, annotationMode=${instanceData.annotationMode}, hasDataLoaded=${hasDataLoaded}`
+      );
+
+      // Check if annotation mode is enabled for this instance
+      if (!instanceData.annotationMode) {
+        return;
+      }
+
+      log.info("Annotation mode active, performing raycast...");
+
+      // Use stored raycast result or perform new raycast
+      let result = lastRaycastResult;
+      log.info(`lastRaycastResult: ${result ? "exists" : "null"}`);
+
+      if (!result && hasDataLoaded) {
+        try {
+          log.info(
+            `Performing fresh raycast at (${event.clientX}, ${event.clientY})`
+          );
+          // Use raycastFromScreenWithFallback for better hit detection
+          const rayResult = raycastFromScreenWithFallback(
+            sceneObjects,
+            event.clientX,
+            event.clientY,
+            container,
+            { instanceId: instanceData.instanceId }
+          );
+          log.info(
+            `Raycast result: hit=${rayResult.hit}, onViewRay=${
+              rayResult.onViewRay || false
+            }`
+          );
+          if (rayResult.hit) {
+            result = {
+              position: {
+                x: rayResult.worldPosition[0],
+                y: rayResult.worldPosition[1],
+                z: rayResult.worldPosition[2],
+              },
+              normal: rayResult.normal
+                ? {
+                    x: rayResult.normal[0],
+                    y: rayResult.normal[1],
+                    z: rayResult.normal[2],
+                  }
+                : null,
+              screenX: event.clientX,
+              screenY: event.clientY,
+            };
+          }
+        } catch (e) {
+          log.warn("Annotation click raycast failed:", e);
+        }
+      }
+
+      if (result) {
+        // Emit annotation click event
+        log.info(
+          `Emitting cia:annotation-click event at (${result.position.x.toFixed(
+            2
+          )}, ${result.position.y.toFixed(2)}, ${result.position.z.toFixed(2)})`
+        );
+        window.dispatchEvent(
+          new CustomEvent("cia:annotation-click", {
+            detail: {
+              instanceId: instanceData.instanceId,
+              position: result.position,
+              normal: result.normal,
+              screenX: result.screenX,
+              screenY: result.screenY,
+            },
+          })
+        );
+      } else {
+        log.info("Annotation click: no surface hit (result is null)");
+      }
+    };
+
     // Attach event listeners
-    container.addEventListener("mousemove", handleMouseMove);
+    // Use capture phase for click to ensure we get the event before VTK's interactor
+    container.addEventListener("mousemove", handleMouseMoveWithRaycast);
     container.addEventListener("mouseleave", handleMouseLeave);
     container.addEventListener("mouseenter", handleMouseEnter);
+    container.addEventListener("click", handleClick, { capture: true });
 
     // Store handlers for cleanup
     instanceData._cursorHandlers = {
-      handleMouseMove,
+      handleMouseMove: handleMouseMoveWithRaycast,
       handleMouseLeave,
       handleMouseEnter,
+      handleClick,
     };
 
     // Update VTKInstanceCursors with scene objects for 3D rendering

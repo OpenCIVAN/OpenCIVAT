@@ -15,41 +15,62 @@
 // ----------------------------------------------------------------------------
 
 import vtkCellPicker from "@kitware/vtk.js/Rendering/Core/CellPicker";
+import vtkPointPicker from "@kitware/vtk.js/Rendering/Core/PointPicker";
 import { instance as log } from "@Utils/logger.js";
 
 // Cache pickers per instance to avoid recreation overhead
-const pickerCache = new Map(); // instanceId -> vtkCellPicker
+const pickerCache = new Map(); // instanceId -> { cellPicker, pointPicker, tolerance }
 
-// Default picker tolerance (in normalized coordinates)
-const DEFAULT_TOLERANCE = 0.005;
+// Default picker tolerance - larger value for more forgiving surface picking
+// This value is in world coordinates, not normalized
+const DEFAULT_TOLERANCE = 0.01;
 
 /**
  * Get or create a cached picker for an instance
  *
  * @param {string} instanceId - Unique instance identifier
  * @param {Object} options - Picker configuration options
- * @returns {vtkCellPicker} The picker instance
+ * @param {string} pickerType - Type of picker ('cell' or 'point')
+ * @returns {vtkCellPicker|vtkPointPicker} The picker instance
  */
-function getOrCreatePicker(instanceId, options = {}) {
+function getOrCreatePicker(instanceId, options = {}, pickerType = "cell") {
+  const tolerance = options.tolerance || DEFAULT_TOLERANCE;
+
   if (pickerCache.has(instanceId)) {
-    return pickerCache.get(instanceId);
+    const cached = pickerCache.get(instanceId);
+    const picker =
+      pickerType === "point" ? cached.pointPicker : cached.cellPicker;
+
+    // Always update tolerance to match options
+    if (picker && picker.getTolerance() !== tolerance) {
+      picker.setTolerance(tolerance);
+      log.debug(
+        `Updated ${pickerType} picker tolerance to ${tolerance} for instance: ${instanceId}`
+      );
+    }
+
+    if (picker) {
+      return picker;
+    }
   }
 
-  const picker = vtkCellPicker.newInstance();
+  // Create cell picker
+  const cellPicker = vtkCellPicker.newInstance();
+  cellPicker.setTolerance(tolerance);
+  cellPicker.setPickFromList(false);
 
-  // Configure picker tolerance
-  // Lower = more precise, but may miss curved surfaces
-  // Higher = more forgiving, but may pick wrong surface
-  picker.setTolerance(options.tolerance || DEFAULT_TOLERANCE);
+  // Create point picker as fallback
+  const pointPicker = vtkPointPicker.newInstance();
+  pointPicker.setTolerance(tolerance);
+  pointPicker.setPickFromList(false);
 
-  // Enable picking of volumes if needed (usually false for surface picking)
-  picker.setPickFromList(false);
+  pickerCache.set(instanceId, { cellPicker, pointPicker, tolerance });
 
-  pickerCache.set(instanceId, picker);
+  log.debug(
+    `Created raycaster pickers (cell + point) for instance: ${instanceId}, tolerance: ${tolerance}`
+  );
 
-  log.debug(`Created raycaster picker for instance: ${instanceId}`);
-
-  return picker;
+  return pickerType === "point" ? pointPicker : cellPicker;
 }
 
 /**
@@ -96,6 +117,83 @@ function screenToNDC(screenX, screenY, container) {
   const ndcY = 1 - normalizedY * 2; // Invert Y axis
 
   return { ndcX, ndcY, valid: true };
+}
+
+/**
+ * Convert screen coordinates to VTK display coordinates.
+ *
+ * VTK display coordinates:
+ * - X: Pixels from left edge of container
+ * - Y: Pixels from BOTTOM edge of container (VTK Y-axis points up)
+ *
+ * @param {number} screenX - Screen X coordinate (clientX)
+ * @param {number} screenY - Screen Y coordinate (clientY)
+ * @param {HTMLElement} container - VTK container element
+ * @returns {{ displayX: number, displayY: number, valid: boolean }}
+ */
+function screenToDisplay(screenX, screenY, container) {
+  const rect = container.getBoundingClientRect();
+
+  // Convert to container-relative coordinates
+  const containerX = screenX - rect.left;
+  const containerY = screenY - rect.top;
+
+  // Check if point is within container bounds
+  const valid =
+    containerX >= 0 &&
+    containerX <= rect.width &&
+    containerY >= 0 &&
+    containerY <= rect.height;
+
+  if (!valid || rect.width === 0 || rect.height === 0) {
+    return { displayX: 0, displayY: 0, valid: false };
+  }
+
+  // VTK display Y is from the bottom, browser Y is from the top
+  // So invert the Y coordinate
+  const displayX = containerX;
+  const displayY = rect.height - containerY;
+
+  return { displayX, displayY, valid: true };
+}
+
+/**
+ * Convert screen coordinates to normalized viewport coordinates.
+ *
+ * VTK picker expects normalized viewport coordinates:
+ * - X: 0 (left edge) to 1 (right edge)
+ * - Y: 0 (bottom edge) to 1 (top edge)
+ *
+ * @param {number} screenX - Screen X coordinate (clientX)
+ * @param {number} screenY - Screen Y coordinate (clientY)
+ * @param {HTMLElement} container - VTK container element
+ * @returns {{ viewportX: number, viewportY: number, valid: boolean }}
+ */
+function screenToViewport(screenX, screenY, container) {
+  const rect = container.getBoundingClientRect();
+
+  // Convert to container-relative coordinates
+  const containerX = screenX - rect.left;
+  const containerY = screenY - rect.top;
+
+  // Check if point is within container bounds
+  const valid =
+    containerX >= 0 &&
+    containerX <= rect.width &&
+    containerY >= 0 &&
+    containerY <= rect.height;
+
+  if (!valid || rect.width === 0 || rect.height === 0) {
+    return { viewportX: 0, viewportY: 0, valid: false };
+  }
+
+  // Normalize to [0, 1] range
+  // X: 0 (left) to 1 (right)
+  // Y: 0 (bottom) to 1 (top) - note Y inversion from browser coords
+  const viewportX = containerX / rect.width;
+  const viewportY = 1 - containerY / rect.height;
+
+  return { viewportX, viewportY, valid: true };
 }
 
 /**
@@ -154,11 +252,20 @@ export function raycastFromScreen(
 
   const { renderer, renderWindow } = sceneObjects;
 
-  // Convert screen coordinates to NDC
-  const { ndcX, ndcY, valid } = screenToNDC(screenX, screenY, container);
+  // Get container/canvas dimensions for coordinate conversion
+  const rect = container.getBoundingClientRect();
+  const containerX = screenX - rect.left;
+  const containerY = screenY - rect.top;
 
-  if (!valid) {
-    // Cursor is outside the container
+  // Check if point is within container bounds
+  if (
+    containerX < 0 ||
+    containerX > rect.width ||
+    containerY < 0 ||
+    containerY > rect.height ||
+    rect.width === 0 ||
+    rect.height === 0
+  ) {
     return {
       worldPosition: null,
       normal: null,
@@ -167,6 +274,38 @@ export function raycastFromScreen(
       actorId: null,
     };
   }
+
+  // Get the actual canvas size from the OpenGL render window view
+  // In VTK.js, renderWindow.getViews() returns the OpenGL render window(s)
+  let canvasWidth = rect.width;
+  let canvasHeight = rect.height;
+  let scaleX = 1;
+  let scaleY = 1;
+
+  try {
+    const views = renderWindow.getViews();
+    if (views && views.length > 0) {
+      const glRenderWindow = views[0];
+      const size = glRenderWindow.getSize();
+      if (size && size[0] > 0 && size[1] > 0) {
+        canvasWidth = size[0];
+        canvasHeight = size[1];
+        scaleX = canvasWidth / rect.width;
+        scaleY = canvasHeight / rect.height;
+      }
+    }
+  } catch (e) {
+    // Fall back to device pixel ratio if getViews fails
+    const dpr = window.devicePixelRatio || 1;
+    scaleX = dpr;
+    scaleY = dpr;
+    canvasWidth = rect.width * dpr;
+    canvasHeight = rect.height * dpr;
+  }
+
+  // VTK display coordinates: Y is from bottom, browser Y is from top
+  const displayX = containerX * scaleX;
+  const displayY = (rect.height - containerY) * scaleY;
 
   // Get or create picker
   const instanceId = options.instanceId || "default";
@@ -182,14 +321,26 @@ export function raycastFromScreen(
 
   try {
     // Perform the pick operation
-    // pick(selectionX, selectionY, selectionZ, renderer)
-    // For 2D picking, selectionZ is typically 0
-    picker.pick([ndcX, ndcY, 0], renderer);
+    // VTK picker.pick expects display coordinates (pixels in canvas space, Y from bottom)
+    log.debug(
+      `Picking at display coords (${displayX.toFixed(1)}, ${displayY.toFixed(
+        1
+      )}), canvas: ${canvasWidth}x${canvasHeight}, scale: ${scaleX.toFixed(
+        2
+      )}x${scaleY.toFixed(2)}, actors: ${actors.length}`
+    );
+    picker.pick([displayX, displayY, 0], renderer);
 
     // Check if we hit something
     const pickedPosition = picker.getPickPosition();
     const pickedNormal = picker.getPickNormal();
     const cellId = picker.getCellId();
+
+    log.debug(
+      `Pick result: cellId=${cellId}, position=${pickedPosition
+        ?.map((v) => v?.toFixed(2))
+        .join(", ")}`
+    );
 
     // cellId of -1 means no intersection
     if (cellId < 0) {
@@ -231,7 +382,11 @@ export function raycastFromScreen(
  * Raycast with alternative methods for different use cases.
  *
  * Sometimes vtkCellPicker may miss thin surfaces or points.
- * This function tries multiple picking strategies.
+ * This function tries multiple picking strategies:
+ * 1. CellPicker with default tolerance
+ * 2. CellPicker with larger tolerance
+ * 3. PointPicker as fallback (better for meshes with small cells)
+ * 4. Fall back to view ray position
  *
  * @param {Object} sceneObjects - VTK scene objects
  * @param {number} screenX - Screen X coordinate
@@ -261,7 +416,7 @@ export function raycastFromScreenWithFallback(
   }
 
   // If cell picker missed, try with a larger tolerance
-  const looseTolerance = (options.tolerance || DEFAULT_TOLERANCE) * 3;
+  const looseTolerance = (options.tolerance || DEFAULT_TOLERANCE) * 5;
   const fallbackResult = raycastFromScreen(
     sceneObjects,
     screenX,
@@ -272,6 +427,19 @@ export function raycastFromScreenWithFallback(
 
   if (fallbackResult.hit) {
     return fallbackResult;
+  }
+
+  // Try with PointPicker as last resort (better for certain mesh types)
+  const pointPickResult = raycastFromScreenWithPointPicker(
+    sceneObjects,
+    screenX,
+    screenY,
+    container,
+    { ...options, tolerance: looseTolerance * 2 }
+  );
+
+  if (pointPickResult.hit) {
+    return pointPickResult;
   }
 
   // If still no hit, return a world position along the view ray
@@ -291,6 +459,162 @@ export function raycastFromScreenWithFallback(
     actorId: null,
     onViewRay: true, // Flag indicating this is on the ray, not on geometry
   };
+}
+
+/**
+ * Raycast using PointPicker instead of CellPicker.
+ *
+ * PointPicker finds the closest point on any geometry, which can work
+ * better for meshes where CellPicker misses due to cell size issues.
+ *
+ * @param {Object} sceneObjects - VTK scene objects
+ * @param {number} screenX - Screen X coordinate
+ * @param {number} screenY - Screen Y coordinate
+ * @param {HTMLElement} container - VTK container element
+ * @param {Object} options - Configuration options
+ * @returns {Object} Raycast result
+ */
+function raycastFromScreenWithPointPicker(
+  sceneObjects,
+  screenX,
+  screenY,
+  container,
+  options = {}
+) {
+  // Validate inputs
+  if (!sceneObjects?.renderer || !sceneObjects?.renderWindow) {
+    return {
+      worldPosition: null,
+      normal: null,
+      hit: false,
+      cellId: null,
+      actorId: null,
+    };
+  }
+
+  if (!container) {
+    return {
+      worldPosition: null,
+      normal: null,
+      hit: false,
+      cellId: null,
+      actorId: null,
+    };
+  }
+
+  const { renderer, renderWindow } = sceneObjects;
+
+  // Get container/canvas dimensions for coordinate conversion
+  const rect = container.getBoundingClientRect();
+  const containerX = screenX - rect.left;
+  const containerY = screenY - rect.top;
+
+  // Check if point is within container bounds
+  if (
+    containerX < 0 ||
+    containerX > rect.width ||
+    containerY < 0 ||
+    containerY > rect.height ||
+    rect.width === 0 ||
+    rect.height === 0
+  ) {
+    return {
+      worldPosition: null,
+      normal: null,
+      hit: false,
+      cellId: null,
+      actorId: null,
+    };
+  }
+
+  // Get the actual canvas size from the OpenGL render window view
+  let scaleX = 1;
+  let scaleY = 1;
+
+  try {
+    const views = renderWindow.getViews();
+    if (views && views.length > 0) {
+      const glRenderWindow = views[0];
+      const size = glRenderWindow.getSize();
+      if (size && size[0] > 0 && size[1] > 0) {
+        scaleX = size[0] / rect.width;
+        scaleY = size[1] / rect.height;
+      }
+    }
+  } catch (e) {
+    const dpr = window.devicePixelRatio || 1;
+    scaleX = dpr;
+    scaleY = dpr;
+  }
+
+  // VTK display coordinates: Y is from bottom, browser Y is from top
+  const displayX = containerX * scaleX;
+  const displayY = (rect.height - containerY) * scaleY;
+
+  // Get point picker
+  const instanceId = options.instanceId || "default";
+  const picker = getOrCreatePicker(instanceId, options, "point");
+
+  // Add all actors from renderer to picker
+  const actors = renderer.getActors();
+  actors.forEach((actor) => {
+    if (actor.getPickable()) {
+      picker.addPickList(actor);
+    }
+  });
+
+  try {
+    // Perform the pick operation with PointPicker
+    log.debug(
+      `PointPicker picking at display coords (${displayX.toFixed(
+        1
+      )}, ${displayY.toFixed(1)})`
+    );
+    picker.pick([displayX, displayY, 0], renderer);
+
+    // Check if we hit something
+    const pickedPosition = picker.getPickPosition();
+    const pointId = picker.getPointId();
+
+    log.debug(
+      `PointPicker result: pointId=${pointId}, position=${pickedPosition
+        ?.map((v) => v?.toFixed(2))
+        .join(", ")}`
+    );
+
+    // pointId of -1 means no intersection
+    if (pointId < 0) {
+      return {
+        worldPosition: null,
+        normal: null,
+        hit: false,
+        cellId: null,
+        actorId: null,
+      };
+    }
+
+    // Get the picked actor
+    const pickedActor = picker.getActor();
+    const actorId = pickedActor ? pickedActor.get?.("id") : null;
+
+    return {
+      worldPosition: [pickedPosition[0], pickedPosition[1], pickedPosition[2]],
+      normal: null, // PointPicker doesn't provide normals
+      hit: true,
+      cellId: null, // PointPicker finds points, not cells
+      pointId,
+      actorId,
+    };
+  } catch (error) {
+    log.error("raycastFromScreenWithPointPicker: Pick operation failed", error);
+    return {
+      worldPosition: null,
+      normal: null,
+      hit: false,
+      cellId: null,
+      actorId: null,
+    };
+  }
 }
 
 /**
@@ -426,8 +750,9 @@ export function worldToScreen(sceneObjects, worldPosition, container) {
  */
 export function disposeRaycaster(instanceId) {
   if (pickerCache.has(instanceId)) {
-    const picker = pickerCache.get(instanceId);
-    picker.delete(); // VTK cleanup
+    const cached = pickerCache.get(instanceId);
+    if (cached.cellPicker) cached.cellPicker.delete();
+    if (cached.pointPicker) cached.pointPicker.delete();
     pickerCache.delete(instanceId);
     log.debug(`Disposed raycaster for instance: ${instanceId}`);
   }
@@ -439,8 +764,9 @@ export function disposeRaycaster(instanceId) {
  * Call this on application shutdown.
  */
 export function disposeAllRaycasters() {
-  pickerCache.forEach((picker, instanceId) => {
-    picker.delete();
+  pickerCache.forEach((cached, instanceId) => {
+    if (cached.cellPicker) cached.cellPicker.delete();
+    if (cached.pointPicker) cached.pointPicker.delete();
     log.debug(`Disposed raycaster for instance: ${instanceId}`);
   });
   pickerCache.clear();
@@ -592,4 +918,4 @@ export function raycastFromRay(sceneObjects, origin, direction, options = {}) {
 }
 
 // Export coordinate conversion helpers for external use
-export { screenToNDC, DEFAULT_TOLERANCE };
+export { screenToNDC, screenToDisplay, DEFAULT_TOLERANCE };

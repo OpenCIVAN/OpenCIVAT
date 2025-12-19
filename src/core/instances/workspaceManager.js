@@ -709,6 +709,8 @@ class WorkspaceManager {
   /**
    * Enable annotation mode for an instance
    * When enabled, clicking on the instance will emit annotation position events
+   * The handler's click listener checks this flag and performs raycasting
+   *
    * @param {string} instanceId - Instance ID
    * @param {boolean} enabled - Whether to enable annotation mode
    */
@@ -719,44 +721,17 @@ class WorkspaceManager {
       return;
     }
 
+    // Set flag on both instance and instanceData (handler checks instanceData)
     instance.annotationMode = enabled;
-
-    if (enabled && instance.container) {
-      // Add click handler for annotation
-      const handleAnnotationClick = (event) => {
-        if (!instance.annotationMode) return;
-
-        const result = this.raycastAt(instanceId, event.clientX, event.clientY);
-
-        if (result?.hit) {
-          // Emit event with annotation position
-          window.dispatchEvent(
-            new CustomEvent("cia:annotation-click", {
-              detail: {
-                instanceId,
-                position: result.position,
-                normal: result.normal,
-                screenX: event.clientX,
-                screenY: event.clientY,
-              },
-            })
-          );
-        }
-      };
-
-      // Store handler reference for cleanup
-      instance._annotationClickHandler = handleAnnotationClick;
-      instance.container.addEventListener("click", handleAnnotationClick);
-      log.debug(`Annotation mode enabled for instance ${instanceId}`);
-    } else if (!enabled && instance._annotationClickHandler) {
-      // Remove click handler
-      instance.container?.removeEventListener(
-        "click",
-        instance._annotationClickHandler
-      );
-      instance._annotationClickHandler = null;
-      log.debug(`Annotation mode disabled for instance ${instanceId}`);
+    if (instance.instanceData) {
+      instance.instanceData.annotationMode = enabled;
     }
+
+    log.debug(
+      `Annotation mode ${
+        enabled ? "enabled" : "disabled"
+      } for instance ${instanceId}`
+    );
   }
 
   // =========================================================================
