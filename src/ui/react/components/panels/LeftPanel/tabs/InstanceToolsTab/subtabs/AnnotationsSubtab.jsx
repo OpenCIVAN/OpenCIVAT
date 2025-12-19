@@ -176,12 +176,20 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
                 label: text.substring(0, 50),
             });
             logSuccess('Annotation created');
+            console.log('[DEBUG] New annotation returned:', newAnnotation);
             setShowCreator(false);
 
             // Immediately render the new annotation in the 3D view
             if (instanceId && newAnnotation) {
                 const allAnnotations = [...annotations, newAnnotation].filter(a => a.visible !== false);
-                workspaceManager.updateInstanceAnnotations(instanceId, true, allAnnotations);
+                console.log('[DEBUG] Rendering annotations:', allAnnotations.length, 'annotations');
+                console.log('[DEBUG] Annotation positions:', allAnnotations.map(a =>
+                    Array.isArray(a.position) ? a.position : [a.position?.x, a.position?.y, a.position?.z]
+                ));
+                await workspaceManager.updateInstanceAnnotations(instanceId, true, allAnnotations);
+                logSuccess(`Rendered ${allAnnotations.length} annotation(s) in 3D view`);
+            } else {
+                console.warn('[DEBUG] Cannot render: instanceId=', instanceId, 'newAnnotation=', !!newAnnotation);
             }
         } catch (err) {
             console.error('Failed to create annotation:', err);

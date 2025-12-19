@@ -593,9 +593,16 @@ function raycastFromScreenWithPointPicker(
       };
     }
 
-    // Get the picked actor
-    const pickedActor = picker.getActor();
-    const actorId = pickedActor ? pickedActor.get?.("id") : null;
+    // Get the picked actor (PointPicker uses getActors() not getActor())
+    let actorId = null;
+    try {
+      const pickedActors = picker.getActors?.() || [];
+      if (pickedActors.length > 0) {
+        actorId = pickedActors[0].get?.("id") || null;
+      }
+    } catch (e) {
+      // Actor retrieval is optional, ignore errors
+    }
 
     return {
       worldPosition: [pickedPosition[0], pickedPosition[1], pickedPosition[2]],
@@ -657,10 +664,33 @@ export function getWorldPositionOnViewRay(
         Math.pow(focalPoint[2] - cameraPos[2], 2)
     );
 
-    // Use renderer to convert display to world coordinates
-    // Create a point on the near clipping plane
-    const nearPoint = renderer.displayToWorld(ndcX, ndcY, 0);
-    const farPoint = renderer.displayToWorld(ndcX, ndcY, 1);
+    // Use VTK.js renderer.viewToWorld to convert NDC to world coordinates
+    // viewToWorld expects normalized view coordinates (-1 to 1)
+    let nearPoint, farPoint;
+    if (typeof renderer.viewToWorld === "function") {
+      nearPoint = renderer.viewToWorld(ndcX, ndcY, 0);
+      farPoint = renderer.viewToWorld(ndcX, ndcY, 1);
+    } else {
+      // Fallback: compute ray from camera through NDC point
+      // This is a simplified approximation using the camera's view direction
+      const viewUp = camera.getViewUp();
+      const viewDir = [
+        focalPoint[0] - cameraPos[0],
+        focalPoint[1] - cameraPos[1],
+        focalPoint[2] - cameraPos[2],
+      ];
+      // Normalize view direction
+      const viewDirLen = Math.sqrt(
+        viewDir[0] ** 2 + viewDir[1] ** 2 + viewDir[2] ** 2
+      );
+      if (viewDirLen === 0) return null;
+      viewDir[0] /= viewDirLen;
+      viewDir[1] /= viewDirLen;
+      viewDir[2] /= viewDirLen;
+
+      // Return focal point as approximation (won't be precise but won't crash)
+      return [focalPoint[0], focalPoint[1], focalPoint[2]];
+    }
 
     if (!nearPoint || !farPoint) return null;
 

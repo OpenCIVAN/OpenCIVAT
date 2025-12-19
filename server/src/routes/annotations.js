@@ -34,7 +34,7 @@ router.get("/", async (req, res, next) => {
              u.email as creator_email,
              d.filename as file_name
       FROM annotations a
-      LEFT JOIN users u ON a.creator_user_id = u.id
+      LEFT JOIN users u ON a.created_by = u.id
       LEFT JOIN datasets d ON a.dataset_id = d.id
       WHERE a.status = $1
     `;
@@ -65,7 +65,7 @@ router.get("/", async (req, res, next) => {
       values.push(visibility);
     } else {
       // Default: show public + user's private annotations
-      query += ` AND (a.visibility = 'public' OR a.creator_user_id = $${paramIndex++})`;
+      query += ` AND (a.visibility = 'public' OR a.created_by = $${paramIndex++})`;
       values.push(user.id);
     }
 
@@ -100,7 +100,7 @@ router.get("/:id", async (req, res, next) => {
              u.email as creator_email,
              d.filename as file_name
       FROM annotations a
-      LEFT JOIN users u ON a.creator_user_id = u.id
+      LEFT JOIN users u ON a.created_by = u.id
       LEFT JOIN datasets d ON a.dataset_id = d.id
       WHERE a.id = $1
     `,
@@ -170,15 +170,27 @@ router.post("/", async (req, res, next) => {
     }
 
     // Insert annotation
+    // Note: Database schema uses 'position' for coordinates and 'content' for properties
+    // Position is DOUBLE PRECISION[3] (PostgreSQL array), pass array directly - no JSON.stringify
+    const positionValue = coordinates || position || null;
+    console.log("[DEBUG] [SERVER] Inserting annotation:", {
+      fileId,
+      fileVersionId,
+      type,
+      positionValue,
+      positionType: typeof positionValue,
+      positionIsArray: Array.isArray(positionValue),
+    });
+
     const result = await pool.query(
       `
       INSERT INTO annotations (
         dataset_id, file_version_id, branch_id, type,
-        coordinates, position, normal, text,
-        properties, metadata, visibility,
-        creator_user_id, created_by
+        position, normal, text,
+        content, metadata, visibility,
+        created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `,
       [
@@ -186,15 +198,13 @@ router.post("/", async (req, res, next) => {
         fileVersionId,
         branchId || null,
         type,
-        JSON.stringify(coordinates),
-        position || null,
+        positionValue,
         normal || null,
         text || null,
         properties ? JSON.stringify(properties) : null,
         metadata ? JSON.stringify(metadata) : "{}",
         visibility,
         user.id,
-        user.email,
       ]
     );
 
@@ -222,6 +232,11 @@ router.post("/", async (req, res, next) => {
       annotation,
     });
   } catch (error) {
+    console.error(
+      "[DEBUG] [SERVER] Annotation creation failed:",
+      error.message
+    );
+    console.error("[DEBUG] [SERVER] Stack trace:", error);
     next(error);
   }
 });
@@ -251,29 +266,47 @@ router.put("/:id", async (req, res, next) => {
     const beforeState = existing.rows[0];
 
     // Build dynamic update query
+    // Note: Database schema uses 'position' for coordinates and 'content' for properties
     const allowedFields = [
       "type",
-      "coordinates",
       "position",
       "normal",
       "text",
-      "properties",
+      "content",
       "metadata",
       "visibility",
       "visible",
       "locked",
     ];
 
+    // Map request field names to database column names
+    const fieldMapping = {
+      coordinates: "position",
+      properties: "content",
+    };
+
     const setClauses = [];
     const values = [];
     let paramIndex = 1;
 
     for (const field of allowedFields) {
-      if (updates[field] !== undefined) {
-        let value = updates[field];
-        // JSON fields need stringification
+      // Check for both database field name and mapped request field name
+      const requestField = Object.keys(fieldMapping).find(
+        (k) => fieldMapping[k] === field
+      );
+      const updateValue =
+        updates[field] !== undefined
+          ? updates[field]
+          : requestField !== undefined
+          ? updates[requestField]
+          : undefined;
+
+      if (updateValue !== undefined) {
+        let value = updateValue;
+        // JSONB fields need stringification (content, metadata)
+        // Position is DOUBLE PRECISION[3], pass array directly - don't stringify
         if (
-          ["coordinates", "properties", "metadata"].includes(field) &&
+          ["content", "metadata"].includes(field) &&
           typeof value === "object"
         ) {
           value = JSON.stringify(value);
@@ -450,26 +483,24 @@ router.post("/batch", async (req, res, next) => {
         `
         INSERT INTO annotations (
           dataset_id, branch_id, type,
-          coordinates, position, normal, text,
-          properties, metadata, visibility,
-          creator_user_id, created_by
+          position, normal, text,
+          content, metadata, visibility,
+          created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
       `,
         [
           fileId,
           branchId || null,
           type,
-          JSON.stringify(coordinates),
-          position || null,
+          coordinates || position || null, // Pass array directly for DOUBLE PRECISION[3]
           normal || null,
           text || null,
           properties ? JSON.stringify(properties) : null,
           metadata ? JSON.stringify(metadata) : "{}",
           visibility,
           user.id,
-          user.email,
         ]
       );
 
@@ -542,20 +573,22 @@ router.post("/:id/migrate", async (req, res, next) => {
     const sourceAnnotation = original.rows[0];
 
     // Create migrated copy
+    // Note: Database schema uses 'position' for coordinates and 'content' for properties
+    // Position is DOUBLE PRECISION[3] (PostgreSQL array), pass array directly
     const result = await pool.query(
       `
       INSERT INTO annotations (
         dataset_id, file_version_id, branch_id, type,
-        coordinates, position, normal, text,
-        properties, metadata, visibility,
-        creator_user_id, created_by,
+        position, normal, text,
+        content, metadata, visibility,
+        created_by,
         migrated_from
       )
       SELECT
         dataset_id, $2, branch_id, type,
-        $3, position, normal, text,
-        properties, metadata, visibility,
-        creator_user_id, created_by,
+        $3, normal, text,
+        content, metadata, visibility,
+        created_by,
         $1
       FROM annotations WHERE id = $1
       RETURNING *
@@ -563,9 +596,7 @@ router.post("/:id/migrate", async (req, res, next) => {
       [
         id,
         targetVersionId,
-        newCoordinates
-          ? JSON.stringify(newCoordinates)
-          : sourceAnnotation.coordinates,
+        newCoordinates || sourceAnnotation.position, // Pass array directly
       ]
     );
 

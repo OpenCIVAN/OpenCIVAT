@@ -2043,21 +2043,64 @@ console.log('Tools:', tools);
   async setAnnotationVisibility(instanceData, visible, annotations = []) {
     if (!instanceData?.initialized) return;
 
-    if (visible) {
+    log.debug(
+      `setAnnotationVisibility: visible=${visible}, annotations=${annotations.length}`
+    );
+
+    if (visible && annotations.length > 0) {
+      // Calculate marker size based on data bounds
+      let markerSize = 0.5; // Default fallback size
+      const actor = instanceData.sceneObjects?.actor;
+      if (actor?.getBounds) {
+        const bounds = actor.getBounds();
+        // Calculate diagonal of bounding box
+        const dx = bounds[1] - bounds[0];
+        const dy = bounds[3] - bounds[2];
+        const dz = bounds[5] - bounds[4];
+        const diagonal = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        // Marker size = 2% of diagonal (visible but not overwhelming)
+        markerSize = Math.max(0.1, diagonal * 0.02);
+        log.debug(
+          `Annotation marker size: ${markerSize.toFixed(
+            3
+          )} (diagonal: ${diagonal.toFixed(2)})`
+        );
+      }
+
       // Create annotation actors
       annotations.forEach((annotation) => {
         if (!instanceData.annotations.has(annotation.id)) {
-          const annotationActor = this._createAnnotationActor(annotation);
-          instanceData.annotations.set(annotation.id, annotationActor);
+          log.debug(
+            `Creating annotation actor for: ${
+              annotation.id
+            } at ${JSON.stringify(annotation.position)}`
+          );
+          const annotationActor = this._createAnnotationActor(
+            annotation,
+            markerSize
+          );
+          // Store both actor and annotation data (VTK actors are frozen, can't attach properties)
+          instanceData.annotations.set(annotation.id, {
+            actor: annotationActor,
+            data: {
+              id: annotation.id,
+              type: annotation.type,
+              text: annotation.text,
+              label: annotation.label,
+              position: annotation.position,
+            },
+          });
           instanceData.sceneObjects.renderer.addActor(annotationActor);
         }
       });
+      log.info(`Rendered ${instanceData.annotations.size} annotation markers`);
     } else {
       // Remove all annotations
-      instanceData.annotations.forEach((actor) => {
-        instanceData.sceneObjects.renderer.removeActor(actor);
+      instanceData.annotations.forEach((entry) => {
+        instanceData.sceneObjects.renderer.removeActor(entry.actor);
       });
       instanceData.annotations.clear();
+      log.debug(`Cleared all annotation markers`);
     }
 
     instanceData.sceneObjects.renderWindow.render();
@@ -3170,9 +3213,10 @@ console.log('Tools:', tools);
   /**
    * Create an annotation actor based on annotation type
    * @param {Object} annotation - Annotation data with type, position, text, etc.
+   * @param {number} markerSize - Size of the marker relative to data bounds
    * @returns {vtkActor} VTK actor for the annotation marker
    */
-  _createAnnotationActor(annotation) {
+  _createAnnotationActor(annotation, markerSize = 0.5) {
     // Type-to-shape mapping
     const ANNOTATION_SHAPES = {
       point: "sphere",
@@ -3209,7 +3253,6 @@ console.log('Tools:', tools);
 
     // Create source based on shape type
     let source;
-    const markerSize = 0.05; // Base size - will be scaled relative to data bounds
 
     switch (shape) {
       case "cone":
@@ -3264,14 +3307,8 @@ console.log('Tools:', tools);
     property.setDiffuse(0.7);
     property.setSpecular(0.2);
 
-    // Store annotation data on actor for later reference (e.g., picking)
-    actor.annotationData = {
-      id: annotation.id,
-      type: annotation.type,
-      text: annotation.text,
-      label: annotation.label,
-      position: position,
-    };
+    // Note: VTK actors are frozen, so we cannot store annotation data on the actor
+    // The annotation data is stored in the annotations Map alongside the actor
 
     return actor;
   }

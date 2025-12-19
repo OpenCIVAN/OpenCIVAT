@@ -1,23 +1,23 @@
 // FloatingAnnotationCreator.jsx
-// A floating menu for creating annotations with coordinate display and editing
+// A floating draggable menu for creating annotations with coordinate display
 //
 // Features:
+// - Draggable window by header
 // - Shows current coordinates from raycasting
 // - Allows editing position manually
-// - Matches modern dark UI aesthetic
-// - Can be positioned near the click location
+// - Matches CIA Web moonlight theme
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, X, Target, Edit3, Check } from 'lucide-react';
+import { MapPin, X, Target, Edit3, Check, GripHorizontal } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import './FloatingAnnotationCreator.scss';
 
 // Annotation type options
 const ANNOTATION_TYPES = [
-    { value: 'note', label: 'Note', color: '#4CAF50', icon: '📝' },
-    { value: 'warning', label: 'Warning', color: '#FFA726', icon: '⚠️' },
-    { value: 'info', label: 'Info', color: '#2196F3', icon: 'ℹ️' },
-    { value: 'measurement', label: 'Measure', color: '#9C27B0', icon: '📏' },
+    { value: 'note', label: 'Note', color: 'green', icon: '📝' },
+    { value: 'warning', label: 'Warning', color: 'amber', icon: '⚠️' },
+    { value: 'info', label: 'Info', color: 'blue', icon: 'ℹ️' },
+    { value: 'measurement', label: 'Measure', color: 'purple', icon: '📏' },
 ];
 
 export function FloatingAnnotationCreator({
@@ -32,8 +32,23 @@ export function FloatingAnnotationCreator({
     const [type, setType] = useState('note');
     const [editingPosition, setEditingPosition] = useState(false);
     const [localPosition, setLocalPosition] = useState(position);
+    const [windowPosition, setWindowPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const inputRef = useRef(null);
     const containerRef = useRef(null);
+
+    // Initialize window position when opened
+    useEffect(() => {
+        if (isOpen) {
+            const left = Math.min(screenPosition.x, window.innerWidth - 320);
+            const top = Math.min(screenPosition.y, window.innerHeight - 400);
+            setWindowPosition({
+                x: Math.max(10, left),
+                y: Math.max(10, top),
+            });
+        }
+    }, [isOpen, screenPosition]);
 
     // Update local position when prop changes
     useEffect(() => {
@@ -46,6 +61,55 @@ export function FloatingAnnotationCreator({
             setTimeout(() => inputRef.current?.focus(), 100);
         }
     }, [isOpen]);
+
+    // Clear form when closed
+    useEffect(() => {
+        if (!isOpen) {
+            setText('');
+            setType('note');
+            setEditingPosition(false);
+        }
+    }, [isOpen]);
+
+    // Drag handlers
+    const handleMouseDown = useCallback((e) => {
+        if (e.target.closest('.floating-annotation-creator__drag-handle') ||
+            e.target.closest('.floating-annotation-creator__header')) {
+            setIsDragging(true);
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (rect) {
+                setDragOffset({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                });
+            }
+            e.preventDefault();
+        }
+    }, []);
+
+    const handleMouseMove = useCallback((e) => {
+        if (isDragging) {
+            const newX = Math.max(0, Math.min(e.clientX - dragOffset.x, window.innerWidth - 300));
+            const newY = Math.max(0, Math.min(e.clientY - dragOffset.y, window.innerHeight - 100));
+            setWindowPosition({ x: newX, y: newY });
+        }
+    }, [isDragging, dragOffset]);
+
+    const handleMouseUp = useCallback(() => {
+        setIsDragging(false);
+    }, []);
+
+    // Add/remove global mouse listeners for dragging
+    useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isDragging, handleMouseMove, handleMouseUp]);
 
     // Handle submit
     const handleSubmit = useCallback(() => {
@@ -76,24 +140,24 @@ export function FloatingAnnotationCreator({
 
     if (!isOpen) return null;
 
-    // Calculate position to stay within viewport
-    const left = Math.min(screenPosition.x, window.innerWidth - 320);
-    const top = Math.min(screenPosition.y, window.innerHeight - 350);
-
     const content = (
         <div
             ref={containerRef}
-            className="floating-annotation-creator"
+            className={`floating-annotation-creator ${isDragging ? 'floating-annotation-creator--dragging' : ''}`}
             style={{
-                left: `${Math.max(10, left)}px`,
-                top: `${Math.max(10, top)}px`,
+                left: `${windowPosition.x}px`,
+                top: `${windowPosition.y}px`,
             }}
             onKeyDown={handleKeyDown}
+            onMouseDown={handleMouseDown}
         >
-            {/* Header */}
+            {/* Header with drag handle */}
             <div className="floating-annotation-creator__header">
+                <div className="floating-annotation-creator__drag-handle">
+                    <GripHorizontal size={14} />
+                </div>
                 <MapPin size={14} className="floating-annotation-creator__icon" />
-                <span>Add Annotation</span>
+                <span>New Annotation</span>
                 <button
                     className="floating-annotation-creator__close"
                     onClick={onClose}
@@ -149,9 +213,9 @@ export function FloatingAnnotationCreator({
                     </div>
                 ) : (
                     <div className="floating-annotation-creator__position-display">
-                        <span className="coord">X: {localPosition.x?.toFixed(3) || '0.000'}</span>
-                        <span className="coord">Y: {localPosition.y?.toFixed(3) || '0.000'}</span>
-                        <span className="coord">Z: {localPosition.z?.toFixed(3) || '0.000'}</span>
+                        <span className="coord"><span className="label">X</span>{localPosition.x?.toFixed(2) || '0.00'}</span>
+                        <span className="coord"><span className="label">Y</span>{localPosition.y?.toFixed(2) || '0.00'}</span>
+                        <span className="coord"><span className="label">Z</span>{localPosition.z?.toFixed(2) || '0.00'}</span>
                     </div>
                 )}
             </div>
@@ -161,8 +225,7 @@ export function FloatingAnnotationCreator({
                 {ANNOTATION_TYPES.map((t) => (
                     <button
                         key={t.value}
-                        className={`floating-annotation-creator__type ${type === t.value ? 'active' : ''}`}
-                        style={{ '--type-color': t.color }}
+                        className={`floating-annotation-creator__type floating-annotation-creator__type--${t.color} ${type === t.value ? 'active' : ''}`}
                         onClick={() => setType(t.value)}
                         title={t.label}
                     >
@@ -180,7 +243,7 @@ export function FloatingAnnotationCreator({
                     onChange={(e) => setText(e.target.value)}
                     placeholder="Enter annotation text..."
                     className="floating-annotation-creator__input"
-                    rows={2}
+                    rows={3}
                 />
             </div>
 
@@ -204,7 +267,7 @@ export function FloatingAnnotationCreator({
 
             {/* Hint */}
             <div className="floating-annotation-creator__hint">
-                Press <kbd>Enter</kbd> to create or <kbd>Esc</kbd> to cancel
+                <kbd>Enter</kbd> to create · <kbd>Esc</kbd> to cancel
             </div>
         </div>
     );
