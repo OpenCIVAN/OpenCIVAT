@@ -1,0 +1,59 @@
+/**
+ * @file ViewModeToggle.scss
+ * @description Styles for ViewModeToggle component.
+ */
+
+@use "theme" as *;
+
+.view-mode-toggle {
+  display: flex;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  overflow: hidden;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: transparent;
+    border: none;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:not(:last-child) {
+      border-right: 1px solid $color-border-subtle;
+    }
+
+    &:hover:not(.active) {
+      color: $color-text-secondary;
+      background: $color-bg-elevated;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: -2px;
+    }
+
+    &.active {
+      background: rgba($color-accent-blue, 0.15);
+    }
+
+    &.active[data-color="blue"] {
+      color: $color-accent-blue;
+    }
+
+    &.active[data-color="amber"] {
+      color: $color-accent-amber;
+      background: rgba($color-accent-amber, 0.15);
+    }
+
+    &.active[data-color="purple"] {
+      color: $color-accent-purple;
+      background: rgba($color-accent-purple, 0.15);
+    }
+  }
+}

@@ -15,6 +15,9 @@ import {
     ChevronUp,
     Shield,
     ShieldAlert,
+    Pause,
+    Square,
+    Cpu,
 } from 'lucide-react';
 
 import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
@@ -149,9 +152,38 @@ function CursorsToggle({ visible, onToggle }) {
 }
 
 /**
- * RecordingIndicator - Shows active recording status
+ * TransientMessage - Shows temporary status messages that auto-fade
  */
-function RecordingIndicator({ isRecording, duration, mode }) {
+function TransientMessage({ message, onFade }) {
+    useEffect(() => {
+        if (!message) return;
+        const timeout = setTimeout(() => {
+            onFade?.();
+        }, 2000);
+        return () => clearTimeout(timeout);
+    }, [message, onFade]);
+
+    if (!message) return null;
+
+    return (
+        <div className="status-bar__transient">
+            <span>{message}</span>
+        </div>
+    );
+}
+
+/**
+ * RecordingControls - Enhanced recording controls with pause/stop
+ */
+function RecordingControls({
+    isRecording,
+    isPaused,
+    duration,
+    mode,
+    onPause,
+    onStop,
+    onClick,
+}) {
     if (!isRecording) return null;
 
     // Format duration as mm:ss
@@ -162,11 +194,56 @@ function RecordingIndicator({ isRecording, duration, mode }) {
     };
 
     return (
-        <div className="status-bar__recording">
-            <Circle size={8} className="status-bar__recording-dot" />
-            <span>REC {formatDuration(duration)}</span>
-            {mode && <span className="status-bar__recording-mode">• {mode}</span>}
+        <div className="status-bar__recording-controls">
+            <button
+                className="status-bar__recording-indicator"
+                onClick={onClick}
+                title="Open Recording panel"
+            >
+                <Circle
+                    size={8}
+                    className={`status-bar__recording-dot ${isPaused ? 'paused' : ''}`}
+                />
+                <span>{formatDuration(duration)}</span>
+                {mode && <span className="status-bar__recording-mode">{mode}</span>}
+            </button>
+            <button
+                className="status-bar__recording-btn"
+                onClick={onPause}
+                title={isPaused ? 'Resume' : 'Pause'}
+            >
+                <Pause size={10} />
+            </button>
+            <button
+                className="status-bar__recording-btn status-bar__recording-btn--stop"
+                onClick={onStop}
+                title="Stop recording"
+            >
+                <Square size={10} />
+            </button>
         </div>
+    );
+}
+
+/**
+ * MemoryUsage - Shows GPU/RAM usage with click for breakdown
+ */
+function MemoryUsage({ gpuUsage, ramUsage, onClick }) {
+    const getUsageClass = (usage) => {
+        if (usage >= 90) return 'status-bar__item--error';
+        if (usage >= 70) return 'status-bar__item--warning';
+        return '';
+    };
+
+    return (
+        <button
+            className={`status-bar__item status-bar__memory ${getUsageClass(Math.max(gpuUsage, ramUsage))}`}
+            onClick={onClick}
+            title="Click for memory breakdown"
+        >
+            <Cpu size={10} />
+            <span>{ramUsage}%</span>
+        </button>
     );
 }
 
@@ -243,11 +320,18 @@ export function StatusBar() {
 
     // Recording state
     const [isRecording, setIsRecording] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
     const [recordingMode, setRecordingMode] = useState('Workspace');
 
     // FPS state
     const [fps, setFps] = useState(60);
+
+    // Memory state
+    const [memoryUsage, setMemoryUsage] = useState({ gpu: 0, ram: 0 });
+
+    // Transient message state
+    const [transientMessage, setTransientMessage] = useState(null);
 
     // Subscribe to presence system for online user count
     useEffect(() => {
@@ -287,36 +371,77 @@ export function StatusBar() {
         };
     }, []);
 
-    // Recording timer
+    // Recording timer (pauses when isPaused)
     useEffect(() => {
-        if (!isRecording) return;
+        if (!isRecording || isPaused) return;
 
         const interval = setInterval(() => {
             setRecordingDuration(prev => prev + 1);
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isRecording]);
+    }, [isRecording, isPaused]);
+
+    // Memory usage monitoring
+    useEffect(() => {
+        const updateMemory = () => {
+            // Check for performance.memory (Chrome only)
+            if (performance.memory) {
+                const usedHeap = performance.memory.usedJSHeapSize;
+                const totalHeap = performance.memory.jsHeapSizeLimit;
+                const ramPercent = Math.round((usedHeap / totalHeap) * 100);
+                setMemoryUsage(prev => ({ ...prev, ram: ramPercent }));
+            }
+        };
+
+        updateMemory();
+        const interval = setInterval(updateMemory, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Listen for transient status messages
+    useEffect(() => {
+        const handleTransient = (event) => {
+            setTransientMessage(event.detail?.message || null);
+        };
+
+        window.addEventListener('status:message', handleTransient);
+        return () => window.removeEventListener('status:message', handleTransient);
+    }, []);
 
     // Listen for recording events from window (global state)
     useEffect(() => {
         const handleRecordingStart = (event) => {
             setIsRecording(true);
+            setIsPaused(false);
             setRecordingDuration(0);
             setRecordingMode(event.detail?.mode || 'Workspace');
         };
 
         const handleRecordingStop = () => {
             setIsRecording(false);
+            setIsPaused(false);
             setRecordingDuration(0);
+        };
+
+        const handleRecordingPause = () => {
+            setIsPaused(true);
+        };
+
+        const handleRecordingResume = () => {
+            setIsPaused(false);
         };
 
         window.addEventListener('recording:start', handleRecordingStart);
         window.addEventListener('recording:stop', handleRecordingStop);
+        window.addEventListener('recording:pause', handleRecordingPause);
+        window.addEventListener('recording:resume', handleRecordingResume);
 
         return () => {
             window.removeEventListener('recording:start', handleRecordingStart);
             window.removeEventListener('recording:stop', handleRecordingStop);
+            window.removeEventListener('recording:pause', handleRecordingPause);
+            window.removeEventListener('recording:resume', handleRecordingResume);
         };
     }, []);
 
@@ -351,6 +476,46 @@ export function StatusBar() {
             controls.showLogs();
         }
     };
+
+    // Recording control handlers
+    const handleRecordingPause = useCallback(() => {
+        if (isPaused) {
+            window.dispatchEvent(new CustomEvent('recording:resume'));
+        } else {
+            window.dispatchEvent(new CustomEvent('recording:pause'));
+        }
+    }, [isPaused]);
+
+    const handleRecordingStop = useCallback(() => {
+        // Dispatch stop with confirmation
+        window.dispatchEvent(new CustomEvent('recording:stop', {
+            detail: { requireConfirmation: true }
+        }));
+    }, []);
+
+    const handleRecordingClick = () => {
+        const controls = typeof getBottomPanelControls === 'function'
+            ? getBottomPanelControls()
+            : null;
+        if (controls) {
+            controls.showRecording?.();
+        }
+    };
+
+    // Memory click handler
+    const handleMemoryClick = () => {
+        const controls = typeof getBottomPanelControls === 'function'
+            ? getBottomPanelControls()
+            : null;
+        if (controls) {
+            controls.showPerformance?.();
+        }
+    };
+
+    // Clear transient message
+    const handleTransientFade = useCallback(() => {
+        setTransientMessage(null);
+    }, []);
 
     return (
         <div className="status-bar">
@@ -396,18 +561,33 @@ export function StatusBar() {
 
             </div>
 
-            {/* Center Zone: Empty or future use */}
+            {/* Center Zone: Transient messages */}
             <div className="status-bar__center">
-                {/* Reserved for future status items */}
+                <TransientMessage
+                    message={transientMessage}
+                    onFade={handleTransientFade}
+                />
             </div>
 
-            {/* Right Zone: Recording, FPS */}
+            {/* Right Zone: Recording, Memory, FPS */}
             <div className="status-bar__right">
-                <RecordingIndicator
+                <RecordingControls
                     isRecording={isRecording}
+                    isPaused={isPaused}
                     duration={recordingDuration}
                     mode={recordingMode}
+                    onPause={handleRecordingPause}
+                    onStop={handleRecordingStop}
+                    onClick={handleRecordingClick}
                 />
+
+                <MemoryUsage
+                    gpuUsage={memoryUsage.gpu}
+                    ramUsage={memoryUsage.ram}
+                    onClick={handleMemoryClick}
+                />
+
+                <div className="status-bar__divider" />
 
                 <FPSCounter fps={fps} />
 

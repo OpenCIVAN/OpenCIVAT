@@ -1,0 +1,123 @@
+/**
+ * @file VoiceQuickControls.scss
+ * @description Styles for VoiceQuickControls component.
+ */
+
+@use "theme" as *;
+
+.voice-quick-controls {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: $color-text-secondary;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 2px;
+    }
+
+    &[data-state="active"],
+    &.on {
+      color: $color-accent-green;
+    }
+
+    &[data-state="muted"],
+    &.off {
+      color: $color-accent-red;
+    }
+
+    &[data-state="deafened"] {
+      color: $color-accent-amber;
+    }
+
+    &[data-state="connected"],
+    &.in-channel {
+      color: $color-accent-red;
+    }
+  }
+
+  &__room-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      border-color: $color-border-default;
+      color: $color-text-primary;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 2px;
+    }
+  }
+
+  &__room-list {
+    min-width: 160px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  &__room-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: $spacing-sm;
+    background: transparent;
+    border: none;
+    color: $color-text-primary;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: $color-bg-tertiary;
+    }
+
+    &.active {
+      background: rgba($color-accent-blue, 0.1);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__room-count {
+    font-size: 11px;
+    color: $color-text-muted;
+    background: $color-bg-tertiary;
+    padding: 2px 6px;
+    border-radius: $radius-sm;
+  }
+
+  &__empty {
+    padding: $spacing-lg;
+    text-align: center;
+    color: $color-text-muted;
+    font-size: 13px;
+  }
+}

@@ -1,0 +1,159 @@
+/**
+ * @file UserMenu.jsx
+ * @description User menu dropdown with profile, settings, and sign out options.
+ */
+
+import React from 'react';
+import {
+    ChevronDown,
+    User,
+    Settings,
+    Keyboard,
+    Shield,
+    LogOut,
+} from 'lucide-react';
+import { Dropdown } from '@UI/react/components/common/Dropdown';
+
+/**
+ * User menu dropdown component.
+ *
+ * @param {Object} props - Component props
+ * @param {Object} [props.user] - Current user object
+ * @param {string} [props.user.name] - User's display name
+ * @param {string} [props.user.email] - User's email
+ * @param {string} [props.user.avatar] - User's avatar URL
+ * @param {string} [props.user.status] - User's status (online, away, busy, offline)
+ * @param {boolean} [props.user.isAdmin] - Whether user is an admin
+ * @param {Function} [props.onNavigate] - Navigation callback
+ * @param {Function} [props.onSignOut] - Sign out callback
+ */
+export function UserMenu({ user, onNavigate, onSignOut }) {
+    const menuItems = [
+        {
+            id: 'profile',
+            icon: User,
+            label: 'Profile',
+            path: '/profile',
+        },
+        {
+            id: 'settings',
+            icon: Settings,
+            label: 'Settings',
+            path: '/settings',
+        },
+        {
+            id: 'shortcuts',
+            icon: Keyboard,
+            label: 'Keyboard Shortcuts',
+            action: 'shortcuts',
+        },
+    ];
+
+    // Add admin if user is admin
+    if (user?.isAdmin) {
+        menuItems.push({
+            id: 'admin',
+            icon: Shield,
+            label: 'Admin',
+            path: '/admin',
+        });
+    }
+
+    const handleItemClick = (item) => {
+        if (item.path) {
+            onNavigate?.(item.path);
+        } else if (item.action === 'shortcuts') {
+            // Dispatch event to open shortcuts modal
+            window.dispatchEvent(
+                new CustomEvent('cia:open-keyboard-shortcuts')
+            );
+        }
+    };
+
+    const handleStatusChange = (e) => {
+        const newStatus = e.target.value;
+        // Dispatch event for status change
+        window.dispatchEvent(
+            new CustomEvent('cia:user-status-change', {
+                detail: { status: newStatus },
+            })
+        );
+    };
+
+    return (
+        <Dropdown
+            trigger={
+                <button
+                    className="user-menu__trigger"
+                    type="button"
+                    aria-label="User menu"
+                >
+                    <div className="user-menu__avatar">
+                        {user?.avatar ? (
+                            <img src={user.avatar} alt={user.name} />
+                        ) : (
+                            <User size={16} />
+                        )}
+                    </div>
+                    <ChevronDown size={14} />
+                </button>
+            }
+            placement="bottom-end"
+        >
+            <div className="user-menu__dropdown">
+                {/* User Info */}
+                <div className="user-menu__info">
+                    <span className="user-menu__name">
+                        {user?.name || 'User'}
+                    </span>
+                    <span className="user-menu__email">
+                        {user?.email || ''}
+                    </span>
+                </div>
+
+                {/* Status Selector */}
+                <div className="user-menu__status">
+                    <select
+                        defaultValue={user?.status || 'online'}
+                        onChange={handleStatusChange}
+                        aria-label="Set status"
+                    >
+                        <option value="online">🟢 Online</option>
+                        <option value="away">🟡 Away</option>
+                        <option value="busy">🔴 Do Not Disturb</option>
+                        <option value="offline">⚫ Appear Offline</option>
+                    </select>
+                </div>
+
+                <div className="user-menu__divider" />
+
+                {/* Menu Items */}
+                {menuItems.map((item) => (
+                    <button
+                        key={item.id}
+                        className="user-menu__item"
+                        onClick={() => handleItemClick(item)}
+                        type="button"
+                    >
+                        <item.icon size={16} />
+                        {item.label}
+                    </button>
+                ))}
+
+                <div className="user-menu__divider" />
+
+                {/* Sign Out */}
+                <button
+                    className="user-menu__item user-menu__item--danger"
+                    onClick={onSignOut}
+                    type="button"
+                >
+                    <LogOut size={16} />
+                    Sign Out
+                </button>
+            </div>
+        </Dropdown>
+    );
+}
+
+export default UserMenu;

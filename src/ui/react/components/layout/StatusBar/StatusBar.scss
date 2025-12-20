@@ -152,25 +152,148 @@
   }
 
   // -------------------------------------------------------------------------
-  // Recording Indicator
+  // Recording Controls (Enhanced with pause/stop)
   // -------------------------------------------------------------------------
-  &__recording {
+  &__recording-controls {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__recording-indicator {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
     padding: 2px $spacing-sm;
     background: rgba($color-accent-red, 0.15);
+    border: none;
     border-radius: $radius-sm;
     color: $color-accent-red;
+    cursor: pointer;
+    font-size: 10px;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-red, 0.25);
+    }
   }
 
   &__recording-dot {
     fill: $color-accent-red;
     animation: pulse 1.5s infinite;
+
+    &.paused {
+      animation: none;
+      opacity: 0.5;
+    }
   }
 
   &__recording-mode {
     color: rgba($color-accent-red, 0.7);
+    font-size: 9px;
+  }
+
+  &__recording-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: rgba($color-accent-red, 0.1);
+    border: none;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-red, 0.2);
+      color: $color-accent-red;
+    }
+
+    &--stop {
+      &:hover {
+        background: rgba($color-accent-red, 0.3);
+        color: $color-accent-red;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Memory Usage
+  // -------------------------------------------------------------------------
+  &__memory {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px $spacing-xs;
+    border-radius: $radius-xs;
+    transition: background $transition-fast;
+    font-size: 10px;
+
+    &:hover {
+      background: $color-glass-light;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Transient Messages (center zone)
+  // -------------------------------------------------------------------------
+  &__transient {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 2px $spacing-sm;
+    background: rgba($color-accent-blue, 0.1);
+    border-radius: $radius-sm;
+    color: $color-accent-blue;
+    font-size: 10px;
+    animation: transient-fade 2s ease-out forwards;
+  }
+
+  // -------------------------------------------------------------------------
+  // Warnings Button
+  // -------------------------------------------------------------------------
+  &__item--warnings {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 2px $spacing-xs;
+    background: rgba($color-accent-amber, 0.1);
+    border: none;
+    border-radius: $radius-xs;
+    color: $color-accent-amber;
+    cursor: pointer;
+    font-size: 10px;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-amber, 0.2);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Panel Toggle Button
+  // -------------------------------------------------------------------------
+  &__item--toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-light;
+      color: $color-text-primary;
+    }
   }
 }
 
@@ -185,6 +308,18 @@
   }
   50% {
     opacity: 0.4;
+  }
+}
+
+@keyframes transient-fade {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

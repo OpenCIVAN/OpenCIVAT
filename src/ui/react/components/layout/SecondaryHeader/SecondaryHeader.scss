@@ -1,0 +1,43 @@
+/**
+ * @file SecondaryHeader.scss
+ * @description Styles for secondary header bar.
+ * Uses BEM naming convention and design tokens.
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// SECONDARY HEADER CONTAINER
+// =============================================================================
+
+.secondary-header {
+  height: 44px;
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border-default;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $spacing-md;
+  z-index: 90;
+  position: relative;
+  flex-shrink: 0;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__divider {
+    width: 1px;
+    height: 24px;
+    background: $color-border-subtle;
+    margin: 0 $spacing-xs;
+  }
+}

@@ -1,0 +1,140 @@
+/**
+ * @file WorkspaceSelector.scss
+ * @description Styles for WorkspaceSelector component.
+ */
+
+@use "theme" as *;
+
+.workspace-selector {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  min-width: 180px;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  color: $color-text-primary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    border-color: $color-border-default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-accent-blue;
+    outline-offset: 2px;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &[data-color="blue"] &__icon {
+    color: $color-accent-blue;
+  }
+  &[data-color="purple"] &__icon {
+    color: $color-accent-purple;
+  }
+  &[data-color="green"] &__icon {
+    color: $color-accent-green;
+  }
+
+  &__name {
+    flex: 1;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__dropdown {
+    width: 240px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  &__group {
+    padding: $spacing-xs 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid $color-border-subtle;
+    }
+  }
+
+  &__group-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: $color-text-muted;
+
+    &[data-color="blue"] {
+      color: $color-accent-blue;
+    }
+    &[data-color="purple"] {
+      color: $color-accent-purple;
+    }
+    &[data-color="green"] {
+      color: $color-accent-green;
+    }
+  }
+
+  &__item {
+    display: block;
+    width: 100%;
+    padding: $spacing-sm $spacing-lg;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: $color-text-primary;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: $color-bg-tertiary;
+    }
+
+    &.active {
+      background: rgba($color-accent-blue, 0.1);
+      color: $color-accent-blue;
+    }
+  }
+
+  &__empty {
+    padding: $spacing-lg;
+    text-align: center;
+    color: $color-text-muted;
+    font-size: 14px;
+  }
+
+  &__footer {
+    border-top: 1px solid $color-border-subtle;
+    padding: $spacing-xs;
+  }
+
+  &__create {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm;
+    background: transparent;
+    border: none;
+    color: $color-accent-blue;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: $radius-sm;
+
+    &:hover {
+      background: rgba($color-accent-blue, 0.1);
+    }
+  }
+}

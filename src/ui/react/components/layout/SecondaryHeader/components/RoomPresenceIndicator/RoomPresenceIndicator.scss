@@ -1,0 +1,88 @@
+/**
+ * @file RoomPresenceIndicator.scss
+ * @description Styles for RoomPresenceIndicator component.
+ */
+
+@use "theme" as *;
+
+.room-presence {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: none;
+  color: $color-text-secondary;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-bg-tertiary;
+    color: $color-text-primary;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-accent-blue;
+    outline-offset: 2px;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__name {
+    font-size: 13px;
+  }
+
+  &__dot {
+    color: $color-text-muted;
+  }
+
+  &__avatars {
+    display: flex;
+    align-items: center;
+  }
+
+  &__avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid $color-bg-secondary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    overflow: hidden;
+    margin-left: -8px;
+    position: relative;
+
+    &:first-child {
+      margin-left: 0;
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__overflow {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: $color-bg-tertiary;
+    border: 2px solid $color-bg-secondary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: $color-text-muted;
+    margin-left: -8px;
+    position: relative;
+  }
+}

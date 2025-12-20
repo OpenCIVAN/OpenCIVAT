@@ -1,4 +1,7 @@
 // src/ui/react/components/layout/index.js
+export { Header } from "./Header";
+export { SecondaryHeader } from "./SecondaryHeader";
+export { SecondaryFooter } from "./SecondaryFooter";
 export { TopBar } from "./TopBar";
 export {
   SecondaryTopBar,

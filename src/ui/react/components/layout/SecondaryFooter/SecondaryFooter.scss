@@ -1,0 +1,45 @@
+/**
+ * @file SecondaryFooter.scss
+ * @description Styles for secondary footer bar.
+ * Uses BEM naming convention and design tokens.
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// SECONDARY FOOTER CONTAINER
+// =============================================================================
+
+.secondary-footer {
+  height: 36px;
+  background: $color-bg-secondary;
+  border-top: 1px solid $color-border-subtle;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $spacing-md;
+  z-index: 90;
+  position: relative;
+  flex-shrink: 0;
+
+  &__left,
+  &__center,
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  &__divider {
+    width: 1px;
+    height: 20px;
+    background: $color-border-subtle;
+    margin: 0 $spacing-xs;
+  }
+}
