@@ -43,12 +43,32 @@
  */
 
 import React, { memo, useCallback, useEffect } from 'react';
+import {
+    Search,
+    Folder,
+    Database,
+    Eye,
+    Users,
+    MessageSquare
+} from 'lucide-react';
 import { Modal } from '../Modal';
 import { SearchInput } from './SearchInput';
-import { FilterChips, SEARCH_FILTERS } from './FilterChips';
+import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { SearchResults } from './SearchResults';
 import { useGlobalSearch } from './useGlobalSearch';
 import './GlobalSearchModal.scss';
+
+/**
+ * Available search filters configuration
+ */
+const SEARCH_FILTERS = [
+    { id: 'all', label: 'All', icon: Search },
+    { id: 'projects', label: 'Projects', icon: Folder },
+    { id: 'datasets', label: 'Datasets', icon: Database },
+    { id: 'views', label: 'Views', icon: Eye },
+    { id: 'people', label: 'People', icon: Users },
+    { id: 'annotations', label: 'Annotations', icon: MessageSquare },
+];
 
 /**
  * @typedef {Object} SearchResult
@@ -230,13 +250,18 @@ function GlobalSearchModal({
                 />
 
                 {/* Filter Chips */}
-                <FilterChips
-                    activeFilter={activeFilter}
-                    onFilterChange={setActiveFilter}
-                    counts={filterCounts}
-                    showCounts={query.trim().length > 0}
-                    testId={testId ? `${testId}-filters` : undefined}
-                />
+                <div className="global-search__filters" data-testid={testId ? `${testId}-filters` : undefined}>
+                    <ChipGroup
+                        chips={SEARCH_FILTERS.map(filter => ({
+                            ...filter,
+                            count: query.trim().length > 0 ? (filterCounts[filter.id] || 0) : undefined,
+                        }))}
+                        activeChips={[activeFilter]}
+                        onToggle={(filterId) => setActiveFilter(filterId)}
+                        size="sm"
+                        allowEmpty={false}
+                    />
+                </div>
 
                 {/* Results */}
                 <SearchResults
@@ -273,4 +298,4 @@ function GlobalSearchModal({
 
 // Memoize to prevent unnecessary re-renders
 export default memo(GlobalSearchModal);
-export { GlobalSearchModal };
+export { GlobalSearchModal, SEARCH_FILTERS };

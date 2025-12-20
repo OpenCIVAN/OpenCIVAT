@@ -29,6 +29,7 @@ import {
     FileQuestion
 } from 'lucide-react';
 import { SearchResultItem, TYPE_LABELS } from './SearchResultItem';
+import { EmptyState as CommonEmptyState } from '@UI/react/components/common/EmptyState';
 
 /**
  * @typedef {Object} SearchResult
@@ -76,32 +77,29 @@ const GROUP_LABELS = {
 };
 
 /**
- * Empty state component
+ * Empty state wrapper for backwards compatibility
+ * Uses the common EmptyState component internally
  */
 const EmptyState = memo(function EmptyState({ query, type = 'no-results' }) {
     if (type === 'no-results') {
         return (
             <div className="global-search__empty">
-                <FileQuestion size={48} className="global-search__empty__icon" />
-                <div className="global-search__empty__title">
-                    No results found for "{query}"
-                </div>
-                <div className="global-search__empty__description">
-                    Try adjusting your search or filter criteria
-                </div>
+                <CommonEmptyState
+                    icon={FileQuestion}
+                    title={`No results found for "${query}"`}
+                    description="Try adjusting your search or filter criteria"
+                />
             </div>
         );
     }
 
     return (
         <div className="global-search__empty">
-            <Search size={48} className="global-search__empty__icon" />
-            <div className="global-search__empty__title">
-                Start typing to search
-            </div>
-            <div className="global-search__empty__description">
-                Search across projects, datasets, views, and more
-            </div>
+            <CommonEmptyState
+                icon={Search}
+                title="Start typing to search"
+                description="Search across projects, datasets, views, and more"
+            />
         </div>
     );
 });

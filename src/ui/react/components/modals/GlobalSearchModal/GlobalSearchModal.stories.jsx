@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { GlobalSearchModal, SearchInput, FilterChips, SearchResultItem, SearchResults } from './index';
+import { GlobalSearchModal, SearchInput, SEARCH_FILTERS, SearchResultItem, SearchResults } from './index';
+import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { Button } from '../../common/Button';
 
 export default {
@@ -150,13 +151,18 @@ export const FilterChipsComponent = {
                 background: '#1a1a24',
                 border: '1px solid #2a2a3a',
                 borderRadius: '12px',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                padding: '12px',
             }}>
-                <FilterChips
-                    activeFilter={activeFilter}
-                    onFilterChange={setActiveFilter}
-                    counts={counts}
-                    showCounts
+                <ChipGroup
+                    chips={SEARCH_FILTERS.map(filter => ({
+                        ...filter,
+                        count: counts[filter.id] || 0,
+                    }))}
+                    activeChips={[activeFilter]}
+                    onToggle={(filterId) => setActiveFilter(filterId)}
+                    size="sm"
+                    allowEmpty={false}
                 />
             </div>
         );

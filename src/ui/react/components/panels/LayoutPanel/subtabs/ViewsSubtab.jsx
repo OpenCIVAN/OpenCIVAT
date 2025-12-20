@@ -17,10 +17,16 @@
  * - Grouping by dataset
  */
 import React, { memo, useCallback, useState, useMemo } from 'react';
-import { Search, X, Database, Filter, Layers, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, X, Database, Filter, Layers, ChevronDown, ChevronRight, Share2, Link2 } from 'lucide-react';
 import { ViewItem } from '@UI/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/ViewItem';
-import { FilterChips } from '@UI/react/components/panels/LayoutPanel/components/FilterChips.jsx';
+import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import './ViewsSubtab.scss';
+
+// Filter chip configuration for Views
+const VIEW_FILTERS = [
+    { id: 'shared', label: 'Shared', icon: Share2, color: 'pink' },
+    { id: 'linked', label: 'Linked', icon: Link2, color: 'teal' },
+];
 
 // View colors for display - matches INSTANCE_COLORS in CanvasNavigator
 const VIEW_COLORS = ['#60a5fa', '#4ade80', '#f472b6', '#fbbf24', '#2dd4bf', '#a78bfa'];
@@ -239,8 +245,9 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
             {/* Filters */}
             <div className="views-subtab__filters">
                 <Filter size={10} className="views-subtab__filter-icon" />
-                <FilterChips
-                    activeFilters={activeFilters}
+                <ChipGroup
+                    chips={VIEW_FILTERS}
+                    activeChips={activeFilters}
                     onToggle={(id) => {
                         if (toggleFilter) {
                             toggleFilter(id);
@@ -250,6 +257,7 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                             );
                         }
                     }}
+                    size="sm"
                 />
                 <button
                     className={`views-subtab__group-btn ${groupByDataset ? 'views-subtab__group-btn--active' : ''}`}

@@ -1,0 +1,85 @@
+/**
+ * @file EmptyState.scss
+ * @description Styles for the EmptyState component.
+ * Uses design tokens for consistent theming.
+ */
+
+@use "theme" as *;
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: $spacing-xl;
+
+  // Size variants
+  &--sm {
+    padding: $spacing-md;
+
+    .empty-state__title {
+      font-size: 12px;
+    }
+
+    .empty-state__description {
+      font-size: 11px;
+    }
+  }
+
+  &--md {
+    padding: $spacing-xl;
+
+    .empty-state__title {
+      font-size: 14px;
+    }
+
+    .empty-state__description {
+      font-size: 12px;
+    }
+  }
+
+  &--lg {
+    padding: $spacing-2xl;
+
+    .empty-state__title {
+      font-size: 16px;
+    }
+
+    .empty-state__description {
+      font-size: 13px;
+    }
+  }
+
+  // Icon
+  &__icon {
+    color: $color-text-muted;
+    margin-bottom: $spacing-md;
+    opacity: 0.5;
+  }
+
+  // Content
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__title {
+    color: $color-text-secondary;
+    font-weight: 500;
+    margin: 0;
+  }
+
+  &__description {
+    color: $color-text-muted;
+    margin: 0;
+    max-width: 280px;
+    line-height: 1.4;
+  }
+
+  // Action button
+  &__action {
+    margin-top: $spacing-lg;
+  }
+}

@@ -63,7 +63,6 @@ export {
 
 export { CanvasNavigator } from "./components/CanvasNavigator/CanvasNavigator";
 export { SpawnSizePicker } from "./components/SpawnSizePicker";
-export { FilterChips } from "./components/FilterChips";
 
 // =============================================================================
 // SUBTABS

@@ -123,12 +123,11 @@
  */
 
 // Main component
-export { GlobalSearchModal } from "./GlobalSearchModal";
+export { GlobalSearchModal, SEARCH_FILTERS } from "./GlobalSearchModal";
 export { default } from "./GlobalSearchModal";
 
 // Subcomponents (for custom implementations)
 export { SearchInput } from "./SearchInput";
-export { FilterChips, SEARCH_FILTERS } from "./FilterChips";
 export { SearchResults, RecentSearches, EmptyState } from "./SearchResults";
 export {
   SearchResultItem,

@@ -33,6 +33,7 @@ import {
     ResizableSection,
     useSectionStates
 } from '@UI/react/components/common/ResizableSections';
+import { EmptyState } from '@UI/react/components/common/EmptyState';
 import { useAnnotations } from '@UI/react/hooks/useAnnotations.js';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import './AnnotationsTab.scss';
@@ -146,14 +147,6 @@ function DatasetGroup({ dataset, annotations, onToggleVisibility }) {
     );
 }
 
-function EmptyState({ message }) {
-    return (
-        <div className="annotations-tab__empty">
-            <MapPin size={24} />
-            <p>{message}</p>
-        </div>
-    );
-}
 
 // =============================================================================
 // MAIN COMPONENT
@@ -328,7 +321,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
                     >
                         <div className="annotations-tab__section-content">
                             {Object.keys(filteredByDataset).length === 0 ? (
-                                <EmptyState message="No dataset annotations" />
+                                <EmptyState icon={MapPin} title="No dataset annotations" size="sm" />
                             ) : (
                                 Object.entries(filteredByDataset).map(([dsId, anns]) => (
                                     <DatasetGroup
@@ -351,7 +344,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
                         count={0}
                     >
                         <div className="annotations-tab__section-content">
-                            <EmptyState message="No workspace annotations" />
+                            <EmptyState icon={MapPin} title="No workspace annotations" size="sm" />
                         </div>
                     </ResizableSection>
                 </ResizableSectionsContainer>
