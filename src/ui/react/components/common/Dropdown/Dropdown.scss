@@ -67,8 +67,16 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
 
-  // Enter animation
-  animation: dropdown-enter 0.1s ease-out;
+  // Hidden during initial positioning (prevents flash at 0,0)
+  &--positioning {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  // Only animate when positioned
+  &:not(&--positioning) {
+    animation: dropdown-enter 0.1s ease-out;
+  }
 
   // Exit animation
   &--exiting {

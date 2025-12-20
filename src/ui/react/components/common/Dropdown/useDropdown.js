@@ -58,6 +58,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
  * Hook return value
  * @typedef {Object} UseDropdownReturn
  * @property {boolean} isOpen - Current open state
+ * @property {boolean} isPositioned - Whether position has been calculated
  * @property {() => void} open - Open the dropdown
  * @property {() => void} close - Close the dropdown
  * @property {() => void} toggle - Toggle open state
@@ -197,6 +198,7 @@ export function useDropdown(options = {}) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [actualPlacement, setActualPlacement] = useState(placement);
   const [triggerWidth, setTriggerWidth] = useState(null);
+  const [isPositioned, setIsPositioned] = useState(false);
 
   // Refs
   const triggerRef = useRef(null);
@@ -260,12 +262,22 @@ export function useDropdown(options = {}) {
     setActualPlacement(newPlacement);
   }, [placement, offset]);
 
+  // Reset isPositioned when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsPositioned(false);
+    }
+  }, [isOpen]);
+
   // Update position when open or placement changes
   useEffect(() => {
     if (isOpen) {
-      // Use requestAnimationFrame to ensure dropdown is rendered
+      // Use double requestAnimationFrame to ensure dropdown is in DOM with dimensions
       requestAnimationFrame(() => {
-        updatePosition();
+        requestAnimationFrame(() => {
+          updatePosition();
+          setIsPositioned(true);
+        });
       });
     }
   }, [isOpen, updatePosition]);
@@ -364,16 +376,18 @@ export function useDropdown(options = {}) {
         position: "fixed",
         left: `${position.x}px`,
         top: `${position.y}px`,
+        visibility: isPositioned ? "visible" : "hidden",
         ...(matchTriggerWidth && triggerWidth
           ? { width: `${triggerWidth}px` }
           : {}),
       },
     }),
-    [position.x, position.y, matchTriggerWidth, triggerWidth]
+    [position.x, position.y, isPositioned, matchTriggerWidth, triggerWidth]
   );
 
   return {
     isOpen,
+    isPositioned,
     open,
     close,
     toggle,

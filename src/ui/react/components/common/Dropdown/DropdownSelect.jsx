@@ -131,6 +131,7 @@ function DropdownSelect({
     // Use dropdown hook
     const {
         isOpen,
+        isPositioned,
         open,
         close: hookClose,
         toggle,
@@ -411,7 +412,8 @@ function DropdownSelect({
     const panelClassNames = [
         'dropdown-panel',
         'dropdown-select__panel',
-        isExiting && 'dropdown-panel--exiting'
+        isExiting && 'dropdown-panel--exiting',
+        !isPositioned && 'dropdown-panel--positioning'
     ].filter(Boolean).join(' ');
 
     // Build container class names
@@ -500,7 +502,8 @@ function DropdownSelect({
                 position: 'fixed',
                 left: `${position.x}px`,
                 top: `${position.y}px`,
-                minWidth: triggerWidth ? `${triggerWidth}px` : '180px'
+                minWidth: triggerWidth ? `${triggerWidth}px` : '180px',
+                visibility: isPositioned ? 'visible' : 'hidden'
             }}
             data-testid={testId ? `${testId}-panel` : undefined}
         >
@@ -617,7 +620,7 @@ function DropdownSelect({
             )}
 
             {/* Portal dropdown */}
-            {createPortal(dropdownContent, document.body)}
+            {shouldRender && createPortal(dropdownContent, document.body)}
         </div>
     );
 }

@@ -14,7 +14,7 @@
  * - Ref forwarding for focus management
  *
  * @example
- * // Basic icon button
+ * // Basic icon button (no visual tooltip, just aria-label)
  * <IconButton
  *   icon={Settings}
  *   label="Settings"
@@ -22,12 +22,20 @@
  * />
  *
  * @example
- * // With tooltip
+ * // With built-in tooltip (uses label text)
  * <IconButton
  *   icon={Download}
  *   label="Download file"
- *   tooltip="Download file"
+ *   tooltip={true}
  *   variant="primary"
+ * />
+ *
+ * @example
+ * // With custom tooltip text
+ * <IconButton
+ *   icon={Save}
+ *   label="Save"
+ *   tooltip="Save changes (Ctrl+S)"
  * />
  *
  * @example
@@ -53,7 +61,7 @@ import './Button.scss';
  * @property {boolean} [active=false] - Show active/pressed state
  * @property {boolean} [loading=false] - Show loading spinner
  * @property {boolean} [disabled=false] - Disable button
- * @property {string} [tooltip] - Tooltip text (defaults to label)
+ * @property {string|boolean} [tooltip] - Tooltip text, or true to use label, or false/omit to disable
  * @property {string} [className] - Additional CSS classes
  * @property {() => void} [onClick] - Click handler
  * @property {string} [testId] - Data-testid for testing
@@ -99,8 +107,9 @@ const IconButton = forwardRef(function IconButton(
     // Get icon size based on button size
     const iconSize = ICON_SIZES[size] || ICON_SIZES.md;
 
-    // Tooltip defaults to label if not provided
-    const tooltipText = tooltip !== undefined ? tooltip : label;
+    // Tooltip is opt-in: pass string for custom text, true to use label, false/omit to disable
+    // This prevents double tooltips when using the Tooltip wrapper component
+    const tooltipText = tooltip === true ? label : (typeof tooltip === 'string' ? tooltip : null);
 
     // Build class names
     const classNames = [

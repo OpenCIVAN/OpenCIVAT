@@ -123,6 +123,7 @@ function Dropdown({
     // Use dropdown hook for state and positioning
     const {
         isOpen,
+        isPositioned,
         open,
         close: hookClose,
         toggle,
@@ -202,6 +203,7 @@ function Dropdown({
     const panelClassNames = [
         'dropdown-panel',
         isExiting && 'dropdown-panel--exiting',
+        !isPositioned && 'dropdown-panel--positioning',
         `dropdown-panel--${actualPlacement}`,
         className
     ].filter(Boolean).join(' ');

@@ -163,7 +163,7 @@ function RichTooltip({ title, description, shortcut, icon: Icon }) {
             <div className="tooltip__rich-header">
                 {Icon && (
                     <span className="tooltip__rich-icon">
-                        {typeof Icon === 'function' ? <Icon size={14} /> : Icon}
+                        {isValidElement(Icon) ? Icon : <Icon size={14} />}
                     </span>
                 )}
                 <span className="tooltip__title">{title}</span>
@@ -249,6 +249,7 @@ function Tooltip({
     const handleHide = useCallback(() => {
         setIsExiting(true);
         exitTimeoutRef.current = setTimeout(() => {
+            setShouldRender(false);
             setIsExiting(false);
             hideImmediate();
             onTooltipClose();
@@ -275,11 +276,10 @@ function Tooltip({
     useEffect(() => {
         if (isVisible) {
             setShouldRender(true);
+            setIsExiting(false);
             onTooltipOpen();
-        } else if (!isExiting) {
-            setShouldRender(false);
         }
-    }, [isVisible, isExiting, onTooltipOpen]);
+    }, [isVisible, onTooltipOpen]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -369,39 +369,37 @@ function Tooltip({
         return style;
     };
 
-    // Tooltip element
-    const tooltipElement = shouldRender && (
-        <div
-            {...hookTooltipProps}
-            className={tooltipClassNames}
-            style={{
-                ...hookTooltipProps.style,
-                maxWidth: `${maxWidth}px`
-            }}
-            data-testid={testId}
-            data-placement={actualPlacement}
-            onMouseEnter={isInteractive ? hookTooltipProps.onMouseEnter : undefined}
-            onMouseLeave={isInteractive ? () => handleHide() : undefined}
-        >
-            {/* Arrow */}
-            {arrow && (
-                <div
-                    className="tooltip__arrow"
-                    style={getArrowStyle()}
-                />
-            )}
-
-            {/* Content */}
-            <div className="tooltip__content">
-                {content}
-            </div>
-        </div>
-    );
-
     return (
         <>
             {triggerElement}
-            {createPortal(tooltipElement, document.body)}
+            {shouldRender && createPortal(
+                <div
+                    {...hookTooltipProps}
+                    className={tooltipClassNames}
+                    style={{
+                        ...hookTooltipProps.style,
+                        maxWidth: `${maxWidth}px`
+                    }}
+                    data-testid={testId}
+                    data-placement={actualPlacement}
+                    onMouseEnter={isInteractive ? hookTooltipProps.onMouseEnter : undefined}
+                    onMouseLeave={isInteractive ? () => handleHide() : undefined}
+                >
+                    {/* Arrow */}
+                    {arrow && (
+                        <div
+                            className="tooltip__arrow"
+                            style={getArrowStyle()}
+                        />
+                    )}
+
+                    {/* Content */}
+                    <div className="tooltip__content">
+                        {content}
+                    </div>
+                </div>,
+                document.body
+            )}
         </>
     );
 }
