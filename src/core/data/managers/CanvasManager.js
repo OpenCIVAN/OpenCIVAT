@@ -227,13 +227,23 @@ export class CanvasManager extends BaseManager {
    */
   async updateCanvas(canvasId, updates) {
     try {
+      // FIX: Get existing placements from cache BEFORE the update
+      const existingCanvas = this._canvases.get(canvasId);
+      const existingPlacements = existingCanvas?.placements || [];
+
       const response = await this._fetch(`/canvases/${canvasId}`, {
         method: "PUT",
         body: JSON.stringify(updates),
       });
 
       const data = await response.json();
-      const canvas = new WorkspaceCanvas(data);
+
+      // FIX: Merge server response with existing placements
+      // The server only returns canvas metadata, not placements
+      const canvas = new WorkspaceCanvas({
+        ...data,
+        placements: existingPlacements.map((p) => (p.toJSON ? p.toJSON() : p)),
+      });
 
       this._canvases.set(canvas.id, canvas);
       this._emit("canvasUpdated", { canvas, updates });

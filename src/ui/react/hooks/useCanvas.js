@@ -13,17 +13,10 @@ import {
   LAYOUT_MODES,
   FLOW_DIRECTIONS,
 } from "@Core/data/models/WorkspaceCanvas.js";
-import { EVENT_NAME as VIEWPORT_SIZE_EVENT } from "./useViewportSize.js";
-
-/**
- * Default viewport configuration
- */
-const DEFAULT_VIEWPORT = {
-  row: 0,
-  col: 0,
-  rows: 2,
-  cols: 3,
-};
+import {
+  VIEWPORT_SIZE_EVENT,
+  getInitialViewportState,
+} from "./viewportState.js";
 
 /**
  * useCanvas - Hook for canvas and viewport state
@@ -49,7 +42,7 @@ export function useCanvas(canvasId = null) {
   const [isConnected, setIsConnected] = useState(canvasManager.isConnected());
 
   // Viewport state (local, not persisted)
-  const [viewport, setViewport] = useState(DEFAULT_VIEWPORT);
+  const [viewport, setViewport] = useState(getInitialViewportState);
 
   // Resolve canvas ID - use provided canvasId or fall back to activeCanvasId
   const resolvedCanvasId = canvasId || activeCanvasId;

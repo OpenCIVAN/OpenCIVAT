@@ -20,7 +20,41 @@ import {
   dispatchNavigateTo,
   dispatchMoveViewport,
 } from "@UI/react/hooks/useViewportSync.js";
-import { EVENT_NAME as VIEWPORT_SIZE_EVENT } from "@UI/react/hooks/useViewportSize.js";
+import {
+  VIEWPORT_SIZE_EVENT,
+  getInitialViewportSize,
+  DEFAULT_VIEWPORT_SIZE,
+} from "@UI/react/hooks/viewportState.js";
+
+// Must match the key used in useViewportSize.js
+const VIEWPORT_STORAGE_KEY = "cia-viewport-size";
+
+/**
+ * Load saved viewport size from localStorage
+ * This must match the logic in useViewportSize.js to ensure consistency
+ */
+function loadSavedViewportSize() {
+  try {
+    const saved = localStorage.getItem(VIEWPORT_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (
+        typeof parsed.rows === "number" &&
+        typeof parsed.cols === "number" &&
+        parsed.rows >= 1 &&
+        parsed.rows <= 10 &&
+        parsed.cols >= 1 &&
+        parsed.cols <= 10
+      ) {
+        return { rows: parsed.rows, cols: parsed.cols };
+      }
+    }
+  } catch (e) {
+    console.warn("[LayoutPanel.logic] Failed to load saved viewport size:", e);
+  }
+  // Default fallback - matches DEFAULT_VIEWPORT_SIZE in useViewportSize.js
+  return { rows: 2, cols: 3 };
+}
 
 // =============================================================================
 // CONSTANTS
@@ -140,12 +174,20 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   // VIEWPORT STATE
   // ===========================================================================
 
-  // Viewport position comes from useCanvas
-  // Viewport SIZE we manage locally for more control
-  const [localViewportSize, setLocalViewportSize] = useState({
-    rows: 2,
-    cols: 3,
-  });
+  // Initialize from useCanvas viewport if available
+  const [localViewportSize, setLocalViewportSize] = useState(
+    getInitialViewportSize
+  );
+
+  // Sync when canvasViewport changes externally
+  useEffect(() => {
+    if (canvasViewport?.rows && canvasViewport?.cols) {
+      setLocalViewportSize({
+        rows: canvasViewport.rows,
+        cols: canvasViewport.cols,
+      });
+    }
+  }, [canvasViewport?.rows, canvasViewport?.cols]);
 
   const [enrichmentRefreshKey, setEnrichmentRefreshKey] = useState(0);
 
@@ -204,8 +246,14 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
   const viewportSize = useMemo(
     () => ({
-      rows: canvasViewport?.rows ?? localViewportSize.rows,
-      cols: canvasViewport?.cols ?? localViewportSize.cols,
+      rows:
+        canvasViewport?.rows ??
+        localViewportSize.rows ??
+        DEFAULT_VIEWPORT_SIZE.rows,
+      cols:
+        canvasViewport?.cols ??
+        localViewportSize.cols ??
+        DEFAULT_VIEWPORT_SIZE.cols,
     }),
     [canvasViewport, localViewportSize]
   );
@@ -636,43 +684,102 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   }, []);
 
   // ===========================================================================
-  // MERGE/UNMERGE CELLS
+  // MERGE / UNMERGE / DELETE OPERATIONS
   // ===========================================================================
 
+  /**
+   * Merge multiple placements into one spanning placement
+   * Takes the first placement's position and expands to cover all selected
+   */
   const mergeCells = useCallback(
-    async (cellIds) => {
-      if (cellIds.length < 2) return;
+    async (placementIds) => {
+      if (!canvas?.id || placementIds.length < 2) return;
 
-      // Find bounds of selected cells
-      const selectedCells = cells.filter((c) => cellIds.includes(c.id));
-      const minRow = Math.min(...selectedCells.map((c) => c.row));
-      const maxRow = Math.max(
-        ...selectedCells.map((c) => c.row + (c.rowSpan || 1))
-      );
-      const minCol = Math.min(...selectedCells.map((c) => c.col));
-      const maxCol = Math.max(
-        ...selectedCells.map((c) => c.col + (c.colSpan || 1))
-      );
+      // Get all placements
+      const placements = placementIds
+        .map((id) => rawPlacements.find((p) => p.id === id))
+        .filter(Boolean);
 
-      // Keep first cell, resize it, remove others
-      const primaryCell = selectedCells[0];
-      await resizePlacement(primaryCell.id, maxRow - minRow, maxCol - minCol);
+      if (placements.length < 2) return;
 
-      for (let i = 1; i < selectedCells.length; i++) {
-        await removePlacement(selectedCells[i].id);
+      // Calculate bounding box
+      let minRow = Infinity,
+        minCol = Infinity;
+      let maxRow = -Infinity,
+        maxCol = -Infinity;
+
+      placements.forEach((p) => {
+        minRow = Math.min(minRow, p.row);
+        minCol = Math.min(minCol, p.col);
+        maxRow = Math.max(maxRow, p.row + (p.rowSpan || 1));
+        maxCol = Math.max(maxCol, p.col + (p.colSpan || 1));
+      });
+
+      const rowSpan = maxRow - minRow;
+      const colSpan = maxCol - minCol;
+
+      // Keep the first placement, resize it to span all
+      const keepPlacement = placements[0];
+      const removePlacements = placements.slice(1);
+
+      try {
+        // Remove other placements first
+        await Promise.all(removePlacements.map((p) => removePlacement(p.id)));
+
+        // Resize the kept placement
+        await resizePlacement(keepPlacement.id, rowSpan, colSpan);
+
+        // Move to top-left if needed
+        if (keepPlacement.row !== minRow || keepPlacement.col !== minCol) {
+          await movePlacement(keepPlacement.id, minRow, minCol);
+        }
+
+        log.info(`Merged ${placements.length} cells into one`);
+      } catch (error) {
+        log.error("Failed to merge cells:", error);
       }
     },
-    [cells, resizePlacement, removePlacement]
+    [canvas, rawPlacements, removePlacement, resizePlacement, movePlacement]
   );
 
+  /**
+   * Unmerge a spanning placement back to 1x1
+   */
   const unmergeCells = useCallback(
-    async (cellId) => {
-      const cell = cells.find((c) => c.id === cellId);
-      if (!cell || (cell.rowSpan === 1 && cell.colSpan === 1)) return;
+    async (placementId) => {
+      const placement = rawPlacements.find((p) => p.id === placementId);
+      if (!placement) return;
 
-      await resizePlacement(cellId, 1, 1);
+      const { rowSpan = 1, colSpan = 1 } = placement;
+      if (rowSpan === 1 && colSpan === 1) {
+        log.warn("Cell is not merged");
+        return;
+      }
+
+      try {
+        // Just resize back to 1x1
+        await resizePlacement(placementId, 1, 1);
+        log.info(`Unmerged cell ${placementId}`);
+      } catch (error) {
+        log.error("Failed to unmerge cell:", error);
+      }
     },
-    [cells, resizePlacement]
+    [rawPlacements, resizePlacement]
+  );
+
+  /**
+   * Delete a placement (remove from canvas)
+   */
+  const deleteCells = useCallback(
+    async (placementId) => {
+      try {
+        await removePlacement(placementId);
+        log.info(`Deleted placement ${placementId}`);
+      } catch (error) {
+        log.error("Failed to delete placement:", error);
+      }
+    },
+    [removePlacement]
   );
 
   // ===========================================================================
@@ -753,6 +860,11 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     // View actions
     closeView,
     deleteView,
+
+    // Merge/Unmerge/Delete operations (FOR CANVAS NAVIGATOR)
+    mergeCells,
+    unmergeCells,
+    deleteCells,
   };
 }
 

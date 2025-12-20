@@ -29,14 +29,13 @@ export { useAuth } from "./useAuth.js";
 export { useCanvas, useViewport, useSubsets } from "./useCanvas.js";
 export { useCanvasSelection } from "./useCanvasSelection.js";
 export { useCanvasDimensions } from "./useCanvasDimensions.js";
+export { useViewportSize } from "./useViewportSize.js";
 export {
-  useViewportSize,
-  STORAGE_KEY as VIEWPORT_SIZE_STORAGE_KEY,
-  EVENT_NAME as VIEWPORT_SIZE_EVENT,
+  VIEWPORT_STORAGE_KEY,
+  VIEWPORT_SIZE_EVENT,
   DEFAULT_VIEWPORT_SIZE,
-  SIZE_PRESETS as VIEWPORT_SIZE_PRESETS,
-} from "./useViewportSize.js";
-
+  VIEWPORT_SIZE_PRESETS,
+} from "./viewportState.js";
 // =============================================================================
 // DATA MANAGEMENT (REFACTORED)
 // =============================================================================

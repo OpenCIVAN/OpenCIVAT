@@ -727,6 +727,7 @@ export function CanvasGrid({
             )}
 
             {/* Isolation Mode Overlay */}
+            {/* Isolation Mode Overlay */}
             <IsolationOverlay
                 isOpen={isIsolationOpen}
                 onClose={exitIsolation}
@@ -743,6 +744,15 @@ export function CanvasGrid({
                         isHighlighted={false}
                         isSelected={false}
                         inEditMode={false}
+                        onRemove={() => {
+                            // First exit isolation mode
+                            exitIsolation();
+                            // Then remove the placement
+                            const placement = viewportPlacements.find(p => p.id === isolatedCell.id);
+                            if (placement) {
+                                onRemovePlacement?.(placement.id);
+                            }
+                        }}
                     />
                 )}
             </IsolationOverlay>
