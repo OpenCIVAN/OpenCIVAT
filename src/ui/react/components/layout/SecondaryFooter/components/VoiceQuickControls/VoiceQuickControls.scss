@@ -5,10 +5,123 @@
 
 @use "theme" as *;
 
-.voice-quick-controls {
+.voice-controls {
   display: flex;
   align-items: center;
   gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-md;
+  transition: all 0.2s ease;
+
+  // ==========================================================================
+  // STATUS-BASED CONTAINER STYLING
+  // ==========================================================================
+
+  // Not in voice - muted/subtle appearance
+  &--disconnected {
+    background: rgba($color-text-muted, 0.05);
+    border: 1px solid transparent;
+
+    .voice-controls__status-text {
+      color: $color-text-muted;
+    }
+  }
+
+  // In voice - green highlight
+  &--connected {
+    background: rgba($color-accent-green, 0.1);
+    border: 1px solid rgba($color-accent-green, 0.3);
+
+    .voice-controls__status-label {
+      color: $color-accent-green;
+    }
+  }
+
+  // In voice but muted - amber highlight
+  &--muted {
+    background: rgba($color-accent-amber, 0.1);
+    border: 1px solid rgba($color-accent-amber, 0.3);
+
+    .voice-controls__status-label {
+      color: $color-accent-amber;
+    }
+  }
+
+  // ==========================================================================
+  // STATUS INDICATOR
+  // ==========================================================================
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-width: 100px;
+  }
+
+  &__status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &--connected {
+      background: $color-accent-green;
+      box-shadow: 0 0 6px rgba($color-accent-green, 0.6);
+      animation: pulse-green 2s infinite;
+    }
+
+    &--disconnected {
+      background: $color-text-muted;
+      opacity: 0.5;
+    }
+  }
+
+  &__status-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  &__status-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  &__status-channel {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__status-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+  }
+
+  &__participant-count {
+    color: $color-text-muted;
+    margin-left: 4px;
+  }
+
+  // ==========================================================================
+  // DIVIDER
+  // ==========================================================================
+
+  &__divider {
+    width: 1px;
+    height: 20px;
+    background: $color-border-subtle;
+    margin: 0 $spacing-xs;
+  }
+
+  // ==========================================================================
+  // CONTROL BUTTONS
+  // ==========================================================================
 
   &__btn {
     display: flex;
@@ -16,108 +129,186 @@
     justify-content: center;
     width: 28px;
     height: 28px;
-    border: none;
+    padding: 0;
     background: transparent;
-    color: $color-text-secondary;
+    border: 1px solid transparent;
     border-radius: $radius-sm;
+    color: $color-text-secondary;
     cursor: pointer;
-    transition: all $transition-fast;
+    transition: all 0.15s ease;
 
     &:hover {
-      background: $color-bg-tertiary;
+      background: rgba($color-text-primary, 0.05);
       color: $color-text-primary;
     }
 
-    &:focus-visible {
-      outline: 2px solid $color-accent-blue;
-      outline-offset: 2px;
+    &--active {
+      background: rgba($color-text-primary, 0.1);
     }
 
-    &[data-state="active"],
-    &.on {
-      color: $color-accent-green;
-    }
-
-    &[data-state="muted"],
-    &.off {
+    &--muted {
       color: $color-accent-red;
+      background: rgba($color-accent-red, 0.1);
+      border-color: rgba($color-accent-red, 0.3);
+
+      &:hover {
+        background: rgba($color-accent-red, 0.2);
+      }
     }
 
-    &[data-state="deafened"] {
+    &--deafened {
       color: $color-accent-amber;
+      background: rgba($color-accent-amber, 0.1);
+      border-color: rgba($color-accent-amber, 0.3);
+
+      &:hover {
+        background: rgba($color-accent-amber, 0.2);
+      }
     }
 
-    &[data-state="connected"],
-    &.in-channel {
-      color: $color-accent-red;
+    &--settings {
+      color: $color-text-muted;
+
+      &:hover {
+        color: $color-text-secondary;
+      }
     }
   }
 
-  &__room-btn {
+  // ==========================================================================
+  // JOIN/LEAVE BUTTON - PROMINENT
+  // ==========================================================================
+
+  &__join-leave {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
     padding: $spacing-xs $spacing-sm;
-    background: $color-bg-tertiary;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &--join {
+      background: rgba($color-accent-green, 0.15);
+      border: 1px solid rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+
+      &:hover {
+        background: rgba($color-accent-green, 0.25);
+        border-color: rgba($color-accent-green, 0.6);
+      }
+    }
+
+    &--leave {
+      background: rgba($color-accent-red, 0.1);
+      border: 1px solid rgba($color-accent-red, 0.3);
+      color: $color-accent-red;
+
+      &:hover {
+        background: rgba($color-accent-red, 0.2);
+        border-color: rgba($color-accent-red, 0.5);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // CHANNEL PICKER
+  // ==========================================================================
+
+  &__channel-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
     border: 1px solid $color-border-subtle;
     border-radius: $radius-sm;
-    color: $color-text-secondary;
-    font-size: 12px;
+    color: $color-text-muted;
     cursor: pointer;
-    transition: all $transition-fast;
+    transition: all 0.15s ease;
 
     &:hover {
-      border-color: $color-border-default;
+      background: rgba($color-text-primary, 0.05);
+      color: $color-text-secondary;
+    }
+  }
+
+  &__channel-menu {
+    min-width: 180px;
+    padding: $spacing-xs 0;
+  }
+
+  &__channel-header {
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid $color-border-subtle;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__channel-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-xs $spacing-sm;
+    background: transparent;
+    border: none;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba($color-text-primary, 0.05);
       color: $color-text-primary;
     }
 
-    &:focus-visible {
-      outline: 2px solid $color-accent-blue;
-      outline-offset: 2px;
+    &--active {
+      background: rgba($color-accent-green, 0.1);
+      color: $color-accent-green;
+
+      &:hover {
+        background: rgba($color-accent-green, 0.15);
+      }
     }
   }
 
-  &__room-list {
-    min-width: 160px;
-    max-height: 200px;
-    overflow-y: auto;
+  &__channel-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  &__room-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: $spacing-sm;
-    background: transparent;
-    border: none;
-    color: $color-text-primary;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background $transition-fast;
-
-    &:hover {
-      background: $color-bg-tertiary;
-    }
-
-    &.active {
-      background: rgba($color-accent-blue, 0.1);
-      color: $color-accent-blue;
-    }
-  }
-
-  &__room-count {
-    font-size: 11px;
+  &__channel-count {
+    font-size: $font-size-xs;
     color: $color-text-muted;
-    background: $color-bg-tertiary;
+    background: rgba($color-text-muted, 0.1);
     padding: 2px 6px;
-    border-radius: $radius-sm;
+    border-radius: $radius-full;
   }
+}
 
-  &__empty {
-    padding: $spacing-lg;
-    text-align: center;
-    color: $color-text-muted;
-    font-size: 13px;
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+@keyframes pulse-green {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba($color-accent-green, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba($color-accent-green, 0.8);
   }
 }

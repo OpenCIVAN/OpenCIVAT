@@ -25,6 +25,7 @@ import {
   getInitialViewportSize,
   DEFAULT_VIEWPORT_SIZE,
 } from "@UI/react/hooks/viewportState.js";
+import { saveCanvasSize } from "@UI/react/hooks/canvasState.js";
 
 // Must match the key used in useViewportSize.js
 const VIEWPORT_STORAGE_KEY = "cia-viewport-size";
@@ -446,6 +447,8 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       await canvasManager.updateCanvas(canvas.id, {
         dimensions: { ...canvas.dimensions, rows: value },
       });
+
+      saveCanvasSize({ rows: value, cols: canvasSize.cols });
     },
     [canvas]
   );
@@ -471,6 +474,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       await canvasManager.updateCanvas(canvas.id, {
         dimensions: { ...canvas.dimensions, cols: value },
       });
+      saveCanvasSize({ rows: canvasSize.rows, cols: value });
     },
     [canvas]
   );

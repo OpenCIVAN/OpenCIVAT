@@ -26,6 +26,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ui as log } from "@Utils/logger.js";
 import { initializePhase3 } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
+import { getViewConfigurationManager } from '@Init/appInitializer';
 
 // =============================================================================
 // LAYOUT INFRASTRUCTURE
@@ -238,8 +239,14 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // CANVAS STATE
   // ===========================================================================
-  const { canvas } = useCanvas();
+  const {
+    canvas,
+    viewport,
+    visiblePlacements } = useCanvas();
   const canvasId = canvas?.id;
+
+  // State for active instance (which view is "focused")
+  const [activeInstanceId, setActiveInstanceId] = useState(null);
 
   // Canvas size (grid dimensions)
   const [canvasSize, setCanvasSize] = useState({ cols: 2, rows: 2 });
@@ -402,6 +409,18 @@ export function CIAWebApp({ username, userId, projectId }) {
     );
   };
 
+  const availableVoiceChannels = useMemo(() => {
+    // This would come from room service or project data
+    // For now, return the rooms that have voice enabled
+    return rooms
+      .filter(room => room.hasVoice)
+      .map(room => ({
+        id: room.id,
+        name: room.name,
+        participantCount: room.voiceParticipants?.length || 0,
+      }));
+  }, [rooms]);
+
   // ===========================================================================
   // RENDER - SECONDARY TOP BAR ZONES (44px)
   // ===========================================================================
@@ -498,21 +517,23 @@ export function CIAWebApp({ username, userId, projectId }) {
         isMuted={voice.muted}
         isDeafened={voice.deafened}
         isInChannel={voice.inVoice}
-        currentChannel={
-          voice.currentRoom
-            ? { id: currentRoomId, name: voice.currentRoom }
-            : null
-        }
-        channels={[
-          // TODO: Wire to actual voice channels
-          { id: "general", name: "General", participantCount: 3 },
-          { id: "team", name: "Team", participantCount: 2 },
-        ]}
+        currentChannel={voice.currentRoom ? {
+          id: currentRoomId,
+          name: voice.currentRoom,
+        } : null}
+        participantCount={voice.participants?.length || 0}
+        channels={availableVoiceChannels}  // Need to get from room/project
         onToggleMute={voice.toggleMute}
         onToggleDeafen={voice.toggleDeafen}
-        onJoinLeave={voice.inVoice ? voice.leaveVoice : voice.joinVoice}
-        onChangeChannel={handleChangeVoiceChannel}
-        onOpenSettings={handleOpenVoiceSettings}
+        onJoinLeave={voice.inVoice ? voice.leave : () => voice.join(currentRoomId)}
+        onChangeChannel={(channelId) => {
+          if (voice.inVoice) voice.leave();
+          voice.join(channelId);
+        }}
+        onOpenVoiceSettings={() => {
+          // Open voice settings modal or panel
+          setShowVoiceSettings(true);
+        }}
       />
     ),
   };

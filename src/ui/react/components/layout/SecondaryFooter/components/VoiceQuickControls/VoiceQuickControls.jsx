@@ -3,7 +3,12 @@
  * @description Quick voice controls for mic, deafen, channel.
  */
 
-import React from 'react';
+// =============================================================================
+// ENHANCED VoiceQuickControls - More Obvious Voice Status
+// File: src/ui/react/components/layout/SecondaryFooter/components/VoiceQuickControls/VoiceQuickControls.jsx
+// =============================================================================
+
+import React, { useState, useCallback } from 'react';
 import {
     Mic,
     MicOff,
@@ -11,29 +16,22 @@ import {
     VolumeX,
     Phone,
     PhoneOff,
-    DoorOpen,
-    Settings,
     ChevronDown,
+    Settings,
+    Headphones,
 } from 'lucide-react';
-import { Dropdown } from '@UI/react/components/common/Dropdown';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
-
+import { Dropdown } from '@UI/react/components/common/Dropdown';
 import './VoiceQuickControls.scss';
 
 /**
- * Voice quick controls component.
- *
- * @param {Object} props - Component props
- * @param {boolean} [props.isMuted] - Whether mic is muted
- * @param {boolean} [props.isDeafened] - Whether user is deafened
- * @param {boolean} [props.isInChannel] - Whether in a voice channel
- * @param {Object} [props.currentChannel] - Current voice channel
- * @param {Array} [props.channels] - Available voice channels
- * @param {Function} [props.onToggleMute] - Callback to toggle mute
- * @param {Function} [props.onToggleDeafen] - Callback to toggle deafen
- * @param {Function} [props.onJoinLeave] - Callback to join/leave voice
- * @param {Function} [props.onChangeChannel] - Callback to change channel
- * @param {Function} [props.onOpenSettings] - Callback to open voice settings
+ * VoiceQuickControls - Voice controls with OBVIOUS connection status
+ * 
+ * Key UX improvements:
+ * - Large, color-coded status indicator
+ * - "Not in Voice" vs "In Voice: [Channel]" text
+ * - Prominent Join/Leave button
+ * - Entire section changes color based on state
  */
 export function VoiceQuickControls({
     isMuted = false,
@@ -41,102 +39,155 @@ export function VoiceQuickControls({
     isInChannel = false,
     currentChannel = null,
     channels = [],
+    participantCount = 0,
     onToggleMute,
     onToggleDeafen,
     onJoinLeave,
     onChangeChannel,
     onOpenSettings,
 }) {
+    const [showChannelPicker, setShowChannelPicker] = useState(false);
+
+    // Determine overall status
+    const statusClass = isInChannel
+        ? (isMuted ? 'voice-controls--muted' : 'voice-controls--connected')
+        : 'voice-controls--disconnected';
+
+    const handleJoinLeave = useCallback(() => {
+        onJoinLeave?.();
+    }, [onJoinLeave]);
+
+    const handleChannelSelect = useCallback((channelId) => {
+        onChangeChannel?.(channelId);
+        setShowChannelPicker(false);
+    }, [onChangeChannel]);
+
     return (
-        <div className="voice-quick-controls">
-            {/* Mic Toggle */}
-            <Tooltip content={isMuted ? 'Unmute' : 'Mute'}>
-                <button
-                    className={`voice-quick-controls__btn ${isMuted ? 'off' : 'on'
-                        }`}
-                    onClick={onToggleMute}
-                    data-state={isMuted ? 'muted' : 'active'}
-                    type="button"
-                    aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-                >
-                    {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
-                </button>
-            </Tooltip>
+        <div className={`voice-controls ${statusClass}`}>
+            {/* Status Indicator - PROMINENT */}
+            <div className="voice-controls__status">
+                {isInChannel ? (
+                    <>
+                        <div className="voice-controls__status-dot voice-controls__status-dot--connected" />
+                        <div className="voice-controls__status-info">
+                            <span className="voice-controls__status-label">In Voice</span>
+                            <span className="voice-controls__status-channel">
+                                {currentChannel?.name || 'Unknown Channel'}
+                                {participantCount > 0 && (
+                                    <span className="voice-controls__participant-count">
+                                        ({participantCount})
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="voice-controls__status-dot voice-controls__status-dot--disconnected" />
+                        <span className="voice-controls__status-text">Not in Voice</span>
+                    </>
+                )}
+            </div>
 
-            {/* Deafen Toggle */}
-            <Tooltip content={isDeafened ? 'Undeafen' : 'Deafen'}>
-                <button
-                    className={`voice-quick-controls__btn ${isDeafened ? 'off' : ''
-                        }`}
-                    onClick={onToggleDeafen}
-                    data-state={isDeafened ? 'deafened' : 'normal'}
-                    type="button"
-                    aria-label={isDeafened ? 'Undeafen' : 'Deafen'}
-                >
-                    {isDeafened ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                </button>
-            </Tooltip>
+            {/* Divider */}
+            <div className="voice-controls__divider" />
 
-            {/* Join/Leave */}
-            <Tooltip content={isInChannel ? 'Leave channel' : 'Join channel'}>
+            {/* Controls - Only show if in channel */}
+            {isInChannel && (
+                <>
+                    {/* Mute Button */}
+                    <Tooltip content={isMuted ? 'Unmute' : 'Mute'}>
+                        <button
+                            className={`voice-controls__btn ${isMuted ? 'voice-controls__btn--active voice-controls__btn--muted' : ''}`}
+                            onClick={onToggleMute}
+                            aria-pressed={isMuted}
+                            aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                        >
+                            {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+                        </button>
+                    </Tooltip>
+
+                    {/* Deafen Button */}
+                    <Tooltip content={isDeafened ? 'Undeafen' : 'Deafen'}>
+                        <button
+                            className={`voice-controls__btn ${isDeafened ? 'voice-controls__btn--active voice-controls__btn--deafened' : ''}`}
+                            onClick={onToggleDeafen}
+                            aria-pressed={isDeafened}
+                            aria-label={isDeafened ? 'Undeafen' : 'Deafen'}
+                        >
+                            {isDeafened ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                        </button>
+                    </Tooltip>
+
+                    <div className="voice-controls__divider" />
+                </>
+            )}
+
+            {/* Join/Leave Button - ALWAYS VISIBLE AND PROMINENT */}
+            <Tooltip content={isInChannel ? 'Leave Voice' : 'Join Voice'}>
                 <button
-                    className={`voice-quick-controls__btn ${isInChannel ? 'in-channel' : ''
-                        }`}
-                    onClick={onJoinLeave}
-                    data-state={isInChannel ? 'connected' : 'disconnected'}
-                    type="button"
+                    className={`voice-controls__join-leave ${isInChannel ? 'voice-controls__join-leave--leave' : 'voice-controls__join-leave--join'}`}
+                    onClick={handleJoinLeave}
                     aria-label={isInChannel ? 'Leave voice channel' : 'Join voice channel'}
                 >
-                    {isInChannel ? <PhoneOff size={16} /> : <Phone size={16} />}
+                    {isInChannel ? (
+                        <>
+                            <PhoneOff size={14} />
+                            <span>Leave</span>
+                        </>
+                    ) : (
+                        <>
+                            <Phone size={14} />
+                            <span>Join</span>
+                        </>
+                    )}
                 </button>
             </Tooltip>
 
-            {/* Room Selector */}
-            <Dropdown
-                trigger={
-                    <button className="voice-quick-controls__room-btn" type="button">
-                        <DoorOpen size={14} />
-                        <span>{currentChannel?.name || 'Select'}</span>
-                        <ChevronDown size={12} />
-                    </button>
-                }
-                placement="top-end"
-            >
-                <div className="voice-quick-controls__room-list">
-                    {channels.length === 0 ? (
-                        <div className="voice-quick-controls__empty">
-                            No channels available
+            {/* Channel Picker */}
+            {channels.length > 0 && (
+                <Dropdown
+                    trigger={
+                        <button
+                            className="voice-controls__channel-picker"
+                            aria-label="Select voice channel"
+                        >
+                            <ChevronDown size={14} />
+                        </button>
+                    }
+                    placement="top-end"
+                >
+                    <div className="voice-controls__channel-menu">
+                        <div className="voice-controls__channel-header">
+                            Voice Channels
                         </div>
-                    ) : (
-                        channels.map((channel) => (
+                        {channels.map((channel) => (
                             <button
                                 key={channel.id}
-                                className={`voice-quick-controls__room-item ${channel.id === currentChannel?.id
-                                        ? 'active'
-                                        : ''
-                                    }`}
-                                onClick={() => onChangeChannel?.(channel.id)}
-                                type="button"
+                                className={`voice-controls__channel-item ${currentChannel?.id === channel.id ? 'voice-controls__channel-item--active' : ''}`}
+                                onClick={() => handleChannelSelect(channel.id)}
                             >
-                                <span>{channel.name}</span>
-                                <span className="voice-quick-controls__room-count">
-                                    {channel.participantCount || 0}
-                                </span>
+                                <Headphones size={14} />
+                                <span className="voice-controls__channel-name">{channel.name}</span>
+                                {channel.participantCount > 0 && (
+                                    <span className="voice-controls__channel-count">
+                                        {channel.participantCount}
+                                    </span>
+                                )}
                             </button>
-                        ))
-                    )}
-                </div>
-            </Dropdown>
+                        ))}
+                    </div>
+                </Dropdown>
+            )}
 
             {/* Settings */}
-            <Tooltip content="Voice settings">
+            <Tooltip content="Voice Settings">
                 <button
-                    className="voice-quick-controls__btn"
+                    className="voice-controls__btn voice-controls__btn--settings"
                     onClick={onOpenSettings}
-                    type="button"
                     aria-label="Voice settings"
                 >
-                    <Settings size={16} />
+                    <Settings size={14} />
                 </button>
             </Tooltip>
         </div>

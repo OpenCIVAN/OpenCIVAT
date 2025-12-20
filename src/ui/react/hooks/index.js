@@ -36,6 +36,12 @@ export {
   DEFAULT_VIEWPORT_SIZE,
   VIEWPORT_SIZE_PRESETS,
 } from "./viewportState.js";
+export {
+  CANVAS_SIZE_STORAGE_KEY,
+  loadCanvasSize,
+  saveCanvasSize,
+} from "./canvasState.js";
+
 // =============================================================================
 // DATA MANAGEMENT (REFACTORED)
 // =============================================================================

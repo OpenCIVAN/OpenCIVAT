@@ -330,3 +330,99 @@ export function getInitialViewportState() {
     cols: size.cols,
   };
 }
+
+// =============================================================================
+// CANVAS SIZE PERSISTENCE (Grid dimensions, not viewport)
+// =============================================================================
+// Canvas size = how big the grid is (e.g., 10×10)
+// Viewport size = how many cells are visible (e.g., 3×4)
+
+/**
+ * LocalStorage key for canvas size
+ */
+export const CANVAS_SIZE_STORAGE_KEY = "cia-canvas-size";
+
+/**
+ * Default canvas size for new canvases
+ */
+export const DEFAULT_CANVAS_SIZE = Object.freeze({
+  rows: 3,
+  cols: 3,
+});
+
+/**
+ * Min/max canvas dimensions
+ */
+export const MIN_CANVAS_SIZE = Object.freeze({ rows: 1, cols: 1 });
+export const MAX_CANVAS_SIZE = Object.freeze({ rows: 50, cols: 50 });
+
+/**
+ * Load saved canvas size from localStorage
+ * @returns {{ rows: number, cols: number } | null}
+ */
+export function loadCanvasSize() {
+  try {
+    const saved = localStorage.getItem(CANVAS_SIZE_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (
+        typeof parsed.rows === "number" &&
+        typeof parsed.cols === "number" &&
+        parsed.rows >= MIN_CANVAS_SIZE.rows &&
+        parsed.rows <= MAX_CANVAS_SIZE.rows &&
+        parsed.cols >= MIN_CANVAS_SIZE.cols &&
+        parsed.cols <= MAX_CANVAS_SIZE.cols
+      ) {
+        return { rows: parsed.rows, cols: parsed.cols };
+      }
+    }
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[viewportState] Failed to load canvas size:", e);
+    }
+  }
+  return null;
+}
+
+/**
+ * Save canvas size to localStorage
+ * @param {{ rows: number, cols: number }} size
+ * @returns {boolean}
+ */
+export function saveCanvasSize(size) {
+  if (
+    !size ||
+    typeof size.rows !== "number" ||
+    typeof size.cols !== "number" ||
+    size.rows < MIN_CANVAS_SIZE.rows ||
+    size.rows > MAX_CANVAS_SIZE.rows ||
+    size.cols < MIN_CANVAS_SIZE.cols ||
+    size.cols > MAX_CANVAS_SIZE.cols
+  ) {
+    return false;
+  }
+
+  try {
+    localStorage.setItem(
+      CANVAS_SIZE_STORAGE_KEY,
+      JSON.stringify({
+        rows: size.rows,
+        cols: size.cols,
+      })
+    );
+    return true;
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[viewportState] Failed to save canvas size:", e);
+    }
+    return false;
+  }
+}
+
+/**
+ * Get initial canvas size for React state
+ * @returns {{ rows: number, cols: number }}
+ */
+export function getInitialCanvasSize() {
+  return loadCanvasSize() ?? { ...DEFAULT_CANVAS_SIZE };
+}
