@@ -1,0 +1,21 @@
+/**
+ * @file NotesTab.scss
+ * @description Styles for NotesTab component container.
+ * Uses BEM naming convention.
+ *
+ * Note: Component-level styles (note-card, note-edit-view) are in RightPanel.scss
+ * for shared styling across the panel.
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// NOTES TAB CONTAINER
+// =============================================================================
+
+.notes-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}

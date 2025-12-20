@@ -46,20 +46,23 @@ export function AllFloatingPanels({
     roomId,
     roomName,
 }) {
-    const { openPanels, closePanel, updatePanelPosition } = useFloatingPanels();
+    const { floatingPanels, dockPanel, updatePanelPosition } = useFloatingPanels();
     const { setLeftOpen, setRightOpen } = useLayoutContext();
+
+    // Convert floatingPanels object to array for mapping
+    const openPanels = Object.values(floatingPanels || {});
 
     // Handle dock back to left panel
     const handleDockToLeft = useCallback((panelId) => {
-        closePanel(panelId);
+        dockPanel(panelId);
         setLeftOpen(true);
-    }, [closePanel, setLeftOpen]);
+    }, [dockPanel, setLeftOpen]);
 
     // Handle dock back to right panel
     const handleDockToRight = useCallback((panelId) => {
-        closePanel(panelId);
+        dockPanel(panelId);
         setRightOpen(true);
-    }, [closePanel, setRightOpen]);
+    }, [dockPanel, setRightOpen]);
 
     // Render content for a panel based on its type
     const renderPanelContent = useCallback((panel) => {
@@ -120,7 +123,7 @@ export function AllFloatingPanels({
                         y={panel.y}
                         width={panel.width}
                         height={panel.height}
-                        onClose={() => closePanel(panel.id)}
+                        onClose={() => dockPanel(panel.id)}
                         onDock={() => getDockHandler(panel.id)(panel.id)}
                         onPositionChange={(x, y) => updatePanelPosition(panel.id, x, y)}
                     >

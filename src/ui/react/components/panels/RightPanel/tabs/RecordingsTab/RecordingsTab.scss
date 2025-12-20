@@ -1,0 +1,134 @@
+/**
+ * @file RecordingsTab.scss
+ * @description Styles for RecordingsTab component.
+ * Uses BEM naming convention.
+ *
+ * Note: Some component styles are in RightPanel.scss
+ * for shared styling across the panel.
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// RECORDINGS TAB CONTAINER
+// =============================================================================
+
+.recordings-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+
+  &__search {
+    display: flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    margin: $spacing-xs $spacing-sm;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+
+    &-icon {
+      color: $color-text-muted;
+      margin-right: $spacing-xs;
+    }
+
+    &-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: $color-text-primary;
+      font-size: $font-size-xs;
+      outline: none;
+
+      &::placeholder {
+        color: $color-text-muted;
+      }
+    }
+
+    &-clear {
+      background: none;
+      border: none;
+      color: $color-text-muted;
+      cursor: pointer;
+      padding: 2px;
+
+      &:hover {
+        color: $color-text-secondary;
+      }
+    }
+  }
+
+  &__loading,
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-2xl;
+    color: $color-text-muted;
+    text-align: center;
+
+    svg {
+      opacity: 0.4;
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: 0 $spacing-sm $spacing-sm;
+  }
+
+  &__error {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    margin: $spacing-xs $spacing-sm;
+    background: rgba($color-accent-red, 0.1);
+    border: 1px solid rgba($color-accent-red, 0.3);
+    border-radius: $radius-sm;
+    color: $color-accent-red;
+    font-size: $font-size-xs;
+  }
+}
+
+// =============================================================================
+// LIVE BADGE
+// =============================================================================
+
+.panel-header__live-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px $spacing-xs;
+  background: rgba($color-accent-red, 0.2);
+  border: 1px solid rgba($color-accent-red, 0.4);
+  border-radius: $radius-sm;
+  color: $color-accent-red;
+  font-size: 9px;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.panel-header__live-dot {
+  width: 6px;
+  height: 6px;
+  background: $color-accent-red;
+  border-radius: 50%;
+  animation: pulse-red 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

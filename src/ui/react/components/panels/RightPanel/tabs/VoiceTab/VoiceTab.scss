@@ -1,0 +1,53 @@
+/**
+ * @file VoiceTab.scss
+ * @description Styles for VoiceTab component.
+ * Uses BEM naming convention.
+ *
+ * Note: Some component styles are in RightPanel.scss
+ * for shared styling across the panel.
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// VOICE PANEL CONTAINER
+// =============================================================================
+
+.voice-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+
+  &__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+    text-align: center;
+  }
+}
+
+// =============================================================================
+// VOICE SECTION
+// =============================================================================
+
+.voice-section {
+  padding: $spacing-sm;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+// =============================================================================
+// PARTICIPANTS LIST
+// =============================================================================
+
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+}
