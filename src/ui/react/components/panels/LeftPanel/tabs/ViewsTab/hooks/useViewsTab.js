@@ -10,7 +10,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
-import { views as log } from "@Utils/logger.js";
+import { view as log } from "@Utils/logger.js";
 
 /**
  * @typedef {Object} UseViewsTabOptions

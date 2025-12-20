@@ -13,6 +13,7 @@ import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 // Tab content components
 import { FilesPanelContent } from './tabs/FilesTab';
 import { DatasetsPanelContent } from './tabs/DatasetsTab';
+import { ViewsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/ViewsTab';
 import { InstanceToolsPanelContent } from './tabs/InstanceToolsTab';
 import { LayoutPanelContent } from './tabs/LayoutTab';
 import { CursorsPanelContent } from './tabs/CursorsTab';
@@ -68,6 +69,8 @@ function renderTabContent(tabId, workspaceId, navigateToPanel) {
             return <FilesPanelContent workspaceId={workspaceId} />;
         case 'datasets':
             return <DatasetsPanelContent workspaceId={workspaceId} />;
+        case 'views':
+            return <ViewsPanelContent workspaceId={workspaceId} />;
         case 'tools':
             return <InstanceToolsPanelContent workspaceId={workspaceId} />;
         case 'layout':

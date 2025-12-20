@@ -36,7 +36,7 @@ import {
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { EmptyState } from '@UI/react/components/common/EmptyState';
 import { ViewItem } from '../DatasetsTab/ViewItem/ViewItem';
-import { CanvasNavigator } from '@UI/react/components/panels/LayoutPanel/components/CanvasNavigator';
+import { CanvasNavigator } from '@UI/react/components/panels/LayoutPanel';
 import { useViewsTab } from './hooks/useViewsTab';
 import './ViewsTab.scss';
 

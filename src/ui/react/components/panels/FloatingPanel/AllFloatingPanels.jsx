@@ -10,6 +10,7 @@ import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 // Left panel tab content components
 import { FilesPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/FilesTab';
 import { DatasetsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/DatasetsTab';
+import { ViewsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/ViewsTab';
 import { InstanceToolsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/InstanceToolsTab';
 import { LayoutPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/LayoutTab';
 import { AnnotationsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/AnnotationsTab';
@@ -36,6 +37,8 @@ function renderLeftTabContent(tabId, workspaceId) {
             return <FilesPanelContent workspaceId={workspaceId} />;
         case 'datasets':
             return <DatasetsPanelContent workspaceId={workspaceId} />;
+        case 'views':
+            return <ViewsPanelContent workspaceId={workspaceId} />;
         case 'tools':
             return <InstanceToolsPanelContent workspaceId={workspaceId} />;
         case 'layout':
