@@ -1,7 +1,7 @@
 /**
  * @file LeftPanelContext.jsx
- * @description Shared state for Left Panel tabs.
- * Provides active tab state and navigation between activity bar and content.
+ * @description Shared state and tab registry for Left Panel.
+ * SINGLE SOURCE OF TRUTH for tab configuration and rendering.
  *
  * Tab Order (per spec):
  * 1. Files (blue) - DATA SOURCES
@@ -29,13 +29,20 @@ import React, {
 import {
     FolderOpen, // Files
     Database, // Datasets
-    Eye, // Views (NEW - per spec uses 👁)
+    Eye, // Views
     Wrench, // Instance Tools
     LayoutGrid, // Layout
     MapPin, // Annotations
     Bookmark, // Bookmarks & Filters
-    MousePointer2, // Cursors (Changed from Users per spec 🎯)
+    MousePointer2, // Cursors
 } from 'lucide-react';
+
+// =============================================================================
+// TAB CONTENT COMPONENTS - Lazy imports to avoid circular dependencies
+// =============================================================================
+
+// These will be dynamically imported by the registry
+// Components are imported where renderTabContent is called
 
 // =============================================================================
 // TAB CONFIGURATION - Per Left_Panel_Design_Specification.docx
@@ -43,6 +50,7 @@ import {
 
 /**
  * Tab definitions matching specification Section 2
+ * This is the SINGLE SOURCE OF TRUTH for left panel tabs.
  */
 export const LEFT_PANEL_TABS = [
     // DATA SOURCES
@@ -52,7 +60,7 @@ export const LEFT_PANEL_TABS = [
         label: 'Files',
         color: 'blue',
         group: 'data',
-        implemented: true,
+        contentComponent: 'FilesPanelContent',
     },
     {
         id: 'datasets',
@@ -60,7 +68,7 @@ export const LEFT_PANEL_TABS = [
         label: 'Datasets',
         color: 'teal',
         group: 'data',
-        implemented: true,
+        contentComponent: 'DatasetsPanelContent',
     },
     // VISUALIZATION
     {
@@ -69,7 +77,7 @@ export const LEFT_PANEL_TABS = [
         label: 'Views',
         color: 'purple',
         group: 'visualization',
-        implemented: true,
+        contentComponent: 'ViewsPanelContent',
     },
     {
         id: 'tools',
@@ -77,7 +85,7 @@ export const LEFT_PANEL_TABS = [
         label: 'Instance Tools',
         color: 'amber',
         group: 'visualization',
-        implemented: true,
+        contentComponent: 'InstanceToolsPanelContent',
     },
     {
         id: 'layout',
@@ -85,7 +93,7 @@ export const LEFT_PANEL_TABS = [
         label: 'Layout',
         color: 'green',
         group: 'visualization',
-        implemented: true,
+        contentComponent: 'LayoutPanelContent',
     },
     // SPATIAL & STATE
     {
@@ -94,7 +102,7 @@ export const LEFT_PANEL_TABS = [
         label: 'Annotations',
         color: 'pink',
         group: 'spatial',
-        implemented: true,
+        contentComponent: 'AnnotationsPanelContent',
     },
     {
         id: 'bookmarks',
@@ -102,7 +110,7 @@ export const LEFT_PANEL_TABS = [
         label: 'Bookmarks & Filters',
         color: 'indigo',
         group: 'spatial',
-        implemented: true,
+        contentComponent: 'BookmarksFiltersPanelContent',
     },
     // PRESENCE (future VR expansion)
     {
@@ -111,15 +119,12 @@ export const LEFT_PANEL_TABS = [
         label: 'Cursors',
         color: 'cyan',
         group: 'presence',
-        implemented: true,
+        contentComponent: 'CursorsPanelContent',
     },
 ];
 
 /**
  * Dividers appear after these tabs (per spec Section 2)
- * - After Datasets (separates DATA SOURCES from VISUALIZATION)
- * - After Layout (separates VISUALIZATION from SPATIAL & STATE)
- * - After Bookmarks & Filters (separates from Cursors for VR expansion)
  */
 export const LEFT_PANEL_DIVIDERS_AFTER = ['datasets', 'layout', 'bookmarks'];
 
@@ -134,8 +139,108 @@ export const LEFT_PANEL_SHORTCUTS = {
     l: 'layout',
     a: 'annotations',
     'shift+b': 'bookmarks',
-    // 'u': 'upload' - action, not tab
+    c: 'cursors',
 };
+
+// =============================================================================
+// TAB CONTENT REGISTRY
+// =============================================================================
+
+/**
+ * Registry of tab content components.
+ * This allows centralized tab rendering without duplicating switch statements.
+ * 
+ * Components are registered here to break circular import dependencies.
+ * Each component must be registered before it can be rendered.
+ */
+const TAB_COMPONENT_REGISTRY = new Map();
+
+/**
+ * Register a tab content component
+ * Call this from each tab's index.jsx to register its content component
+ * 
+ * @param {string} tabId - Tab identifier (e.g., 'files', 'datasets')
+ * @param {React.ComponentType} Component - The content component to render
+ * 
+ * @example
+ * // In FilesTab/index.jsx:
+ * import { registerLeftPanelTab } from '../LeftPanelContext';
+ * registerLeftPanelTab('files', FilesPanelContent);
+ */
+export function registerLeftPanelTab(tabId, Component) {
+    TAB_COMPONENT_REGISTRY.set(tabId, Component);
+}
+
+/**
+ * Get a registered tab content component
+ * 
+ * @param {string} tabId - Tab identifier
+ * @returns {React.ComponentType|null} The registered component or null
+ */
+export function getLeftPanelTabComponent(tabId) {
+    return TAB_COMPONENT_REGISTRY.get(tabId) || null;
+}
+
+/**
+ * Check if a tab has a registered component
+ * 
+ * @param {string} tabId - Tab identifier
+ * @returns {boolean} Whether the tab has a registered component
+ */
+export function isLeftPanelTabRegistered(tabId) {
+    return TAB_COMPONENT_REGISTRY.has(tabId);
+}
+
+// =============================================================================
+// PLACEHOLDER COMPONENT
+// =============================================================================
+
+/**
+ * PlaceholderContent - Shown for tabs without registered components
+ */
+function PlaceholderContent({ tabId }) {
+    const tab = LEFT_PANEL_TABS.find(t => t.id === tabId) || LEFT_PANEL_TABS[0];
+    const Icon = tab.icon;
+
+    return (
+        <div className="left-panel__placeholder">
+            <Icon size={32} className="left-panel__placeholder-icon" data-color={tab.color} />
+            <h3 className="left-panel__placeholder-title">{tab.label}</h3>
+            <p className="left-panel__placeholder-text">
+                This tab is coming soon. It will contain {tab.label.toLowerCase()} management features.
+            </p>
+        </div>
+    );
+}
+
+// =============================================================================
+// CENTRALIZED TAB CONTENT RENDERER
+// =============================================================================
+
+/**
+ * Render content for a specific tab.
+ * This is the SINGLE function all consumers should use.
+ * 
+ * @param {string} tabId - Tab identifier
+ * @param {Object} props - Props to pass to the content component
+ * @param {string} props.workspaceId - Current workspace ID
+ * @param {Function} [props.onNavigateToPanel] - Navigation callback for cross-panel links
+ * @returns {React.ReactElement} The rendered tab content
+ * 
+ * @example
+ * // In LeftPanelContent.jsx:
+ * import { renderLeftPanelTabContent } from './LeftPanelContext';
+ * return renderLeftPanelTabContent(activeTab, { workspaceId, onNavigateToPanel: navigateToPanel });
+ */
+export function renderLeftPanelTabContent(tabId, props = {}) {
+    const Component = TAB_COMPONENT_REGISTRY.get(tabId);
+
+    if (!Component) {
+        return <PlaceholderContent tabId={tabId} />;
+    }
+
+    return <Component {...props} />;
+}
 
 // =============================================================================
 // CONTEXT
@@ -146,6 +251,10 @@ const LeftPanelContext = createContext({
     setActiveTab: () => { },
     navigateToPanel: () => { },
 });
+
+// =============================================================================
+// PROVIDER
+// =============================================================================
 
 /**
  * LeftPanelProvider - Provides shared state for Left Panel

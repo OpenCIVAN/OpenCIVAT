@@ -1,88 +1,29 @@
-// src/ui/react/components/panels/RightPanel/RightPanelContent.jsx
-// Expandable content for the right panel
-// Renders in ThreeEdgeLayout's right panel content slot
-// Supports pop-out to floating panel with space reclamation
-//
-// IMPORTANT: Uses existing class names from RightPanel.scss to preserve styles
+/**
+ * @file RightPanelContent.jsx
+ * @description Expandable content for the right panel.
+ * Renders in ThreeEdgeLayout's right panel content slot.
+ * Supports pop-out to floating panel with space reclamation.
+ *
+ * Uses centralized tab rendering from RightPanelContext.
+ * NO LOCAL SWITCH STATEMENTS - all tabs render through the registry.
+ */
 
 import React, { useCallback } from 'react';
-import { useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
+import { ExternalLink } from 'lucide-react';
+
+import {
+    useRightPanelContext,
+    RIGHT_PANEL_TABS,
+    renderRightPanelTabContent
+} from './RightPanelContext';
 import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 
-// Tab content components
-import { PeoplePanelContent } from './tabs/PeopleTab';
-import { RoomsPanelContent } from './tabs/RoomsTab';
-import { ChatPanelContent } from './tabs/ChatTab';
-import { VoicePanelContent } from './tabs/VoiceTab';
-import { NotesPanelContent } from './tabs/NotesTab';
-import { RecordingsPanelContent } from './tabs/RecordingsTab';
-import { ActivityPanelContent } from './tabs/ActivityTab';
-import { SettingsPanelContent } from './tabs/SettingsTab';
+// Ensure tab components are registered
+import './RightPanelTabRegistry';
 
-// Icons for pop-out button
-import { ExternalLink } from 'lucide-react';
-
-// Uses existing styles from RightPanel.scss - no separate SCSS needed
+// Uses existing styles from RightPanel.scss
 import './RightPanel.scss';
-
-// =============================================================================
-// TAB CONTENT RENDERER
-// =============================================================================
-
-/**
- * Render content for a specific tab
- */
-function renderTabContent(tabId, workspaceId, roomId, roomName) {
-    switch (tabId) {
-        case 'people':
-            return <PeoplePanelContent workspaceId={workspaceId} roomId={roomId} />;
-        case 'rooms':
-            return <RoomsPanelContent workspaceId={workspaceId} />;
-        case 'chat':
-            return <ChatPanelContent workspaceId={workspaceId} roomId={roomId} />;
-        case 'voice':
-            return <VoicePanelContent workspaceId={workspaceId} roomId={roomId} roomName={roomName} />;
-        case 'notes':
-            return <NotesPanelContent workspaceId={workspaceId} />;
-        case 'recording':
-            return <RecordingsPanelContent workspaceId={workspaceId} />;
-        case 'activity':
-            return <ActivityPanelContent workspaceId={workspaceId} />;
-        case 'settings':
-            return <SettingsPanelContent workspaceId={workspaceId} projectId={workspaceId} />;
-        default:
-            return <PlaceholderContent tabId={tabId} />;
-    }
-}
-
-/**
- * Placeholder for unimplemented tabs
- */
-function PlaceholderContent({ tabId }) {
-    const tabConfig = RIGHT_PANEL_TABS.find(t => t.id === tabId);
-    const Icon = tabConfig?.icon;
-
-    return (
-        // Uses existing class names from RightPanel.scss
-        <div className="right-panel__placeholder">
-            {Icon && (
-                <div
-                    className="right-panel__placeholder-icon"
-                    data-color={tabConfig?.color}
-                >
-                    <Icon size={32} />
-                </div>
-            )}
-            <div className="right-panel__placeholder-title">
-                {tabConfig?.label || 'Unknown'}
-            </div>
-            <div className="right-panel__placeholder-text">
-                This panel is coming soon
-            </div>
-        </div>
-    );
-}
 
 // =============================================================================
 // MAIN COMPONENT
@@ -98,17 +39,19 @@ function PlaceholderContent({ tabId }) {
  * Note: Floating panels are rendered at the app level (AllFloatingPanels),
  * not here, so they persist even when the docked panel is closed.
  *
- * @param {string} workspaceId - Current workspace ID
- * @param {string} roomId - Current room ID (for filtering presence)
- * @param {string} roomName - Current room name (for voice chat)
+ * @param {Object} props
+ * @param {string} [props.workspaceId='default'] - Current workspace ID
+ * @param {string} [props.roomId] - Current room ID (for filtering presence)
+ * @param {string} [props.roomName] - Current room name (for voice chat display)
  */
 export function RightPanelContent({ workspaceId = 'default', roomId, roomName }) {
     const { activeTab } = useRightPanelContext();
     const { popOutPanel, isPoppedOut } = useFloatingPanels();
     const { setRightOpen } = useLayoutContext();
 
-    const tabConfig = RIGHT_PANEL_TABS.find(t => t.id === activeTab);
-    const Icon = tabConfig?.icon;
+    // Get current tab config from the single source of truth
+    const currentTab = RIGHT_PANEL_TABS.find(t => t.id === activeTab);
+    const Icon = currentTab?.icon;
 
     // Check if current tab is already popped out
     const panelId = `right-${activeTab}`;
@@ -117,9 +60,9 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
     // Handle pop-out - close docked panel to reclaim space
     const handlePopOut = useCallback(() => {
         popOutPanel(panelId, {
-            title: tabConfig?.label,
+            title: currentTab?.label,
             icon: Icon,
-            color: tabConfig?.color,
+            color: currentTab?.color,
             // Position on the right side of screen
             x: window.innerWidth - 500,
             y: 100,
@@ -128,18 +71,18 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
         });
         // Collapse the docked panel to reclaim workspace space
         setRightOpen(false);
-    }, [panelId, tabConfig, Icon, popOutPanel, setRightOpen]);
+    }, [panelId, currentTab, Icon, popOutPanel, setRightOpen]);
 
     // If the current tab is floating, show a message to select another tab
     if (isCurrentTabFloating) {
         return (
             <div
                 className="right-panel__content right-panel__content--tab-floating"
-                data-color={tabConfig?.color}
+                data-color={currentTab?.color}
             >
                 <div className="right-panel__floating-notice">
                     {Icon && <Icon size={20} />}
-                    <span>{tabConfig?.label} is floating</span>
+                    <span>{currentTab?.label} is floating</span>
                 </div>
             </div>
         );
@@ -148,7 +91,7 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
     return (
         <div
             className="right-panel__content"
-            data-color={tabConfig?.color}
+            data-color={currentTab?.color}
         >
             {/* Mini toolbar with pop-out button */}
             <div className="right-panel__toolbar">
@@ -161,8 +104,16 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
                 </button>
             </div>
 
-            {/* Tab content - no redundant header, activity bar shows tab */}
-            {renderTabContent(activeTab, workspaceId, roomId, roomName)}
+            {/* 
+             * Tab content - rendered via centralized registry
+             * NO switch statement here - all routing handled by renderRightPanelTabContent
+             */}
+            {renderRightPanelTabContent(activeTab, {
+                workspaceId,
+                roomId,
+                roomName,
+                projectId: workspaceId, // For SettingsTab
+            })}
         </div>
     );
 }

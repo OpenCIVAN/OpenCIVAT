@@ -1,60 +1,53 @@
-// src/ui/react/components/panels/RightPanel/index.jsx
-// Unified Right Panel with VS Code-style Activity Bar
-//
-// Features:
-// - Activity bar with icon tabs (fixed width, right-aligned)
-// - Tab content fills remaining space
-// - Tabs: People, Chat, Voice, Notes, Recording, Activity
-// - Matches left panel styling patterns
-// - Toggle button at bottom of activity bar
+/**
+ * @file RightPanel/index.jsx
+ * @description Unified Right Panel with VS Code-style Activity Bar.
+ * 
+ * Features:
+ * - Activity bar with icon tabs (fixed width, right-aligned)
+ * - Tab content fills remaining space
+ * - Tabs: People, Voice, Rooms, Chat, Activity, Notes, Recording, Settings
+ * - Matches left panel styling patterns
+ * - Toggle button at bottom of activity bar
+ * 
+ * IMPORTANT: This file uses RIGHT_PANEL_TABS from RightPanelContext.
+ * DO NOT define a local TABS array - that creates sync issues.
+ * 
+ * This component is the MONOLITHIC version that combines activity bar + content.
+ * For the SEPARATED version (used with ThreeEdgeLayout), use:
+ * - RightActivityBar
+ * - RightPanelContent
+ */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-    Users,
-    Briefcase,
-    MessageSquare,
-    Mic2,
-    FileText,
-    Video,
-    Activity,
-    PanelRightClose,
-    ChevronLeft,
-} from 'lucide-react';
+import { PanelRightClose, ChevronLeft } from 'lucide-react';
 
-// Tab content components
-import { PeoplePanelContent } from './tabs/PeopleTab';
-import { RoomsPanelContent } from './tabs/RoomsTab';
-import { ChatPanelContent } from './tabs/ChatTab';
-import { VoicePanelContent } from './tabs/VoiceTab';
-import { NotesPanelContent } from './tabs/NotesTab';
-import { RecordingsPanelContent } from './tabs/RecordingsTab';
-import { ActivityPanelContent } from './tabs/ActivityTab';
+// Import tab config and renderer from the SINGLE SOURCE OF TRUTH
+import {
+    RIGHT_PANEL_TABS,
+    RIGHT_PANEL_DIVIDERS_AFTER,
+    renderRightPanelTabContent
+} from './RightPanelContext';
+
+// Ensure tab components are registered
+import './RightPanelTabRegistry';
 
 import './RightPanel.scss';
-
-// =============================================================================
-// TAB CONFIGURATION
-// =============================================================================
-
-/**
- * Right panel tabs configuration
- * Order: People, Rooms, Chat, Voice, Notes, Recording, Activity
- */
-const TABS = [
-    { id: 'people', icon: Users, label: 'People', color: 'pink', implemented: true },
-    { id: 'rooms', icon: Briefcase, label: 'Rooms', color: 'purple', implemented: true },
-    { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'blue', implemented: true },
-    { id: 'voice', icon: Mic2, label: 'Voice', color: 'green', implemented: true },
-    { id: 'notes', icon: FileText, label: 'Notes', color: 'teal', implemented: true },
-    { id: 'recording', icon: Video, label: 'Recording', color: 'red', implemented: true },
-    { id: 'activity', icon: Activity, label: 'Activity', color: 'amber', implemented: true },
-];
 
 // =============================================================================
 // ACTIVITY BAR
 // =============================================================================
 
-function ActivityBar({ tabs, activeTab, onTabChange, onTogglePanel, isPanelOpen }) {
+/**
+ * ActivityBar - Vertical icon navigation for panel tabs
+ */
+function ActivityBar({
+    tabs,
+    activeTab,
+    onTabChange,
+    onTogglePanel,
+    isPanelOpen,
+    dividersAfter = [],
+}) {
     // Handle tab click - if clicking active tab, toggle panel
     const handleTabClick = (tabId) => {
         if (tabId === activeTab) {
@@ -75,22 +68,24 @@ function ActivityBar({ tabs, activeTab, onTabChange, onTogglePanel, isPanelOpen 
                 {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
+                    const showDivider = dividersAfter.includes(tab.id);
 
                     return (
-                        <button
-                            key={tab.id}
-                            className={`right-panel__activity-btn ${isActive ? 'active' : ''}`}
-                            data-color={tab.color}
-                            onClick={() => handleTabClick(tab.id)}
-                            title={tab.label}
-                            aria-label={tab.label}
-                            aria-selected={isActive}
-                        >
-                            <Icon size={18} />
-                            {!tab.implemented && (
-                                <span className="right-panel__activity-badge">Soon</span>
+                        <React.Fragment key={tab.id}>
+                            <button
+                                className={`right-panel__activity-btn ${isActive ? 'active' : ''}`}
+                                data-color={tab.color}
+                                onClick={() => handleTabClick(tab.id)}
+                                title={tab.label}
+                                aria-label={tab.label}
+                                aria-selected={isActive}
+                            >
+                                <Icon size={18} />
+                            </button>
+                            {showDivider && (
+                                <div className="right-panel__activity-divider" />
                             )}
-                        </button>
+                        </React.Fragment>
                     );
                 })}
             </div>
@@ -111,50 +106,18 @@ function ActivityBar({ tabs, activeTab, onTabChange, onTogglePanel, isPanelOpen 
 }
 
 // =============================================================================
-// TAB CONTENT RENDERER
-// =============================================================================
-
-function TabContent({ activeTab, workspaceId }) {
-    switch (activeTab) {
-        case 'people':
-            return <PeoplePanelContent workspaceId={workspaceId} />;
-        case 'rooms':
-            return <RoomsPanelContent workspaceId={workspaceId} />;
-        case 'chat':
-            return <ChatPanelContent workspaceId={workspaceId} />;
-        case 'voice':
-            return <VoicePanelContent workspaceId={workspaceId} />;
-        case 'notes':
-            return <NotesPanelContent workspaceId={workspaceId} />;
-        case 'recording':
-            return <RecordingsPanelContent workspaceId={workspaceId} />;
-        case 'activity':
-            return <ActivityPanelContent workspaceId={workspaceId} />;
-        default:
-            return (
-                <div className="right-panel__placeholder">
-                    <div className="right-panel__placeholder-icon">
-                        {TABS.find(t => t.id === activeTab)?.icon && (
-                            React.createElement(TABS.find(t => t.id === activeTab).icon, { size: 32 })
-                        )}
-                    </div>
-                    <div className="right-panel__placeholder-title">
-                        {TABS.find(t => t.id === activeTab)?.label || 'Unknown'}
-                    </div>
-                    <div className="right-panel__placeholder-text">
-                        This panel is coming soon
-                    </div>
-                </div>
-            );
-    }
-}
-
-// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
 /**
  * RightPanel - Main unified right panel component
+ * 
+ * This is the MONOLITHIC version that includes both the activity bar
+ * and the content panel. Use this when you don't need separate layout control.
+ * 
+ * For ThreeEdgeLayout integration, use the separated components:
+ * - RightActivityBar (in activity bar slot)
+ * - RightPanelContent (in content slot)
  *
  * Note: This component receives props from ResizablePanel via React.cloneElement:
  * - isCollapsed: boolean - Whether panel is collapsed
@@ -162,13 +125,18 @@ function TabContent({ activeTab, workspaceId }) {
  * - side: string - Always 'right' for this panel
  *
  * @param {Object} props
- * @param {string} props.workspaceId - Current workspace ID from context
- * @param {boolean} props.isCollapsed - Whether panel is collapsed (from ResizablePanel)
- * @param {Function} props.onToggle - Callback to toggle panel (from ResizablePanel)
- * @param {string} props.side - Panel side, always 'right' (from ResizablePanel)
+ * @param {string} [props.workspaceId='default'] - Current workspace ID from context
+ * @param {string} [props.roomId] - Current room ID for presence filtering
+ * @param {string} [props.roomName] - Current room name for voice display
+ * @param {string} [props.initialTab='people'] - Initial active tab
+ * @param {boolean} [props.isCollapsed=false] - Whether panel is collapsed (from ResizablePanel)
+ * @param {Function} [props.onToggle] - Callback to toggle panel (from ResizablePanel)
+ * @param {string} [props.side='right'] - Panel side, always 'right' (from ResizablePanel)
  */
 export function RightPanel({
     workspaceId = 'default',
+    roomId,
+    roomName,
     initialTab = 'people',
     // These props come from ResizablePanel via React.cloneElement
     isCollapsed = false,
@@ -177,14 +145,18 @@ export function RightPanel({
 }) {
     const [activeTab, setActiveTab] = useState(initialTab);
 
-    // Get active tab config
+    // Get active tab config from the SINGLE SOURCE OF TRUTH
     const activeTabConfig = useMemo(() => {
-        return TABS.find(t => t.id === activeTab) || TABS[0];
+        return RIGHT_PANEL_TABS.find(t => t.id === activeTab) || RIGHT_PANEL_TABS[0];
     }, [activeTab]);
 
     // Handle tab change
     const handleTabChange = useCallback((tabId) => {
         setActiveTab(tabId);
+        // Dispatch event for tracking/analytics
+        window.dispatchEvent(new CustomEvent('cia:right-panel-tab-change', {
+            detail: { tabId }
+        }));
     }, []);
 
     return (
@@ -195,29 +167,50 @@ export function RightPanel({
                     className="right-panel__content"
                     data-color={activeTabConfig.color}
                 >
-                    <TabContent
-                        activeTab={activeTab}
-                        workspaceId={workspaceId}
-                    />
+                    {/* 
+                     * Tab content - rendered via centralized registry
+                     * NO switch statement here - all routing handled by renderRightPanelTabContent
+                     */}
+                    {renderRightPanelTabContent(activeTab, {
+                        workspaceId,
+                        roomId,
+                        roomName,
+                        projectId: workspaceId,
+                    })}
                 </div>
             )}
 
             {/* Activity bar - always visible, on the right */}
             <ActivityBar
-                tabs={TABS}
+                tabs={RIGHT_PANEL_TABS}
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
                 onTogglePanel={onToggle}
                 isPanelOpen={!isCollapsed}
+                dividersAfter={RIGHT_PANEL_DIVIDERS_AFTER}
             />
         </div>
     );
 }
 
-// Monolithic component (activity bar + content combined) - exported above via `export function`
+// =============================================================================
+// EXPORTS
+// =============================================================================
+
+// Default export - monolithic component
 export default RightPanel;
 
+// Re-export tab config from context (DO NOT define locally)
+export { RIGHT_PANEL_TABS } from './RightPanelContext';
+
 // Separated components (activity bar and content in separate grid cells)
-export { RightPanelProvider, useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
+export {
+    RightPanelProvider,
+    useRightPanelContext,
+    RIGHT_PANEL_DIVIDERS_AFTER,
+    renderRightPanelTabContent,
+    registerRightPanelTab,
+} from './RightPanelContext';
+
 export { RightActivityBar } from './RightActivityBar';
 export { RightPanelContent } from './RightPanelContent';

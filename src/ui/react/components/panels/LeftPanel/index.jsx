@@ -1,69 +1,35 @@
-// src/ui/react/components/panels/LeftPanel/index.jsx
-// Unified left panel with activity bar navigation and workspace-scoped content
-//
-// Architecture:
-// - Activity bar: Vertical icon navigation for panel tabs
-// - Content area: Tab-specific content (Files, Datasets, etc.)
-// - Workspace context: All tabs share the selected workspace context
-//
-// Tabs:
-// - Files: Project files with grid/list views and thumbnails
-// - Datasets: Loaded datasets with views tree
-// - Instance Tools: Tools for the active instance
-// - Layout: Workspace layout presets
-// - Annotations: Spatial annotations
-// - Cursors: Cursor visibility settings
-// - Saved Filters: Reusable filter presets
-// - Bookmarks: Saved view bookmarks
+/**
+ * @file LeftPanel/index.jsx
+ * @description Unified left panel with activity bar navigation and workspace-scoped content.
+ * 
+ * Architecture:
+ * - Activity bar: Vertical icon navigation for panel tabs
+ * - Content area: Tab-specific content (Files, Datasets, etc.)
+ * - Workspace context: All tabs share the selected workspace context
+ * 
+ * IMPORTANT: This file uses LEFT_PANEL_TABS from LeftPanelContext.
+ * DO NOT define a local TABS array - that creates sync issues.
+ * 
+ * This component is the MONOLITHIC version that combines activity bar + content.
+ * For the SEPARATED version (used with ThreeEdgeLayout), use:
+ * - LeftActivityBar
+ * - LeftPanelContent
+ */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-    FolderOpen,
-    Database,
-    Wrench,
-    LayoutGrid,
-    MapPin,
-    MousePointer2,
-    Filter,
-    Bookmark,
-    PanelLeftClose,
-    ChevronRight,
-} from 'lucide-react';
+import { PanelLeftClose, ChevronRight } from 'lucide-react';
 
-// Tab content components
-import { FilesPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/FilesTab';
-import { DatasetsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/DatasetsTab';
-import { ViewsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/ViewsTab';
-import { InstanceToolsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/InstanceToolsTab';
-import { LayoutPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/LayoutTab';
-import { AnnotationsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/AnnotationsTab';
-import { CursorsPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/CursorsTab';
-import { BookmarksFiltersPanelContent } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab';
+// Import tab config and renderer from the SINGLE SOURCE OF TRUTH
+import {
+    LEFT_PANEL_TABS,
+    LEFT_PANEL_DIVIDERS_AFTER,
+    renderLeftPanelTabContent
+} from './LeftPanelContext';
+
+// Ensure tab components are registered
+import './LeftPanelTabRegistry';
 
 import './LeftPanel.scss';
-
-// =============================================================================
-// TAB CONFIGURATION
-// =============================================================================
-
-/**
- * Tab definitions with icons and colors
- * Each tab has:
- * - id: Unique identifier
- * - icon: Lucide icon component
- * - label: Display name (for tooltips)
- * - color: Accent color variable name from tokens
- * - implemented: Whether the tab content is ready
- */
-const TABS = [
-    { id: 'files', icon: FolderOpen, label: 'Files', color: 'blue', implemented: true },
-    { id: 'datasets', icon: Database, label: 'Datasets', color: 'teal', implemented: true },
-    { id: 'tools', icon: Wrench, label: 'Instance Tools', color: 'amber', implemented: true },
-    { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
-    { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'pink', implemented: true },
-    { id: 'cursors', icon: MousePointer2, label: 'Cursors', color: 'amber', implemented: true },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks', color: 'indigo', implemented: true },
-];
 
 // =============================================================================
 // ACTIVITY BAR
@@ -71,10 +37,15 @@ const TABS = [
 
 /**
  * ActivityBar - Vertical icon navigation for panel tabs
- * Fixed width, always visible even when panel is collapsed
  */
-function ActivityBar({ tabs, activeTab, onTabChange, onTogglePanel, isPanelOpen }) {
-
+function ActivityBar({
+    tabs,
+    activeTab,
+    onTabChange,
+    onTogglePanel,
+    isPanelOpen,
+    dividersAfter = [],
+}) {
     // Handle tab click - if clicking active tab, toggle panel
     const handleTabClick = (tabId) => {
         if (tabId === activeTab) {
@@ -91,32 +62,32 @@ function ActivityBar({ tabs, activeTab, onTabChange, onTogglePanel, isPanelOpen 
 
     return (
         <div className="left-panel__activity-bar">
-            {/* Tab buttons */}
             <div className="left-panel__activity-tabs">
-                {tabs.map(tab => {
+                {tabs.map((tab, index) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
+                    const showDivider = dividersAfter.includes(tab.id);
 
                     return (
-                        <button
-                            key={tab.id}
-                            className={`left-panel__activity-btn ${isActive ? 'active' : ''}`}
-                            data-color={tab.color}
-                            onClick={() => handleTabClick(tab.id)}
-                            title={tab.label}
-                            aria-label={tab.label}
-                            aria-selected={isActive}
-                        >
-                            <Icon size={18} />
-                            {!tab.implemented && (
-                                <span className="left-panel__activity-badge">Soon</span>
+                        <React.Fragment key={tab.id}>
+                            <button
+                                className={`left-panel__activity-btn ${isActive ? 'active' : ''}`}
+                                data-color={tab.color}
+                                onClick={() => handleTabClick(tab.id)}
+                                title={tab.label}
+                                aria-label={tab.label}
+                                aria-selected={isActive}
+                            >
+                                <Icon size={18} />
+                            </button>
+                            {showDivider && (
+                                <div className="left-panel__activity-divider" />
                             )}
-                        </button>
+                        </React.Fragment>
                     );
                 })}
             </div>
 
-            {/* Spacer */}
             <div className="left-panel__activity-spacer" />
 
             {/* Toggle panel button at bottom */}
@@ -133,33 +104,18 @@ function ActivityBar({ tabs, activeTab, onTabChange, onTogglePanel, isPanelOpen 
 }
 
 // =============================================================================
-// PLACEHOLDER TAB CONTENT
-// =============================================================================
-
-/**
- * PlaceholderContent - Shown for unimplemented tabs
- */
-function PlaceholderContent({ tab }) {
-    const Icon = tab.icon;
-
-    return (
-        <div className="left-panel__placeholder">
-            <Icon size={32} className="left-panel__placeholder-icon" data-color={tab.color} />
-            <h3 className="left-panel__placeholder-title">{tab.label}</h3>
-            <p className="left-panel__placeholder-text">
-                This tab is coming soon. It will contain {tab.label.toLowerCase()}
-                management features.
-            </p>
-        </div>
-    );
-}
-
-// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
 /**
  * LeftPanel - Main unified left panel component
+ * 
+ * This is the MONOLITHIC version that includes both the activity bar
+ * and the content panel. Use this when you don't need separate layout control.
+ * 
+ * For ThreeEdgeLayout integration, use the separated components:
+ * - LeftActivityBar (in activity bar slot)
+ * - LeftPanelContent (in content slot)
  * 
  * Note: This component receives props from ResizablePanel via React.cloneElement:
  * - isCollapsed: boolean - Whether panel is collapsed
@@ -182,9 +138,9 @@ export function LeftPanel({
     // Active tab state
     const [activeTab, setActiveTab] = useState('files');
 
-    // Get current tab config
+    // Get current tab config from the SINGLE SOURCE OF TRUTH
     const currentTab = useMemo(
-        () => TABS.find(t => t.id === activeTab) || TABS[0],
+        () => LEFT_PANEL_TABS.find(t => t.id === activeTab) || LEFT_PANEL_TABS[0],
         [activeTab]
     );
 
@@ -199,7 +155,7 @@ export function LeftPanel({
 
     // Handle navigation between panels (for cross-panel links)
     const handleNavigateToPanel = useCallback((panelId) => {
-        const tab = TABS.find(t => t.id === panelId);
+        const tab = LEFT_PANEL_TABS.find(t => t.id === panelId);
         if (tab) {
             setActiveTab(panelId);
         }
@@ -232,39 +188,16 @@ export function LeftPanel({
         };
     }, [isCollapsed, onToggle]);
 
-    // Render tab content based on active tab
-    const renderContent = useCallback(() => {
-        switch (activeTab) {
-            case 'files':
-                return <FilesPanelContent workspaceId={workspaceId} />;
-            case 'datasets':
-                return <DatasetsPanelContent workspaceId={workspaceId} />;
-            case 'views':
-                return <ViewsPanelContent workspaceId={workspaceId} />;
-            case 'tools':
-                return <InstanceToolsPanelContent workspaceId={workspaceId} />;
-            case 'layout':
-                return <LayoutPanelContent workspaceId={workspaceId} />;
-            case 'annotations':
-                return <AnnotationsPanelContent workspaceId={workspaceId} />;
-            case 'cursors':
-                return <CursorsPanelContent workspaceId={workspaceId} onNavigateToPanel={handleNavigateToPanel} />;
-            case 'bookmarks':
-                return <BookmarksFiltersPanelContent workspaceId={workspaceId} />;
-            default:
-                return <PlaceholderContent tab={TABS[0]} />;
-        }
-    }, [activeTab, workspaceId, currentTab, handleNavigateToPanel]);
-
     return (
         <div className="left-panel" data-collapsed={isCollapsed}>
             {/* Activity Bar - Always visible */}
             <ActivityBar
-                tabs={TABS}
+                tabs={LEFT_PANEL_TABS}
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
                 onTogglePanel={onToggle}
                 isPanelOpen={!isCollapsed}
+                dividersAfter={LEFT_PANEL_DIVIDERS_AFTER}
             />
 
             {/* Content Panel - Hidden when collapsed */}
@@ -274,7 +207,14 @@ export function LeftPanel({
                     data-active-tab={activeTab}
                     data-color={currentTab.color}
                 >
-                    {renderContent()}
+                    {/* 
+                     * Tab content - rendered via centralized registry
+                     * NO switch statement here - all routing handled by renderLeftPanelTabContent
+                     */}
+                    {renderLeftPanelTabContent(activeTab, {
+                        workspaceId,
+                        onNavigateToPanel: handleNavigateToPanel,
+                    })}
                 </div>
             )}
         </div>
@@ -285,13 +225,21 @@ export function LeftPanel({
 // EXPORTS
 // =============================================================================
 
-// Tab configuration
-export { TABS as LEFT_PANEL_TABS };
-
-// Monolithic component (activity bar + content combined) - exported above via `export function`
+// Default export - monolithic component
 export default LeftPanel;
 
+// Re-export tab config from context (DO NOT define locally)
+export { LEFT_PANEL_TABS } from './LeftPanelContext';
+
 // Separated components (activity bar and content in separate grid cells)
-export { LeftPanelProvider, useLeftPanelContext } from './LeftPanelContext';
+export {
+    LeftPanelProvider,
+    useLeftPanelContext,
+    LEFT_PANEL_DIVIDERS_AFTER,
+    LEFT_PANEL_SHORTCUTS,
+    renderLeftPanelTabContent,
+    registerLeftPanelTab,
+} from './LeftPanelContext';
+
 export { LeftActivityBar } from './LeftActivityBar';
 export { LeftPanelContent } from './LeftPanelContent';
