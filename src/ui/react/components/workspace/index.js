@@ -7,7 +7,6 @@ export { CanvasCell } from "./Canvas";
 export { ViewportNavigator } from "./Canvas";
 
 // Workspace hierarchy components
-export { WorkspaceSelector } from "./Workspace";
 export {
   WorkspaceTypeIndicator,
   WorkspaceTypeBadge,

@@ -1,5 +1,4 @@
 // Workspace hierarchy components
-export { WorkspaceSelector } from "./WorkspaceSelector/WorkspaceSelector.jsx";
 export {
   WorkspaceTypeIndicator,
   WorkspaceTypeBadge,
