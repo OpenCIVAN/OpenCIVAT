@@ -1,133 +1,57 @@
-// src/ui/react/components/collaboration/PeoplePanel/CreateRoomModal.scss
-// Modal styling for breakout room creation
+/**
+ * @file CreateRoomModal.scss
+ * @description Styles for CreateRoomModal content.
+ * Modal container, header, and footer are handled by FormModal.
+ */
 @use "theme" as *;
 
 // =============================================================================
-// OVERLAY
+// CONTENT CONTAINER
 // =============================================================================
 
-.create-room-modal__overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: $spacing-lg;
-}
-
-// =============================================================================
-// MODAL CONTAINER
-// =============================================================================
-
-.create-room-modal {
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  background: $color-bg-primary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-lg;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-// =============================================================================
-// HEADER
-// =============================================================================
-
-.create-room-modal__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-md $spacing-lg;
-  border-bottom: 1px solid $color-border-subtle;
-  flex-shrink: 0;
-
-  h3 {
-    margin: 0;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-}
-
-.create-room-modal__close {
-  padding: $spacing-xs;
-  background: transparent;
-  border: none;
-  color: $color-text-tertiary;
-  cursor: pointer;
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-bg-tertiary;
-    color: $color-text-primary;
-  }
-}
-
-// =============================================================================
-// FORM
-// =============================================================================
-
-.create-room-modal__form {
-  flex: 1;
-  overflow-y: auto;
-  padding: $spacing-lg;
+.create-room-modal__content {
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
-  @include glass-scrollable;
 }
 
 // =============================================================================
-// FORM FIELDS
+// SUBMIT ERROR
 // =============================================================================
 
-.create-room-modal__field {
+.create-room-modal__submit-error {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-error, 0.1);
+  border: 1px solid rgba($color-error, 0.3);
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $color-error;
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+// =============================================================================
+// SECTIONS
+// =============================================================================
+
+.create-room-modal__section {
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
+}
 
-  > label {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-  }
-
-  > input[type="text"] {
-    padding: $spacing-sm $spacing-md;
-    background: $color-bg-secondary;
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-sm;
-    color: $color-text-primary;
-    font-size: $font-size-sm;
-    transition: all $transition-fast;
-
-    &::placeholder {
-      color: $color-text-tertiary;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: $color-accent-blue;
-      background: $color-bg-tertiary;
-    }
-
-    &.error {
-      border-color: $color-error;
-    }
-  }
+.create-room-modal__section-label {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
 }
 
 .create-room-modal__error {
@@ -253,13 +177,30 @@
 // =============================================================================
 
 .create-room-modal__user-search {
-  // Uses same styles as other inputs from .create-room-modal__field
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  transition: all $transition-fast;
+
+  &::placeholder {
+    color: $color-text-tertiary;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent-blue;
+    background: $color-bg-tertiary;
+  }
 }
 
 .create-room-modal__selected-users {
   display: flex;
   flex-wrap: wrap;
   gap: $spacing-xs;
+  margin-top: $spacing-xs;
 }
 
 .create-room-modal__selected-chip {
@@ -282,12 +223,19 @@
   }
 }
 
+.create-room-modal__chip-remove {
+  font-size: 14px;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
 .create-room-modal__user-list {
   max-height: 150px;
   overflow-y: auto;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-sm;
   background: $color-bg-secondary;
+  margin-top: $spacing-xs;
   @include glass-scrollable;
 }
 
@@ -329,52 +277,4 @@
 .create-room-modal__user-check {
   margin-left: auto;
   color: $color-accent-blue;
-}
-
-// =============================================================================
-// ACTIONS
-// =============================================================================
-
-.create-room-modal__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $spacing-sm;
-  padding-top: $spacing-md;
-  border-top: 1px solid $color-border-subtle;
-  margin-top: auto;
-}
-
-.create-room-modal__btn {
-  padding: $spacing-sm $spacing-lg;
-  border-radius: $radius-sm;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &--cancel {
-    background: transparent;
-    border: 1px solid $color-border-subtle;
-    color: $color-text-secondary;
-
-    &:hover {
-      background: $color-bg-tertiary;
-      border-color: $color-border-medium;
-    }
-  }
-
-  &--create {
-    background: $color-accent-blue;
-    border: none;
-    color: white;
-
-    &:hover {
-      background: $color-accent-primary-hover;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
 }

@@ -1,5 +1,10 @@
-// FloatingAnnotationCreator.scss
-// Draggable floating annotation creator - CIA Web moonlight theme
+/**
+ * @file FloatingAnnotationCreator.scss
+ * @description Styles for the FloatingAnnotationCreator component.
+ * Draggable floating panel for creating annotations.
+ * Uses BEM naming convention and CIA Web moonlight theme.
+ */
+
 @use "theme" as *;
 
 .floating-annotation-creator {

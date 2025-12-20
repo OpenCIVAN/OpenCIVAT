@@ -1,15 +1,32 @@
 /**
- * ViewSettingsModal Component
+ * @file ViewSettingsModal.jsx
+ * @description Comprehensive settings modal for ViewItem configuration.
+ * Uses the base Modal component for consistent styling and behavior.
  *
- * Comprehensive settings modal for ViewItem configuration.
- * Acts as the "one-stop shop" where everything from context menu
- * and sliding panel is also accessible.
+ * Features:
+ * - Inline name editing with double-click
+ * - Quick action toggles (star, save state, lock)
+ * - Multiple collapsible sections
+ * - Sharing management
+ * - Canvas size selection
+ * - Link properties configuration
+ * - Annotation display filters
+ * - Display options
+ * - Danger zone with delete
+ *
+ * @example
+ * <ViewSettingsModal
+ *   isOpen={showSettings}
+ *   view={selectedView}
+ *   dataset={viewDataset}
+ *   onClose={() => setShowSettings(false)}
+ *   onRename={handleRename}
+ *   onTrash={handleDelete}
+ * />
  */
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import {
-    X,
     Settings,
     Folder,
     Globe,
@@ -31,7 +48,11 @@ import {
     Trash2,
     Copy,
     Pencil,
+    X,
 } from 'lucide-react';
+
+import { Modal } from '@UI/react/components/modals/Modal';
+
 import './ViewSettingsModal.scss';
 
 // Link property configuration
@@ -44,6 +65,7 @@ const LINK_PROPERTIES = [
 ];
 
 export function ViewSettingsModal({
+    isOpen,
     view,
     dataset,
     availableViews = [],
@@ -147,46 +169,61 @@ export function ViewSettingsModal({
         onUpdateSharing?.(updated);
     };
 
-    const modalContent = (
-        <div className="view-settings-modal-backdrop" onClick={onClose}>
-            <div className="view-settings-modal" onClick={(e) => e.stopPropagation()}>
-                {/* Header with double-click rename */}
-                <div className="view-settings-modal__header">
-                    <Settings size={20} className="view-settings-modal__header-icon" />
-                    <div className="view-settings-modal__header-content">
-                        {isEditingName ? (
-                            <input
-                                ref={nameInputRef}
-                                type="text"
-                                className="view-settings-modal__name-input"
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                onBlur={handleNameSubmit}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleNameSubmit();
-                                    if (e.key === 'Escape') {
-                                        setEditName(view.name);
-                                        setIsEditingName(false);
-                                    }
-                                }}
-                            />
-                        ) : (
-                            <div
-                                className="view-settings-modal__name"
-                                onDoubleClick={() => setIsEditingName(true)}
-                                title="Double-click to rename"
-                            >
-                                <span>{editName}</span>
-                                <Pencil size={10} className="view-settings-modal__name-hint" />
-                            </div>
-                        )}
-                        <span className="view-settings-modal__subtitle">
-                            {isEditingName ? 'Press Enter to save' : 'Double-click to rename'}
-                        </span>
-                    </div>
-                    <button className="view-settings-modal__close" onClick={onClose}>
-                        <X size={16} />
-                    </button>
+    // ---------------------------------------------------------------------------
+    // RENDER FOOTER
+    // ---------------------------------------------------------------------------
+
+    const renderFooter = () => (
+        <button className="view-settings-modal__footer-btn" onClick={onClose}>
+            Close
+        </button>
+    );
+
+    // ---------------------------------------------------------------------------
+    // RENDER
+    // ---------------------------------------------------------------------------
+
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="View Settings"
+            icon={Settings}
+            size="md"
+            footer={renderFooter()}
+        >
+            <div className="view-settings-modal">
+                {/* Editable Name Section */}
+                <div className="view-settings-modal__name-section">
+                    {isEditingName ? (
+                        <input
+                            ref={nameInputRef}
+                            type="text"
+                            className="view-settings-modal__name-input"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onBlur={handleNameSubmit}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleNameSubmit();
+                                if (e.key === 'Escape') {
+                                    setEditName(view.name);
+                                    setIsEditingName(false);
+                                }
+                            }}
+                        />
+                    ) : (
+                        <div
+                            className="view-settings-modal__name"
+                            onDoubleClick={() => setIsEditingName(true)}
+                            title="Double-click to rename"
+                        >
+                            <span>{editName}</span>
+                            <Pencil size={10} className="view-settings-modal__name-hint" />
+                        </div>
+                    )}
+                    <span className="view-settings-modal__subtitle">
+                        {isEditingName ? 'Press Enter to save' : 'Double-click to rename'}
+                    </span>
                 </div>
 
                 {/* Quick Actions Bar */}
@@ -229,8 +266,8 @@ export function ViewSettingsModal({
                     />
                 </div>
 
-                {/* Content */}
-                <div className="view-settings-modal__content">
+                {/* Sections */}
+                <div className="view-settings-modal__sections">
                     {/* Source Dataset */}
                     <ModalSection icon={Layers} title="Source Dataset">
                         <div className="view-settings-modal__dataset">
@@ -342,8 +379,8 @@ export function ViewSettingsModal({
                                     <button
                                         key={`${row}x${col}`}
                                         className={`view-settings-modal__size-btn ${row === (view.rowSpan || 1) && col === (view.colSpan || 1)
-                                                ? 'view-settings-modal__size-btn--active'
-                                                : ''
+                                            ? 'view-settings-modal__size-btn--active'
+                                            : ''
                                             }`}
                                         onClick={() => onSizeChange?.({ rows: row, cols: col })}
                                     >
@@ -500,18 +537,9 @@ export function ViewSettingsModal({
                         </p>
                     </ModalSection>
                 </div>
-
-                {/* Footer */}
-                <div className="view-settings-modal__footer">
-                    <button className="view-settings-modal__footer-btn" onClick={onClose}>
-                        Close
-                    </button>
-                </div>
             </div>
-        </div>
+        </Modal>
     );
-
-    return createPortal(modalContent, document.body);
 }
 
 // Quick Toggle Button

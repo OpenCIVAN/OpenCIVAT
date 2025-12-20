@@ -48,7 +48,7 @@ import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { dataset as log } from '@Utils/logger.js';
 import { ViewItem } from './ViewItem/ViewItem.jsx';
-import { DatasetSettingsModal } from './DatasetSettingsModal';
+import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
 import './DatasetsTab.scss';
 
 // =============================================================================
@@ -263,15 +263,14 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
             )}
 
             {/* Settings Modal */}
-            {showSettingsModal && (
-                <DatasetSettingsModal
-                    dataset={dataset}
-                    views={views}
-                    onClose={() => setShowSettingsModal(false)}
-                    onCreateView={handleCreateView}
-                    onUnloadDataset={handleUnloadDataset}
-                />
-            )}
+            <DatasetSettingsModal
+                isOpen={showSettingsModal}
+                dataset={dataset}
+                views={views}
+                onClose={() => setShowSettingsModal(false)}
+                onCreateView={handleCreateView}
+                onUnloadDataset={handleUnloadDataset}
+            />
         </div>
     );
 }

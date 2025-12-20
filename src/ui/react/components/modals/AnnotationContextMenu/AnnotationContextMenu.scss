@@ -1,5 +1,10 @@
-// AnnotationContextMenu.scss
-// Context menu for annotation actions - CIA Web moonlight theme
+/**
+ * @file AnnotationContextMenu.scss
+ * @description Styles for the AnnotationContextMenu component.
+ * Context menu that appears on right-click of annotations.
+ * Uses BEM naming convention and CIA Web moonlight theme.
+ */
+
 @use "theme" as *;
 
 .annotation-context-menu {

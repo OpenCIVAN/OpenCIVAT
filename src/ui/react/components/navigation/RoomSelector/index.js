@@ -2,4 +2,3 @@
 export { RoomSelector } from "./RoomSelector.jsx";
 export { default } from "./RoomSelector.jsx";
 export { useRoomSelector, useRooms } from "./RoomSelector.logic.js";
-export { CreateRoomModal } from "./CreateRoomModal.jsx";

@@ -1,2 +1,7 @@
-export { AnnotationContextMenu } from "./AnnotationContextMenu.jsx";
-export { default } from "./AnnotationContextMenu.jsx";
+/**
+ * @file index.js
+ * @description Public exports for the AnnotationContextMenu component.
+ */
+
+export { AnnotationContextMenu } from "./AnnotationContextMenu";
+export { default } from "./AnnotationContextMenu";

@@ -1,2 +1,7 @@
-export { FloatingAnnotationCreator } from "./FloatingAnnotationCreator.jsx";
-export { default } from "./FloatingAnnotationCreator.jsx";
+/**
+ * @file index.js
+ * @description Public exports for the FloatingAnnotationCreator component.
+ */
+
+export { FloatingAnnotationCreator } from "./FloatingAnnotationCreator";
+export { default } from "./FloatingAnnotationCreator";

@@ -1,11 +1,28 @@
-// src/ui/react/components/modals/WorkspacePickerModal/WorkspacePickerModal.jsx
-// Modal for selecting workspace when switching rooms
-// Shows workspaces grouped by scope, filtered for target room
+/**
+ * @file WorkspacePickerModal.jsx
+ * @description Modal for selecting workspace when switching rooms.
+ * Uses the base Modal component for consistent styling and behavior.
+ *
+ * Features:
+ * - Grouped workspace lists (Personal, Room, Project)
+ * - Online presence indicators per workspace
+ * - Last-used workspace memory per room
+ * - Auto-enter when no workspaces available
+ * - Double-click for quick selection
+ *
+ * @example
+ * <WorkspacePickerModal
+ *   isOpen={showPicker}
+ *   targetRoom={{ roomId: 'room-1', roomName: 'Team Room' }}
+ *   groupedWorkspaces={{ personal: [], room: [], project: [] }}
+ *   onConfirm={(workspaceId) => switchWorkspace(workspaceId)}
+ *   onSkip={() => enterRoomWithoutSwitch()}
+ *   onCancel={() => setShowPicker(false)}
+ * />
+ */
 
 import React, { memo, useMemo, useCallback, useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import {
-    X,
     User,
     Briefcase,
     Globe,
@@ -13,8 +30,12 @@ import {
     ChevronRight,
     Plus,
     ArrowRight,
+    Layout,
 } from 'lucide-react';
+
+import { Modal } from '@UI/react/components/modals/Modal';
 import { useWorkspacePresence } from '@UI/react/hooks/useRoomPresence.js';
+
 import './WorkspacePickerModal.scss';
 
 // Key for localStorage
@@ -278,52 +299,68 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
         }
     }, [onCreateWorkspace, targetRoom, onConfirm]);
 
-    // Keyboard handling
+    // Keyboard handling for Enter key (Escape is handled by Modal)
     useEffect(() => {
         if (!isOpen) return;
 
         const handleKeyDown = (e) => {
-            if (e.key === 'Escape') {
-                onCancel?.();
-            } else if (e.key === 'Enter' && selectedWorkspace) {
+            if (e.key === 'Enter' && selectedWorkspace) {
+                e.preventDefault();
                 handleConfirm();
             }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, selectedWorkspace, handleConfirm, onCancel]);
+    }, [isOpen, selectedWorkspace, handleConfirm]);
 
-    // Don't render if closed or if we're auto-entering (no workspaces)
-    if (!isOpen || totalWorkspaces === 0) return null;
+    // Don't render if we're auto-entering (no workspaces)
+    // Modal handles the isOpen check internally
+    if (totalWorkspaces === 0) return null;
 
-    return createPortal(
-        <div className="workspace-picker__overlay" onClick={onCancel}>
-            <div
-                className="workspace-picker"
-                onClick={(e) => e.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="workspace-picker-title"
+    // ---------------------------------------------------------------------------
+    // RENDER FOOTER
+    // ---------------------------------------------------------------------------
+
+    const renderFooter = () => (
+        <>
+            <button
+                className="workspace-picker__btn workspace-picker__btn--skip"
+                onClick={onSkip}
             >
-                {/* Header */}
-                <div className="workspace-picker__header">
-                    <div className="workspace-picker__header-content">
-                        <h3 id="workspace-picker-title">Choose Workspace</h3>
-                        <p className="workspace-picker__subtitle">
-                            Entering <strong>{targetRoom?.roomName || 'room'}</strong>
-                        </p>
-                    </div>
-                    <button
-                        className="workspace-picker__close"
-                        onClick={onCancel}
-                        aria-label="Cancel"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
+                Keep Current
+            </button>
+            <button
+                className="workspace-picker__btn workspace-picker__btn--confirm"
+                onClick={handleConfirm}
+                disabled={!selectedWorkspace}
+            >
+                <span>Open Workspace</span>
+                <ArrowRight size={14} />
+            </button>
+        </>
+    );
 
-                {/* Body - Workspace Groups */}
+    // ---------------------------------------------------------------------------
+    // RENDER
+    // ---------------------------------------------------------------------------
+
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onCancel}
+            title="Choose Workspace"
+            icon={Layout}
+            size="md"
+            footer={renderFooter()}
+        >
+            <div className="workspace-picker__content">
+                {/* Subtitle */}
+                <p className="workspace-picker__subtitle">
+                    Entering <strong>{targetRoom?.roomName || 'room'}</strong>
+                </p>
+
+                {/* Workspace Groups */}
                 <div className="workspace-picker__body">
                     <WorkspaceGroup
                         title="My Workspaces"
@@ -363,27 +400,8 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
                         </button>
                     )}
                 </div>
-
-                {/* Footer - Actions */}
-                <div className="workspace-picker__footer">
-                    <button
-                        className="workspace-picker__btn workspace-picker__btn--skip"
-                        onClick={onSkip}
-                    >
-                        Keep Current
-                    </button>
-                    <button
-                        className="workspace-picker__btn workspace-picker__btn--confirm"
-                        onClick={handleConfirm}
-                        disabled={!selectedWorkspace}
-                    >
-                        <span>Open Workspace</span>
-                        <ArrowRight size={14} />
-                    </button>
-                </div>
             </div>
-        </div>,
-        document.body
+        </Modal>
     );
 });
 

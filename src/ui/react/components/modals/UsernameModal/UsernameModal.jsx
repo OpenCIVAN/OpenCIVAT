@@ -1,10 +1,40 @@
-// src/ui/react/components/modals/UsernameModal.jsx
-// Username prompt modal with glassmorphism theme
+/**
+ * @file UsernameModal.jsx
+ * @description Entry-point modal for username input with branded glassmorphism theme.
+ *
+ * This is a special modal shown at application entry before the user joins
+ * the collaborative session. It has intentionally different styling from
+ * in-app modals to create a branded "landing" experience.
+ *
+ * Features:
+ * - Branded header with logo and app name
+ * - Username validation (2-20 characters)
+ * - Glassmorphism styling with accent glow
+ * - Auto-focus on input
+ *
+ * Note: This component does NOT use the base Modal component because it has
+ * unique branding requirements and appears before the main app loads.
+ *
+ * @example
+ * <UsernameModal onSubmit={(username) => joinSession(username)} />
+ */
 
-import React, { useState, useEffect, useRef } from "react";
-import { User } from "lucide-react";
-import "./UsernameModal.scss";
+import React, { useState, useEffect, useRef } from 'react';
+import { User } from 'lucide-react';
+import './UsernameModal.scss';
 
+/**
+ * @typedef {Object} UsernameModalProps
+ * @property {(username: string) => void} onSubmit - Callback with validated username
+ */
+
+/**
+ * Entry-point modal for username input.
+ * Shown at application entry before joining the collaborative session.
+ *
+ * @param {UsernameModalProps} props - Component props
+ * @returns {React.ReactElement} The modal element
+ */
 export function UsernameModal({ onSubmit }) {
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");

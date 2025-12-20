@@ -10,7 +10,7 @@
 import React, { useState, useCallback } from 'react';
 import { useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { SubsetCard } from '../SubsetCard';
-import { CreateSubsetDialog } from '../CreateSubsetDialog';
+import { CreateSubsetDialog } from '@UI/react/components/modals/CreateSubsetDialog';
 import './SubsetPanel.scss';
 
 /**
@@ -179,13 +179,12 @@ export function SubsetPanel({ canvasId, currentViewport }) {
             </div>
 
             {/* Create subset dialog */}
-            {showCreateDialog && (
-                <CreateSubsetDialog
-                    selectedCount={selectedIds.length}
-                    onConfirm={handleCreateSubset}
-                    onCancel={() => setShowCreateDialog(false)}
-                />
-            )}
+            <CreateSubsetDialog
+                isOpen={showCreateDialog}
+                selectedCount={selectedIds.length}
+                onConfirm={handleCreateSubset}
+                onCancel={() => setShowCreateDialog(false)}
+            />
         </div>
     );
 }

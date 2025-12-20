@@ -1,86 +1,26 @@
-// src/ui/react/components/modals/WorkspacePickerModal/WorkspacePickerModal.scss
+/**
+ * @file WorkspacePickerModal.scss
+ * @description Styles for WorkspacePickerModal content.
+ * Modal container, header, and backdrop are handled by base Modal component.
+ */
 @use "theme" as *;
 
 // =============================================================================
-// OVERLAY
+// CONTENT CONTAINER
 // =============================================================================
 
-.workspace-picker__overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: $spacing-lg;
-  animation: fadeIn 0.15s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-// =============================================================================
-// MODAL CONTAINER
-// =============================================================================
-
-.workspace-picker {
-  width: 100%;
-  max-width: 480px;
-  max-height: 80vh;
-  background: $color-bg-primary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-lg;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+.workspace-picker__content {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  animation: slideUp 0.2s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  gap: $spacing-md;
 }
 
 // =============================================================================
-// HEADER
+// SUBTITLE
 // =============================================================================
-
-.workspace-picker__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: $spacing-lg;
-  border-bottom: 1px solid $color-border-subtle;
-  flex-shrink: 0;
-}
-
-.workspace-picker__header-content {
-  h3 {
-    margin: 0;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-}
 
 .workspace-picker__subtitle {
-  margin: $spacing-xs 0 0 0;
+  margin: 0;
   font-size: $font-size-sm;
   color: $color-text-tertiary;
 
@@ -90,53 +30,17 @@
   }
 }
 
-.workspace-picker__close {
-  padding: $spacing-xs;
-  background: transparent;
-  border: none;
-  color: $color-text-tertiary;
-  cursor: pointer;
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-bg-tertiary;
-    color: $color-text-primary;
-  }
-}
-
 // =============================================================================
 // BODY
 // =============================================================================
 
 .workspace-picker__body {
-  flex: 1;
-  overflow-y: auto;
-  padding: $spacing-md $spacing-lg;
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
-
-  // Custom scrollbar
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: $color-border-medium;
-    border-radius: $radius-sm;
-
-    &:hover {
-      background: $color-border-strong;
-    }
-  }
+  max-height: 400px;
+  overflow-y: auto;
+  @include glass-scrollable;
 }
 
 // =============================================================================
@@ -289,18 +193,8 @@
 }
 
 // =============================================================================
-// FOOTER
+// FOOTER BUTTONS
 // =============================================================================
-
-.workspace-picker__footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $spacing-sm;
-  padding: $spacing-md $spacing-lg;
-  border-top: 1px solid $color-border-subtle;
-  background: $color-bg-secondary;
-}
 
 .workspace-picker__btn {
   display: flex;

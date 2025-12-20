@@ -1,4 +1,10 @@
-// src/ui/react/components/modals/UsernameModal.scss
+/**
+ * @file UsernameModal.scss
+ * @description Styles for the UsernameModal entry-point component.
+ * Features branded glassmorphism styling with accent glows.
+ * Uses BEM naming convention.
+ */
+
 @use "theme" as *;
 
 .username-modal {

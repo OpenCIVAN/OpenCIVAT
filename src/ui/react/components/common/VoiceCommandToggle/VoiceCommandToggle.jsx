@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Mic, MicOff, HelpCircle } from "lucide-react";
 import { useVoiceCommands } from "@UI/react/hooks/useVoiceCommands.js";
-import { VoiceCommandHelp } from "@UI/react/components/overlays/VoiceCommandHelp";
+import { VoiceCommandHelp } from "@UI/react/components/modals/VoiceCommandHelp";
 import "./VoiceCommandToggle.scss";
 
 /**

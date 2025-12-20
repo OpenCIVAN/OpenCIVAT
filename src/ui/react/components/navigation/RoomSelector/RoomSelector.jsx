@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useRoomSelector } from './RoomSelector.logic.js';
 import { useRoomUserCount } from '@UI/react/hooks/useRoomPresence.js';
-import CreateRoomModal from './CreateRoomModal.jsx';
+import { CreateRoomModal } from '@UI/react/components/modals/CreateRoomModal';
 import './RoomSelector.scss';
 
 /**
@@ -178,8 +178,10 @@ export const RoomSelector = memo(function RoomSelector({
             {/* Create Room Modal */}
             {showCreateModal && (
                 <CreateRoomModal
+                    isOpen={showCreateModal}
                     onClose={closeCreateModal}
                     onCreate={createRoom}
+                    availableUsers={[]} // Add if needed
                 />
             )}
         </div>

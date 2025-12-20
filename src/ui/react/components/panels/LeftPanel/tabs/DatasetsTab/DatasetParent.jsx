@@ -5,7 +5,7 @@ import React, { useState, useCallback } from 'react';
 import { ChevronDown, ChevronRight, MoreHorizontal, Settings } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
-import { DatasetSettingsModal } from './DatasetSettingsModal';
+import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
 
 /**
  * Get display configuration for a dataset based on its file type
@@ -114,15 +114,14 @@ export function DatasetParent({
             )}
 
             {/* Settings Modal */}
-            {showSettingsModal && (
-                <DatasetSettingsModal
-                    dataset={dataset}
-                    views={views}
-                    onClose={() => setShowSettingsModal(false)}
-                    onCreateView={onCreateView}
-                    onUnloadDataset={onUnloadDataset}
-                />
-            )}
+            <DatasetSettingsModal
+                isOpen={showSettingsModal}
+                dataset={dataset}
+                views={views}
+                onClose={() => setShowSettingsModal(false)}
+                onCreateView={onCreateView}
+                onUnloadDataset={onUnloadDataset}
+            />
         </div>
     );
 }

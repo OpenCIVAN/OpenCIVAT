@@ -1,85 +1,31 @@
-// ViewSettingsModal.scss
-// Comprehensive settings modal for ViewItem
-// Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/components/ViewSettingsModal.scss
+/**
+ * @file ViewSettingsModal.scss
+ * @description Styles for ViewSettingsModal content.
+ * Modal container, backdrop, and base footer are handled by base Modal component.
+ */
 
 @use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
-// BACKDROP
-// =============================================================================
-
-.view-settings-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: $z-modal;
-  animation: backdrop-in 0.2s ease-out;
-}
-
-@keyframes backdrop-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-// =============================================================================
-// MODAL CONTAINER
+// CONTENT CONTAINER
 // =============================================================================
 
 .view-settings-modal {
-  width: 100%;
-  max-width: 440px;
-  max-height: 90vh;
-  background: $color-bg-elevated;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-glass-lg;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  animation: modal-in 0.2s ease-out;
-}
-
-@keyframes modal-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-// =============================================================================
-// HEADER
-// =============================================================================
-
-.view-settings-modal__header {
-  display: flex;
-  align-items: center;
   gap: $spacing-md;
-  padding: $spacing-lg $spacing-xl;
-  border-bottom: 1px solid $color-border-default;
-  background: $color-bg-tertiary;
 }
 
-.view-settings-modal__header-icon {
-  color: $color-accent-blue;
-  flex-shrink: 0;
-}
+// =============================================================================
+// NAME SECTION (Editable title)
+// =============================================================================
 
-.view-settings-modal__header-content {
-  flex: 1;
-  min-width: 0;
+.view-settings-modal__name-section {
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
 }
 
 .view-settings-modal__name {
@@ -124,25 +70,6 @@
   margin-top: 2px;
 }
 
-.view-settings-modal__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: none;
-  border-radius: $radius-sm;
-  color: $color-text-muted;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-glass-light;
-    color: $color-text-primary;
-  }
-}
-
 // =============================================================================
 // QUICK ACTIONS BAR
 // =============================================================================
@@ -151,9 +78,10 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 10px $spacing-xl;
-  border-bottom: 1px solid $color-border-default;
+  padding: $spacing-sm $spacing-md;
   background: $color-bg-secondary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
 }
 
 .view-settings-modal__quick-label {
@@ -210,25 +138,24 @@
 }
 
 // =============================================================================
-// CONTENT
+// SECTIONS CONTAINER
 // =============================================================================
 
-.view-settings-modal__content {
-  flex: 1;
+.view-settings-modal__sections {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+  max-height: 400px;
   overflow-y: auto;
-  padding: $spacing-lg;
+  @include glass-scrollable;
 }
 
 // =============================================================================
-// SECTIONS
+// SECTION
 // =============================================================================
 
 .view-settings-modal__section {
-  margin-bottom: $spacing-lg;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
+  // No margin needed, gap handles spacing
 }
 
 .view-settings-modal__section-header {
@@ -405,7 +332,7 @@
   transition: background $transition-fast;
 
   &:hover {
-    background: color.adjust($color-accent-pink, $lightness: 5%)
+    background: color.adjust($color-accent-pink, $lightness: 5%);
   }
 }
 
@@ -543,7 +470,7 @@
     color: white;
 
     &:hover {
-      background: color.adjust($color-accent-blue, $lightness: 5%)
+      background: color.adjust($color-accent-blue, $lightness: 5%);
     }
   }
 }
@@ -856,16 +783,8 @@
 }
 
 // =============================================================================
-// FOOTER
+// FOOTER BUTTON
 // =============================================================================
-
-.view-settings-modal__footer {
-  padding: $spacing-md $spacing-lg;
-  border-top: 1px solid $color-border-default;
-  display: flex;
-  justify-content: flex-end;
-  gap: $spacing-sm;
-}
 
 .view-settings-modal__footer-btn {
   padding: $spacing-sm $spacing-lg;

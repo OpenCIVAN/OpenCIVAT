@@ -1,270 +1,232 @@
-import React, { useState, useEffect, useRef } from "react";
-import { toast } from "@UI/react/store/toastStore.js";
+/**
+ * @file AnnotationModal.jsx
+ * @description Modal dialog for creating annotations on 3D data.
+ *
+ * This is a simpler alternative to FloatingAnnotationCreator for basic
+ * annotation creation. It provides type selection and text input in a
+ * centered modal dialog.
+ *
+ * Features:
+ * - Annotation type selection (note, warning, info, measurement)
+ * - Text input with keyboard shortcuts
+ * - Optional "don't show again" checkbox for instructions
+ * - Position display showing 3D coordinates
+ *
+ * @example
+ * <AnnotationModal
+ *     isOpen={showModal}
+ *     onClose={() => setShowModal(false)}
+ *     onSubmit={(text, type) => createAnnotation(text, type)}
+ *     position={{ x: 1.5, y: 2.3, z: -0.8 }}
+ * />
+ */
 
-export function AnnotationModal({ isOpen, onClose, onSubmit, position }) {
-  const [text, setText] = useState("");
-  const [type, setType] = useState("note");
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Modal } from '@UI/react/components/modals/Modal';
+import { MapPin } from 'lucide-react';
+import './AnnotationModal.scss';
+
+/**
+ * Annotation type configuration
+ * @type {Array<{value: string, label: string, color: string, icon: string}>}
+ */
+const ANNOTATION_TYPES = [
+  { value: 'note', label: 'Note', color: 'note', icon: '📝' },
+  { value: 'warning', label: 'Warning', color: 'warning', icon: '⚠️' },
+  { value: 'info', label: 'Info', color: 'info', icon: 'ℹ️' },
+  { value: 'measurement', label: 'Measure', color: 'measurement', icon: '📏' },
+];
+
+/**
+ * @typedef {Object} AnnotationModalProps
+ * @property {boolean} isOpen - Whether modal is visible
+ * @property {() => void} onClose - Callback when modal should close
+ * @property {(text: string, type: string) => void} onSubmit - Callback with annotation text and type
+ * @property {{x: number, y: number, z: number}} [position] - 3D position for the annotation
+ */
+
+/**
+ * Modal dialog for creating annotations on 3D data.
+ *
+ * @param {AnnotationModalProps} props - Component props
+ * @returns {React.ReactElement|null} The modal element or null if closed
+ */
+export function AnnotationModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  position
+}) {
+  const [text, setText] = useState('');
+  const [type, setType] = useState('note');
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const inputRef = useRef(null);
 
+  // Focus input when modal opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+      // Small delay to ensure modal animation completes
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setText('');
+      setType('note');
+    }
+  }, [isOpen]);
 
-  const handleSubmit = () => {
+  /**
+   * Handles form submission
+   */
+  const handleSubmit = useCallback(() => {
     if (!text.trim()) {
-      toast.info("Please enter annotation text");
       return;
     }
 
     if (dontShowAgain) {
-      localStorage.setItem("annotation_skip_instructions", "true");
+      localStorage.setItem('annotation_skip_instructions', 'true');
     }
 
-    onSubmit(text, type);
-    setText("");
-    setType("note");
+    onSubmit(text.trim(), type);
+    setText('');
+    setType('note');
     setDontShowAgain(false);
-  };
+  }, [text, type, dontShowAgain, onSubmit]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  /**
+   * Handles keyboard shortcuts
+   * @param {React.KeyboardEvent} e - Keyboard event
+   */
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
-    } else if (e.key === "Escape") {
-      onClose();
     }
+  }, [handleSubmit]);
+
+  /**
+   * Formats a coordinate value for display
+   * @param {number} value - Coordinate value
+   * @returns {string} Formatted value
+   */
+  const formatCoord = (value) => {
+    return typeof value === 'number' ? value.toFixed(2) : '0.00';
   };
 
-  return (
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 10000
-    }}>
-      <div style={{
-        backgroundColor: "#2a2a2a",
-        border: "2px solid #4CAF50",
-        borderRadius: "8px",
-        padding: "24px",
-        maxWidth: "500px",
-        width: "90%",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.5)"
-      }}>
-        {/* Header */}
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px"
-        }}>
-          <h3 style={{
-            margin: 0,
-            fontSize: "18px",
-            fontWeight: "600",
-            color: "#4CAF50"
-          }}>
-            📍 Create Annotation
-          </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#999",
-              fontSize: "24px",
-              cursor: "pointer",
-              padding: "0 8px"
-            }}
-          >
-            ×
-          </button>
-        </div>
+  // Render footer with submit button
+  const renderFooter = () => (
+    <>
+      <button
+        className="btn btn--secondary"
+        onClick={onClose}
+      >
+        Cancel
+      </button>
+      <button
+        className="btn btn--primary"
+        onClick={handleSubmit}
+        disabled={!text.trim()}
+      >
+        <MapPin size={14} />
+        Create Annotation
+      </button>
+    </>
+  );
 
-        {/* Position Info */}
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create Annotation"
+      icon={MapPin}
+      size="sm"
+      footer={renderFooter()}
+    >
+      <div className="annotation-modal">
+        {/* Position display */}
         {position && (
-          <div style={{
-            fontSize: "11px",
-            color: "#666",
-            marginBottom: "16px",
-            fontFamily: "monospace"
-          }}>
-            Position: ({position.x.toFixed(2)}, {position.y.toFixed(2)}, {position.z.toFixed(2)})
+          <div className="annotation-modal__position">
+            <span className="label">Position:</span>
+            <span className="coord">
+              <span>X</span> {formatCoord(position.x)}
+            </span>
+            <span className="coord">
+              <span>Y</span> {formatCoord(position.y)}
+            </span>
+            <span className="coord">
+              <span>Z</span> {formatCoord(position.z)}
+            </span>
           </div>
         )}
 
-        {/* Type Selection */}
-        <div style={{ marginBottom: "16px" }}>
-          <div style={{
-            fontSize: "12px",
-            color: "#aaa",
-            marginBottom: "8px",
-            fontWeight: "600"
-          }}>
-            TYPE
-          </div>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {[
-              { value: "note", label: "📝 Note", color: "#4CAF50", shape: "Sphere" },
-              { value: "warning", label: "⚠️ Warning", color: "#FFA726", shape: "Cone" },
-              { value: "info", label: "ℹ️ Info", color: "#2196F3", shape: "Cube" },
-              { value: "measurement", label: "📏 Measurement", color: "#9C27B0", shape: "Cylinder" }
-            ].map((t) => (
-              <button
-                key={t.value}
-                onClick={() => setType(t.value)}
-                style={{
-                  flex: "1 1 calc(50% - 4px)",
-                  padding: "12px",
-                  backgroundColor: type === t.value ? t.color + "22" : "#1a1a1a",
-                  border: `2px solid ${type === t.value ? t.color : "#333"}`,
-                  borderRadius: "6px",
-                  color: "#e0e0e0",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "4px"
-                }}
-              >
-                <div>{t.label}</div>
-                <div style={{ fontSize: "10px", color: "#666" }}>{t.shape}</div>
-              </button>
-            ))}
-          </div>
+        {/* Type selection */}
+        <div className="annotation-modal__types">
+          {ANNOTATION_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              className={`annotation-modal__type annotation-modal__type--${t.color} ${type === t.value ? 'annotation-modal__type--active' : ''
+                }`}
+              onClick={() => setType(t.value)}
+            >
+              <span className="annotation-modal__type-icon">{t.icon}</span>
+              <span className="annotation-modal__type-label">{t.label}</span>
+            </button>
+          ))}
         </div>
 
-        {/* Text Input */}
-        <div style={{ marginBottom: "16px" }}>
-          <div style={{
-            fontSize: "12px",
-            color: "#aaa",
-            marginBottom: "8px",
-            fontWeight: "600"
-          }}>
-            ANNOTATION TEXT
-          </div>
+        {/* Text input */}
+        <div className="annotation-modal__input-wrapper">
+          <label
+            htmlFor="annotation-text"
+            className="annotation-modal__input-label"
+          >
+            Annotation Text
+          </label>
           <textarea
             ref={inputRef}
+            id="annotation-text"
+            className="annotation-modal__input"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Enter annotation text... (Shift+Enter for new line)"
-            style={{
-              width: "100%",
-              minHeight: "100px",
-              padding: "12px",
-              backgroundColor: "#1a1a1a",
-              border: "1px solid #444",
-              borderRadius: "4px",
-              color: "#e0e0e0",
-              fontSize: "14px",
-              fontFamily: "inherit",
-              resize: "vertical",
-              boxSizing: "border-box"
-            }}
+            placeholder="Enter annotation text..."
+            rows={4}
           />
         </div>
 
-        {/* Don"t show again checkbox */}
-        <div style={{
-          marginBottom: "20px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px"
-        }}>
+        {/* Don't show again checkbox */}
+        <div className="annotation-modal__checkbox-wrapper">
           <input
             type="checkbox"
-            id="dontShowAgain"
+            id="dont-show-again"
+            className="annotation-modal__checkbox"
             checked={dontShowAgain}
             onChange={(e) => setDontShowAgain(e.target.checked)}
-            style={{ cursor: "pointer" }}
           />
           <label
-            htmlFor="dontShowAgain"
-            style={{
-              fontSize: "12px",
-              color: "#999",
-              cursor: "pointer"
-            }}
+            htmlFor="dont-show-again"
+            className="annotation-modal__checkbox-label"
           >
-            Don"t show instructions next time
+            Don't show instructions again
           </label>
         </div>
 
-        {/* Buttons */}
-        <div style={{ display: "flex", gap: "12px" }}>
-          <button
-            onClick={handleSubmit}
-            style={{
-              flex: 1,
-              padding: "12px",
-              backgroundColor: "#2a4a2a",
-              border: "2px solid #4CAF50",
-              borderRadius: "6px",
-              color: "#fff",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#3a5a3a";
-              e.currentTarget.style.transform = "translateY(-2px)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#2a4a2a";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-          >
-            ✓ Create Annotation
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              flex: 1,
-              padding: "12px",
-              backgroundColor: "#1a1a1a",
-              border: "2px solid #666",
-              borderRadius: "6px",
-              color: "#999",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#2a2a2a";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#1a1a1a";
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-
-        {/* Keyboard shortcuts hint */}
-        <div style={{
-          marginTop: "16px",
-          fontSize: "11px",
-          color: "#666",
-          textAlign: "center"
-        }}>
-          Press <kbd style={{ padding: "2px 6px", backgroundColor: "#333", borderRadius: "3px" }}>Enter</kbd> to create
-          or <kbd style={{ padding: "2px 6px", backgroundColor: "#333", borderRadius: "3px" }}>Esc</kbd> to cancel
+        {/* Keyboard hint */}
+        <div className="annotation-modal__hint">
+          <span><kbd>Enter</kbd> to create</span>
+          <span><kbd>Shift+Enter</kbd> for new line</span>
+          <span><kbd>Esc</kbd> to cancel</span>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
+
+export default AnnotationModal;

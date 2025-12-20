@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { SlidingPanel } from './components/SlidingPanel';
 import { ViewItemContextMenu } from './components/ViewItemContextMenu';
-import { ViewSettingsModal } from './components/ViewSettingsModal';
+import { ViewSettingsModal } from '@UI/react/components/modals/ViewSettingsModal';
 // ═══════════════════════════════════════════════════════════════════════════════
 // NEW: Import Thumbnail component for view previews
 // ═══════════════════════════════════════════════════════════════════════════════

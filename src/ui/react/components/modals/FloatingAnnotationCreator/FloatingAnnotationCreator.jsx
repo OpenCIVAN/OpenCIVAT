@@ -1,18 +1,42 @@
-// FloatingAnnotationCreator.jsx
-// A floating draggable menu for creating annotations with coordinate display
-//
-// Features:
-// - Draggable window by header
-// - Shows current coordinates from raycasting
-// - Allows editing position manually
-// - Matches CIA Web moonlight theme
+/**
+ * @file FloatingAnnotationCreator.jsx
+ * @description Draggable floating panel for creating annotations with coordinate display.
+ *
+ * This is a floating draggable window (not a centered modal) that allows users
+ * to create annotations while seeing the 3D view. It displays real-time
+ * coordinates from raycasting and allows manual position editing.
+ *
+ * Features:
+ * - Draggable by header (grab handle)
+ * - Real-time coordinate display from raycasting
+ * - Manual position editing with X/Y/Z inputs
+ * - Annotation type selection (note, warning, info, measurement)
+ * - Keyboard shortcuts (Enter to create, Esc to cancel)
+ *
+ * Note: This component uses createPortal directly (not the base Modal)
+ * because it's a draggable floating panel positioned relative to screen
+ * coordinates, not a centered dialog.
+ *
+ * @example
+ * <FloatingAnnotationCreator
+ *     isOpen={showCreator}
+ *     onClose={() => setShowCreator(false)}
+ *     onSubmit={(text, type, position) => createAnnotation(text, type, position)}
+ *     position={{ x: 1.5, y: 2.3, z: -0.8 }}
+ *     screenPosition={{ x: 200, y: 200 }}
+ *     onPositionChange={handlePositionChange}
+ * />
+ */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, X, Target, Edit3, Check, GripHorizontal } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import './FloatingAnnotationCreator.scss';
 
-// Annotation type options
+/**
+ * Annotation type configuration
+ * @type {Array<{value: string, label: string, color: string, icon: string}>}
+ */
 const ANNOTATION_TYPES = [
     { value: 'note', label: 'Note', color: 'green', icon: '📝' },
     { value: 'warning', label: 'Warning', color: 'amber', icon: '⚠️' },
@@ -20,6 +44,22 @@ const ANNOTATION_TYPES = [
     { value: 'measurement', label: 'Measure', color: 'purple', icon: '📏' },
 ];
 
+/**
+ * @typedef {Object} FloatingAnnotationCreatorProps
+ * @property {boolean} isOpen - Whether the creator is visible
+ * @property {() => void} onClose - Callback when creator should close
+ * @property {(text: string, type: string) => void} onSubmit - Callback with annotation data
+ * @property {{x: number, y: number, z: number}} position - 3D world position
+ * @property {{x: number, y: number}} screenPosition - Initial screen position for window
+ * @property {(position: {x: number, y: number, z: number}) => void} [onPositionChange] - Callback when position is edited
+ */
+
+/**
+ * Draggable floating panel for creating annotations.
+ *
+ * @param {FloatingAnnotationCreatorProps} props - Component props
+ * @returns {React.ReactPortal|null} Portal with creator panel, or null if closed
+ */
 export function FloatingAnnotationCreator({
     isOpen,
     onClose,

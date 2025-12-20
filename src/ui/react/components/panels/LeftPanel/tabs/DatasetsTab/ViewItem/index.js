@@ -4,4 +4,3 @@
 export { ViewItem, default } from "./ViewItem";
 export { SlidingPanel } from "./components/SlidingPanel";
 export { ViewItemContextMenu } from "./components/ViewItemContextMenu";
-export { ViewSettingsModal } from "./components/ViewSettingsModal";
