@@ -36,7 +36,7 @@ import {
 
 import { FormModal } from "@UI/react/components/modals/FormModal";
 import { FormField } from "@UI/react/components/modals/FormModal";
-import { UserAvatar } from "@UI/react/components/collaboration/PeoplePanel";
+import { UserAvatar } from "@UI/react/components/common/UserAvatar";
 
 import "./CreateRoomModal.scss";
 

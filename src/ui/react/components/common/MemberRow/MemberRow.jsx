@@ -35,7 +35,7 @@ import {
     Crown,
 } from 'lucide-react';
 import { PresenceIndicator } from '@UI/react/components/common/PresenceIndicator';
-import { UserAvatar } from '@UI/react/components/collaboration/PeoplePanel/UserAvatar';
+import { UserAvatar } from '@UI/react/components/common/UserAvatar';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 import './MemberRow.scss';
 
