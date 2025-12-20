@@ -101,3 +101,5 @@ export {
   useWorkspaceIndicator,
   useSecondaryBottomBar,
 } from "./useVoiceBar.js";
+
+export { useRoomIndicator } from "./useRoomIndicator.js";

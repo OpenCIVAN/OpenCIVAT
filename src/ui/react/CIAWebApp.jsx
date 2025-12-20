@@ -96,6 +96,7 @@ import { FloatingCanvasNavigator } from "@UI/react/components/panels/LayoutPanel
 // MODALS
 // =============================================================================
 import { WorkspacePickerModal } from "@UI/react/components/modals/WorkspacePickerModal/WorkspacePickerModal.jsx";
+import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
 
 // =============================================================================
 // HOOKS
@@ -112,6 +113,7 @@ import {
 import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
 import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
 import { useInstanceSelector } from "@UI/react/hooks/useInstanceSelector.js";
+import { useRoomIndicator } from "@UI/react/hooks/useRoomIndicator.js";
 
 // =============================================================================
 // MAIN APPLICATION COMPONENT
@@ -178,27 +180,45 @@ export function CIAWebApp({ username, userId, projectId }) {
   } = useInstanceSelector({ workspaceId });
 
   // ===========================================================================
-  // ROOM STATE (Space Navigation)
+  // ROOM STATE (Space Navigation) - Now using useRoomIndicator hook
   // ===========================================================================
-  const [currentRoomId, setCurrentRoomId] = useState(null);
-  const [currentRoomName, setCurrentRoomName] = useState("Main Room");
-  const [pendingRoomChange, setPendingRoomChange] = useState(null);
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
 
-  // Room/workspace transition handling
   const {
-    showWorkspacePicker,
-    handleRoomSelect,
-    handleWorkspaceSelect,
-    handleCreateWorkspaceForRoom,
-    handleCancelWorkspacePicker,
-  } = useRoomWorkspaceTransition({
+    currentRoom,
     currentRoomId,
-    setCurrentRoomId,
-    setCurrentRoomName,
-    pendingRoomChange,
-    setPendingRoomChange,
-    selectWorkspace,
+    currentRoomName,
+    availableRooms,
+    roomMembers,
+    isLoading: isLoadingRooms,
+    switchRoom,
+    createRoom,
+  } = useRoomIndicator({
+    projectId,
+    userId,
+    onRoomChange: (roomId, roomName) => {
+      log.info("Room changed to:", roomName);
+      // Optionally trigger workspace picker for breakout rooms
+    },
   });
+
+  // Room/workspace transition handling (simplified)
+  const handleRoomSelect = useCallback(
+    (roomId, roomName) => {
+      switchRoom(roomId, roomName);
+    },
+    [switchRoom]
+  );
+
+  const handleCreateRoom = useCallback(() => {
+    setShowCreateRoomModal(true);
+  }, []);
+
+  // Callback to open rooms panel in right sidebar
+  const handleOpenRoomsPanel = useCallback(() => {
+    log.debug("Open rooms panel");
+    window.dispatchEvent(new CustomEvent("open:rooms-panel"));
+  }, []);
 
   // ===========================================================================
   // VIEW MODE STATE (Desktop/VR)
@@ -304,12 +324,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   const handleCreateWorkspace = useCallback(() => {
     log.debug("Create new workspace");
     window.dispatchEvent(new CustomEvent("open:new-workspace"));
-  }, []);
-
-  const handleOpenRoomsPanel = useCallback(() => {
-    log.debug("Open rooms panel");
-    // TODO: Open right panel to Rooms tab
-    window.dispatchEvent(new CustomEvent("open:rooms-panel"));
   }, []);
 
   const handleToggleEditMode = useCallback(() => {
@@ -438,17 +452,12 @@ export function CIAWebApp({ username, userId, projectId }) {
     // Right Zone: Room + Presence with dropdown (syncs with right panel width)
     right: (
       <RoomPresenceIndicator
-        room={{ id: currentRoomId, name: currentRoomName, type: "main" }}
-        members={[]} // TODO: Wire to presence system via presenceSystem.getUsersInRoom()
-        availableRooms={
-          [
-            // TODO: Wire to actual rooms from RoomManager
-            // For now, showing structure expected by enhanced component
-          ]
-        }
+        room={currentRoom}
+        members={roomMembers}
+        availableRooms={availableRooms}
         onRoomChange={handleRoomSelect}
         onClick={handleOpenRoomsPanel}
-        onCreateRoom={() => log.debug("Create room")}
+        onCreateRoom={handleCreateRoom}
       />
     ),
   };
@@ -583,7 +592,7 @@ export function CIAWebApp({ username, userId, projectId }) {
             {/* ─────────────────────────────────────────────────────────────
                 MODALS (Rendered outside layout)
                 ───────────────────────────────────────────────────────────── */}
-            {showWorkspacePicker && (
+            {/* {showWorkspacePicker && (
               <WorkspacePickerModal
                 room={pendingRoomChange}
                 workspaces={workspaces}
@@ -591,10 +600,25 @@ export function CIAWebApp({ username, userId, projectId }) {
                 onCreate={handleCreateWorkspaceForRoom}
                 onCancel={handleCancelWorkspacePicker}
               />
-            )}
+            )} */}
           </LayoutPanelProvider>
         </RightPanelProvider>
       </LeftPanelProvider>
+      {/* Create Room Modal */}
+      <CreateRoomModal
+        isOpen={showCreateRoomModal}
+        onClose={() => setShowCreateRoomModal(false)}
+        onCreate={async (roomData) => {
+          try {
+            await createRoom(roomData);
+            setShowCreateRoomModal(false);
+          } catch (error) {
+            log.error("Failed to create room:", error);
+            // Error handling is in the modal
+          }
+        }}
+        availableUsers={roomMembers.filter(m => !m.isYou)}
+      />
     </FloatingPanelProvider>
   );
 }
