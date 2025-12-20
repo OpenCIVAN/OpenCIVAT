@@ -1,5 +1,11 @@
-// src/ui/react/components/collaboration/PeoplePanel/UserAvatar.scss
-// Styling for avatar components
+/**
+ * @file UserAvatar.scss
+ * @description Styles for the UserAvatar and UserAvatarGroup components.
+ * Uses BEM naming convention and design tokens.
+ *
+ * Size variants: xs (20px), sm (28px), md (36px), lg (48px)
+ */
+
 @use "theme" as *;
 
 // =============================================================================
@@ -136,10 +142,10 @@ $avatar-font-lg: 18px;
   border: 2px solid $color-bg-primary;
   border-radius: $radius-full;
   color: $color-text-secondary;
-  font-weight: $font-weight-semibold;
+  font-weight: $font-weight-medium;
   box-sizing: content-box;
 
-  // Size variants
+  // Size-specific dimensions (matches avatar sizes)
   &.user-avatar--xs {
     width: $avatar-size-xs;
     height: $avatar-size-xs;
@@ -162,53 +168,5 @@ $avatar-font-lg: 18px;
     width: $avatar-size-lg;
     height: $avatar-size-lg;
     font-size: $avatar-font-lg;
-  }
-}
-
-// =============================================================================
-// INTERACTIVE STATES
-// =============================================================================
-
-.user-avatar--clickable {
-  cursor: pointer;
-  transition: transform $transition-fast, box-shadow $transition-fast;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-}
-
-// =============================================================================
-// STATUS INDICATOR OVERLAY
-// =============================================================================
-
-.user-avatar--with-status {
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: -1px;
-    right: -1px;
-    width: 10px;
-    height: 10px;
-    border-radius: $radius-full;
-    border: 2px solid $color-bg-primary;
-    background: var(--status-color, $color-success);
-  }
-
-  &.user-avatar--xs::after {
-    width: 7px;
-    height: 7px;
-    border-width: 1.5px;
-  }
-
-  &.user-avatar--lg::after {
-    width: 14px;
-    height: 14px;
-    border-width: 3px;
   }
 }
