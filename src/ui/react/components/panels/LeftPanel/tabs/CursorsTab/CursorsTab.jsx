@@ -1,48 +1,41 @@
-// src/ui/react/components/panels/LeftPanel/tabs/CursorsTab/CursorsTab.jsx
-// Cursors tab - cursor visibility and settings
-//
-// FIXES:
-// - Header uses ALL CAPS styling like Files/Datasets
-// - Online users section is collapsible at the bottom
-// - Uses ResizableSections for settings and users
+/**
+ * @file CursorsTab.jsx
+ * @description Cursors tab - cursor visibility and settings.
+ *
+ * Features:
+ * - ALL CAPS header styling like Files/Datasets
+ * - ResizableSections for settings and users
+ * - CIEDE2000 color distance for accessible differentiation
+ * - Admin/user color preferences with fallback
+ *
+ * @see Left_Panel_Design_Specification.docx - Section 8 Cursors Tab
+ */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
     MousePointer2,
     Eye,
     EyeOff,
-    Palette,
     Users,
-    User,
     Settings,
-    ChevronDown,
-    ChevronRight,
 } from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
 } from '@UI/react/components/common/ResizableSections';
+import { CURSOR_PALETTE, assignColorsToUsers } from './utils';
 import './CursorsTab.scss';
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
-const DEFAULT_CURSOR_COLORS = [
-    '#60a5fa', // blue
-    '#34d399', // green
-    '#fb7185', // pink
-    '#fbbf24', // amber
-    '#c084fc', // purple
-    '#2dd4bf', // teal
-];
-
 // Sample online users - replace with real presence data
 const SAMPLE_USERS = [
-    { id: 'user-1', name: 'You', color: '#2dd4bf', isVisible: true, isSelf: true },
-    { id: 'user-2', name: 'Dr. Sarah Smith', color: '#fb7185', isVisible: true, isSelf: false },
-    { id: 'user-3', name: 'Alex Chen', color: '#60a5fa', isVisible: false, isSelf: false },
+    { id: 'user-1', name: 'You', isSelf: true, preferredColor: '#2dd4bf' },
+    { id: 'user-2', name: 'Dr. Sarah Smith', preferredColor: '#fb7185' },
+    { id: 'user-3', name: 'Alex Chen' },
 ];
 
 const DEFAULT_SECTION_STATES = {
@@ -54,16 +47,26 @@ const DEFAULT_SECTION_STATES = {
 // SUB-COMPONENTS
 // =============================================================================
 
-function UserCursorRow({ user, onToggleVisibility, onChangeColor }) {
+/**
+ * User cursor row component.
+ *
+ * @param {Object} props
+ * @param {Object} props.user - User data
+ * @param {string} props.color - Assigned color hex
+ * @param {string} props.colorName - Color name for tooltip
+ * @param {Function} props.onToggleVisibility - Toggle visibility handler
+ * @param {Function} props.onChangeColor - Change color handler
+ */
+function UserCursorRow({ user, color, colorName, onToggleVisibility, onChangeColor }) {
     const [showColorPicker, setShowColorPicker] = useState(false);
 
     return (
         <div className={`cursor-row ${user.isSelf ? 'cursor-row--self' : ''}`}>
             <div
                 className="cursor-row__color"
-                style={{ backgroundColor: user.color }}
-                onClick={() => !user.isSelf && setShowColorPicker(!showColorPicker)}
-                title={user.isSelf ? 'Your cursor color' : 'Click to change'}
+                style={{ backgroundColor: color }}
+                onClick={() => setShowColorPicker(!showColorPicker)}
+                title={`${colorName} - Click to change`}
             />
             <span className="cursor-row__name">
                 {user.name}
@@ -78,15 +81,16 @@ function UserCursorRow({ user, onToggleVisibility, onChangeColor }) {
             </button>
 
             {/* Color picker dropdown */}
-            {showColorPicker && !user.isSelf && (
+            {showColorPicker && (
                 <div className="cursor-row__color-picker">
-                    {DEFAULT_CURSOR_COLORS.map(color => (
+                    {CURSOR_PALETTE.map(paletteColor => (
                         <button
-                            key={color}
-                            className="cursor-row__color-option"
-                            style={{ backgroundColor: color }}
+                            key={paletteColor.hex}
+                            className={`cursor-row__color-option ${color === paletteColor.hex ? 'cursor-row__color-option--active' : ''}`}
+                            style={{ backgroundColor: paletteColor.hex }}
+                            title={paletteColor.name}
                             onClick={() => {
-                                onChangeColor(user.id, color);
+                                onChangeColor(user.id, paletteColor.hex);
                                 setShowColorPicker(false);
                             }}
                         />
@@ -97,34 +101,21 @@ function UserCursorRow({ user, onToggleVisibility, onChangeColor }) {
     );
 }
 
-function SettingsSection({ title, children, defaultExpanded = true }) {
-    const [expanded, setExpanded] = useState(defaultExpanded);
-
-    return (
-        <div className={`settings-section ${expanded ? 'settings-section--expanded' : ''}`}>
-            <button
-                className="settings-section__header"
-                onClick={() => setExpanded(!expanded)}
-            >
-                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                <span>{title}</span>
-            </button>
-            {expanded && (
-                <div className="settings-section__content">
-                    {children}
-                </div>
-            )}
-        </div>
-    );
-}
-
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
+/**
+ * Cursors panel content component.
+ *
+ * @param {Object} props
+ * @param {string} props.workspaceId - Current workspace ID
+ */
 export function CursorsPanelContent({ workspaceId }) {
-    // State
-    const [users, setUsers] = useState(SAMPLE_USERS);
+    // User state with visibility
+    const [users, setUsers] = useState(() =>
+        SAMPLE_USERS.map(u => ({ ...u, isVisible: true }))
+    );
     const [showAllCursors, setShowAllCursors] = useState(true);
     const [cursorSize, setCursorSize] = useState('medium');
     const [showLabels, setShowLabels] = useState(true);
@@ -132,6 +123,15 @@ export function CursorsPanelContent({ workspaceId }) {
 
     // Section states for resizable sections
     const { states: sectionStates, toggleSection, resizeSection } = useSectionStates(DEFAULT_SECTION_STATES);
+
+    // Compute color assignments using CIEDE2000 algorithm
+    const colorAssignments = useMemo(() => {
+        return assignColorsToUsers(users);
+    }, [users]);
+
+    // Get self user color for settings panel
+    const selfUser = users.find(u => u.isSelf);
+    const selfColor = selfUser ? colorAssignments.get(selfUser.id) : null;
 
     // Handlers
     const toggleUserVisibility = useCallback((userId) => {
@@ -142,7 +142,7 @@ export function CursorsPanelContent({ workspaceId }) {
 
     const changeUserColor = useCallback((userId, color) => {
         setUsers(prev => prev.map(u =>
-            u.id === userId ? { ...u, color } : u
+            u.id === userId ? { ...u, preferredColor: color } : u
         ));
     }, []);
 
@@ -158,7 +158,7 @@ export function CursorsPanelContent({ workspaceId }) {
     return (
         <div className="cursors-tab">
             {/* Header - ALL CAPS like other tabs */}
-            <div className="panel-header panel-header--teal">
+            <div className="panel-header panel-header--cyan">
                 <MousePointer2 size={16} className="panel-header__icon" />
                 <span className="panel-header__title">Cursors</span>
                 <span className="panel-header__count">{visibleCount}/{users.length}</span>
@@ -224,12 +224,13 @@ export function CursorsPanelContent({ workspaceId }) {
                         <div className="setting-row setting-row--colors">
                             <span>My Color</span>
                             <div className="color-swatches">
-                                {DEFAULT_CURSOR_COLORS.map(color => (
+                                {CURSOR_PALETTE.map(paletteColor => (
                                     <button
-                                        key={color}
-                                        className={`color-swatch ${users[0]?.color === color ? 'color-swatch--active' : ''}`}
-                                        style={{ backgroundColor: color }}
-                                        onClick={() => changeUserColor('user-1', color)}
+                                        key={paletteColor.hex}
+                                        className={`color-swatch ${selfColor?.hex === paletteColor.hex ? 'color-swatch--active' : ''}`}
+                                        style={{ backgroundColor: paletteColor.hex }}
+                                        title={paletteColor.name}
+                                        onClick={() => selfUser && changeUserColor(selfUser.id, paletteColor.hex)}
                                     />
                                 ))}
                             </div>
@@ -241,19 +242,24 @@ export function CursorsPanelContent({ workspaceId }) {
                 <ResizableSection
                     id="online"
                     icon={Users}
-                    iconColorClass="icon-teal"
+                    iconColorClass="icon-cyan"
                     label="Online Users"
                     count={users.length}
                 >
                     <div className="cursors-tab__users-list">
-                        {users.map(user => (
-                            <UserCursorRow
-                                key={user.id}
-                                user={user}
-                                onToggleVisibility={toggleUserVisibility}
-                                onChangeColor={changeUserColor}
-                            />
-                        ))}
+                        {users.map(user => {
+                            const colorInfo = colorAssignments.get(user.id);
+                            return (
+                                <UserCursorRow
+                                    key={user.id}
+                                    user={user}
+                                    color={colorInfo?.hex || '#888888'}
+                                    colorName={colorInfo?.name || 'Unknown'}
+                                    onToggleVisibility={toggleUserVisibility}
+                                    onChangeColor={changeUserColor}
+                                />
+                            );
+                        })}
                     </div>
                 </ResizableSection>
             </ResizableSectionsContainer>

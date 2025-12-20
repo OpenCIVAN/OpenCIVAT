@@ -1,63 +1,146 @@
-// src/ui/react/components/panels/LeftPanel/LeftPanelContext.jsx
-// Shared state between LeftActivityBar and LeftPanelContent
-// since they render in different DOM locations in ThreeEdgeLayout
+/**
+ * @file LeftPanelContext.jsx
+ * @description Shared state for Left Panel tabs.
+ * Provides active tab state and navigation between activity bar and content.
+ *
+ * Tab Order (per spec):
+ * 1. Files (blue) - DATA SOURCES
+ * 2. Datasets (teal) - DATA SOURCES
+ * --- divider ---
+ * 3. Views (purple) - VISUALIZATION
+ * 4. Instance Tools (amber) - VISUALIZATION
+ * 5. Layout (green) - VISUALIZATION
+ * --- divider ---
+ * 6. Annotations (pink) - SPATIAL & STATE
+ * 7. Bookmarks & Filters (indigo) - SPATIAL & STATE
+ * --- divider ---
+ * 8. Cursors (cyan) - PRESENCE
+ *
+ * @see Left_Panel_Design_Specification.docx - Section 2 Tab Structure
+ */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, {
+    createContext,
+    useContext,
+    useState,
+    useCallback,
+    useEffect,
+} from 'react';
 import {
-    FolderOpen,
-    Database,
-    Wrench,
-    LayoutGrid,
-    MapPin,
-    Bookmark,
-    Users,
+    FolderOpen, // Files
+    Database, // Datasets
+    Eye, // Views (NEW - per spec uses 👁)
+    Wrench, // Instance Tools
+    LayoutGrid, // Layout
+    MapPin, // Annotations
+    Bookmark, // Bookmarks & Filters
+    MousePointer2, // Cursors (Changed from Users per spec 🎯)
 } from 'lucide-react';
 
 // =============================================================================
-// TAB CONFIGURATION
+// TAB CONFIGURATION - Per Left_Panel_Design_Specification.docx
 // =============================================================================
 
 /**
- * Tab definitions with icons and colors
- * Each tab has:
- * - id: Unique identifier
- * - icon: Lucide icon component
- * - label: Display name (for tooltips)
- * - color: Accent color variable name from tokens
- * - implemented: Whether the tab content is ready
- *
- * 6-tab configuration per spec:
- * - Files: Project files with grid/list views and thumbnails
- * - Datasets: Loaded datasets with views tree
- * --- divider ---
- * - Instance Tools: Tools for the active instance
- * - Layout: Workspace layout presets
- * --- divider ---
- * - Annotations: Global annotations search/filter
- * - Bookmarks & Filters: Combined bookmarks and saved filter presets
+ * Tab definitions matching specification Section 2
  */
 export const LEFT_PANEL_TABS = [
-    { id: 'files', icon: FolderOpen, label: 'Files', color: 'blue', implemented: true },
-    { id: 'datasets', icon: Database, label: 'Datasets', color: 'teal', implemented: true },
-    { id: 'tools', icon: Wrench, label: 'Instance Tools', color: 'amber', implemented: true },
-    { id: 'layout', icon: LayoutGrid, label: 'Layout', color: 'green', implemented: true },
-    { id: 'annotations', icon: MapPin, label: 'Annotations', color: 'pink', implemented: true },
-    { id: 'cursors', icon: Users, label: 'Cursors', color: 'purple', implemented: true },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks & Filters', color: 'indigo', implemented: true },
+    // DATA SOURCES
+    {
+        id: 'files',
+        icon: FolderOpen,
+        label: 'Files',
+        color: 'blue',
+        group: 'data',
+        implemented: true,
+    },
+    {
+        id: 'datasets',
+        icon: Database,
+        label: 'Datasets',
+        color: 'teal',
+        group: 'data',
+        implemented: true,
+    },
+    // VISUALIZATION
+    {
+        id: 'views',
+        icon: Eye,
+        label: 'Views',
+        color: 'purple',
+        group: 'visualization',
+        implemented: true,
+    },
+    {
+        id: 'tools',
+        icon: Wrench,
+        label: 'Instance Tools',
+        color: 'amber',
+        group: 'visualization',
+        implemented: true,
+    },
+    {
+        id: 'layout',
+        icon: LayoutGrid,
+        label: 'Layout',
+        color: 'green',
+        group: 'visualization',
+        implemented: true,
+    },
+    // SPATIAL & STATE
+    {
+        id: 'annotations',
+        icon: MapPin,
+        label: 'Annotations',
+        color: 'pink',
+        group: 'spatial',
+        implemented: true,
+    },
+    {
+        id: 'bookmarks',
+        icon: Bookmark,
+        label: 'Bookmarks & Filters',
+        color: 'indigo',
+        group: 'spatial',
+        implemented: true,
+    },
+    // PRESENCE (future VR expansion)
+    {
+        id: 'cursors',
+        icon: MousePointer2,
+        label: 'Cursors',
+        color: 'cyan',
+        group: 'presence',
+        implemented: true,
+    },
 ];
 
 /**
- * Dividers appear after these tabs for visual grouping
+ * Dividers appear after these tabs (per spec Section 2)
+ * - After Datasets (separates DATA SOURCES from VISUALIZATION)
+ * - After Layout (separates VISUALIZATION from SPATIAL & STATE)
+ * - After Bookmarks & Filters (separates from Cursors for VR expansion)
  */
-export const LEFT_PANEL_DIVIDERS_AFTER = ['datasets', 'layout'];
+export const LEFT_PANEL_DIVIDERS_AFTER = ['datasets', 'layout', 'bookmarks'];
+
+/**
+ * Keyboard shortcuts for tabs (per spec Section 13)
+ */
+export const LEFT_PANEL_SHORTCUTS = {
+    f: 'files',
+    d: 'datasets',
+    v: 'views',
+    i: 'tools',
+    l: 'layout',
+    a: 'annotations',
+    'shift+b': 'bookmarks',
+    // 'u': 'upload' - action, not tab
+};
 
 // =============================================================================
 // CONTEXT
 // =============================================================================
 
-/**
- * Context shape
- */
 const LeftPanelContext = createContext({
     activeTab: 'files',
     setActiveTab: () => { },
@@ -65,22 +148,14 @@ const LeftPanelContext = createContext({
 });
 
 /**
- * LeftPanelProvider - Wraps the app to provide shared state
- *
- * @example
- * <LeftPanelProvider>
- *   <ThreeEdgeLayout
- *     leftActivityBar={<LeftActivityBar />}
- *     leftPanelContent={<LeftPanelContent />}
- *   />
- * </LeftPanelProvider>
+ * LeftPanelProvider - Provides shared state for Left Panel
  */
 export function LeftPanelProvider({ children, defaultTab = 'files' }) {
     const [activeTab, setActiveTab] = useState(defaultTab);
 
-    // Navigate to a specific panel/tab (used for cross-panel links)
+    // Navigate to a specific panel/tab
     const navigateToPanel = useCallback((panelId) => {
-        const tab = LEFT_PANEL_TABS.find(t => t.id === panelId);
+        const tab = LEFT_PANEL_TABS.find((t) => t.id === panelId);
         if (tab) {
             setActiveTab(panelId);
         }
@@ -88,9 +163,11 @@ export function LeftPanelProvider({ children, defaultTab = 'files' }) {
 
     // Dispatch tab change events for other components (e.g., InstanceViewport)
     useEffect(() => {
-        window.dispatchEvent(new CustomEvent('cia:left-panel-tab-change', {
-            detail: { tabId: activeTab, isInstanceToolsActive: activeTab === 'tools' }
-        }));
+        window.dispatchEvent(
+            new CustomEvent('cia:left-panel-tab-change', {
+                detail: { tabId: activeTab, isInstanceToolsActive: activeTab === 'tools' },
+            })
+        );
     }, [activeTab]);
 
     // Listen for instance tools open event (from wrench button in InstanceViewport)
@@ -103,6 +180,27 @@ export function LeftPanelProvider({ children, defaultTab = 'files' }) {
         return () => {
             window.removeEventListener('cia:open-instance-tools', handleOpenInstanceTools);
         };
+    }, []);
+
+    // Keyboard shortcut handler
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Don't trigger if typing in input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            const key = e.shiftKey
+                ? `shift+${e.key.toLowerCase()}`
+                : e.key.toLowerCase();
+            const tabId = LEFT_PANEL_SHORTCUTS[key];
+
+            if (tabId) {
+                e.preventDefault();
+                setActiveTab(tabId);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     const value = {
@@ -127,7 +225,11 @@ export function LeftPanelProvider({ children, defaultTab = 'files' }) {
 export function useLeftPanelContext() {
     const context = useContext(LeftPanelContext);
     if (!context) {
-        throw new Error('useLeftPanelContext must be used within a LeftPanelProvider');
+        throw new Error(
+            'useLeftPanelContext must be used within a LeftPanelProvider'
+        );
     }
     return context;
 }
+
+export default LeftPanelContext;

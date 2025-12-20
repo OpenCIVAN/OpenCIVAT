@@ -1,5 +1,7 @@
-// src/ui/react/components/panels/LeftPanel/tabs/CursorsTab/CursorsTab.scss
-// Cursors tab styling
+/**
+ * @file CursorsTab.scss
+ * @description Cursors tab styling with CIEDE2000 color differentiation.
+ */
 
 @use "theme" as *;
 
@@ -77,9 +79,9 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.15);
-    border-color: rgba($color-accent-teal, 0.3);
-    color: $color-accent-teal;
+    background: rgba($color-accent-sky, 0.15);
+    border-color: rgba($color-accent-sky, 0.3);
+    color: $color-accent-sky;
   }
 }
 
@@ -100,8 +102,8 @@
   }
 
   &--self {
-    background: rgba($color-accent-teal, 0.08);
-    border-color: rgba($color-accent-teal, 0.2);
+    background: rgba($color-accent-sky, 0.08);
+    border-color: rgba($color-accent-sky, 0.2);
   }
 
   &__color {
@@ -174,6 +176,11 @@
       transform: scale(1.15);
       border-color: rgba(255, 255, 255, 0.3);
     }
+
+    &--active {
+      border-color: $color-text-primary;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+    }
   }
 }
 
@@ -243,7 +250,7 @@
 
   &:focus {
     outline: none;
-    border-color: $color-accent-teal;
+    border-color: $color-accent-sky;
   }
 }
 
@@ -258,9 +265,9 @@
   transition: all $transition-fast;
 
   &--on {
-    background: rgba($color-accent-teal, 0.15);
-    border-color: rgba($color-accent-teal, 0.3);
-    color: $color-accent-teal;
+    background: rgba($color-accent-sky, 0.15);
+    border-color: rgba($color-accent-sky, 0.3);
+    color: $color-accent-sky;
   }
 }
 
@@ -302,6 +309,10 @@
 
 .icon-teal {
   color: $color-accent-teal;
+}
+
+.icon-cyan {
+  color: $color-accent-sky;
 }
 
 .icon-amber {

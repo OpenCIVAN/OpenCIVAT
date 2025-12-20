@@ -6,7 +6,6 @@ import {
     Search,
     ChevronDown,
     ChevronRight,
-    Circle,
     Users,
     Mic,
     MicOff,
@@ -18,39 +17,20 @@ import {
     EyeOff,
     Plus,
     LogOut,
-    Settings,
-    Clock,
-    Moon,
-    Coffee,
-    XCircle,
     Edit3,
-    Check,
     X,
     Volume2,
-    VolumeX,
     UserPlus,
     Crown,
-    MoreHorizontal
 } from "lucide-react";
 
 import { usePeoplePanel } from "./usePeoplePanel.js";
 import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
 import { UserStatusEditor } from "./UserStatusEditor";
 import { UserAvatar } from "./UserAvatar";
+import { STATUS_CONFIG, getStatusIconProps } from "@UI/react/utils/statusConfig";
 
 import "./PeoplePanel.scss";
-
-// =============================================================================
-// STATUS CONFIGURATIONS
-// =============================================================================
-
-const STATUS_CONFIG = {
-    online: { icon: Circle, color: "var(--status-online)", label: "Online", fill: true },
-    idle: { icon: Clock, color: "var(--status-idle)", label: "Idle", fill: false },
-    away: { icon: Coffee, color: "var(--status-away)", label: "Away", fill: false },
-    dnd: { icon: XCircle, color: "var(--status-dnd)", label: "Do Not Disturb", fill: false },
-    offline: { icon: Circle, color: "var(--status-offline)", label: "Offline", fill: false },
-};
 
 // =============================================================================
 // MAIN COMPONENT
@@ -138,14 +118,8 @@ export function PeoplePanel() {
     const renderStatusIcon = (status) => {
         const config = STATUS_CONFIG[status] || STATUS_CONFIG.offline;
         const IconComponent = config.icon;
-        return (
-            <IconComponent
-                size={10}
-                color={config.color}
-                fill={config.fill ? config.color : "none"}
-                className="user-status-icon"
-            />
-        );
+        const iconProps = getStatusIconProps(status, { className: "user-status-icon" });
+        return <IconComponent {...iconProps} />;
     };
 
     const renderUserRow = (user, options = {}) => {

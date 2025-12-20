@@ -10,7 +10,7 @@
  * - .tooltip__rich - Rich tooltip layout
  * - .kbd - Keyboard shortcut badge
  */
-
+@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -293,7 +293,7 @@
   // Subtle gradient for depth
   background: linear-gradient(
     180deg,
-    lighten($color-bg-elevated, 2%) 0%,
+    color.adjust($color-bg-elevated, $lightness: 2%) 0%,
     $color-bg-elevated 100%
   );
 }

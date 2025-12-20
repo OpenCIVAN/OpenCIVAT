@@ -1,18 +1,28 @@
-// src/ui/react/components/panels/LeftPanel/tabs/FilesTab.jsx
-// Files tab content for the unified left panel
-//
-// Features:
-// - List and grid view modes with thumbnails
-// - Starred, Recent, and All Files sections (VS Code-style resizable)
-// - Nested folder support
-// - Drag-and-drop for loading files
-// - Context menu for file actions
-// - Search and filter capabilities
-// - Footer anchored to bottom
+/**
+ * @file FilesTab.jsx
+ * @description Project file storage and organization tab.
+ * Upload, browse, organize, version, and prepare files for use.
+ *
+ * Features:
+ * - Grid and list view modes with thumbnails
+ * - Starred, Recent, and All Files sections (resizable)
+ * - Nested folder support with drag-and-drop
+ * - Context menu for file actions
+ * - Upload dropzone with progress
+ * - File state indicators (stored, loading, loaded, processing, error)
+ *
+ * Three-layer model:
+ * - Files = Supply closet (all files in storage)
+ * - Datasets = Palette (files loaded into memory)
+ * - Views = Easel (what's on canvas)
+ *
+ * @see Left_Panel_Design_Specification.docx - Section 4 Files Tab
+ *
+ * @example
+ * <FilesTab workspaceId="ws-1" />
+ */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { ui as log } from "@Utils/logger.js";
+import React, { useCallback } from 'react';
 import {
     FolderOpen,
     FolderPlus,
@@ -23,684 +33,154 @@ import {
     ArrowUpDown,
     Filter,
     Star,
-    Clock,
     Folder,
-    ChevronDown,
-    ChevronRight,
-    GripVertical,
-    Upload,
-    RefreshCw,
-    Box,
     Database,
-    FileCode,
-    FileText,
-    Circle,
-    MoreHorizontal,
-    Eye,
-    Info,
-    Pencil,
     Loader,
-    Cpu,
 } from 'lucide-react';
-
-import { useComputeJobs } from '@UI/react/hooks/useComputeJobs.js';
-import { useDatasets } from '@UI/react/hooks/useDatasets.js';
-import { config } from '@Core/config/clientConfig.js';
-
 import {
     ResizableSectionsContainer,
     ResizableSection,
-    useSectionStates
-} from "@UI/react/components/common/ResizableSections";
-import { useProjectFiles } from '@UI/react/hooks/useProjectFiles.js';
-import { instanceTypeRegistry } from '@Core/instances/types/instanceTypeRegistry.js';
-import { getHandlerForFileType, getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
-import { formatFileSize } from '@Utils/formatters.js';
-import * as LucideIcons from 'lucide-react';
-import { ThumbnailPreview } from '@UI/react/components/common/ThumbnailPreview';
-
+} from '@UI/react/components/common/ResizableSections';
+import { useFilesTab } from './hooks/useFilesTab';
+import { FileItemList, FileItemGrid } from './components/FileItem';
+import { FileContextMenu } from './components/FileContextMenu';
+import { UploadDropzone } from './components/UploadDropzone';
+import './FilesTab.scss';
 
 // =============================================================================
-// FILE UTILITIES (Type-agnostic) - MUST BE HERE, BEFORE COMPONENTS
-// =============================================================================
-
-const canVisualize = (fileType) => {
-    if (!fileType) return false;
-    return getHandlerForFileType(fileType) !== null;
-};
-
-const getFileTypeConfig = (file) => {
-    if (file.isFolder) {
-        return { icon: LucideIcons.Folder, colorClass: 'file-icon--folder', color: null };
-    }
-
-    const displayInfo = getFileTypeDisplayInfo(file.fileType);
-
-    if (displayInfo) {
-        // Get icon component from Lucide by name
-        const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
-        const IconComponent = LucideIcons[iconName] || LucideIcons.Box;
-
-        return {
-            icon: IconComponent,
-            color: displayInfo.color,  // Use inline style for color
-            colorClass: null,
-        };
-    }
-
-    return { icon: LucideIcons.FileText, colorClass: 'file-icon--default', color: null };
-};
-
-// =============================================================================
-// CONTEXT MENU (with submenu support)
-// =============================================================================
-
-function ContextMenu({ x, y, onClose, onAction, file }) {
-    const [activeSubmenu, setActiveSubmenu] = useState(null);
-    const [operations, setOperations] = useState([]);
-    const [loadingOps, setLoadingOps] = useState(false);
-
-    // Fetch available operations when Process submenu is hovered
-    useEffect(() => {
-        if (activeSubmenu !== 'process' || !file) return;
-
-        const fetchOperations = async () => {
-            setLoadingOps(true);
-            try {
-                // Get handler type from file type
-                const handler = getHandlerForFileType(file.fileType);
-                if (!handler) {
-                    setOperations([]);
-                    return;
-                }
-
-                const handlerType = handler.id || 'vtk';
-                const url = new URL(`${config.apiBaseUrl}/compute/operations`);
-                url.searchParams.set('handlerType', handlerType);
-                url.searchParams.set('fileType', file.fileType);
-
-                const response = await fetch(url);
-                if (response.ok) {
-                    const data = await response.json();
-                    setOperations(data.operations || []);
-                } else {
-                    setOperations([]);
-                }
-            } catch (err) {
-                log.error('Failed to fetch operations:', err);
-                setOperations([]);
-            } finally {
-                setLoadingOps(false);
-            }
-        };
-
-        fetchOperations();
-    }, [activeSubmenu, file]);
-
-    const menuItems = [
-        { id: 'open', icon: Eye, label: 'Load in Instance' },
-        { id: 'info', icon: Info, label: 'File Details...' },
-        { divider: true },
-        { id: 'process', icon: Cpu, label: 'Process', hasSubmenu: true },
-        { divider: true },
-        { id: 'rename', icon: Pencil, label: 'Rename...' },
-        { id: 'star', icon: Star, label: file?.starred ? 'Unstar' : 'Star' },
-    ];
-
-    const handleMouseEnter = (itemId) => {
-        if (itemId === 'process') {
-            setActiveSubmenu('process');
-        } else {
-            setActiveSubmenu(null);
-        }
-    };
-
-    return createPortal(
-        <>
-            <div className="context-menu-backdrop" onClick={onClose} />
-            <div className="context-menu" style={{ top: y, left: x }} onClick={(e) => e.stopPropagation()}>
-                {menuItems.map((item, index) =>
-                    item.divider ? (
-                        <div key={index} className="context-menu__divider" />
-                    ) : (
-                        <div
-                            key={item.id}
-                            className="context-menu__item-wrapper"
-                            onMouseEnter={() => handleMouseEnter(item.id)}
-                        >
-                            <button
-                                className={`context-menu__item ${item.hasSubmenu ? 'has-submenu' : ''}`}
-                                onClick={() => {
-                                    if (!item.hasSubmenu) {
-                                        onAction(item.id, file);
-                                        onClose();
-                                    }
-                                }}
-                            >
-                                <item.icon size={12} />
-                                <span>{item.label}</span>
-                                {item.hasSubmenu && <ChevronRight size={10} className="submenu-arrow" />}
-                            </button>
-
-                            {/* Process submenu */}
-                            {item.id === 'process' && activeSubmenu === 'process' && (
-                                <div className="context-menu__submenu">
-                                    {loadingOps ? (
-                                        <div className="context-menu__item context-menu__item--loading">
-                                            <Loader size={12} className="spin" />
-                                            <span>Loading...</span>
-                                        </div>
-                                    ) : operations.length === 0 ? (
-                                        <div className="context-menu__item context-menu__item--disabled">
-                                            <span>No operations available</span>
-                                        </div>
-                                    ) : (
-                                        operations.map(op => (
-                                            <button
-                                                key={op.id}
-                                                className="context-menu__item"
-                                                onClick={() => {
-                                                    onAction('process', file, op);
-                                                    onClose();
-                                                }}
-                                            >
-                                                <span>{op.name}</span>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )
-                )}
-            </div>
-        </>,
-        document.body
-    );
-}
-
-// =============================================================================
-// FILE ITEM - LIST VIEW
-// =============================================================================
-
-function FileItemList({ file, depth = 0, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick, onDoubleClick, expandedFolders, onToggleFolder }) {
-    const [isHovered, setIsHovered] = useState(false);
-    const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
-    const isFolder = file.type === 'folder';
-    const isExpanded = expandedFolders?.has(file.id);
-
-    return (
-        <>
-            <div
-                className={`tree-item ${isFolder ? 'tree-item--folder' : 'tree-item--file'} ${isSelected ? 'selected' : ''} ${file.loaded ? 'loaded' : ''}`}
-                style={{ paddingLeft: 8 + (depth * 16) }}
-                draggable={!isFolder}
-                onDragStart={(e) => !isFolder && onDragStart?.(e, file)}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                onClick={() => isFolder ? onToggleFolder(file.id) : onSelect(file.id)}
-                onDoubleClick={(e) => { if (!isFolder) { e.stopPropagation(); onDoubleClick?.(file); } }}
-                onContextMenu={(e) => !isFolder && onContextMenu?.(e, file)}
-            >
-                {isFolder ? (
-                    <span className="chevron">
-                        {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    </span>
-                ) : (
-                    <GripVertical size={10} className="drag-handle" style={{ opacity: isHovered ? 0.6 : 0 }} />
-                )}
-                <TypeIcon size={14} style={color ? { color } : undefined} className={colorClass || ''} />
-                <span className="item-name">{file.name}</span>
-                {!isFolder && (isHovered || file.starred) && (
-                    <button className={`star-btn ${file.starred ? 'star-btn--starred' : ''}`} onClick={(e) => { e.stopPropagation(); onStar(file.id); }}>
-                        <Star size={10} fill={file.starred ? 'currentColor' : 'none'} />
-                    </button>
-                )}
-                {!isFolder && isHovered && (
-                    <button className="menu-btn" onClick={(e) => onMenuClick?.(e, file)} title="More actions">
-                        <MoreHorizontal size={12} />
-                    </button>
-                )}
-                {file.loaded && <Circle size={6} fill="currentColor" className="status-indicator__dot--active" />}
-                <span className="item-meta">{isFolder ? `${file.children?.length || 0}` : file.size}</span>
-            </div>
-            {isFolder && isExpanded && file.children?.map(child => (
-                <FileItemList key={child.id} file={child} depth={depth + 1} isSelected={isSelected} onSelect={onSelect} onStar={onStar} onDragStart={onDragStart} onContextMenu={onContextMenu} onMenuClick={onMenuClick} onDoubleClick={onDoubleClick} expandedFolders={expandedFolders} onToggleFolder={onToggleFolder} />
-            ))}
-        </>
-    );
-}
-
-// =============================================================================
-// FILE ITEM - GRID VIEW
+// MAIN COMPONENT
 // =============================================================================
 
 /**
- * FileThumbnailImage - Shows actual thumbnail image for a file
- * Falls back to icon if no thumbnail available
- *
- * Uses fetch to properly handle 204 No Content responses which img tags
- * don't handle well (neither onLoad nor onError fires for 204).
- *
- * Listens for 'cia:file-thumbnail-updated' events to auto-refresh when
- * server generates/updates the thumbnail.
+ * @typedef {Object} FilesPanelContentProps
+ * @property {string} workspaceId - Current workspace ID
+ * @property {Array} [mockFiles] - Mock files for testing
+ * @property {Set} [mockStarredIds] - Mock starred IDs for testing
+ * @property {boolean} [mockIsLoading] - Mock loading state
+ * @property {string} [mockError] - Mock error state
  */
-function FileThumbnailImage({ fileId, fallbackIcon: FallbackIcon, color, colorClass }) {
-    const [status, setStatus] = useState('loading'); // 'loading' | 'loaded' | 'error' | 'no-thumbnail'
-    const [objectUrl, setObjectUrl] = useState(null);
-    const [revision, setRevision] = useState(0); // Increment to force refetch
 
-    // Listen for file thumbnail updates from WebSocket
-    useEffect(() => {
-        const handleThumbnailUpdate = (event) => {
-            if (event.detail?.fileId === fileId) {
-                log.debug(`File thumbnail updated for ${fileId}, refetching...`);
-                setRevision(r => r + 1);
-            }
-        };
-
-        window.addEventListener('cia:file-thumbnail-updated', handleThumbnailUpdate);
-        return () => window.removeEventListener('cia:file-thumbnail-updated', handleThumbnailUpdate);
-    }, [fileId]);
-
-    // Fetch thumbnail using fetch API to handle 204 properly
-    useEffect(() => {
-        if (!fileId) {
-            setStatus('error');
-            return;
-        }
-
-        let cancelled = false;
-        setStatus('loading');
-
-        // Clean up previous object URL
-        if (objectUrl) {
-            URL.revokeObjectURL(objectUrl);
-            setObjectUrl(null);
-        }
-
-        const loadThumbnail = async () => {
-            try {
-                const apiBase = config.apiBaseUrl || 'http://localhost:3001/api';
-                // Add cache-busting param on revision to force fresh fetch
-                const url = revision > 0
-                    ? `${apiBase}/files/${fileId}/thumbnail?_=${revision}`
-                    : `${apiBase}/files/${fileId}/thumbnail`;
-
-                const response = await fetch(url, {
-                    credentials: 'include',
-                });
-
-                if (cancelled) return;
-
-                // 204 No Content means no thumbnail exists
-                if (response.status === 204) {
-                    setStatus('no-thumbnail');
-                    return;
-                }
-
-                if (!response.ok) {
-                    setStatus('error');
-                    return;
-                }
-
-                // Get blob and create object URL
-                const blob = await response.blob();
-                if (cancelled) return;
-
-                if (blob.size === 0) {
-                    setStatus('no-thumbnail');
-                    return;
-                }
-
-                const blobUrl = URL.createObjectURL(blob);
-                setObjectUrl(blobUrl);
-                setStatus('loaded');
-            } catch (err) {
-                if (!cancelled) {
-                    log.warn(`Failed to load thumbnail for file ${fileId}:`, err.message);
-                    setStatus('error');
-                }
-            }
-        };
-
-        loadThumbnail();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [fileId, revision]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Cleanup object URL on unmount
-    useEffect(() => {
-        return () => {
-            if (objectUrl) {
-                URL.revokeObjectURL(objectUrl);
-            }
-        };
-    }, [objectUrl]);
-
-    // Show fallback for error or no-thumbnail states
-    if (status === 'error' || status === 'no-thumbnail') {
-        return (
-            <FallbackIcon
-                size={20}
-                style={color ? { color, opacity: 0.5 } : { opacity: 0.5 }}
-                className={colorClass || ''}
-            />
-        );
-    }
-
-    // Show loading state with semi-transparent icon
-    if (status === 'loading' || !objectUrl) {
-        return (
-            <FallbackIcon
-                size={20}
-                style={color ? { color, opacity: 0.3 } : { opacity: 0.3 }}
-                className={colorClass || ''}
-            />
-        );
-    }
-
-    // Show actual thumbnail - scaled to fit container
-    return (
-        <img
-            src={objectUrl}
-            alt="File thumbnail"
-            className="thumbnail__image"
-            style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-            }}
-        />
-    );
-}
-
-function FileItemGrid({ file, isSelected, onSelect, onStar, onDragStart, onContextMenu, onMenuClick, onDoubleClick }) {
-    const [isHovered, setIsHovered] = useState(false);
-    const { icon: TypeIcon, colorClass, color } = getFileTypeConfig(file);
-
-    if (file.type === 'folder') return null;
-
-    return (
-        <div
-            className={`file-card ${isSelected ? 'selected' : ''}`}
-            draggable
-            onDragStart={(e) => onDragStart?.(e, file)}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={() => onSelect(file.id)}
-            onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(file); }}
-            onContextMenu={(e) => onContextMenu?.(e, file)}
-        >
-            <div className="thumbnail">
-                {/* Always use FileThumbnailImage - it handles missing thumbnails with fallback icons
-                    and listens for WebSocket updates to auto-refresh */}
-                <div className="thumbnail__preview">
-                    <FileThumbnailImage
-                        fileId={file.id}
-                        fallbackIcon={TypeIcon}
-                        color={color}
-                        colorClass={colorClass}
-                    />
-                </div>
-                <div className="thumbnail-actions" style={{ opacity: isHovered ? 1 : 0 }}>
-                    <button className="thumbnail-action" onClick={(e) => { e.stopPropagation(); onStar(file.id); }}>
-                        <Star size={10} fill={file.starred ? 'currentColor' : 'none'} />
-                    </button>
-                    <button className="thumbnail-action" onClick={(e) => onMenuClick?.(e, file)} title="More actions">
-                        <MoreHorizontal size={10} />
-                    </button>
-                </div>
-            </div>
-            <div className="file-name">{file.name}</div>
-            <div className="file-size">{file.size}</div>
-        </div>
-    );
-}
-
-// =============================================================================
-// MAIN FILES TAB CONTENT
-// =============================================================================
-
+/**
+ * Files tab panel content component.
+ *
+ * @param {FilesPanelContentProps} props - Component props
+ * @returns {React.ReactElement} The rendered panel content
+ */
 export function FilesPanelContent({
     workspaceId,
-    // Optional mock data injection (for Storybook)
     mockFiles = null,
-    mockFolders = null,
     mockStarredIds = null,
     mockIsLoading = null,
     mockError = null,
 }) {
-    // View state
-    const [viewMode, setViewMode] = useState('list');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [showFilters, setShowFilters] = useState(false);
-    const [activeFilters, setActiveFilters] = useState({ types: [] });
+    const {
+        // View state
+        viewMode,
+        setViewMode,
+        searchQuery,
+        setSearchQuery,
+        showFilters,
+        setShowFilters,
+        activeFilters,
+        toggleTypeFilter,
+        clearFilters,
 
-    // Selection and expansion state
-    const [selectedFileId, setSelectedFileId] = useState(null);
-    const [expandedFolders, setExpandedFolders] = useState(new Set([1]));
+        // Selection
+        selectedFileId,
+        setSelectedFileId,
+        expandedFolders,
+        toggleFolder,
 
-    // Section states (VS Code-style)
-    const { states: sectionStates, toggleSection, resizeSection } = useSectionStates({
-        starred: { expanded: true, flexGrow: 1 },
-        loaded: { expanded: true, flexGrow: 1 },
-        all: { expanded: true, flexGrow: 2 },
+        // Section states
+        sectionStates,
+        toggleSection,
+        resizeSection,
+
+        // Context menu
+        contextMenu,
+        handleContextMenu,
+        handleMenuClick,
+        closeContextMenu,
+        handleContextAction,
+
+        // Upload
+        isDragOver,
+        setIsDragOver,
+        handleUpload,
+
+        // Files data
+        files,
+        starredFiles,
+        loadedDatasetsFormatted,
+        loadedCount,
+        supportedFileTypes,
+        isLoading,
+        error,
+
+        // Actions
+        handleStar,
+        handleDragStart,
+        handleDoubleClick,
+        refetch,
+    } = useFilesTab({
+        workspaceId,
+        mockFiles,
+        mockStarredIds,
+        mockIsLoading,
+        mockError,
     });
 
-    // Context menu and drag state
-    const [contextMenu, setContextMenu] = useState(null);
-    const [isDragOver, setIsDragOver] = useState(false);
-
-    // Fetch files from server (hook call)
-    const { files: hookFiles, isLoading: hookLoading, error: hookError, refetch, uploadFile, toggleStar } = useProjectFiles();
-
-    // Compute jobs hook
-    const { submitJob } = useComputeJobs();
-
-    // Loaded datasets from DatasetManager
-    const loadedDatasets = useDatasets();
-
-    // Use mock data if provided, otherwise use hook data
-    const serverFiles = mockFiles ?? hookFiles;
-    const isLoading = mockIsLoading ?? hookLoading;
-    const error = mockError ?? hookError;
-
-    // Transform server files to UI format
-    const files = useMemo(() => {
-        if (!serverFiles || serverFiles.length === 0) return [];
-
-        return serverFiles.map(file => ({
-            id: file.id,
-            name: file.name || file.filename,
-            fileType: file.fileType,
-            // Use sizeFormatted from hook, fall back to formatting size, fall back to raw
-            size: file.sizeFormatted || (typeof file.size === 'number' ? formatFileSize(file.size) : file.size) || '',
-            starred: mockStarredIds ? mockStarredIds.has(file.id) : (file.starred ?? false),
-            loaded: file.loaded ?? false,
-            thumbnail: file.thumbnail ?? canVisualize(file.fileType),
-            date: file.uploadedAt,
-            isFolder: false,
-        }));
-    }, [serverFiles, mockStarredIds]);
-
-    // The key change is:
-    // OLD: size: typeof file.size === 'string' ? file.size : formatFileSize(file.size)
-    // NEW: size: file.sizeFormatted || (typeof file.size === 'number' ? formatFileSize(file.size) : file.size) || ''
-
-    // This handles three cases:
-    // 1. Hook already formatted it → use sizeFormatted
-    // 2. Raw number from server → format it
-    // 3. Already a string → use as-is
-
-    const starredFiles = useMemo(() => {
-        return files.filter(f => f.starred);
-    }, [files]);
-
-
-    // Transform loaded datasets to file-like format for display
-    const loadedDatasetsFormatted = useMemo(() => {
-        return loadedDatasets.map(ds => ({
-            id: ds.id,
-            name: ds.name,
-            fileType: ds.fileType,
-            size: ds.pointCount ? `${ds.pointCount.toLocaleString()} pts` : '',
-            starred: false,
-            loaded: true,
-            thumbnail: true,
-            date: ds.uploadedAt,
-            isFolder: false,
-            isDataset: true, // Flag to indicate this is a loaded dataset
-        }));
-    }, [loadedDatasets]);
-
-
-    const loadedCount = useMemo(() => {
-        return files.filter(f => f.loaded).length;
-    }, [files]);
-
-
-    // Get all supported file types from registered handlers
-    const supportedFileTypes = useMemo(() => {
-        const handlers = instanceTypeRegistry.getAvailableHandlers();
-        const types = new Set();
-
-        handlers.forEach(({ handler }) => {
-            const supported = handler.getSupportedFileTypes();
-            supported.forEach(t => types.add(t.extension));
-        });
-
-        return Array.from(types);
-    }, []);
-
-
-    // Handlers
-    const toggleFolder = useCallback((id) => {
-        setExpandedFolders(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-    }, []);
-
-    const handleStar = useCallback(async (id) => {
-        try {
-            await toggleStar({ type: 'file', targetId: id });
-            log.debug('Toggled star for file:', id);
-        } catch (err) {
-            log.error('Failed to toggle star:', err);
-        }
-    }, [toggleStar]);
-
-    const handleDragStart = useCallback((e, file) => {
-        // Include type field so CanvasCell knows how to handle this drop
-        e.dataTransfer.setData('application/json', JSON.stringify({
-            type: 'file',
-            ...file,
-            isFile: true,
-        }));
-        e.dataTransfer.effectAllowed = 'copy';
-    }, []);
-
-    // Double-click to open file in instance
-    const handleDoubleClick = useCallback((file) => {
-        log.info(`Double-click to open: ${file.name}`);
-        window.dispatchEvent(new CustomEvent('cia:request-instance', {
-            detail: {
-                datasetId: file.id,
-                fileId: file.id,
-                fileName: file.name,
+    // Render file items based on view mode
+    const renderFileItems = useCallback(
+        (items) => {
+            if (viewMode === 'grid') {
+                return (
+                    <div className="files-grid">
+                        {items.map((file) => (
+                            <FileItemGrid
+                                key={file.id}
+                                file={file}
+                                isSelected={selectedFileId === file.id}
+                                onSelect={setSelectedFileId}
+                                onStar={handleStar}
+                                onDragStart={handleDragStart}
+                                onContextMenu={handleContextMenu}
+                                onMenuClick={handleMenuClick}
+                                onDoubleClick={handleDoubleClick}
+                            />
+                        ))}
+                    </div>
+                );
             }
-        }));
-    }, []);
-
-    const handleContextMenu = useCallback((e, file) => {
-        e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY, file });
-    }, []);
-
-    // Menu button click handler (shows menu at button position)
-    const handleMenuClick = useCallback((e, file) => {
-        e.stopPropagation();
-        const rect = e.currentTarget.getBoundingClientRect();
-        setContextMenu({ x: rect.right, y: rect.top, file });
-    }, []);
-
-    const handleContextAction = useCallback(async (action, file, operation) => {
-        log.debug('Context action:', action, file, operation);
-
-        switch (action) {
-            case 'open':
-                // Dispatch request to create/open instance with this file
-                // Note: file.id is the server file ID, which equals dataset.id after sync
-                log.info(`Opening file in instance: ${file.name}`);
-                window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                    detail: {
-                        datasetId: file.id,  // file.id === dataset.id after syncDatasetsFromServer
-                        fileId: file.id,     // Also provide as fileId for clarity
-                        fileName: file.name,
-                    }
-                }));
-                break;
-
-            case 'info':
-                // TODO: Show file details dialog
-                log.info(`Show details for: ${file.name}`);
-                break;
-
-            case 'rename':
-                // TODO: Show rename dialog
-                log.info(`Rename file: ${file.name}`);
-                break;
-
-            case 'star':
-                await handleStar(file.id);
-                break;
-
-            case 'process':
-                if (operation) {
-                    try {
-                        log.info(`Submitting ${operation.id} job for file ${file.id}`);
-                        await submitJob(
-                            file.id,
-                            operation.id,
-                            operation.defaultParams || {},
-                            { fileName: file.name }
-                        );
-                    } catch (err) {
-                        log.error('Failed to submit compute job:', err);
-                    }
-                }
-                break;
-
-            default:
-                log.warn(`Unknown context action: ${action}`);
-        }
-    }, [submitJob, handleStar]);
-    const toggleTypeFilter = useCallback((type) => {
-        setActiveFilters(prev => ({
-            ...prev,
-            types: prev.types.includes(type) ? prev.types.filter(t => t !== type) : [...prev.types, type]
-        }));
-    }, []);
-
-    // Render helpers
-    const renderFileItems = useCallback((items) => {
-        if (viewMode === 'grid') {
-            return (
-                <div className="files-grid">
-                    {items.map(file => (
-                        <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} onDoubleClick={handleDoubleClick} />
-                    ))}
-                </div>
-            );
-        }
-        return items.map(file => (
-            <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} onDoubleClick={handleDoubleClick} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
-        ));
-    }, [viewMode, selectedFileId, expandedFolders, handleStar, handleDragStart, handleContextMenu, handleMenuClick, handleDoubleClick, toggleFolder]);
+            return items.map((file) => (
+                <FileItemList
+                    key={file.id}
+                    file={file}
+                    isSelected={selectedFileId === file.id}
+                    onSelect={setSelectedFileId}
+                    onStar={handleStar}
+                    onDragStart={handleDragStart}
+                    onContextMenu={handleContextMenu}
+                    onMenuClick={handleMenuClick}
+                    onDoubleClick={handleDoubleClick}
+                    expandedFolders={expandedFolders}
+                    onToggleFolder={toggleFolder}
+                />
+            ));
+        },
+        [
+            viewMode,
+            selectedFileId,
+            expandedFolders,
+            handleStar,
+            handleDragStart,
+            handleContextMenu,
+            handleMenuClick,
+            handleDoubleClick,
+            setSelectedFileId,
+            toggleFolder,
+        ]
+    );
 
     return (
         <div className="files-tab">
@@ -709,7 +189,9 @@ export function FilesPanelContent({
                 <FolderOpen size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__actions">
-                    <button className="panel-header__action-btn" title="New Folder"><FolderPlus size={14} /></button>
+                    <button className="panel-header__action-btn" title="New Folder">
+                        <FolderPlus size={14} />
+                    </button>
                 </div>
             </div>
 
@@ -717,24 +199,55 @@ export function FilesPanelContent({
             <div className="panel-search">
                 <div className="panel-search__wrapper">
                     <Search size={12} className="search-icon" />
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search files..." />
-                    {searchQuery && <button className="clear-button" onClick={() => setSearchQuery('')}><X size={10} /></button>}
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search files..."
+                    />
+                    {searchQuery && (
+                        <button className="clear-button" onClick={() => setSearchQuery('')}>
+                            <X size={10} />
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Toolbar */}
             <div className="panel-toolbar">
                 <div className="panel-toolbar__group">
-                    <button className={`panel-toolbar__toggle ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')} title="List view"><List size={11} /></button>
-                    <button className={`panel-toolbar__toggle ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title="Grid view"><Grid3X3 size={11} /></button>
+                    <button
+                        className={`panel-toolbar__toggle ${viewMode === 'list' ? 'active' : ''}`}
+                        onClick={() => setViewMode('list')}
+                        title="List view"
+                    >
+                        <List size={11} />
+                    </button>
+                    <button
+                        className={`panel-toolbar__toggle ${viewMode === 'grid' ? 'active' : ''}`}
+                        onClick={() => setViewMode('grid')}
+                        title="Grid view"
+                    >
+                        <Grid3X3 size={11} />
+                    </button>
                 </div>
-                <button className="filter-toggle"><ArrowUpDown size={9} /><span>Date</span></button>
-                <div className="panel-toolbar__spacer" />
-                <button className={`filter-toggle ${showFilters || activeFilters.types.length > 0 ? 'active' : ''}`} onClick={() => setShowFilters(!showFilters)}>
-                    <Filter size={9} />
-                    {activeFilters.types.length > 0 && <span className="count">{activeFilters.types.length}</span>}
+                <button className="filter-toggle">
+                    <ArrowUpDown size={9} />
+                    <span>Date</span>
                 </button>
-                <span className="panel-toolbar__info"><strong>{loadedCount}</strong> loaded</span>
+                <div className="panel-toolbar__spacer" />
+                <button
+                    className={`filter-toggle ${showFilters || activeFilters.types.length > 0 ? 'active' : ''}`}
+                    onClick={() => setShowFilters(!showFilters)}
+                >
+                    <Filter size={9} />
+                    {activeFilters.types.length > 0 && (
+                        <span className="count">{activeFilters.types.length}</span>
+                    )}
+                </button>
+                <span className="panel-toolbar__info">
+                    <strong>{loadedCount}</strong> loaded
+                </span>
             </div>
 
             {/* Loading indicator */}
@@ -757,7 +270,7 @@ export function FilesPanelContent({
             {showFilters && (
                 <div className="panel-filters">
                     <div className="panel-filters__row">
-                        {supportedFileTypes.map(type => (
+                        {supportedFileTypes.map((type) => (
                             <button
                                 key={type}
                                 className={`filter-toggle ${activeFilters.types.includes(type) ? 'active' : ''}`}
@@ -767,7 +280,7 @@ export function FilesPanelContent({
                             </button>
                         ))}
                         {activeFilters.types.length > 0 && (
-                            <button className="panel-filters__clear" onClick={() => setActiveFilters({ types: [] })}>
+                            <button className="panel-filters__clear" onClick={clearFilters}>
                                 Clear
                             </button>
                         )}
@@ -775,14 +288,19 @@ export function FilesPanelContent({
                 </div>
             )}
 
-
             {/* Resizable Sections */}
             <ResizableSectionsContainer
                 sectionStates={sectionStates}
                 onSectionToggle={toggleSection}
                 onSectionResize={resizeSection}
             >
-                <ResizableSection id="starred" icon={Star} iconColorClass="icon-amber" label="Starred" count={starredFiles.length}>
+                <ResizableSection
+                    id="starred"
+                    icon={Star}
+                    iconColorClass="icon-amber"
+                    label="Starred"
+                    count={starredFiles.length}
+                >
                     {starredFiles.length > 0 ? (
                         renderFileItems(starredFiles)
                     ) : (
@@ -790,7 +308,13 @@ export function FilesPanelContent({
                     )}
                 </ResizableSection>
 
-                <ResizableSection id="loaded" icon={Database} iconColorClass="icon-teal" label="Loaded Datasets" count={loadedDatasetsFormatted.length}>
+                <ResizableSection
+                    id="loaded"
+                    icon={Database}
+                    iconColorClass="icon-teal"
+                    label="Loaded Datasets"
+                    count={loadedDatasetsFormatted.length}
+                >
                     {loadedDatasetsFormatted.length > 0 ? (
                         renderFileItems(loadedDatasetsFormatted)
                     ) : (
@@ -798,17 +322,47 @@ export function FilesPanelContent({
                     )}
                 </ResizableSection>
 
-                <ResizableSection id="all" icon={Folder} iconColorClass="icon-blue" label="All Files" count={files.length}>
+                <ResizableSection
+                    id="all"
+                    icon={Folder}
+                    iconColorClass="icon-blue"
+                    label="All Files"
+                    count={files.length}
+                >
                     {files.length > 0 ? (
                         viewMode === 'grid' ? (
                             <div className="files-grid">
-                                {files.filter(f => f.type !== 'folder').map(file => (
-                                    <FileItemGrid key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} onDoubleClick={handleDoubleClick} />
-                                ))}
+                                {files
+                                    .filter((f) => f.type !== 'folder')
+                                    .map((file) => (
+                                        <FileItemGrid
+                                            key={file.id}
+                                            file={file}
+                                            isSelected={selectedFileId === file.id}
+                                            onSelect={setSelectedFileId}
+                                            onStar={handleStar}
+                                            onDragStart={handleDragStart}
+                                            onContextMenu={handleContextMenu}
+                                            onMenuClick={handleMenuClick}
+                                            onDoubleClick={handleDoubleClick}
+                                        />
+                                    ))}
                             </div>
                         ) : (
-                            files.map(file => (
-                                <FileItemList key={file.id} file={file} isSelected={selectedFileId === file.id} onSelect={setSelectedFileId} onStar={handleStar} onDragStart={handleDragStart} onContextMenu={handleContextMenu} onMenuClick={handleMenuClick} onDoubleClick={handleDoubleClick} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} />
+                            files.map((file) => (
+                                <FileItemList
+                                    key={file.id}
+                                    file={file}
+                                    isSelected={selectedFileId === file.id}
+                                    onSelect={setSelectedFileId}
+                                    onStar={handleStar}
+                                    onDragStart={handleDragStart}
+                                    onContextMenu={handleContextMenu}
+                                    onMenuClick={handleMenuClick}
+                                    onDoubleClick={handleDoubleClick}
+                                    expandedFolders={expandedFolders}
+                                    onToggleFolder={toggleFolder}
+                                />
                             ))
                         )
                     ) : (
@@ -817,48 +371,24 @@ export function FilesPanelContent({
                 </ResizableSection>
             </ResizableSectionsContainer>
 
-            {/* Footer - Always anchored to bottom */}
-            <div className="panel-footer" onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={(e) => { e.preventDefault(); setIsDragOver(false); }}>
-                {isDragOver ? (
-                    <div className="panel-footer__dropzone"><Upload size={16} /><span>Drop to upload</span></div>
-                ) : (
-                    <>
-                        <button
-                            className="panel-footer__btn panel-footer__btn--primary"
-                            onClick={() => {
-                                const input = document.createElement('input');
-                                input.type = 'file';
-                                input.accept = '.vtp,.vtk,.nii,.nii.gz,.dcm';
-                                input.onchange = async (e) => {
-                                    const file = e.target.files[0];
-                                    if (file) {
-                                        try {
-                                            await uploadFile({ file });
-                                            refetch();
-                                        } catch (err) {
-                                            log.error('Upload failed:', err);
-                                        }
-                                    }
-                                };
-                                input.click();
-                            }}
-                        >
-                            <Upload size={11} /><span>Upload</span>
-                        </button>
-
-                        <button
-                            className="panel-footer__btn panel-footer__btn--icon"
-                            title="Refresh"
-                            onClick={() => refetch?.()}
-                        >
-                            <RefreshCw size={11} />
-                        </button>
-                    </>
-                )}
-            </div>
+            {/* Footer with upload */}
+            <UploadDropzone
+                onUpload={handleUpload}
+                onRefresh={refetch}
+                isDragOver={isDragOver}
+                setIsDragOver={setIsDragOver}
+            />
 
             {/* Context menu */}
-            {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} file={contextMenu.file} onClose={() => setContextMenu(null)} onAction={handleContextAction} />}
+            {contextMenu && (
+                <FileContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    file={contextMenu.file}
+                    onClose={closeContextMenu}
+                    onAction={handleContextAction}
+                />
+            )}
         </div>
     );
 }

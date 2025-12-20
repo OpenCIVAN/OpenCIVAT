@@ -1,0 +1,27 @@
+/**
+ * @file ViewsTab.scss
+ * @description Styles for the Views tab.
+ */
+
+@use "theme" as *;
+
+.views-tab {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+
+  &__sections {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: $spacing-xs;
+  }
+}

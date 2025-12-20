@@ -4,7 +4,6 @@ import {
     Search,
     ChevronDown,
     ChevronRight,
-    Circle,
     Users,
     Mic,
     MicOff,
@@ -13,13 +12,11 @@ import {
     Unlock,
     Plus,
     LogOut,
-    Clock,
-    Coffee,
-    XCircle,
     Edit3,
     Crown,
 } from "lucide-react";
 import { UserAvatar } from "./UserAvatar";
+import { STATUS_CONFIG, getStatusIconProps } from "@UI/react/utils/statusConfig";
 import "./PeoplePanel.scss";
 
 export default {
@@ -64,18 +61,6 @@ const MOCK_ROOMS = [
 ];
 
 // =============================================================================
-// STATUS CONFIG
-// =============================================================================
-
-const STATUS_CONFIG = {
-    online: { icon: Circle, color: "#4CAF50", fill: true },
-    idle: { icon: Clock, color: "#FF9800", fill: false },
-    away: { icon: Coffee, color: "#808080", fill: false },
-    dnd: { icon: XCircle, color: "#f44336", fill: false },
-    offline: { icon: Circle, color: "#404040", fill: false },
-};
-
-// =============================================================================
 // MOCK COMPONENT (simplified without hooks)
 // =============================================================================
 
@@ -103,13 +88,9 @@ const MockPeoplePanel = ({
     const renderStatusIcon = (status) => {
         const config = STATUS_CONFIG[status] || STATUS_CONFIG.offline;
         const IconComponent = config.icon;
-        return (
-            <IconComponent
-                size={10}
-                color={config.color}
-                fill={config.fill ? config.color : "none"}
-            />
-        );
+        // Use hex colors for stories since CSS vars may not be loaded
+        const iconProps = getStatusIconProps(status, { useHex: true });
+        return <IconComponent {...iconProps} />;
     };
 
     const renderUserRow = (user) => (

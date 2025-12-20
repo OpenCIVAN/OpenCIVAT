@@ -18,6 +18,7 @@ import { VoicePanelContent } from './tabs/VoiceTab';
 import { NotesPanelContent } from './tabs/NotesTab';
 import { RecordingsPanelContent } from './tabs/RecordingsTab';
 import { ActivityPanelContent } from './tabs/ActivityTab';
+import { SettingsPanelContent } from './tabs/SettingsTab';
 
 // Icons for pop-out button
 import { ExternalLink } from 'lucide-react';
@@ -48,6 +49,8 @@ function renderTabContent(tabId, workspaceId, roomId, roomName) {
             return <RecordingsPanelContent workspaceId={workspaceId} />;
         case 'activity':
             return <ActivityPanelContent workspaceId={workspaceId} />;
+        case 'settings':
+            return <SettingsPanelContent workspaceId={workspaceId} projectId={workspaceId} />;
         default:
             return <PlaceholderContent tabId={tabId} />;
     }

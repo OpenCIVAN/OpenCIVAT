@@ -42,17 +42,8 @@ import {
 } from 'lucide-react';
 import Modal from '../Modal/Modal';
 import { Button } from '../../common/Button';
+import { STATUS_CONFIG, getStatusLabel } from '@UI/react/utils/statusConfig';
 import './ProfileModal.scss';
-
-/**
- * Status configuration with colors and labels
- */
-const STATUS_CONFIG = {
-    online: { label: 'Online' },
-    away: { label: 'Away' },
-    busy: { label: 'Busy' },
-    offline: { label: 'Offline' },
-};
 
 /**
  * Role configuration with icons and labels
@@ -205,7 +196,7 @@ function ProfileModal({
         lastActive
     } = user;
 
-    const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.offline;
+    const statusLabel = getStatusLabel(status);
     const roleConfig = ROLE_CONFIG[role] || ROLE_CONFIG.viewer;
     const RoleIcon = roleConfig.icon;
     const initials = getInitials(name);
@@ -233,8 +224,8 @@ function ProfileModal({
                 <div className="profile-modal__name">
                     <span
                         className={`profile-modal__status-dot profile-modal__status-dot--${status}`}
-                        aria-label={statusConfig.label}
-                        title={statusConfig.label}
+                        aria-label={statusLabel}
+                        title={statusLabel}
                     />
                     <span>{name}</span>
                 </div>

@@ -1,16 +1,34 @@
-// src/ui/react/components/panels/RightPanel/RightPanelContext.jsx
-// Shared state between RightActivityBar and RightPanelContent
-// since they render in different DOM locations in ThreeEdgeLayout
+/**
+ * @file RightPanelContext.jsx
+ * @description Shared state for Right Panel tabs.
+ * Provides active tab state and navigation between activity bar and content.
+ *
+ * Tab Order (per spec):
+ * 1. People (pink) - Presence & Location
+ * 2. Voice (green) - Presence & Location
+ * 3. Rooms (purple) - Presence & Location
+ * --- divider ---
+ * 4. Chat (blue) - Communication
+ * 5. Activity (amber) - Communication
+ * --- divider ---
+ * 6. Notes (teal) - Documentation
+ * 7. Recording (red) - Documentation
+ * --- divider ---
+ * 8. Settings (gray)
+ *
+ * @see Right_Panel_Design_Specification.md
+ */
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import {
     Users,
-    Briefcase,
-    MessageSquare,
     Mic2,
+    DoorOpen,
+    MessageSquare,
+    Activity,
     FileText,
     Video,
-    Activity,
+    SlidersHorizontal,
 } from 'lucide-react';
 
 // =============================================================================
@@ -18,37 +36,33 @@ import {
 // =============================================================================
 
 /**
- * Tab definitions with icons and colors
+ * Tab configuration matching specification
  * Each tab has:
  * - id: Unique identifier
  * - icon: Lucide icon component
  * - label: Display name (for tooltips)
  * - color: Accent color variable name from tokens
- * - implemented: Whether the tab content is ready
+ * - group: Functional grouping for visual organization
  */
 export const RIGHT_PANEL_TABS = [
-    { id: 'people', icon: Users, label: 'People', color: 'pink', implemented: true },
-    { id: 'rooms', icon: Briefcase, label: 'Rooms', color: 'purple', implemented: true },
-    { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'blue', implemented: true },
-    { id: 'voice', icon: Mic2, label: 'Voice', color: 'green', implemented: true },
-    { id: 'notes', icon: FileText, label: 'Notes', color: 'teal', implemented: true },
-    { id: 'recording', icon: Video, label: 'Recording', color: 'red', implemented: true },
-    { id: 'activity', icon: Activity, label: 'Activity', color: 'amber', implemented: true },
+    // PRESENCE & LOCATION
+    { id: 'people', icon: Users, label: 'People', color: 'pink', group: 'presence' },
+    { id: 'voice', icon: Mic2, label: 'Voice', color: 'green', group: 'presence' },
+    { id: 'rooms', icon: DoorOpen, label: 'Rooms', color: 'purple', group: 'presence' },
+    // COMMUNICATION
+    { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'blue', group: 'communication' },
+    { id: 'activity', icon: Activity, label: 'Activity', color: 'amber', group: 'communication' },
+    // DOCUMENTATION
+    { id: 'notes', icon: FileText, label: 'Notes', color: 'teal', group: 'documentation' },
+    { id: 'recording', icon: Video, label: 'Recording', color: 'red', group: 'documentation' },
+    // SETTINGS
+    { id: 'settings', icon: SlidersHorizontal, label: 'Settings', color: 'gray', group: 'settings' },
 ];
 
-// Tabs:
-// - People: Online members with presence indicators
-// - Rooms: Breakout rooms management
-// - Chat: Text chat messaging
-// - Voice: Voice chat controls
-// - Notes: Shared notes/annotations
-// - Recording: Session recording controls
-// - Activity: Activity feed and notifications
-
 /**
- * Dividers appear after these tabs for visual grouping
+ * Dividers appear after these tabs (per spec)
  */
-export const RIGHT_PANEL_DIVIDERS_AFTER = ['rooms', 'voice'];
+export const RIGHT_PANEL_DIVIDERS_AFTER = ['rooms', 'activity', 'recording'];
 
 // =============================================================================
 // CONTEXT

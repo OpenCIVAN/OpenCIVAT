@@ -4,55 +4,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
     X,
-    Circle,
-    Clock,
-    Coffee,
-    XCircle,
-    Moon,
     Check,
     Smile
 } from "lucide-react";
 
+import { STATUS_OPTIONS } from "@UI/react/utils/statusConfig";
 import "./UserStatusEditor.scss";
-
-// =============================================================================
-// STATUS OPTIONS
-// =============================================================================
-
-const STATUS_OPTIONS = [
-    {
-        id: "online",
-        icon: Circle,
-        label: "Online",
-        color: "var(--status-online)",
-        fill: true,
-        description: "Available and active"
-    },
-    {
-        id: "idle",
-        icon: Clock,
-        label: "Idle",
-        color: "var(--status-idle)",
-        fill: false,
-        description: "Temporarily away"
-    },
-    {
-        id: "away",
-        icon: Coffee,
-        label: "Away",
-        color: "var(--status-away)",
-        fill: false,
-        description: "Away for a while"
-    },
-    {
-        id: "dnd",
-        icon: XCircle,
-        label: "Do Not Disturb",
-        color: "var(--status-dnd)",
-        fill: false,
-        description: "Mute notifications"
-    },
-];
 
 // Quick status presets with emoji
 const STATUS_PRESETS = [

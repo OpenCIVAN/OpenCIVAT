@@ -13,7 +13,6 @@ import {
     Circle,
     Zap,
     ChevronUp,
-    ChevronDown,
     Shield,
     ShieldAlert,
 } from 'lucide-react';
@@ -22,6 +21,7 @@ import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
 import { getBottomPanelControls } from '@UI/react/components/panels/BottomPanel';
 import { useAuth } from '@UI/react/hooks/useAuth.js';
 import { VoiceCommandToggle } from '@UI/react/components/common/VoiceCommandToggle';
+import { getStatusColorHex } from '@UI/react/utils/statusConfig';
 import './StatusBar.scss';
 
 // =============================================================================
@@ -85,29 +85,32 @@ function OnlineUsersIndicator({ count }) {
                 <div className="online-popover">
                     <div className="online-popover__header">Currently Online</div>
                     <div className="online-popover__list">
-                        {users.map(user => (
-                            <div key={user.userId} className="online-popover__user">
-                                <Circle
-                                    size={8}
-                                    fill={user.status === 'active' ? '#34d399' : '#fbbf24'}
-                                    stroke={user.status === 'active' ? '#34d399' : '#fbbf24'}
-                                    className="online-popover__status"
-                                />
-                                <span
-                                    className="online-popover__name"
-                                    style={{ color: user.userColor }}
-                                >
-                                    {user.userName}
-                                    {user.isYou && ' (you)'}
-                                </span>
-                                {user.status === 'idle' && (
-                                    <span className="online-popover__idle">(idle)</span>
-                                )}
-                                {user.status === 'away' && (
-                                    <span className="online-popover__idle">(away)</span>
-                                )}
-                            </div>
-                        ))}
+                        {users.map(user => {
+                            const statusColor = getStatusColorHex(user.status);
+                            return (
+                                <div key={user.userId} className="online-popover__user">
+                                    <Circle
+                                        size={8}
+                                        fill={statusColor}
+                                        stroke={statusColor}
+                                        className="online-popover__status"
+                                    />
+                                    <span
+                                        className="online-popover__name"
+                                        style={{ color: user.userColor }}
+                                    >
+                                        {user.userName}
+                                        {user.isYou && ' (you)'}
+                                    </span>
+                                    {user.status === 'idle' && (
+                                        <span className="online-popover__idle">(idle)</span>
+                                    )}
+                                    {user.status === 'away' && (
+                                        <span className="online-popover__idle">(away)</span>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

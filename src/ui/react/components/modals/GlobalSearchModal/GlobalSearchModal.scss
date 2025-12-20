@@ -207,8 +207,8 @@
     color: white;
 
     &:hover {
-      background: lighten($color-accent-blue, 5%);
-      border-color: lighten($color-accent-blue, 5%);
+      background: color.adjust($color-accent-blue, $lightness: 5%);
+      border-color: color.adjust($color-accent-blue, $lightness: 5%);
     }
   }
 
