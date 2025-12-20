@@ -1,15 +1,15 @@
 // src/ui/react/components/layout/index.js
+// =============================================================================
+// HEADER/FOOTER BAR COMPONENTS (per design spec)
+// =============================================================================
 export { Header } from "./Header";
 export { SecondaryHeader } from "./SecondaryHeader";
 export { SecondaryFooter } from "./SecondaryFooter";
-export { TopBar } from "./TopBar";
-export {
-  SecondaryTopBar,
-  VIEW_MODES,
-  WORKSPACE_TYPES,
-} from "./SecondaryTopBar";
-export { SecondaryBottomBar } from "./SecondaryBottomBar";
 export { StatusBar } from "./StatusBar";
+
+// =============================================================================
+// LAYOUT INFRASTRUCTURE
+// =============================================================================
 export { ActivityBar } from "./ActivityBar";
 export {
   ThreeEdgeLayout,
@@ -26,3 +26,22 @@ export {
   SecondaryBarDivider,
   SecondaryBarSpacer,
 } from "./SecondaryBarZone";
+
+// =============================================================================
+// RE-EXPORTS FROM HOOKS (for convenience)
+// =============================================================================
+export {
+  useWorkspaceSelector,
+  useViewMode,
+  useWorkspacePresence,
+  useSecondaryTopBar,
+  VIEW_MODES,
+  WORKSPACE_TYPES,
+} from "@UI/react/hooks/useWorkspaceBar.js";
+
+export {
+  useCanvasViewport,
+  useVoiceControls,
+  useWorkspaceIndicator,
+  useSecondaryBottomBar,
+} from "@UI/react/hooks/useVoiceBar.js";

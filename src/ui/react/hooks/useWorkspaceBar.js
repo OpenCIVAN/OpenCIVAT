@@ -1,12 +1,12 @@
-// src/ui/react/components/layout/SecondaryTopBar/SecondaryTopBar.logic.js
-// Headless logic for the secondary top bar
-// Manages workspace selection, view modes, and workspace controls
+// src/ui/react/hooks/useWorkspaceBar.js
+// Workspace bar hooks - manages workspace selection, view modes, and presence
+// Migrated from legacy SecondaryTopBar.logic.js
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 
 /**
- * View mode options for the workspace
+ * View mode options for the workspace layout
  */
 export const VIEW_MODES = {
   NORMAL: "normal",
@@ -65,20 +65,17 @@ export function useWorkspaceSelector({
   }, [workspaces, searchQuery]);
 
   // Group workspaces by scope with room awareness
-  // New grouping: Personal (my workspaces), Room (current room), Project (all project-wide)
   const groupedWorkspaces = useMemo(() => {
     const personal = filteredWorkspaces.filter(
       (w) => w.type === WORKSPACE_TYPES.PERSONAL
     );
 
-    // Room workspaces: type is 'breakout' and either matches current room or has no roomId
     const room = filteredWorkspaces.filter(
       (w) =>
         w.type === WORKSPACE_TYPES.BREAKOUT &&
         (!currentRoomId || w.roomId === currentRoomId || !w.roomId)
     );
 
-    // Project workspaces: type is 'project'
     const project = filteredWorkspaces.filter(
       (w) => w.type === WORKSPACE_TYPES.PROJECT
     );
@@ -87,8 +84,7 @@ export function useWorkspaceSelector({
       personal,
       room,
       project,
-      // Keep legacy 'breakout' for backwards compatibility
-      breakout: room,
+      breakout: room, // Legacy alias
     };
   }, [filteredWorkspaces, currentRoomId]);
 
@@ -106,7 +102,7 @@ export function useWorkspaceSelector({
   // Toggle dropdown
   const toggleDropdown = useCallback(() => {
     setIsOpen((prev) => !prev);
-    if (!isOpen) setSearchQuery(""); // Clear search when opening
+    if (!isOpen) setSearchQuery("");
   }, [isOpen]);
 
   // Close dropdown
@@ -116,15 +112,12 @@ export function useWorkspaceSelector({
   }, []);
 
   return {
-    // State
     currentWorkspace,
     isOpen,
     searchQuery,
     filteredWorkspaces,
     groupedWorkspaces,
     currentRoomName,
-
-    // Actions
     selectWorkspace,
     toggleDropdown,
     closeDropdown,
@@ -179,21 +172,16 @@ export function useWorkspacePresence(workspaceId) {
     if (!workspaceId) return;
 
     const handlePresenceUpdate = (allUsers) => {
-      // Filter users by workspace
-      // In real implementation, users would have workspaceId in their presence
       const workspaceUsers = allUsers.filter(
         (u) => u.workspaceId === workspaceId || !u.workspaceId
       );
       setUsers(workspaceUsers);
     };
 
-    // Subscribe to presence updates
     const cleanup = presenceSystem.onPresenceChange(handlePresenceUpdate);
-
     return cleanup;
   }, [workspaceId]);
 
-  // Split into visible avatars and overflow count
   const visibleUsers = users.slice(0, 4);
   const overflowCount = Math.max(0, users.length - 4);
 
@@ -208,14 +196,16 @@ export function useWorkspacePresence(workspaceId) {
 }
 
 /**
- * useSecondaryTopBar - Combined hook for all secondary top bar state
+ * useSecondaryTopBar - Combined hook for all workspace bar state
  *
  * @param {Object} options - Configuration options
- * @returns {Object} All secondary top bar state and actions
+ * @returns {Object} All workspace bar state and actions
  */
 export function useSecondaryTopBar({
   workspaces = [],
   initialWorkspaceId = null,
+  currentRoomId = null,
+  currentRoomName = "Room",
   initialViewMode = VIEW_MODES.NORMAL,
   onWorkspaceChange,
   onViewModeChange,
@@ -228,6 +218,8 @@ export function useSecondaryTopBar({
   const workspaceSelector = useWorkspaceSelector({
     workspaces,
     initialWorkspaceId,
+    currentRoomId,
+    currentRoomName,
     onWorkspaceChange,
   });
 
@@ -240,7 +232,7 @@ export function useSecondaryTopBar({
   // Presence for current workspace
   const presence = useWorkspacePresence(workspaceSelector.currentWorkspace?.id);
 
-  // Action handlers (pass-through to parent callbacks)
+  // Action handlers
   const actions = useMemo(
     () => ({
       addCell: () => onAddCell?.(),

@@ -76,4 +76,28 @@ export { useFilters } from "./useFilters.js";
 export { useBookmarks } from "./useBookmarks.js";
 export { useAnnotations } from "./useAnnotations.js";
 
-export { useThumbnail, useThumbnailUrl, THUMBNAIL_STATUS } from './useThumbnail.js';
+export {
+  useThumbnail,
+  useThumbnailUrl,
+  THUMBNAIL_STATUS,
+} from "./useThumbnail.js";
+
+// =============================================================================
+// WORKSPACE & VOICE BAR HOOKS
+// =============================================================================
+
+export {
+  useWorkspaceSelector,
+  useViewMode,
+  useWorkspacePresence,
+  useSecondaryTopBar,
+  VIEW_MODES as WORKSPACE_VIEW_MODES,
+  WORKSPACE_TYPES,
+} from "./useWorkspaceBar.js";
+
+export {
+  useCanvasViewport,
+  useVoiceControls,
+  useWorkspaceIndicator,
+  useSecondaryBottomBar,
+} from "./useVoiceBar.js";

@@ -10,20 +10,30 @@ import { sessionManager } from "@Core/session/sessionManager.js";
 // Import UI components
 import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
 import { CanvasWorkspace } from "@UI/react/components/workspace/";
-import { TopBar } from "@UI/react/components/layout/TopBar";
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
 import { BottomPanel } from "@UI/react/components/panels/BottomPanel";
+
+// New Header/Footer bar components (per design spec)
+import { Header } from "@UI/react/components/layout/Header";
 import {
-  SecondaryTopBar,
   WorkspaceSelector,
-  WorkspacePresence,
-  useSecondaryTopBar,
-} from "@UI/react/components/layout/SecondaryTopBar";
+  RoomPresenceIndicator,
+  FlowDirectionToggle,
+  EditToolbar,
+  CanvasNavigation,
+} from "@UI/react/components/layout/SecondaryHeader";
 import {
-  SecondaryBottomBar,
-  VoiceControls,
-  useVoiceControls,
-} from "@UI/react/components/layout/SecondaryBottomBar";
+  PopoutButtons,
+  InstanceSelector,
+  ViewModeToggle as FooterViewModeToggle,
+  CanvasSizeDisplay,
+  VoiceQuickControls,
+} from "@UI/react/components/layout/SecondaryFooter";
+
+// Workspace and voice bar hooks
+import { useSecondaryTopBar } from "@UI/react/hooks/useWorkspaceBar.js";
+import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
+
 import { useWorkspaces } from "@UI/react/hooks/useWorkspaces.js";
 import {
   VIEW_MODES,
@@ -31,8 +41,7 @@ import {
   useViewModeKeyboardShortcut,
   useGlobalKeyboardShortcuts,
 } from "@UI/react/components/controls/ViewModeToggle";
-import { LayoutModeToggle, LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
-import NavigatorButton from "@UI/react/components/layout/SecondaryBottomBar/NavigatorButton";
+import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
 import { SecondaryBarDivider } from "./components/layout/SecondaryBarZone";
 
 // Room Navigation
@@ -107,6 +116,16 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [editMode, setEditMode] = useState(false);
   const [selectedCells, setSelectedCells] = useState([]);
   const [activeTool, setActiveTool] = useState('select');
+
+  // New component state (per design spec)
+  const [flowDirection, setFlowDirection] = useState('row');
+  const [canvasPosition, setCanvasPosition] = useState({ col: 0, row: 0 });
+  const [canvasSize, setCanvasSize] = useState({ cols: 2, rows: 2 });
+  const [openPopouts, setOpenPopouts] = useState([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   // Handle room change - receives both id and name from RoomSelector
   const handleRoomChange = useCallback((roomId, roomName) => {
@@ -256,6 +275,60 @@ export function CIAWebApp({ username, userId, projectId }) {
   useGlobalKeyboardShortcuts();
 
   // =========================================================================
+  // NEW COMPONENT HANDLERS (per design spec)
+  // =========================================================================
+
+  // Popout panel toggle
+  const handleTogglePopout = useCallback((popoutId) => {
+    setOpenPopouts(prev =>
+      prev.includes(popoutId)
+        ? prev.filter(id => id !== popoutId)
+        : [...prev, popoutId]
+    );
+  }, []);
+
+  // Canvas navigation
+  const handleNavigateHome = useCallback(() => {
+    setCanvasPosition({ col: 0, row: 0 });
+  }, []);
+
+  const handleNavigateDirection = useCallback((direction) => {
+    setCanvasPosition(prev => ({
+      col: prev.col + (direction === 'right' ? 1 : direction === 'left' ? -1 : 0),
+      row: prev.row + (direction === 'down' ? 1 : direction === 'up' ? -1 : 0),
+    }));
+  }, []);
+
+  // Edit actions
+  const handleUndo = useCallback(() => {
+    log.debug('Undo action');
+    // TODO: Implement undo
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    log.debug('Redo action');
+    // TODO: Implement redo
+  }, []);
+
+  // Header actions
+  const handleOpenSearch = useCallback(() => {
+    log.debug('Open global search');
+    // TODO: Dispatch global search modal
+    window.dispatchEvent(new CustomEvent('open:global-search'));
+  }, []);
+
+  const handleOpenHelp = useCallback(() => {
+    log.debug('Open help modal');
+    // TODO: Dispatch help modal
+    window.dispatchEvent(new CustomEvent('open:help'));
+  }, []);
+
+  const handleSignOut = useCallback(() => {
+    log.debug('Sign out');
+    sessionManager.logout?.();
+  }, []);
+
+  // =========================================================================
   // RENDER HELPERS
   // =========================================================================
 
@@ -289,14 +362,24 @@ export function CIAWebApp({ username, userId, projectId }) {
           {/* LayoutPanelProvider shares state between LayoutPanel and FloatingCanvasNavigator */}
           <LayoutPanelProvider canvasId={canvasId}>
             <ThreeEdgeLayout
-              // Top bar
+              // Top bar (48px Header per design spec)
               topBar={
-                <TopBar
-                  username={username}
-                  projectName={projectId ? `Project ${projectId}` : null}
+                <Header
+                  currentProject={projectId ? { id: projectId, name: `Project ${projectId}` } : null}
+                  projects={projects}
+                  user={{ id: userId, name: username, status: 'online' }}
+                  notifications={notifications}
+                  unreadCount={notifications.filter(n => !n.read).length}
                   viewMode={viewMode}
-                  onViewModeChange={handleViewModeChange}
                   vrAvailable={vrAvailable}
+                  onProjectChange={(project) => log.debug('Project changed:', project)}
+                  onCreateProject={() => log.debug('Create project')}
+                  onOpenSearch={handleOpenSearch}
+                  onOpenHelp={handleOpenHelp}
+                  onNotificationClick={(n) => log.debug('Notification clicked:', n)}
+                  onViewModeChange={handleViewModeChange}
+                  onNavigate={(path) => log.debug('Navigate:', path)}
+                  onSignOut={handleSignOut}
                 />
               }
 
@@ -319,24 +402,56 @@ export function CIAWebApp({ username, userId, projectId }) {
               rightActivityBar={<RightActivityBar />}
               rightPanelContent={<RightPanelContent workspaceId={workspaceId} roomId={currentRoomId} roomName={currentRoomName} />}
 
-              // Secondary bar zones - distributed across grid cells
+              // Secondary bar zones (44px SecondaryHeader per design spec)
               secondaryTopBarZones={{
                 left: (
-                  <WorkspaceSelector
-                    currentWorkspace={workspace.currentWorkspace}
-                    isOpen={workspaceSelectorOpen}
-                    searchQuery={workspace.searchQuery}
-                    groupedWorkspaces={workspace.groupedWorkspaces}
-                    onToggle={() => setWorkspaceSelectorOpen(!workspaceSelectorOpen)}
-                    onSelect={(id) => {
-                      workspace.selectWorkspace(id);
-                      setWorkspaceSelectorOpen(false);
-                    }}
-                    onSearchChange={workspace.setSearchQuery}
-                    onClose={() => setWorkspaceSelectorOpen(false)}
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <WorkspaceSelector
+                      workspace={workspace.currentWorkspace}
+                      workspaces={workspaces}
+                      onSelect={(ws) => workspace.selectWorkspace(ws?.id || ws)}
+                      onCreate={() => log.debug('Create workspace')}
+                    />
+                    <SecondaryBarDivider height={20} />
+                    <RoomPresenceIndicator
+                      room={{ id: currentRoomId, name: currentRoomName }}
+                      members={presence.visibleUsers?.map(u => ({
+                        id: u.id,
+                        name: u.name || u.username,
+                        color: u.color,
+                        status: 'online',
+                      })) || []}
+                      onClick={() => log.debug('Open rooms panel')}
+                    />
+                  </div>
                 ),
-                center: <SecondaryTopBar />,
+                center: (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FlowDirectionToggle
+                      direction={flowDirection}
+                      onChange={setFlowDirection}
+                    />
+                    <SecondaryBarDivider height={20} />
+                    <EditToolbar
+                      isEditMode={editMode}
+                      activeTool={activeTool}
+                      onToolChange={setActiveTool}
+                      onToggleEditMode={() => setEditMode(!editMode)}
+                      canUndo={canUndo}
+                      canRedo={canRedo}
+                      onUndo={handleUndo}
+                      onRedo={handleRedo}
+                    />
+                    <SecondaryBarDivider height={20} />
+                    <CanvasNavigation
+                      position={canvasPosition}
+                      isAtOrigin={canvasPosition.col === 0 && canvasPosition.row === 0}
+                      onHome={handleNavigateHome}
+                      onMove={handleNavigateDirection}
+                      onBookmark={() => log.debug('Open bookmarks')}
+                    />
+                  </div>
+                ),
                 right: (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <RoomSelector
@@ -354,40 +469,53 @@ export function CIAWebApp({ username, userId, projectId }) {
                       onAutoEnter={transition.autoEnter}
                       onCreateWorkspace={handleCreateWorkspaceForRoom}
                     />
-                    <WorkspacePresence
-                      visibleUsers={presence.visibleUsers}
-                      overflowCount={presence.overflowCount}
-                      totalCount={presence.totalCount}
-                      isHovering={presence.isHovering}
-                      onHoverChange={presence.setIsHovering}
-                    />
                   </div>
                 ),
               }}
+              // Secondary bar zones (36px SecondaryFooter per design spec)
               secondaryBottomBarZones={{
                 left: (
+                  <PopoutButtons
+                    openPopouts={openPopouts}
+                    onToggle={handleTogglePopout}
+                  />
+                ),
+                center: (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <NavigatorButton />
-                    <SecondaryBarDivider height={12} />
-                    {/* <LayoutModeToggle
+                    <InstanceSelector
+                      activeInstance={null}
+                      onCanvasViews={[]}
+                      availableViews={[]}
+                      onSelectInstance={(instance) => log.debug('Select instance:', instance)}
+                      onPlaceView={(view) => log.debug('Place view:', view)}
+                    />
+                    <SecondaryBarDivider height={20} />
+                    <FooterViewModeToggle
                       mode={layoutMode}
-                      onModeChange={setLayoutMode}
-                    /> */}
+                      onChange={setLayoutMode}
+                    />
+                    <SecondaryBarDivider height={20} />
+                    <CanvasSizeDisplay
+                      size={canvasSize}
+                      onChange={setCanvasSize}
+                    />
                   </div>
                 ),
-                center: <SecondaryBottomBar currentWorkspace={currentWorkspace} />,
                 right: (
-                  <VoiceControls
-                    inVoice={voice.inVoice}
-                    muted={voice.muted}
-                    deafened={voice.deafened}
-                    currentRoom={voice.currentRoom}
-                    showRoomDropdown={voice.showRoomDropdown}
-                    onJoin={voice.joinVoice}
-                    onLeave={voice.leaveVoice}
+                  <VoiceQuickControls
+                    isMuted={voice.muted}
+                    isDeafened={voice.deafened}
+                    isInChannel={voice.inVoice}
+                    currentChannel={voice.currentRoom ? { id: currentRoomId, name: voice.currentRoom } : null}
+                    channels={[
+                      { id: 'general', name: 'General', participantCount: 3 },
+                      { id: 'team', name: 'Team', participantCount: 2 },
+                    ]}
                     onToggleMute={voice.toggleMute}
                     onToggleDeafen={voice.toggleDeafen}
-                    onToggleRoomDropdown={voice.toggleRoomDropdown}
+                    onJoinLeave={voice.inVoice ? voice.leaveVoice : voice.joinVoice}
+                    onChangeChannel={(channelId) => log.debug('Change voice channel:', channelId)}
+                    onOpenSettings={() => log.debug('Open voice settings')}
                   />
                 ),
               }}

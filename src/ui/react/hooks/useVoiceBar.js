@@ -1,6 +1,6 @@
-// src/ui/react/components/layout/SecondaryBottomBar/SecondaryBottomBar.logic.js
-// Headless logic for the secondary bottom bar
-// Manages canvas viewport, voice controls, and workspace indicators
+// src/ui/react/hooks/useVoiceBar.js
+// Voice bar hooks - manages voice controls, canvas viewport, and workspace indicators
+// Migrated from legacy SecondaryBottomBar.logic.js
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import {
@@ -123,11 +123,9 @@ export function useVoiceControls({
 
     setIsJoining(true);
     try {
-      // Use room name for LiveKit room identity
       const voiceRoomName = roomId ? `room-${roomId}` : "main-room";
       await voiceRoomService.joinRoom(voiceRoomName, userName);
 
-      // Update presence with voice state
       presenceSystem.updateVoiceState({
         inVoice: true,
         isMuted: voiceRoomService.isMuted,
@@ -146,7 +144,6 @@ export function useVoiceControls({
   const leaveVoice = useCallback(async () => {
     await voiceRoomService.leaveRoom();
 
-    // Update presence
     presenceSystem.updateVoiceState({
       inVoice: false,
       isMuted: true,
@@ -165,7 +162,6 @@ export function useVoiceControls({
     const newMuted = await voiceRoomService.toggleMute();
     setMuted(newMuted);
 
-    // Update presence
     presenceSystem.updateVoiceState({
       inVoice: true,
       isMuted: newMuted,
@@ -185,7 +181,6 @@ export function useVoiceControls({
   }, []);
 
   return {
-    // State
     inVoice,
     isConnecting,
     isJoining,
@@ -194,8 +189,6 @@ export function useVoiceControls({
     currentRoom: roomName,
     showRoomDropdown,
     connectionState,
-
-    // Actions
     joinVoice,
     leaveVoice,
     toggleMute,
@@ -223,18 +216,15 @@ export function useWorkspaceIndicator(currentWorkspace) {
 }
 
 /**
- * useSecondaryBottomBar - Combined hook for all secondary bottom bar state
+ * useSecondaryBottomBar - Combined hook for all voice bar state
  *
  * @param {Object} options - Configuration options
- * @returns {Object} All secondary bottom bar state and actions
+ * @returns {Object} All voice bar state and actions
  */
 export function useSecondaryBottomBar({
-  // Canvas options
   canvasSize,
   viewport,
   onViewportChange,
-
-  // Voice options
   initialInVoice,
   initialMuted,
   initialDeafened,
@@ -243,11 +233,7 @@ export function useSecondaryBottomBar({
   onLeaveVoice,
   onMuteToggle,
   onDeafenToggle,
-
-  // Workspace
   currentWorkspace,
-
-  // Instance count
   instanceCount = 0,
 } = {}) {
   const canvasViewport = useCanvasViewport({
