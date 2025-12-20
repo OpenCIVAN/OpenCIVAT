@@ -7,6 +7,8 @@
  * - Left: Logo, Project Selector
  * - Right: Search, Help, Notifications, Theme, VR, User
  *
+ * FIX: Added `compact` prop to ViewModeToggle to prevent text overflow
+ *
  * @example
  * <Header
  *   currentProject={project}
@@ -87,10 +89,12 @@ export function Header({
                     onNotificationClick={onNotificationClick}
                 />
                 <ThemeToggle />
+                {/* FIX: Added compact prop to prevent text overflow in header */}
                 <ViewModeToggle
                     mode={viewMode}
                     onChange={onViewModeChange}
                     vrAvailable={vrAvailable}
+                    compact
                 />
                 <UserMenu
                     user={user}

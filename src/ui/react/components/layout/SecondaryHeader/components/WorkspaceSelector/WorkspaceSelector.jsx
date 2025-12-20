@@ -1,6 +1,11 @@
 /**
  * @file WorkspaceSelector.jsx
- * @description Dropdown for selecting workspace with type indicators.
+ * @description Tall dropdown for selecting workspace with type indicators.
+ * 
+ * ENHANCED VERSION - Matches design spec with:
+ * - "Workspace" label above name
+ * - Colored border based on workspace type
+ * - Glassmorphism styling
  *
  * Workspace Types:
  * - Project (Globe, blue) - Main project workspace
@@ -8,20 +13,43 @@
  * - Personal (User, green) - Personal workspace
  */
 
-import React from 'react';
-import { Globe, GitBranch, User, ChevronDown, Plus } from 'lucide-react';
-import { Dropdown } from '@UI/react/components/common/Dropdown';
+import React, { useState, useRef, useEffect } from 'react';
+import { Globe, GitBranch, User, ChevronDown, Plus, Check } from 'lucide-react';
 
 import './WorkspaceSelector.scss';
 
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
 const WORKSPACE_TYPES = {
-    project: { icon: Globe, color: 'blue', label: 'Project' },
-    breakout: { icon: GitBranch, color: 'purple', label: 'Breakout' },
-    personal: { icon: User, color: 'green', label: 'Personal' },
+    project: {
+        icon: Globe,
+        color: 'blue',
+        label: 'Project',
+        rgb: '96, 165, 250',
+    },
+    breakout: {
+        icon: GitBranch,
+        color: 'purple',
+        label: 'Breakout',
+        rgb: '167, 139, 250',
+    },
+    personal: {
+        icon: User,
+        color: 'green',
+        label: 'Personal',
+        rgb: '74, 222, 128',
+    },
 };
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 /**
  * Workspace selector dropdown component.
+ * Tall dropdown with label showing current workspace.
  *
  * @param {Object} props - Component props
  * @param {Object} [props.workspace] - Currently selected workspace
@@ -35,9 +63,38 @@ export function WorkspaceSelector({
     onSelect,
     onCreate,
 }) {
-    const typeConfig =
-        WORKSPACE_TYPES[workspace?.type] || WORKSPACE_TYPES.project;
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef(null);
+
+    // Get type config for current workspace
+    const typeConfig = WORKSPACE_TYPES[workspace?.type] || WORKSPACE_TYPES.project;
     const TypeIcon = typeConfig.icon;
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    // Close on Escape
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') setIsOpen(false);
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen]);
 
     // Group workspaces by type
     const grouped = workspaces.reduce((acc, ws) => {
@@ -49,78 +106,154 @@ export function WorkspaceSelector({
 
     const handleSelect = (ws) => {
         onSelect?.(ws);
+        setIsOpen(false);
     };
 
     const handleCreate = () => {
         onCreate?.();
+        setIsOpen(false);
+    };
+
+    // Style with CSS custom properties for workspace color
+    const triggerStyle = {
+        '--ws-color-rgb': typeConfig.rgb,
+        '--ws-color': `rgb(${typeConfig.rgb})`,
     };
 
     return (
-        <Dropdown
-            trigger={
-                <button
-                    className="workspace-selector"
-                    data-color={typeConfig.color}
-                    type="button"
-                >
-                    <TypeIcon size={16} className="workspace-selector__icon" />
+        <div className="workspace-selector" ref={containerRef}>
+            {/* Trigger Button - Tall style with label */}
+            <button
+                className="workspace-selector__trigger"
+                onClick={() => setIsOpen(!isOpen)}
+                style={triggerStyle}
+                type="button"
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
+            >
+                <TypeIcon size={14} className="workspace-selector__icon" />
+
+                <div className="workspace-selector__info">
+                    <span className="workspace-selector__label">Workspace</span>
                     <span className="workspace-selector__name">
                         {workspace?.name || 'Select Workspace'}
                     </span>
-                    <ChevronDown size={14} />
-                </button>
-            }
-            placement="bottom-start"
-        >
-            <div className="workspace-selector__dropdown">
-                {Object.entries(WORKSPACE_TYPES).map(([type, config]) => {
-                    const items = grouped[type] || [];
-                    if (items.length === 0) return null;
-
-                    const Icon = config.icon;
-                    return (
-                        <div key={type} className="workspace-selector__group">
-                            <div
-                                className="workspace-selector__group-header"
-                                data-color={config.color}
-                            >
-                                <Icon size={12} />
-                                {config.label}
-                            </div>
-                            {items.map((ws) => (
-                                <button
-                                    key={ws.id}
-                                    className={`workspace-selector__item ${ws.id === workspace?.id ? 'active' : ''
-                                        }`}
-                                    onClick={() => handleSelect(ws)}
-                                    type="button"
-                                >
-                                    {ws.name}
-                                </button>
-                            ))}
-                        </div>
-                    );
-                })}
-
-                {/* Show empty state if no workspaces */}
-                {workspaces.length === 0 && (
-                    <div className="workspace-selector__empty">
-                        No workspaces available
-                    </div>
-                )}
-
-                <div className="workspace-selector__footer">
-                    <button
-                        className="workspace-selector__create"
-                        onClick={handleCreate}
-                        type="button"
-                    >
-                        <Plus size={14} />
-                        New Workspace
-                    </button>
                 </div>
-            </div>
-        </Dropdown>
+
+                <ChevronDown
+                    size={12}
+                    className={`workspace-selector__chevron ${isOpen ? 'workspace-selector__chevron--open' : ''}`}
+                />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isOpen && (
+                <div className="workspace-selector__dropdown" role="listbox">
+                    {/* Project Workspaces */}
+                    {grouped.project?.length > 0 && (
+                        <div className="workspace-selector__section">
+                            <div className="workspace-selector__section-header" data-color="blue">
+                                <Globe size={10} />
+                                <span>Project Workspaces</span>
+                            </div>
+                            {grouped.project.map((ws) => {
+                                const isActive = workspace?.id === ws.id;
+                                return (
+                                    <button
+                                        key={ws.id}
+                                        className={`workspace-selector__item ${isActive ? 'workspace-selector__item--active' : ''}`}
+                                        onClick={() => handleSelect(ws)}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={isActive}
+                                        style={{ '--ws-color-rgb': WORKSPACE_TYPES.project.rgb }}
+                                    >
+                                        <Globe size={12} className="workspace-selector__item-icon" />
+                                        <span className="workspace-selector__item-name">{ws.name}</span>
+                                        {isActive && <Check size={12} className="workspace-selector__item-check" />}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Breakout Workspaces */}
+                    {grouped.breakout?.length > 0 && (
+                        <div className="workspace-selector__section">
+                            <div className="workspace-selector__section-header" data-color="purple">
+                                <GitBranch size={10} />
+                                <span>Breakout Rooms</span>
+                            </div>
+                            {grouped.breakout.map((ws) => {
+                                const isActive = workspace?.id === ws.id;
+                                return (
+                                    <button
+                                        key={ws.id}
+                                        className={`workspace-selector__item ${isActive ? 'workspace-selector__item--active' : ''}`}
+                                        onClick={() => handleSelect(ws)}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={isActive}
+                                        style={{ '--ws-color-rgb': WORKSPACE_TYPES.breakout.rgb }}
+                                    >
+                                        <GitBranch size={12} className="workspace-selector__item-icon" />
+                                        <span className="workspace-selector__item-name">{ws.name}</span>
+                                        {isActive && <Check size={12} className="workspace-selector__item-check" />}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Personal Workspaces */}
+                    {grouped.personal?.length > 0 && (
+                        <div className="workspace-selector__section">
+                            <div className="workspace-selector__section-header" data-color="green">
+                                <User size={10} />
+                                <span>Personal</span>
+                            </div>
+                            {grouped.personal.map((ws) => {
+                                const isActive = workspace?.id === ws.id;
+                                return (
+                                    <button
+                                        key={ws.id}
+                                        className={`workspace-selector__item ${isActive ? 'workspace-selector__item--active' : ''}`}
+                                        onClick={() => handleSelect(ws)}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={isActive}
+                                        style={{ '--ws-color-rgb': WORKSPACE_TYPES.personal.rgb }}
+                                    >
+                                        <User size={12} className="workspace-selector__item-icon" />
+                                        <span className="workspace-selector__item-name">{ws.name}</span>
+                                        {isActive && <Check size={12} className="workspace-selector__item-check" />}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Empty State */}
+                    {workspaces.length === 0 && (
+                        <div className="workspace-selector__empty">
+                            No workspaces available
+                        </div>
+                    )}
+
+                    {/* Create Action */}
+                    <div className="workspace-selector__actions">
+                        <button
+                            className="workspace-selector__create-btn"
+                            onClick={handleCreate}
+                            type="button"
+                        >
+                            <Plus size={12} />
+                            <span>New Workspace</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
 

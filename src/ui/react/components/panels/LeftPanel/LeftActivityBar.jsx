@@ -3,6 +3,8 @@
 // Renders in ThreeEdgeLayout's left activity bar slot
 //
 // IMPORTANT: Uses existing class names from LeftPanel.scss to preserve styles
+// FIX: Changed `!tab.implemented` to `tab.implemented === false` to only show
+//      "Soon" badge when explicitly marked as not implemented
 
 import React from 'react';
 import { PanelLeftClose, ChevronRight } from 'lucide-react';
@@ -67,7 +69,8 @@ export function LeftActivityBar() {
                             aria-selected={isActive}
                         >
                             <Icon size={18} />
-                            {!tab.implemented && (
+                            {/* FIX: Only show "Soon" if explicitly set to false */}
+                            {tab.implemented === false && (
                                 <span className="left-panel__activity-badge">Soon</span>
                             )}
                         </button>
