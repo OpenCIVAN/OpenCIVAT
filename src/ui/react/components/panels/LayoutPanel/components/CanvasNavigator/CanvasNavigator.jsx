@@ -267,12 +267,12 @@ const Tooltip = memo(function Tooltip({ cell, position }) {
  * CanvasNavigator - Complete canvas navigation and editing component
  */
 export const CanvasNavigator = memo(function CanvasNavigator({
-    // Data props
-    canvasSize,
-    viewport,
-    viewportSize,
-    cells,
-    homepoint,
+    // Data props - with defaults to prevent crashes
+    canvasSize = { rows: 3, cols: 3 },
+    viewport = { row: 0, col: 0 },
+    viewportSize = { rows: 2, cols: 2 },
+    cells = [],
+    homepoint = null,
     collaborators = [],
     dockPosition = DOCK_POSITIONS.LEFT_PANEL,
     loading = false,

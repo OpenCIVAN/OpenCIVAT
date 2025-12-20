@@ -48,11 +48,12 @@ export {
 
 export {
   useCanvasNavigator,
-  usePressAndHold,
-  useViewportDrag,
+  // Constants
+  CONTEXT_MODES,
   DISPLAY_MODES,
   NAV_MODES,
   INSTANCE_COLORS,
+  // NOTE: usePressAndHold and useViewportDrag were removed
   // NOTE: DOCK_POSITIONS is NOT exported from CanvasNavigator.logic.js
   // Use the one from LayoutPanelContext instead
 } from "./components/CanvasNavigator/CanvasNavigator.logic";
