@@ -19,7 +19,7 @@
 import React from 'react';
 import { PopoutButtons } from './components/PopoutButtons';
 import { InstanceSelector } from './components/InstanceSelector';
-export { LayoutModeToggle } from '@UI/react/components/controls/LayoutModeToggle';
+import { LayoutModeToggle } from '@UI/react/components/controls/LayoutModeToggle';
 import { CanvasSizeDisplay } from './components/CanvasSizeDisplay';
 import { VoiceQuickControls } from './components/VoiceQuickControls';
 
