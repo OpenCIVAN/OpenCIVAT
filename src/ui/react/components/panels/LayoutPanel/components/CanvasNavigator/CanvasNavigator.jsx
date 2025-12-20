@@ -618,8 +618,8 @@ export const CanvasNavigator = memo(function CanvasNavigator({
             <div
                 className="canvas-navigator__grid"
                 style={{
-                    gridTemplateColumns: `repeat(${canvasSize.cols}, ${cellDimensions.width}px)`,
-                    gridTemplateRows: `repeat(${canvasSize.rows}, ${cellDimensions.height}px)`,
+                    gridTemplateColumns: `repeat(${nav.canvasSize.cols}, ${cellDimensions.width}px)`,
+                    gridTemplateRows: `repeat(${nav.canvasSize.rows}, ${cellDimensions.height}px)`,
                     gap: cellDimensions.gap,
                 }}
             >
@@ -714,14 +714,14 @@ export const CanvasNavigator = memo(function CanvasNavigator({
             <div
                 className="canvas-navigator__viewport-indicator"
                 style={{
-                    left: viewport.col * (cellDimensions.width + cellDimensions.gap),
-                    top: viewport.row * (cellDimensions.height + cellDimensions.gap),
+                    left: nav.viewport.col * (cellDimensions.width + cellDimensions.gap),
+                    top: nav.viewport.row * (cellDimensions.height + cellDimensions.gap),
                     width:
-                        viewportSize.cols * cellDimensions.width +
-                        (viewportSize.cols - 1) * cellDimensions.gap,
+                        nav.viewportSize.cols * cellDimensions.width +
+                        (nav.viewportSize.cols - 1) * cellDimensions.gap,
                     height:
-                        viewportSize.rows * cellDimensions.height +
-                        (viewportSize.rows - 1) * cellDimensions.gap,
+                        nav.viewportSize.rows * cellDimensions.height +
+                        (nav.viewportSize.rows - 1) * cellDimensions.gap,
                 }}
             />
         </div>
@@ -739,7 +739,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     <NavBtn
                         size="sm"
                         onClick={() => nav.moveViewport("up")}
-                        disabled={viewport.row <= 0}
+                        disabled={nav.viewport.row <= 0}
                         title="Move Up"
                     >
                         <ChevronUp size={12} />
@@ -749,7 +749,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     <NavBtn
                         size="sm"
                         onClick={() => nav.moveViewport("left")}
-                        disabled={viewport.col <= 0}
+                        disabled={nav.viewport.col <= 0}
                         title="Move Left"
                     >
                         <ChevronLeft size={12} />
@@ -758,7 +758,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         size="sm"
                         onClick={nav.navigateHome}
                         active={nav.isAtHome}
-                        disabled={!homepoint}
+                        disabled={!nav.homepoint}
                         title="Go Home"
                         color="pink"
                     >
@@ -767,7 +767,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     <NavBtn
                         size="sm"
                         onClick={() => nav.moveViewport("right")}
-                        disabled={viewport.col + viewportSize.cols >= canvasSize.cols}
+                        disabled={nav.viewport.col + nav.viewportSize.cols >= nav.canvasSize.cols}
                         title="Move Right"
                     >
                         <ChevronRight size={12} />
@@ -777,7 +777,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     <NavBtn
                         size="sm"
                         onClick={() => nav.moveViewport("down")}
-                        disabled={viewport.row + viewportSize.rows >= canvasSize.rows}
+                        disabled={nav.viewport.row + nav.viewportSize.rows >= nav.canvasSize.rows}
                         title="Move Down"
                     >
                         <ChevronDown size={12} />
@@ -789,7 +789,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
             <div className="canvas-navigator__position">
                 <span className="canvas-navigator__position-label">Position</span>
                 <span className="canvas-navigator__position-value">
-                    {viewport.row + 1},{viewport.col + 1}
+                    {nav.viewport.row + 1},{nav.viewport.col + 1}
                 </span>
             </div>
 
@@ -804,7 +804,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                 >
                     <Crosshair size={12} />
                 </NavBtn>
-                {homepoint && (
+                {nav.homepoint && (
                     <NavBtn
                         size="sm"
                         onClick={nav.clearHomepoint}
@@ -830,19 +830,19 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                 <div className="canvas-navigator__size-row">
                     <NumberSpinner
                         label="R"
-                        value={viewportSize.rows}
+                        value={nav.viewportSize.rows}
                         onChange={nav.setViewportSizeRows}
                         min={1}
-                        max={canvasSize.rows}
+                        max={nav.canvasSize.rows}
                         color="blue"
                         compact
                     />
                     <NumberSpinner
                         label="C"
-                        value={viewportSize.cols}
+                        value={nav.viewportSize.cols}
                         onChange={nav.setViewportSizeCols}
                         min={1}
-                        max={canvasSize.cols}
+                        max={nav.canvasSize.cols}
                         color="blue"
                         compact
                     />
@@ -856,7 +856,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     <div className="canvas-navigator__size-row">
                         <NumberSpinner
                             label="R"
-                            value={canvasSize.rows}
+                            value={nav.canvasSize.rows}
                             onChange={nav.setCanvasRows}
                             min={1}
                             max={50}
@@ -865,7 +865,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         />
                         <NumberSpinner
                             label="C"
-                            value={canvasSize.cols}
+                            value={nav.canvasSize.cols}
                             onChange={nav.setCanvasCols}
                             min={1}
                             max={50}
