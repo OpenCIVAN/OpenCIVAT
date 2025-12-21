@@ -313,6 +313,11 @@ export function CanvasGrid({
 
     useEffect(() => {
         const handleKeyDown = (e) => {
+            // Debug: log all key presses to see what's happening
+            if (['1', '2', '3', '0', 'Home', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                console.log('[CanvasGrid] Key pressed:', e.key, 'target:', e.target.tagName, 'ctrlKey:', e.ctrlKey);
+            }
+
             // Skip if typing in an input or textarea
             if (e.target.tagName === 'INPUT' ||
                 e.target.tagName === 'TEXTAREA' ||
@@ -353,6 +358,7 @@ export function CanvasGrid({
             // Number key presets - work globally
             if (e.key === '1' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
+                console.log('[CanvasGrid] Key 1 pressed, setViewportSize:', typeof setViewportSize);
                 // 1x1 focus mode
                 setViewportSize?.(1, 1);
             } else if (e.key === '2' && !e.ctrlKey && !e.metaKey) {
