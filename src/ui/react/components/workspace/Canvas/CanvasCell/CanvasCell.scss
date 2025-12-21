@@ -450,6 +450,15 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+
+  // Crossfade transition - fades out when viewport becomes ready
+  opacity: 1;
+  transition: opacity 0.25s ease-out;
+
+  &--hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .canvas-cell__instance-container {
@@ -458,6 +467,25 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
+
+  // Crossfade transition - fades in when becoming active
+  opacity: 1;
+  transition: opacity 0.2s ease-in;
+
+  &--activating {
+    // Smooth fade-in when viewport mounts for active thumbnail
+    animation: viewport-fade-in 0.3s ease-out;
+  }
+}
+
+// Viewport activation animation
+@keyframes viewport-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 // =============================================================================

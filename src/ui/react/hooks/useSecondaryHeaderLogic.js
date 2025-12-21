@@ -16,7 +16,10 @@
 
 import { useCallback, useMemo, useEffect, useState } from "react";
 import { useLayoutPanelContext } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
-import { getViewConfigurationManager } from "@Init/appInitializer";
+import {
+  getViewConfigurationManager,
+  getDatasetManager,
+} from "@Init/appInitializer";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { eventBus, BUS_EVENTS } from "@Core/events";
@@ -204,17 +207,36 @@ export function useSecondaryHeaderLogic() {
    */
   const onCanvasViews = useMemo(() => {
     // cells from context are already enriched with viewConfiguration data
-    return cells.map((cell, index) => ({
-      id: cell.viewConfigurationId || cell.id,
-      name: cell.name || cell.title || `View ${index + 1}`,
-      type: cell.content?.type || "vtk",
-      position: { col: cell.col, row: cell.row },
-      color:
-        cell.color ||
-        cell.instanceColor ||
-        getViewColor(cell.viewConfigurationId, index),
-      datasetName: cell.datasetName || cell.datasetId,
-    }));
+    return cells.map((cell, index) => {
+      const viewId = cell.viewConfigurationId || cell.id;
+      const cellName = cell.name || cell.title;
+
+      // Check if the name is a default placeholder
+      const isDefaultName =
+        !cellName ||
+        cellName === "Untitled View" ||
+        cellName === "Default View";
+
+      // Get dataset filename as fallback for default names
+      let displayName = cellName;
+      if (isDefaultName) {
+        const vcm = getViewConfigurationManager?.();
+        const viewConfig = vcm?.getView?.(viewId);
+        const dataset = viewConfig?.datasetId
+          ? getDatasetManager?.()?.getDataset?.(viewConfig.datasetId)
+          : null;
+        displayName = dataset?.filename || cellName || `View ${index + 1}`;
+      }
+
+      return {
+        id: viewId,
+        name: displayName,
+        type: cell.content?.type || "vtk",
+        position: { col: cell.col, row: cell.row },
+        color: cell.color || cell.instanceColor || getViewColor(viewId, index),
+        datasetName: cell.datasetName || cell.datasetId,
+      };
+    });
   }, [cells, refreshKey]);
 
   /**
@@ -257,20 +279,36 @@ export function useSecondaryHeaderLogic() {
     const canvasView = onCanvasViews.find((v) => v.id === viewConfigId);
 
     // Get view name from ViewConfigurationManager
+    // Prefer dataset filename over default "Untitled View" name
     const vcm = getViewConfigurationManager?.();
     const viewConfig = vcm?.getView?.(viewConfigId);
+    const dataset = viewConfig?.datasetId
+      ? getDatasetManager?.()?.getDataset?.(viewConfig.datasetId)
+      : null;
 
-    return {
-      id: viewConfigId,
-      name:
+    // Check if view name is a default placeholder
+    const isDefaultName =
+      !viewConfig?.name ||
+      viewConfig.name === "Untitled View" ||
+      viewConfig.name === "Default View";
+
+    // Prefer dataset filename over default view name
+    const displayName = isDefaultName
+      ? dataset?.filename ||
         viewConfig?.name ||
         activeInstance.name ||
         canvasView?.name ||
-        "Active View",
+        "Active View"
+      : viewConfig.name;
+
+    return {
+      id: viewConfigId,
+      name: displayName,
       type: viewConfig?.handlerType || activeInstance.type || "vtk",
       position: canvasView?.position || null,
       color: colorHex || canvasView?.color || VIEW_COLORS[0],
-      datasetName: viewConfig?.datasetName || canvasView?.datasetName,
+      datasetName:
+        dataset?.filename || viewConfig?.datasetName || canvasView?.datasetName,
     };
   }, [activeInstance, onCanvasViews, refreshKey]);
 

@@ -104,6 +104,10 @@ export function CanvasGrid({
     const [activeTool, setActiveTool] = useState('select');
     const [selectionModifierHeld, setSelectionModifierHeld] = useState(false);
 
+    // Active view tracking - for performance optimization
+    // Only the active view mounts InstanceViewport in THUMBNAIL/SNAPSHOT modes
+    const [activeViewId, setActiveViewId] = useState(null);
+
     // Context menu state
     const [contextMenu, setContextMenu] = useState({
         isOpen: false,
@@ -225,6 +229,29 @@ export function CanvasGrid({
 
         window.addEventListener('cia:viewport-size-changed', handleViewportSizeChanged);
         return () => window.removeEventListener('cia:viewport-size-changed', handleViewportSizeChanged);
+    }, []);
+
+    // ==========================================================================
+    // ACTIVE VIEW TRACKING (Performance optimization)
+    // ==========================================================================
+    // Listen for instance focus events to track which view is active.
+    // Only the active view mounts InstanceViewport in THUMBNAIL/SNAPSHOT modes,
+    // reducing WebGL/GPU load from N instances to 0-1.
+
+    useEffect(() => {
+        const handleInstanceFocused = (e) => {
+            // Note: The event uses 'viewId' not 'viewConfigId'
+            const { viewId, instanceId } = e.detail || {};
+            if (viewId) {
+                setActiveViewId(viewId);
+                if (process.env.NODE_ENV === 'development') {
+                    log.debug(`[CanvasGrid] Active view changed: ${viewId}`);
+                }
+            }
+        };
+
+        window.addEventListener('cia:instance-focused', handleInstanceFocused);
+        return () => window.removeEventListener('cia:instance-focused', handleInstanceFocused);
     }, []);
     // ==========================================================================
     // CONTAINER MEASUREMENT HOOK (robust resize handling)
@@ -874,6 +901,7 @@ export function CanvasGrid({
                             isHighlighted={placement?.id === highlightedPlacementId}
                             isSelected={selectedIds.includes(placement?.id) || selectedCells.some(sc => sc.row === canvasRow && sc.col === canvasCol)}
                             inEditMode={editMode}
+                            activeViewId={activeViewId}
                             onSelect={toggleSelection}
                             onClick={(e) => placement && handleCellClick(placement, e)}
                             onDoubleClick={(e) => placement && onCellDoubleClick?.(placement, e)}
@@ -896,6 +924,7 @@ export function CanvasGrid({
         selectedIds,
         selectedCells,
         editMode,
+        activeViewId,
         toggleSelection,
         handleCellClick,
         onCellDoubleClick,

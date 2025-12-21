@@ -113,6 +113,7 @@ export const CanvasCell = memo(function CanvasCell({
     isHighlighted = false,
     selectionMode = false,
     inEditMode = false,
+    activeViewId = null,
     onClick,
     onDoubleClick,
     onSelect,
@@ -382,9 +383,18 @@ export const CanvasCell = memo(function CanvasCell({
 
         switch (contentType) {
             case PlacementContentType.VIEW:
+                // Determine if this view should mount its InstanceViewport
+                // In THUMBNAIL/SNAPSHOT modes, only mount for active view (performance optimization)
+                const viewId = placement.content.viewConfigurationId;
+                const isActiveView = viewId === activeViewId;
+                const shouldMountViewport =
+                    renderMode === RENDER_MODES.FULL ||
+                    renderMode === RENDER_MODES.COMPACT ||
+                    isActiveView;
+
                 return (
                     <ViewContent
-                        viewId={placement.content.viewConfigurationId}
+                        viewId={viewId}
                         rowSpan={rowSpan}
                         colSpan={colSpan}
                         placementId={placement.id}
@@ -393,6 +403,8 @@ export const CanvasCell = memo(function CanvasCell({
                         onClose={() => onRemove?.()}
                         viewName={placement.content?.name || placement.content?.viewName}
                         viewColor={placement.content?.color?.hex || placement.content?.colorHex}
+                        shouldMountViewport={shouldMountViewport}
+                        isActiveView={isActiveView}
                     />
                 );
 
@@ -738,13 +750,33 @@ function MiniHeader({ name, color, onClose, onOpenMenu, viewId }) {
 // VIEW CONTENT
 // =============================================================================
 
-function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConfig, onClose, onOpenMenu, viewName, viewColor }) {
+function ViewContent({
+    viewId,
+    rowSpan,
+    colSpan,
+    placementId,
+    renderMode,
+    uiConfig,
+    onClose,
+    onOpenMenu,
+    viewName,
+    viewColor,
+    shouldMountViewport = true,
+    isActiveView = false,
+}) {
     const [isReady, setIsReady] = useState(false);
 
     // Determine if we should show thumbnail overlay vs live render
-    const showThumbnailOverlay =
+    // Show thumbnail when in thumbnail/snapshot mode AND viewport is not mounted
+    const isThumbnailMode =
         uiConfig.renderContent === 'thumbnail' ||
         uiConfig.renderContent === 'snapshot';
+
+    // Show thumbnail overlay unless viewport is mounted AND ready
+    const showThumbnailOverlay = isThumbnailMode && !(shouldMountViewport && isReady);
+
+    // CSS class for crossfade transition when becoming active
+    const viewportTransitionClass = isActiveView && isThumbnailMode ? 'canvas-cell__instance-container--activating' : '';
 
     return (
         <div className="canvas-cell__view-content">
@@ -759,9 +791,12 @@ function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConf
                 />
             )}
 
-            {/* Thumbnail overlay - shows OVER the instance */}
-            {showThumbnailOverlay && (
-                <div className="canvas-cell__thumbnail-overlay">
+            {/* Thumbnail overlay - shows OVER the instance when not active */}
+            {/* Fades out when viewport becomes ready */}
+            {isThumbnailMode && (
+                <div
+                    className={`canvas-cell__thumbnail-overlay ${showThumbnailOverlay ? '' : 'canvas-cell__thumbnail-overlay--hidden'}`}
+                >
                     <Thumbnail
                         viewId={viewId}
                         size="fill"
@@ -775,25 +810,29 @@ function ViewContent({ viewId, rowSpan, colSpan, placementId, renderMode, uiConf
                 </div>
             )}
 
-            {/* ALWAYS render InstanceViewport - it's behind thumbnail overlay via z-index */}
-            {/* We keep it visible (not visibility:hidden) to preserve WebGL context */}
-            <div
-                className="canvas-cell__instance-container"
-                style={{
-                    pointerEvents: showThumbnailOverlay ? 'none' : 'auto',
-                }}
-            >
-                <ProgressiveLoader viewId={viewId} isReady={isReady}>
-                    <InstanceViewport
-                        viewConfigId={viewId}
-                        isRemote={false}
-                        currentSpan={`${colSpan}x${rowSpan}`}
-                        uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
-                        onReady={() => setIsReady(true)}
-                        onClose={onClose}
-                    />
-                </ProgressiveLoader>
-            </div>
+            {/* Only mount InstanceViewport when:
+                - FULL/COMPACT mode (always render), OR
+                - THUMBNAIL/SNAPSHOT mode AND this is the active view
+                This reduces WebGL instances from N to 0-1 in thumbnail grids */}
+            {shouldMountViewport && (
+                <div
+                    className={`canvas-cell__instance-container ${viewportTransitionClass}`}
+                    style={{
+                        pointerEvents: showThumbnailOverlay ? 'none' : 'auto',
+                    }}
+                >
+                    <ProgressiveLoader viewId={viewId} isReady={isReady}>
+                        <InstanceViewport
+                            viewConfigId={viewId}
+                            isRemote={false}
+                            currentSpan={`${colSpan}x${rowSpan}`}
+                            uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
+                            onReady={() => setIsReady(true)}
+                            onClose={onClose}
+                        />
+                    </ProgressiveLoader>
+                </div>
+            )}
         </div>
     );
 }

@@ -524,10 +524,11 @@ function MoreMenu({
 
 /**
  * HeaderBar - Responsive blended dark header with instance label badge
+ * Layout: [Wrench][View Name] ----spacer---- [More][Expand][VR][Close]
  * Shows different icons based on viewport width:
- * - Full (≥400px): [Wrench] View Name [More] [Expand] [VR] [Close]
- * - Medium (300-399px): [Wrench] View Name [More] [Expand] [Close] (VR in More menu)
- * - Small (<300px): View Name [More] [Close] (Wrench, Expand in More menu)
+ * - Full (≥400px): [Wrench] View Name ... [More] [Expand] [VR] [Close]
+ * - Medium (300-399px): [Wrench] View Name ... [More] [Expand] [Close]
+ * - Small (<300px): View Name ... [More] [Close]
  */
 function HeaderBar({
     displayName,
@@ -567,7 +568,7 @@ function HeaderBar({
             onMouseEnter={onShowToolbar}
             onMouseLeave={onHideToolbar}
         >
-            {/* Left Controls - Wrench (hidden in small mode) */}
+            {/* Left section - Wrench + Label together */}
             <div className="instance-viewport__header-left">
                 {headerMode !== 'small' && (
                     <button
@@ -578,20 +579,20 @@ function HeaderBar({
                         <Wrench size={12} />
                     </button>
                 )}
-            </div>
 
-            {/* Instance Label Badge */}
-            <div
-                className="instance-viewport__label"
-                style={{
-                    '--instance-color': colorHex,
-                    '--instance-color-rgb': colorRgb,
-                }}
-            >
-                <div className="instance-viewport__label-dot" />
-                <span className="instance-viewport__label-text">
-                    {displayName}
-                </span>
+                {/* Instance Label Badge - now in left section */}
+                <div
+                    className="instance-viewport__label"
+                    style={{
+                        '--instance-color': colorHex,
+                        '--instance-color-rgb': colorRgb,
+                    }}
+                >
+                    <div className="instance-viewport__label-dot" />
+                    <span className="instance-viewport__label-text">
+                        {displayName}
+                    </span>
+                </div>
             </div>
 
             {/* Right Controls */}
