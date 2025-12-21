@@ -170,7 +170,7 @@ export function ActiveViewSelector({
             {/* Dropdown */}
             {isOpen && (
                 <div className="active-view-selector__dropdown" role="listbox">
-                    {/* Search input */}
+                    {/* Search input - fixed at top */}
                     {(onCanvasViews.length > 3 || availableViews.length > 0) && (
                         <div className="active-view-selector__search">
                             <input
@@ -184,79 +184,82 @@ export function ActiveViewSelector({
                         </div>
                     )}
 
-                    {/* On Canvas section */}
-                    {filteredOnCanvas.length > 0 && (
-                        <div className="active-view-selector__section">
-                            <div className="active-view-selector__section-header">
-                                <MapPin size={10} />
-                                <span>On Canvas</span>
+                    {/* Scrollable content area */}
+                    <div className="active-view-selector__content">
+                        {/* On Canvas section */}
+                        {filteredOnCanvas.length > 0 && (
+                            <div className="active-view-selector__section">
+                                <div className="active-view-selector__section-header">
+                                    <MapPin size={10} />
+                                    <span>On Canvas</span>
+                                </div>
+                                {filteredOnCanvas.map((view, index) => {
+                                    const isActive = activeView?.id === view.id;
+                                    const viewColor = getViewColor(view.id, index);
+
+                                    return (
+                                        <button
+                                            key={view.id}
+                                            type="button"
+                                            className={`active-view-selector__item ${isActive ? 'active-view-selector__item--active' : ''}`}
+                                            onClick={() => handleSelect(view)}
+                                            role="option"
+                                            aria-selected={isActive}
+                                            style={{ '--view-color': viewColor }}
+                                        >
+                                            <span
+                                                className="active-view-selector__item-dot"
+                                                style={{ background: viewColor }}
+                                            />
+                                            <span className="active-view-selector__item-name">{view.name}</span>
+                                            {view.position && (
+                                                <span className="active-view-selector__item-position">
+                                                    {view.position.col}, {view.position.row}
+                                                </span>
+                                            )}
+                                            {isActive && <Check size={12} className="active-view-selector__item-check" />}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                            {filteredOnCanvas.map((view, index) => {
-                                const isActive = activeView?.id === view.id;
-                                const viewColor = getViewColor(view.id, index);
+                        )}
 
-                                return (
-                                    <button
-                                        key={view.id}
-                                        type="button"
-                                        className={`active-view-selector__item ${isActive ? 'active-view-selector__item--active' : ''}`}
-                                        onClick={() => handleSelect(view)}
-                                        role="option"
-                                        aria-selected={isActive}
-                                        style={{ '--view-color': viewColor }}
-                                    >
-                                        <span
-                                            className="active-view-selector__item-dot"
-                                            style={{ background: viewColor }}
-                                        />
-                                        <span className="active-view-selector__item-name">{view.name}</span>
-                                        {view.position && (
-                                            <span className="active-view-selector__item-position">
-                                                {view.position.col}, {view.position.row}
-                                            </span>
-                                        )}
-                                        {isActive && <Check size={12} className="active-view-selector__item-check" />}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
+                        {/* Available Views section */}
+                        {filteredAvailable.length > 0 && (
+                            <div className="active-view-selector__section">
+                                <div className="active-view-selector__section-header">
+                                    <Eye size={10} />
+                                    <span>Available to Place</span>
+                                </div>
+                                {filteredAvailable.map((view, index) => {
+                                    const viewColor = getViewColor(view.id, index + onCanvasViews.length);
 
-                    {/* Available Views section */}
-                    {filteredAvailable.length > 0 && (
-                        <div className="active-view-selector__section">
-                            <div className="active-view-selector__section-header">
-                                <Eye size={10} />
-                                <span>Available to Place</span>
+                                    return (
+                                        <button
+                                            key={view.id}
+                                            type="button"
+                                            className="active-view-selector__item active-view-selector__item--available"
+                                            onClick={() => handlePlace(view)}
+                                            role="option"
+                                            aria-selected={false}
+                                            style={{ '--view-color': viewColor }}
+                                        >
+                                            <Plus size={12} className="active-view-selector__item-icon" />
+                                            <span className="active-view-selector__item-name">{view.name}</span>
+                                            <span className="active-view-selector__item-type">{view.type}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
-                            {filteredAvailable.map((view, index) => {
-                                const viewColor = getViewColor(view.id, index + onCanvasViews.length);
+                        )}
 
-                                return (
-                                    <button
-                                        key={view.id}
-                                        type="button"
-                                        className="active-view-selector__item active-view-selector__item--available"
-                                        onClick={() => handlePlace(view)}
-                                        role="option"
-                                        aria-selected={false}
-                                        style={{ '--view-color': viewColor }}
-                                    >
-                                        <Plus size={12} className="active-view-selector__item-icon" />
-                                        <span className="active-view-selector__item-name">{view.name}</span>
-                                        <span className="active-view-selector__item-type">{view.type}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Empty state */}
-                    {filteredOnCanvas.length === 0 && filteredAvailable.length === 0 && (
-                        <div className="active-view-selector__empty">
-                            {searchQuery ? 'No matching views' : 'No views available'}
-                        </div>
-                    )}
+                        {/* Empty state */}
+                        {filteredOnCanvas.length === 0 && filteredAvailable.length === 0 && (
+                            <div className="active-view-selector__empty">
+                                {searchQuery ? 'No matching views' : 'No views available'}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

@@ -114,12 +114,35 @@
 
   min-width: 220px;
   max-height: 320px;
-  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
 
   background: $color-bg-elevated;
   border: 1px solid $color-border-default;
   border-radius: $radius-md;
   box-shadow: $shadow-lg;
+}
+
+// =============================================================================
+// SEARCH (fixed at top)
+// =============================================================================
+
+.active-view-selector__search {
+  flex-shrink: 0;
+  padding: $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+  background: $color-bg-elevated;
+}
+
+// =============================================================================
+// SCROLLABLE CONTENT
+// =============================================================================
+
+.active-view-selector__content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0; // Important for flex scrolling
 
   // Scrollbar styling
   &::-webkit-scrollbar {
@@ -138,15 +161,6 @@
       background: $color-border-strong;
     }
   }
-}
-
-// =============================================================================
-// SEARCH
-// =============================================================================
-
-.active-view-selector__search {
-  padding: $spacing-sm;
-  border-bottom: 1px solid $color-border-subtle;
 }
 
 .active-view-selector__search-input {

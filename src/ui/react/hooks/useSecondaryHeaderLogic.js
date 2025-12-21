@@ -165,6 +165,51 @@ export function useSecondaryHeaderLogic() {
     };
   }, []);
 
+  // Listen for focus events from other components to sync active view
+  useEffect(() => {
+    const handleViewFocused = ({ viewId }) => {
+      if (viewId && viewId !== activeViewId) {
+        log.debug("SecondaryHeader: External view focus", viewId);
+        setActiveViewId(viewId);
+      }
+    };
+
+    const handleCellFocused = (e) => {
+      const { row, col, viewId } = e.detail || {};
+      if (viewId) {
+        setActiveViewId(viewId);
+      } else if (typeof row === "number" && typeof col === "number") {
+        // Find view at this position
+        const viewAtPosition = cells.find(
+          (c) => c.row === row && c.col === col
+        );
+        if (viewAtPosition?.viewConfigurationId) {
+          setActiveViewId(viewAtPosition.viewConfigurationId);
+        }
+      }
+    };
+
+    const unsub = eventBus.on(BUS_EVENTS.VIEW_FOCUSED, handleViewFocused);
+    window.addEventListener("cia:cell-focused", handleCellFocused);
+    window.addEventListener("cia:instance-focused", handleCellFocused);
+
+    return () => {
+      unsub?.();
+      window.removeEventListener("cia:cell-focused", handleCellFocused);
+      window.removeEventListener("cia:instance-focused", handleCellFocused);
+    };
+  }, [activeViewId, cells]);
+
+  // Update active view when viewport changes to a cell with a view
+  useEffect(() => {
+    const viewAtViewport = cells.find(
+      (c) => c.row === viewport.row && c.col === viewport.col
+    );
+    if (viewAtViewport?.viewConfigurationId) {
+      setActiveViewId(viewAtViewport.viewConfigurationId);
+    }
+  }, [viewport.row, viewport.col, cells]);
+
   /**
    * Get enriched views on canvas with names
    * Uses cells from LayoutPanelContext which are already enriched with view metadata
