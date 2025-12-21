@@ -15,7 +15,7 @@
  * @see Left_Panel_Design_Specification.docx - Section 5 Datasets Tab
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
     Database,
     Search,
@@ -31,6 +31,9 @@ import {
     MoreHorizontal,
     HardDrive,
     Clock,
+    Download,
+    Share2,
+    Trash2,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
@@ -133,8 +136,11 @@ function DatasetViewItemWrapper({ view }) {
 
 function DatasetParent({ dataset, views, isExpanded, onToggle }) {
     const [isHovered, setIsHovered] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const cardRef = useRef(null);
+    const dragImageRef = useRef(null);
 
     const typeConfig = getDatasetTypeConfig(dataset.fileType || dataset.type);
     const TypeIcon = typeConfig.icon;
@@ -147,12 +153,22 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
     const loadedDisplay = dataset.loadedAt ? formatRelativeTime(dataset.loadedAt) : null;
     const handlerLabel = typeConfig.label || dataset.handlerType || 'Data';
 
-    const handleCreateView = useCallback((e) => {
+    // =========================================================================
+    // HANDLERS
+    // =========================================================================
+
+    // Create view and place on canvas (flow mode - auto finds next cell)
+    const handleCreateView = useCallback(async (e) => {
         e?.stopPropagation();
-        window.dispatchEvent(new CustomEvent('cia:create-view', {
-            detail: { datasetId: dataset.id }
-        }));
-    }, [dataset.id]);
+        try {
+            await viewLifecycleService.createAndPlaceView(dataset.id, {}, {
+                name: `View of ${dataset.name || dataset.filename || 'Dataset'}`,
+            });
+            log.info(`Created and placed view for dataset: ${dataset.id}`);
+        } catch (err) {
+            log.error('Failed to create view:', err);
+        }
+    }, [dataset.id, dataset.name, dataset.filename]);
 
     const handleOpenSettings = useCallback((e) => {
         e?.stopPropagation();
@@ -165,23 +181,86 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
         setMenuOpen(!menuOpen);
     }, [menuOpen]);
 
+    const handleCloseMenu = useCallback(() => {
+        setMenuOpen(false);
+    }, []);
+
     const handleUnloadDataset = useCallback(() => {
         window.dispatchEvent(new CustomEvent('cia:unload-dataset', {
             detail: { datasetId: dataset.id }
         }));
+        setMenuOpen(false);
     }, [dataset.id]);
+
+    const handleDownload = useCallback((e) => {
+        e?.stopPropagation();
+        window.dispatchEvent(new CustomEvent('cia:download-dataset', {
+            detail: { datasetId: dataset.id }
+        }));
+        setMenuOpen(false);
+    }, [dataset.id]);
+
+    const handleShare = useCallback((e) => {
+        e?.stopPropagation();
+        window.dispatchEvent(new CustomEvent('cia:share-dataset', {
+            detail: { datasetId: dataset.id }
+        }));
+        setMenuOpen(false);
+    }, [dataset.id]);
+
+    // =========================================================================
+    // DRAG HANDLERS - For grid mode placement
+    // =========================================================================
+
+    const handleDragStart = useCallback((e) => {
+        // Set drag data for canvas cells to create a new view
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('application/x-dataset', JSON.stringify({
+            datasetId: dataset.id,
+            datasetName: dataset.name || dataset.filename,
+            fileType: dataset.fileType || dataset.type,
+            action: 'create-view',
+        }));
+
+        // Create custom drag image (collapsed card only)
+        if (dragImageRef.current) {
+            // Clone the card for drag image
+            const dragImage = dragImageRef.current.cloneNode(true);
+            dragImage.style.position = 'absolute';
+            dragImage.style.top = '-1000px';
+            dragImage.style.left = '-1000px';
+            dragImage.style.width = `${cardRef.current?.offsetWidth || 200}px`;
+            dragImage.style.opacity = '0.9';
+            document.body.appendChild(dragImage);
+            e.dataTransfer.setDragImage(dragImage, 20, 20);
+            // Clean up after a tick
+            setTimeout(() => document.body.removeChild(dragImage), 0);
+        }
+
+        setIsDragging(true);
+    }, [dataset]);
+
+    const handleDragEnd = useCallback(() => {
+        setIsDragging(false);
+    }, []);
 
     return (
         <div
-            className={`dataset-parent ${isHovered ? 'dataset-parent--hovered' : ''}`}
+            className={`dataset-parent ${isHovered ? 'dataset-parent--hovered' : ''} ${isDragging ? 'dataset-parent--dragging' : ''}`}
             onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => { setIsHovered(false); setMenuOpen(false); }}
+            onMouseLeave={() => { setIsHovered(false); if (!menuOpen) setMenuOpen(false); }}
+            ref={cardRef}
         >
             <div className="dataset-parent__card">
                 {/* Header row with content + action buttons */}
-                <div className="dataset-parent__header">
+                <div
+                    className="dataset-parent__header"
+                    draggable
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                >
                     {/* Main header content (clickable for expand/collapse) */}
-                    <div className="dataset-parent__header-content" onClick={onToggle}>
+                    <div className="dataset-parent__header-content" onClick={onToggle} ref={dragImageRef}>
                         {/* Chevron - centered vertically, rotates on expand */}
                         <span className={`dataset-parent__chevron ${isExpanded ? 'dataset-parent__chevron--expanded' : ''}`}>
                             <ChevronDown size={12} />
@@ -234,7 +313,7 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                         <button
                             className="dataset-parent__actions-btn dataset-parent__actions-btn--create"
                             onClick={handleCreateView}
-                            title="Create View"
+                            title="Add view to canvas"
                         >
                             <Plus size={11} />
                         </button>
@@ -255,8 +334,42 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                     </div>
                 </div>
 
+                {/* Context Menu */}
+                {menuOpen && (
+                    <>
+                        <div className="dataset-parent__menu-backdrop" onClick={handleCloseMenu} />
+                        <div className="dataset-parent__menu">
+                            <button className="dataset-parent__menu-item" onClick={handleCreateView}>
+                                <Plus size={12} />
+                                <span>Create View</span>
+                            </button>
+                            <button className="dataset-parent__menu-item" onClick={handleOpenSettings}>
+                                <Settings size={12} />
+                                <span>Dataset Settings</span>
+                            </button>
+                            <div className="dataset-parent__menu-divider" />
+                            <button className="dataset-parent__menu-item" onClick={handleDownload}>
+                                <Download size={12} />
+                                <span>Download</span>
+                            </button>
+                            <button className="dataset-parent__menu-item" onClick={handleShare}>
+                                <Share2 size={12} />
+                                <span>Share</span>
+                            </button>
+                            <div className="dataset-parent__menu-divider" />
+                            <button
+                                className="dataset-parent__menu-item dataset-parent__menu-item--danger"
+                                onClick={handleUnloadDataset}
+                            >
+                                <Trash2 size={12} />
+                                <span>Unload Dataset</span>
+                            </button>
+                        </div>
+                    </>
+                )}
+
                 {/* Expanded content - views list */}
-                {isExpanded && (
+                {isExpanded && !isDragging && (
                     <div className="dataset-parent__expanded">
                         {views.length > 0 ? (
                             <div className="dataset-parent__views">
