@@ -120,6 +120,9 @@ module.exports = {
       "process.env.NODE_ENV": JSON.stringify(
         process.env.NODE_ENV || "development"
       ),
+      __DEV_BYPASS_AUTH__: JSON.stringify(
+        process.env.DEV_BYPASS_AUTH === "true"
+      ),
     }),
   ],
   // Ignore controller.html
@@ -134,11 +137,10 @@ module.exports = {
       "@": path.resolve(__dirname, "src"),
       "@Algorithms": path.resolve(__dirname, "src/algorithms"),
       "@Collaboration": path.resolve(__dirname, "src/collaboration"),
+      "@Config": path.resolve(__dirname, "src/config"),
       "@Core": path.resolve(__dirname, "src/core"),
-      "@Debug": path.resolve(__dirname, "src/debug"),
       "@Init": path.resolve(__dirname, "src/init"),
       "@Services": path.resolve(__dirname, "src/services"),
-      "@Tests": path.resolve(__dirname, "src/__tests__"),
       "@UI": path.resolve(__dirname, "src/ui"),
       "@Utils": path.resolve(__dirname, "src/utils"),
       "@VR": path.resolve(__dirname, "src/vr"),

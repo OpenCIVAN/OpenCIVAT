@@ -1,5 +1,7 @@
 import { generateUserId } from "@Utils/idGenerator.js";
 import { presence as log } from "@Utils/logger.js";
+import { config } from "@Core/config/clientConfig.js";
+import { getStoredMockUserId, getDefaultMockUser, getMockUser } from "@Config/mockUsers.js";
 
 // Initialize or retrieve user ID
 let userId = localStorage.getItem("cia_user_id");
@@ -16,10 +18,26 @@ let userName = localStorage.getItem("cia_username");
 let userColor = null;
 
 export function getUserId() {
+  const isDevMode =
+    config.devBypassAuth === true || config.devBypassAuth === "true";
+  if (isDevMode) {
+    const mockUserId = getStoredMockUserId();
+    return mockUserId || getDefaultMockUser().id;
+  }
   return userId;
 }
 
 export function getUserName() {
+  const isDevMode =
+    config.devBypassAuth === true || config.devBypassAuth === "true";
+  if (isDevMode) {
+    const mockUserId = getStoredMockUserId();
+    if (mockUserId) {
+      const mockUser = getMockUser(mockUserId);
+      if (mockUser) return mockUser.name;
+    }
+    return getDefaultMockUser().name;
+  }
   return userName;
 }
 

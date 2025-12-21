@@ -25,6 +25,7 @@ import {
   CANVAS_MANAGER_EVENTS as CANVAS_EVENTS,
   DOM_EVENTS,
 } from "@Core/events/eventConstants.js";
+import { dispatchNavigateTo } from "@UI/react/hooks/useViewportSync.js";
 import { view as log } from "@Utils/logger.js";
 
 // =============================================================================
@@ -509,11 +510,11 @@ export function useViewsTab({ workspaceId }) {
     (viewId) => {
       const view = views.find((v) => v.id === viewId);
       if (view?.position) {
-        window.dispatchEvent(
-          new CustomEvent(DOM_EVENTS.NAVIGATE_TO_CELL, {
-            detail: { row: view.position.row, col: view.position.col },
-          })
-        );
+        log.debug("Navigating to view position:", view.position);
+        // Use the correct viewport navigation function
+        dispatchNavigateTo(view.position.row, view.position.col);
+      } else {
+        log.debug("Cannot navigate - view has no position:", viewId);
       }
     },
     [views]
@@ -538,9 +539,13 @@ export function useViewsTab({ workspaceId }) {
    */
   const handleResizeView = useCallback((viewId, size) => {
     log.debug("Resizing view:", viewId, size);
-    const placement = canvasManager?.getPlacementForView?.(viewId);
+
+    // Find placement using our fallback function (canvasManager.getPlacementForView may not exist)
+    const placement = findPlacementForView(viewId);
     if (placement) {
       canvasManager?.resizePlacement?.(placement.id, size.rows, size.cols);
+    } else {
+      log.warn("Cannot resize view - no placement found:", viewId);
     }
   }, []);
 

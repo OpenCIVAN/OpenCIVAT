@@ -114,7 +114,7 @@ ON CONFLICT (id) DO UPDATE SET
 INSERT INTO organization_members (id, organization_id, user_id, role, joined_at)
 SELECT 
     uuid_generate_v4(),
-    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000000',
     u.id,
     CASE 
         WHEN u.id = '00000000-0000-0000-0000-000000000001' THEN 'admin'
@@ -191,37 +191,33 @@ seed_users() {
 show_users() {
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║                    Mock Users for Testing                      ║${NC}"
-    echo -e "${CYAN}╠════════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     
-    # Simple query to list users
+    # Simple query to list users - just check users table directly
     run_query_formatted "
         SELECT 
-            u.display_name as \"Name\",
-            u.email as \"Email\",
-            COALESCE(pm.role, '-') as \"Project Role\"
-        FROM users u
-        LEFT JOIN project_members pm ON u.id = pm.user_id 
-            AND pm.project_id = '00000000-0000-0000-0000-000000000001'
-        WHERE u.id IN (
+            display_name as \"Name\",
+            email as \"Email\",
+            preferences->>'role' as \"Role\"
+        FROM users
+        WHERE id IN (
             '00000000-0000-0000-0000-000000000001',
             '00000000-0000-0000-0000-000000000002',
             '00000000-0000-0000-0000-000000000003',
             '00000000-0000-0000-0000-000000000004',
             '00000000-0000-0000-0000-000000000005'
         )
-        ORDER BY u.id;
+        ORDER BY id;
     "
     
     echo ""
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo "User IDs for reference:"
-    echo "  Dev:   00000000-0000-0000-0000-000000000001"
-    echo "  Alice: 00000000-0000-0000-0000-000000000002"
-    echo "  Bob:   00000000-0000-0000-0000-000000000003"
-    echo "  Carol: 00000000-0000-0000-0000-000000000004"
-    echo "  Dave:  00000000-0000-0000-0000-000000000005"
+    echo "User IDs for switching:"
+    echo "  Dev:   00000000-0000-0000-0000-000000000001 (admin)"
+    echo "  Alice: 00000000-0000-0000-0000-000000000002 (researcher)"
+    echo "  Bob:   00000000-0000-0000-0000-000000000003 (analyst)"
+    echo "  Carol: 00000000-0000-0000-0000-000000000004 (pi/admin)"
+    echo "  Dave:  00000000-0000-0000-0000-000000000005 (student)"
 }
 
 # Check status
@@ -235,9 +231,9 @@ check_status() {
         '00000000-0000-0000-0000-000000000003',
         '00000000-0000-0000-0000-000000000004',
         '00000000-0000-0000-0000-000000000005'
-    );" | xargs)
+    );" 2>/dev/null | tr -d ' ')
     
-    if [ "$count" -gt 0 ] 2>/dev/null; then
+    if [ -n "$count" ] && [ "$count" -gt 0 ] 2>/dev/null; then
         log_success "Found $count mock user(s)"
         echo ""
         show_users

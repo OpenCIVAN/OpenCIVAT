@@ -15,6 +15,11 @@
 import { config } from "@Core/config/clientConfig.js";
 import { authService } from "./authService.js";
 import { api as log } from "@Utils/logger.js";
+import {
+  getStoredMockUserId,
+  getMockUser,
+  getDefaultMockUser,
+} from "@Config/mockUsers.js";
 
 // =============================================================================
 // API ERROR CLASS
@@ -127,6 +132,12 @@ class ApiClient {
     const headers = {
       ...customHeaders,
     };
+
+    // Add dev user headers in dev mode
+    if (this._isDevMode()) {
+      const devHeaders = this._getDevUserHeaders();
+      Object.assign(headers, devHeaders);
+    }
 
     // Add Content-Type for requests with body
     if (body && !headers["Content-Type"]) {
@@ -253,6 +264,43 @@ class ApiClient {
     } catch {
       return { message: response.statusText };
     }
+  }
+
+  // ===========================================================================
+  // DEV MODE HELPERS
+  // ===========================================================================
+
+  /**
+   * Check if running in dev bypass mode
+   * @private
+   */
+  _isDevMode() {
+    return config.devBypassAuth === true || config.devBypassAuth === "true";
+  }
+
+  /**
+   * Get dev user headers for API requests
+   * @private
+   * @returns {Object} Headers object with user identity
+   */
+  _getDevUserHeaders() {
+    if (!this._isDevMode()) {
+      return {};
+    }
+
+    // Get current mock user from storage
+    const storedId = getStoredMockUserId();
+    const user = storedId ? getMockUser(storedId) : getDefaultMockUser();
+
+    if (!user) {
+      return {};
+    }
+
+    return {
+      "x-user-id": user.id,
+      "x-user-email": user.email,
+      "x-user-name": user.name,
+    };
   }
 
   // ===========================================================================

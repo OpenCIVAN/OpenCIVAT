@@ -1,8 +1,10 @@
 // src/ui/react/components/auth/DevModeBanner.jsx
-// Development mode warning banner
+// Development mode warning banner with user switcher
+// FIXED: Positioned as overlay (not push layout) per design spec
 
 import React, { useState, useEffect } from "react";
 import { AlertTriangle, X } from "lucide-react";
+import { DevUserSwitcher } from "@UI/react/components/dev/DevUserSwitcher.jsx";
 import "./DevModeBanner.scss";
 
 /** Storage key for dismissed state */
@@ -10,6 +12,7 @@ const DISMISSED_KEY = "cia_dev_banner_dismissed";
 
 /**
  * DevModeBanner - Warning banner shown when running in development mode
+ * Positioned as fixed overlay at top of screen (doesn't push layout)
  *
  * @param {Object} props
  * @param {boolean} props.visible - Whether to show the banner
@@ -17,7 +20,7 @@ const DISMISSED_KEY = "cia_dev_banner_dismissed";
  */
 export function DevModeBanner({
     visible = true,
-    message = "Development Mode - Authentication Bypassed",
+    message = "Development Mode",
 }) {
     const [isDismissed, setIsDismissed] = useState(false);
 
@@ -41,15 +44,16 @@ export function DevModeBanner({
     return (
         <div className="dev-mode-banner">
             <div className="dev-mode-banner__content">
-                <AlertTriangle size={16} className="dev-mode-banner__icon" />
+                <AlertTriangle size={14} className="dev-mode-banner__icon" />
                 <span className="dev-mode-banner__message">{message}</span>
+                <DevUserSwitcher compact />
             </div>
             <button
                 className="dev-mode-banner__dismiss"
                 onClick={handleDismiss}
                 title="Dismiss (will reappear on refresh)"
             >
-                <X size={14} />
+                <X size={12} />
             </button>
         </div>
     );

@@ -560,7 +560,7 @@ CREATE TABLE recording_events (
     event_source VARCHAR(50),
     event_data JSONB NOT NULL,
     user_id UUID REFERENCES users(id),
-    client_id INTEGER,
+    client_id BIGINT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -608,7 +608,7 @@ CREATE TABLE yjs_updates (
     update_data BYTEA NOT NULL,
     update_origin VARCHAR(50),
     user_id UUID REFERENCES users(id),
-    client_id INTEGER,
+    client_id BIGINT,
     sequence_num BIGSERIAL,
     timestamp TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT fk_yjs_room FOREIGN KEY (room_id) REFERENCES yjs_documents(room_id) ON DELETE CASCADE

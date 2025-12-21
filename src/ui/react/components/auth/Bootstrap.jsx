@@ -13,6 +13,7 @@ import { toast } from "@UI/react/store/toastStore.js";
 import { ToastContainer } from "@UI/react/components/common/Toast";
 import { LoginButton } from "@UI/react/components/auth/LoginButton.jsx";
 import { DevModeBanner } from "@UI/react/components/auth/DevModeBanner.jsx";
+import { DevUserProvider } from "@UI/react/context/DevUserContext.jsx";
 
 import "@UI/react/components/auth/Bootstrap.scss";
 
@@ -298,16 +299,15 @@ export function Bootstrap() {
             </div>
         );
     } else if (bootstrapState === 'ready') {
-        // FIX: Pass projectId from sessionManager
         content = (
-            <>
-                {isDevMode && <DevModeBanner />}
+            <div className={isDevBypass ? 'dev-mode-active' : ''}>
+                {isDevBypass && <DevModeBanner />}
                 <CIAWebApp
                     username={username}
                     userId={getUserId()}
                     projectId={sessionManager.getRoomId()}
                 />
-            </>
+            </div>
         );
     }
 
