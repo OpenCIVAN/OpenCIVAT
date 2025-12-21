@@ -1,16 +1,17 @@
 /**
  * @file SecondaryFooter.scss
- * @description Styles for secondary footer bar with proper 3-zone flexbox layout.
+ * @description Styles for secondary footer bar with responsive zone behavior.
  * 
- * CRITICAL: Class names must match JSX:
- * - .secondary-footer__zone--left (not &__left)
- * - .secondary-footer__zone--center (not &__center)
- * - .secondary-footer__zone--right (not &__right)
+ * RESPONSIVE STRATEGY:
+ * - Zones use flex-basis with min-width to allow shrinking
+ * - Content adapts via container queries (hide labels, show icons only)
+ * - LabeledIconButtons collapse to icon-only at narrow widths
+ * - Dropdowns use React Portals
  * 
  * Layout:
  * ┌─────────────────┬──────────────────────────────────────┬─────────────────────┐
  * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE        │
- * │  (auto width)   │        (flexible, fills)             │  (fixed, tinted)    │
+ * │  (adaptive)     │        (flexible, fills)             │  (adaptive,tinted)  │
  * └─────────────────┴──────────────────────────────────────┴─────────────────────┘
  */
 
@@ -20,8 +21,10 @@
 // VARIABLES
 // =============================================================================
 
-$footer-height: 36px;
-$right-zone-width: 280px; // Fixed width for voice controls
+$footer-height: 40px;
+$zone-min-width: 120px;
+$zone-preferred-width: 220px;
+$zone-padding: $spacing-md;
 
 // =============================================================================
 // SECONDARY FOOTER CONTAINER
@@ -36,10 +39,7 @@ $right-zone-width: 280px; // Fixed width for voice controls
   align-items: center;
   z-index: 90;
   flex-shrink: 0;
-
-  // NO padding - zones handle their own padding
-  // NO position: relative - not needed
-  // NO justify-content: space-between - using flex: 1 on center
+  position: relative;
 }
 
 // =============================================================================
@@ -51,53 +51,51 @@ $right-zone-width: 280px; // Fixed width for voice controls
   align-items: center;
   height: 100%;
   gap: $spacing-sm;
+
+  // NOTE: Don't use container-type - it breaks absolute positioning for dropdowns
 }
 
 // =============================================================================
-// LEFT ZONE: Popout Buttons (auto width)
+// LEFT ZONE: Popout Buttons
 // =============================================================================
 
 .secondary-footer__zone--left {
-  flex-shrink: 0;
-  padding: 0 $spacing-md;
+  flex: 0 0 auto;
+  min-width: $zone-min-width;
+  max-width: $zone-preferred-width;
+  padding: 0 $zone-padding;
   border-right: 1px solid $color-border-subtle;
   justify-content: flex-start;
-  gap: $spacing-xs;
+  gap: $spacing-sm;
 }
 
 // =============================================================================
-// CENTER ZONE: Edit Tools (FILLS available space)
+// CENTER ZONE: Edit Tools
 // =============================================================================
 
 .secondary-footer__zone--center {
-  flex: 1; // CRITICAL: Fill available space
-  min-width: 0; // Allow shrinking below content size
-  padding: 0 $spacing-lg;
+  flex: 1 1 auto;
+  min-width: 150px;
+  padding: 0 $zone-padding;
   justify-content: center;
   gap: $spacing-md;
-  overflow: hidden;
-
-  // REMOVED: position: absolute - this was breaking the layout!
-  // REMOVED: left: 50%; transform: translateX(-50%);
-  // Content centers naturally via justify-content: center
 }
 
 // =============================================================================
-// RIGHT ZONE: Voice Controls (fixed width, tinted background)
+// RIGHT ZONE: Voice Controls
 // =============================================================================
 
 .secondary-footer__zone--right {
-  width: $right-zone-width;
-  min-width: $right-zone-width;
-  flex-shrink: 0;
-  padding: 0 $spacing-md;
-  border-left: 1px solid $color-border-subtle;
+  flex: 0 0 auto;
+  min-width: $zone-min-width;
+  max-width: $zone-preferred-width;
+  padding: 0 $zone-padding;
+  border-left: 1px solid rgba(96, 165, 250, 0.3);
   justify-content: flex-end;
   gap: $spacing-sm;
 
   // Tinted background for voice section
-  background: rgba(96, 165, 250, 0.04); // blue tint
-  border-left-color: rgba(96, 165, 250, 0.2);
+  background: rgba(96, 165, 250, 0.06);
 }
 
 // =============================================================================
@@ -118,41 +116,59 @@ $right-zone-width: 280px; // Fixed width for voice controls
 }
 
 // =============================================================================
-// RESPONSIVE BEHAVIOR
+// RESPONSIVE - Use media queries (container queries break dropdown positioning)
+// =============================================================================
+
+// NOTE: We intentionally DON'T use CSS Container Queries here because
+// container-type: inline-size creates a new containing block that breaks
+// position: absolute for dropdown menus.
+
+// =============================================================================
+// RESPONSIVE BREAKPOINTS - Fallback
 // =============================================================================
 
 @media (max-width: 1400px) {
+  .secondary-footer__zone--left,
   .secondary-footer__zone--right {
-    width: 240px;
-    min-width: 240px;
+    max-width: 180px;
+    padding: 0 $spacing-sm;
   }
 
   .secondary-footer__zone--center {
     gap: $spacing-sm;
-    padding: 0 $spacing-md;
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
+  .secondary-footer__zone--left,
   .secondary-footer__zone--right {
-    width: 200px;
-    min-width: 180px;
+    min-width: 100px;
+    max-width: 140px;
   }
 
   .secondary-footer__zone--center {
     gap: $spacing-xs;
     padding: 0 $spacing-sm;
   }
-}
 
-@media (max-width: 900px) {
-  .secondary-footer__zone--left {
-    padding: 0 $spacing-sm;
+  .secondary-footer__divider {
+    display: none;
   }
 
+  // Collapse labels
+  .labeled-icon-button__label {
+    display: none;
+  }
+}
+
+@media (max-width: 1000px) {
+  .secondary-footer {
+    height: 36px;
+  }
+
+  .secondary-footer__zone--left,
   .secondary-footer__zone--right {
-    min-width: 160px;
-    width: auto;
-    padding: 0 $spacing-sm;
+    min-width: 80px;
+    padding: 0 $spacing-xs;
   }
 }

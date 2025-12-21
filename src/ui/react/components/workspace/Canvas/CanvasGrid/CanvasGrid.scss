@@ -136,6 +136,15 @@
     opacity: 0.3;
     pointer-events: none;
   }
+
+  // Selection mode - show crosshair cursor when Ctrl/Shift held
+  &--selection-mode {
+    cursor: crosshair;
+
+    .canvas-cell {
+      cursor: crosshair;
+    }
+  }
 }
 
 // =============================================================================

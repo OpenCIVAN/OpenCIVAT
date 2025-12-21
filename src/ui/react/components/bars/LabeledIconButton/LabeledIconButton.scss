@@ -1,7 +1,7 @@
 /**
  * @file LabeledIconButton.scss
- * @description Styles for the LabeledIconButton component.
- * Icon button with visible text label for prominent toggles.
+ * @description Styles for responsive LabeledIconButton component.
+ * Collapses to icon-only when container is narrow (via container queries).
  */
 
 @use "theme" as *;
@@ -11,10 +11,10 @@
 // =============================================================================
 
 .labeled-icon-button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-xs $spacing-sm;
+  gap: $spacing-xs;
+  padding: 6px $spacing-sm;
 
   background: $color-glass-subtle;
   border: 1px solid $color-border-subtle;
@@ -22,22 +22,33 @@
 
   cursor: pointer;
   transition: all $transition-fast;
+  white-space: nowrap;
+  flex-shrink: 0; // Don't let button shrink
 
-  // Default icon and label colors
+  // Icon
   &__icon {
+    flex-shrink: 0;
     color: $color-text-tertiary;
     transition: color $transition-fast;
+
+    svg {
+      display: block;
+    }
   }
 
+  // Label
   &__label {
     font-size: 11px;
     font-weight: $font-weight-medium;
     color: $color-text-secondary;
     transition: color $transition-fast;
+
+    // Prevent text selection
+    user-select: none;
   }
 
   // Hover state
-  &[data-hovered="true"] {
+  &[data-hovered="true"]:not(&--disabled) {
     background: $color-glass-light;
     border-color: $color-border-default;
 
@@ -80,19 +91,27 @@
     outline: none;
     box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4);
   }
+
+  // ==========================================================================
+  // COMPACT MODE (icon only)
+  // ==========================================================================
+
+  &--compact {
+    padding: 6px;
+
+    .labeled-icon-button__label {
+      display: none;
+    }
+  }
 }
 
 // =============================================================================
 // CSS CUSTOM PROPERTIES FOR ACCENT COLORS
 // =============================================================================
 
-// Define RGB values for common accent colors
-// These enable rgba() usage with CSS custom properties
 .labeled-icon-button {
-  // Default (blue)
-  --btn-accent-rgb: 96, 165, 250;
+  --btn-accent-rgb: 96, 165, 250; // Default blue
 
-  // Override based on accent color
   &[style*="--btn-accent: var(--color-accent-teal)"] {
     --btn-accent-rgb: 45, 212, 191;
   }
@@ -115,5 +134,22 @@
 
   &[style*="--btn-accent: var(--color-accent-red)"] {
     --btn-accent-rgb: 248, 113, 113;
+  }
+}
+
+// =============================================================================
+// RESPONSIVE - Use --compact modifier class instead of container queries
+// Container queries break dropdown positioning in parent containers.
+// =============================================================================
+
+// Apply compact mode via parent class or media query
+@media (max-width: 1200px) {
+  // In narrow viewports, SecondaryFooter left zone collapses labels
+  .secondary-footer__zone--left .labeled-icon-button {
+    padding: 6px;
+
+    .labeled-icon-button__label {
+      display: none;
+    }
   }
 }

@@ -314,11 +314,6 @@ export function CanvasGrid({
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            // Debug: log all key presses to see what's happening
-            if (['1', '2', '3', '0', 'Home', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-                console.log('[CanvasGrid] Key pressed:', e.key, 'target:', e.target.tagName, 'ctrlKey:', e.ctrlKey);
-            }
-
             // Skip if typing in an input or textarea
             if (e.target.tagName === 'INPUT' ||
                 e.target.tagName === 'TEXTAREA' ||
@@ -328,18 +323,46 @@ export function CanvasGrid({
 
             // Arrow keys - require grid focus for directional navigation
             if (gridRef.current?.contains(document.activeElement)) {
-                if (e.key === 'ArrowUp') {
+                const arrowKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key);
+
+                if (arrowKey) {
                     e.preventDefault();
-                    moveViewport(-1, 0);
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    moveViewport(1, 0);
-                } else if (e.key === 'ArrowLeft') {
-                    e.preventDefault();
-                    moveViewport(0, -1);
-                } else if (e.key === 'ArrowRight') {
-                    e.preventDefault();
-                    moveViewport(0, 1);
+
+                    // Calculate direction
+                    const deltaRow = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+                    const deltaCol = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+
+                    // If cells are selected, move/extend selection
+                    if (selectedCells.length > 0) {
+                        const lastSelected = selectedCells[selectedCells.length - 1];
+                        const newRow = Math.max(0, lastSelected.row + deltaRow);
+                        const newCol = Math.max(0, lastSelected.col + deltaCol);
+
+                        // Find placement at new position
+                        const newPlacement = canvas?.placements?.find(
+                            p => p.row === newRow && p.col === newCol
+                        );
+
+                        if (newPlacement) {
+                            const newCellData = { row: newRow, col: newCol, placement: newPlacement };
+
+                            if (e.shiftKey) {
+                                // Shift+Arrow: extend selection
+                                const alreadySelected = selectedCells.some(
+                                    sc => sc.row === newRow && sc.col === newCol
+                                );
+                                if (!alreadySelected) {
+                                    setSelectedCells(prev => [...prev, newCellData]);
+                                }
+                            } else {
+                                // Arrow only: move selection to new cell
+                                setSelectedCells([newCellData]);
+                            }
+                        }
+                    } else {
+                        // No selection - move viewport (original behavior)
+                        moveViewport(deltaRow, deltaCol);
+                    }
                 }
             }
 
@@ -359,8 +382,6 @@ export function CanvasGrid({
             // Number key presets - work globally
             if (e.key === '1' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
-                console.log('[CanvasGrid] Key 1 pressed, setViewportSize:', typeof setViewportSize);
-                // 1x1 focus mode
                 setViewportSize?.(1, 1);
             } else if (e.key === '2' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
@@ -397,17 +418,14 @@ export function CanvasGrid({
                             placement: p,
                         }));
                     setSelectedCells(cellsWithViews);
-                    console.log('[CanvasGrid] Selected cells:', cellsWithViews.length);
                 }
             }
 
             // Escape - Deselect all (per spec)
             if (e.key === 'Escape') {
-                console.log('[CanvasGrid] Escape pressed, selectedCells.length:', selectedCells.length, 'contextMenu.isOpen:', contextMenu.isOpen);
                 if (selectedCells.length > 0) {
                     e.preventDefault();
                     setSelectedCells([]);
-                    console.log('[CanvasGrid] Cleared selection');
                 }
                 // Also close context menu
                 if (contextMenu.isOpen) {
@@ -418,7 +436,7 @@ export function CanvasGrid({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells.length, contextMenu.isOpen]);
+    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells, contextMenu.isOpen]);
 
     // ==========================================================================
     // SELECTION MODIFIER KEY TRACKING (for cursor feedback)
@@ -622,6 +640,28 @@ export function CanvasGrid({
         log.debug('handleCellDrop', { row, col, dropData });
 
         try {
+            // Handle push actions with modifiers
+            // Per spec: Shift = wrap to next row, Ctrl = close last view
+            if (dropData.action === 'push') {
+                const { direction, modifiers } = dropData;
+                log.debug(`Push ${direction} with modifiers:`, modifiers);
+
+                // TODO: Implement push behavior in CanvasManager
+                // - Normal push: auto-expand canvas, never close views
+                // - Shift + push: wrap to next row (respects flow direction)
+                // - Ctrl + push: close last view (with undo available)
+
+                // For now, fall through to standard drop handling
+                // The view will be placed at the target position
+            }
+
+            // Handle swap actions
+            if (dropData.action === 'swap' && dropData.existingPlacement) {
+                log.debug('Swap action:', dropData);
+                // TODO: Implement swap in CanvasManager
+                // canvasManager.swapPlacements(sourceId, dropData.existingPlacement.id);
+            }
+
             // IMPORTANT: Check type field FIRST before checking for id
             // Every object has an id, so we must check type to distinguish
 

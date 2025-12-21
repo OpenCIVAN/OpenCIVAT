@@ -2,12 +2,19 @@
  * @file StackedNavBlock.scss
  * @description Styles for the StackedNavBlock navigation component.
  * 
- * Layout:
+ * TIGHTENED 2-column stacked layout:
  * ┌──────┬─────────────────┐
- * │  ⌂   │     12, 34      │
- * ├──────┤  ◀  ▲  ▼  ▶    │
+ * │  ⌂   │     12, 34      │  ← Position with generous padding
+ * ├──────┤  ◀  ▲  ▼  ▶    │  ← D-pad centered below
  * │  ☆   │                 │
  * └──────┴─────────────────┘
+ * 
+ * Changes from original:
+ * - Reduced outer padding
+ * - Tighter gaps between elements
+ * - Smaller buttons (22px instead of 24px)
+ * - Position display has more horizontal padding for readability
+ * - Overall height reduced from ~52px to ~44px
  */
 
 @use "theme" as *;
@@ -19,7 +26,7 @@
 .stacked-nav-block {
   display: flex;
   gap: $spacing-xs;
-  padding: $spacing-xs;
+  padding: 4px 6px; // Tighter outer padding
   background: $color-glass-subtle;
   border-radius: $radius-md;
   border: 1px solid $color-border-subtle;
@@ -31,6 +38,7 @@
   &__quick-jump {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 2px;
     padding-right: $spacing-xs;
     border-right: 1px solid $color-border-subtle;
@@ -44,25 +52,27 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
-    min-width: 96px; // Ensure room for larger position numbers like "128, 256"
+    min-width: 88px; // Room for "128, 256" style positions
   }
 
   // ==========================================================================
-  // POSITION DISPLAY
+  // POSITION DISPLAY - More horizontal padding for readability
   // ==========================================================================
 
   &__position {
     font-family: $font-family-mono;
-    font-size: $font-size-sm;
+    font-size: $font-size-xs; // 11px
     font-weight: $font-weight-medium;
     color: $color-text-secondary;
-    padding: 2px $spacing-sm;
+    padding: 3px $spacing-md; // More horizontal padding
     background: $color-glass-light;
     border-radius: $radius-sm;
     letter-spacing: 0.5px;
     text-align: center;
-    min-width: 60px;
+    min-width: 56px;
+    line-height: 1.2;
 
     // Subtle inner shadow for depth
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -79,15 +89,15 @@
   }
 
   // ==========================================================================
-  // NAVIGATION BUTTON (shared styles)
+  // NAVIGATION BUTTON - Slightly smaller
   // ==========================================================================
 
   &__btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     padding: 0;
     border-radius: $radius-sm;
     border: 1px solid transparent;
@@ -98,56 +108,68 @@
 
     // Icon styling
     svg {
-      transition: color $transition-fast;
+      width: 12px;
+      height: 12px;
     }
 
     // Hover state
-    &[data-hovered="true"] {
-      background: $color-glass-light;
+    &:hover {
+      background: $color-glass-medium;
       color: $color-text-secondary;
+      border-color: $color-border-subtle;
     }
 
-    // Active state (e.g., Home when at origin)
-    &--active {
-      background: rgba(var(--btn-accent-rgb, 251, 191, 36), 0.15);
-      border-color: var(--btn-accent, $color-accent-amber);
-      color: var(--btn-accent, $color-accent-amber);
-
-      svg {
-        color: var(--btn-accent, $color-accent-amber);
-      }
-
-      &[data-hovered="true"] {
-        background: rgba(var(--btn-accent-rgb, 251, 191, 36), 0.2);
-      }
+    // Active/pressed state
+    &:active {
+      background: $color-glass-strong;
+      transform: scale(0.95);
     }
 
-    // Focus visible
+    // Focus visible (keyboard nav)
     &:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4);
+      outline: 2px solid $color-accent-primary;
+      outline-offset: 1px;
     }
 
-    // Disabled state
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+    // Active state (like "at origin" for home button)
+    &--active {
+      background: rgba(251, 191, 36, 0.15); // Amber tint
+      color: $color-accent-amber;
+      border-color: rgba(251, 191, 36, 0.3);
+
+      &:hover {
+        background: rgba(251, 191, 36, 0.25);
+      }
     }
   }
 }
 
 // =============================================================================
-// CSS CUSTOM PROPERTIES FOR ACCENT COLORS
+// RESPONSIVE - Even tighter on small screens
 // =============================================================================
 
-// These allow dynamic accent colors via inline styles
-.stacked-nav-block__btn {
-  --btn-accent: #{$color-text-tertiary};
-  --btn-accent-rgb: 255, 255, 255;
-}
+@media (max-width: 1200px) {
+  .stacked-nav-block {
+    padding: 3px 4px;
+    gap: 2px;
 
-// Amber accent for Home button
-.stacked-nav-block__btn--active {
-  --btn-accent: #{$color-accent-amber};
-  --btn-accent-rgb: 251, 191, 36;
+    &__navigation {
+      min-width: 80px;
+    }
+
+    &__position {
+      padding: 2px $spacing-sm;
+      font-size: 10px;
+    }
+
+    &__btn {
+      width: 20px;
+      height: 20px;
+
+      svg {
+        width: 11px;
+        height: 11px;
+      }
+    }
+  }
 }
