@@ -205,15 +205,27 @@
   height: 100%;
   position: relative;
 
-  // THIS is the only border for empty cells
-  border: 2px dashed $color-border-subtle;
+  // Normal Mode: subtle appearance (per spec)
+  border: 1px dashed rgba(255, 255, 255, 0.08);
   border-radius: $radius-md;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   transition: all 0.15s ease;
 
   &:hover {
-    border-color: $color-border-default;
-    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  // Edit Mode: more visible (per spec)
+  .canvas-cell--edit-mode & {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+
+    &:hover {
+      // Blue tint on hover in edit mode
+      background: rgba(96, 165, 250, 0.08);
+      border-color: rgba(96, 165, 250, 0.4);
+    }
   }
 }
 
@@ -683,4 +695,126 @@
     background: rgba(248, 113, 113, 0.3);
     color: #f87171;
   }
+}
+
+// =============================================================================
+// DROP ZONE OVERLAY - Visual feedback during drag (per spec)
+// =============================================================================
+
+.canvas-cell__drop-zone {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  border-radius: $radius-md;
+  transition: all 0.15s ease;
+}
+
+.drop-zone__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: $radius-sm;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.drop-zone__label {
+  font-size: 11px;
+  font-weight: $font-weight-medium;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// Place zone - Green (per spec)
+.drop-zone--place {
+  background: rgba(74, 222, 128, 0.15);
+  border: 2px solid rgba(74, 222, 128, 0.5);
+
+  .drop-zone__content {
+    color: #4ade80;
+  }
+}
+
+// Swap zone - Blue (per spec)
+.drop-zone--swap {
+  background: rgba(96, 165, 250, 0.2);
+  border: 2px solid rgba(96, 165, 250, 0.5);
+
+  .drop-zone__content {
+    color: #60a5fa;
+  }
+}
+
+// Push zones - Amber (per spec)
+.drop-zone--push {
+  background: rgba(251, 191, 36, 0.1);
+  border: 2px dashed rgba(251, 191, 36, 0.5);
+
+  .drop-zone__content {
+    color: #fbbf24;
+  }
+}
+
+// Push direction indicators - show half-cell preview
+.drop-zone--push-up {
+  background: linear-gradient(
+    to bottom,
+    rgba(251, 191, 36, 0.2) 0%,
+    rgba(251, 191, 36, 0.2) 50%,
+    transparent 50%
+  );
+  border-top-width: 3px;
+  border-top-style: solid;
+}
+
+.drop-zone--push-down {
+  background: linear-gradient(
+    to top,
+    rgba(251, 191, 36, 0.2) 0%,
+    rgba(251, 191, 36, 0.2) 50%,
+    transparent 50%
+  );
+  border-bottom-width: 3px;
+  border-bottom-style: solid;
+}
+
+.drop-zone--push-left {
+  background: linear-gradient(
+    to right,
+    rgba(251, 191, 36, 0.2) 0%,
+    rgba(251, 191, 36, 0.2) 50%,
+    transparent 50%
+  );
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
+.drop-zone--push-right {
+  background: linear-gradient(
+    to left,
+    rgba(251, 191, 36, 0.2) 0%,
+    rgba(251, 191, 36, 0.2) 50%,
+    transparent 50%
+  );
+  border-right-width: 3px;
+  border-right-style: solid;
+}
+
+// Drop zone active states on the cell
+.canvas-cell--drop-zone-place {
+  .canvas-cell__empty-container {
+    border-color: rgba(74, 222, 128, 0.5) !important;
+    background: rgba(74, 222, 128, 0.1) !important;
+  }
+}
+
+.canvas-cell--drop-zone-swap {
+  border-color: rgba(96, 165, 250, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3) !important;
 }

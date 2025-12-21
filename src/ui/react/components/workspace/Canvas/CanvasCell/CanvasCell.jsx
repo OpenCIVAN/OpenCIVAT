@@ -23,7 +23,55 @@ import {
     Box,
     ZoomIn,
     MoreVertical,
+    ArrowUp,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+    ArrowLeftRight,
 } from 'lucide-react';
+
+// =============================================================================
+// DROP ZONE CONSTANTS
+// =============================================================================
+
+// Drop zone types per spec
+const DROP_ZONES = {
+    NONE: 'none',
+    PLACE: 'place',      // Empty cell center - green
+    SWAP: 'swap',        // Occupied cell center (60%) - blue
+    PUSH_UP: 'push-up',      // Top 20% - amber
+    PUSH_DOWN: 'push-down',  // Bottom 20% - amber
+    PUSH_LEFT: 'push-left',  // Left 20% - amber
+    PUSH_RIGHT: 'push-right', // Right 20% - amber
+};
+
+// Calculate which drop zone based on mouse position within cell
+function getDropZone(e, cellRef, isEmpty) {
+    if (!cellRef.current) return DROP_ZONES.NONE;
+
+    const rect = cellRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const width = rect.width;
+    const height = rect.height;
+
+    // Calculate relative position (0-1)
+    const relX = x / width;
+    const relY = y / height;
+
+    // Edge threshold is 20% per spec
+    const edgeThreshold = 0.20;
+
+    // Check edges first (push zones)
+    if (relY < edgeThreshold) return DROP_ZONES.PUSH_UP;
+    if (relY > 1 - edgeThreshold) return DROP_ZONES.PUSH_DOWN;
+    if (relX < edgeThreshold) return DROP_ZONES.PUSH_LEFT;
+    if (relX > 1 - edgeThreshold) return DROP_ZONES.PUSH_RIGHT;
+
+    // Center zone - Place for empty, Swap for occupied
+    return isEmpty ? DROP_ZONES.PLACE : DROP_ZONES.SWAP;
+}
+
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
 import { ProgressiveLoader } from '@UI/react/components/common/ThumbnailPreview';
@@ -69,11 +117,14 @@ export const CanvasCell = memo(function CanvasCell({
     onDoubleClick,
     onSelect,
     onDrop,
+    onSwap,
+    onPush,
     onAddContent,
     onRemove,
 }) {
-    const [isDragOver, setIsDragOver] = useState(false);
+    const [activeDropZone, setActiveDropZone] = useState(DROP_ZONES.NONE);
     const [showTooltip, setShowTooltip] = useState(false);
+    const cellRef = useRef(null);
 
     const isEmpty = !placement ||
         !placement.content ||
@@ -143,6 +194,7 @@ export const CanvasCell = memo(function CanvasCell({
     }, [renderMode]);
 
     // Build class names
+    const isDragOver = activeDropZone !== DROP_ZONES.NONE;
     const classNames = [
         'canvas-cell',
         `canvas-cell--${contentType}`,
@@ -153,6 +205,7 @@ export const CanvasCell = memo(function CanvasCell({
         selectionMode && 'canvas-cell--selectable',
         inEditMode && 'canvas-cell--edit-mode',
         isDragOver && 'canvas-cell--drag-over',
+        isDragOver && `canvas-cell--drop-zone-${activeDropZone}`,
         rowSpan > 1 && 'canvas-cell--row-span',
         colSpan > 1 && 'canvas-cell--col-span',
     ]
@@ -160,35 +213,42 @@ export const CanvasCell = memo(function CanvasCell({
         .join(' ');
 
     // ==========================================================================
-    // DRAG AND DROP
+    // DRAG AND DROP - With Zone Detection
     // ==========================================================================
 
     const handleDragOver = useCallback((e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
-        if (isEmpty) {
-            setIsDragOver(true);
-        }
+
+        // Calculate which drop zone we're in
+        const zone = getDropZone(e, cellRef, isEmpty);
+        setActiveDropZone(zone);
     }, [isEmpty]);
 
-    const handleDragLeave = useCallback(() => {
-        setIsDragOver(false);
+    const handleDragLeave = useCallback((e) => {
+        // Only clear if leaving the cell entirely (not entering a child)
+        if (!cellRef.current?.contains(e.relatedTarget)) {
+            setActiveDropZone(DROP_ZONES.NONE);
+        }
     }, []);
 
-    const handleDrop = useCallback((e) => {
-        e.preventDefault();
-        setIsDragOver(false);
-
-        if (!onDrop || !isEmpty) return;
-
+    // Parse drop data from drag event
+    const parseDropData = useCallback((e) => {
         try {
-            // Try ViewItem format first (from datasets tab - x-viewitem MIME type)
-            let data = e.dataTransfer.getData('application/x-viewitem');
+            // Try dataset format first (from datasets tab)
+            let data = e.dataTransfer.getData('application/x-dataset');
+            if (data) {
+                const parsed = JSON.parse(data);
+                console.log('Dataset drop (x-dataset):', parsed);
+                return { type: 'dataset', ...parsed };
+            }
+
+            // Try ViewItem format (from datasets tab - x-viewitem MIME type)
+            data = e.dataTransfer.getData('application/x-viewitem');
             if (data) {
                 const parsed = JSON.parse(data);
                 console.log('ViewItem drop (x-viewitem):', parsed);
-                onDrop(row, col, { viewConfigId: parsed.id, ...parsed });
-                return;
+                return { type: 'view', viewConfigId: parsed.id, ...parsed };
             }
 
             // Fall back to generic JSON (from files tab or other sources)
@@ -197,28 +257,83 @@ export const CanvasCell = memo(function CanvasCell({
                 const parsed = JSON.parse(data);
                 console.log('JSON drop:', parsed);
 
-                // Determine what type of data this is
                 if (parsed.type === 'dataset') {
-                    onDrop(row, col, { datasetId: parsed.datasetId, ...parsed });
+                    return { type: 'dataset', datasetId: parsed.datasetId, ...parsed };
                 } else if (parsed.type === 'view-item' || parsed.type === 'view') {
-                    // Accept BOTH 'view-item' and 'view' types
-                    onDrop(row, col, { viewConfigId: parsed.viewId || parsed.id, ...parsed });
+                    return { type: 'view', viewConfigId: parsed.viewId || parsed.id, ...parsed };
                 } else if (parsed.type === 'file' || parsed.path || parsed.isFile) {
-                    // File from FilesTab - check type OR legacy path/isFile fields
-                    onDrop(row, col, { ...parsed, isFile: true });
+                    return { type: 'file', ...parsed, isFile: true };
                 } else {
-                    // Unknown format - pass through
-                    console.warn('Unknown drop data format:', parsed);
-                    onDrop(row, col, parsed);
+                    return { type: 'unknown', ...parsed };
                 }
-                return;
             }
 
             console.warn('No recognized data format in drop');
+            return null;
         } catch (err) {
             console.error('Failed to parse dropped data:', err);
+            return null;
         }
-    }, [isEmpty, row, col, onDrop]);
+    }, []);
+
+    const handleDrop = useCallback((e) => {
+        e.preventDefault();
+        const dropZone = activeDropZone;
+        setActiveDropZone(DROP_ZONES.NONE);
+
+        const dropData = parseDropData(e);
+        if (!dropData) return;
+
+        // Get modifier keys for push behavior
+        const modifiers = {
+            shift: e.shiftKey,   // Wrap to next row
+            ctrl: e.ctrlKey,     // Close last view
+            alt: e.altKey,
+        };
+
+        // Handle based on drop zone
+        switch (dropZone) {
+            case DROP_ZONES.PLACE:
+                // Place in empty cell
+                if (onDrop && isEmpty) {
+                    if (dropData.type === 'dataset') {
+                        onDrop(row, col, { datasetId: dropData.datasetId, ...dropData });
+                    } else if (dropData.type === 'view') {
+                        onDrop(row, col, { viewConfigId: dropData.viewConfigId, ...dropData });
+                    } else {
+                        onDrop(row, col, dropData);
+                    }
+                }
+                break;
+
+            case DROP_ZONES.SWAP:
+                // Swap with existing view
+                if (onSwap && !isEmpty) {
+                    onSwap(row, col, dropData, placement);
+                } else if (onDrop) {
+                    // Fallback to onDrop if onSwap not provided
+                    onDrop(row, col, { ...dropData, action: 'swap', existingPlacement: placement });
+                }
+                break;
+
+            case DROP_ZONES.PUSH_UP:
+            case DROP_ZONES.PUSH_DOWN:
+            case DROP_ZONES.PUSH_LEFT:
+            case DROP_ZONES.PUSH_RIGHT:
+                // Push in direction
+                const direction = dropZone.replace('push-', '');
+                if (onPush) {
+                    onPush(row, col, direction, dropData, modifiers);
+                } else if (onDrop) {
+                    // Fallback to onDrop with push info
+                    onDrop(row, col, { ...dropData, action: 'push', direction, modifiers });
+                }
+                break;
+
+            default:
+                console.warn('Unknown drop zone:', dropZone);
+        }
+    }, [activeDropZone, parseDropData, isEmpty, row, col, placement, onDrop, onSwap, onPush]);
 
     // ==========================================================================
     // CLICK HANDLERS
@@ -327,11 +442,13 @@ export const CanvasCell = memo(function CanvasCell({
 
     return (
         <div
+            ref={cellRef}
             className={classNames}
             data-row={row}
             data-col={col}
             data-content-type={contentType}
             data-render-mode={renderMode}
+            data-drop-zone={activeDropZone}
             style={{
                 '--cell-width': `${cellSize.width}px`,
                 '--cell-height': `${cellSize.height}px`,
@@ -344,6 +461,11 @@ export const CanvasCell = memo(function CanvasCell({
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
         >
+            {/* Drop Zone Overlay - Shows visual feedback during drag */}
+            {isDragOver && (
+                <DropZoneOverlay zone={activeDropZone} isEmpty={isEmpty} />
+            )}
+
             {/* Selection checkbox (for edit mode) */}
             {selectionMode && (
                 <div className="canvas-cell__selection-overlay">
@@ -386,6 +508,69 @@ export const CanvasCell = memo(function CanvasCell({
         </div>
     );
 });
+
+// =============================================================================
+// DROP ZONE OVERLAY - Visual feedback during drag
+// =============================================================================
+
+function DropZoneOverlay({ zone, isEmpty }) {
+    const getZoneConfig = () => {
+        switch (zone) {
+            case DROP_ZONES.PLACE:
+                return {
+                    className: 'drop-zone--place',
+                    icon: Plus,
+                    label: 'Place Here',
+                };
+            case DROP_ZONES.SWAP:
+                return {
+                    className: 'drop-zone--swap',
+                    icon: ArrowLeftRight,
+                    label: 'Swap',
+                };
+            case DROP_ZONES.PUSH_UP:
+                return {
+                    className: 'drop-zone--push drop-zone--push-up',
+                    icon: ArrowUp,
+                    label: 'Push Up',
+                };
+            case DROP_ZONES.PUSH_DOWN:
+                return {
+                    className: 'drop-zone--push drop-zone--push-down',
+                    icon: ArrowDown,
+                    label: 'Push Down',
+                };
+            case DROP_ZONES.PUSH_LEFT:
+                return {
+                    className: 'drop-zone--push drop-zone--push-left',
+                    icon: ArrowLeft,
+                    label: 'Push Left',
+                };
+            case DROP_ZONES.PUSH_RIGHT:
+                return {
+                    className: 'drop-zone--push drop-zone--push-right',
+                    icon: ArrowRight,
+                    label: 'Push Right',
+                };
+            default:
+                return null;
+        }
+    };
+
+    const config = getZoneConfig();
+    if (!config) return null;
+
+    const Icon = config.icon;
+
+    return (
+        <div className={`canvas-cell__drop-zone ${config.className}`}>
+            <div className="drop-zone__content">
+                <Icon size={20} />
+                <span className="drop-zone__label">{config.label}</span>
+            </div>
+        </div>
+    );
+}
 
 // =============================================================================
 // EMPTY PLACEHOLDER - With Radial Menu (No Portal)
