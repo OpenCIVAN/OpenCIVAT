@@ -1,36 +1,400 @@
-// tabs/LayoutTab/LayoutTab.scss
-// Layout tab styling - wraps LayoutPanel component
-// Most styling comes from LayoutPanel/LayoutPanel.scss
+// src/ui/react/components/panels/LeftPanel/tabs/LayoutTab/LayoutTab.scss
+// Layout tab styling - simplified without subtabs
 
 @use "theme" as *;
 
 // =============================================================================
-// LAYOUT TAB CONTAINER
+// CONTAINER
 // =============================================================================
 
 .layout-tab {
   display: flex;
-  flex: 1;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
   overflow: hidden;
 
-  // LayoutPanel fills the container
-  .layout-panel {
-    flex: 1;
-    min-height: 0;
+  // States
+  &--loading,
+  &--error {
+    .layout-tab__content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
   }
-}
 
-// =============================================================================
-// LAYOUT TAB WRAPPER OVERRIDES
-// =============================================================================
+  &__loading,
+  &__error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-xl;
+    color: $color-text-muted;
 
-// When used inside the LeftPanel, adjust LayoutPanel to fit
-.left-panel-content .layout-panel {
-  // Remove duplicate header if needed
-  &__header {
-    display: none;
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  // ===========================================================================
+  // CONTENT
+  // ===========================================================================
+
+  &__content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: $spacing-sm;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    @include glass-scrollable;
+  }
+
+  // ===========================================================================
+  // CARDS
+  // ===========================================================================
+
+  &__card {
+    background: $color-glass-subtle;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    padding: $spacing-sm;
+
+    // Color accents
+    &[data-color="purple"] {
+      border-left: 2px solid $color-accent-purple;
+    }
+    &[data-color="blue"] {
+      border-left: 2px solid $color-accent-blue;
+    }
+    &[data-color="green"] {
+      border-left: 2px solid $color-accent-green;
+    }
+    &[data-color="amber"] {
+      border-left: 2px solid $color-accent-amber;
+    }
+    &[data-color="teal"] {
+      border-left: 2px solid $color-accent-teal;
+    }
+  }
+
+  &__card-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+
+    svg {
+      opacity: 0.7;
+    }
+  }
+
+  &__card-hint {
+    margin-top: $spacing-xs;
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  // ===========================================================================
+  // LAYOUT MODE
+  // ===========================================================================
+
+  &__mode-toggle {
+    display: flex;
+    gap: $spacing-xs;
+  }
+
+  &__mode-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    background: $color-glass-light;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      border-color: $color-border-default;
+    }
+
+    &--active {
+      background: rgba($color-accent-purple, 0.15);
+      border-color: rgba($color-accent-purple, 0.4);
+      color: $color-accent-purple;
+    }
+  }
+
+  &__flow-direction {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__direction-toggle {
+    display: flex;
+    gap: 2px;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: $color-glass-subtle;
+      border: 1px solid $color-border-subtle;
+      border-radius: $radius-sm;
+      color: $color-text-tertiary;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all $transition-fast;
+
+      &:hover {
+        background: $color-glass-light;
+      }
+
+      &.active {
+        background: rgba($color-accent-purple, 0.1);
+        border-color: rgba($color-accent-purple, 0.3);
+        color: $color-accent-purple;
+      }
+    }
+  }
+
+  // ===========================================================================
+  // CANVAS SIZE
+  // ===========================================================================
+
+  &__canvas-size {
+    display: flex;
+    gap: $spacing-md;
+  }
+
+  &__size-control {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__size-label {
+    font-size: 11px;
+    color: $color-text-muted;
+    min-width: 32px;
+  }
+
+  &__size-stepper {
+    display: flex;
+    align-items: center;
+    background: $color-glass-light;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      background: transparent;
+      border: none;
+      color: $color-text-tertiary;
+      cursor: pointer;
+      transition: all $transition-fast;
+
+      &:hover:not(:disabled) {
+        background: $color-glass-medium;
+        color: $color-text-secondary;
+      }
+
+      &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      &:first-child {
+        border-radius: $radius-sm 0 0 $radius-sm;
+      }
+
+      &:last-child {
+        border-radius: 0 $radius-sm $radius-sm 0;
+      }
+    }
+
+    span {
+      min-width: 28px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: $font-weight-medium;
+      color: $color-text-primary;
+    }
+  }
+
+  // ===========================================================================
+  // SPAWN SIZE PICKER
+  // ===========================================================================
+
+  &__spawn-sizes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $spacing-xs;
+  }
+
+  &__spawn-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: $spacing-xs;
+    background: $color-glass-light;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      border-color: $color-border-default;
+    }
+
+    &--active {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+    }
+
+    span {
+      font-size: 9px;
+      color: $color-text-muted;
+    }
+  }
+
+  &__spawn-preview {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    gap: 2px;
+    padding: 2px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+  }
+
+  &__spawn-cell {
+    background: $color-accent-green;
+    border-radius: 1px;
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+  }
+
+  // ===========================================================================
+  // QUICK LAYOUTS
+  // ===========================================================================
+
+  &__quick-layouts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-xs;
+  }
+
+  &__quick-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: $color-glass-light;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      border-color: $color-border-default;
+      color: $color-text-primary;
+    }
+
+    svg {
+      color: $color-accent-amber;
+    }
+  }
+
+  // ===========================================================================
+  // TOOLS
+  // ===========================================================================
+
+  &__tools {
+    display: flex;
+    gap: $spacing-xs;
+  }
+
+  &__tool-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: $spacing-sm;
+    background: $color-glass-light;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      border-color: $color-border-default;
+    }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.15);
+      border-color: rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+
+      svg {
+        color: $color-accent-teal;
+      }
+    }
+
+    svg {
+      color: $color-text-tertiary;
+    }
+  }
+
+  // ===========================================================================
+  // DOCKED NAVIGATOR
+  // ===========================================================================
+
+  &__navigator {
+    border-top: 1px solid $color-border-subtle;
+    flex-shrink: 0;
   }
 }

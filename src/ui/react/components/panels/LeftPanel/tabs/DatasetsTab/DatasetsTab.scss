@@ -1,1191 +1,268 @@
-// tabs/DatasetsTab/DatasetsTab.scss
-// Datasets tab styling - matches Layout tab patterns
+// src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/DatasetsTab.scss
+// Datasets tab styling - simplified without subtabs
 
 @use "theme" as *;
 
 // =============================================================================
-// DATASETS TAB CONTAINER
+// CONTAINER
 // =============================================================================
 
 .datasets-tab {
   display: flex;
-  flex: 1 1 0; // Fill available space in flex parent
   flex-direction: column;
-  min-height: 0; // Allow shrinking below content size
-  width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
   overflow: hidden;
 
-  // Subtabs - Layout tab style
-  &__tabs {
-    display: flex;
-    border-bottom: 1px solid $color-border-subtle;
-    flex-shrink: 0;
-  }
-
-  &__tab {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-xs;
-    padding: $spacing-sm $spacing-md;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: $color-text-muted;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover:not(&--active) {
-      background: $color-glass-light;
-      color: $color-text-secondary;
-    }
-
-    &--active {
-      background: rgba(var(--tab-color-rgb), 0.04);
-      border-bottom-color: var(--tab-color);
-      color: var(--tab-color);
-
-      &[data-color="teal"] {
-        --tab-color: #{$color-accent-teal};
-        --tab-color-rgb: 45, 212, 191;
-      }
-
-      &[data-color="blue"] {
-        --tab-color: #{$color-accent-blue};
-        --tab-color-rgb: 96, 165, 250;
-      }
+  // States
+  &--loading,
+  &--error {
+    .datasets-tab__content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   }
 
-  &__tab-badge {
-    font-size: 9px;
-    padding: 1px 5px;
-    background: rgba(var(--tab-color-rgb, 255, 255, 255), 0.15);
-    border-radius: $radius-full;
-  }
+  // ===========================================================================
+  // TOOLBAR
+  // ===========================================================================
 
-  // Filter bar - centered chips
-  &__filter-bar {
-    display: flex;
-    justify-content: center;
+  &__toolbar {
     padding: $spacing-sm;
     border-bottom: 1px solid $color-border-subtle;
-    background: rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
   }
 
-  // Search - matches ViewsSubtab style
   &__search {
     display: flex;
     align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-sm;
-    border-bottom: 1px solid $color-border-subtle;
-    flex-shrink: 0;
-  }
-
-  &__search-icon {
-    color: $color-text-muted;
-    flex-shrink: 0;
-  }
-
-  &__search-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    font-size: 11px;
-    color: $color-text-primary;
-    outline: none;
-
-    &::placeholder {
-      color: $color-text-muted;
-    }
-  }
-
-  &__search-clear {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    background: transparent;
-    border: none;
-    color: $color-text-muted;
-    cursor: pointer;
-    border-radius: $radius-xs;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: $color-text-secondary;
-    }
-  }
-
-  // Content area - takes remaining space
-  &__content {
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  // List for "By Dataset" view
-  &__list {
-    flex: 1 1 0;
-    min-height: 0;
-    overflow-y: auto;
-    padding: $spacing-sm;
-  }
-
-  // Canvas sections for "By Canvas" view
-  &__canvas-sections {
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  // Canvas list within sections
-  &__canvas-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  // Empty state
-  &__empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: $spacing-xl;
-    text-align: center;
-    color: $color-text-muted;
-    flex: 1;
-
-    svg {
-      opacity: 0.5;
-      margin-bottom: $spacing-md;
-    }
-
-    h3 {
-      font-size: $font-size-sm;
-      font-weight: $font-weight-semibold;
-      color: $color-text-secondary;
-      margin-bottom: $spacing-sm;
-    }
-
-    p {
-      font-size: 11px;
-    }
-  }
-}
-
-// =============================================================================
-// SORT TOGGLE
-// =============================================================================
-
-.datasets-sort-toggle {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-xs $spacing-sm;
-  background: rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid $color-border-subtle;
-
-  &__label {
-    font-size: 9px;
-    color: $color-text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  &__btn {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 3px 6px;
-    font-size: 9px;
-    background: transparent;
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover:not(&--active) {
-      color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    &--active {
-      background: rgba($color-accent-blue, 0.15);
-      border-color: rgba($color-accent-blue, 0.4);
-      color: $color-accent-blue;
-    }
-  }
-}
-
-// =============================================================================
-// DATASET PARENT (expandable group)
-// =============================================================================
-
-.dataset-parent {
-  margin-bottom: $spacing-xs;
-
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-md;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.3);
-      border-color: $color-border-medium;
-    }
-
-    &--expanded {
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
-      background: rgba(0, 0, 0, 0.25);
-    }
-  }
-
-  &__chevron {
-    color: $color-text-muted;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-  }
-
-  &__icon {
-    flex-shrink: 0;
-  }
-
-  &__name {
-    flex: 1;
-    font-size: 11px;
-    font-weight: $font-weight-medium;
-    color: $color-text-primary;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__count {
-    font-size: 10px;
-    color: $color-text-muted;
-
-    .text-green {
-      color: $color-accent-green;
-    }
-  }
-
-  &__more-btn {
-    background: none;
-    border: none;
-    padding: 4px;
-    color: $color-text-muted;
-    cursor: pointer;
-    border-radius: $radius-xs;
-    transition: all $transition-fast;
-    display: flex;
-    align-items: center;
-
-    &:hover {
-      color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.05);
-    }
-  }
-
-  &__settings-btn {
-    background: none;
-    border: none;
-    padding: 4px;
-    color: $color-text-muted;
-    cursor: pointer;
-    border-radius: $radius-xs;
-    transition: all $transition-fast;
-    display: flex;
-    align-items: center;
-
-    &:hover {
-      color: $color-accent-blue;
-      background: rgba($color-accent-blue, 0.1);
-    }
-  }
-
-  &__children {
-    background: rgba(0, 0, 0, 0.15);
-    border: 1px solid $color-border-subtle;
-    border-top: none;
-    border-bottom-left-radius: $radius-md;
-    border-bottom-right-radius: $radius-md;
-    padding: $spacing-xs;
-  }
-
-  &__add-btn {
-    background: none;
-    border: none;
-    padding: 4px;
-    color: $color-text-muted;
-    cursor: pointer;
-    border-radius: $radius-xs;
-    transition: all $transition-fast;
-    display: flex;
-    align-items: center;
-
-    &:hover {
-      color: $color-accent-green;
-      background: rgba($color-accent-green, 0.1);
-    }
-  }
-
-  &__empty {
-    padding: $spacing-sm;
-    text-align: center;
-  }
-
-  &__create-view-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba($color-accent-blue, 0.1);
-    border: 1px solid rgba($color-accent-blue, 0.3);
-    border-radius: $radius-sm;
-    color: $color-accent-blue;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: rgba($color-accent-blue, 0.2);
-      border-color: rgba($color-accent-blue, 0.5);
-    }
-  }
-}
-
-// =============================================================================
-// DATASET VIEW ITEM (in tree)
-// =============================================================================
-
-.dataset-view-item {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm;
-  margin-bottom: 2px;
-  background: rgba(0, 0, 0, 0.1);
-  border: 1px solid transparent;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.2);
-    border-color: $color-border-subtle;
-  }
-
-  &--active {
-    border-color: rgba($color-accent-green, 0.4);
-    background: rgba($color-accent-green, 0.08);
-  }
-
-  &__drag {
-    color: $color-text-muted;
-    opacity: 0;
-    cursor: grab;
-    flex-shrink: 0;
-    transition: opacity $transition-fast;
-
-    .dataset-view-item:hover & {
-      opacity: 1;
-    }
-  }
-
-  &__status {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-
-    &--active {
-      background: $color-accent-green;
-      box-shadow: 0 0 4px rgba($color-accent-green, 0.5);
-    }
-
-    &--inactive {
-      border: 1.5px solid $color-text-muted;
-      background: transparent;
-    }
-  }
-
-  &__name {
-    flex: 1;
-    font-size: 11px;
-    color: $color-text-primary;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    .dataset-view-item--active & {
-      font-weight: $font-weight-medium;
-    }
-  }
-
-  &__position {
-    font-size: 9px;
-    font-family: $font-family-mono;
-    color: $color-text-muted;
-    padding: 2px 4px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: $radius-xs;
-  }
-
-  &__badge {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 8px;
-    padding: 2px 5px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-
-    &--shared {
-      background: rgba($color-accent-pink, 0.15);
-      color: $color-accent-pink;
-    }
-  }
-
-  &__actions {
-    display: flex;
-    gap: 2px;
-    opacity: 0;
-    transition: opacity $transition-fast;
-
-    .dataset-view-item:hover & {
-      opacity: 1;
-    }
-  }
-
-  &__action {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    background: transparent;
-    border: none;
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    &--danger:hover {
-      color: $color-accent-red;
-      background: rgba($color-accent-red, 0.1);
-    }
-  }
-}
-
-// =============================================================================
-// CANVAS VIEW ITEM (for "By Canvas" view)
-// =============================================================================
-
-.canvas-view-item {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  padding: $spacing-sm $spacing-md;
-  background: rgba(0, 0, 0, 0.1);
-  border: 1px solid transparent;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.2);
-    border-color: $color-border-subtle;
-  }
-
-  &--active {
-    border-color: rgba($color-accent-green, 0.4);
-    background: rgba($color-accent-green, 0.08);
-  }
-
-  &__position {
-    font-size: 9px;
-    font-family: $font-family-mono;
-    font-weight: $font-weight-medium;
-    padding: 2px 6px;
-    background: rgba($color-accent-blue, 0.15);
-    border: 1px solid rgba($color-accent-blue, 0.3);
-    border-radius: $radius-xs;
-    color: $color-accent-blue;
-    min-width: 32px;
-    text-align: center;
-  }
-
-  &__status {
-    flex-shrink: 0;
-  }
-
-  &__name {
-    flex: 1;
-    font-size: 11px;
-    font-weight: $font-weight-medium;
-    color: $color-text-primary;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-  }
-
-  &__dataset {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    color: $color-text-muted;
-    max-width: 100px;
-    overflow: hidden;
-  }
-
-  &__dataset-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__badge {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 8px;
-    padding: 2px 5px;
-    background: rgba($color-accent-purple, 0.15);
-    border-radius: $radius-xs;
-    color: $color-accent-purple;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 2px;
-    opacity: 0;
-    transition: opacity $transition-fast;
-
-    .canvas-view-item:hover & {
-      opacity: 1;
-    }
-  }
-
-  &__action {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    background: transparent;
-    border: none;
-    border-radius: $radius-xs;
-    color: $color-text-muted;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    &--danger:hover {
-      color: $color-accent-red;
-      background: rgba($color-accent-red, 0.1);
-    }
-  }
-}
-
-.trashed-view-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-sm;
-  background: rgba(0, 0, 0, 0.15);
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
-  margin-bottom: 2px;
-
-  &__info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  &__name {
-    font-size: 11px;
-    color: $color-text-muted;
-    text-decoration: line-through;
-    opacity: 0.7;
-  }
-
-  &__expires {
-    font-size: 9px;
-    color: $color-accent-amber;
-  }
-
-  &__actions {
-    display: flex;
-    gap: $spacing-xs;
-  }
-
-  &__restore,
-  &__delete {
-    padding: 4px;
-    background: none;
-    border: none;
-    color: $color-text-muted;
-    cursor: pointer;
-    border-radius: $radius-xs;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-  }
-
-  &__restore:hover {
-    color: $color-accent-green;
-  }
-
-  &__delete:hover {
-    color: $color-error;
-  }
-}
-
-// =============================================================================
-// HELPER CLASSES
-// =============================================================================
-
-.text-green {
-  color: $color-accent-green;
-}
-
-// =============================================================================
-// VIEW SETTINGS MODAL
-// =============================================================================
-
-.view-settings-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: $z-modal;
-}
-
-.view-settings-modal {
-  width: 360px;
-  max-width: 90vw;
-  max-height: 80vh;
-  background: $color-bg-primary;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-lg;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-
-  &__header {
-    display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
-    padding: $spacing-md;
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid $color-border-subtle;
-    flex-shrink: 0;
-  }
-
-  &__icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba($color-accent-blue, 0.15);
-    border-radius: $radius-md;
-    color: $color-accent-blue;
-    flex-shrink: 0;
-  }
-
-  &__title-area {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__title {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__subtitle {
-    font-size: 10px;
-    color: $color-text-muted;
-  }
-
-  &__close {
-    background: none;
-    border: none;
-    padding: 4px;
-    color: $color-text-muted;
-    cursor: pointer;
-    border-radius: $radius-xs;
-
-    &:hover {
-      color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.05);
-    }
-  }
-
-  &__content {
-    flex: 1;
-    overflow-y: auto;
-    padding: $spacing-md;
-  }
-
-  &__section {
-    margin-bottom: $spacing-md;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    &--placeholder {
-      opacity: 0.6;
-    }
-  }
-
-  &__section-header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    font-size: 11px;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-    margin-bottom: $spacing-sm;
-
-    svg {
-      color: $color-text-muted;
-    }
-  }
-
-  &__badge {
-    margin-left: auto;
-    font-size: 9px;
-    padding: 2px 6px;
-    background: rgba($color-accent-teal, 0.15);
-    border-radius: $radius-full;
-    color: $color-accent-teal;
-  }
-
-  &__size-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-  }
-
-  &__size-btn {
-    padding: $spacing-xs $spacing-sm;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-sm;
-    color: $color-text-secondary;
-    font-size: 10px;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover:not(&--active) {
-      background: rgba(0, 0, 0, 0.3);
-      border-color: $color-border-default;
-    }
-
-    &--active {
-      background: rgba($color-accent-blue, 0.15);
-      border-color: rgba($color-accent-blue, 0.4);
-      color: $color-accent-blue;
-    }
-  }
-
-  &__empty {
-    padding: $spacing-sm;
-    text-align: center;
-    font-size: 10px;
-    color: $color-text-muted;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: $radius-sm;
-  }
-
-  &__link-list {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-xs;
-  }
-
-  &__link-item {
-    display: flex;
-    align-items: center;
     gap: $spacing-sm;
     padding: $spacing-xs $spacing-sm;
-    background: rgba(0, 0, 0, 0.1);
+    background: $color-glass-subtle;
+    border: 1px solid $color-border-subtle;
     border-radius: $radius-sm;
-    font-size: 11px;
-    color: $color-text-secondary;
 
     svg {
-      color: $color-text-muted;
+      color: $color-text-tertiary;
       flex-shrink: 0;
     }
 
-    span {
-      min-width: 60px;
-    }
-  }
-
-  &__link-select {
-    flex: 1;
-    padding: 4px $spacing-xs;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-xs;
-    color: $color-text-primary;
-    font-size: 10px;
-    cursor: pointer;
-
-    &:focus {
+    input {
+      flex: 1;
+      background: transparent;
+      border: none;
       outline: none;
-      border-color: $color-accent-blue;
+      font-size: 11px;
+      color: $color-text-primary;
+
+      &::placeholder {
+        color: $color-text-tertiary;
+      }
     }
 
-    option {
-      background: $color-bg-primary;
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      background: transparent;
+      border: none;
+      color: $color-text-tertiary;
+      cursor: pointer;
+      border-radius: $radius-xs;
+
+      &:hover {
+        background: $color-glass-light;
+        color: $color-text-secondary;
+      }
     }
   }
 
-  &__placeholder {
-    padding: $spacing-sm;
-    text-align: center;
-    font-size: 10px;
-    color: $color-text-muted;
-    font-style: italic;
+  // ===========================================================================
+  // CONTENT
+  // ===========================================================================
+
+  &__content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    @include glass-scrollable;
   }
 
-  &__footer {
+  &__list {
     display: flex;
-    justify-content: flex-end;
-    gap: $spacing-sm;
-    padding: $spacing-md;
-    border-top: 1px solid $color-border-subtle;
-    background: rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;
+    flex-direction: column;
   }
 
-  &__btn {
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-xl;
+    color: $color-text-muted;
+
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  }
+
+  // ===========================================================================
+  // DATASET ITEM
+  // ===========================================================================
+
+  &__dataset {
+    border-bottom: 1px solid $color-border-subtle;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__dataset-header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: $spacing-xs $spacing-md;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: transparent;
+    border: none;
+    border-left: 2px solid var(--dataset-color, $color-accent-teal);
     color: $color-text-secondary;
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: $font-weight-medium;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
+      background: $color-glass-light;
 
-    &--primary {
-      background: rgba($color-accent-blue, 0.15);
-      border-color: rgba($color-accent-blue, 0.4);
-      color: $color-accent-blue;
-
-      &:hover {
-        background: rgba($color-accent-blue, 0.25);
+      .datasets-tab__dataset-actions {
+        opacity: 1;
       }
     }
 
-    &--secondary {
-      color: $color-text-muted;
+    // Chevron
+    > svg:first-child {
+      color: $color-text-tertiary;
+      flex-shrink: 0;
     }
   }
-}
 
-// =============================================================================
-// DATASET SETTINGS MODAL
-// =============================================================================
-
-.dataset-settings-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: $z-modal;
-}
-
-.dataset-settings-modal {
-  width: 380px;
-  max-width: 90vw;
-  max-height: 80vh;
-  background: $color-bg-primary;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-lg;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-
-  &__header {
-    display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
-    padding: $spacing-md;
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid $color-border-subtle;
+  &__dataset-icon {
     flex-shrink: 0;
   }
 
-  &__icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba($color-accent-purple, 0.15);
-    border-radius: $radius-md;
-    color: $color-accent-purple;
-    flex-shrink: 0;
-  }
-
-  &__title-area {
+  &__dataset-name {
     flex: 1;
-    min-width: 0;
-  }
-
-  &__title {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
+    color: $color-text-primary;
   }
 
-  &__subtitle {
+  &__dataset-count {
+    padding: 2px 8px;
+    background: $color-glass-light;
+    border-radius: $radius-full;
     font-size: 10px;
     color: $color-text-muted;
+    flex-shrink: 0;
   }
 
-  &__close {
-    background: none;
-    border: none;
-    padding: 4px;
-    color: $color-text-muted;
+  &__dataset-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity $transition-fast;
+  }
+
+  &__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: $color-glass-subtle;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-tertiary;
     cursor: pointer;
-    border-radius: $radius-xs;
+    transition: all $transition-fast;
 
     &:hover {
+      background: $color-glass-light;
+      border-color: $color-border-default;
       color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.05);
     }
   }
 
-  &__content {
-    flex: 1;
-    overflow-y: auto;
-    padding: $spacing-md;
+  // ===========================================================================
+  // DATASET CONTENT (VIEWS)
+  // ===========================================================================
+
+  &__dataset-content {
+    padding: $spacing-xs $spacing-sm $spacing-sm $spacing-lg;
   }
 
-  &__section {
-    margin-bottom: $spacing-md;
+  &__empty-views {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm;
+    background: $color-glass-subtle;
+    border-radius: $radius-sm;
+    font-size: 11px;
+    color: $color-text-muted;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: rgba($color-accent-teal, 0.1);
+      border: 1px solid rgba($color-accent-teal, 0.3);
+      border-radius: $radius-sm;
+      color: $color-accent-teal;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all $transition-fast;
+
+      &:hover {
+        background: rgba($color-accent-teal, 0.2);
+      }
+    }
+  }
+
+  &__view-group {
+    margin-bottom: $spacing-sm;
 
     &:last-child {
       margin-bottom: 0;
     }
-
-    &--placeholder {
-      opacity: 0.6;
-    }
   }
 
-  &__section-header {
+  &__view-group-header {
     display: flex;
     align-items: center;
     gap: $spacing-xs;
-    font-size: 11px;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-    margin-bottom: $spacing-sm;
+    padding: $spacing-xs 0;
+    font-size: 9px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 
     svg {
-      color: $color-text-muted;
-    }
-  }
-
-  &__info-grid {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-xs;
-  }
-
-  &__info-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: $radius-sm;
-  }
-
-  &__info-label {
-    font-size: 10px;
-    color: $color-text-muted;
-  }
-
-  &__info-value {
-    font-size: 11px;
-    color: $color-text-primary;
-  }
-
-  &__empty {
-    padding: $spacing-sm;
-    text-align: center;
-    font-size: 10px;
-    color: $color-text-muted;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: $radius-sm;
-  }
-
-  &__view-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  &__view-item {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: $radius-sm;
-  }
-
-  &__view-status {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: $color-text-muted;
-    flex-shrink: 0;
-
-    &--active {
-      background: $color-accent-green;
-      box-shadow: 0 0 4px rgba($color-accent-green, 0.5);
-    }
-  }
-
-  &__view-name {
-    font-size: 11px;
-    color: $color-text-secondary;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__view-more {
-    font-size: 10px;
-    color: $color-text-muted;
-    padding: $spacing-xs $spacing-sm;
-    text-align: center;
-  }
-
-  &__placeholder {
-    padding: $spacing-sm;
-    text-align: center;
-    font-size: 10px;
-    color: $color-text-muted;
-    font-style: italic;
-  }
-
-  &__footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: $spacing-sm;
-    padding: $spacing-md;
-    border-top: 1px solid $color-border-subtle;
-    background: rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;
-  }
-
-  &__btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: $spacing-xs $spacing-md;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    color: $color-text-secondary;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
-
-    &--primary {
-      background: rgba($color-accent-green, 0.15);
-      border-color: rgba($color-accent-green, 0.4);
-      color: $color-accent-green;
-
-      &:hover {
-        background: rgba($color-accent-green, 0.25);
-      }
-    }
-
-    &--danger {
-      &:hover {
-        background: rgba($color-error, 0.15);
-        border-color: rgba($color-error, 0.4);
-        color: $color-error;
-      }
-    }
-
-    &--secondary {
-      color: $color-text-muted;
+      opacity: 0.7;
     }
   }
 }
