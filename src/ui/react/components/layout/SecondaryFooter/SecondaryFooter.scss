@@ -22,8 +22,7 @@
 // =============================================================================
 
 $footer-height: 40px;
-$zone-min-width: 120px;
-$zone-preferred-width: 220px;
+$zone-min-width: 140px; // Minimum before content starts hiding
 $zone-padding: $spacing-md;
 
 // =============================================================================
@@ -60,9 +59,11 @@ $zone-padding: $spacing-md;
 // =============================================================================
 
 .secondary-footer__zone--left {
+  // Size to content, don't grow, can shrink
   flex: 0 0 auto;
   min-width: $zone-min-width;
-  max-width: $zone-preferred-width;
+  // NO max-width - let it take the space it needs
+
   padding: 0 $zone-padding;
   border-right: 1px solid $color-border-subtle;
   justify-content: flex-start;
@@ -86,9 +87,11 @@ $zone-padding: $spacing-md;
 // =============================================================================
 
 .secondary-footer__zone--right {
+  // Size to content, don't grow, can shrink
   flex: 0 0 auto;
   min-width: $zone-min-width;
-  max-width: $zone-preferred-width;
+  // NO max-width - let it take the space it needs
+
   padding: 0 $zone-padding;
   border-left: 1px solid rgba(96, 165, 250, 0.3);
   justify-content: flex-end;
@@ -124,13 +127,12 @@ $zone-padding: $spacing-md;
 // position: absolute for dropdown menus.
 
 // =============================================================================
-// RESPONSIVE BREAKPOINTS - Fallback
+// RESPONSIVE BREAKPOINTS
 // =============================================================================
 
 @media (max-width: 1400px) {
   .secondary-footer__zone--left,
   .secondary-footer__zone--right {
-    max-width: 180px;
     padding: 0 $spacing-sm;
   }
 
@@ -142,8 +144,7 @@ $zone-padding: $spacing-md;
 @media (max-width: 1200px) {
   .secondary-footer__zone--left,
   .secondary-footer__zone--right {
-    min-width: 100px;
-    max-width: 140px;
+    min-width: 120px;
   }
 
   .secondary-footer__zone--center {
@@ -154,14 +155,16 @@ $zone-padding: $spacing-md;
   .secondary-footer__divider {
     display: none;
   }
+}
 
-  // Collapse labels
+@media (max-width: 900px) {
+  // Only collapse labels at very narrow widths
   .labeled-icon-button__label {
     display: none;
   }
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 800px) {
   .secondary-footer {
     height: 36px;
   }

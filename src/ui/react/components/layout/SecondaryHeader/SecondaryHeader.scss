@@ -22,8 +22,7 @@
 // =============================================================================
 
 $header-height: 56px;
-$zone-min-width: 140px;
-$zone-preferred-width: 240px;
+$zone-min-width: 180px; // Minimum before content starts hiding
 $zone-padding: $spacing-md;
 
 // =============================================================================
@@ -63,23 +62,17 @@ $zone-padding: $spacing-md;
 // =============================================================================
 
 .secondary-header__zone--left {
+  // Size to content, don't grow, can shrink
   flex: 0 0 auto;
   min-width: $zone-min-width;
-  max-width: $zone-preferred-width;
+  // NO max-width - let it take the space it needs
+
   padding: 0 $zone-padding;
   border-right: 1px solid $color-border-subtle;
   justify-content: flex-start;
 
   // CRITICAL: Position context for dropdown menus
   position: relative;
-
-  // Content truncation (but NOT overflow: hidden - breaks dropdowns!)
-  .workspace-selector__name,
-  .selector__label {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 }
 
 // =============================================================================
@@ -101,23 +94,17 @@ $zone-padding: $spacing-md;
 // =============================================================================
 
 .secondary-header__zone--right {
+  // Size to content, don't grow, can shrink
   flex: 0 0 auto;
   min-width: $zone-min-width;
-  max-width: $zone-preferred-width;
+  // NO max-width - let it take the space it needs
+
   padding: 0 $zone-padding;
   border-left: 1px solid $color-border-subtle;
   justify-content: flex-end;
 
   // CRITICAL: Position context for dropdown menus
   position: relative;
-
-  // Content truncation (but NOT overflow: hidden - breaks dropdowns!)
-  .room-selector__name,
-  .presence__label {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 }
 
 // =============================================================================
@@ -141,13 +128,12 @@ $zone-padding: $spacing-md;
 // position: absolute for dropdown menus. Use media queries instead.
 
 // =============================================================================
-// RESPONSIVE BREAKPOINTS - Fallback for browsers without container queries
+// RESPONSIVE BREAKPOINTS
 // =============================================================================
 
 @media (max-width: 1400px) {
   .secondary-header__zone--left,
   .secondary-header__zone--right {
-    max-width: 200px;
     padding: 0 $spacing-sm;
   }
 
@@ -159,8 +145,7 @@ $zone-padding: $spacing-md;
 @media (max-width: 1200px) {
   .secondary-header__zone--left,
   .secondary-header__zone--right {
-    min-width: 120px;
-    max-width: 160px;
+    min-width: 140px;
   }
 
   .secondary-header__zone--center {
@@ -180,7 +165,7 @@ $zone-padding: $spacing-md;
 
   .secondary-header__zone--left,
   .secondary-header__zone--right {
-    min-width: 100px;
+    min-width: 120px;
     padding: 0 $spacing-xs;
   }
 }

@@ -138,13 +138,12 @@
 }
 
 // =============================================================================
-// RESPONSIVE - Use --compact modifier class instead of container queries
-// Container queries break dropdown positioning in parent containers.
+// RESPONSIVE - Labels collapse only at very narrow viewport widths
 // =============================================================================
 
-// Apply compact mode via parent class or media query
-@media (max-width: 1200px) {
-  // In narrow viewports, SecondaryFooter left zone collapses labels
+// Don't collapse labels until viewport is quite narrow
+// Parent containers handle their own responsive behavior via media queries
+@media (max-width: 900px) {
   .secondary-footer__zone--left .labeled-icon-button {
     padding: 6px;
 
