@@ -3,5 +3,5 @@
  * @description Exports for ViewsTab.
  */
 
-export { ViewsPanelContent, default } from './ViewsTab';
-export { useViewsTab } from './hooks/useViewsTab';
+export { ViewsPanelContent, ViewsPanelContent as default } from './ViewsTab';
+export { useViewsTab, VIEW_MODES } from './hooks/useViewsTab';

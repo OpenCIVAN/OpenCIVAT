@@ -1,6 +1,6 @@
 // SlidingPanel.scss
 // Sliding panel that appears below ViewItem on hover
-// Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/components/SlidingPanel.scss
+// Location: src/ui/react/components/common/ViewItem/components/SlidingPanel.scss
 
 @use "sass:color";
 @use "theme" as *;
@@ -23,18 +23,18 @@
 
   &--open {
     padding: $spacing-xs;
-    max-height: 80px; // Reduced - we want single line
+    max-height: 80px;
     opacity: 1;
   }
 }
 
 // =============================================================================
-// TOOLTIP AREA - Compact
+// TOOLTIP AREA
 // =============================================================================
 
 .sliding-panel__tooltip {
   padding: 2px $spacing-xs;
-  margin-bottom: 2px; // Reduced from 4px
+  margin-bottom: 2px;
   background: $color-bg-primary;
   border-radius: $radius-xs;
   font-size: 9px;
@@ -53,15 +53,15 @@
 }
 
 // =============================================================================
-// ACTIONS ROW
+// ACTIONS
 // =============================================================================
 
 .sliding-panel__actions {
   display: flex;
-  gap: 2px; // Reduced from 3px
+  gap: 2px;
   align-items: center;
-  flex-wrap: nowrap; // CHANGED: prevent wrapping
-  overflow-x: auto; // Allow horizontal scroll if needed
+  flex-wrap: nowrap;
+  overflow-x: auto;
 
   // Hide scrollbar but allow scrolling
   scrollbar-width: none;
@@ -75,14 +75,14 @@
   background: $color-bg-primary;
   border-radius: $radius-xs;
   padding: 1px;
-  gap: 0; // Reduced from 1px - buttons touch
+  gap: 0;
   flex-shrink: 0;
 }
 
 .sliding-panel__spacer {
   flex: 1;
-  min-width: 4px; // Minimum spacer
-  max-width: 20px; // Don't push too far
+  min-width: 4px;
+  max-width: 20px;
 }
 
 // =============================================================================
@@ -93,7 +93,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px; // Reduced from 24px
+  width: 22px;
   height: 22px;
   background: transparent;
   border: none;
@@ -109,7 +109,7 @@
     color: $color-text-primary;
   }
 
-  // Active states
+  // Active color states
   &--active {
     &.sliding-panel__btn--purple {
       background: rgba($color-accent-purple, 0.2);
@@ -131,6 +131,11 @@
       color: $color-accent-teal;
     }
 
+    &.sliding-panel__btn--green {
+      background: rgba($color-accent-green, 0.2);
+      color: $color-accent-green;
+    }
+
     &.sliding-panel__btn--blue {
       background: rgba($color-accent-blue, 0.2);
       color: $color-accent-blue;
@@ -140,19 +145,17 @@
 
 .sliding-panel__btn-badge {
   position: absolute;
-  top: -1px;
-  right: -1px;
-  min-width: 10px;
-  height: 10px;
-  padding: 0 2px;
-  background: $color-accent-teal;
-  border-radius: 5px;
+  top: 0;
+  right: 0;
   font-size: 7px;
-  font-weight: $font-weight-semibold;
+  font-weight: $font-weight-bold;
+  background: currentColor;
   color: $color-bg-primary;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 0 3px;
+  border-radius: 4px;
+  min-width: 10px;
+  text-align: center;
+  transform: translate(25%, -25%);
 }
 
 // =============================================================================
@@ -162,26 +165,20 @@
 .sliding-panel__size-btn {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px 5px; // Reduced padding
+  gap: 3px;
+  padding: 3px 6px;
   background: $color-bg-primary;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-xs;
+  font-size: 9px;
   color: $color-text-secondary;
-  font-size: 9px; // Smaller font
   cursor: pointer;
   transition: all $transition-fast;
   flex-shrink: 0;
-  white-space: nowrap;
 
   &:hover {
-    background: $color-glass-light;
     border-color: $color-border-default;
-    color: $color-text-primary;
-  }
-
-  svg {
-    flex-shrink: 0;
+    background: $color-glass-light;
   }
 }
 
@@ -192,18 +189,18 @@
 .sliding-panel__size-backdrop {
   position: fixed;
   inset: 0;
-  z-index: $z-modal - 1;
+  z-index: $z-popover - 1;
 }
 
 .sliding-panel__size-menu {
   position: fixed;
-  min-width: 140px;
+  z-index: $z-popover;
   background: $color-bg-secondary;
   border: 1px solid $color-border-default;
   border-radius: $radius-md;
   padding: $spacing-sm;
   box-shadow: $shadow-glass-lg;
-  z-index: $z-modal;
+  backdrop-filter: $blur-medium;
   animation: size-menu-in 0.15s ease-out;
 }
 
@@ -219,10 +216,13 @@
 }
 
 .sliding-panel__size-menu-title {
-  font-size: 10px;
+  font-size: 9px;
+  font-weight: $font-weight-semibold;
   color: $color-text-muted;
-  margin-bottom: $spacing-sm;
-  padding: 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: $spacing-xs;
+  text-align: center;
 }
 
 .sliding-panel__size-grid {
@@ -232,29 +232,25 @@
 }
 
 .sliding-panel__size-option {
-  padding: $spacing-sm 0;
+  padding: 6px 10px;
   background: $color-bg-tertiary;
   border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
+  border-radius: $radius-xs;
   font-size: 11px;
   font-weight: $font-weight-medium;
   color: $color-text-secondary;
   cursor: pointer;
   transition: all $transition-fast;
+  text-align: center;
 
   &:hover {
     background: $color-glass-light;
     border-color: $color-border-default;
-    color: $color-text-primary;
   }
 
   &--active {
     background: $color-accent-blue;
     border-color: $color-accent-blue;
     color: white;
-
-    &:hover {
-      background: color.adjust($color-accent-blue, $lightness: 5%);
-    }
   }
 }

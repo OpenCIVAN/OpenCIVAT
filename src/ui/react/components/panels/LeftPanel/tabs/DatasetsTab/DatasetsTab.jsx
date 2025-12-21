@@ -1,34 +1,57 @@
-// src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/DatasetsTab.jsx
-// Datasets tab - simplified without subtabs
-//
-// Shows a tree view of loaded datasets with their views.
-// No subtabs - just the dataset tree with expand/collapse.
+/**
+ * @file DatasetsTab.jsx
+ * @description Datasets tab for the Left Panel - SIMPLIFIED VERSION
+ * 
+ * This version removes the "By Canvas" subtab since that functionality
+ * has been moved to the ViewsTab. Now shows only the "By Dataset" tree view.
+ *
+ * Features:
+ * - Dataset tree with expandable nodes
+ * - Views grouped under their parent datasets
+ * - Filter chips (Active/Inactive/Shared)
+ * - View creation from datasets
+ * - Storage management
+ *
+ * @see Left_Panel_Design_Specification.docx - Section 5 Datasets Tab
+ */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     Database,
     Search,
     X,
+    Eye,
+    Archive,
+    Users,
     ChevronDown,
     ChevronRight,
-    Plus,
+    FolderOpen,
     RefreshCw,
     Trash2,
+    Plus,
     Settings,
-    Eye,
-    EyeOff,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { EmptyState } from '@UI/react/components/common/EmptyState';
+import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
-import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
+import { getViewConfigurationManager } from '@Init/appInitializer.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
+import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { dataset as log } from '@Utils/logger.js';
-import { ViewItem } from './ViewItem/ViewItem.jsx';
+import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
-
 import './DatasetsTab.scss';
+
+// =============================================================================
+// FILTER CHIPS CONFIGURATION
+// =============================================================================
+
+const getFilterChips = (counts) => [
+    { id: 'active', label: 'Active', icon: Eye, color: 'green', count: counts.active },
+    { id: 'inactive', label: 'Inactive', icon: Archive, color: 'gray', count: counts.inactive },
+    { id: 'shared', label: 'Shared', icon: Users, color: 'pink', count: counts.shared },
+];
 
 // =============================================================================
 // DATASET TYPE UTILITIES
@@ -52,118 +75,160 @@ const getDatasetTypeConfig = (fileType) => {
 };
 
 // =============================================================================
-// DATASET ITEM COMPONENT
+// VIEW ITEM WRAPPER - Provides callbacks for ViewItem
 // =============================================================================
 
-function DatasetItem({
-    dataset,
-    views,
-    isExpanded,
-    onToggle,
-    onCreateView,
-    onUnload,
-    onSettings,
-    onViewSelect,
-    onViewClose,
-    onViewTrash,
-    onViewRename,
-    onViewPlace,
-}) {
-    const typeConfig = getDatasetTypeConfig(dataset.fileType);
-    const Icon = typeConfig.icon;
-    const activeViews = views.filter(v => v.isOnCanvas);
-    const inactiveViews = views.filter(v => !v.isOnCanvas && v.status !== 'trashed');
+function DatasetViewItemWrapper({ view, datasetId }) {
+    const isActive = view.status === 'active';
+
+    const handleSelect = useCallback((viewId) => {
+        log.debug(`Selecting view ${viewId}`);
+        window.dispatchEvent(new CustomEvent('cia:request-instance', {
+            detail: { viewId, datasetId, spawnNew: false }
+        }));
+    }, [datasetId]);
+
+    const handleClose = useCallback(async (viewId) => {
+        log.debug(`Closing view ${viewId} (deactivating)`);
+        await canvasManager?.removeViewPlacements?.(viewId);
+        getViewConfigurationManager()?.deactivateView?.(viewId);
+        window.dispatchEvent(new CustomEvent('cia:close-view', {
+            detail: { viewId }
+        }));
+    }, []);
+
+    const handleTrash = useCallback(async (viewId) => {
+        log.debug(`Trashing view ${viewId}`);
+        await canvasManager?.removeViewPlacements?.(viewId);
+        getViewConfigurationManager()?.trashView?.(viewId);
+    }, []);
+
+    const handleRename = useCallback((viewId, newName) => {
+        log.debug(`Renaming view ${viewId} to ${newName}`);
+        getViewConfigurationManager()?.renameView?.(viewId, newName);
+    }, []);
+
+    const handleNavigate = useCallback((viewId) => {
+        const placement = canvasManager?.getPlacementForView?.(viewId);
+        if (placement) {
+            window.dispatchEvent(new CustomEvent('cia:navigate-to-cell', {
+                detail: { row: placement.row, col: placement.col }
+            }));
+        }
+    }, []);
+
+    const handlePlaceOnCanvas = useCallback(async (viewId) => {
+        await canvasManager?.placeView?.(viewId);
+        getViewConfigurationManager()?.activateView?.(viewId);
+    }, []);
 
     return (
-        <div className="datasets-tab__dataset">
-            {/* Dataset Header */}
-            <button
-                className="datasets-tab__dataset-header"
-                onClick={onToggle}
-                style={{ '--dataset-color': typeConfig.color || '#60a5fa' }}
-            >
-                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                <Icon size={14} className="datasets-tab__dataset-icon" style={{ color: typeConfig.color }} />
-                <span className="datasets-tab__dataset-name">{dataset.name || dataset.filename}</span>
-                <span className="datasets-tab__dataset-count">{views.length}</span>
+        <ViewItem
+            view={view}
+            isActive={isActive}
+            onSelect={handleSelect}
+            onClose={handleClose}
+            onTrash={handleTrash}
+            onRename={handleRename}
+            onNavigate={handleNavigate}
+            onPlaceOnCanvas={handlePlaceOnCanvas}
+        />
+    );
+}
 
-                {/* Quick actions */}
-                <div className="datasets-tab__dataset-actions" onClick={e => e.stopPropagation()}>
-                    <button
-                        className="datasets-tab__action-btn"
-                        onClick={onCreateView}
-                        title="Create View"
-                    >
-                        <Plus size={12} />
-                    </button>
-                    <button
-                        className="datasets-tab__action-btn"
-                        onClick={onSettings}
-                        title="Settings"
-                    >
-                        <Settings size={12} />
-                    </button>
-                </div>
-            </button>
+// =============================================================================
+// DATASET PARENT COMPONENT
+// =============================================================================
 
-            {/* Expanded Content */}
+function DatasetParent({ dataset, views, isExpanded, onToggle }) {
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const typeConfig = getDatasetTypeConfig(dataset.fileType || dataset.type);
+    const TypeIcon = typeConfig.icon;
+
+    const activeCount = views.filter(v => v.status === 'active').length;
+    const totalCount = views.length;
+
+    const handleCreateView = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('cia:create-view', {
+            detail: { datasetId: dataset.id }
+        }));
+    }, [dataset.id]);
+
+    const handleUnloadDataset = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('cia:unload-dataset', {
+            detail: { datasetId: dataset.id }
+        }));
+    }, [dataset.id]);
+
+    return (
+        <div className="dataset-parent">
+            {/* Header row */}
+            <div className="dataset-parent__header" onClick={onToggle}>
+                <button className="dataset-parent__toggle">
+                    {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                </button>
+
+                <span
+                    className={`dataset-parent__icon ${typeConfig.colorClass || ''}`}
+                    style={typeConfig.color ? { color: typeConfig.color } : undefined}
+                >
+                    <TypeIcon size={14} />
+                </span>
+
+                <span className="dataset-parent__name">{dataset.name}</span>
+
+                <span className="dataset-parent__count">
+                    <span className="dataset-parent__count-active">{activeCount}</span>
+                    /
+                    <span className="dataset-parent__count-total">{totalCount}</span>
+                </span>
+
+                <button
+                    className="dataset-parent__settings"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowSettingsModal(true);
+                    }}
+                    title="Dataset settings"
+                >
+                    <Settings size={12} />
+                </button>
+            </div>
+
+            {/* Expanded content - views list */}
             {isExpanded && (
-                <div className="datasets-tab__dataset-content">
+                <div className="dataset-parent__children">
                     {views.length === 0 ? (
-                        <div className="datasets-tab__empty-views">
-                            <span>No views</span>
-                            <button onClick={onCreateView}>
-                                <Plus size={10} /> Create View
+                        <div className="dataset-parent__empty">
+                            <button
+                                className="dataset-parent__create-view-btn"
+                                onClick={handleCreateView}
+                            >
+                                <Plus size={12} />
+                                <span>Create View</span>
                             </button>
                         </div>
                     ) : (
-                        <>
-                            {/* Active Views */}
-                            {activeViews.length > 0 && (
-                                <div className="datasets-tab__view-group">
-                                    <div className="datasets-tab__view-group-header">
-                                        <Eye size={10} />
-                                        <span>On Canvas ({activeViews.length})</span>
-                                    </div>
-                                    {activeViews.map(view => (
-                                        <ViewItem
-                                            key={view.id}
-                                            view={view}
-                                            onSelect={onViewSelect}
-                                            onClose={onViewClose}
-                                            onTrash={onViewTrash}
-                                            onRename={onViewRename}
-                                            showPosition
-                                            compact
-                                        />
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Inactive Views */}
-                            {inactiveViews.length > 0 && (
-                                <div className="datasets-tab__view-group">
-                                    <div className="datasets-tab__view-group-header">
-                                        <EyeOff size={10} />
-                                        <span>Not Placed ({inactiveViews.length})</span>
-                                    </div>
-                                    {inactiveViews.map(view => (
-                                        <ViewItem
-                                            key={view.id}
-                                            view={view}
-                                            onSelect={onViewPlace}
-                                            onTrash={onViewTrash}
-                                            onRename={onViewRename}
-                                            variant="inactive"
-                                            compact
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </>
+                        views.map(view => (
+                            <DatasetViewItemWrapper
+                                key={view.id}
+                                view={view}
+                                datasetId={dataset.id}
+                            />
+                        ))
                     )}
                 </div>
             )}
+
+            {/* Settings Modal */}
+            <DatasetSettingsModal
+                isOpen={showSettingsModal}
+                dataset={dataset}
+                views={views}
+                onClose={() => setShowSettingsModal(false)}
+                onCreateView={handleCreateView}
+                onUnloadDataset={handleUnloadDataset}
+            />
         </div>
     );
 }
@@ -173,201 +238,142 @@ function DatasetItem({
 // =============================================================================
 
 export function DatasetsPanelContent({ workspaceId }) {
+    // =========================================================================
+    // STATE
+    // =========================================================================
+
+    const [activeFilters, setActiveFilters] = useState(['active', 'inactive', 'shared']);
     const [searchQuery, setSearchQuery] = useState('');
-    const [expandedDatasets, setExpandedDatasets] = useState({});
-    const [settingsDataset, setSettingsDataset] = useState(null);
-    const [refreshKey, setRefreshKey] = useState(0);
+    const [expandedDatasets, setExpandedDatasets] = useState(new Set());
 
-    // Get datasets from hook
-    const { datasets, loading, error, refresh } = useDatasets({ workspaceId });
-
-    // =========================================================================
-    // COMPUTE VIEWS PER DATASET
-    // =========================================================================
-
-    const datasetsWithViews = useMemo(() => {
-        const viewManager = getViewConfigurationManager();
-        const placements = canvasManager?.getPlacements?.() || [];
-
-        if (!viewManager || !datasets) return [];
-
-        // Get placed view IDs
-        const placedViewIds = new Set();
-        placements.forEach(p => {
-            const viewId = p.content?.viewConfigurationId || p.content?.viewId || p.viewId;
-            if (viewId) placedViewIds.add(viewId);
-        });
-
-        // Get all views
-        const allViews = viewManager.getAllViews?.() || [];
-
-        // Group views by dataset
-        return datasets
-            .filter(dataset => {
-                if (!searchQuery) return true;
-                const query = searchQuery.toLowerCase();
-                return (dataset.name || dataset.filename || '').toLowerCase().includes(query);
-            })
-            .map(dataset => {
-                const datasetViews = allViews
-                    .filter(v => v.datasetId === dataset.id && v.status !== 'trashed')
-                    .map(view => {
-                        const placement = placements.find(p =>
-                            (p.content?.viewConfigurationId || p.content?.viewId || p.viewId) === view.id
-                        );
-                        return {
-                            id: view.id,
-                            name: view.name || 'Untitled View',
-                            color: view.color?.hex || view.color || '#60a5fa',
-                            status: view.status,
-                            isOnCanvas: placedViewIds.has(view.id),
-                            position: placement ? { row: placement.row, col: placement.col } : null,
-                        };
-                    });
-
-                return {
-                    ...dataset,
-                    views: datasetViews,
-                };
-            });
-    }, [datasets, searchQuery, refreshKey]);
+    // Refresh counter for reactivity
+    const [viewRefreshCounter, setViewRefreshCounter] = useState(0);
 
     // =========================================================================
     // EVENT SUBSCRIPTIONS
     // =========================================================================
 
     useEffect(() => {
-        const handleRefresh = () => setRefreshKey(k => k + 1);
+        const handleViewUpdate = () => {
+            setViewRefreshCounter(c => c + 1);
+        };
 
-        window.addEventListener('cia:view-placed', handleRefresh);
-        window.addEventListener('cia:view-removed', handleRefresh);
-        window.addEventListener('cia:close-view', handleRefresh);
-
-        const viewManager = getViewConfigurationManager();
-        if (viewManager?.on) {
-            viewManager.on('viewCreated', handleRefresh);
-            viewManager.on('viewUpdated', handleRefresh);
-            viewManager.on('viewTrashed', handleRefresh);
-            viewManager.on('viewRenamed', handleRefresh);
-        }
+        getViewConfigurationManager()?.on?.('viewUpdated', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewDeactivated', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewActivated', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewTrashed', handleViewUpdate);
+        getViewConfigurationManager()?.on?.('viewRestored', handleViewUpdate);
 
         return () => {
-            window.removeEventListener('cia:view-placed', handleRefresh);
-            window.removeEventListener('cia:view-removed', handleRefresh);
-            window.removeEventListener('cia:close-view', handleRefresh);
-
-            if (viewManager?.off) {
-                viewManager.off('viewCreated', handleRefresh);
-                viewManager.off('viewUpdated', handleRefresh);
-                viewManager.off('viewTrashed', handleRefresh);
-                viewManager.off('viewRenamed', handleRefresh);
-            }
+            getViewConfigurationManager()?.off?.('viewUpdated', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewDeactivated', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewActivated', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewTrashed', handleViewUpdate);
+            getViewConfigurationManager()?.off?.('viewRestored', handleViewUpdate);
         };
     }, []);
 
-    // Auto-expand datasets
-    useEffect(() => {
-        const initial = {};
-        datasetsWithViews.forEach(d => {
-            if (d.views.length > 0 && expandedDatasets[d.id] === undefined) {
-                initial[d.id] = true;
-            }
-        });
-        if (Object.keys(initial).length > 0) {
-            setExpandedDatasets(prev => ({ ...prev, ...initial }));
+    // =========================================================================
+    // DATA
+    // =========================================================================
+
+    const loadedDatasets = useDatasets();
+
+    // Get views for a dataset (excluding trashed)
+    const getViewsForDataset = useCallback((datasetId) => {
+        try {
+            const views = getViewConfigurationManager()?.getViewsForDataset?.(datasetId) || [];
+            return views
+                .filter(v => v.status !== 'trashed' && v.status !== 'archived')
+                .map(v => {
+                    const instanceColor = workspaceManager?.getViewColor?.(v.id);
+                    const placement = canvasManager?.getPlacementForView?.(v.id);
+                    return {
+                        ...v,
+                        color: instanceColor || v.color || '#60a5fa',
+                        position: placement ? { row: placement.row, col: placement.col } : null,
+                        status: v.status === 'active' || placement ? 'active' : 'inactive',
+                    };
+                });
+        } catch (e) {
+            log.warn('Failed to get views for dataset:', e);
+            return [];
         }
-    }, [datasetsWithViews]);
+    }, [viewRefreshCounter]);
+
+    // Merge datasets with their views
+    const datasets = useMemo(() => {
+        return loadedDatasets.map(ds => ({
+            ...ds,
+            views: getViewsForDataset(ds.id),
+        }));
+    }, [loadedDatasets, getViewsForDataset]);
+
+    // Filter views by active filters
+    const filterViews = useCallback((views) => {
+        return views.filter(v => {
+            if (v.status === 'active' && !activeFilters.includes('active')) return false;
+            if (v.status === 'inactive' && !activeFilters.includes('inactive')) return false;
+            if (v.isShared && !activeFilters.includes('shared')) return false;
+            return true;
+        });
+    }, [activeFilters]);
+
+    // Get filtered views for display
+    const getFilteredViews = useCallback((dataset) => {
+        return filterViews(dataset.views || []);
+    }, [filterViews]);
+
+    // Count views for filter chips
+    const filterCounts = useMemo(() => {
+        let active = 0, inactive = 0, shared = 0;
+        datasets.forEach(ds => {
+            ds.views?.forEach(v => {
+                if (v.status === 'active') active++;
+                if (v.status === 'inactive') inactive++;
+                if (v.isShared) shared++;
+            });
+        });
+        return { active, inactive, shared };
+    }, [datasets]);
+
+    // Search filtered datasets
+    const filteredDatasets = useMemo(() => {
+        if (!searchQuery) return datasets;
+        const q = searchQuery.toLowerCase();
+        return datasets.filter(ds =>
+            ds.name.toLowerCase().includes(q) ||
+            ds.views.some(v => v.name.toLowerCase().includes(q))
+        );
+    }, [datasets, searchQuery]);
 
     // =========================================================================
     // HANDLERS
     // =========================================================================
 
+    const toggleFilter = useCallback((filterId) => {
+        setActiveFilters(prev =>
+            prev.includes(filterId)
+                ? prev.filter(id => id !== filterId)
+                : [...prev, filterId]
+        );
+    }, []);
+
     const toggleDataset = useCallback((datasetId) => {
-        setExpandedDatasets(prev => ({ ...prev, [datasetId]: !prev[datasetId] }));
+        setExpandedDatasets(prev => {
+            const next = new Set(prev);
+            next.has(datasetId) ? next.delete(datasetId) : next.add(datasetId);
+            return next;
+        });
     }, []);
 
-    const handleCreateView = useCallback((datasetId) => {
-        log.debug('Create view for dataset:', datasetId);
-        window.dispatchEvent(new CustomEvent('cia:request-instance', {
-            detail: { datasetId, spawnNew: true }
-        }));
-    }, []);
-
-    const handleViewSelect = useCallback((viewId) => {
-        window.dispatchEvent(new CustomEvent('cia:instance-focused', {
-            detail: { viewId }
-        }));
-    }, []);
-
-    const handleViewPlace = useCallback((viewId) => {
-        const viewManager = getViewConfigurationManager();
-        viewManager?.activateView?.(viewId);
-
-        const nextCell = canvasManager?.getNextAvailableCell?.() || { row: 0, col: 0 };
-        canvasManager?.placeView?.(viewId, nextCell.row, nextCell.col);
-
-        window.dispatchEvent(new CustomEvent('cia:view-placed', {
-            detail: { viewId, row: nextCell.row, col: nextCell.col }
-        }));
-    }, []);
-
-    const handleViewClose = useCallback((viewId) => {
-        canvasManager?.removeViewPlacements?.(viewId);
-        getViewConfigurationManager()?.deactivateView?.(viewId);
-        window.dispatchEvent(new CustomEvent('cia:close-view', { detail: { viewId } }));
-    }, []);
-
-    const handleViewTrash = useCallback((viewId) => {
-        canvasManager?.removeViewPlacements?.(viewId);
-        getViewConfigurationManager()?.trashView?.(viewId);
-    }, []);
-
-    const handleViewRename = useCallback((viewId, newName) => {
-        getViewConfigurationManager()?.renameView?.(viewId, newName);
-    }, []);
-
-    const handleUnloadDataset = useCallback((datasetId) => {
-        log.debug('Unload dataset:', datasetId);
-        getDatasetManager()?.unloadDataset?.(datasetId);
+    const handleLoadDataset = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('cia:open-file-picker'));
     }, []);
 
     // =========================================================================
     // RENDER
     // =========================================================================
-
-    // Loading state
-    if (loading) {
-        return (
-            <div className="datasets-tab datasets-tab--loading">
-                <div className="panel-header panel-header--teal">
-                    <Database size={14} className="panel-header__icon" />
-                    <span className="panel-header__title">Datasets</span>
-                </div>
-                <div className="datasets-tab__loading">
-                    <RefreshCw size={24} className="spin" />
-                    <span>Loading datasets...</span>
-                </div>
-            </div>
-        );
-    }
-
-    // Error state
-    if (error) {
-        return (
-            <div className="datasets-tab datasets-tab--error">
-                <div className="panel-header panel-header--teal">
-                    <Database size={14} className="panel-header__icon" />
-                    <span className="panel-header__title">Datasets</span>
-                </div>
-                <EmptyState
-                    icon={Database}
-                    title="Failed to load datasets"
-                    description={error.message}
-                    action={{ label: 'Retry', onClick: refresh }}
-                />
-            </div>
-        );
-    }
 
     return (
         <div className="datasets-tab">
@@ -375,71 +381,79 @@ export function DatasetsPanelContent({ workspaceId }) {
             <div className="panel-header panel-header--teal">
                 <Database size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Datasets</span>
-                <span className="panel-header__count">{datasetsWithViews.length}</span>
             </div>
 
             {/* Search */}
-            <div className="datasets-tab__toolbar">
+            <div className="datasets-tab__search-row">
                 <div className="datasets-tab__search">
-                    <Search size={12} />
+                    <Search size={12} className="datasets-tab__search-icon" />
                     <input
                         type="text"
-                        placeholder="Search datasets..."
+                        className="datasets-tab__search-input"
+                        placeholder="Search datasets and views..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                     {searchQuery && (
-                        <button onClick={() => setSearchQuery('')}>
+                        <button
+                            className="datasets-tab__search-clear"
+                            onClick={() => setSearchQuery('')}
+                        >
                             <X size={10} />
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* Dataset List */}
-            <div className="datasets-tab__content">
-                {datasetsWithViews.length === 0 ? (
-                    <EmptyState
-                        icon={Database}
-                        title="No datasets loaded"
-                        description="Upload or open a file from the Files tab"
-                        size="md"
-                    />
-                ) : (
-                    <div className="datasets-tab__list">
-                        {datasetsWithViews.map(dataset => (
-                            <DatasetItem
-                                key={dataset.id}
-                                dataset={dataset}
-                                views={dataset.views}
-                                isExpanded={expandedDatasets[dataset.id]}
-                                onToggle={() => toggleDataset(dataset.id)}
-                                onCreateView={() => handleCreateView(dataset.id)}
-                                onUnload={() => handleUnloadDataset(dataset.id)}
-                                onSettings={() => setSettingsDataset(dataset)}
-                                onViewSelect={handleViewSelect}
-                                onViewClose={handleViewClose}
-                                onViewTrash={handleViewTrash}
-                                onViewRename={handleViewRename}
-                                onViewPlace={handleViewPlace}
-                            />
-                        ))}
-                    </div>
-                )}
+            {/* Filter Chips */}
+            <div className="datasets-tab__filters">
+                <ChipGroup
+                    chips={getFilterChips(filterCounts)}
+                    activeChips={activeFilters}
+                    onToggle={toggleFilter}
+                    size="sm"
+                />
             </div>
 
-            {/* Settings Modal */}
-            {settingsDataset && (
-                <DatasetSettingsModal
-                    isOpen={true}
-                    dataset={settingsDataset}
-                    onClose={() => setSettingsDataset(null)}
-                    onUnloadDataset={() => {
-                        handleUnloadDataset(settingsDataset.id);
-                        setSettingsDataset(null);
-                    }}
-                />
-            )}
+            {/* Dataset Tree */}
+            <div className="datasets-tab__content">
+                <div className="datasets-tab__list">
+                    {filteredDatasets.length === 0 ? (
+                        <div className="datasets-tab__empty">
+                            <Database size={32} />
+                            <h3>No datasets loaded</h3>
+                            <p>Load a dataset to get started</p>
+                        </div>
+                    ) : (
+                        filteredDatasets.map(ds => {
+                            const views = getFilteredViews(ds);
+                            return (
+                                <DatasetParent
+                                    key={ds.id}
+                                    dataset={ds}
+                                    views={views}
+                                    isExpanded={expandedDatasets.has(ds.id)}
+                                    onToggle={() => toggleDataset(ds.id)}
+                                />
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+
+            {/* Footer */}
+            <div className="panel-footer">
+                <button
+                    className="panel-footer__btn panel-footer__btn--primary"
+                    onClick={handleLoadDataset}
+                >
+                    <FolderOpen size={11} />
+                    <span>Load Dataset</span>
+                </button>
+                <button className="panel-footer__btn panel-footer__btn--icon" title="Refresh">
+                    <RefreshCw size={11} />
+                </button>
+            </div>
         </div>
     );
 }

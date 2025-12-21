@@ -1,268 +1,279 @@
-// src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/DatasetsTab.scss
-// Datasets tab styling - simplified without subtabs
+// DatasetsTab.scss
+// Styles for the simplified Datasets tab (tree view only)
+// Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/DatasetsTab.scss
 
+@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
-// CONTAINER
+// MAIN CONTAINER
 // =============================================================================
 
 .datasets-tab {
   display: flex;
   flex-direction: column;
-  flex: 1 1 0;
-  min-height: 0;
+  height: 100%;
   overflow: hidden;
+}
 
-  // States
-  &--loading,
-  &--error {
-    .datasets-tab__content {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+// =============================================================================
+// SEARCH
+// =============================================================================
+
+.datasets-tab__search-row {
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.datasets-tab__search {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+
+  &:focus-within {
+    border-color: $color-accent-primary;
   }
+}
 
-  // ===========================================================================
-  // TOOLBAR
-  // ===========================================================================
+.datasets-tab__search-icon {
+  color: $color-text-muted;
+  flex-shrink: 0;
+}
 
-  &__toolbar {
-    padding: $spacing-sm;
-    border-bottom: 1px solid $color-border-subtle;
-    flex-shrink: 0;
-  }
+.datasets-tab__search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 11px;
+  color: $color-text-primary;
 
-  &__search {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-xs $spacing-sm;
-    background: $color-glass-subtle;
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-sm;
-
-    svg {
-      color: $color-text-tertiary;
-      flex-shrink: 0;
-    }
-
-    input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      font-size: 11px;
-      color: $color-text-primary;
-
-      &::placeholder {
-        color: $color-text-tertiary;
-      }
-    }
-
-    button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px;
-      background: transparent;
-      border: none;
-      color: $color-text-tertiary;
-      cursor: pointer;
-      border-radius: $radius-xs;
-
-      &:hover {
-        background: $color-glass-light;
-        color: $color-text-secondary;
-      }
-    }
-  }
-
-  // ===========================================================================
-  // CONTENT
-  // ===========================================================================
-
-  &__content {
-    flex: 1 1 0;
-    min-height: 0;
-    overflow-y: auto;
-    @include glass-scrollable;
-  }
-
-  &__list {
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-xl;
+  &::placeholder {
     color: $color-text-muted;
-
-    .spin {
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
   }
+}
 
-  // ===========================================================================
-  // DATASET ITEM
-  // ===========================================================================
+.datasets-tab__search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-xs;
 
-  &__dataset {
-    border-bottom: 1px solid $color-border-subtle;
-
-    &:last-child {
-      border-bottom: none;
-    }
-  }
-
-  &__dataset-header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    width: 100%;
-    padding: $spacing-sm $spacing-md;
-    background: transparent;
-    border: none;
-    border-left: 2px solid var(--dataset-color, $color-accent-teal);
-    color: $color-text-secondary;
-    font-size: 12px;
-    font-weight: $font-weight-medium;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $color-glass-light;
-
-      .datasets-tab__dataset-actions {
-        opacity: 1;
-      }
-    }
-
-    // Chevron
-    > svg:first-child {
-      color: $color-text-tertiary;
-      flex-shrink: 0;
-    }
-  }
-
-  &__dataset-icon {
-    flex-shrink: 0;
-  }
-
-  &__dataset-name {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: left;
-    color: $color-text-primary;
-  }
-
-  &__dataset-count {
-    padding: 2px 8px;
+  &:hover {
     background: $color-glass-light;
-    border-radius: $radius-full;
-    font-size: 10px;
-    color: $color-text-muted;
-    flex-shrink: 0;
+    color: $color-text-secondary;
+  }
+}
+
+// =============================================================================
+// FILTERS
+// =============================================================================
+
+.datasets-tab__filters {
+  display: flex;
+  justify-content: center;
+  padding: $spacing-xs $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+// =============================================================================
+// CONTENT
+// =============================================================================
+
+.datasets-tab__content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: $spacing-sm;
+}
+
+.datasets-tab__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// =============================================================================
+// EMPTY STATE
+// =============================================================================
+
+.datasets-tab__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-muted;
+
+  svg {
+    opacity: 0.4;
+    margin-bottom: $spacing-md;
   }
 
-  &__dataset-actions {
-    display: flex;
-    gap: 2px;
-    opacity: 0;
-    transition: opacity $transition-fast;
-  }
-
-  &__action-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    background: $color-glass-subtle;
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-sm;
-    color: $color-text-tertiary;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $color-glass-light;
-      border-color: $color-border-default;
-      color: $color-text-secondary;
-    }
-  }
-
-  // ===========================================================================
-  // DATASET CONTENT (VIEWS)
-  // ===========================================================================
-
-  &__dataset-content {
-    padding: $spacing-xs $spacing-sm $spacing-sm $spacing-lg;
-  }
-
-  &__empty-views {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: $spacing-sm;
-    background: $color-glass-subtle;
-    border-radius: $radius-sm;
-    font-size: 11px;
-    color: $color-text-muted;
-
-    button {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      background: rgba($color-accent-teal, 0.1);
-      border: 1px solid rgba($color-accent-teal, 0.3);
-      border-radius: $radius-sm;
-      color: $color-accent-teal;
-      font-size: 10px;
-      cursor: pointer;
-      transition: all $transition-fast;
-
-      &:hover {
-        background: rgba($color-accent-teal, 0.2);
-      }
-    }
-  }
-
-  &__view-group {
-    margin-bottom: $spacing-sm;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-
-  &__view-group-header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs 0;
-    font-size: 9px;
+  h3 {
+    font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    color: $color-text-tertiary;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-
-    svg {
-      opacity: 0.7;
-    }
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
   }
+
+  p {
+    font-size: $font-size-xs;
+  }
+}
+
+// =============================================================================
+// DATASET PARENT
+// =============================================================================
+
+.dataset-parent {
+  margin-bottom: 2px;
+}
+
+.dataset-parent__header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    border-color: $color-border-default;
+  }
+}
+
+.dataset-parent__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: transform $transition-fast;
+}
+
+.dataset-parent__icon {
+  display: flex;
+  align-items: center;
+  color: $color-accent-teal;
+  flex-shrink: 0;
+}
+
+.dataset-parent__name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataset-parent__count {
+  font-size: 10px;
+  font-family: $font-family-mono;
+  color: $color-text-muted;
+}
+
+.dataset-parent__count-active {
+  color: $color-accent-green;
+}
+
+.dataset-parent__count-total {
+  color: $color-text-tertiary;
+}
+
+.dataset-parent__settings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-xs;
+  opacity: 0;
+  transition: all $transition-fast;
+
+  .dataset-parent__header:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+}
+
+// =============================================================================
+// DATASET CHILDREN (Views)
+// =============================================================================
+
+.dataset-parent__children {
+  padding-left: $spacing-lg;
+  margin-top: 2px;
+}
+
+.dataset-parent__empty {
+  padding: $spacing-sm;
+  text-align: center;
+}
+
+.dataset-parent__create-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: transparent;
+  border: 1px dashed $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    border-color: $color-accent-green;
+    color: $color-accent-green;
+  }
+}
+
+// =============================================================================
+// FILE ICON COLORS
+// =============================================================================
+
+.file-icon--vtk {
+  color: $color-accent-blue;
+}
+.file-icon--nifti {
+  color: $color-accent-purple;
+}
+.file-icon--dicom {
+  color: $color-accent-green;
+}
+.file-icon--csv {
+  color: $color-accent-amber;
+}
+.file-icon--default {
+  color: $color-text-muted;
 }

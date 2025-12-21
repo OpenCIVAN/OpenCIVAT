@@ -1,0 +1,456 @@
+// ViewItem.scss
+// Common ViewItem component styles
+// Location: src/ui/react/components/common/ViewItem/ViewItem.scss
+
+@use "sass:color";
+@use "theme" as *;
+
+// =============================================================================
+// BASE VIEW ITEM
+// =============================================================================
+
+.view-item {
+  position: relative;
+  margin-bottom: 2px;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    .view-item__drag-handle {
+      opacity: 0.5;
+    }
+  }
+}
+
+// =============================================================================
+// MAIN ROW
+// =============================================================================
+
+.view-item__row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    border-color: $color-border-default;
+  }
+
+  // When panel is open, adjust border radius
+  .view-item--panel-open & {
+    border-radius: $radius-sm $radius-sm 0 0;
+    border-bottom-color: transparent;
+  }
+}
+
+// =============================================================================
+// DRAG HANDLE
+// =============================================================================
+
+.view-item__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-text-muted;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity $transition-fast;
+  flex-shrink: 0;
+
+  &:hover {
+    opacity: 1 !important;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// =============================================================================
+// THUMBNAIL
+// =============================================================================
+
+.view-item__thumbnail-wrapper {
+  position: relative;
+  flex-shrink: 0;
+
+  .thumbnail {
+    border-radius: $radius-xs;
+  }
+}
+
+.view-item__status-ring {
+  position: absolute;
+  inset: -2px;
+  border: 2px solid transparent;
+  border-radius: $radius-sm;
+  pointer-events: none;
+  transition: border-color $transition-fast;
+
+  &--active {
+    border-style: solid;
+    // Border color set via inline style to match view.color
+  }
+
+  &--inactive {
+    border: 1px dashed $color-border-subtle;
+  }
+}
+
+// =============================================================================
+// NAME
+// =============================================================================
+
+.view-item__name-container {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.view-item__name {
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &--muted {
+    color: $color-text-muted;
+  }
+}
+
+.view-item__name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  background: $color-bg-primary;
+  border: 1px solid $color-accent-primary;
+  border-radius: $radius-xs;
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  outline: none;
+
+  &:focus {
+    box-shadow: 0 0 0 2px rgba($color-accent-primary, 0.2);
+  }
+}
+
+// =============================================================================
+// STATUS ICONS
+// =============================================================================
+
+.view-item__status-icons {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  flex-shrink: 0;
+
+  &--minimal {
+    opacity: 0.7;
+  }
+}
+
+.view-item__status-icon {
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  &--purple {
+    color: $color-accent-purple;
+  }
+  &--amber {
+    color: $color-accent-amber;
+  }
+  &--pink {
+    color: $color-accent-pink;
+  }
+  &--teal {
+    color: $color-accent-teal;
+  }
+  &--green {
+    color: $color-accent-green;
+  }
+  &--blue {
+    color: $color-accent-blue;
+  }
+}
+
+.view-item__status-count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  font-size: 8px;
+  font-weight: $font-weight-bold;
+  background: currentColor;
+  color: $color-bg-primary;
+  padding: 0 3px;
+  border-radius: 6px;
+  min-width: 12px;
+  text-align: center;
+}
+
+.view-item__status-more {
+  font-size: 9px;
+  color: $color-text-muted;
+  margin-left: 2px;
+}
+
+// =============================================================================
+// POSITION BADGE
+// =============================================================================
+
+.view-item__position {
+  padding: 2px 6px;
+  background: color-mix(
+    in srgb,
+    var(--view-color, #{$color-accent-primary}) 15%,
+    transparent
+  );
+  border-radius: $radius-xs;
+  font-size: 10px;
+  font-family: $font-family-mono;
+  color: var(--view-color, $color-accent-primary);
+  flex-shrink: 0;
+}
+
+// =============================================================================
+// HOVER ACTIONS
+// =============================================================================
+
+.view-item__hover-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.view-item__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-primary;
+  }
+
+  &--success {
+    &:hover {
+      background: rgba($color-accent-green, 0.15);
+      color: $color-accent-green;
+    }
+  }
+
+  &--warning {
+    &:hover {
+      background: rgba($color-accent-amber, 0.15);
+      color: $color-accent-amber;
+    }
+  }
+
+  &--danger {
+    &:hover {
+      background: rgba($color-accent-red, 0.15);
+      color: $color-accent-red;
+    }
+  }
+}
+
+// =============================================================================
+// STATE MODIFIERS
+// =============================================================================
+
+.view-item--active {
+  .view-item__row {
+    border-left: 3px solid var(--view-color, $color-accent-primary);
+  }
+}
+
+.view-item--selected {
+  .view-item__row {
+    background: rgba($color-accent-primary, 0.1);
+    border-color: $color-accent-primary;
+  }
+}
+
+.view-item--dragging {
+  opacity: 0.5;
+
+  .view-item__row {
+    border-style: dashed;
+  }
+}
+
+.view-item--not-placed {
+  .view-item__thumbnail-wrapper .thumbnail {
+    opacity: 0.7;
+  }
+
+  &:hover .view-item__thumbnail-wrapper .thumbnail {
+    opacity: 1;
+  }
+}
+
+.view-item--inactive {
+  .view-item__row {
+    background: rgba($color-bg-tertiary, 0.5);
+  }
+}
+
+// =============================================================================
+// TRASHED VIEW ITEM
+// =============================================================================
+
+.trashed-view-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  margin-bottom: 2px;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.25);
+    border-color: $color-border-default;
+  }
+
+  &--expiring {
+    border-color: rgba($color-accent-amber, 0.3);
+  }
+
+  &--confirm-delete {
+    border-color: rgba($color-accent-red, 0.5);
+    background: rgba($color-accent-red, 0.1);
+  }
+}
+
+.trashed-view-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.trashed-view-item__name {
+  font-size: 11px;
+  color: $color-text-muted;
+  text-decoration: line-through;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trashed-view-item__expires {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: $color-text-tertiary;
+
+  &--warning {
+    color: $color-accent-amber;
+  }
+}
+
+.trashed-view-item__actions {
+  display: flex;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+}
+
+.trashed-view-item__restore,
+.trashed-view-item__delete {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  border-radius: $radius-xs;
+  font-size: 10px;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  span {
+    display: none;
+  }
+
+  .trashed-view-item:hover & span {
+    display: inline;
+  }
+}
+
+.trashed-view-item__restore:hover {
+  color: $color-accent-green;
+  background: rgba($color-accent-green, 0.1);
+}
+
+.trashed-view-item__delete:hover {
+  color: $color-accent-red;
+  background: rgba($color-accent-red, 0.1);
+}
+
+.trashed-view-item__delete--confirm {
+  color: $color-accent-red;
+  background: rgba($color-accent-red, 0.15);
+  font-weight: $font-weight-semibold;
+
+  span {
+    display: inline;
+  }
+}
+
+// =============================================================================
+// ICON HELPER CLASSES
+// =============================================================================
+
+.icon-purple {
+  color: $color-accent-purple;
+}
+.icon-amber {
+  color: $color-accent-amber;
+}
+.icon-pink {
+  color: $color-accent-pink;
+}
+.icon-teal {
+  color: $color-accent-teal;
+}
+.icon-green {
+  color: $color-accent-green;
+}
+.icon-blue {
+  color: $color-accent-blue;
+}
+.icon-red {
+  color: $color-accent-red;
+}
+.icon-muted {
+  color: $color-text-muted;
+}

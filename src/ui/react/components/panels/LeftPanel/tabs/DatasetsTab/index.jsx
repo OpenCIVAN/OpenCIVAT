@@ -1,4 +1,4 @@
-// tabs/DatasetsTab/index.jsx
-// Re-export the main component from parent directory
-export { DatasetsPanelContent } from './DatasetsTab.jsx';
-export { default } from './DatasetsTab.jsx';
+// DatasetsTab Component Exports
+// Location: src/ui/react/components/panels/LeftPanel/tabs/DatasetsTab/index.js
+
+export { DatasetsPanelContent, DatasetsPanelContent as default } from './DatasetsTab';

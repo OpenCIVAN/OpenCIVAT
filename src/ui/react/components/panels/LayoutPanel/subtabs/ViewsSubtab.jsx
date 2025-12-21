@@ -18,7 +18,7 @@
  */
 import React, { memo, useCallback, useState, useMemo } from 'react';
 import { Search, X, Database, Filter, Layers, ChevronDown, ChevronRight, Share2, Link2 } from 'lucide-react';
-import { ViewItem } from '@UI/react/components/panels/LeftPanel/tabs/DatasetsTab/ViewItem/ViewItem';
+import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import './ViewsSubtab.scss';
 
