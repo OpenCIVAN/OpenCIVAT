@@ -921,11 +921,45 @@ export function InstanceViewport({
     const handleFocus = useCallback(() => {
         setIsFocused(true);
         setNavbarVisible(true);
+
         if (actualInstanceId) {
+            // Update cursor tracking (existing behavior)
             setActiveInstance(actualInstanceId, viewConfigId);
-            // Also update workspaceManager so the left panel tools update
-            workspaceManager.setActiveInstance(actualInstanceId);
+
+            // NEW: Update workspaceManager's active instance
+            workspaceManager?.setActiveInstance?.(actualInstanceId);
+
+            // NEW: Dispatch event for UI components
+            window.dispatchEvent(
+                new CustomEvent('cia:instance-focused', {
+                    detail: {
+                        instanceId: actualInstanceId,
+                        viewId: viewConfigId
+                    },
+                })
+            );
         }
+    }, [actualInstanceId, viewConfigId]);
+
+    /**
+ * Handle click/mousedown on viewport container
+ * Sets this instance as the active instance in workspaceManager
+ */
+    const handleActivateInstance = useCallback(() => {
+        if (!actualInstanceId) return;
+
+        // Update workspaceManager's active instance
+        workspaceManager?.setActiveInstance?.(actualInstanceId);
+
+        // Dispatch event for other components (InstanceSelector, InstanceToolsTab)
+        window.dispatchEvent(
+            new CustomEvent('cia:instance-focused', {
+                detail: {
+                    instanceId: actualInstanceId,
+                    viewId: viewConfigId
+                },
+            })
+        );
     }, [actualInstanceId, viewConfigId]);
 
     const handleBlur = useCallback(() => {
@@ -1395,6 +1429,7 @@ export function InstanceViewport({
             tabIndex={0}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            onMouseDown={handleActivateInstance}
         >
             {/* Header - ALWAYS visible so users can always close the instance */}
             <HeaderBar

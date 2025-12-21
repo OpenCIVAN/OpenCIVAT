@@ -3,154 +3,293 @@
  * @description Styles for InstanceSelector component.
  */
 
+// src/ui/react/components/layout/SecondaryFooter/components/InstanceSelector/InstanceSelector.scss
+// Instance Selector dropdown styling
+//
+// FIXED:
+// - Two-line trigger showing view name + dataset name
+// - Matches Instance Tools tab indicator styling
+// - Color-coded active state
+// - Better visual hierarchy in dropdown items
+
 @use "theme" as *;
 
-.instance-selector {
-  &__trigger {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-xs $spacing-sm;
-    background: transparent;
-    border: 1px solid $color-border-subtle;
-    border-radius: $radius-sm;
-    color: $color-text-primary;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all $transition-fast;
+// =============================================================================
+// TRIGGER BUTTON
+// =============================================================================
 
-    &:hover {
-      border-color: $color-border-default;
-      background: $color-bg-tertiary;
-    }
+.instance-selector__trigger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 160px;
+  max-width: 280px;
+  padding: 4px 8px;
+  background: $color-glass-light;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
 
-    &:focus-visible {
-      outline: 2px solid $color-accent-blue;
-      outline-offset: 2px;
-    }
+  &:hover {
+    background: $color-glass-medium;
+    border-color: $color-border-default;
   }
 
-  &__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+  // Active state - has an instance selected
+  &--active {
+    background: rgba(var(--instance-color-rgb, 96, 165, 250), 0.08);
+    border-color: rgba(var(--instance-color-rgb, 96, 165, 250), 0.25);
+
+    // Parse hex color to RGB for use in rgba()
+    // This is a workaround since we can't parse hex in CSS
+    // The JS sets --instance-color, we approximate with fallback
+
+    &:hover {
+      background: rgba(var(--instance-color-rgb, 96, 165, 250), 0.12);
+      border-color: rgba(var(--instance-color-rgb, 96, 165, 250), 0.35);
+    }
+  }
+}
+
+.instance-selector__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.instance-selector__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.instance-selector__name {
+  font-size: 11px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.instance-selector__dataset {
+  font-size: 9px;
+  color: $color-text-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.instance-selector__icon--muted {
+  color: $color-text-tertiary;
+  opacity: 0.6;
+}
+
+.instance-selector__empty-text {
+  font-size: 11px;
+  color: $color-text-muted;
+  font-style: italic;
+}
+
+.instance-selector__chevron {
+  flex-shrink: 0;
+  color: $color-text-tertiary;
+  transition: transform $transition-fast;
+
+  .instance-selector__trigger[data-state="open"] & {
+    transform: rotate(180deg);
+  }
+}
+
+// =============================================================================
+// DROPDOWN
+// =============================================================================
+
+.instance-selector__dropdown {
+  min-width: 260px;
+  max-width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+}
+
+// Search
+.instance-selector__search {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border-subtle;
+  background: rgba(0, 0, 0, 0.1);
+
+  svg {
+    color: $color-text-tertiary;
     flex-shrink: 0;
   }
 
-  &__text {
-    max-width: 140px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    &.muted {
-      color: $color-text-muted;
-    }
-  }
-
-  &__dropdown {
-    width: 280px;
-    max-height: 320px;
-    overflow-y: auto;
-  }
-
-  &__search {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm;
-    border-bottom: 1px solid $color-border-subtle;
-    color: $color-text-muted;
-
-    input {
-      flex: 1;
-      border: none;
-      background: transparent;
-      color: $color-text-primary;
-      font-size: 13px;
-      outline: none;
-
-      &::placeholder {
-        color: $color-text-muted;
-      }
-    }
-  }
-
-  &__section {
-    padding: $spacing-xs 0;
-
-    &:not(:last-child) {
-      border-bottom: 1px solid $color-border-subtle;
-    }
-  }
-
-  &__section-header {
-    padding: $spacing-xs $spacing-sm;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: $color-text-muted;
-  }
-
-  &__item {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    width: 100%;
-    padding: $spacing-sm;
-    text-align: left;
+  input {
+    flex: 1;
     background: transparent;
     border: none;
+    outline: none;
+    font-size: 12px;
     color: $color-text-primary;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background $transition-fast;
+
+    &::placeholder {
+      color: $color-text-tertiary;
+    }
+  }
+}
+
+// Section
+.instance-selector__section {
+  padding: $spacing-xs 0;
+
+  & + & {
+    border-top: 1px solid $color-border-subtle;
+  }
+}
+
+.instance-selector__section-header {
+  padding: $spacing-xs $spacing-md;
+  font-size: 9px;
+  font-weight: $font-weight-semibold;
+  color: $color-text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+// Items
+.instance-selector__item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+  }
+
+  // Active item (currently focused instance)
+  &--active {
+    background: rgba(var(--item-color-rgb, 96, 165, 250), 0.1);
+    border-left: 2px solid var(--item-color, $color-accent-blue);
 
     &:hover {
-      background: $color-bg-tertiary;
-    }
-
-    &.active {
-      background: rgba($color-accent-blue, 0.1);
-    }
-
-    &--available {
-      .instance-selector__item-name {
-        flex: 1;
-      }
+      background: rgba(var(--item-color-rgb, 96, 165, 250), 0.15);
     }
   }
 
-  &__item-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
+  // Available (not on canvas) - more muted
+  &--available {
+    opacity: 0.8;
 
-  &__item-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+    &:hover {
+      opacity: 1;
+    }
 
-  &__item-position {
-    font-size: 11px;
-    color: $color-text-muted;
-    margin-left: auto;
+    .instance-selector__item-name {
+      color: $color-text-secondary;
+    }
   }
+}
 
-  &__item-action {
-    font-size: 11px;
-    color: $color-accent-blue;
-    font-weight: 500;
-  }
+.instance-selector__item-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 4px currentColor;
+}
 
-  &__empty {
-    padding: $spacing-lg;
-    text-align: center;
-    color: $color-text-muted;
-    font-size: 13px;
+.instance-selector__item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.instance-selector__item-name {
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.instance-selector__item-dataset {
+  font-size: 10px;
+  color: $color-text-muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.instance-selector__item-position {
+  font-size: 9px;
+  font-family: $font-family-mono;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+}
+
+.instance-selector__item-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba($color-accent-green, 0.1);
+  border: 1px solid rgba($color-accent-green, 0.3);
+  border-radius: $radius-sm;
+  font-size: 10px;
+  font-weight: $font-weight-medium;
+  color: $color-accent-green;
+  flex-shrink: 0;
+  transition: all $transition-fast;
+
+  .instance-selector__item:hover & {
+    background: rgba($color-accent-green, 0.2);
+    border-color: rgba($color-accent-green, 0.5);
   }
+}
+
+// Empty state
+.instance-selector__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl $spacing-md;
+  text-align: center;
+  color: $color-text-muted;
+  font-size: 12px;
+
+  svg {
+    color: $color-text-tertiary;
+    opacity: 0.5;
+  }
+}
+
+.instance-selector__empty-hint {
+  font-size: 10px;
+  color: $color-text-tertiary;
 }

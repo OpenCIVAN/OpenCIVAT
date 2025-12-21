@@ -18,58 +18,34 @@
  * } = useInstanceSelector({ workspaceId });
  */
 
+// src/ui/react/hooks/useInstanceSelector.js
+// Hook for managing instance selection state in the SecondaryFooter
+//
+// FIXED:
+// - Properly gets VIEW name from ViewConfigurationManager (not dataset filename)
+// - Gets DATASET name separately
+// - Listens for name change events
+// - Subscribes to canvas placement changes
+
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { getViewConfigurationManager } from "@Init/appInitializer.js";
+import {
+  getViewConfigurationManager,
+  getDatasetManager,
+} from "@Init/appInitializer.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { view as log } from "@Utils/logger.js";
 
 /**
- * @typedef {Object} UseInstanceSelectorOptions
- * @property {string} workspaceId - Current workspace ID
- */
-
-/**
- * @typedef {Object} InstanceInfo
- * @property {string} id - Instance ID
- * @property {string} name - Display name
- * @property {string} color - Instance color (hex)
- * @property {number} [count] - Number of selected instances (for multi-select)
- */
-
-/**
- * @typedef {Object} CanvasViewInfo
- * @property {string} id - View ID
- * @property {string} name - View name
- * @property {string} color - View color (hex)
- * @property {Object} position - Grid position { row, col }
- */
-
-/**
- * @typedef {Object} AvailableViewInfo
- * @property {string} id - View ID
- * @property {string} name - View name
- * @property {string} datasetName - Parent dataset name
- */
-
-/**
- * @typedef {Object} UseInstanceSelectorReturn
- * @property {InstanceInfo|null} activeInstance - Currently active/focused instance
- * @property {CanvasViewInfo[]} onCanvasViews - Views currently on canvas
- * @property {AvailableViewInfo[]} availableViews - Views available to place
- * @property {Function} handleSelectInstance - Select/focus an instance
- * @property {Function} handlePlaceView - Place a view on canvas
- */
-
-/**
  * Hook for instance selector state management.
  *
- * @param {UseInstanceSelectorOptions} options - Hook options
- * @returns {UseInstanceSelectorReturn} Instance selector state and handlers
+ * @param {Object} options - Hook options
+ * @param {string} options.workspaceId - Current workspace ID
+ * @returns {Object} Instance selector state and handlers
  */
 export function useInstanceSelector({ workspaceId } = {}) {
   const [activeInstance, setActiveInstance] = useState(null);
-  const [views, setViews] = useState([]);
+  const [placements, setPlacements] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // ===========================================================================
@@ -79,15 +55,44 @@ export function useInstanceSelector({ workspaceId } = {}) {
     const updateActiveInstance = () => {
       try {
         const instance = workspaceManager?.getActiveInstance?.();
-        if (instance) {
-          setActiveInstance({
-            id: instance.id,
-            name: instance.name || instance.viewId || "Instance",
-            color: instance.color?.hex || instance.color || "#60a5fa",
-          });
-        } else {
+
+        if (!instance) {
           setActiveInstance(null);
+          return;
         }
+
+        // Get the ViewConfiguration for this instance to get the REAL view name
+        const viewManager = getViewConfigurationManager();
+        const viewConfig = viewManager?.getView?.(
+          instance.viewConfigId || instance.viewId
+        );
+
+        // Get the dataset name separately
+        const datasetManager = getDatasetManager();
+        const datasetId =
+          viewConfig?.datasetId || instance.instanceData?.dataset?.id;
+        const dataset = datasetId
+          ? datasetManager?.getDataset?.(datasetId)
+          : null;
+
+        setActiveInstance({
+          id: instance.instanceId || instance.id,
+          viewId: instance.viewConfigId || instance.viewId,
+          // Use view name from ViewConfiguration, not dataset filename
+          name: viewConfig?.name || instance.name || "Untitled View",
+          // Dataset name is separate
+          datasetName:
+            dataset?.name ||
+            instance.instanceData?.dataset?.name ||
+            instance.instanceData?.dataset?.filename ||
+            "Unknown Dataset",
+          color:
+            viewConfig?.color?.hex ||
+            instance.color?.hex ||
+            instance.color ||
+            "#60a5fa",
+          type: instance.type || viewConfig?.handlerType || "vtk",
+        });
       } catch (error) {
         log.warn("Failed to get active instance:", error);
         setActiveInstance(null);
@@ -97,22 +102,23 @@ export function useInstanceSelector({ workspaceId } = {}) {
     // Initial check
     updateActiveInstance();
 
-    // Listen for instance changes
-    const handleInstanceFocus = () => {
+    // Listen for instance focus changes
+    const handleInstanceFocus = () => updateActiveInstance();
+
+    // Listen for view/instance name changes
+    const handleNameChange = (event) => {
+      // Re-fetch to get updated name
       updateActiveInstance();
     };
 
-    // Event listeners for instance state changes
     window.addEventListener("cia:instance-focused", handleInstanceFocus);
     window.addEventListener("cia:active-instance-changed", handleInstanceFocus);
-    window.addEventListener("cia:instance-created", handleInstanceFocus);
-    window.addEventListener("cia:instance-deleted", handleInstanceFocus);
 
-    // Listen to workspaceManager if it has event emitter
-    if (workspaceManager?.on) {
-      workspaceManager.on("instanceCreated", handleInstanceFocus);
-      workspaceManager.on("instanceDeleted", handleInstanceFocus);
-      workspaceManager.on("activeInstanceChanged", handleInstanceFocus);
+    // ViewConfigurationManager events for name changes
+    const viewManager = getViewConfigurationManager();
+    if (viewManager?.on) {
+      viewManager.on("viewUpdated", handleNameChange);
+      viewManager.on("viewRenamed", handleNameChange);
     }
 
     return () => {
@@ -121,142 +127,156 @@ export function useInstanceSelector({ workspaceId } = {}) {
         "cia:active-instance-changed",
         handleInstanceFocus
       );
-      window.removeEventListener("cia:instance-created", handleInstanceFocus);
-      window.removeEventListener("cia:instance-deleted", handleInstanceFocus);
 
-      if (workspaceManager?.off) {
-        workspaceManager.off("instanceCreated", handleInstanceFocus);
-        workspaceManager.off("instanceDeleted", handleInstanceFocus);
-        workspaceManager.off("activeInstanceChanged", handleInstanceFocus);
+      if (viewManager?.off) {
+        viewManager.off("viewUpdated", handleNameChange);
+        viewManager.off("viewRenamed", handleNameChange);
       }
     };
-  }, []);
+  }, [refreshKey]);
 
   // ===========================================================================
-  // SUBSCRIBE TO VIEW CHANGES
+  // SUBSCRIBE TO CANVAS PLACEMENTS
   // ===========================================================================
   useEffect(() => {
-    const viewManager = getViewConfigurationManager();
-
-    const updateViews = () => {
+    const updatePlacements = () => {
       try {
-        const allViews = viewManager?.getAllViews?.() || [];
-        setViews(allViews);
+        const currentPlacements = canvasManager?.getPlacements?.() || [];
+        setPlacements(currentPlacements);
       } catch (error) {
-        log.warn("Failed to get views:", error);
-        setViews([]);
+        log.warn("Failed to get placements:", error);
+        setPlacements([]);
       }
     };
 
     // Initial load
-    updateViews();
+    updatePlacements();
 
-    // Listen for view changes
-    const handleViewChange = () => {
-      updateViews();
-      // Force re-render for computed values
+    // Listen for placement changes
+    const handlePlacementChange = () => {
+      updatePlacements();
       setRefreshKey((k) => k + 1);
     };
 
-    // Canvas placement events
-    window.addEventListener("cia:view-placed", handleViewChange);
-    window.addEventListener("cia:view-removed", handleViewChange);
-    window.addEventListener("cia:close-view", handleViewChange);
+    // Canvas events
+    window.addEventListener("cia:view-placed", handlePlacementChange);
+    window.addEventListener("cia:view-removed", handlePlacementChange);
+    window.addEventListener("cia:close-view", handlePlacementChange);
+    window.addEventListener("cia:placement-added", handlePlacementChange);
+    window.addEventListener("cia:placement-removed", handlePlacementChange);
 
-    // ViewConfigurationManager events
-    if (viewManager?.on) {
-      viewManager.on("viewCreated", handleViewChange);
-      viewManager.on("viewUpdated", handleViewChange);
-      viewManager.on("viewTrashed", handleViewChange);
-      viewManager.on("viewDeleted", handleViewChange);
-      viewManager.on("viewActivated", handleViewChange);
-      viewManager.on("viewDeactivated", handleViewChange);
-      viewManager.on("reconciled", handleViewChange);
+    // CanvasManager events
+    if (canvasManager?.on) {
+      canvasManager.on("placementAdded", handlePlacementChange);
+      canvasManager.on("placementRemoved", handlePlacementChange);
+      canvasManager.on("canvasLoaded", handlePlacementChange);
     }
 
     return () => {
-      window.removeEventListener("cia:view-placed", handleViewChange);
-      window.removeEventListener("cia:view-removed", handleViewChange);
-      window.removeEventListener("cia:close-view", handleViewChange);
+      window.removeEventListener("cia:view-placed", handlePlacementChange);
+      window.removeEventListener("cia:view-removed", handlePlacementChange);
+      window.removeEventListener("cia:close-view", handlePlacementChange);
+      window.removeEventListener("cia:placement-added", handlePlacementChange);
+      window.removeEventListener(
+        "cia:placement-removed",
+        handlePlacementChange
+      );
 
-      if (viewManager?.off) {
-        viewManager.off("viewCreated", handleViewChange);
-        viewManager.off("viewUpdated", handleViewChange);
-        viewManager.off("viewTrashed", handleViewChange);
-        viewManager.off("viewDeleted", handleViewChange);
-        viewManager.off("viewActivated", handleViewChange);
-        viewManager.off("viewDeactivated", handleViewChange);
-        viewManager.off("reconciled", handleViewChange);
+      if (canvasManager?.off) {
+        canvasManager.off("placementAdded", handlePlacementChange);
+        canvasManager.off("placementRemoved", handlePlacementChange);
+        canvasManager.off("canvasLoaded", handlePlacementChange);
       }
     };
   }, []);
 
   // ===========================================================================
   // COMPUTE ON-CANVAS VIEWS
-  // Views that are currently active and placed on the canvas grid
+  // Views that are currently placed on the canvas grid
   // ===========================================================================
   const onCanvasViews = useMemo(() => {
-    // Get placements from canvas manager
-    const placements = canvasManager?.getPlacements?.() || [];
+    const viewManager = getViewConfigurationManager();
+    const datasetManager = getDatasetManager();
 
-    // Filter to active views with canvas placement
-    return views
-      .filter((view) => {
-        // Check if view is active (not trashed, not inactive)
-        if (view.status === "trashed" || view.status === "inactive") {
-          return false;
-        }
+    // Get view IDs from placements
+    const placedViewIds = new Set();
+    placements.forEach((p) => {
+      const viewId =
+        p.content?.viewConfigurationId || p.content?.viewId || p.viewId;
+      if (viewId) placedViewIds.add(viewId);
+    });
 
-        // Check if view has a canvas placement
-        const hasPlacement = placements.some(
-          (p) => p.content?.viewId === view.id || p.viewId === view.id
-        );
+    // Build view info for each placed view
+    const views = [];
+    placedViewIds.forEach((viewId) => {
+      const viewConfig = viewManager?.getView?.(viewId);
+      if (!viewConfig) return;
 
-        // Also check the view's own isActive flag
-        return view.isActive || hasPlacement;
-      })
-      .map((view) => {
-        // Find placement for position
-        const placement = placements.find(
-          (p) => p.content?.viewId === view.id || p.viewId === view.id
-        );
+      // Skip trashed views
+      if (viewConfig.status === "trashed") return;
 
-        return {
-          id: view.id,
-          name: view.name || "Untitled View",
-          color: view.color?.hex || view.color || "#60a5fa",
-          position: placement
-            ? { row: placement.row, col: placement.col }
-            : { row: 0, col: 0 },
-        };
+      // Get dataset name
+      const dataset = viewConfig.datasetId
+        ? datasetManager?.getDataset?.(viewConfig.datasetId)
+        : null;
+
+      // Find placement for position
+      const placement = placements.find(
+        (p) =>
+          (p.content?.viewConfigurationId || p.content?.viewId || p.viewId) ===
+          viewId
+      );
+
+      views.push({
+        id: viewId,
+        name: viewConfig.name || "Untitled View",
+        datasetName:
+          dataset?.name || viewConfig.datasetName || "Unknown Dataset",
+        color: viewConfig.color?.hex || viewConfig.color || "#60a5fa",
+        position: placement
+          ? { row: placement.row, col: placement.col }
+          : { row: 0, col: 0 },
       });
-  }, [views, refreshKey]);
+    });
+
+    return views;
+  }, [placements, refreshKey]);
 
   // ===========================================================================
   // COMPUTE AVAILABLE VIEWS
   // Views that exist but are not currently on canvas
   // ===========================================================================
   const availableViews = useMemo(() => {
+    const viewManager = getViewConfigurationManager();
+    const datasetManager = getDatasetManager();
+
+    if (!viewManager) return [];
+
+    const allViews = viewManager.getAllViews?.() || [];
     const onCanvasIds = new Set(onCanvasViews.map((v) => v.id));
 
-    return views
+    return allViews
       .filter((view) => {
-        // Not on canvas
+        // Not already on canvas
         if (onCanvasIds.has(view.id)) return false;
-
         // Not trashed
         if (view.status === "trashed") return false;
-
-        // Is a valid, placeable view
+        // Not inactive (optional - could show inactive with different styling)
+        // if (view.status === "inactive") return false;
         return true;
       })
-      .map((view) => ({
-        id: view.id,
-        name: view.name || "Untitled View",
-        datasetName:
-          view.datasetName || view.dataset?.name || "Unknown Dataset",
-      }));
-  }, [views, onCanvasViews, refreshKey]);
+      .map((view) => {
+        const dataset = view.datasetId
+          ? datasetManager?.getDataset?.(view.datasetId)
+          : null;
+
+        return {
+          id: view.id,
+          name: view.name || "Untitled View",
+          datasetName: dataset?.name || view.datasetName || "Unknown Dataset",
+        };
+      });
+  }, [onCanvasViews, refreshKey]);
 
   // ===========================================================================
   // HANDLERS
@@ -266,40 +286,52 @@ export function useInstanceSelector({ workspaceId } = {}) {
    * Select/focus an instance on the canvas
    * @param {string} viewId - View ID to focus
    */
-  const handleSelectInstance = useCallback((viewId) => {
-    log.debug("Instance selector: selecting view", viewId);
+  const handleSelectInstance = useCallback(
+    (viewId) => {
+      log.debug("Instance selector: selecting view", viewId);
 
-    // Find the instance for this view
-    if (workspaceManager) {
-      const instances = workspaceManager.getInstances?.() || [];
-      const instance = instances.find(
-        (i) => i.viewId === viewId || i.id === viewId
+      // Find the instance for this view
+      if (workspaceManager) {
+        const instances = workspaceManager.getInstances?.() || [];
+        const instance = instances.find(
+          (i) =>
+            i.viewId === viewId || i.viewConfigId === viewId || i.id === viewId
+        );
+
+        if (instance) {
+          // Set as active instance
+          workspaceManager.setActiveInstance?.(
+            instance.id || instance.instanceId
+          );
+
+          // Dispatch event for other components to react
+          window.dispatchEvent(
+            new CustomEvent("cia:instance-focused", {
+              detail: {
+                instanceId: instance.id || instance.instanceId,
+                viewId,
+              },
+            })
+          );
+        }
+      }
+
+      // Also navigate canvas to show the view
+      const placement = placements.find(
+        (p) =>
+          (p.content?.viewConfigurationId || p.content?.viewId || p.viewId) ===
+          viewId
       );
-
-      if (instance) {
-        // Set as active instance
-        workspaceManager.setActiveInstance?.(instance.id);
-
-        // Dispatch event for other components to react
+      if (placement) {
         window.dispatchEvent(
-          new CustomEvent("cia:instance-focused", {
-            detail: { instanceId: instance.id, viewId },
+          new CustomEvent("cia:navigate-to-cell", {
+            detail: { row: placement.row, col: placement.col },
           })
         );
       }
-    }
-
-    // Also navigate canvas to show the view
-    // This could scroll the canvas grid to center on the selected view
-    const placement = canvasManager?.getPlacementByViewId?.(viewId);
-    if (placement) {
-      window.dispatchEvent(
-        new CustomEvent("cia:navigate-to-cell", {
-          detail: { row: placement.row, col: placement.col },
-        })
-      );
-    }
-  }, []);
+    },
+    [placements]
+  );
 
   /**
    * Place a view on the canvas

@@ -1,14 +1,11 @@
 // src/ui/react/components/panels/LeftPanel/tabs/InstanceToolsTab/InstanceToolsTab.jsx
 // Instance Tools tab content for the unified left panel
 //
-// FIXED: Added standard panel-header to match Files and Datasets tabs
-//
-// Features:
-// - Shows tools for the currently focused instance
-// - 3 subtabs: Tools, Layers, Annotations
-// - Dynamic tool list from instance handler
-// - Layer visibility toggles
-// - Instance-scoped annotation list
+// FIXED:
+// - Properly gets VIEW name from ViewConfigurationManager (not dataset filename)
+// - Gets DATASET name separately
+// - Listens for name change events to update display
+// - Shows both view name (primary) and dataset name (secondary)
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
@@ -26,9 +23,8 @@ import { LayersSubtab } from './subtabs/LayersSubtab';
 import { AnnotationsSubtab } from './subtabs/AnnotationsSubtab';
 
 // Import managers
-// For instance tools, use the instances workspaceManager:
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
-import { getViewConfigurationManager } from '@Init/appInitializer.js';
+import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 
 import './InstanceToolsTab.scss';
 
@@ -43,7 +39,7 @@ const SUBTABS = [
 ];
 
 // =============================================================================
-// TOOLS SUBTAB WRAPPER - Gets tools from workspaceManager (same as InstanceViewport)
+// TOOLS SUBTAB WRAPPER - Gets tools from workspaceManager
 // =============================================================================
 
 function ToolsSubtab({ activeInstance }) {
@@ -129,6 +125,55 @@ function NoInstancePlaceholder() {
 }
 
 // =============================================================================
+// HELPER: Get instance display info from ViewConfigurationManager
+// =============================================================================
+
+/**
+ * Extract proper display info for an instance.
+ * Gets VIEW name from ViewConfigurationManager (not dataset filename).
+ * Gets DATASET name separately.
+ */
+function getInstanceDisplayInfo(instance) {
+    if (!instance) return null;
+
+    const viewManager = getViewConfigurationManager();
+    const datasetManager = getDatasetManager();
+
+    // Get the ViewConfiguration for the real view name
+    const viewConfig = viewManager?.getView?.(
+        instance.viewConfigId || instance.viewId
+    );
+
+    // Get the dataset for the dataset name
+    const datasetId = viewConfig?.datasetId || instance.instanceData?.dataset?.id;
+    const dataset = datasetId ? datasetManager?.getDataset?.(datasetId) : null;
+
+    // Build display info
+    return {
+        // Primary: View name from ViewConfiguration
+        name: viewConfig?.name ||
+            instance.name ||
+            `Instance ${(instance.instanceId || instance.id)?.slice(0, 8) || 'Unknown'}`,
+
+        // Secondary: Dataset name (separate from view name)
+        dataset: dataset?.name ||
+            instance.instanceData?.dataset?.name ||
+            instance.instanceData?.dataset?.filename ||
+            instance.instanceData?.dataset?.fileName ||
+            'No data loaded',
+
+        // Handler type
+        type: instance.type || viewConfig?.handlerType || 'vtk',
+
+        // Color from view config or instance
+        color: viewConfig?.color?.hex ||
+            instance.color?.hex ||
+            instance.color?.name ||
+            'blue',
+    };
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -136,11 +181,12 @@ function NoInstancePlaceholder() {
  * InstanceToolsPanelContent - Tools panel for the active instance
  * 
  * Shows tools, layers, and annotations for the currently focused instance.
- * Updates automatically when user clicks on different instances.
+ * Updates automatically when user clicks on different instances or renames views.
  */
 export function InstanceToolsPanelContent({ workspaceId }) {
     const [activeTab, setActiveTab] = useState('tools');
     const [activeInstance, setActiveInstance] = useState(null);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     // Subscribe to active instance changes
     useEffect(() => {
@@ -153,7 +199,7 @@ export function InstanceToolsPanelContent({ workspaceId }) {
         updateActiveInstance();
 
         // Listen for instance focus changes
-        const handleInstanceFocus = (event) => {
+        const handleInstanceFocus = () => {
             updateActiveInstance();
         };
 
@@ -163,36 +209,45 @@ export function InstanceToolsPanelContent({ workspaceId }) {
             setTimeout(updateActiveInstance, 50);
         };
 
+        // Listen for name changes - force re-render to show new name
+        const handleNameChange = () => {
+            setRefreshKey(k => k + 1);
+        };
+
         window.addEventListener('cia:instance-focused', handleInstanceFocus);
         window.addEventListener('cia:active-instance-changed', handleInstanceFocus);
         window.addEventListener('cia:close-view', handleViewClosed);
 
         // Also listen to viewConfigurationManager events
-        getViewConfigurationManager()?.on?.('viewTrashed', handleViewClosed);
-        getViewConfigurationManager()?.on?.('viewDeleted', handleViewClosed);
-        getViewConfigurationManager()?.on?.('viewDeactivated', handleViewClosed);
+        const viewManager = getViewConfigurationManager();
+        if (viewManager?.on) {
+            viewManager.on('viewTrashed', handleViewClosed);
+            viewManager.on('viewDeleted', handleViewClosed);
+            viewManager.on('viewDeactivated', handleViewClosed);
+            // Listen for name changes
+            viewManager.on('viewUpdated', handleNameChange);
+            viewManager.on('viewRenamed', handleNameChange);
+        }
 
         return () => {
             window.removeEventListener('cia:instance-focused', handleInstanceFocus);
             window.removeEventListener('cia:active-instance-changed', handleInstanceFocus);
             window.removeEventListener('cia:close-view', handleViewClosed);
-            getViewConfigurationManager()?.off?.('viewTrashed', handleViewClosed);
-            getViewConfigurationManager()?.off?.('viewDeleted', handleViewClosed);
-            getViewConfigurationManager()?.off?.('viewDeactivated', handleViewClosed);
+
+            if (viewManager?.off) {
+                viewManager.off('viewTrashed', handleViewClosed);
+                viewManager.off('viewDeleted', handleViewClosed);
+                viewManager.off('viewDeactivated', handleViewClosed);
+                viewManager.off('viewUpdated', handleNameChange);
+                viewManager.off('viewRenamed', handleNameChange);
+            }
         };
     }, []);
 
-    // Extract instance info for display
-    const instanceInfo = activeInstance ? {
-        name: activeInstance.instanceData?.dataset?.filename ||
-            activeInstance.instanceData?.dataset?.fileName ||
-            `Instance ${activeInstance.instanceId?.slice(0, 8)}`,
-        type: activeInstance.type || 'unknown',
-        color: activeInstance.color?.name || 'blue',
-        dataset: activeInstance.instanceData?.dataset?.filename ||
-            activeInstance.instanceData?.dataset?.fileName ||
-            'No data loaded',
-    } : null;
+    // Extract instance info for display - recalculate when refreshKey changes
+    const instanceInfo = useMemo(() => {
+        return getInstanceDisplayInfo(activeInstance);
+    }, [activeInstance, refreshKey]);
 
     // Render content based on active subtab
     const renderContent = () => {
@@ -229,18 +284,25 @@ export function InstanceToolsPanelContent({ workspaceId }) {
             ) : (
                 <>
                     {/* ========================================================
-                        FOCUSED INSTANCE HEADER - Shows which instance is selected
+                        FOCUSED INSTANCE HEADER
+                        Shows view name (primary) + dataset name (secondary)
                         ======================================================== */}
                     <div
                         className="instance-tools-tab__instance-header"
-                        style={{ '--instance-color': activeInstance.color?.hex || 'var(--color-accent-blue)' }}
+                        style={{ '--instance-color': instanceInfo?.color || 'var(--color-accent-blue)' }}
                     >
                         <Monitor size={14} />
                         <div className="instance-tools-tab__instance-info">
-                            <span className="instance-tools-tab__instance-name">{instanceInfo.name}</span>
-                            <span className="instance-tools-tab__instance-dataset">{instanceInfo.dataset}</span>
+                            <span className="instance-tools-tab__instance-name">
+                                {instanceInfo?.name || 'Untitled View'}
+                            </span>
+                            <span className="instance-tools-tab__instance-dataset">
+                                {instanceInfo?.dataset || 'No data loaded'}
+                            </span>
                         </div>
-                        <span className="instance-tools-tab__instance-type">{instanceInfo.type.toUpperCase()}</span>
+                        <span className="instance-tools-tab__instance-type">
+                            {(instanceInfo?.type || 'vtk').toUpperCase()}
+                        </span>
                     </div>
 
                     {/* ========================================================
