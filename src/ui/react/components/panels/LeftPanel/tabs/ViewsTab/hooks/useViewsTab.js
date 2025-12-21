@@ -110,40 +110,40 @@ export function useViewsTab({ workspaceId }) {
         return [];
       }
 
-      // Get all views from the internal cache
-      // Note: _viewConfigs is a Map, we need to access it properly
-      // Try different methods to get all views
+      // IMPORTANT: In dev mode, getUserId() may return undefined
+      // which causes getMyViews() to return empty (filters by undefined)
+      // We need to get ALL views regardless of ownership
+
       let views = [];
 
-      // Method 1: Try getViewsForDataset with all datasets (if available)
-      // Method 2: Combine getMyViews + getSharedWithMe (may miss some)
-      // Method 3: Use getActiveViews for now + manual inactive detection
+      // Try to access the internal _viewConfigs Map directly
+      // This bypasses the userId filtering that breaks in dev mode
+      if (viewManager._viewConfigs && viewManager._viewConfigs instanceof Map) {
+        views = Array.from(viewManager._viewConfigs.values());
+        log.debug(`Got ${views.length} views from _viewConfigs`);
+      } else {
+        // Fallback: try the filtered methods
+        const myViews = viewManager.getMyViews?.() || [];
+        const sharedViews = viewManager.getSharedWithMe?.() || [];
 
-      // First, try to get views using available methods
-      const myViews = viewManager.getMyViews?.() || [];
-      const sharedViews = viewManager.getSharedWithMe?.() || [];
-      const trashedViews = viewManager.getTrashedViews?.() || [];
-
-      log.debug(
-        `Views found: ${myViews.length} owned, ${sharedViews.length} shared, ${trashedViews.length} trashed`
-      );
-
-      // Combine all (deduplicate by ID)
-      const viewMap = new Map();
-      [...myViews, ...sharedViews].forEach((v) => {
-        if (v && v.id && !viewMap.has(v.id)) {
-          viewMap.set(v.id, v);
-        }
-      });
-
-      views = Array.from(viewMap.values());
-
-      // If no views found, log a warning
-      if (views.length === 0) {
         log.debug(
-          "No views found - this may be normal if no views have been created yet"
+          `Fallback: ${myViews.length} owned, ${sharedViews.length} shared`
         );
+
+        // Combine all (deduplicate by ID)
+        const viewMap = new Map();
+        [...myViews, ...sharedViews].forEach((v) => {
+          if (v && v.id && !viewMap.has(v.id)) {
+            viewMap.set(v.id, v);
+          }
+        });
+        views = Array.from(viewMap.values());
       }
+
+      // Filter out trashed views (they're handled separately)
+      views = views.filter((v) => v.status !== "trashed");
+
+      log.debug(`useViewsTab: Found ${views.length} non-trashed views`);
 
       // Enrich views with additional data
       return views.map((v) => {
@@ -166,12 +166,13 @@ export function useViewsTab({ workspaceId }) {
             : null,
           rowSpan: placement?.rowSpan || v.rowSpan || 1,
           colSpan: placement?.colSpan || v.colSpan || 1,
-          // Determine status based on placement
-          status: placement
-            ? "active"
-            : v.status === "trashed"
-            ? "trashed"
-            : "inactive",
+          // Determine status based on view's own status or placement
+          status:
+            v.status === "active"
+              ? "active"
+              : placement
+              ? "active"
+              : "inactive",
         };
       });
     } catch (e) {
