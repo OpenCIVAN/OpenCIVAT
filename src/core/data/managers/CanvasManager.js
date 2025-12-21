@@ -256,6 +256,64 @@ export class CanvasManager extends BaseManager {
   }
 
   /**
+   * Find a placement containing a specific view
+   * @param {string} viewId - The view configuration ID to find
+   * @param {string} [canvasId] - Optional canvas ID to search (searches active canvas if not provided)
+   * @returns {CanvasPlacement|null}
+   */
+  getPlacementForView(viewId, canvasId) {
+    if (!viewId) return null;
+
+    // If canvasId provided, search only that canvas
+    if (canvasId) {
+      const canvas = this._canvases.get(canvasId);
+      if (!canvas?.placements) return null;
+
+      return (
+        canvas.placements.find(
+          (p) =>
+            p.content?.viewConfigurationId === viewId ||
+            p.content?.viewId === viewId
+        ) || null
+      );
+    }
+
+    // Search active canvas first
+    const activeCanvas = this.getActiveCanvas();
+    if (activeCanvas?.placements) {
+      const placement = activeCanvas.placements.find(
+        (p) =>
+          p.content?.viewConfigurationId === viewId ||
+          p.content?.viewId === viewId
+      );
+      if (placement) return placement;
+    }
+
+    // Search all other canvases
+    for (const canvas of this._canvases.values()) {
+      if (canvas.id === this._activeCanvasId) continue; // Already checked
+
+      const placement = canvas.placements?.find(
+        (p) =>
+          p.content?.viewConfigurationId === viewId ||
+          p.content?.viewId === viewId
+      );
+      if (placement) return placement;
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if a view is placed on any canvas
+   * @param {string} viewId - The view configuration ID
+   * @returns {boolean}
+   */
+  isViewOnCanvas(viewId) {
+    return this.getPlacementForView(viewId) !== null;
+  }
+
+  /**
    * Delete a canvas
    * @param {string} canvasId
    * @returns {Promise<void>}

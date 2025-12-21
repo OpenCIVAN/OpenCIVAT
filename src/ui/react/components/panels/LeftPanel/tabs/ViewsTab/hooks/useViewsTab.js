@@ -2,23 +2,28 @@
  * @file useViewsTab.js
  * @description Hook for Views tab state management.
  *
- * UPDATED VERSION:
- * - Uses ViewLifecycleService for all view operations
- * - Uses EventBus for event subscriptions
- * - Cleaner separation of concerns
+ * ARCHITECTURE:
+ * - Uses ViewLifecycleService for all view operations (centralized)
+ * - Uses EventBus + manager events for reactivity
+ * - Uses useState instead of useMemo for views to ensure reactivity
+ * - Properly tracks active/inactive/linked status
+ *
+ * UPDATED: Now uses ViewLifecycleService instead of direct manager calls
  *
  * @example
- * const { views, handlePlaceView, handleTrashView } = useViewsTab({ workspaceId });
+ * const { views, onCanvasViews, handlePlaceView } = useViewsTab({ workspaceId });
  */
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
-import { viewLifecycleService } from "@Services";
-import { eventBus, BUS_EVENTS } from "@Core/events";
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
+import { eventBus, BUS_EVENTS } from "@Core/events/EventBus.js";
 import {
   VIEW_EVENTS,
   CANVAS_MANAGER_EVENTS as CANVAS_EVENTS,
+  DOM_EVENTS,
 } from "@Core/events/eventConstants.js";
 import { view as log } from "@Utils/logger.js";
 
@@ -59,17 +64,54 @@ function getAllViewsFromManager(viewManager) {
 }
 
 // =============================================================================
+// HELPER: Find placement for a view (fallback if canvasManager method doesn't exist)
+// =============================================================================
+
+function findPlacementForView(viewId) {
+  if (!viewId || !canvasManager) return null;
+
+  // Try canvasManager method first (if it exists)
+  if (typeof canvasManager.getPlacementForView === "function") {
+    return canvasManager.getPlacementForView(viewId);
+  }
+
+  // Fallback: manually search through canvases
+  // Check active canvas first
+  const activeCanvas = canvasManager.getActiveCanvas?.();
+  if (activeCanvas?.placements) {
+    const placement = activeCanvas.placements.find(
+      (p) =>
+        p.content?.viewConfigurationId === viewId ||
+        p.content?.viewId === viewId
+    );
+    if (placement) return placement;
+  }
+
+  // Check all canvases
+  const allCanvases = canvasManager.getAllCanvases?.() || [];
+  for (const canvas of allCanvases) {
+    if (canvas.id === activeCanvas?.id) continue; // Already checked
+    const placement = canvas.placements?.find(
+      (p) =>
+        p.content?.viewConfigurationId === viewId ||
+        p.content?.viewId === viewId
+    );
+    if (placement) return placement;
+  }
+
+  return null;
+}
+
+// =============================================================================
 // HELPER: Enrich view with runtime data
 // =============================================================================
 
 function enrichView(view) {
   if (!view) return null;
 
-  // Check if view is on canvas
-  const isOnCanvas = viewLifecycleService.isViewOnCanvas(view.id);
-
-  // Get placement info from canvas (for position info)
-  const placement = canvasManager?.getPlacementForView?.(view.id);
+  // Get placement info from canvas
+  const placement = findPlacementForView(view.id);
+  const instanceColor = workspaceManager?.getViewColor?.(view.id);
 
   // Determine if view has any links
   const hasLinks =
@@ -78,56 +120,127 @@ function enrichView(view) {
       (link) => link && (link.isActive?.() || link.targetViewId)
     );
 
+  // Count active links
+  const linkedCount = view.links
+    ? Object.values(view.links).filter((link) => link?.targetViewId).length
+    : 0;
+
+  // isOnCanvas is determined by placement existence
+  const isOnCanvas = placement !== null;
+
   return {
     ...view,
+    id: view.id,
+    name: view.name || "Untitled View",
+    datasetId: view.datasetId,
+    datasetName: view.datasetName || view.datasetId,
+    color: instanceColor || view.color || "#60a5fa",
+
+    // Position & size
+    position: placement ? { row: placement.row, col: placement.col } : null,
+    rowSpan: placement?.rowSpan || view.rowSpan || 1,
+    colSpan: placement?.colSpan || view.colSpan || 1,
+
+    // Canvas placement status
     isOnCanvas,
-    placement,
+    placementId: placement?.id || null,
+
+    // Status - PLACEMENT is authoritative for active/inactive
+    // Only use view.status for "trashed" state
+    status:
+      view.status === "trashed"
+        ? "trashed"
+        : isOnCanvas
+        ? "active"
+        : "inactive",
+
+    // Link info
     hasLinks,
+    linkedCount,
     isLinked: hasLinks,
   };
 }
 
 // =============================================================================
-// MAIN HOOK
+// HOOK
 // =============================================================================
 
+/**
+ * Hook for Views tab state management.
+ *
+ * @param {Object} options - Hook options
+ * @param {string} options.workspaceId - Current workspace ID
+ * @returns {Object} Hook return value
+ */
 export function useViewsTab({ workspaceId }) {
-  // -------------------------------------------------------------------------
-  // STATE
-  // -------------------------------------------------------------------------
-  const [views, setViews] = useState([]);
-  const [viewMode, setViewMode] = useState(VIEW_MODES.BY_STATUS);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  // =========================================================================
+  // STATE - Use useState for reactivity (not useMemo!)
+  // =========================================================================
 
-  // -------------------------------------------------------------------------
-  // LOAD VIEWS
-  // -------------------------------------------------------------------------
+  const [views, setViews] = useState([]);
+  const [trashedViews, setTrashedViews] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilters, setActiveFilters] = useState(["active", "inactive"]);
+  const [viewMode, setViewMode] = useState(VIEW_MODES.BY_STATUS);
+  const [sortBy, setSortBy] = useState("name");
+  const [expandedDatasets, setExpandedDatasets] = useState(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // =========================================================================
+  // LOAD VIEWS - Called on mount and when events fire
+  // =========================================================================
 
   const loadViews = useCallback(() => {
-    const viewManager = getViewConfigurationManager();
-    const allViews = getAllViewsFromManager(viewManager);
-    const enrichedViews = allViews.map(enrichView).filter(Boolean);
-    setViews(enrichedViews);
-    log.debug(`Loaded ${enrichedViews.length} views`);
+    try {
+      const viewManager = getViewConfigurationManager();
+      if (!viewManager) {
+        log.debug("ViewConfigurationManager not available yet");
+        return;
+      }
+
+      // Get all views
+      const allRawViews = getAllViewsFromManager(viewManager);
+
+      // Separate trashed from non-trashed
+      const nonTrashed = allRawViews.filter((v) => v.status !== "trashed");
+      const trashed =
+        viewManager.getTrashedViews?.() ||
+        allRawViews.filter((v) => v.status === "trashed");
+
+      // Enrich views with runtime data
+      const enrichedViews = nonTrashed.map(enrichView).filter(Boolean);
+      const enrichedTrashed = trashed.map(enrichView).filter(Boolean);
+
+      setViews(enrichedViews);
+      setTrashedViews(enrichedTrashed);
+
+      log.debug(
+        `Loaded ${enrichedViews.length} views, ${enrichedTrashed.length} trashed`
+      );
+    } catch (e) {
+      log.error("Failed to load views:", e);
+      setError(e);
+    }
   }, []);
 
-  // Initial load
+  // =========================================================================
+  // INITIAL LOAD
+  // =========================================================================
+
   useEffect(() => {
     loadViews();
-  }, [loadViews, refreshCounter]);
+  }, [loadViews, workspaceId]);
 
-  // -------------------------------------------------------------------------
+  // =========================================================================
   // EVENT SUBSCRIPTIONS - Manager Events
-  // -------------------------------------------------------------------------
+  // =========================================================================
 
   useEffect(() => {
     const viewManager = getViewConfigurationManager();
     if (!viewManager?.on) return;
 
-    const refresh = () => setRefreshCounter((c) => c + 1);
-
-    // Subscribe to manager events
+    // Subscribe to ViewConfigurationManager events
     const events = [
       VIEW_EVENTS.ADDED,
       VIEW_EVENTS.UPDATED,
@@ -137,77 +250,215 @@ export function useViewsTab({ workspaceId }) {
       VIEW_EVENTS.DELETED,
     ];
 
-    events.forEach((event) => viewManager.on(event, refresh));
+    events.forEach((event) => viewManager.on(event, loadViews));
 
     return () => {
-      events.forEach((event) => viewManager.off(event, refresh));
+      events.forEach((event) => viewManager.off(event, loadViews));
     };
-  }, []);
+  }, [loadViews]);
 
-  // -------------------------------------------------------------------------
-  // EVENT SUBSCRIPTIONS - EventBus Events
-  // -------------------------------------------------------------------------
+  // =========================================================================
+  // EVENT SUBSCRIPTIONS - EventBus Events (from ViewLifecycleService)
+  // =========================================================================
 
   useEffect(() => {
-    const refresh = () => setRefreshCounter((c) => c + 1);
-
-    // Subscribe to EventBus events from ViewLifecycleService
     const unsubs = [
-      eventBus.on(BUS_EVENTS.VIEW_CREATED, refresh),
-      eventBus.on(BUS_EVENTS.VIEW_PLACED, refresh),
-      eventBus.on(BUS_EVENTS.VIEW_REMOVED, refresh),
-      eventBus.on(BUS_EVENTS.VIEW_TRASHED, refresh),
-      eventBus.on(BUS_EVENTS.VIEW_RESTORED, refresh),
-      eventBus.on(BUS_EVENTS.VIEW_DELETED, refresh),
-      eventBus.on(BUS_EVENTS.VIEW_RENAMED, refresh),
-      eventBus.on(BUS_EVENTS.PLACEMENT_ADDED, refresh),
-      eventBus.on(BUS_EVENTS.PLACEMENT_REMOVED, refresh),
+      eventBus.on(BUS_EVENTS.VIEW_CREATED, loadViews),
+      eventBus.on(BUS_EVENTS.VIEW_PLACED, loadViews),
+      eventBus.on(BUS_EVENTS.VIEW_REMOVED, loadViews),
+      eventBus.on(BUS_EVENTS.VIEW_TRASHED, loadViews),
+      eventBus.on(BUS_EVENTS.VIEW_RESTORED, loadViews),
+      eventBus.on(BUS_EVENTS.VIEW_DELETED, loadViews),
+      eventBus.on(BUS_EVENTS.VIEW_RENAMED, loadViews),
+      eventBus.on(BUS_EVENTS.PLACEMENT_ADDED, loadViews),
+      eventBus.on(BUS_EVENTS.PLACEMENT_REMOVED, loadViews),
     ];
 
     return () => unsubs.forEach((unsub) => unsub());
-  }, []);
+  }, [loadViews]);
 
-  // -------------------------------------------------------------------------
+  // =========================================================================
   // EVENT SUBSCRIPTIONS - Canvas Manager Events
-  // -------------------------------------------------------------------------
+  // =========================================================================
 
   useEffect(() => {
-    const refresh = () => setRefreshCounter((c) => c + 1);
-
     const unsubs = [
-      canvasManager.on(CANVAS_EVENTS.PLACEMENT_ADDED, refresh),
-      canvasManager.on(CANVAS_EVENTS.PLACEMENT_REMOVED, refresh),
+      canvasManager.on(CANVAS_EVENTS.PLACEMENT_ADDED, loadViews),
+      canvasManager.on(CANVAS_EVENTS.PLACEMENT_REMOVED, loadViews),
     ];
 
     return () => unsubs.forEach((unsub) => unsub());
+  }, [loadViews]);
+
+  // =========================================================================
+  // FILTERED & SORTED VIEWS
+  // =========================================================================
+
+  const filteredViews = useMemo(() => {
+    let result = [...views];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (v) =>
+          v.name?.toLowerCase().includes(query) ||
+          v.datasetName?.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply status filters
+    if (activeFilters.length > 0 && !activeFilters.includes("all")) {
+      result = result.filter((v) => {
+        if (activeFilters.includes("active") && v.status === "active")
+          return true;
+        if (activeFilters.includes("inactive") && v.status === "inactive")
+          return true;
+        if (activeFilters.includes("shared") && v.isShared) return true;
+        if (activeFilters.includes("linked") && v.isLinked) return true;
+        return false;
+      });
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return (a.name || "").localeCompare(b.name || "");
+        case "position":
+          const posA = a.position || { row: 999, col: 999 };
+          const posB = b.position || { row: 999, col: 999 };
+          return posA.row !== posB.row
+            ? posA.row - posB.row
+            : posA.col - posB.col;
+        case "recent":
+          return (b.updatedAt || 0) - (a.updatedAt || 0);
+        case "dataset":
+          return (a.datasetName || "").localeCompare(b.datasetName || "");
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [views, searchQuery, activeFilters, sortBy]);
+
+  // =========================================================================
+  // CATEGORIZED VIEWS
+  // =========================================================================
+
+  const onCanvasViews = useMemo(
+    () => filteredViews.filter((v) => v.isOnCanvas),
+    [filteredViews]
+  );
+
+  const notPlacedViews = useMemo(
+    () => filteredViews.filter((v) => !v.isOnCanvas && v.status !== "trashed"),
+    [filteredViews]
+  );
+
+  const linkedViews = useMemo(
+    () => filteredViews.filter((v) => v.isLinked),
+    [filteredViews]
+  );
+
+  const unlinkedViews = useMemo(
+    () => filteredViews.filter((v) => !v.isLinked),
+    [filteredViews]
+  );
+
+  const recentlyDeletedViews = useMemo(() => trashedViews, [trashedViews]);
+
+  // Group by dataset
+  const viewsByDataset = useMemo(() => {
+    const groups = new Map();
+
+    filteredViews.forEach((view) => {
+      const datasetId = view.datasetId || "unknown";
+      const datasetName = view.datasetName || "Unknown Dataset";
+
+      if (!groups.has(datasetId)) {
+        groups.set(datasetId, {
+          id: datasetId,
+          name: datasetName,
+          views: [],
+        });
+      }
+      groups.get(datasetId).views.push(view);
+    });
+
+    return Array.from(groups.values());
+  }, [filteredViews]);
+
+  // =========================================================================
+  // FILTER TOGGLE
+  // =========================================================================
+
+  const toggleFilter = useCallback((filterId) => {
+    setActiveFilters((prev) =>
+      prev.includes(filterId)
+        ? prev.filter((f) => f !== filterId)
+        : [...prev, filterId]
+    );
   }, []);
 
-  // -------------------------------------------------------------------------
-  // VIEW OPERATIONS - All using ViewLifecycleService
-  // -------------------------------------------------------------------------
+  // =========================================================================
+  // DATASET EXPANSION
+  // =========================================================================
+
+  const toggleDatasetExpanded = useCallback((datasetId) => {
+    setExpandedDatasets((prev) => {
+      const next = new Set(prev);
+      if (next.has(datasetId)) {
+        next.delete(datasetId);
+      } else {
+        next.add(datasetId);
+      }
+      return next;
+    });
+  }, []);
+
+  // =========================================================================
+  // VIEW LIFECYCLE HANDLERS - Using ViewLifecycleService
+  // =========================================================================
 
   /**
    * Place a view on the canvas
    */
   const handlePlaceView = useCallback(async (viewId) => {
-    log.debug("Placing view:", viewId);
-    await viewLifecycleService.placeView(viewId);
+    log.debug("Placing view on canvas:", viewId);
+    try {
+      await viewLifecycleService.placeView(viewId);
+    } catch (e) {
+      log.error("Failed to place view:", e);
+      setError(e);
+    }
   }, []);
 
   /**
-   * Remove view from canvas (but keep the view)
+   * Remove a view from the canvas (but keep the view)
    */
   const handleRemoveFromCanvas = useCallback(async (viewId) => {
     log.debug("Removing view from canvas:", viewId);
-    await viewLifecycleService.removeViewFromCanvas(viewId);
+    try {
+      await viewLifecycleService.removeViewFromCanvas(viewId);
+    } catch (e) {
+      log.error("Failed to remove view:", e);
+      setError(e);
+    }
   }, []);
 
   /**
-   * Trash a view (soft delete)
+   * Move a view to trash (soft delete)
    */
   const handleTrashView = useCallback(async (viewId) => {
     log.debug("Trashing view:", viewId);
-    await viewLifecycleService.trashView(viewId);
+    try {
+      await viewLifecycleService.trashView(viewId);
+    } catch (e) {
+      log.error("Failed to trash view:", e);
+      setError(e);
+    }
   }, []);
 
   /**
@@ -215,127 +466,133 @@ export function useViewsTab({ workspaceId }) {
    */
   const handleRestoreView = useCallback(async (viewId) => {
     log.debug("Restoring view:", viewId);
-    await viewLifecycleService.restoreView(viewId);
+    try {
+      await viewLifecycleService.restoreView(viewId);
+    } catch (e) {
+      log.error("Failed to restore view:", e);
+      setError(e);
+    }
   }, []);
 
   /**
    * Permanently delete a view
    */
-  const handleDeleteView = useCallback(async (viewId) => {
-    log.debug("Deleting view:", viewId);
-    await viewLifecycleService.deleteView(viewId);
+  const handlePermanentDelete = useCallback(async (viewId) => {
+    log.debug("Permanently deleting view:", viewId);
+    try {
+      await viewLifecycleService.deleteView(viewId);
+    } catch (e) {
+      log.error("Failed to delete view:", e);
+      setError(e);
+    }
   }, []);
+
+  /**
+   * Open the create view modal
+   */
+  const handleCreateView = useCallback(() => {
+    window.dispatchEvent(new CustomEvent(DOM_EVENTS.OPEN_CREATE_VIEW_MODAL));
+  }, []);
+
+  /**
+   * Select/focus a view (navigate to it if on canvas)
+   */
+  const handleSelectView = useCallback((viewId) => {
+    log.debug("Selecting view:", viewId);
+    viewLifecycleService.focusView(viewId);
+  }, []);
+
+  /**
+   * Navigate to view's position on canvas
+   */
+  const handleNavigateToView = useCallback(
+    (viewId) => {
+      const view = views.find((v) => v.id === viewId);
+      if (view?.position) {
+        window.dispatchEvent(
+          new CustomEvent(DOM_EVENTS.NAVIGATE_TO_CELL, {
+            detail: { row: view.position.row, col: view.position.col },
+          })
+        );
+      }
+    },
+    [views]
+  );
 
   /**
    * Rename a view
    */
   const handleRenameView = useCallback(async (viewId, newName) => {
-    log.debug("Renaming view:", viewId, newName);
-    await viewLifecycleService.renameView(viewId, newName);
+    log.debug("Renaming view:", viewId, "to", newName);
+    try {
+      await viewLifecycleService.renameView(viewId, newName);
+    } catch (e) {
+      log.error("Failed to rename view:", e);
+      setError(e);
+    }
   }, []);
 
   /**
-   * Focus/navigate to a view
+   * Resize a view's placement on canvas
+   * Note: This still uses canvasManager directly as it's a placement operation
    */
-  const handleFocusView = useCallback((viewId) => {
-    log.debug("Focusing view:", viewId);
-    viewLifecycleService.focusView(viewId);
+  const handleResizeView = useCallback((viewId, size) => {
+    log.debug("Resizing view:", viewId, size);
+    const placement = canvasManager?.getPlacementForView?.(viewId);
+    if (placement) {
+      canvasManager?.resizePlacement?.(placement.id, size.rows, size.cols);
+    }
   }, []);
 
-  /**
-   * Duplicate a view
-   */
-  const handleDuplicateView = useCallback(async (viewId) => {
-    log.debug("Duplicating view:", viewId);
-    await viewLifecycleService.duplicateAndPlaceView(viewId);
-  }, []);
+  // =========================================================================
+  // MANUAL REFRESH
+  // =========================================================================
 
-  // -------------------------------------------------------------------------
-  // COMPUTED VALUES
-  // -------------------------------------------------------------------------
+  const refetch = useCallback(() => {
+    loadViews();
+  }, [loadViews]);
 
-  /**
-   * Filter views by search query
-   */
-  const filteredViews = useMemo(() => {
-    if (!searchQuery.trim()) return views;
-
-    const query = searchQuery.toLowerCase();
-    return views.filter((view) => {
-      const name = (view.name || "").toLowerCase();
-      const datasetName = (view.datasetName || "").toLowerCase();
-      return name.includes(query) || datasetName.includes(query);
-    });
-  }, [views, searchQuery]);
-
-  /**
-   * Views currently on canvas
-   */
-  const onCanvasViews = useMemo(() => {
-    return filteredViews.filter((v) => v.isOnCanvas);
-  }, [filteredViews]);
-
-  /**
-   * Views not placed (but not trashed)
-   */
-  const notPlacedViews = useMemo(() => {
-    return filteredViews.filter((v) => !v.isOnCanvas && v.status !== "trashed");
-  }, [filteredViews]);
-
-  /**
-   * Views in trash
-   */
-  const trashedViews = useMemo(() => {
-    return filteredViews.filter((v) => v.status === "trashed");
-  }, [filteredViews]);
-
-  /**
-   * Group views by dataset
-   */
-  const viewsByDataset = useMemo(() => {
-    const grouped = new Map();
-    filteredViews.forEach((view) => {
-      const datasetId = view.datasetId || "unknown";
-      if (!grouped.has(datasetId)) {
-        grouped.set(datasetId, []);
-      }
-      grouped.get(datasetId).push(view);
-    });
-    return grouped;
-  }, [filteredViews]);
-
-  // -------------------------------------------------------------------------
+  // =========================================================================
   // RETURN
-  // -------------------------------------------------------------------------
+  // =========================================================================
 
   return {
-    // State
+    // Data
     views: filteredViews,
-    viewMode,
-    searchQuery,
-
-    // Setters
-    setViewMode,
-    setSearchQuery,
-
-    // Computed groups
+    allViews: views,
     onCanvasViews,
     notPlacedViews,
-    trashedViews,
+    linkedViews,
+    unlinkedViews,
+    recentlyDeletedViews,
     viewsByDataset,
 
-    // Actions - all using ViewLifecycleService
+    // State
+    isLoading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    activeFilters,
+    toggleFilter,
+    viewMode,
+    setViewMode,
+    sortBy,
+    setSortBy,
+    expandedDatasets,
+    toggleDatasetExpanded,
+
+    // Handlers - all using ViewLifecycleService
     handlePlaceView,
     handleRemoveFromCanvas,
     handleTrashView,
     handleRestoreView,
-    handleDeleteView,
+    handlePermanentDelete,
+    handleCreateView,
+    handleSelectView,
+    handleNavigateToView,
     handleRenameView,
-    handleFocusView,
-    handleDuplicateView,
-
-    // Refresh trigger (for manual refresh)
-    refresh: () => setRefreshCounter((c) => c + 1),
+    handleResizeView,
+    refetch,
   };
 }
 
