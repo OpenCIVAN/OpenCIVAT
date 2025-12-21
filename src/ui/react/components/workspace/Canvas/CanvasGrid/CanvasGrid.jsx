@@ -102,6 +102,7 @@ export function CanvasGrid({
     const [selectedCells, setSelectedCells] = useState([]);
     const [minimapExpanded, setMinimapExpanded] = useState(false);
     const [activeTool, setActiveTool] = useState('select');
+    const [selectionModifierHeld, setSelectionModifierHeld] = useState(false);
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState({
@@ -420,11 +421,79 @@ export function CanvasGrid({
     }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells.length, contextMenu.isOpen]);
 
     // ==========================================================================
+    // SELECTION MODIFIER KEY TRACKING (for cursor feedback)
+    // ==========================================================================
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                setSelectionModifierHeld(true);
+            }
+        };
+
+        const handleKeyUp = (e) => {
+            // Check if any modifier is still held
+            if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                setSelectionModifierHeld(false);
+            }
+        };
+
+        // Also handle window blur (user switches apps while holding modifier)
+        const handleBlur = () => {
+            setSelectionModifierHeld(false);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('blur', handleBlur);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('blur', handleBlur);
+        };
+    }, []);
+
+    // ==========================================================================
     // CELL CLICK HANDLING
     // ==========================================================================
 
     const handleCellClick = useCallback((placement, e) => {
-        // Check if this cell should trigger isolation mode
+        // Selection modifiers bypass isolation mode
+        const isSelectionClick = e.ctrlKey || e.metaKey || e.shiftKey;
+
+        // Ctrl/Cmd+Click - toggle cell in selection
+        if (e.ctrlKey || e.metaKey) {
+            const cellData = { row: placement.row, col: placement.col, placement };
+            const isCurrentlySelected = selectedCells.some(
+                sc => sc.row === placement.row && sc.col === placement.col
+            );
+
+            if (isCurrentlySelected) {
+                // Remove from selection
+                setSelectedCells(prev => prev.filter(
+                    sc => !(sc.row === placement.row && sc.col === placement.col)
+                ));
+            } else {
+                // Add to selection
+                setSelectedCells(prev => [...prev, cellData]);
+            }
+            return;
+        }
+
+        // Shift+Click - add to selection (standard OS behavior)
+        if (e.shiftKey) {
+            const cellData = { row: placement.row, col: placement.col, placement };
+            const isCurrentlySelected = selectedCells.some(
+                sc => sc.row === placement.row && sc.col === placement.col
+            );
+            if (!isCurrentlySelected) {
+                setSelectedCells(prev => [...prev, cellData]);
+            }
+            return;
+        }
+
+        // Check if this cell should trigger isolation mode (only for regular clicks)
         if (shouldTriggerIsolation(renderMode)) {
             isolateCell({
                 id: placement.id,
@@ -440,7 +509,7 @@ export function CanvasGrid({
         if (onCellClick) {
             onCellClick(placement, e);
         }
-    }, [renderMode, shouldTriggerIsolation, isolateCell, onCellClick]);
+    }, [renderMode, shouldTriggerIsolation, isolateCell, onCellClick, selectedCells]);
 
     // ==========================================================================
     // CONTEXT MENU HANDLERS
@@ -827,7 +896,7 @@ export function CanvasGrid({
                     {/* Grid viewport - ALWAYS rendered to preserve VTK instances */}
                     <div
                         ref={gridRef}
-                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''}`}
+                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''} ${selectionModifierHeld ? 'canvas-grid__viewport--selection-mode' : ''}`}
                         tabIndex={0}
                         onContextMenu={handleContextMenu}
                     >
