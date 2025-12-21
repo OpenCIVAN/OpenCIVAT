@@ -48,6 +48,7 @@ import {
     useLayoutPanel,
 } from '@UI/react/components/panels/LayoutPanel';
 import { useViewsTab, VIEW_MODES } from './hooks/useViewsTab';
+import { viewLifecycleService } from '@Services';
 import './ViewsTab.scss';
 
 // =============================================================================

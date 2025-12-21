@@ -41,6 +41,7 @@ import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { dataset as log } from '@Utils/logger.js';
 import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
+import { viewLifecycleService } from '@Services';
 import './DatasetsTab.scss';
 
 // =============================================================================
@@ -81,45 +82,34 @@ const getDatasetTypeConfig = (fileType) => {
 function DatasetViewItemWrapper({ view, datasetId }) {
     const isActive = view.status === 'active';
 
+    // Select/focus a view
     const handleSelect = useCallback((viewId) => {
-        log.debug(`Selecting view ${viewId}`);
-        window.dispatchEvent(new CustomEvent('cia:request-instance', {
-            detail: { viewId, datasetId, spawnNew: false }
-        }));
-    }, [datasetId]);
+        viewLifecycleService.focusView(viewId);
+    }, []);
 
+    // Close view (remove from canvas)
     const handleClose = useCallback(async (viewId) => {
-        log.debug(`Closing view ${viewId} (deactivating)`);
-        await canvasManager?.removeViewPlacements?.(viewId);
-        getViewConfigurationManager()?.deactivateView?.(viewId);
-        window.dispatchEvent(new CustomEvent('cia:close-view', {
-            detail: { viewId }
-        }));
+        await viewLifecycleService.removeViewFromCanvas(viewId);
     }, []);
 
+    // Trash view
     const handleTrash = useCallback(async (viewId) => {
-        log.debug(`Trashing view ${viewId}`);
-        await canvasManager?.removeViewPlacements?.(viewId);
-        getViewConfigurationManager()?.trashView?.(viewId);
+        await viewLifecycleService.trashView(viewId);
     }, []);
 
+    // Rename view
     const handleRename = useCallback((viewId, newName) => {
-        log.debug(`Renaming view ${viewId} to ${newName}`);
-        getViewConfigurationManager()?.renameView?.(viewId, newName);
+        viewLifecycleService.renameView(viewId, newName);
     }, []);
 
+    // Navigate to view on canvas
     const handleNavigate = useCallback((viewId) => {
-        const placement = canvasManager?.getPlacementForView?.(viewId);
-        if (placement) {
-            window.dispatchEvent(new CustomEvent('cia:navigate-to-cell', {
-                detail: { row: placement.row, col: placement.col }
-            }));
-        }
+        viewLifecycleService.focusView(viewId);
     }, []);
 
+    // Place view on canvas
     const handlePlaceOnCanvas = useCallback(async (viewId) => {
-        await canvasManager?.placeView?.(viewId);
-        getViewConfigurationManager()?.activateView?.(viewId);
+        await viewLifecycleService.placeView(viewId);
     }, []);
 
     return (

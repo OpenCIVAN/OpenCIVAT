@@ -32,6 +32,7 @@ import {
   clearSyncState,
   DivergenceLevel,
 } from "@Services/syncService.js";
+import { viewLifecycleService } from '@Services/ViewLifecycleService.js';
 
 // ✅ NEW: Import annotation system
 // We'll initialize this in Phase 2 after DatasetManager is ready
@@ -441,6 +442,9 @@ export async function initializePhase2() {
     } catch (voiceError) {
       log.warn("Voice command handlers failed to initialize:", voiceError);
     }
+
+    viewLifecycleService.initialize();
+    log.info('ViewLifecycleService initialized');
 
     log.info("Phase 2 complete - User services ready");
     logSuccess("Application ready");

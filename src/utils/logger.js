@@ -31,6 +31,7 @@ const DEFAULT_CATEGORIES = {
   // Core app
   app: true, // App lifecycle, initialization phases
   ui: false, // UI component events (noisy)
+  event: true, // App events
   store: false, // Zustand/state updates (noisy)
 
   // Network & sync
@@ -129,6 +130,7 @@ const CATEGORY_COLORS = {
   // Core
   app: "#48dbfb",
   ui: "#ff9ff3",
+  events: "#48dbfb",
   store: "#feca57",
   // Network
   api: "#1dd1a1",
@@ -204,6 +206,7 @@ const loggers = {
   // Core
   app: createLogger("app"),
   ui: createLogger("ui"),
+  events: createLogger("events"),
   store: createLogger("store"),
   // Network
   api: createLogger("api"),
@@ -462,6 +465,7 @@ export { createLogger, logConfig };
 export const {
   app,
   ui,
+  events,
   store,
   api,
   ws,
