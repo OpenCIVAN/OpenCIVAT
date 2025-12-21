@@ -40,7 +40,7 @@ import { Header } from "@UI/react/components/layout/Header";
 // =============================================================================
 // SECONDARY BARS (Self-contained - manage their own zones internally)
 // =============================================================================
-import { SecondaryHeader } from "@UI/react/components/layout/SecondaryHeader";
+import { SecondaryHeader } from '@UI/react/components/layout/SecondaryHeader';
 import { SecondaryFooter } from "@UI/react/components/layout/SecondaryFooter";
 
 // =============================================================================
@@ -94,6 +94,7 @@ import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
 import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
 import { useInstanceSelector } from "@UI/react/hooks/useInstanceSelector.js";
 import { useRoomIndicator } from "@UI/react/hooks/useRoomIndicator.js";
+import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic';
 
 // =============================================================================
 // CENTRALIZED STATE MODULES
@@ -119,6 +120,9 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   const [phase3Status, setPhase3Status] = useState("pending");
   const phase3Started = useRef(false);
+
+  // Get wired logic for SecondaryHeader
+  const headerLogic = useSecondaryHeaderLogic();
 
   useEffect(() => {
     if (phase3Started.current) return;
@@ -415,18 +419,18 @@ export function CIAWebApp({ username, userId, projectId }) {
                   workspaces={workspaces}
                   onWorkspaceChange={handleWorkspaceChange}
                   onCreateWorkspace={handleCreateWorkspace}
-                  // Navigation props
-                  canvasPosition={canvasPosition}
-                  isAtOrigin={isAtOrigin}
-                  onNavigate={handleNavigateDirection}
-                  onHome={handleNavigateHome}
-                  onBookmark={handleOpenBookmarks}
-                  // View props
-                  activeView={activeInstance}
-                  onCanvasViews={onCanvasViews}
-                  availableViews={availableViews}
-                  onSelectView={handleSelectView}
-                  onPlaceView={handlePlaceView}
+                  // Navigation (from hook - properly wired to canvas)
+                  canvasPosition={headerLogic.canvasPosition}
+                  isAtOrigin={headerLogic.isAtOrigin}
+                  onNavigate={headerLogic.onNavigate}
+                  onHome={headerLogic.onHome}
+                  onBookmark={headerLogic.onBookmark}
+                  // Views (from hook - enriched with names)
+                  activeView={headerLogic.activeView}
+                  onCanvasViews={headerLogic.onCanvasViews}
+                  availableViews={headerLogic.availableViews}
+                  onSelectView={headerLogic.onSelectView}
+                  onPlaceView={headerLogic.onPlaceView}
                   viewMode={layoutMode}
                   onViewModeChange={handleViewModeChange}
                   // Room props

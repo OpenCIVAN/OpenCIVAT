@@ -439,6 +439,256 @@ export class CanvasManager extends BaseManager {
     return this.updatePlacement(placementId, { rowSpan, colSpan });
   }
 
+  /**
+   * Swap positions of two placements
+   * @param {string} placementId1 - First placement ID
+   * @param {string} placementId2 - Second placement ID
+   * @returns {Promise<{placement1: CanvasPlacement, placement2: CanvasPlacement}>}
+   */
+  async swapPlacements(placementId1, placementId2) {
+    try {
+      // Find both placements
+      let placement1 = null;
+      let placement2 = null;
+      let canvasId = null;
+
+      for (const canvas of this._canvases.values()) {
+        const p1 = canvas.placements.find((p) => p.id === placementId1);
+        const p2 = canvas.placements.find((p) => p.id === placementId2);
+
+        if (p1) placement1 = p1;
+        if (p2) placement2 = p2;
+        if (p1 || p2) canvasId = canvas.id;
+
+        if (placement1 && placement2) break;
+      }
+
+      if (!placement1 || !placement2) {
+        throw new Error("Could not find both placements to swap");
+      }
+
+      // Store original positions
+      const pos1 = { row: placement1.row, col: placement1.col };
+      const pos2 = { row: placement2.row, col: placement2.col };
+
+      // Swap positions (update both placements)
+      const [updated1, updated2] = await Promise.all([
+        this.updatePlacement(placementId1, { row: pos2.row, col: pos2.col }),
+        this.updatePlacement(placementId2, { row: pos1.row, col: pos1.col }),
+      ]);
+
+      log.debug(`Swapped placements: ${placementId1} <-> ${placementId2}`);
+
+      this._emit("placementsSwapped", {
+        canvasId,
+        placement1: updated1,
+        placement2: updated2,
+      });
+
+      return { placement1: updated1, placement2: updated2 };
+    } catch (error) {
+      this._emit("error", { operation: "swapPlacements", error });
+      throw error;
+    }
+  }
+
+  /**
+   * Push placements in a direction to make room for a new placement
+   * @param {string} canvasId - Canvas ID
+   * @param {number} targetRow - Row to insert at
+   * @param {number} targetCol - Column to insert at
+   * @param {string} direction - 'up', 'down', 'left', 'right'
+   * @param {Object} options - { wrap: boolean, closeLast: boolean }
+   * @returns {Promise<{movedPlacements: CanvasPlacement[], expandedCanvas: boolean}>}
+   */
+  async pushPlacements(
+    canvasId,
+    targetRow,
+    targetCol,
+    direction,
+    options = {}
+  ) {
+    const { wrap = false, closeLast = false } = options;
+
+    try {
+      const canvas = this._canvases.get(canvasId);
+      if (!canvas) {
+        throw new Error(`Canvas not found: ${canvasId}`);
+      }
+
+      const placements = canvas.placements || [];
+      const movedPlacements = [];
+      let expandedCanvas = false;
+
+      // Determine which placements need to move based on direction
+      // and calculate their new positions
+      const placementsToMove = [];
+
+      switch (direction) {
+        case "down":
+          // Push all placements at or below targetRow (in the same column) down by 1
+          // Sort by row descending so we move bottom-most first (avoids collisions)
+          placements
+            .filter((p) => p.row >= targetRow && p.col === targetCol)
+            .sort((a, b) => b.row - a.row)
+            .forEach((p) => {
+              placementsToMove.push({
+                placement: p,
+                newRow: p.row + 1,
+                newCol: p.col,
+              });
+            });
+          log.debug(
+            `Push down: found ${placementsToMove.length} placements to move at col ${targetCol}, row >= ${targetRow}`
+          );
+          break;
+
+        case "up":
+          // Push all placements at or above targetRow (in the same column) up by 1
+          // Sort by row ascending so we move top-most first
+          placements
+            .filter((p) => p.row <= targetRow && p.col === targetCol)
+            .sort((a, b) => a.row - b.row)
+            .forEach((p) => {
+              placementsToMove.push({
+                placement: p,
+                newRow: p.row - 1,
+                newCol: p.col,
+              });
+            });
+          log.debug(
+            `Push up: found ${placementsToMove.length} placements to move at col ${targetCol}, row <= ${targetRow}`
+          );
+          break;
+
+        case "right":
+          // Push all placements at or to the right of targetCol (in the same row) right by 1
+          // Sort by col descending so we move right-most first
+          placements
+            .filter((p) => p.col >= targetCol && p.row === targetRow)
+            .sort((a, b) => b.col - a.col)
+            .forEach((p) => {
+              placementsToMove.push({
+                placement: p,
+                newRow: p.row,
+                newCol: p.col + 1,
+              });
+            });
+          log.debug(
+            `Push right: found ${placementsToMove.length} placements to move at row ${targetRow}, col >= ${targetCol}`
+          );
+          break;
+
+        case "left":
+          // Push all placements at or to the left of targetCol (in the same row) left by 1
+          // Sort by col ascending so we move left-most first
+          placements
+            .filter((p) => p.col <= targetCol && p.row === targetRow)
+            .sort((a, b) => a.col - b.col)
+            .forEach((p) => {
+              placementsToMove.push({
+                placement: p,
+                newRow: p.row,
+                newCol: p.col - 1,
+              });
+            });
+          log.debug(
+            `Push left: found ${placementsToMove.length} placements to move at row ${targetRow}, col <= ${targetCol}`
+          );
+          break;
+      }
+
+      // Handle wrap option - wrap to next row/col instead of pushing off edge
+      if (wrap) {
+        placementsToMove.forEach((item) => {
+          if (item.newRow < 0) {
+            item.newRow = canvas.dimensions.rows - 1;
+            item.newCol = item.newCol - 1;
+          } else if (item.newRow >= canvas.dimensions.rows) {
+            item.newRow = 0;
+            item.newCol = item.newCol + 1;
+          } else if (item.newCol < 0) {
+            item.newCol = canvas.dimensions.cols - 1;
+            item.newRow = item.newRow - 1;
+          } else if (item.newCol >= canvas.dimensions.cols) {
+            item.newCol = 0;
+            item.newRow = item.newRow + 1;
+          }
+        });
+      }
+
+      // Handle closeLast option - remove the last placement instead of expanding
+      if (closeLast && placementsToMove.length > 0) {
+        // Find the placement that would be pushed off the edge
+        const lastPlacement = placementsToMove.find(
+          (item) =>
+            item.newRow < 0 ||
+            item.newRow >= canvas.dimensions.rows ||
+            item.newCol < 0 ||
+            item.newCol >= canvas.dimensions.cols
+        );
+
+        if (lastPlacement) {
+          await this.removePlacement(lastPlacement.placement.id);
+          // Remove from the move list
+          const idx = placementsToMove.indexOf(lastPlacement);
+          if (idx !== -1) placementsToMove.splice(idx, 1);
+        }
+      }
+
+      // Check if we need to expand the canvas
+      const needsExpansion = placementsToMove.some(
+        (item) =>
+          item.newRow >= canvas.dimensions.rows ||
+          item.newCol >= canvas.dimensions.cols
+      );
+
+      if (needsExpansion && !closeLast) {
+        // Expand canvas dimensions
+        const newDimensions = {
+          rows: Math.max(
+            canvas.dimensions.rows,
+            ...placementsToMove.map((item) => item.newRow + 1)
+          ),
+          cols: Math.max(
+            canvas.dimensions.cols,
+            ...placementsToMove.map((item) => item.newCol + 1)
+          ),
+        };
+
+        await this.updateCanvas(canvasId, { dimensions: newDimensions });
+        expandedCanvas = true;
+      }
+
+      // Filter out any placements that would go to invalid positions
+      const validMoves = placementsToMove.filter(
+        (item) => item.newRow >= 0 && item.newCol >= 0
+      );
+
+      // Move all placements
+      const movePromises = validMoves.map((item) =>
+        this.movePlacement(item.placement.id, item.newRow, item.newCol)
+      );
+
+      const moved = await Promise.all(movePromises);
+      movedPlacements.push(...moved);
+
+      log.debug(`Pushed ${movedPlacements.length} placements ${direction}`);
+
+      this._emit("placementsPushed", {
+        canvasId,
+        direction,
+        movedPlacements,
+        expandedCanvas,
+      });
+
+      return { movedPlacements, expandedCanvas };
+    } catch (error) {
+      this._emit("error", { operation: "pushPlacements", error });
+      throw error;
+    }
+  }
+
   // ===========================================================================
   // LAYOUT MODE OPERATIONS
   // ===========================================================================

@@ -643,23 +643,60 @@ export function CanvasGrid({
             // Handle push actions with modifiers
             // Per spec: Shift = wrap to next row, Ctrl = close last view
             if (dropData.action === 'push') {
-                const { direction, modifiers } = dropData;
-                log.debug(`Push ${direction} with modifiers:`, modifiers);
+                const { direction, modifiers = {} } = dropData;
+                log.debug(`Push ${direction} at [${row}, ${col}] with modifiers:`, modifiers);
 
-                // TODO: Implement push behavior in CanvasManager
-                // - Normal push: auto-expand canvas, never close views
-                // - Shift + push: wrap to next row (respects flow direction)
-                // - Ctrl + push: close last view (with undo available)
+                // Calculate the actual insert position based on push direction
+                // When dropping on PUSH_DOWN zone of cell [1,0], insert at [2,0] (below)
+                // When dropping on PUSH_RIGHT zone of cell [1,0], insert at [1,1] (right)
+                let insertRow = row;
+                let insertCol = col;
 
-                // For now, fall through to standard drop handling
-                // The view will be placed at the target position
+                switch (direction) {
+                    case 'down':
+                        insertRow = row + 1;
+                        break;
+                    case 'up':
+                        // Insert at current position, push existing up
+                        // But we need to ensure row doesn't go negative
+                        insertRow = Math.max(0, row);
+                        break;
+                    case 'right':
+                        insertCol = col + 1;
+                        break;
+                    case 'left':
+                        insertCol = Math.max(0, col);
+                        break;
+                }
+
+                // Push existing views to make room at the insert position
+                await canvasManager.pushPlacements(canvasId, insertRow, insertCol, direction, {
+                    wrap: modifiers.shift || false,
+                    closeLast: modifiers.ctrl || false,
+                });
+
+                // Update row/col to the insert position for placing the new view
+                row = insertRow;
+                col = insertCol;
+
+                // Fall through to standard drop handling to place the new view
             }
 
-            // Handle swap actions
+            // Handle swap actions - swap dragged view with existing view at target
             if (dropData.action === 'swap' && dropData.existingPlacement) {
                 log.debug('Swap action:', dropData);
-                // TODO: Implement swap in CanvasManager
-                // canvasManager.swapPlacements(sourceId, dropData.existingPlacement.id);
+
+                // Get source placement ID from dropData
+                const sourcePlacementId = dropData.sourcePlacementId;
+                const targetPlacementId = dropData.existingPlacement.id;
+
+                if (sourcePlacementId && targetPlacementId) {
+                    await canvasManager.swapPlacements(sourcePlacementId, targetPlacementId);
+                    return; // Swap complete, don't place a new view
+                }
+
+                // If no source placement (dragging from outside canvas),
+                // just replace the existing view - fall through to normal handling
             }
 
             // IMPORTANT: Check type field FIRST before checking for id

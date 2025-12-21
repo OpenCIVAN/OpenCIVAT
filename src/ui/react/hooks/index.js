@@ -108,3 +108,5 @@ export {
 } from "./useVoiceBar.js";
 
 export { useRoomIndicator } from "./useRoomIndicator.js";
+
+export { useSecondaryHeaderLogic } from "./useSecondaryHeaderLogic.js";
