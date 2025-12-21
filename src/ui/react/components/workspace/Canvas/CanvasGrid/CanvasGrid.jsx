@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { CanvasCell } from '@UI/react/components/workspace';
 import { ConnectionOverlay } from '../ConnectionOverlay';
 import { IsolationOverlay, useIsolationMode } from '@UI/react/components/workspace/Canvas/IsolationOverlay';
+import { SelectionContextMenu } from '../SelectionContextMenu';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { useViewportSize } from '@UI/react/hooks';
 import { useCanvasDimensions, RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
@@ -101,6 +102,13 @@ export function CanvasGrid({
     const [selectedCells, setSelectedCells] = useState([]);
     const [minimapExpanded, setMinimapExpanded] = useState(false);
     const [activeTool, setActiveTool] = useState('select');
+
+    // Context menu state
+    const [contextMenu, setContextMenu] = useState({
+        isOpen: false,
+        position: null,
+        cells: [],
+    });
 
     // ==========================================================================
     // CANVAS DATA HOOK
@@ -367,11 +375,39 @@ export function CanvasGrid({
                 resetViewportSize?.();
                 requestAnimationFrame(() => gridRef.current?.focus());
             }
+
+            // Ctrl+A - Select all cells with views (per spec)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                // Only if grid has focus
+                if (gridRef.current?.contains(document.activeElement)) {
+                    e.preventDefault();
+                    const cellsWithViews = (canvas?.placements || [])
+                        .filter(p => p.content?.type === 'view')
+                        .map(p => ({
+                            row: p.row,
+                            col: p.col,
+                            placement: p,
+                        }));
+                    setSelectedCells(cellsWithViews);
+                }
+            }
+
+            // Escape - Deselect all (per spec)
+            if (e.key === 'Escape') {
+                if (selectedCells.length > 0) {
+                    e.preventDefault();
+                    setSelectedCells([]);
+                }
+                // Also close context menu
+                if (contextMenu.isOpen) {
+                    setContextMenu({ isOpen: false, position: null, cells: [] });
+                }
+            }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize]);
+    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells.length, contextMenu.isOpen]);
 
     // ==========================================================================
     // CELL CLICK HANDLING
@@ -395,6 +431,75 @@ export function CanvasGrid({
             onCellClick(placement, e);
         }
     }, [renderMode, shouldTriggerIsolation, isolateCell, onCellClick]);
+
+    // ==========================================================================
+    // CONTEXT MENU HANDLERS
+    // ==========================================================================
+
+    const handleContextMenu = useCallback((e) => {
+        e.preventDefault();
+
+        // Only show context menu if there are selected cells
+        if (selectedCells.length === 0) return;
+
+        setContextMenu({
+            isOpen: true,
+            position: { x: e.clientX, y: e.clientY },
+            cells: selectedCells,
+        });
+    }, [selectedCells]);
+
+    const handleCloseContextMenu = useCallback(() => {
+        setContextMenu({ isOpen: false, position: null, cells: [] });
+    }, []);
+
+    const handleSwapCells = useCallback(() => {
+        if (selectedCells.length !== 2) return;
+        const [cell1, cell2] = selectedCells;
+
+        // Swap placements
+        if (cell1.placement && cell2.placement) {
+            canvasManager.swapPlacements?.(cell1.placement.id, cell2.placement.id);
+        }
+        setSelectedCells([]);
+    }, [selectedCells]);
+
+    const handleMergeCells = useCallback(() => {
+        if (selectedCells.length < 2) return;
+
+        // Calculate bounds of selected cells
+        const rows = selectedCells.map(c => c.row);
+        const cols = selectedCells.map(c => c.col);
+        const minRow = Math.min(...rows);
+        const maxRow = Math.max(...rows);
+        const minCol = Math.min(...cols);
+        const maxCol = Math.max(...cols);
+
+        // TODO: Implement merge via canvasManager
+        log.info(`Merge cells from [${minRow},${minCol}] to [${maxRow},${maxCol}]`);
+        setSelectedCells([]);
+    }, [selectedCells]);
+
+    const handleAlignCells = useCallback((direction) => {
+        if (selectedCells.length < 2) return;
+        // TODO: Implement alignment
+        log.info(`Align cells: ${direction}`);
+    }, [selectedCells]);
+
+    const handleCloseAllViews = useCallback(() => {
+        const viewCells = selectedCells.filter(c => c.placement?.content?.type === 'view');
+        viewCells.forEach(cell => {
+            if (cell.placement) {
+                onRemovePlacement?.(cell.placement.id);
+            }
+        });
+        setSelectedCells([]);
+    }, [selectedCells, onRemovePlacement]);
+
+    const handleDeleteAllViews = useCallback(() => {
+        // Same as close for now - could be permanent delete in future
+        handleCloseAllViews();
+    }, [handleCloseAllViews]);
 
     // ==========================================================================
     // HELPER FUNCTIONS
@@ -713,6 +818,7 @@ export function CanvasGrid({
                         ref={gridRef}
                         className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''}`}
                         tabIndex={0}
+                        onContextMenu={handleContextMenu}
                     >
                         {renderCells}
                     </div>
@@ -771,6 +877,19 @@ export function CanvasGrid({
                 connectionState={connectionState}
                 error={canvasManager.getLastError()}
                 onRetry={handleRetryConnection}
+            />
+
+            {/* Selection Context Menu */}
+            <SelectionContextMenu
+                isOpen={contextMenu.isOpen}
+                position={contextMenu.position}
+                selectedCells={contextMenu.cells}
+                onClose={handleCloseContextMenu}
+                onSwap={handleSwapCells}
+                onMerge={handleMergeCells}
+                onAlign={handleAlignCells}
+                onCloseAll={handleCloseAllViews}
+                onDeleteAll={handleDeleteAllViews}
             />
         </div>
     );
