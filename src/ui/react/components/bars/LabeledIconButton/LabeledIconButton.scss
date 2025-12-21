@@ -1,0 +1,119 @@
+/**
+ * @file LabeledIconButton.scss
+ * @description Styles for the LabeledIconButton component.
+ * Icon button with visible text label for prominent toggles.
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// BUTTON
+// =============================================================================
+
+.labeled-icon-button {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  // Default icon and label colors
+  &__icon {
+    color: $color-text-tertiary;
+    transition: color $transition-fast;
+  }
+
+  &__label {
+    font-size: 11px;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    transition: color $transition-fast;
+  }
+
+  // Hover state
+  &[data-hovered="true"] {
+    background: $color-glass-light;
+    border-color: $color-border-default;
+
+    .labeled-icon-button__icon {
+      color: $color-text-secondary;
+    }
+
+    .labeled-icon-button__label {
+      color: $color-text-primary;
+    }
+  }
+
+  // Active state
+  &--active {
+    background: rgba(var(--btn-accent-rgb, 96, 165, 250), 0.15);
+    border-color: var(--btn-accent, $color-accent-blue);
+
+    .labeled-icon-button__icon {
+      color: var(--btn-accent, $color-accent-blue);
+    }
+
+    .labeled-icon-button__label {
+      color: var(--btn-accent, $color-accent-blue);
+    }
+
+    &[data-hovered="true"] {
+      background: rgba(var(--btn-accent-rgb, 96, 165, 250), 0.2);
+    }
+  }
+
+  // Disabled state
+  &--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  // Focus visible
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4);
+  }
+}
+
+// =============================================================================
+// CSS CUSTOM PROPERTIES FOR ACCENT COLORS
+// =============================================================================
+
+// Define RGB values for common accent colors
+// These enable rgba() usage with CSS custom properties
+.labeled-icon-button {
+  // Default (blue)
+  --btn-accent-rgb: 96, 165, 250;
+
+  // Override based on accent color
+  &[style*="--btn-accent: var(--color-accent-teal)"] {
+    --btn-accent-rgb: 45, 212, 191;
+  }
+
+  &[style*="--btn-accent: var(--color-accent-amber)"] {
+    --btn-accent-rgb: 251, 191, 36;
+  }
+
+  &[style*="--btn-accent: var(--color-accent-green)"] {
+    --btn-accent-rgb: 52, 211, 153;
+  }
+
+  &[style*="--btn-accent: var(--color-accent-purple)"] {
+    --btn-accent-rgb: 192, 132, 252;
+  }
+
+  &[style*="--btn-accent: var(--color-accent-pink)"] {
+    --btn-accent-rgb: 251, 113, 133;
+  }
+
+  &[style*="--btn-accent: var(--color-accent-red)"] {
+    --btn-accent-rgb: 248, 113, 113;
+  }
+}

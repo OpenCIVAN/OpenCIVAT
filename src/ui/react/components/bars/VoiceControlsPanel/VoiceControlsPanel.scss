@@ -1,0 +1,270 @@
+/**
+ * @file VoiceControlsPanel.scss
+ * @description Styles for the VoiceControlsPanel component.
+ * Features subtle blue tint and left accent border for visual separation.
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// PANEL CONTAINER
+// =============================================================================
+
+.voice-controls-panel {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm $spacing-xs $spacing-md;
+
+  // Subtle tinted background
+  background: rgba($color-accent-blue, 0.04);
+
+  // Left accent border for visual separation
+  border-left: 2px solid rgba($color-accent-blue, 0.3);
+  border-radius: 0 $radius-md $radius-md 0;
+
+  // Extend to edge of parent (negative margin trick)
+  margin-right: -$spacing-md;
+  padding-right: $spacing-md;
+}
+
+// =============================================================================
+// BUTTON GROUP
+// =============================================================================
+
+.voice-controls-panel__buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: $color-glass-subtle;
+  border-radius: $radius-md;
+  border: 1px solid $color-border-subtle;
+}
+
+// =============================================================================
+// INDIVIDUAL BUTTONS
+// =============================================================================
+
+.voice-controls-panel__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: $radius-sm;
+  border: 1px solid transparent;
+  background: transparent;
+  color: $color-text-tertiary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  svg {
+    transition: color $transition-fast;
+  }
+
+  // Hover state
+  &[data-hovered="true"] {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+
+  // Active state (e.g., mic is on)
+  &--active {
+    background: rgba(52, 211, 153, 0.15); // Green tint
+    border-color: var(--btn-accent, $color-accent-green);
+    color: var(--btn-accent, $color-accent-green);
+
+    svg {
+      color: var(--btn-accent, $color-accent-green);
+    }
+
+    &[data-hovered="true"] {
+      background: rgba(52, 211, 153, 0.2);
+    }
+  }
+
+  // Grouped button styling (inside button group)
+  &--grouped {
+    border-radius: $radius-sm;
+  }
+
+  // Focus visible
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4);
+  }
+}
+
+// =============================================================================
+// DIVIDER
+// =============================================================================
+
+.voice-controls-panel__divider {
+  width: 1px;
+  height: 16px;
+  background: $color-border-subtle;
+  margin: 0 2px;
+}
+
+// =============================================================================
+// CHANNEL SELECTOR
+// =============================================================================
+
+.voice-controls-panel__channel-selector {
+  position: relative;
+}
+
+.voice-controls-panel__channel-trigger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  min-width: 100px;
+
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-medium;
+    border-color: $color-border-default;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4);
+  }
+}
+
+.voice-controls-panel__channel-icon {
+  color: $color-text-secondary;
+  flex-shrink: 0;
+}
+
+.voice-controls-panel__channel-info {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+}
+
+.voice-controls-panel__channel-label {
+  display: block;
+  font-size: 8px;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1px;
+}
+
+.voice-controls-panel__channel-name {
+  display: block;
+  font-size: 11px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-controls-panel__channel-chevron {
+  color: $color-text-muted;
+  flex-shrink: 0;
+  transition: transform $transition-fast;
+
+  .voice-controls-panel__channel-trigger[aria-expanded="true"] & {
+    transform: rotate(180deg);
+  }
+}
+
+// =============================================================================
+// CHANNEL DROPDOWN
+// =============================================================================
+
+.voice-controls-panel__channel-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+
+  background: $color-bg-elevated;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  padding: $spacing-xs 0;
+
+  // Scrollbar styling
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $color-border-medium;
+    border-radius: 3px;
+  }
+}
+
+.voice-controls-panel__channel-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+
+  &:hover {
+    background: $color-glass-light;
+  }
+
+  &--active {
+    background: rgba($color-accent-blue, 0.1);
+  }
+}
+
+.voice-controls-panel__channel-item-icon {
+  color: $color-text-muted;
+  flex-shrink: 0;
+}
+
+.voice-controls-panel__channel-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-controls-panel__channel-item-count {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: $color-text-muted;
+  flex-shrink: 0;
+
+  svg {
+    opacity: 0.7;
+  }
+}
+
+.voice-controls-panel__channel-item-check {
+  color: $color-accent-blue;
+  flex-shrink: 0;
+}

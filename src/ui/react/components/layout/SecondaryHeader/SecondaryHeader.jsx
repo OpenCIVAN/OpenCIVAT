@@ -1,135 +1,154 @@
 /**
  * @file SecondaryHeader.jsx
  * @description Secondary header bar with workspace context and navigation.
- * Height: 44px | z-index: 90
+ * Height: 48px | z-index: 90
+ *
+ * This component manages its own internal zones rather than receiving
+ * zone content from the parent. This makes it self-contained and easier
+ * to reason about.
  *
  * Layout:
- * - Left: Workspace Selector, Room + Presence
- * - Center/Right: Flow Direction, Edit Tools (contextual), Canvas Nav
+ * ┌─────────────────┬──────────────────────────────────────┬─────────────────┐
+ * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE    │
+ * │  Workspace      │  NavBlock | ActiveView | ViewMode    │  Room+Presence  │
+ * └─────────────────┴──────────────────────────────────────┴─────────────────┘
  *
  * @example
  * <SecondaryHeader
+ *   // Workspace props
  *   workspace={currentWorkspace}
+ *   workspaces={workspaces}
+ *   onWorkspaceChange={handleWorkspaceChange}
+ *   // Navigation props
+ *   canvasPosition={{ col: 0, row: 0 }}
+ *   onNavigate={handleNavigate}
+ *   // View props
+ *   activeView={currentView}
+ *   viewMode="normal"
+ *   // Room props
  *   room={currentRoom}
  *   members={roomMembers}
- *   isEditMode={isEditMode}
  * />
  */
 
-import React from 'react';
-import { WorkspaceSelector } from './components/WorkspaceSelector';
-import { RoomPresenceIndicator } from './components/RoomPresenceIndicator';
-import { FlowDirectionToggle } from './components/FlowDirectionToggle';
-import { EditToolbar } from './components/EditToolbar';
-import { CanvasNavigation } from './components/CanvasNavigation';
+import React, { memo } from 'react';
+import { LayoutGrid, Maximize2, Layers } from 'lucide-react';
+
+// Shared bar components (from common bars/ folder)
+import { StackedNavBlock, ActiveViewSelector, SegmentedToggle, WorkspaceSelector, RoomPresenceIndicator } from '@UI/react/components/bars';
 
 import './SecondaryHeader.scss';
 
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const VIEW_MODE_OPTIONS = [
+    { value: 'normal', icon: LayoutGrid, label: 'Normal View', accent: 'var(--color-accent-blue)' },
+    { value: 'isolation', icon: Maximize2, label: 'Isolation Mode', accent: 'var(--color-accent-amber)' },
+    { value: 'subset', icon: Layers, label: 'Subset Mode', accent: 'var(--color-accent-purple)' },
+];
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
 /**
  * Secondary Header bar component.
- *
- * @param {Object} props - Component props
- * @param {Object} [props.workspace] - Current workspace
- * @param {Array} [props.workspaces] - List of available workspaces
- * @param {Function} [props.onWorkspaceChange] - Callback when workspace is selected
- * @param {Function} [props.onCreateWorkspace] - Callback to create new workspace
- * @param {Object} [props.room] - Current room
- * @param {Array} [props.members] - Room members
- * @param {Function} [props.onOpenRoomsPanel] - Callback to open rooms panel
- * @param {string} [props.flowDirection] - Flow direction ('row' or 'column')
- * @param {Function} [props.onFlowDirectionChange] - Callback when flow direction changes
- * @param {boolean} [props.isEditMode] - Whether edit mode is active
- * @param {string} [props.activeTool] - Currently active edit tool
- * @param {Function} [props.onToolChange] - Callback when tool is selected
- * @param {Function} [props.onToggleEditMode] - Callback to toggle edit mode
- * @param {boolean} [props.canUndo] - Whether undo is available
- * @param {boolean} [props.canRedo] - Whether redo is available
- * @param {Function} [props.onUndo] - Undo callback
- * @param {Function} [props.onRedo] - Redo callback
- * @param {Object} [props.canvasPosition] - Current canvas position {col, row}
- * @param {boolean} [props.isAtOrigin] - Whether at origin position
- * @param {Function} [props.onNavigateHome] - Callback to navigate home
- * @param {Function} [props.onNavigateDirection] - Callback to navigate direction
- * @param {Function} [props.onOpenBookmarks] - Callback to open bookmarks
+ * Manages its own internal zones for workspace, navigation, and room context.
  */
-export function SecondaryHeader({
-    // Workspace
-    workspace = null,
+function SecondaryHeader({
+    // Workspace props
+    workspace,
     workspaces = [],
     onWorkspaceChange,
     onCreateWorkspace,
-    // Room & Presence
-    room = null,
-    members = [],
-    onOpenRoomsPanel,
-    // Flow Direction
-    flowDirection = 'row',
-    onFlowDirectionChange,
-    // Edit Mode
-    isEditMode = false,
-    activeTool = 'select',
-    onToolChange,
-    onToggleEditMode,
-    canUndo = false,
-    canRedo = false,
-    onUndo,
-    onRedo,
-    // Canvas Navigation
+
+    // Navigation props
     canvasPosition = { col: 0, row: 0 },
     isAtOrigin = true,
-    onNavigateHome,
-    onNavigateDirection,
-    onOpenBookmarks,
+    onNavigate,
+    onHome,
+    onBookmark,
+
+    // View props
+    activeView,
+    onCanvasViews = [],
+    availableViews = [],
+    onSelectView,
+    onPlaceView,
+    viewMode = 'normal',
+    onViewModeChange,
+
+    // Room props
+    room,
+    members = [],
+    availableRooms = [],
+    onRoomChange,
+    onOpenRoomsPanel,
+    onCreateRoom,
+
+    className = '',
 }) {
     return (
-        <div className="secondary-header" role="toolbar" aria-label="Workspace toolbar">
-            {/* Left Zone */}
-            <div className="secondary-header__left">
+        <div className={`secondary-header ${className}`}>
+            {/* ================================================================= */}
+            {/* LEFT ZONE: Workspace Selector */}
+            {/* ================================================================= */}
+            <div className="secondary-header__zone secondary-header__zone--left">
                 <WorkspaceSelector
                     workspace={workspace}
                     workspaces={workspaces}
                     onSelect={onWorkspaceChange}
                     onCreate={onCreateWorkspace}
                 />
-                <RoomPresenceIndicator
-                    room={room}
-                    members={members}
-                    onClick={onOpenRoomsPanel}
+            </div>
+
+            {/* ================================================================= */}
+            {/* CENTER ZONE: Navigation + View Context */}
+            {/* ================================================================= */}
+            <div className="secondary-header__zone secondary-header__zone--center">
+                <StackedNavBlock
+                    position={canvasPosition}
+                    isAtOrigin={isAtOrigin}
+                    onNavigate={onNavigate}
+                    onHome={onHome}
+                    onBookmark={onBookmark}
+                />
+
+                <div className="secondary-header__divider" />
+
+                <ActiveViewSelector
+                    activeView={activeView}
+                    onCanvasViews={onCanvasViews}
+                    availableViews={availableViews}
+                    onSelect={onSelectView}
+                    onPlace={onPlaceView}
+                />
+
+                <SegmentedToggle
+                    options={VIEW_MODE_OPTIONS}
+                    value={viewMode}
+                    onChange={onViewModeChange}
                 />
             </div>
 
-            {/* Right Zone */}
-            <div className="secondary-header__right">
-                <FlowDirectionToggle
-                    direction={flowDirection}
-                    onChange={onFlowDirectionChange}
-                />
-
-                <div className="secondary-header__divider" />
-
-                <EditToolbar
-                    isEditMode={isEditMode}
-                    activeTool={activeTool}
-                    onToolChange={onToolChange}
-                    onToggleEditMode={onToggleEditMode}
-                    canUndo={canUndo}
-                    canRedo={canRedo}
-                    onUndo={onUndo}
-                    onRedo={onRedo}
-                />
-
-                <div className="secondary-header__divider" />
-
-                <CanvasNavigation
-                    position={canvasPosition}
-                    isAtOrigin={isAtOrigin}
-                    onHome={onNavigateHome}
-                    onMove={onNavigateDirection}
-                    onBookmark={onOpenBookmarks}
+            {/* ================================================================= */}
+            {/* RIGHT ZONE: Room + Presence */}
+            {/* ================================================================= */}
+            <div className="secondary-header__zone secondary-header__zone--right">
+                <RoomPresenceIndicator
+                    room={room}
+                    members={members}
+                    availableRooms={availableRooms}
+                    onRoomChange={onRoomChange}
+                    onClick={onOpenRoomsPanel}
+                    onCreateRoom={onCreateRoom}
                 />
             </div>
         </div>
     );
 }
 
-export default SecondaryHeader;
+export default memo(SecondaryHeader);
+export { SecondaryHeader };

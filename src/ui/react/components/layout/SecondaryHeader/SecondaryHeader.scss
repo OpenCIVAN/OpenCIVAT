@@ -1,7 +1,13 @@
 /**
  * @file SecondaryHeader.scss
- * @description Styles for secondary header bar.
- * Uses BEM naming convention and design tokens.
+ * @description Styles for secondary header bar with v6 layout.
+ * 
+ * NEW LAYOUT:
+ * - Left: Workspace Selector (tinted, min-width synced with left panel)
+ * - Center: StackedNavBlock + ActiveViewSelector + ViewModeToggle
+ * - Right: Room + Presence (min-width synced with right panel)
+ * 
+ * Height increased from 44px to 48px to accommodate stacked navigation block.
  */
 
 @use "theme" as *;
@@ -11,7 +17,8 @@
 // =============================================================================
 
 .secondary-header {
-  height: 44px;
+  // Increased height to accommodate stacked navigation block
+  height: 48px;
   background: $color-bg-secondary;
   border-bottom: 1px solid $color-border-default;
   display: flex;
@@ -21,23 +28,92 @@
   z-index: 90;
   position: relative;
   flex-shrink: 0;
+}
 
-  &__left {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
+// =============================================================================
+// LEFT ZONE: Workspace Selector
+// =============================================================================
+
+.secondary-header__left {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+
+  // Min width synced with left panel (when collapsed, this is the min)
+  min-width: 180px;
+}
+
+// =============================================================================
+// CENTER ZONE: Navigation + View Context
+// =============================================================================
+
+.secondary-header__center {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+
+  // Center content horizontally
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+
+  // Ensure content doesn't overlap with left/right zones
+  max-width: calc(100% - 400px);
+}
+
+// =============================================================================
+// RIGHT ZONE: Room + Presence
+// =============================================================================
+
+.secondary-header__right {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  justify-content: flex-end;
+
+  // Min width synced with right panel (when collapsed, this is the min)
+  min-width: 180px;
+}
+
+// =============================================================================
+// DIVIDER
+// =============================================================================
+
+.secondary-header__divider {
+  width: 1px;
+  height: 24px;
+  background: $color-border-subtle;
+  margin: 0 $spacing-xs;
+  flex-shrink: 0;
+}
+
+// =============================================================================
+// RESPONSIVE BEHAVIOR
+// =============================================================================
+
+// On narrower screens, allow center to wrap or reduce gaps
+@media (max-width: 1200px) {
+  .secondary-header__center {
+    gap: $spacing-xs;
+    max-width: calc(100% - 360px);
+  }
+}
+
+// On very narrow screens, hide some center elements
+@media (max-width: 900px) {
+  .secondary-header__center {
+    // Allow natural positioning instead of absolute centering
+    position: static;
+    transform: none;
+    flex: 1;
+    justify-content: center;
+    max-width: none;
+    overflow: hidden;
   }
 
-  &__right {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-
-  &__divider {
-    width: 1px;
-    height: 24px;
-    background: $color-border-subtle;
-    margin: 0 $spacing-xs;
+  .secondary-header__left,
+  .secondary-header__right {
+    min-width: 140px;
+    flex-shrink: 0;
   }
 }

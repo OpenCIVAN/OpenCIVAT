@@ -1,130 +1,222 @@
 /**
  * @file SecondaryFooter.jsx
- * @description Secondary footer bar with instance context and voice controls.
+ * @description Secondary footer bar with editing tools and voice controls.
  * Height: 36px | z-index: 90
  *
+ * This component manages its own internal zones rather than receiving
+ * zone content from the parent.
+ *
  * Layout:
- * - Left: Popout buttons (Navigator, Scratchpad)
- * - Center: Instance selector, View mode, Canvas size
- * - Right: Voice quick controls
+ * ┌─────────────────┬──────────────────────────────────────┬─────────────────────┐
+ * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE        │
+ * │  Nav/Scratchpad │  Flow | EditTools | Undo | Size      │  Voice (tinted)     │
+ * └─────────────────┴──────────────────────────────────────┴─────────────────────┘
  *
  * @example
  * <SecondaryFooter
- *   activeInstance={instance}
+ *   navigatorOpen={false}
+ *   flowDirection="row"
+ *   isEditMode={true}
+ *   activeTool="select"
  *   voiceState={voiceState}
- *   onToggleMute={handleMute}
  * />
  */
 
-import React from 'react';
-import { PopoutButtons } from './components/PopoutButtons';
-import { InstanceSelector } from './components/InstanceSelector';
-import { LayoutModeToggle } from '@UI/react/components/controls/LayoutModeToggle';
-import { CanvasSizeDisplay } from './components/CanvasSizeDisplay';
-import { VoiceQuickControls } from './components/VoiceQuickControls';
+import React, { useCallback, memo } from 'react';
+import {
+    Map, StickyNote,
+    ArrowRight, ArrowDown,
+    MousePointer2, Hand, Combine, Pencil,
+    Undo2, Redo2,
+} from 'lucide-react';
+
+// Shared bar components (from common bars/ folder)
+import {
+    CanvasSizeDisplay,
+    LabeledIconButton,
+    SegmentedToggle,
+    VoiceControlsPanel
+} from '@UI/react/components/bars';
+
+// Common UI components
+import { ButtonGroup, IconButton } from '@UI/react/components/common/Button';
 
 import './SecondaryFooter.scss';
 
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const FLOW_OPTIONS = [
+    { value: 'row', icon: ArrowRight, label: 'Row Flow', accent: 'var(--color-accent-blue)' },
+    { value: 'column', icon: ArrowDown, label: 'Column Flow', accent: 'var(--color-accent-blue)' },
+];
+
+const EDIT_TOOLS = [
+    { id: 'select', icon: MousePointer2, label: 'Select', accent: 'var(--color-accent-blue)' },
+    { id: 'pan', icon: Hand, label: 'Pan', accent: 'var(--color-accent-teal)' },
+    { id: 'merge', icon: Combine, label: 'Merge Cells', accent: 'var(--color-accent-purple)' },
+];
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
 /**
  * Secondary Footer bar component.
- *
- * @param {Object} props - Component props
- * @param {Array} [props.openPopouts] - List of open popout IDs
- * @param {Function} [props.onTogglePopout] - Callback to toggle popout
- * @param {Object} [props.activeInstance] - Currently active instance
- * @param {Array} [props.onCanvasViews] - Views currently on canvas
- * @param {Array} [props.availableViews] - Views available to place
- * @param {Function} [props.onSelectInstance] - Callback when instance is selected
- * @param {Function} [props.onPlaceView] - Callback to place a view
- * @param {string} [props.viewMode] - Current view mode ('normal', 'isolation', 'subset')
- * @param {Function} [props.onViewModeChange] - Callback when view mode changes
- * @param {Object} [props.canvasSize] - Canvas dimensions {cols, rows}
- * @param {Function} [props.onCanvasSizeChange] - Callback when canvas size changes
- * @param {Object} [props.voiceState] - Voice state object
- * @param {Array} [props.voiceChannels] - Available voice channels
- * @param {Function} [props.onToggleMute] - Callback to toggle mute
- * @param {Function} [props.onToggleDeafen] - Callback to toggle deafen
- * @param {Function} [props.onJoinLeaveVoice] - Callback to join/leave voice
- * @param {Function} [props.onChangeVoiceChannel] - Callback to change voice channel
- * @param {Function} [props.onOpenVoiceSettings] - Callback to open voice settings
+ * Manages its own internal zones for popouts, edit tools, and voice controls.
  */
-export function SecondaryFooter({
-    // Popouts
-    openPopouts = [],
-    onTogglePopout,
-    // Instance
-    activeInstance = null,
-    onCanvasViews = [],
-    availableViews = [],
-    onSelectInstance,
-    onPlaceView,
-    // View Mode
-    viewMode = 'normal',
-    onViewModeChange,
-    // Canvas Size
-    canvasSize = { cols: 2, rows: 2 },
+function SecondaryFooter({
+    // Popout props
+    navigatorOpen = false,
+    scratchpadOpen = false,
+    onToggleNavigator,
+    onToggleScratchpad,
+
+    // Flow/Edit props
+    flowDirection = 'row',
+    onFlowDirectionChange,
+    isEditMode = false,
+    activeTool = 'select',
+    onToolChange,
+    onToggleEditMode,
+    canUndo = false,
+    canRedo = false,
+    onUndo,
+    onRedo,
+
+    // Canvas props
+    canvasSize = { cols: 3, rows: 3 },
     onCanvasSizeChange,
-    // Voice
-    voiceState = {},
+
+    // Voice props
+    isMuted = false,
+    isDeafened = false,
+    isInChannel = false,
+    currentChannel,
     voiceChannels = [],
     onToggleMute,
     onToggleDeafen,
     onJoinLeaveVoice,
     onChangeVoiceChannel,
     onOpenVoiceSettings,
+
+    className = '',
 }) {
+    // Handle tool selection - auto-enable edit mode
+    const handleToolChange = useCallback((toolId) => {
+        onToolChange?.(toolId);
+        if (!isEditMode) {
+            onToggleEditMode?.();
+        }
+    }, [onToolChange, isEditMode, onToggleEditMode]);
+
     return (
-        <div className="secondary-footer" role="toolbar" aria-label="Instance toolbar">
-            {/* Left Zone - Popouts */}
-            <div className="secondary-footer__left">
-                <PopoutButtons
-                    openPopouts={openPopouts}
-                    onToggle={onTogglePopout}
+        <div className={`secondary-footer ${className}`}>
+            {/* ================================================================= */}
+            {/* LEFT ZONE: Popout Buttons */}
+            {/* ================================================================= */}
+            <div className="secondary-footer__zone secondary-footer__zone--left">
+                <LabeledIconButton
+                    icon={Map}
+                    label="Navigator"
+                    active={navigatorOpen}
+                    accent="var(--color-accent-teal)"
+                    onClick={onToggleNavigator}
+                />
+                <LabeledIconButton
+                    icon={StickyNote}
+                    label="Scratchpad"
+                    active={scratchpadOpen}
+                    accent="var(--color-accent-amber)"
+                    onClick={onToggleScratchpad}
                 />
             </div>
 
-            {/* Center Zone */}
-            <div className="secondary-footer__center">
-                <InstanceSelector
-                    activeInstance={activeInstance}
-                    onCanvasViews={onCanvasViews}
-                    availableViews={availableViews}
-                    onSelectInstance={onSelectInstance}
-                    onPlaceView={onPlaceView}
+            {/* ================================================================= */}
+            {/* CENTER ZONE: Flow + Edit Tools + Undo/Redo + Canvas Size */}
+            {/* ================================================================= */}
+            <div className="secondary-footer__zone secondary-footer__zone--center">
+                {/* Flow Direction */}
+                <SegmentedToggle
+                    options={FLOW_OPTIONS}
+                    value={flowDirection}
+                    onChange={onFlowDirectionChange}
                 />
 
                 <div className="secondary-footer__divider" />
 
-                <LayoutModeToggle
-                    mode={viewMode}
-                    onChange={onViewModeChange}
-                />
+                {/* Edit Tools */}
+                <ButtonGroup gap="sm">
+                    {EDIT_TOOLS.map((tool) => (
+                        <IconButton
+                            key={tool.id}
+                            icon={tool.icon}
+                            label={tool.label}
+                            active={isEditMode && activeTool === tool.id}
+                            size="sm"
+                            onClick={() => handleToolChange(tool.id)}
+                        />
+                    ))}
+                    <div className="secondary-footer__divider secondary-footer__divider--small" />
+                    <IconButton
+                        icon={Pencil}
+                        label="Toggle Edit Mode"
+                        active={isEditMode}
+                        size="sm"
+                        onClick={onToggleEditMode}
+                    />
+                </ButtonGroup>
 
                 <div className="secondary-footer__divider" />
 
+                {/* Undo/Redo */}
+                <ButtonGroup gap="sm">
+                    <IconButton
+                        icon={Undo2}
+                        label="Undo"
+                        size="sm"
+                        disabled={!canUndo}
+                        onClick={onUndo}
+                    />
+                    <IconButton
+                        icon={Redo2}
+                        label="Redo"
+                        size="sm"
+                        disabled={!canRedo}
+                        onClick={onRedo}
+                    />
+                </ButtonGroup>
+
+                <div className="secondary-footer__divider" />
+
+                {/* Canvas Size */}
                 <CanvasSizeDisplay
-                    size={canvasSize}
-                    onChange={onCanvasSizeChange}
+                    cols={canvasSize.cols}
+                    rows={canvasSize.rows}
+                    onClick={onCanvasSizeChange}
                 />
             </div>
 
-            {/* Right Zone - Voice */}
-            <div className="secondary-footer__right">
-                <VoiceQuickControls
-                    isMuted={voiceState.isMuted}
-                    isDeafened={voiceState.isDeafened}
-                    isInChannel={voiceState.isInChannel}
-                    currentChannel={voiceState.currentChannel}
-                    channels={voiceChannels}
-                    onToggleMute={onToggleMute}
-                    onToggleDeafen={onToggleDeafen}
-                    onJoinLeave={onJoinLeaveVoice}
-                    onChangeChannel={onChangeVoiceChannel}
-                    onOpenSettings={onOpenVoiceSettings}
-                />
-            </div>
+            {/* ================================================================= */}
+            {/* RIGHT ZONE: Voice Controls (tinted panel) */}
+            {/* ================================================================= */}
+            <VoiceControlsPanel
+                isMuted={isMuted}
+                isDeafened={isDeafened}
+                isInChannel={isInChannel}
+                currentChannel={currentChannel}
+                channels={voiceChannels}
+                onToggleMute={onToggleMute}
+                onToggleDeafen={onToggleDeafen}
+                onJoinLeave={onJoinLeaveVoice}
+                onChangeChannel={onChangeVoiceChannel}
+                onOpenSettings={onOpenVoiceSettings}
+                className="secondary-footer__zone secondary-footer__zone--right"
+            />
         </div>
     );
 }
 
-export default SecondaryFooter;
+export default memo(SecondaryFooter);
+export { SecondaryFooter };

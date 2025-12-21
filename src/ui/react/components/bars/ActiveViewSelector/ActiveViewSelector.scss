@@ -1,0 +1,283 @@
+/**
+ * @file ActiveViewSelector.scss
+ * @description Styles for the ActiveViewSelector component.
+ * Compact labeled dropdown with colored dot indicator.
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// CONTAINER
+// =============================================================================
+
+.active-view-selector {
+  position: relative;
+}
+
+// =============================================================================
+// TRIGGER BUTTON
+// =============================================================================
+
+.active-view-selector__trigger {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  min-width: 120px;
+
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-medium;
+    border-color: $color-border-default;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4);
+  }
+
+  // Empty state (no active view)
+  &--empty {
+    .active-view-selector__dot {
+      border: 1px dashed $color-border-default;
+    }
+
+    .active-view-selector__name {
+      color: $color-text-muted;
+      font-style: italic;
+    }
+  }
+}
+
+// =============================================================================
+// TRIGGER CONTENTS
+// =============================================================================
+
+.active-view-selector__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px var(--view-color, $color-accent-blue);
+}
+
+.active-view-selector__info {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+}
+
+.active-view-selector__label {
+  display: block;
+  font-size: 8px;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1px;
+}
+
+.active-view-selector__name {
+  display: block;
+  font-size: 11px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-view-selector__chevron {
+  color: $color-text-muted;
+  flex-shrink: 0;
+  transition: transform $transition-fast;
+
+  .active-view-selector__trigger[aria-expanded="true"] & {
+    transform: rotate(180deg);
+  }
+}
+
+// =============================================================================
+// DROPDOWN
+// =============================================================================
+
+.active-view-selector__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+
+  background: $color-bg-elevated;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+
+  // Scrollbar styling
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $color-border-medium;
+    border-radius: 3px;
+
+    &:hover {
+      background: $color-border-strong;
+    }
+  }
+}
+
+// =============================================================================
+// SEARCH
+// =============================================================================
+
+.active-view-selector__search {
+  padding: $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.active-view-selector__search-input {
+  width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  outline: none;
+  transition: all $transition-fast;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:focus {
+    border-color: $color-accent-blue;
+    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+  }
+}
+
+// =============================================================================
+// SECTIONS
+// =============================================================================
+
+.active-view-selector__section {
+  padding: $spacing-xs 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid $color-border-subtle;
+  }
+}
+
+.active-view-selector__section-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  font-size: 9px;
+  font-weight: $font-weight-medium;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  svg {
+    opacity: 0.6;
+  }
+}
+
+// =============================================================================
+// ITEMS
+// =============================================================================
+
+.active-view-selector__item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+
+  &:hover {
+    background: $color-glass-light;
+  }
+
+  &--active {
+    background: rgba(var(--view-color-rgb, 96, 165, 250), 0.1);
+  }
+
+  &--available {
+    color: $color-text-secondary;
+
+    &:hover {
+      color: $color-text-primary;
+    }
+  }
+}
+
+.active-view-selector__item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.active-view-selector__item-icon {
+  color: $color-text-muted;
+  flex-shrink: 0;
+}
+
+.active-view-selector__item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-view-selector__item-position {
+  font-family: $font-family-mono;
+  font-size: 10px;
+  color: $color-text-muted;
+  flex-shrink: 0;
+}
+
+.active-view-selector__item-type {
+  font-size: 10px;
+  color: $color-text-muted;
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.active-view-selector__item-check {
+  color: var(--view-color, $color-accent-blue);
+  flex-shrink: 0;
+}
+
+// =============================================================================
+// EMPTY STATE
+// =============================================================================
+
+.active-view-selector__empty {
+  padding: $spacing-lg;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-text-muted;
+}
