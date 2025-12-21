@@ -1,61 +1,45 @@
 // src/ui/react/components/panels/LeftPanel/tabs/LayoutTab/LayoutTab.jsx
-// Layout tab - simplified without subtabs
+// Layout tab - simplified without Grid/Flow toggle
 //
-// Shows canvas layout controls directly:
-// - Layout Mode (Grid/Flow)
-// - New View Size
-// - Quick Layouts
-// - Canvas Size
-// - Canvas Tools
+// Both Grid and Flow modes are always accessible:
+// - Grid: Manual placement by clicking cells
+// - Flow: Auto-arrangement when using "+ New View"
 //
-// NOTE: This is a standalone version that doesn't require LayoutPanelContext.
-// It manages its own state and syncs with canvasManager directly.
+// User just picks flow direction (Row-first or Column-first)
+// Canvas Navigator is permanently docked at bottom
 
-import React, { memo, useState, useCallback, useEffect } from 'react';
+import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
 import {
     LayoutGrid,
     Grid3X3,
-    Rows3,
-    Columns3,
     PlusCircle,
     MousePointer2,
     Hand,
     Merge,
     Maximize2,
+    Columns3,
+    Rows3,
     ArrowRight,
     ArrowDown,
     WifiOff,
     Loader2,
-    AlertCircle,
     Minus,
     Plus,
 } from 'lucide-react';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
-// Canvas size persistence - try canvasState first, fall back to viewportState
 import { loadCanvasSize, saveCanvasSize } from '@UI/react/hooks/canvasState.js';
-// Alternative: import { loadCanvasSize, saveCanvasSize } from '@UI/react/hooks/viewportState.js';
-
+import {
+    CanvasNavigator,
+    useLayoutPanelContext,
+    useLayoutPanel,
+    FLOW_DIRECTIONS,
+    TOOLS,
+} from '@UI/react/components/panels/LayoutPanel';
 import './LayoutTab.scss';
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
-const LAYOUT_MODES = {
-    GRID: 'grid',
-    FLOW: 'flow',
-};
-
-const FLOW_DIRECTIONS = {
-    ROW: 'row',
-    COLUMN: 'column',
-};
-
-const TOOLS = {
-    SELECT: 'select',
-    PAN: 'pan',
-    MERGE: 'merge',
-};
 
 const SPAWN_SIZES = [
     { id: '1x1', label: '1×1', rows: 1, cols: 1 },
@@ -65,16 +49,19 @@ const SPAWN_SIZES = [
 ];
 
 const QUICK_LAYOUTS = [
-    { id: 'single', label: 'Single', icon: Maximize2 },
-    { id: 'side-by-side', label: 'Side by Side', icon: Columns3 },
-    { id: 'stacked', label: 'Stacked', icon: Rows3 },
-    { id: '2x2', label: '2×2 Grid', icon: Grid3X3 },
+    { id: 'single', label: 'Single', icon: Maximize2, rows: 1, cols: 1 },
+    { id: 'side-by-side', label: 'Side by Side', icon: Columns3, rows: 1, cols: 2 },
+    { id: 'stacked', label: 'Stacked', icon: Rows3, rows: 2, cols: 1 },
+    { id: '2x2', label: '2×2 Grid', icon: Grid3X3, rows: 2, cols: 2 },
 ];
 
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
 
+/**
+ * Spawn Size Picker - Select default size for new views
+ */
 function SpawnSizePicker({ value, onChange }) {
     return (
         <div className="layout-tab__spawn-sizes">
@@ -101,30 +88,22 @@ function SpawnSizePicker({ value, onChange }) {
     );
 }
 
-function QuickLayoutButton({ layout, onClick }) {
-    const Icon = layout.icon;
-    return (
-        <button
-            className="layout-tab__quick-btn"
-            onClick={() => onClick?.(layout.id)}
-            title={layout.label}
-        >
-            <Icon size={16} />
-            <span>{layout.label}</span>
-        </button>
-    );
-}
-
+/**
+ * Canvas Size Control - Rows and columns steppers
+ */
 function CanvasSizeControl({ rows, cols, onChangeRows, onChangeCols }) {
     return (
         <div className="layout-tab__canvas-size">
             <div className="layout-tab__size-control">
                 <span className="layout-tab__size-label">Rows</span>
                 <div className="layout-tab__size-stepper">
-                    <button onClick={() => onChangeRows?.(Math.max(1, rows - 1))} disabled={rows <= 1}>
+                    <button
+                        onClick={() => onChangeRows?.(Math.max(1, rows - 1))}
+                        disabled={rows <= 1}
+                    >
                         <Minus size={12} />
                     </button>
-                    <span>{rows}</span>
+                    <span className="layout-tab__size-value">{rows}</span>
                     <button onClick={() => onChangeRows?.(rows + 1)}>
                         <Plus size={12} />
                     </button>
@@ -133,15 +112,55 @@ function CanvasSizeControl({ rows, cols, onChangeRows, onChangeCols }) {
             <div className="layout-tab__size-control">
                 <span className="layout-tab__size-label">Cols</span>
                 <div className="layout-tab__size-stepper">
-                    <button onClick={() => onChangeCols?.(Math.max(1, cols - 1))} disabled={cols <= 1}>
+                    <button
+                        onClick={() => onChangeCols?.(Math.max(1, cols - 1))}
+                        disabled={cols <= 1}
+                    >
                         <Minus size={12} />
                     </button>
-                    <span>{cols}</span>
+                    <span className="layout-tab__size-value">{cols}</span>
                     <button onClick={() => onChangeCols?.(cols + 1)}>
                         <Plus size={12} />
                     </button>
                 </div>
             </div>
+        </div>
+    );
+}
+
+/**
+ * Canvas Tools - Select, Pan, Merge
+ */
+function CanvasTools({ tool, setTool }) {
+    return (
+        <div className="layout-tab__tools">
+            <button
+                className={`layout-tab__tool-btn ${tool === TOOLS.SELECT ? 'layout-tab__tool-btn--active' : ''}`}
+                onClick={() => setTool?.(TOOLS.SELECT)}
+                title="Select - Click to select cells"
+                data-color="blue"
+            >
+                <MousePointer2 size={14} />
+                <span>Select</span>
+            </button>
+            <button
+                className={`layout-tab__tool-btn ${tool === TOOLS.PAN ? 'layout-tab__tool-btn--active' : ''}`}
+                onClick={() => setTool?.(TOOLS.PAN)}
+                title="Pan - Drag to pan viewport"
+                data-color="teal"
+            >
+                <Hand size={14} />
+                <span>Pan</span>
+            </button>
+            <button
+                className={`layout-tab__tool-btn ${tool === TOOLS.MERGE ? 'layout-tab__tool-btn--active' : ''}`}
+                onClick={() => setTool?.(TOOLS.MERGE)}
+                title="Merge - Select cells to merge/unmerge"
+                data-color="purple"
+            >
+                <Merge size={14} />
+                <span>Merge</span>
+            </button>
         </div>
     );
 }
@@ -155,11 +174,23 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
     className = '',
 }) {
     // =========================================================================
-    // STATE - Managed locally, synced with canvasManager
+    // GET LAYOUT PANEL CONTEXT
+    // =========================================================================
+
+    // Get context if inside LayoutPanelProvider
+    const layoutContext = useLayoutPanelContext();
+
+    // Create standalone logic - must be called unconditionally (React hooks rules)
+    const standaloneLogic = useLayoutPanel({ canvasId: workspaceId });
+
+    // Prefer context logic if available
+    const layoutLogic = layoutContext?.logic || standaloneLogic;
+
+    // =========================================================================
+    // STATE
     // =========================================================================
 
     const [isLoading, setIsLoading] = useState(false);
-    const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.GRID);
     const [flowDirection, setFlowDirection] = useState(FLOW_DIRECTIONS.ROW);
     const [spawnSize, setSpawnSize] = useState('1x1');
     const [tool, setTool] = useState(TOOLS.SELECT);
@@ -179,11 +210,10 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
     // =========================================================================
 
     useEffect(() => {
-        // Get initial state from canvasManager if available
         const canvas = canvasManager?.getCanvas?.();
         if (canvas) {
-            if (canvas.rows) setCanvasSizeState(prev => ({ ...prev, rows: canvas.rows }));
-            if (canvas.cols) setCanvasSizeState(prev => ({ ...prev, cols: canvas.cols }));
+            setCanvasSizeState({ rows: canvas.rows || 3, cols: canvas.cols || 3 });
+            setFlowDirection(canvas.flowDirection || FLOW_DIRECTIONS.ROW);
         }
     }, []);
 
@@ -191,95 +221,50 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
     // HANDLERS
     // =========================================================================
 
-    const handleLayoutModeChange = useCallback((mode) => {
-        setLayoutMode(mode);
-        // Dispatch event for canvas to react
-        window.dispatchEvent(new CustomEvent('cia:layout-mode-changed', {
-            detail: { mode }
-        }));
-    }, []);
+    // =========================================================================
+    // HANDLERS - Use events, let CanvasWorkspace handle API calls
+    // =========================================================================
 
     const handleFlowDirectionChange = useCallback((direction) => {
         setFlowDirection(direction);
+        // Dispatch event - CanvasWorkspace will handle the actual API call
         window.dispatchEvent(new CustomEvent('cia:flow-direction-changed', {
             detail: { direction }
         }));
     }, []);
 
-    const handleSpawnSizeChange = useCallback((size) => {
-        setSpawnSize(size);
-        const sizeConfig = SPAWN_SIZES.find(s => s.id === size);
-        window.dispatchEvent(new CustomEvent('cia:spawn-size-changed', {
-            detail: { size, rows: sizeConfig?.rows || 1, cols: sizeConfig?.cols || 1 }
-        }));
-    }, []);
-
-    const handleToolChange = useCallback((newTool) => {
-        setTool(newTool);
-        window.dispatchEvent(new CustomEvent('cia:canvas-tool-changed', {
-            detail: { tool: newTool }
-        }));
-    }, []);
-
-    const handleChangeRows = useCallback((newRows) => {
-        const newSize = { rows: newRows, cols: canvasSize.cols };
+    const handleRowsChange = useCallback((rows) => {
+        const newSize = { ...canvasSize, rows };
         setCanvasSizeState(newSize);
         try { saveCanvasSize?.(newSize); } catch { /* ignore */ }
-        canvasManager?.setCanvasSize?.(newRows, canvasSize.cols);
+        // Dispatch event - CanvasWorkspace will handle the actual API call
         window.dispatchEvent(new CustomEvent('cia:canvas-size-changed', {
             detail: newSize
         }));
-    }, [canvasSize.cols]);
+    }, [canvasSize]);
 
-    const handleChangeCols = useCallback((newCols) => {
-        const newSize = { rows: canvasSize.rows, cols: newCols };
+    const handleColsChange = useCallback((cols) => {
+        const newSize = { ...canvasSize, cols };
         setCanvasSizeState(newSize);
         try { saveCanvasSize?.(newSize); } catch { /* ignore */ }
-        canvasManager?.setCanvasSize?.(canvasSize.rows, newCols);
+        // Dispatch event - CanvasWorkspace will handle the actual API call
         window.dispatchEvent(new CustomEvent('cia:canvas-size-changed', {
             detail: newSize
         }));
-    }, [canvasSize.rows]);
+    }, [canvasSize]);
 
-    const handleQuickLayout = useCallback((layoutId) => {
-        // Apply quick layout based on ID
-        const placements = canvasManager?.getPlacements?.() || [];
-        const viewCount = placements.length;
-
-        if (viewCount === 0) return;
-
-        let newLayout = null;
-
-        switch (layoutId) {
-            case 'single':
-                // Make first view fullscreen
-                newLayout = { rows: 1, cols: 1 };
-                break;
-            case 'side-by-side':
-                newLayout = { rows: 1, cols: Math.min(viewCount, 4) };
-                break;
-            case 'stacked':
-                newLayout = { rows: Math.min(viewCount, 4), cols: 1 };
-                break;
-            case '2x2':
-                newLayout = { rows: 2, cols: 2 };
-                break;
-            default:
-                return;
-        }
-
-        if (newLayout) {
-            setCanvasSizeState(newLayout);
-            try { saveCanvasSize?.(newLayout); } catch { /* ignore */ }
-            canvasManager?.setCanvasSize?.(newLayout.rows, newLayout.cols);
-            window.dispatchEvent(new CustomEvent('cia:canvas-size-changed', {
-                detail: newLayout
-            }));
-        }
+    const handleQuickLayout = useCallback((layout) => {
+        const newSize = { rows: layout.rows, cols: layout.cols };
+        setCanvasSizeState(newSize);
+        try { saveCanvasSize?.(newSize); } catch { /* ignore */ }
+        // Dispatch event - CanvasWorkspace will handle the actual API call
+        window.dispatchEvent(new CustomEvent('cia:canvas-size-changed', {
+            detail: newSize
+        }));
     }, []);
 
     // =========================================================================
-    // RENDER
+    // RENDER - LOADING
     // =========================================================================
 
     if (isLoading) {
@@ -297,6 +282,10 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
         );
     }
 
+    // =========================================================================
+    // RENDER - MAIN
+    // =========================================================================
+
     return (
         <div className={`layout-tab ${className}`}>
             {/* Header */}
@@ -305,50 +294,33 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                 <span className="panel-header__title">Layout</span>
             </div>
 
-            {/* Content */}
+            {/* Scrollable Content */}
             <div className="layout-tab__content">
-                {/* Layout Mode Card */}
+                {/* Flow Direction Card */}
                 <div className="layout-tab__card" data-color="purple">
                     <div className="layout-tab__card-header">
                         <LayoutGrid size={10} />
-                        <span>Layout Mode</span>
+                        <span>Flow Direction</span>
                     </div>
-                    <div className="layout-tab__mode-toggle">
+                    <p className="layout-tab__card-description">
+                        When auto-placing views, fill cells in this order:
+                    </p>
+                    <div className="layout-tab__direction-toggle">
                         <button
-                            className={`layout-tab__mode-btn ${layoutMode === LAYOUT_MODES.GRID ? 'layout-tab__mode-btn--active' : ''}`}
-                            onClick={() => handleLayoutModeChange(LAYOUT_MODES.GRID)}
+                            className={`layout-tab__direction-btn ${flowDirection === FLOW_DIRECTIONS.ROW ? 'layout-tab__direction-btn--active' : ''}`}
+                            onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.ROW)}
                         >
-                            <Grid3X3 size={14} />
-                            <span>Grid</span>
+                            <ArrowRight size={14} />
+                            <span>Row</span>
                         </button>
                         <button
-                            className={`layout-tab__mode-btn ${layoutMode === LAYOUT_MODES.FLOW ? 'layout-tab__mode-btn--active' : ''}`}
-                            onClick={() => handleLayoutModeChange(LAYOUT_MODES.FLOW)}
+                            className={`layout-tab__direction-btn ${flowDirection === FLOW_DIRECTIONS.COLUMN ? 'layout-tab__direction-btn--active' : ''}`}
+                            onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.COLUMN)}
                         >
-                            <Rows3 size={14} />
-                            <span>Flow</span>
+                            <ArrowDown size={14} />
+                            <span>Col</span>
                         </button>
                     </div>
-
-                    {layoutMode === LAYOUT_MODES.FLOW && (
-                        <div className="layout-tab__flow-direction">
-                            <span>Direction:</span>
-                            <div className="layout-tab__direction-toggle">
-                                <button
-                                    className={flowDirection === FLOW_DIRECTIONS.ROW ? 'active' : ''}
-                                    onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.ROW)}
-                                >
-                                    <ArrowRight size={12} /> Row
-                                </button>
-                                <button
-                                    className={flowDirection === FLOW_DIRECTIONS.COLUMN ? 'active' : ''}
-                                    onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.COLUMN)}
-                                >
-                                    <ArrowDown size={12} /> Col
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Canvas Size Card */}
@@ -360,8 +332,8 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                     <CanvasSizeControl
                         rows={canvasSize.rows}
                         cols={canvasSize.cols}
-                        onChangeRows={handleChangeRows}
-                        onChangeCols={handleChangeCols}
+                        onChangeRows={handleRowsChange}
+                        onChangeCols={handleColsChange}
                     />
                 </div>
 
@@ -371,8 +343,8 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                         <PlusCircle size={10} />
                         <span>New View Size</span>
                     </div>
-                    <SpawnSizePicker value={spawnSize} onChange={handleSpawnSizeChange} />
-                    <p className="layout-tab__card-hint">
+                    <SpawnSizePicker value={spawnSize} onChange={setSpawnSize} />
+                    <p className="layout-tab__card-description">
                         Default size when creating new views
                     </p>
                 </div>
@@ -380,56 +352,48 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                 {/* Quick Layouts Card */}
                 <div className="layout-tab__card" data-color="amber">
                     <div className="layout-tab__card-header">
-                        <LayoutGrid size={10} />
+                        <Grid3X3 size={10} />
                         <span>Quick Layouts</span>
                     </div>
                     <div className="layout-tab__quick-layouts">
-                        {QUICK_LAYOUTS.map(layout => (
-                            <QuickLayoutButton
-                                key={layout.id}
-                                layout={layout}
-                                onClick={handleQuickLayout}
-                            />
-                        ))}
+                        {QUICK_LAYOUTS.map(layout => {
+                            const Icon = layout.icon;
+                            return (
+                                <button
+                                    key={layout.id}
+                                    className="layout-tab__quick-btn"
+                                    onClick={() => handleQuickLayout(layout)}
+                                    title={layout.label}
+                                >
+                                    <Icon size={14} />
+                                    <span>{layout.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* Tools Card */}
+                {/* Canvas Tools Card */}
                 <div className="layout-tab__card" data-color="teal">
                     <div className="layout-tab__card-header">
                         <MousePointer2 size={10} />
                         <span>Canvas Tools</span>
                     </div>
-                    <div className="layout-tab__tools">
-                        <button
-                            className={`layout-tab__tool-btn ${tool === TOOLS.SELECT ? 'layout-tab__tool-btn--active' : ''}`}
-                            onClick={() => handleToolChange(TOOLS.SELECT)}
-                            title="Select"
-                        >
-                            <MousePointer2 size={14} />
-                            <span>Select</span>
-                        </button>
-                        <button
-                            className={`layout-tab__tool-btn ${tool === TOOLS.PAN ? 'layout-tab__tool-btn--active' : ''}`}
-                            onClick={() => handleToolChange(TOOLS.PAN)}
-                            title="Pan"
-                        >
-                            <Hand size={14} />
-                            <span>Pan</span>
-                        </button>
-                        <button
-                            className={`layout-tab__tool-btn ${tool === TOOLS.MERGE ? 'layout-tab__tool-btn--active' : ''}`}
-                            onClick={() => handleToolChange(TOOLS.MERGE)}
-                            title="Merge Cells"
-                        >
-                            <Merge size={14} />
-                            <span>Merge</span>
-                        </button>
-                    </div>
+                    <CanvasTools tool={tool} setTool={setTool} />
                 </div>
+            </div>
+
+            {/* Permanently Docked Canvas Navigator */}
+            <div className="layout-tab__navigator">
+                <CanvasNavigator
+                    isDocked={true}
+                    logic={layoutLogic}
+                />
             </div>
         </div>
     );
 });
 
+// Alias for backward compatibility
+export { LayoutPanelContent as LayoutTab };
 export default LayoutPanelContent;

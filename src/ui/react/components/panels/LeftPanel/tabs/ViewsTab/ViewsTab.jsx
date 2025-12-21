@@ -160,9 +160,15 @@ export function ViewsPanelContent({ workspaceId }) {
     // =========================================================================
 
     // Get layout panel context for CanvasNavigator
-    // If we're inside a LayoutPanelProvider, use its logic; otherwise create standalone
+    // Note: useLayoutPanel must be called unconditionally (React hooks rules)
+    // When context exists, we use context.logic; otherwise use standalone
     const layoutContext = useLayoutPanelContext();
-    const standaloneLogic = useLayoutPanel(layoutContext ? { __existing: true } : { workspaceId });
+
+    // Create standalone logic - this is always called but may not be used
+    // Pass workspaceId for canvas initialization
+    const standaloneLogic = useLayoutPanel({ canvasId: workspaceId });
+
+    // Prefer context logic if available, fall back to standalone
     const layoutLogic = layoutContext?.logic || standaloneLogic;
 
     const {
@@ -238,7 +244,7 @@ export function ViewsPanelContent({ workspaceId }) {
                 <CanvasNavigator
                     isDocked={true}
                     logic={layoutLogic}
-                    contextMode="views"
+
                 />
             </ResizableSection>
 
@@ -335,7 +341,7 @@ export function ViewsPanelContent({ workspaceId }) {
         <div className="views-tab__by-dataset">
             {/* Canvas Navigator at top */}
             <div className="views-tab__navigator-container">
-                <CanvasNavigator isDocked={true} logic={layoutLogic} contextMode="views" />
+                <CanvasNavigator isDocked={true} logic={layoutLogic} />
             </div>
 
             {/* Dataset groups */}
@@ -387,7 +393,7 @@ export function ViewsPanelContent({ workspaceId }) {
         <div className="views-tab__flat-list">
             {/* Canvas Navigator at top */}
             <div className="views-tab__navigator-container">
-                <CanvasNavigator isDocked={true} logic={layoutLogic} contextMode="views" />
+                <CanvasNavigator isDocked={true} logic={layoutLogic} />
             </div>
 
             {/* All views in a flat list */}
@@ -425,7 +431,7 @@ export function ViewsPanelContent({ workspaceId }) {
         <div className="views-tab__grid-view">
             {/* Canvas Navigator takes priority */}
             <div className="views-tab__navigator-container views-tab__navigator-container--large">
-                <CanvasNavigator isDocked={true} logic={layoutLogic} contextMode="views" />
+                <CanvasNavigator isDocked={true} logic={layoutLogic} />
             </div>
 
             {/* Compact view list below */}
