@@ -51,11 +51,14 @@ const getViewColor = (viewId, index = 0) => {
 
 export function useSecondaryHeaderLogic() {
   // =========================================================================
-  // LAYOUT PANEL CONTEXT (canvas navigation)
+  // LAYOUT PANEL CONTEXT (canvas navigation + cells)
   // =========================================================================
 
   const layoutContext = useLayoutPanelContext();
   const logic = layoutContext?.logic || {};
+
+  // Get cells (enriched placements) from context - this is the source of truth
+  const cells = logic.cells || [];
 
   // Extract viewport position with safe defaults
   const viewport = useMemo(
@@ -164,37 +167,27 @@ export function useSecondaryHeaderLogic() {
 
   /**
    * Get enriched views on canvas with names
+   * Uses cells from LayoutPanelContext which are already enriched with view metadata
    */
   const onCanvasViews = useMemo(() => {
-    const canvas = canvasManager?.getActiveCanvas?.();
-    const placements = canvas?.placements || [];
-    const vcm = getViewConfigurationManager?.();
+    // Debug: log cells from context
+    if (cells.length > 0) {
+      log.debug("SecondaryHeader: cells from context:", cells.length, cells);
+    }
 
-    return placements
-      .filter((p) => p.content?.type === "view")
-      .map((p, index) => {
-        const viewId = p.content?.viewConfigurationId;
-        const viewConfig = vcm?.getViewConfiguration?.(viewId);
-
-        // Get view name - try multiple sources
-        let name = viewConfig?.name;
-        if (!name && viewConfig?.datasetId) {
-          name = `View of ${viewConfig.datasetId}`;
-        }
-        if (!name) {
-          name = `View ${index + 1}`;
-        }
-
-        return {
-          id: viewId,
-          name,
-          type: viewConfig?.type || "vtk",
-          position: { col: p.col, row: p.row },
-          color: getViewColor(viewId, index),
-          datasetName: viewConfig?.datasetName || viewConfig?.datasetId,
-        };
-      });
-  }, [refreshKey]);
+    // cells from context are already enriched with viewConfiguration data
+    return cells.map((cell, index) => ({
+      id: cell.viewConfigurationId || cell.id,
+      name: cell.name || cell.title || `View ${index + 1}`,
+      type: cell.content?.type || "vtk",
+      position: { col: cell.col, row: cell.row },
+      color:
+        cell.color ||
+        cell.instanceColor ||
+        getViewColor(cell.viewConfigurationId, index),
+      datasetName: cell.datasetName || cell.datasetId,
+    }));
+  }, [cells, refreshKey]);
 
   /**
    * Get available views (not on canvas)
