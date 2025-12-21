@@ -1,10 +1,11 @@
 /**
  * @file useViewsTab.js
  * @description Hook for Views tab state management.
- * Provides view filtering, lifecycle operations, and canvas integration.
  *
- * CRITICAL: Includes proper event subscriptions to refresh when views change.
- * This was missing in the previous implementation causing stale data.
+ * ARCHITECTURE:
+ * - Uses centralized event types from @Core/events
+ * - Uses useState instead of useMemo for views to ensure reactivity
+ * - Properly tracks active/inactive/linked status
  *
  * @example
  * const { views, onCanvasViews, handlePlaceView } = useViewsTab({ workspaceId });
@@ -14,6 +15,11 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
+import {
+  VIEW_EVENTS,
+  CANVAS_MANAGER_EVENTS as CANVAS_EVENTS,
+  DOM_EVENTS,
+} from "@Core/events/eventConstants.js";
 import { view as log } from "@Utils/logger.js";
 
 // =============================================================================
@@ -28,6 +34,82 @@ export const VIEW_MODES = {
 };
 
 // =============================================================================
+// HELPER: Get all views from manager
+// =============================================================================
+
+function getAllViewsFromManager(viewManager) {
+  if (!viewManager) return [];
+
+  // Access internal _viewConfigs Map directly
+  // This bypasses userId filtering that breaks in dev mode
+  if (viewManager._viewConfigs instanceof Map) {
+    return Array.from(viewManager._viewConfigs.values());
+  }
+
+  // Fallback: combine available methods
+  const myViews = viewManager.getMyViews?.() || [];
+  const sharedViews = viewManager.getSharedWithMe?.() || [];
+
+  const viewMap = new Map();
+  [...myViews, ...sharedViews].forEach((v) => {
+    if (v?.id) viewMap.set(v.id, v);
+  });
+
+  return Array.from(viewMap.values());
+}
+
+// =============================================================================
+// HELPER: Enrich view with runtime data
+// =============================================================================
+
+function enrichView(view) {
+  if (!view) return null;
+
+  // Get placement info from canvas
+  const placement = canvasManager?.getPlacementForView?.(view.id);
+  const instanceColor = workspaceManager?.getViewColor?.(view.id);
+
+  // Determine if view has any links
+  const hasLinks =
+    view.links &&
+    Object.values(view.links).some(
+      (link) => link && (link.isActive?.() || link.targetViewId)
+    );
+
+  // Count active links
+  const linkedCount = view.links
+    ? Object.values(view.links).filter((link) => link?.targetViewId).length
+    : 0;
+
+  return {
+    ...view,
+    id: view.id,
+    name: view.name || "Untitled View",
+    datasetId: view.datasetId,
+    datasetName: view.datasetName || view.datasetId,
+    color: instanceColor || view.color || "#60a5fa",
+
+    // Position & size
+    position: placement ? { row: placement.row, col: placement.col } : null,
+    rowSpan: placement?.rowSpan || view.rowSpan || 1,
+    colSpan: placement?.colSpan || view.colSpan || 1,
+
+    // Status - use authoritative status, fallback to placement check
+    status:
+      view.status === "trashed"
+        ? "trashed"
+        : view.status === "active" || placement
+        ? "active"
+        : "inactive",
+
+    // Link info
+    hasLinks,
+    linkedCount,
+    isLinked: hasLinks,
+  };
+}
+
+// =============================================================================
 // HOOK
 // =============================================================================
 
@@ -40,9 +122,11 @@ export const VIEW_MODES = {
  */
 export function useViewsTab({ workspaceId }) {
   // =========================================================================
-  // STATE
+  // STATE - Use useState for reactivity (not useMemo!)
   // =========================================================================
 
+  const [views, setViews] = useState([]);
+  const [trashedViews, setTrashedViews] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState(["active", "inactive"]);
   const [viewMode, setViewMode] = useState(VIEW_MODES.BY_STATUS);
@@ -51,200 +135,148 @@ export function useViewsTab({ workspaceId }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // CRITICAL: Refresh counter to trigger re-computation when views change
-  const [refreshKey, setRefreshKey] = useState(0);
-
   // =========================================================================
-  // EVENT SUBSCRIPTIONS - CRITICAL FOR REACTIVITY
+  // LOAD VIEWS - Called on mount and when events fire
   // =========================================================================
 
-  useEffect(() => {
-    const refresh = () => {
-      log.debug("Views tab: Refreshing due to view event");
-      setRefreshKey((k) => k + 1);
-    };
-
-    // Get the view manager
-    const viewManager = getViewConfigurationManager();
-
-    // Subscribe to ViewConfigurationManager events
-    viewManager?.on?.("viewCreated", refresh);
-    viewManager?.on?.("viewUpdated", refresh);
-    viewManager?.on?.("viewTrashed", refresh);
-    viewManager?.on?.("viewRestored", refresh);
-    viewManager?.on?.("viewDeleted", refresh);
-    viewManager?.on?.("viewActivated", refresh);
-    viewManager?.on?.("viewDeactivated", refresh);
-    viewManager?.on?.("viewRenamed", refresh);
-
-    // Subscribe to canvas events
-    window.addEventListener("cia:view-placed", refresh);
-    window.addEventListener("cia:view-removed", refresh);
-    window.addEventListener("cia:canvas-updated", refresh);
-
-    return () => {
-      viewManager?.off?.("viewCreated", refresh);
-      viewManager?.off?.("viewUpdated", refresh);
-      viewManager?.off?.("viewTrashed", refresh);
-      viewManager?.off?.("viewRestored", refresh);
-      viewManager?.off?.("viewDeleted", refresh);
-      viewManager?.off?.("viewActivated", refresh);
-      viewManager?.off?.("viewDeactivated", refresh);
-      viewManager?.off?.("viewRenamed", refresh);
-
-      window.removeEventListener("cia:view-placed", refresh);
-      window.removeEventListener("cia:view-removed", refresh);
-      window.removeEventListener("cia:canvas-updated", refresh);
-    };
-  }, []);
-
-  // =========================================================================
-  // GET ALL VIEWS - Includes refreshKey dependency
-  // =========================================================================
-
-  const allViews = useMemo(() => {
+  const loadViews = useCallback(() => {
     try {
       const viewManager = getViewConfigurationManager();
       if (!viewManager) {
-        log.warn("ViewConfigurationManager not available");
-        return [];
+        log.debug("ViewConfigurationManager not available yet");
+        return;
       }
 
-      // IMPORTANT: In dev mode, getUserId() may return undefined
-      // which causes getMyViews() to return empty (filters by undefined)
-      // We need to get ALL views regardless of ownership
+      // Get all views
+      const allRawViews = getAllViewsFromManager(viewManager);
 
-      let views = [];
+      // Separate trashed from non-trashed
+      const nonTrashed = allRawViews.filter((v) => v.status !== "trashed");
+      const trashed =
+        viewManager.getTrashedViews?.() ||
+        allRawViews.filter((v) => v.status === "trashed");
 
-      // Try to access the internal _viewConfigs Map directly
-      // This bypasses the userId filtering that breaks in dev mode
-      if (viewManager._viewConfigs && viewManager._viewConfigs instanceof Map) {
-        views = Array.from(viewManager._viewConfigs.values());
-        log.debug(`Got ${views.length} views from _viewConfigs`);
-      } else {
-        // Fallback: try the filtered methods
-        const myViews = viewManager.getMyViews?.() || [];
-        const sharedViews = viewManager.getSharedWithMe?.() || [];
+      // Enrich all views with runtime data
+      const enrichedViews = nonTrashed.map(enrichView).filter(Boolean);
+      const enrichedTrashed = trashed
+        .map((v) => ({
+          ...enrichView(v),
+          expiresInHours: v.expiresInHours || 720,
+        }))
+        .filter(Boolean);
 
-        log.debug(
-          `Fallback: ${myViews.length} owned, ${sharedViews.length} shared`
-        );
+      log.debug(
+        `Loaded ${enrichedViews.length} views, ${enrichedTrashed.length} trashed`
+      );
 
-        // Combine all (deduplicate by ID)
-        const viewMap = new Map();
-        [...myViews, ...sharedViews].forEach((v) => {
-          if (v && v.id && !viewMap.has(v.id)) {
-            viewMap.set(v.id, v);
-          }
-        });
-        views = Array.from(viewMap.values());
-      }
-
-      // Filter out trashed views (they're handled separately)
-      views = views.filter((v) => v.status !== "trashed");
-
-      log.debug(`useViewsTab: Found ${views.length} non-trashed views`);
-
-      // Enrich views with additional data
-      return views.map((v) => {
-        // Get instance color from workspaceManager
-        const instanceColor = workspaceManager?.getViewColor?.(v.id);
-
-        // Get position from canvas if active
-        const placement = canvasManager?.getPlacementForView?.(v.id);
-
-        return {
-          ...v,
-          // Ensure we have the view id
-          id: v.id,
-          name: v.name || "Untitled View",
-          datasetId: v.datasetId,
-          datasetName: v.datasetName || v.datasetId,
-          color: instanceColor || v.color || "#60a5fa",
-          position: placement
-            ? { row: placement.row, col: placement.col }
-            : null,
-          rowSpan: placement?.rowSpan || v.rowSpan || 1,
-          colSpan: placement?.colSpan || v.colSpan || 1,
-          // Determine status based on view's own status or placement
-          status:
-            v.status === "active"
-              ? "active"
-              : placement
-              ? "active"
-              : "inactive",
-        };
-      });
+      setViews(enrichedViews);
+      setTrashedViews(enrichedTrashed);
     } catch (e) {
-      log.error("Failed to get views:", e);
-      return [];
+      log.error("Failed to load views:", e);
+      setError(e);
     }
-  }, [refreshKey]); // CRITICAL: Include refreshKey as dependency
+  }, []);
 
   // =========================================================================
-  // TRASHED VIEWS
+  // EVENT SUBSCRIPTIONS - Using centralized event types
   // =========================================================================
 
-  const trashedViews = useMemo(() => {
-    try {
-      const viewManager = getViewConfigurationManager();
-      return viewManager?.getTrashedViews?.() || [];
-    } catch (e) {
-      log.warn("Failed to get trashed views:", e);
-      return [];
-    }
-  }, [refreshKey]);
+  useEffect(() => {
+    // Initial load
+    loadViews();
 
-  // =========================================================================
-  // FILTER VIEWS
-  // =========================================================================
+    const viewManager = getViewConfigurationManager();
 
-  const filterViews = useCallback(
-    (views) => {
-      return views.filter((v) => {
-        // Status filter
-        if (v.status === "active" && !activeFilters.includes("active"))
-          return false;
-        if (v.status === "inactive" && !activeFilters.includes("inactive"))
-          return false;
-        if (v.isShared && activeFilters.includes("shared")) return true;
-        if (v.linkedCount > 0 && activeFilters.includes("linked")) return true;
+    // Manager event handlers
+    const managerEvents = [
+      VIEW_EVENTS.ADDED,
+      VIEW_EVENTS.UPDATED,
+      VIEW_EVENTS.REMOVED,
+      VIEW_EVENTS.TRASHED,
+      VIEW_EVENTS.RESTORED,
+      VIEW_EVENTS.DELETED,
+      VIEW_EVENTS.LINK_CHANGED,
+    ];
 
-        // If we have active/inactive in filters, include those
-        if (activeFilters.includes("active") && v.status === "active")
-          return true;
-        if (activeFilters.includes("inactive") && v.status === "inactive")
-          return true;
+    managerEvents.forEach((event) => {
+      viewManager?.on?.(event, loadViews);
+    });
 
-        // Default: show if active or inactive is in filter
-        return activeFilters.includes(v.status);
+    // Canvas manager events
+    const canvasEvents = [
+      CANVAS_EVENTS.PLACEMENT_ADDED,
+      CANVAS_EVENTS.PLACEMENT_UPDATED,
+      CANVAS_EVENTS.PLACEMENT_REMOVED,
+    ];
+
+    canvasEvents.forEach((event) => {
+      canvasManager?.on?.(event, loadViews);
+    });
+
+    // DOM events
+    const domEvents = [
+      DOM_EVENTS.VIEW_PLACED,
+      DOM_EVENTS.VIEW_REMOVED,
+      DOM_EVENTS.CANVAS_UPDATED,
+      DOM_EVENTS.PLACEMENT_ADDED,
+      DOM_EVENTS.PLACEMENT_REMOVED,
+    ];
+
+    domEvents.forEach((event) => {
+      window.addEventListener(event, loadViews);
+    });
+
+    // Cleanup
+    return () => {
+      managerEvents.forEach((event) => {
+        viewManager?.off?.(event, loadViews);
       });
-    },
-    [activeFilters]
-  );
+
+      canvasEvents.forEach((event) => {
+        canvasManager?.off?.(event, loadViews);
+      });
+
+      domEvents.forEach((event) => {
+        window.removeEventListener(event, loadViews);
+      });
+    };
+  }, [loadViews]);
 
   // =========================================================================
-  // FILTERED AND CATEGORIZED VIEWS
+  // FILTERED VIEWS - This can be useMemo since it's derived from state
   // =========================================================================
 
   const filteredViews = useMemo(() => {
-    let views = allViews.filter((v) => v.status !== "trashed");
+    let result = [...views];
 
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      views = views.filter(
+      result = result.filter(
         (v) =>
           v.name?.toLowerCase().includes(query) ||
           v.datasetName?.toLowerCase().includes(query)
       );
     }
 
-    // Apply filters
-    views = filterViews(views);
+    // Status/type filters
+    result = result.filter((v) => {
+      // Check status filters
+      if (v.status === "active" && activeFilters.includes("active"))
+        return true;
+      if (v.status === "inactive" && activeFilters.includes("inactive"))
+        return true;
+
+      // Check type filters
+      if (v.isShared && activeFilters.includes("shared")) return true;
+      if (v.isLinked && activeFilters.includes("linked")) return true;
+
+      // Default: show if status is in active filters
+      return activeFilters.includes(v.status);
+    });
 
     // Sort
-    views.sort((a, b) => {
+    result.sort((a, b) => {
       switch (sortBy) {
         case "name":
           return (a.name || "").localeCompare(b.name || "");
@@ -263,10 +295,13 @@ export function useViewsTab({ workspaceId }) {
       }
     });
 
-    return views;
-  }, [allViews, searchQuery, filterViews, sortBy]);
+    return result;
+  }, [views, searchQuery, activeFilters, sortBy]);
 
-  // Categorize views
+  // =========================================================================
+  // CATEGORIZED VIEWS
+  // =========================================================================
+
   const onCanvasViews = useMemo(
     () => filteredViews.filter((v) => v.status === "active"),
     [filteredViews]
@@ -277,14 +312,17 @@ export function useViewsTab({ workspaceId }) {
     [filteredViews]
   );
 
-  const recentlyDeletedViews = useMemo(
-    () =>
-      trashedViews.map((v) => ({
-        ...v,
-        expiresInHours: v.expiresInHours || 720, // Default 30 days
-      })),
-    [trashedViews]
+  const linkedViews = useMemo(
+    () => filteredViews.filter((v) => v.isLinked),
+    [filteredViews]
   );
+
+  const unlinkedViews = useMemo(
+    () => filteredViews.filter((v) => !v.isLinked),
+    [filteredViews]
+  );
+
+  const recentlyDeletedViews = useMemo(() => trashedViews, [trashedViews]);
 
   // Group by dataset
   const viewsByDataset = useMemo(() => {
@@ -345,9 +383,8 @@ export function useViewsTab({ workspaceId }) {
       await canvasManager?.placeView?.(viewId);
       getViewConfigurationManager()?.activateView?.(viewId);
 
-      // Dispatch event
       window.dispatchEvent(
-        new CustomEvent("cia:view-placed", {
+        new CustomEvent(DOM_EVENTS.VIEW_PLACED, {
           detail: { viewId },
         })
       );
@@ -363,9 +400,8 @@ export function useViewsTab({ workspaceId }) {
       await canvasManager?.removeViewPlacements?.(viewId);
       getViewConfigurationManager()?.deactivateView?.(viewId);
 
-      // Dispatch event
       window.dispatchEvent(
-        new CustomEvent("cia:view-removed", {
+        new CustomEvent(DOM_EVENTS.VIEW_REMOVED, {
           detail: { viewId },
         })
       );
@@ -378,7 +414,6 @@ export function useViewsTab({ workspaceId }) {
   const handleTrashView = useCallback(async (viewId) => {
     log.debug("Trashing view:", viewId);
     try {
-      // Remove from canvas first if placed
       await canvasManager?.removeViewPlacements?.(viewId);
       getViewConfigurationManager()?.trashView?.(viewId);
     } catch (e) {
@@ -400,10 +435,9 @@ export function useViewsTab({ workspaceId }) {
   const handlePermanentDelete = useCallback(async (viewId) => {
     log.debug("Permanently deleting view:", viewId);
     try {
-      // Close any lingering instances first
       await canvasManager?.removeViewPlacements?.(viewId);
       window.dispatchEvent(
-        new CustomEvent("cia:close-view", {
+        new CustomEvent(DOM_EVENTS.VIEW_CLOSED, {
           detail: { viewId },
         })
       );
@@ -416,13 +450,12 @@ export function useViewsTab({ workspaceId }) {
   }, []);
 
   const handleCreateView = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("cia:open-create-view-modal"));
+    window.dispatchEvent(new CustomEvent(DOM_EVENTS.OPEN_CREATE_VIEW_MODAL));
   }, []);
 
   const handleSelectView = useCallback((viewId) => {
-    // Request the instance for this view
     window.dispatchEvent(
-      new CustomEvent("cia:request-instance", {
+      new CustomEvent(DOM_EVENTS.REQUEST_INSTANCE, {
         detail: { viewId, spawnNew: false },
       })
     );
@@ -430,16 +463,16 @@ export function useViewsTab({ workspaceId }) {
 
   const handleNavigateToView = useCallback(
     (viewId) => {
-      const view = allViews.find((v) => v.id === viewId);
+      const view = views.find((v) => v.id === viewId);
       if (view?.position) {
         window.dispatchEvent(
-          new CustomEvent("cia:navigate-to-cell", {
+          new CustomEvent(DOM_EVENTS.NAVIGATE_TO_CELL, {
             detail: { row: view.position.row, col: view.position.col },
           })
         );
       }
     },
-    [allViews]
+    [views]
   );
 
   const handleRenameView = useCallback((viewId, newName) => {
@@ -460,8 +493,8 @@ export function useViewsTab({ workspaceId }) {
   // =========================================================================
 
   const refetch = useCallback(() => {
-    setRefreshKey((k) => k + 1);
-  }, []);
+    loadViews();
+  }, [loadViews]);
 
   // =========================================================================
   // RETURN
@@ -470,9 +503,11 @@ export function useViewsTab({ workspaceId }) {
   return {
     // Data
     views: filteredViews,
-    allViews,
+    allViews: views,
     onCanvasViews,
     notPlacedViews,
+    linkedViews,
+    unlinkedViews,
     recentlyDeletedViews,
     viewsByDataset,
 

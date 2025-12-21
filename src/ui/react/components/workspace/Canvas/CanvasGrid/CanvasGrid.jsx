@@ -473,22 +473,31 @@ export function CanvasGrid({
                 return;
             }
 
-            // Case 3: ViewItem dropped (from datasets tab Views list)
-            // Only match if we have an explicit viewConfigId or type is 'view'/'view-item'
+            // Case 3: ViewItem dropped (existing view from Views/Datasets tab)
+            // ARCHITECTURE: Each cell gets its OWN ViewConfiguration
+            // We DUPLICATE the dropped view to create an independent copy
+            // The new view starts linked to the original (synced by default)
             if (dropData.viewConfigId || dropData.type === 'view' || dropData.type === 'view-item') {
-                const viewId = dropData.viewConfigId || dropData.viewId || dropData.id;
-                log.debug(`Creating placement for view ${viewId} at [${row}, ${col}]`);
+                const sourceViewId = dropData.viewConfigId || dropData.viewId || dropData.id;
+                const datasetId = dropData.datasetId;
 
-                await addPlacement({
-                    row,
-                    col,
-                    rowSpan: dropData.rowSpan || 1,
-                    colSpan: dropData.colSpan || 1,
-                    content: {
-                        type: 'view',
-                        viewConfigurationId: viewId,
+                log.debug(`ViewItem dropped - creating duplicate of ${sourceViewId} at [${row}, ${col}]`);
+
+                // Dispatch request to create a duplicate view and place it
+                // CanvasWorkspace.handleInstanceRequest will:
+                // 1. Duplicate the source view (creating new ViewConfiguration)
+                // 2. Set up default linking to source view
+                // 3. Place the new view at target position
+                window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                    detail: {
+                        datasetId: datasetId,
+                        duplicateViewId: sourceViewId,  // Creates linked duplicate
+                        spawnNew: true,                 // Force new view creation
+                        targetRow: row,
+                        targetCol: col,
+                        canvasId,
                     },
-                });
+                }));
                 return;
             }
 
