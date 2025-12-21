@@ -382,11 +382,12 @@ export function CanvasGrid({
                 requestAnimationFrame(() => gridRef.current?.focus());
             }
 
-            // Ctrl+A - Select all cells with views (per spec)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+            // Ctrl+Shift+A - Select all cells with views (Ctrl+A conflicts with annotations)
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') {
                 // Only if grid has focus
                 if (gridRef.current?.contains(document.activeElement)) {
                     e.preventDefault();
+                    e.stopPropagation();
                     const cellsWithViews = (canvas?.placements || [])
                         .filter(p => p.content?.type === 'view')
                         .map(p => ({
@@ -395,14 +396,17 @@ export function CanvasGrid({
                             placement: p,
                         }));
                     setSelectedCells(cellsWithViews);
+                    console.log('[CanvasGrid] Selected cells:', cellsWithViews.length);
                 }
             }
 
             // Escape - Deselect all (per spec)
             if (e.key === 'Escape') {
+                console.log('[CanvasGrid] Escape pressed, selectedCells.length:', selectedCells.length, 'contextMenu.isOpen:', contextMenu.isOpen);
                 if (selectedCells.length > 0) {
                     e.preventDefault();
                     setSelectedCells([]);
+                    console.log('[CanvasGrid] Cleared selection');
                 }
                 // Also close context menu
                 if (contextMenu.isOpen) {
@@ -722,7 +726,7 @@ export function CanvasGrid({
                             renderMode={renderMode}
                             cellSize={cellSize}
                             isHighlighted={placement?.id === highlightedPlacementId}
-                            isSelected={selectedIds.includes(placement?.id)}
+                            isSelected={selectedIds.includes(placement?.id) || selectedCells.some(sc => sc.row === canvasRow && sc.col === canvasCol)}
                             inEditMode={editMode}
                             onSelect={toggleSelection}
                             onClick={(e) => placement && handleCellClick(placement, e)}
@@ -744,6 +748,7 @@ export function CanvasGrid({
         renderMode,
         highlightedPlacementId,
         selectedIds,
+        selectedCells,
         editMode,
         toggleSelection,
         handleCellClick,
