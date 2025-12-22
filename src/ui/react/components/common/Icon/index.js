@@ -51,6 +51,8 @@ export {
   MoreVertOutlined as IconMoreVertical,
   SettingsOutlined as IconSettings,
   MenuOutlined as IconMenu,
+  EastOutlined as IconFlowRow,
+  SouthOutlined as IconFlowColumn,
 } from "@mui/icons-material";
 
 // =============================================================================
@@ -71,6 +73,7 @@ export {
   SwapVertOutlined as IconArrowUpDown,
   HomeOutlined as IconHome,
   OpenInNewOutlined as IconExternalLink,
+  PanToolOutlined as IconPanTool,
 } from "@mui/icons-material";
 
 // =============================================================================
@@ -220,6 +223,7 @@ export {
   MapOutlined as IconMap,
   AccountTreeOutlined as IconGitBranch,
   ListOutlined as IconList,
+  PhotoSizeSelectSmallOutlined as IconCanvasSize,
 } from "@mui/icons-material";
 
 // =============================================================================

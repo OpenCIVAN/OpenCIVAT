@@ -4,22 +4,15 @@
  */
 
 import React from 'react';
-import {
-    MousePointer2,
-    Hand,
-    Combine,
-    Pencil,
-    Undo,
-    Redo,
-} from 'lucide-react';
+import { IconMousePointer, IconPanTool, IconMerge, IconEdit, IconUndo, IconRedo } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 
 import './EditToolbar.scss';
 
 const EDIT_TOOLS = [
-    { id: 'select', icon: MousePointer2, label: 'Select', color: 'blue' },
-    { id: 'pan', icon: Hand, label: 'Pan', color: 'teal' },
-    { id: 'merge', icon: Combine, label: 'Merge Cells', color: 'purple' },
+    { id: 'select', icon: IconMousePointer, label: 'Select', color: 'blue' },
+    { id: 'pan', icon: IconPanTool, label: 'Pan', color: 'teal' },
+    { id: 'merge', icon: IconMerge, label: 'Merge Cells', color: 'purple' },
 ];
 
 /**
@@ -55,7 +48,7 @@ export function EditToolbar({
                     type="button"
                     aria-label="Enter edit mode"
                 >
-                    <Pencil size={16} />
+                    <IconEdit sx={{ fontSize: 16 }} />
                 </button>
             </Tooltip>
         );
@@ -74,7 +67,7 @@ export function EditToolbar({
                         type="button"
                         aria-pressed={activeTool === tool.id}
                     >
-                        <tool.icon size={16} />
+                        <tool.icon sx={{ fontSize: 16 }} />
                     </button>
                 </Tooltip>
             ))}
@@ -90,7 +83,7 @@ export function EditToolbar({
                     type="button"
                     aria-label="Undo"
                 >
-                    <Undo size={16} />
+                    <IconUndo sx={{ fontSize: 16 }} />
                 </button>
             </Tooltip>
             <Tooltip content="Redo (Ctrl+Shift+Z)">
@@ -101,7 +94,7 @@ export function EditToolbar({
                     type="button"
                     aria-label="Redo"
                 >
-                    <Redo size={16} />
+                    <IconRedo sx={{ fontSize: 16 }} />
                 </button>
             </Tooltip>
 
@@ -116,7 +109,7 @@ export function EditToolbar({
                     type="button"
                     aria-label="Exit edit mode"
                 >
-                    <Pencil size={16} />
+                    <IconEdit sx={{ fontSize: 16 }} />
                 </button>
             </Tooltip>
         </div>

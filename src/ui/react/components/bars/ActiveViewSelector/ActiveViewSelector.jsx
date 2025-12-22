@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useCallback, useRef } from 'react';
-import {IconChevronDown, IconCheck, IconAdd, IconMapPin, IconEye} from '@UI/react/components/common/Icon';
+import { IconChevronDown, IconCheck, IconAdd, IconMapPin, IconEye } from '@UI/react/components/common/Icon';
 import { DropdownPortal } from '@UI/react/components/common/DropdownPortal';
 
 import './ActiveViewSelector.scss';

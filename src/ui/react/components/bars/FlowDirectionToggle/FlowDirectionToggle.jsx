@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { ArrowRight, ArrowDown } from 'lucide-react';
+import { IconFlowRow, IconFlowColumn } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 
 import './FlowDirectionToggle.scss';
@@ -34,7 +35,7 @@ export function FlowDirectionToggle({ direction = 'row', onChange }) {
                     aria-pressed={direction === 'row'}
                     type="button"
                 >
-                    <ArrowRight size={16} />
+                    <IconFlowRow sx={{ fontSize: 16 }} />
                 </button>
             </Tooltip>
             <Tooltip content="Column-first placement (↓)">
@@ -45,7 +46,7 @@ export function FlowDirectionToggle({ direction = 'row', onChange }) {
                     aria-pressed={direction === 'column'}
                     type="button"
                 >
-                    <ArrowDown size={16} />
+                    <IconFlowColumn sx={{ fontSize: 16 }} />
                 </button>
             </Tooltip>
         </div>

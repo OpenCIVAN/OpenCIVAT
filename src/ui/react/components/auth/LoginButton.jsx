@@ -2,7 +2,7 @@
 // Sign In button component for unauthenticated users
 
 import React, { useState } from "react";
-import { LogIn, Loader2 } from "lucide-react";
+import { IconLogin, IconLoader } from '@UI/react/components/common/Icon';
 import { useAuth } from "@UI/react/hooks/useAuth.js";
 import "./LoginButton.scss";
 
@@ -37,9 +37,9 @@ export function LoginButton({ variant = "default", className = "" }) {
                 title="Sign In"
             >
                 {isLoading ? (
-                    <Loader2 size={16} className="login-button__spinner" />
+                    <IconLoader sx={{ fontSize: 16 }} className="login-button__spinner" />
                 ) : (
-                    <LogIn size={16} />
+                    <IconLogin sx={{ fontSize: 16 }} />
                 )}
             </button>
         );
@@ -54,12 +54,12 @@ export function LoginButton({ variant = "default", className = "" }) {
             >
                 {isLoading ? (
                     <>
-                        <Loader2 size={18} className="login-button__spinner" />
+                        <IconLoader sx={{ fontSize: 18 }} className="login-button__spinner" />
                         <span>Signing in...</span>
                     </>
                 ) : (
                     <>
-                        <LogIn size={18} />
+                        <IconLogin sx={{ fontSize: 18 }} />
                         <span>Sign In with SSO</span>
                     </>
                 )}
@@ -76,12 +76,12 @@ export function LoginButton({ variant = "default", className = "" }) {
         >
             {isLoading ? (
                 <>
-                    <Loader2 size={16} className="login-button__spinner" />
+                    <IconLoader sx={{ fontSize: 16 }} className="login-button__spinner" />
                     <span>Signing in...</span>
                 </>
             ) : (
                 <>
-                    <LogIn size={16} />
+                    <IconLogin sx={{ fontSize: 16 }} />
                     <span>Sign In</span>
                 </>
             )}

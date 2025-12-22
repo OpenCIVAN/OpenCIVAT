@@ -2,7 +2,7 @@
 // User menu dropdown with profile, settings, and sign out options
 
 import React, { useState, useRef, useEffect } from "react";
-import { User, Settings, LogOut, ChevronDown, Shield } from "lucide-react";
+import { IconUser, IconUserCog, IconLogout, IconChevronDown, IconShield } from '@UI/react/components/common/Icon';
 import { useAuth } from "@UI/react/hooks/useAuth.js";
 import "./UserMenu.scss";
 
@@ -83,8 +83,8 @@ export function UserMenu({
                 aria-haspopup="true"
             >
                 <span className="user-menu__avatar">{initial}</span>
-                <ChevronDown
-                    size={14}
+                <IconChevronDown
+                    sx={{ fontSize: 14 }}
                     className={`user-menu__chevron ${isOpen ? "open" : ""}`}
                 />
             </button>
@@ -112,7 +112,7 @@ export function UserMenu({
                             )}
                             {isAdmin && !isDevBypass && (
                                 <span className="user-menu__header-badge user-menu__header-badge--admin">
-                                    <Shield size={10} /> Admin
+                                    <IconShield sx={{ fontSize: 10 }} /> Admin
                                 </span>
                             )}
                         </div>
@@ -126,7 +126,7 @@ export function UserMenu({
                             className="user-menu__item"
                             onClick={handleProfileClick}
                         >
-                            <User size={16} />
+                            <IconUser sx={{ fontSize: 16 }} />
                             <span>Profile</span>
                         </button>
 
@@ -134,7 +134,7 @@ export function UserMenu({
                             className="user-menu__item"
                             onClick={handleSettingsClick}
                         >
-                            <Settings size={16} />
+                            <IconUserCog sx={{ fontSize: 16 }} />
                             <span>Settings</span>
                         </button>
                     </div>
@@ -147,7 +147,7 @@ export function UserMenu({
                             className="user-menu__item user-menu__item--danger"
                             onClick={handleLogout}
                         >
-                            <LogOut size={16} />
+                            <IconLogout sx={{ fontSize: 16 }} />
                             <span>Sign Out</span>
                         </button>
                     </div>
