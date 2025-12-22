@@ -21,7 +21,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, memo } from 'react';
-import { ChevronDown, ChevronUp, Maximize2, GripHorizontal } from 'lucide-react';
+import { IconChevronDown, IconChevronUp, IconMaximize, IconGripHorizontal } from '@UI/react/components/common/Icon';
 import { useDockedHeight } from './DockedHeightContext';
 import './DockedBottomSection.scss';
 
@@ -111,7 +111,7 @@ export const DockedBottomSection = memo(function DockedBottomSection({
                     className="docked-bottom-section__resize-handle"
                     onMouseDown={handleDragStart}
                 >
-                    <GripHorizontal size={16} />
+                    <IconGripHorizontal sx={{ fontSize: 16 }} />
                 </div>
             )}
 
@@ -122,7 +122,7 @@ export const DockedBottomSection = memo(function DockedBottomSection({
                     onClick={toggleCollapsed}
                     aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
                 >
-                    {isCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    {isCollapsed ? <IconChevronUp sx={{ fontSize: 16 }} /> : <IconChevronDown sx={{ fontSize: 16 }} />}
                 </button>
 
                 <span className="docked-bottom-section__title">{title}</span>
@@ -137,7 +137,7 @@ export const DockedBottomSection = memo(function DockedBottomSection({
                             aria-label="Expand to overlay (⌘E)"
                             title="Expand to overlay (⌘E)"
                         >
-                            <Maximize2 size={14} />
+                            <IconMaximize sx={{ fontSize: 14 }} />
                         </button>
                     )}
                 </div>

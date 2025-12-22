@@ -1,6 +1,6 @@
 // src/ui/react/components/common/Button/Button.stories.jsx
 import React from "react";
-import { Plus, Save, Trash2, Settings, Play, Pause, ChevronRight, Download, Upload, Edit } from "lucide-react";
+import { Plus, Save, Trash2, Settings, Play, Pause, ChevronRight, Download, Upload, Edit } from '@UI/react/components/common/Icon';
 import { Button, IconButton, ButtonGroup } from "./index";
 
 export default {

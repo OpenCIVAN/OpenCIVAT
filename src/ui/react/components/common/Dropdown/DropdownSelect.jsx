@@ -60,7 +60,7 @@ import React, {
     useMemo
 } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, X, Check, Search } from 'lucide-react';
+import { IconChevronDown, IconClose, IconCheck, IconSearch } from '@UI/react/components/common/Icon';
 import { useDropdown } from './useDropdown';
 import './Dropdown.scss';
 
@@ -451,13 +451,13 @@ function DropdownSelect({
             >
                 {Icon && (
                     <span className="dropdown-select__option-icon">
-                        <Icon size={16} />
+                        <Icon sx={{ fontSize: 16 }} />
                     </span>
                 )}
                 <span className="dropdown-select__option-label">{label}</span>
                 {selected && (
                     <span className="dropdown-select__option-check">
-                        <Check size={16} />
+                        <IconCheck sx={{ fontSize: 16 }} />
                     </span>
                 )}
             </div>
@@ -510,7 +510,7 @@ function DropdownSelect({
             {/* Search input */}
             {searchable && (
                 <div className="dropdown-select__search">
-                    <Search size={16} className="dropdown-select__search-icon" />
+                    <IconSearch sx={{ fontSize: 16 }} className="dropdown-select__search-icon" />
                     <input
                         ref={searchInputRef}
                         type="text"
@@ -563,7 +563,7 @@ function DropdownSelect({
                                 const OptIcon = opt.icon;
                                 return (
                                     <span key={opt.value} className="dropdown-select__tag">
-                                        {OptIcon && <OptIcon size={12} />}
+                                        {OptIcon && <OptIcon sx={{ fontSize: 12 }} />}
                                         <span>{opt.label}</span>
                                         <button
                                             type="button"
@@ -571,7 +571,7 @@ function DropdownSelect({
                                             onClick={(e) => handleRemoveTag(opt.value, e)}
                                             aria-label={`Remove ${opt.label}`}
                                         >
-                                            <X size={12} />
+                                            <IconClose sx={{ fontSize: 12 }} />
                                         </button>
                                     </span>
                                 );
@@ -582,7 +582,7 @@ function DropdownSelect({
                             const SelectedIcon = selectedOptions[0].icon;
                             return (
                                 <span className="dropdown-select__selected">
-                                    {SelectedIcon && <SelectedIcon size={16} />}
+                                    {SelectedIcon && <SelectedIcon sx={{ fontSize: 16 }} />}
                                     <span>{selectedOptions[0].label}</span>
                                 </span>
                             );
@@ -603,13 +603,13 @@ function DropdownSelect({
                             aria-label="Clear selection"
                             tabIndex={-1}
                         >
-                            <X size={16} />
+                            <IconClose sx={{ fontSize: 16 }} />
                         </button>
                     )}
 
                     {/* Arrow icon */}
                     <span className={`dropdown-select__arrow ${isOpen ? 'dropdown-select__arrow--open' : ''}`}>
-                        <ChevronDown size={18} />
+                        <IconChevronDown sx={{ fontSize: 18 }} />
                     </span>
                 </div>
             </button>

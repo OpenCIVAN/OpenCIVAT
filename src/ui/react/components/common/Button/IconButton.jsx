@@ -16,7 +16,7 @@
  * @example
  * // Basic icon button (no visual tooltip, just aria-label)
  * <IconButton
- *   icon={Settings}
+ *   icon={IconSettings}
  *   label="Settings"
  *   onClick={openSettings}
  * />
@@ -24,7 +24,7 @@
  * @example
  * // With built-in tooltip (uses label text)
  * <IconButton
- *   icon={Download}
+ *   icon={IconDownload}
  *   label="Download file"
  *   tooltip={true}
  *   variant="primary"
@@ -33,7 +33,7 @@
  * @example
  * // With custom tooltip text
  * <IconButton
- *   icon={Save}
+ *   icon={IconSave}
  *   label="Save"
  *   tooltip="Save changes (Ctrl+S)"
  * />
@@ -41,7 +41,7 @@
  * @example
  * // Toggle button with active state
  * <IconButton
- *   icon={Grid}
+ *   icon={IconGrid3x3}
  *   label="Grid view"
  *   active={viewMode === 'grid'}
  *   onClick={() => setViewMode('grid')}
@@ -49,7 +49,7 @@
  */
 
 import React, { forwardRef, memo, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
+import { IconLoader } from '@UI/react/components/common/Icon';
 import './Button.scss';
 
 /**
@@ -167,7 +167,7 @@ const IconButton = forwardRef(function IconButton(
             {...props}
         >
             {loading ? (
-                <Loader2 className="icon-btn__spinner" size={iconSize} aria-hidden="true" />
+                <IconLoader className="icon-btn__spinner" size={iconSize} aria-hidden="true" />
             ) : (
                 Icon && <Icon size={iconSize} aria-hidden="true" />
             )}

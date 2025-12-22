@@ -7,7 +7,6 @@
  */
 
 import React from 'react';
-import { ArrowRight, ArrowDown } from 'lucide-react';
 import { IconFlowRow, IconFlowColumn } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 

@@ -17,7 +17,7 @@
  */
 
 import React, { memo } from 'react';
-import { Circle, Loader, AlertTriangle, Lock } from 'lucide-react';
+import { IconCircle, IconLoader, IconAlertTriangle, IconLock } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 import './FileStateIndicator.scss';
 
@@ -38,14 +38,14 @@ import './FileStateIndicator.scss';
 export const FILE_STATE_CONFIG = {
     stored: {
         color: 'var(--color-text-muted)',
-        icon: Circle,
+        icon: IconCircle,
         label: 'Stored',
         description: 'In storage, not loaded as dataset',
         fill: false,
     },
     loading: {
         color: 'var(--color-accent-blue)',
-        icon: Loader,
+        icon: IconLoader,
         label: 'Loading',
         description: 'Currently loading into memory',
         fill: false,
@@ -53,14 +53,14 @@ export const FILE_STATE_CONFIG = {
     },
     loaded: {
         color: 'var(--color-accent-green)',
-        icon: Circle,
+        icon: IconCircle,
         label: 'Loaded',
         description: 'Active as dataset in Datasets Tab',
         fill: true,
     },
     processing: {
         color: 'var(--color-accent-amber)',
-        icon: Loader,
+        icon: IconLoader,
         label: 'Processing',
         description: 'Server-side compute running',
         fill: false,
@@ -68,14 +68,14 @@ export const FILE_STATE_CONFIG = {
     },
     error: {
         color: 'var(--color-accent-red)',
-        icon: AlertTriangle,
+        icon: IconAlertTriangle,
         label: 'Error',
         description: 'Failed to process or validate',
         fill: false,
     },
     restricted: {
         color: 'var(--color-text-muted)',
-        icon: Lock,
+        icon: IconLock,
         label: 'Restricted',
         description: "You don't have access to this file",
         fill: false,
@@ -121,7 +121,7 @@ export const FileStateIndicator = memo(function FileStateIndicator({
             style={{ '--state-color': config.color }}
         >
             <Icon
-                size={sizeConfig.icon}
+                sx={{ fontSize: sizeConfig.icon }}
                 fill={config.fill ? 'currentColor' : 'none'}
             />
         </span>

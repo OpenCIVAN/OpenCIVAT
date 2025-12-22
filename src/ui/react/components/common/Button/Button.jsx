@@ -16,7 +16,7 @@
  *
  * @example
  * // Primary button with icon
- * <Button variant="primary" icon={Save} onClick={handleSave}>
+ * <Button variant="primary" icon={IconSave} onClick={handleSave}>
  *   Save Changes
  * </Button>
  *
@@ -28,13 +28,13 @@
  *
  * @example
  * // Danger button
- * <Button variant="danger" icon={Trash2}>
+ * <Button variant="danger" icon={IconDelete}>
  *   Delete
  * </Button>
  */
 
 import React, { forwardRef, memo, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
+import { IconLoader } from '@UI/react/components/common/Icon';
 import './Button.scss';
 
 /**
@@ -144,7 +144,7 @@ const Button = forwardRef(function Button(
         if (loading) {
             return (
                 <>
-                    <Loader2 className="btn__spinner" size={iconSize} aria-hidden="true" />
+                    <IconLoader className="btn__spinner" size={iconSize} aria-hidden="true" />
                     {!iconOnly && children && <span className="btn__text">{children}</span>}
                 </>
             );
