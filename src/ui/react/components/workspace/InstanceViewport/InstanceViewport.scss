@@ -235,6 +235,29 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
+// Cold header mode - for unmounted viewports (gives illusion of rendered view)
+.instance-viewport__header--cold {
+  // Same as full mode but with disabled styling for inactive buttons
+  .instance-viewport__header-wrench,
+  .instance-viewport__header-expand {
+    display: flex;
+  }
+  .instance-viewport__header-vr {
+    display: none; // Hide VR in cold mode to save space
+  }
+
+  // Disabled buttons get reduced opacity
+  .instance-viewport__header-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
 // ============================================================================
 // MORE MENU DROPDOWN - Portal to document.body
 // ============================================================================

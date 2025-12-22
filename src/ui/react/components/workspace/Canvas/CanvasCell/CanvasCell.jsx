@@ -23,6 +23,8 @@ import {
     Box,
     ZoomIn,
     MoreVertical,
+    MoreHorizontal,
+    Wrench,
     ArrowUp,
     ArrowDown,
     ArrowLeft,
@@ -779,6 +781,82 @@ function MiniHeader({ name, color, onClose, onOpenMenu, viewId }) {
 }
 
 // =============================================================================
+// COLD VIEW HEADER - Mimics InstanceViewport header for unmounted views
+// =============================================================================
+// This header gives the illusion of a fully rendered view even when the
+// InstanceViewport isn't mounted. It matches the styling of the real header.
+
+function ColdViewHeader({ name, color, onClose }) {
+    const colorHex = color || '#60a5fa';
+    // Convert hex to RGB for CSS variable
+    const hexToRgb = (hex) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result
+            ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+            : '96, 165, 250';
+    };
+    const colorRgb = hexToRgb(colorHex);
+
+    return (
+        <div
+            className="instance-viewport__header instance-viewport__header--cold"
+            style={{
+                '--instance-color': colorHex,
+                '--instance-color-rgb': colorRgb,
+            }}
+        >
+            {/* Left section - Wrench + Label (wrench is decorative for cold views) */}
+            <div className="instance-viewport__header-left">
+                <button
+                    className="instance-viewport__header-button instance-viewport__header-wrench"
+                    title="Instance Tools (click to activate view)"
+                    disabled
+                >
+                    <Wrench size={12} />
+                </button>
+
+                {/* Instance Label Badge */}
+                <div
+                    className="instance-viewport__label"
+                    style={{
+                        '--instance-color': colorHex,
+                        '--instance-color-rgb': colorRgb,
+                    }}
+                >
+                    <div className="instance-viewport__label-dot" />
+                    <span className="instance-viewport__label-text">
+                        {name || 'View'}
+                    </span>
+                </div>
+            </div>
+
+            {/* Right Controls - minimal for cold views */}
+            <div className="instance-viewport__header-controls">
+                {/* More Menu Button - decorative */}
+                <button
+                    className="instance-viewport__header-button"
+                    title="More options (click to activate view)"
+                    disabled
+                >
+                    <MoreHorizontal size={12} />
+                </button>
+
+                {/* Close button - functional */}
+                {onClose && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                        className="instance-viewport__header-button"
+                        title="Close (view stays in Datasets list)"
+                    >
+                        <X size={12} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// =============================================================================
 // VIEW CONTENT
 // =============================================================================
 
@@ -814,14 +892,24 @@ function ViewContent({
 
     return (
         <div className="canvas-cell__view-content">
-            {/* Mini header for small modes */}
-            {uiConfig.showMiniHeader && (
+            {/* Mini header for small modes (THUMBNAIL/SNAPSHOT) when viewport is mounted */}
+            {uiConfig.showMiniHeader && shouldMountViewport && (
                 <MiniHeader
                     name={viewName}
                     color={viewColor}
                     onClose={onClose}
                     onOpenMenu={onOpenMenu}
                     viewId={viewId}
+                />
+            )}
+
+            {/* Cold view header - shows real header appearance for unmounted viewports */}
+            {/* This gives the illusion of a fully rendered view */}
+            {isThumbnailMode && !shouldMountViewport && (
+                <ColdViewHeader
+                    name={viewName}
+                    color={viewColor}
+                    onClose={onClose}
                 />
             )}
 
