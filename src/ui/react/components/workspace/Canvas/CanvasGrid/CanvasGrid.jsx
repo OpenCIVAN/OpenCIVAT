@@ -683,6 +683,28 @@ export function CanvasGrid({
         });
     }, [canvas?.placements, effectiveViewport]);
 
+    // Build placement lookup Map for O(1) access in render loop
+    // Key: "row,col" -> placement
+    const placementLookup = useMemo(() => {
+        const map = new Map();
+        if (viewportPlacements) {
+            for (const p of viewportPlacements) {
+                map.set(`${p.row},${p.col}`, p);
+            }
+        }
+        return map;
+    }, [viewportPlacements]);
+
+    // Build Sets for O(1) selection lookups in render loop
+    const selectedIdsSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+    const selectedCellsSet = useMemo(() => {
+        const set = new Set();
+        for (const sc of selectedCells) {
+            set.add(`${sc.row},${sc.col}`);
+        }
+        return set;
+    }, [selectedCells]);
+
     const handleCellDrop = useCallback(async (row, col, dropData) => {
         log.debug('handleCellDrop', { row, col, dropData });
 
@@ -864,10 +886,8 @@ export function CanvasGrid({
                 const key = `${canvasRow},${canvasCol}`;
 
                 // Check if this cell is the origin of a placement
-                // In renderCells useMemo, before rendering a placement:
-                const placement = viewportPlacements.find(
-                    p => p.row === canvasRow && p.col === canvasCol
-                );
+                // Use Map for O(1) lookup instead of O(n) find
+                const placement = placementLookup.get(key);
 
                 // Validate placement has valid content
                 if (placement && !isValidPlacement(placement)) {
@@ -919,7 +939,7 @@ export function CanvasGrid({
                             renderMode={renderMode}
                             cellSize={cellSize}
                             isHighlighted={placement?.id === highlightedPlacementId}
-                            isSelected={selectedIds.includes(placement?.id) || selectedCells.some(sc => sc.row === canvasRow && sc.col === canvasCol)}
+                            isSelected={selectedIdsSet.has(placement?.id) || selectedCellsSet.has(key)}
                             inEditMode={editMode}
                             activeViewId={activeViewId}
                             recentViewIds={recentViewIds}
@@ -938,12 +958,13 @@ export function CanvasGrid({
         return cells;
     }, [
         visiblePlacements,
+        placementLookup,
         effectiveViewport,
         cellSize,
         renderMode,
         highlightedPlacementId,
-        selectedIds,
-        selectedCells,
+        selectedIdsSet,
+        selectedCellsSet,
         editMode,
         activeViewId,
         recentViewIds,
@@ -952,6 +973,7 @@ export function CanvasGrid({
         onCellDoubleClick,
         onAddContent,
         onRemovePlacement,
+        handleCellDrop,
     ]);
 
     // ==========================================================================

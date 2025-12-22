@@ -125,8 +125,10 @@ export const CanvasCell = memo(function CanvasCell({
     onRemove,
 }) {
     const [activeDropZone, setActiveDropZone] = useState(DROP_ZONES.NONE);
-    const [showTooltip, setShowTooltip] = useState(false);
     const cellRef = useRef(null);
+    // Refs for dragover throttling - avoid state updates on every mouse move
+    const pendingZoneRef = useRef(DROP_ZONES.NONE);
+    const rafIdRef = useRef(null);
 
     const isEmpty = !placement ||
         !placement.content ||
@@ -215,7 +217,7 @@ export const CanvasCell = memo(function CanvasCell({
         .join(' ');
 
     // ==========================================================================
-    // DRAG AND DROP - With Zone Detection
+    // DRAG AND DROP - With Zone Detection (rAF throttled)
     // ==========================================================================
 
     const handleDragOver = useCallback((e) => {
@@ -224,24 +226,41 @@ export const CanvasCell = memo(function CanvasCell({
 
         // Calculate which drop zone we're in
         const zone = getDropZone(e, cellRef, isEmpty);
-        setActiveDropZone(zone);
+
+        // Only schedule update if zone actually changed
+        if (zone !== pendingZoneRef.current) {
+            pendingZoneRef.current = zone;
+
+            // Throttle with rAF - only one update per frame
+            if (!rafIdRef.current) {
+                rafIdRef.current = requestAnimationFrame(() => {
+                    rafIdRef.current = null;
+                    setActiveDropZone(pendingZoneRef.current);
+                });
+            }
+        }
     }, [isEmpty]);
 
     const handleDragLeave = useCallback((e) => {
         // Only clear if leaving the cell entirely (not entering a child)
         if (!cellRef.current?.contains(e.relatedTarget)) {
+            // Cancel any pending rAF
+            if (rafIdRef.current) {
+                cancelAnimationFrame(rafIdRef.current);
+                rafIdRef.current = null;
+            }
+            pendingZoneRef.current = DROP_ZONES.NONE;
             setActiveDropZone(DROP_ZONES.NONE);
         }
     }, []);
 
-    // Parse drop data from drag event
+    // Parse drop data from drag event (hot path - no logging)
     const parseDropData = useCallback((e) => {
         try {
             // Try dataset format first (from datasets tab)
             let data = e.dataTransfer.getData('application/x-dataset');
             if (data) {
                 const parsed = JSON.parse(data);
-                console.log('Dataset drop (x-dataset):', parsed);
                 return { type: 'dataset', ...parsed };
             }
 
@@ -249,7 +268,6 @@ export const CanvasCell = memo(function CanvasCell({
             data = e.dataTransfer.getData('application/x-viewitem');
             if (data) {
                 const parsed = JSON.parse(data);
-                console.log('ViewItem drop (x-viewitem):', parsed);
                 return { type: 'view', viewConfigId: parsed.id, ...parsed };
             }
 
@@ -257,7 +275,6 @@ export const CanvasCell = memo(function CanvasCell({
             data = e.dataTransfer.getData('application/json');
             if (data) {
                 const parsed = JSON.parse(data);
-                console.log('JSON drop:', parsed);
 
                 if (parsed.type === 'dataset') {
                     return { type: 'dataset', datasetId: parsed.datasetId, ...parsed };
@@ -270,10 +287,9 @@ export const CanvasCell = memo(function CanvasCell({
                 }
             }
 
-            console.warn('No recognized data format in drop');
             return null;
         } catch (err) {
-            console.error('Failed to parse dropped data:', err);
+            // Silent fail - don't log in hot path
             return null;
         }
     }, []);
@@ -500,8 +516,8 @@ export const CanvasCell = memo(function CanvasCell({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
+            // Use native title for tooltip in small modes - no React state needed
+            title={uiConfig.showTooltipOnHover ? `${getDisplayName()}${rowSpan > 1 || colSpan > 1 ? ` (${colSpan}×${rowSpan})` : ''}` : undefined}
         >
             {/* Drop Zone Overlay - Shows visual feedback during drag */}
             {isDragOver && (
@@ -537,14 +553,6 @@ export const CanvasCell = memo(function CanvasCell({
             {uiConfig.showCoords && (
                 <div className="canvas-cell__coords">
                     [{row}, {col}]
-                </div>
-            )}
-
-            {/* Tooltip (for small cells) */}
-            {showTooltip && uiConfig.showTooltipOnHover && (
-                <div className="canvas-cell__tooltip">
-                    {getDisplayName()}
-                    {rowSpan > 1 || colSpan > 1 ? ` (${colSpan}×${rowSpan})` : ''}
                 </div>
             )}
         </div>
@@ -742,21 +750,15 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
 // =============================================================================
 
 function MiniHeader({ name, color, onClose, onOpenMenu, viewId }) {
-    const [showName, setShowName] = useState(false);
-
+    // Use CSS :hover for name reveal - no React state needed
     return (
-        <div
-            className="canvas-cell__mini-header"
-            onMouseEnter={() => setShowName(true)}
-            onMouseLeave={() => setShowName(false)}
-        >
+        <div className="canvas-cell__mini-header">
             <div
                 className="canvas-cell__mini-header-dot"
                 style={{ backgroundColor: color || '#60a5fa' }}
             />
-            {showName && (
-                <div className="canvas-cell__mini-header-name">{name || 'View'}</div>
-            )}
+            {/* Name revealed via CSS :hover on parent - always rendered but hidden */}
+            <div className="canvas-cell__mini-header-name">{name || 'View'}</div>
             <div style={{ flex: 1 }} />
             <button
                 className="canvas-cell__mini-header-btn"
