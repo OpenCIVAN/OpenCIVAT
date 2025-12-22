@@ -108,6 +108,12 @@ export function CanvasGrid({
     // Only the active view mounts InstanceViewport in THUMBNAIL/SNAPSHOT modes
     const [activeViewId, setActiveViewId] = useState(null);
 
+    // LRU cache of recently active views for warm-pausing
+    // These views keep their InstanceViewport mounted but paused (no GPU work)
+    // This enables fast switching between recently used views
+    const MAX_WARM_INSTANCES = 3; // Budget for paused instances
+    const [recentViewIds, setRecentViewIds] = useState([]);
+
     // Context menu state
     const [contextMenu, setContextMenu] = useState({
         isOpen: false,
@@ -243,7 +249,21 @@ export function CanvasGrid({
             // Note: The event uses 'viewId' not 'viewConfigId'
             const { viewId, instanceId } = e.detail || {};
             if (viewId) {
-                setActiveViewId(viewId);
+                setActiveViewId((prevActiveId) => {
+                    // Update LRU cache when active view changes
+                    if (prevActiveId && prevActiveId !== viewId) {
+                        setRecentViewIds((prevRecent) => {
+                            // Remove the new active view from recent list (if present)
+                            const filtered = prevRecent.filter(id => id !== viewId);
+                            // Add previous active to front of list
+                            const updated = [prevActiveId, ...filtered.filter(id => id !== prevActiveId)];
+                            // Trim to max size
+                            return updated.slice(0, MAX_WARM_INSTANCES);
+                        });
+                    }
+                    return viewId;
+                });
+
                 if (process.env.NODE_ENV === 'development') {
                     log.debug(`[CanvasGrid] Active view changed: ${viewId}`);
                 }
@@ -902,6 +922,7 @@ export function CanvasGrid({
                             isSelected={selectedIds.includes(placement?.id) || selectedCells.some(sc => sc.row === canvasRow && sc.col === canvasCol)}
                             inEditMode={editMode}
                             activeViewId={activeViewId}
+                            recentViewIds={recentViewIds}
                             onSelect={toggleSelection}
                             onClick={(e) => placement && handleCellClick(placement, e)}
                             onDoubleClick={(e) => placement && onCellDoubleClick?.(placement, e)}
@@ -925,6 +946,7 @@ export function CanvasGrid({
         selectedCells,
         editMode,
         activeViewId,
+        recentViewIds,
         toggleSelection,
         handleCellClick,
         onCellDoubleClick,

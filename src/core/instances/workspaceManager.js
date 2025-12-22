@@ -545,6 +545,96 @@ class WorkspaceManager {
   }
 
   // =========================================================================
+  // INSTANCE LIFECYCLE MANAGEMENT (pause/resume)
+  // =========================================================================
+
+  /**
+   * Pause an instance - stops interactions and GPU work
+   *
+   * Paused instances keep their WebGL context but:
+   * - Don't handle mouse/keyboard events
+   * - Don't sync camera to Y.js
+   * - Don't receive animation frame updates
+   *
+   * This is used for warm-caching recently used views.
+   *
+   * @param {string} instanceId - Instance to pause
+   * @returns {boolean} True if paused successfully
+   */
+  pauseInstance(instanceId) {
+    const instance = this.getInstance(instanceId);
+    if (!instance) {
+      log.warn(`Cannot pause: instance ${instanceId} not found`);
+      return false;
+    }
+
+    if (!instance.handler?.pauseInstance) {
+      log.warn(`Handler for instance ${instanceId} doesn't support pause`);
+      return false;
+    }
+
+    const result = instance.handler.pauseInstance(instance.instanceData);
+    if (result) {
+      instance.lifecycleState = "paused";
+      log.debug(`Instance ${instanceId} paused`);
+    }
+    return result;
+  }
+
+  /**
+   * Resume a paused instance - restores interactions and GPU work
+   *
+   * @param {string} instanceId - Instance to resume
+   * @returns {boolean} True if resumed successfully
+   */
+  resumeInstance(instanceId) {
+    const instance = this.getInstance(instanceId);
+    if (!instance) {
+      log.warn(`Cannot resume: instance ${instanceId} not found`);
+      return false;
+    }
+
+    if (!instance.handler?.resumeInstance) {
+      log.warn(`Handler for instance ${instanceId} doesn't support resume`);
+      return false;
+    }
+
+    const result = instance.handler.resumeInstance(instance.instanceData);
+    if (result) {
+      instance.lifecycleState = "live";
+      instance.lastActive = Date.now();
+      log.debug(`Instance ${instanceId} resumed`);
+    }
+    return result;
+  }
+
+  /**
+   * Check if an instance is paused
+   * @param {string} instanceId - Instance to check
+   * @returns {boolean} True if paused
+   */
+  isInstancePaused(instanceId) {
+    const instance = this.getInstance(instanceId);
+    if (!instance) return false;
+
+    if (instance.handler?.isInstancePaused) {
+      return instance.handler.isInstancePaused(instance.instanceData);
+    }
+    return instance.lifecycleState === "paused";
+  }
+
+  /**
+   * Get lifecycle state of an instance
+   * @param {string} instanceId - Instance to check
+   * @returns {'live' | 'paused' | 'cold' | null} Lifecycle state
+   */
+  getInstanceLifecycleState(instanceId) {
+    const instance = this.getInstance(instanceId);
+    if (!instance) return null;
+    return instance.lifecycleState || "live";
+  }
+
+  // =========================================================================
   // CAMERA CONTROLS (Type-agnostic delegation to handlers)
   // =========================================================================
 
@@ -744,6 +834,17 @@ class WorkspaceManager {
 
   removeListener(callback) {
     this.listeners.delete(callback);
+  }
+
+  /**
+   * Subscribe to workspace changes (React-friendly pattern)
+   * Returns an unsubscribe function for easy cleanup in useEffect
+   * @param {Function} callback - Change handler
+   * @returns {Function} Unsubscribe function
+   */
+  subscribe(callback) {
+    this.addListener(callback);
+    return () => this.removeListener(callback);
   }
 
   _notifyListeners() {

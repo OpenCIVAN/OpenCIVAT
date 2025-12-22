@@ -114,6 +114,7 @@ export const CanvasCell = memo(function CanvasCell({
     selectionMode = false,
     inEditMode = false,
     activeViewId = null,
+    recentViewIds = [],
     onClick,
     onDoubleClick,
     onSelect,
@@ -383,14 +384,42 @@ export const CanvasCell = memo(function CanvasCell({
 
         switch (contentType) {
             case PlacementContentType.VIEW:
-                // Determine if this view should mount its InstanceViewport
-                // In THUMBNAIL/SNAPSHOT modes, only mount for active view (performance optimization)
+                // =================================================================
+                // 3-TIER LIFECYCLE SYSTEM for InstanceViewport
+                // =================================================================
+                // LIVE: Active view (interactive, renders on demand)
+                // PAUSED: Recently used views in LRU cache (mounted but paused)
+                // COLD: All other views (thumbnail only, no InstanceViewport)
+                //
+                // This reduces GPU load from N instances to 1 live + max 3 paused.
+                // Paused instances don't render or handle events, but resume fast.
+                // =================================================================
                 const viewId = placement.content.viewConfigurationId;
                 const isActiveView = viewId === activeViewId;
+                const isWarmCached = recentViewIds.includes(viewId);
+
+                // Determine lifecycle state
+                let lifecycle = 'cold';
+                if (isActiveView) {
+                    lifecycle = 'live';
+                } else if (isWarmCached) {
+                    lifecycle = 'paused';
+                }
+
+                // Mount InstanceViewport for active OR warm-cached views
+                // In FULL/COMPACT mode, always mount and run live
+                const isThumbnailMode =
+                    renderMode === RENDER_MODES.THUMBNAIL ||
+                    renderMode === RENDER_MODES.SNAPSHOT;
+
                 const shouldMountViewport =
                     renderMode === RENDER_MODES.FULL ||
                     renderMode === RENDER_MODES.COMPACT ||
-                    isActiveView;
+                    isActiveView ||
+                    isWarmCached;
+
+                // In full/compact mode, always live
+                const effectiveLifecycle = isThumbnailMode ? lifecycle : 'live';
 
                 return (
                     <ViewContent
@@ -405,6 +434,7 @@ export const CanvasCell = memo(function CanvasCell({
                         viewColor={placement.content?.color?.hex || placement.content?.colorHex}
                         shouldMountViewport={shouldMountViewport}
                         isActiveView={isActiveView}
+                        lifecycle={effectiveLifecycle}
                     />
                 );
 
@@ -763,6 +793,7 @@ function ViewContent({
     viewColor,
     shouldMountViewport = true,
     isActiveView = false,
+    lifecycle = 'live', // 'live' | 'paused' | 'cold'
 }) {
     const [isReady, setIsReady] = useState(false);
 
@@ -772,8 +803,9 @@ function ViewContent({
         uiConfig.renderContent === 'thumbnail' ||
         uiConfig.renderContent === 'snapshot';
 
-    // Show thumbnail overlay unless viewport is mounted AND ready
-    const showThumbnailOverlay = isThumbnailMode && !(shouldMountViewport && isReady);
+    // Show thumbnail overlay unless viewport is mounted AND ready AND live
+    // Paused viewports should also show the thumbnail overlay to hide the frozen frame
+    const showThumbnailOverlay = isThumbnailMode && !(shouldMountViewport && isReady && lifecycle === 'live');
 
     // CSS class for crossfade transition when becoming active
     const viewportTransitionClass = isActiveView && isThumbnailMode ? 'canvas-cell__instance-container--activating' : '';
@@ -792,7 +824,7 @@ function ViewContent({
             )}
 
             {/* Thumbnail overlay - shows OVER the instance when not active */}
-            {/* Fades out when viewport becomes ready */}
+            {/* Fades out when viewport becomes ready and is live */}
             {isThumbnailMode && (
                 <div
                     className={`canvas-cell__thumbnail-overlay ${showThumbnailOverlay ? '' : 'canvas-cell__thumbnail-overlay--hidden'}`}
@@ -810,10 +842,16 @@ function ViewContent({
                 </div>
             )}
 
-            {/* Only mount InstanceViewport when:
-                - FULL/COMPACT mode (always render), OR
-                - THUMBNAIL/SNAPSHOT mode AND this is the active view
-                This reduces WebGL instances from N to 0-1 in thumbnail grids */}
+            {/* Mount InstanceViewport when:
+                - FULL/COMPACT mode (always render live), OR
+                - THUMBNAIL/SNAPSHOT mode AND (active view OR warm-cached)
+
+                Lifecycle states:
+                - 'live': Interactive, renders on demand
+                - 'paused': Mounted but frozen (no events, no render loop)
+                - 'cold': Not mounted at all (thumbnail only)
+
+                This reduces GPU load from N instances to 1 live + 3 paused max */}
             {shouldMountViewport && (
                 <div
                     className={`canvas-cell__instance-container ${viewportTransitionClass}`}
@@ -829,6 +867,7 @@ function ViewContent({
                             uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
                             onReady={() => setIsReady(true)}
                             onClose={onClose}
+                            lifecycle={lifecycle}
                         />
                     </ProgressiveLoader>
                 </div>

@@ -686,7 +686,8 @@ export function InstanceViewport({
     onTrash,      // Called when user clicks trash (move to Recently Deleted)
     onChangeSpan,
     onReady,      // Called when instance has loaded data and is ready to display
-    currentSpan = '1x1'
+    currentSpan = '1x1',
+    lifecycle = 'live', // 'live' | 'paused' - controls instance render loop and interactions
 }) {
     // =========================================================================
     // REFS
@@ -769,6 +770,27 @@ export function InstanceViewport({
             getViewConfigurationManager()?.off?.('viewUpdated', handleViewUpdate);
         };
     }, [viewConfigId]);
+
+    // =========================================================================
+    // LIFECYCLE MANAGEMENT (pause/resume for performance)
+    // =========================================================================
+    // When lifecycle prop changes between 'live' and 'paused':
+    // - 'live': Resume the instance (rebind events, enable rendering)
+    // - 'paused': Pause the instance (unbind events, stop render loop)
+    //
+    // This enables warm-caching of recently used views without GPU load.
+
+    useEffect(() => {
+        if (!actualInstanceId || !initialized) return;
+
+        if (lifecycle === 'paused') {
+            workspaceManager.pauseInstance(actualInstanceId);
+            log.debug(`InstanceViewport: Pausing ${actualInstanceId}`);
+        } else if (lifecycle === 'live') {
+            workspaceManager.resumeInstance(actualInstanceId);
+            log.debug(`InstanceViewport: Resuming ${actualInstanceId}`);
+        }
+    }, [lifecycle, actualInstanceId, initialized]);
 
     // =========================================================================
     // SIZE TRACKING

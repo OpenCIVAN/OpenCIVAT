@@ -283,6 +283,136 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     log.info(`Instance ${instanceId} cleaned up`);
   }
 
+  // ===========================================================================
+  // LIFECYCLE MANAGEMENT (pause/resume for performance optimization)
+  // ===========================================================================
+
+  /**
+   * Pause an instance - stops interactions and prevents continuous GPU work
+   *
+   * PAUSED instances:
+   * - Keep their WebGL context and rendered frame visible
+   * - Unbind interactor events (no mouse/keyboard input)
+   * - Skip camera sync callbacks (no Y.js updates)
+   * - Don't receive animation frame updates
+   *
+   * This enables warm-caching of recently used instances without GPU load.
+   *
+   * @param {Object} instanceData - Instance data from initialize()
+   * @returns {boolean} True if paused successfully
+   */
+  pauseInstance(instanceData) {
+    if (!instanceData || !instanceData.sceneObjects) {
+      log.warn(
+        `Cannot pause instance ${instanceData?.instanceId}: not initialized`
+      );
+      return false;
+    }
+
+    if (instanceData.isPaused) {
+      log.debug(`Instance ${instanceData.instanceId} already paused`);
+      return true;
+    }
+
+    const { interactor } = instanceData.sceneObjects;
+    const { container, instanceId } = instanceData;
+
+    log.debug(`Pausing instance ${instanceId}`);
+
+    // 1. Unbind interactor events (stops mouse/keyboard handling)
+    if (interactor) {
+      try {
+        interactor.unbindEvents();
+        log.trace(`Interactor events unbound for ${instanceId}`);
+      } catch (e) {
+        log.warn(`Failed to unbind interactor events: ${e.message}`);
+      }
+    }
+
+    // 2. Mark as paused (camera.onModified() checks this flag)
+    instanceData.isPaused = true;
+
+    // 3. Add visual indicator class (optional, for debugging)
+    if (container) {
+      container.classList.add("vtk-instance--paused");
+    }
+
+    log.info(`Instance ${instanceId} paused`);
+    return true;
+  }
+
+  /**
+   * Resume an instance - restores interactions and enables GPU updates
+   *
+   * LIVE instances:
+   * - Rebind interactor events for mouse/keyboard input
+   * - Resume camera sync callbacks
+   * - Force a single render to ensure display is current
+   *
+   * @param {Object} instanceData - Instance data from initialize()
+   * @returns {boolean} True if resumed successfully
+   */
+  resumeInstance(instanceData) {
+    if (!instanceData || !instanceData.sceneObjects) {
+      log.warn(
+        `Cannot resume instance ${instanceData?.instanceId}: not initialized`
+      );
+      return false;
+    }
+
+    if (!instanceData.isPaused) {
+      log.debug(
+        `Instance ${instanceData.instanceId} not paused, nothing to resume`
+      );
+      return true;
+    }
+
+    const { interactor, renderWindow } = instanceData.sceneObjects;
+    const { container, instanceId } = instanceData;
+
+    log.debug(`Resuming instance ${instanceId}`);
+
+    // 1. Clear paused flag FIRST (so camera callbacks work)
+    instanceData.isPaused = false;
+
+    // 2. Rebind interactor events
+    if (interactor && container) {
+      try {
+        interactor.bindEvents(container);
+        log.trace(`Interactor events rebound for ${instanceId}`);
+      } catch (e) {
+        log.warn(`Failed to rebind interactor events: ${e.message}`);
+      }
+    }
+
+    // 3. Remove visual indicator class
+    if (container) {
+      container.classList.remove("vtk-instance--paused");
+    }
+
+    // 4. Force a render to ensure display is current
+    if (renderWindow) {
+      try {
+        renderWindow.render();
+        log.trace(`Forced render for ${instanceId}`);
+      } catch (e) {
+        log.warn(`Failed to render on resume: ${e.message}`);
+      }
+    }
+
+    log.info(`Instance ${instanceId} resumed`);
+    return true;
+  }
+
+  /**
+   * Check if an instance is paused
+   * @param {Object} instanceData - Instance data from initialize()
+   * @returns {boolean} True if paused
+   */
+  isInstancePaused(instanceData) {
+    return instanceData?.isPaused === true;
+  }
+
   /**
    * Load data into this VTK instance
    *
@@ -2807,6 +2937,11 @@ console.log('Tools:', tools);
     // Listen for camera modifications and publish through adapter
     camera.onModified(() => {
       try {
+        // Skip camera sync when instance is paused (performance optimization)
+        if (instanceData.isPaused) {
+          return;
+        }
+
         if (!this._isApplyingRemoteState && instanceData.viewConfigId) {
           const cameraState = {
             position: camera.getPosition(),
