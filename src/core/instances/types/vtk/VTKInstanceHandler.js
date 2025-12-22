@@ -71,6 +71,110 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     this.instances = new Map(); // instanceId -> instance data
     this.reductionFeature = new VTKReductionFeature();
     this._isApplyingRemoteState = false;
+
+    // ===========================================================================
+    // RENDER INSTRUMENTATION (dev only)
+    // ===========================================================================
+    // Track renders per instance to verify only LIVE views are rendering
+    this._renderCounts = new Map(); // instanceId -> count this second
+    this._totalRenders = 0;
+    this._lastReportTime = Date.now();
+
+    // Start render reporting interval in dev mode
+    if (process.env.NODE_ENV === "development") {
+      setInterval(() => this._reportRenderStats(), 1000);
+    }
+  }
+
+  /**
+   * Report render statistics (dev only)
+   * Prints per-second summary of renders across all instances
+   */
+  _reportRenderStats() {
+    if (!window.__CIA_DEBUG_RENDER) return;
+
+    const now = Date.now();
+    const elapsed = (now - this._lastReportTime) / 1000;
+
+    if (this._totalRenders > 0) {
+      const perSecond = Math.round(this._totalRenders / elapsed);
+      const breakdown = Array.from(this._renderCounts.entries())
+        .filter(([_, count]) => count > 0)
+        .map(([id, count]) => `${id.slice(0, 8)}:${count}`)
+        .join(", ");
+
+      console.debug(
+        `[VTK Renders] ${perSecond}/sec total | ${breakdown || "none"}`
+      );
+    }
+
+    // Reset counters
+    this._totalRenders = 0;
+    this._renderCounts.clear();
+    this._lastReportTime = now;
+  }
+
+  /**
+   * Request a render for an instance (gated by isPaused)
+   *
+   * This is the ONLY way to trigger renders - all direct renderWindow.render()
+   * calls should go through this method to enforce the lifecycle system.
+   *
+   * @param {Object} instanceData - Instance data from initialize()
+   * @param {string} reason - Debug label for why render was requested
+   * @returns {boolean} True if render was scheduled, false if skipped
+   */
+  _requestRender(instanceData, reason = "unknown") {
+    if (!instanceData?.sceneObjects?.renderWindow) {
+      return false;
+    }
+
+    // CRITICAL: Do not render paused instances
+    if (instanceData.isPaused) {
+      instanceData.needsRenderOnResume = true;
+      if (window.__CIA_DEBUG_RENDER) {
+        log.trace(
+          `[SKIP RENDER] ${instanceData.instanceId} (paused) - ${reason}`
+        );
+      }
+      return false;
+    }
+
+    // Coalesce multiple render requests per frame
+    if (instanceData._pendingRender) {
+      return true; // Already scheduled
+    }
+
+    instanceData._pendingRender = true;
+
+    requestAnimationFrame(() => {
+      instanceData._pendingRender = false;
+
+      // Double-check not paused (could have changed)
+      if (instanceData.isPaused) {
+        instanceData.needsRenderOnResume = true;
+        return;
+      }
+
+      try {
+        instanceData.sceneObjects.renderWindow.render();
+
+        // Track for instrumentation
+        if (process.env.NODE_ENV === "development") {
+          this._totalRenders++;
+          const count = this._renderCounts.get(instanceData.instanceId) || 0;
+          this._renderCounts.set(instanceData.instanceId, count + 1);
+
+          if (window.__CIA_DEBUG_RENDER) {
+            log.trace(`[RENDER] ${instanceData.instanceId} - ${reason}`);
+          }
+        }
+      } catch (e) {
+        log.warn(`Render failed for ${instanceData.instanceId}: ${e.message}`);
+      }
+    });
+
+    return true;
   }
 
   // ===========================================================================
@@ -319,7 +423,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
 
     log.debug(`Pausing instance ${instanceId}`);
 
-    // 1. Unbind interactor events (stops mouse/keyboard handling)
+    // 1. Unbind VTK interactor events (stops mouse/keyboard handling)
     if (interactor) {
       try {
         interactor.unbindEvents();
@@ -329,10 +433,26 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       }
     }
 
-    // 2. Mark as paused (camera.onModified() checks this flag)
+    // 2. Unbind custom DOM event handlers (cursor broadcasting, raycasting)
+    // These are stored in instanceData._domHandlers during initialization
+    if (instanceData._domHandlers && container) {
+      const handlers = instanceData._domHandlers;
+      if (handlers.mousemove)
+        container.removeEventListener("mousemove", handlers.mousemove);
+      if (handlers.mousedown)
+        container.removeEventListener("mousedown", handlers.mousedown);
+      if (handlers.mouseleave)
+        container.removeEventListener("mouseleave", handlers.mouseleave);
+      log.trace(`DOM handlers unbound for ${instanceId}`);
+    }
+
+    // 3. Mark as paused (camera.onModified(), _requestRender() check this flag)
     instanceData.isPaused = true;
 
-    // 3. Add visual indicator class (optional, for debugging)
+    // 4. Clear any pending render
+    instanceData._pendingRender = false;
+
+    // 5. Add visual indicator class (optional, for debugging)
     if (container) {
       container.classList.add("vtk-instance--paused");
     }
@@ -367,12 +487,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       return true;
     }
 
-    const { interactor, renderWindow } = instanceData.sceneObjects;
+    const { interactor, renderer } = instanceData.sceneObjects;
     const { container, instanceId } = instanceData;
 
     log.debug(`Resuming instance ${instanceId}`);
 
-    // 1. Clear paused flag FIRST (so camera callbacks work)
+    // 1. Clear paused flag FIRST (so camera callbacks and renders work)
     instanceData.isPaused = false;
 
     // 2. Rebind interactor events
@@ -385,20 +505,39 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       }
     }
 
-    // 3. Remove visual indicator class
+    // 3. Rebind custom DOM event handlers (cursor broadcasting, etc.)
+    if (instanceData._domHandlers && container) {
+      const handlers = instanceData._domHandlers;
+      if (handlers.mousemove)
+        container.addEventListener("mousemove", handlers.mousemove);
+      if (handlers.mousedown)
+        container.addEventListener("mousedown", handlers.mousedown);
+      if (handlers.mouseleave)
+        container.addEventListener("mouseleave", handlers.mouseleave);
+      log.trace(`DOM handlers rebound for ${instanceId}`);
+    }
+
+    // 4. Remove visual indicator class
     if (container) {
       container.classList.remove("vtk-instance--paused");
     }
 
-    // 4. Force a render to ensure display is current
-    if (renderWindow) {
-      try {
-        renderWindow.render();
-        log.trace(`Forced render for ${instanceId}`);
-      } catch (e) {
-        log.warn(`Failed to render on resume: ${e.message}`);
+    // 5. Handle pending resize or state changes while paused
+    if (instanceData.needsRenderOnResume) {
+      // Reset camera if we have data and size changed while paused
+      if (instanceData.hasData && renderer) {
+        try {
+          renderer.resetCamera();
+          log.trace(`Camera reset on resume for ${instanceId}`);
+        } catch (e) {
+          log.warn(`Failed to reset camera on resume: ${e.message}`);
+        }
       }
+      instanceData.needsRenderOnResume = false;
     }
+
+    // 6. Request render to ensure display is current (via gated method)
+    this._requestRender(instanceData, "resume");
 
     log.info(`Instance ${instanceId} resumed`);
     return true;
@@ -630,9 +769,6 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       this._isApplyingRemoteState = false;
     }
 
-    // Render
-    renderWindow.render();
-
     // Store dataset reference
     instanceData.dataset = dataset;
     instanceData.polydata = polydata;
@@ -642,6 +778,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     if (instanceData.markDataLoaded) {
       instanceData.markDataLoaded();
     }
+
+    // Render (gated by isPaused)
+    this._requestRender(instanceData, "data-loaded");
 
     log.info(`Data loaded successfully`);
   }
@@ -1573,9 +1712,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
    * Force a render (useful after widget config changes)
    */
   forceRender(instanceId) {
-    const tools = this.instanceTools.get(instanceId);
-    if (tools?.sceneObjects?.renderWindow) {
-      tools.sceneObjects.renderWindow.render();
+    const instanceData = this.instances.get(instanceId);
+    if (instanceData) {
+      this._requestRender(instanceData, "force-render");
     }
   }
 
@@ -2157,7 +2296,8 @@ console.log('Tools:', tools);
       instanceData.cursors.clear();
     }
 
-    instanceData.sceneObjects.renderWindow.render();
+    // Only render if not paused
+    this._requestRender(instanceData, "cursor-visibility");
   }
 
   /**
@@ -2171,7 +2311,8 @@ console.log('Tools:', tools);
       // Project 2D screen position to 3D world position
       // This is simplified - real implementation would use picker
       cursorActor.setPosition(cursorData.position);
-      instanceData.sceneObjects.renderWindow.render();
+      // Only render if not paused - visual update deferred to resume
+      this._requestRender(instanceData, "cursor-update");
     }
   }
 
@@ -2241,7 +2382,8 @@ console.log('Tools:', tools);
       log.debug(`Cleared all annotation markers`);
     }
 
-    instanceData.sceneObjects.renderWindow.render();
+    // Only render if not paused - visual update deferred to resume
+    this._requestRender(instanceData, "annotation-visibility");
   }
 
   /**
@@ -2250,11 +2392,18 @@ console.log('Tools:', tools);
   async syncCamera(instanceData, cameraState) {
     if (!instanceData?.initialized || !cameraState) return;
 
+    // CRITICAL: Skip camera sync for paused instances
+    // This prevents render spam from other users' camera movements
+    if (instanceData.isPaused) {
+      instanceData.needsRenderOnResume = true;
+      return;
+    }
+
     const camera = instanceData.sceneObjects.camera;
     camera.setPosition(cameraState.position);
     camera.setFocalPoint(cameraState.focalPoint);
     camera.setViewUp(cameraState.viewUp);
-    instanceData.sceneObjects.renderWindow.render();
+    this._requestRender(instanceData, "camera-sync");
   }
 
   /**
@@ -2458,10 +2607,8 @@ console.log('Tools:', tools);
       //   this._applyFilterStates(instanceData, state.filters);
       // }
 
-      // Trigger render to show the changes
-      if (instanceData.sceneObjects.renderWindow) {
-        instanceData.sceneObjects.renderWindow.render();
-      }
+      // Trigger render to show the changes (gated by isPaused)
+      this._requestRender(instanceData, "remote-state");
     } catch (error) {
       log.error("Failed to apply remote state:", error);
     } finally {
@@ -2482,6 +2629,12 @@ console.log('Tools:', tools);
       return;
     }
 
+    // Skip for paused instances
+    if (instanceData.isPaused) {
+      instanceData.needsRenderOnResume = true;
+      return;
+    }
+
     this._isApplyingRemoteState = true;
 
     try {
@@ -2497,7 +2650,7 @@ console.log('Tools:', tools);
         camera.setClippingRange(...cameraState.clippingRange);
       if (cameraState.viewAngle) camera.setViewAngle(cameraState.viewAngle);
 
-      instanceData.sceneObjects.renderWindow.render();
+      this._requestRender(instanceData, "apply-camera-state");
 
       log.debug(`Applied camera state to instance ${instanceId}`);
     } finally {
@@ -2795,9 +2948,7 @@ console.log('Tools:', tools);
     }
 
     // Re-render to desktop view
-    if (sceneObjects?.renderWindow) {
-      sceneObjects.renderWindow.render();
-    }
+    this._requestRender(instanceData, "vr-exit");
 
     // Clear VR data
     instanceData.vrData = null;
@@ -3064,10 +3215,24 @@ console.log('Tools:', tools);
               lastWidth = newWidth;
               lastHeight = newHeight;
 
-              // Update the canvas size
+              // Update the canvas size (always, so dimensions are correct on resume)
               openGLRenderWindow.setSize(newWidth, newHeight);
 
-              // ✅ FIX: Reset camera to recenter the view ONLY if we have data loaded
+              // PERFORMANCE: Skip resetCamera and render when instance is PAUSED
+              // This prevents GPU spikes from resize storms during pan/zoom in thumbnail modes
+              // The size is still set above so dimensions are correct when resumed
+              if (instanceData.isPaused) {
+                // Mark that we need to re-render on resume (camera reset + render)
+                instanceData.needsRenderOnResume = true;
+                if (window.__CIA_DEBUG_RENDER) {
+                  log.trace(
+                    `[SKIP RESIZE RENDER] ${instanceData.instanceId} (paused)`
+                  );
+                }
+                return;
+              }
+
+              // Reset camera to recenter the view ONLY if we have data loaded
               // This prevents parts of the visualization from becoming inaccessible
               if (hasDataLoaded && renderer) {
                 renderer.resetCamera();
@@ -3076,8 +3241,19 @@ console.log('Tools:', tools);
                 );
               }
 
-              // Render the scene
+              // Render the scene via gated method
+              // Note: We can't call this._requestRender here because 'this' isn't
+              // available in the closure. Instead we do the render directly since
+              // we already checked isPaused above.
               renderWindow.render();
+
+              // Track for instrumentation (inline since we can't access handler)
+              if (
+                process.env.NODE_ENV === "development" &&
+                window.__CIA_DEBUG_RENDER
+              ) {
+                log.trace(`[RENDER] ${instanceData.instanceId} - resize`);
+              }
             }
           }
         }
@@ -3561,12 +3737,12 @@ console.log('Tools:', tools);
       return;
     }
 
-    const { camera, renderer, renderWindow } = instanceData.sceneObjects;
+    const { camera, renderer } = instanceData.sceneObjects;
 
     // VTK zoom: dolly the camera (move closer/farther from focal point)
     camera.dolly(factor);
     renderer.resetCameraClippingRange();
-    renderWindow.render();
+    this._requestRender(instanceData, "zoom");
 
     log.trace(
       `Zoomed by factor ${factor} for instance ${instanceData.instanceId}`

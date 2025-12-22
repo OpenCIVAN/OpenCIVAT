@@ -359,6 +359,19 @@ export const CanvasCell = memo(function CanvasCell({
     // CLICK HANDLERS
     // ==========================================================================
 
+    // Mousedown activates this view for the 3-tier lifecycle system
+    // This ensures the view becomes LIVE before any interaction starts
+    const handleMouseDown = useCallback((e) => {
+        // Only activate for view placements
+        if (contentType === 'view' && placement?.content?.viewConfigurationId) {
+            const viewId = placement.content.viewConfigurationId;
+            // Dispatch activation event - CanvasGrid listens for this
+            window.dispatchEvent(new CustomEvent('cia:instance-focused', {
+                detail: { viewId, source: 'cell-mousedown' }
+            }));
+        }
+    }, [contentType, placement?.content?.viewConfigurationId]);
+
     const handleClick = useCallback((e) => {
         if (onClick) {
             onClick(e);
@@ -513,6 +526,7 @@ export const CanvasCell = memo(function CanvasCell({
                 '--cell-width': `${cellSize.width}px`,
                 '--cell-height': `${cellSize.height}px`,
             }}
+            onMouseDown={handleMouseDown}
             onClick={handleClick}
             onDoubleClick={onDoubleClick}
             onDragOver={handleDragOver}

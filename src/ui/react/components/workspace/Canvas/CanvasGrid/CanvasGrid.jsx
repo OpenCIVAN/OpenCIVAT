@@ -247,18 +247,38 @@ export function CanvasGrid({
     useEffect(() => {
         const handleInstanceFocused = (e) => {
             // Note: The event uses 'viewId' not 'viewConfigId'
-            const { viewId, instanceId } = e.detail || {};
+            const { viewId } = e.detail || {};
             if (viewId) {
                 setActiveViewId((prevActiveId) => {
                     // Update LRU cache when active view changes
                     if (prevActiveId && prevActiveId !== viewId) {
                         setRecentViewIds((prevRecent) => {
-                            // Remove the new active view from recent list (if present)
-                            const filtered = prevRecent.filter(id => id !== viewId);
-                            // Add previous active to front of list
-                            const updated = [prevActiveId, ...filtered.filter(id => id !== prevActiveId)];
-                            // Trim to max size
-                            return updated.slice(0, MAX_WARM_INSTANCES);
+                            // Build LRU list: [prevActive, ...filtered], max MAX_WARM_INSTANCES
+                            // 1. Remove new active view from recent (it's now LIVE, not WARM)
+                            // 2. Remove prevActive from filtered (will add to front)
+                            const withoutNew = prevRecent.filter(id => id !== viewId);
+                            const withoutPrev = withoutNew.filter(id => id !== prevActiveId);
+                            // 3. Build updated list with prevActive at front
+                            const updated = [prevActiveId, ...withoutPrev].slice(0, MAX_WARM_INSTANCES);
+
+                            // DEV ASSERTIONS: Verify LRU invariants
+                            if (process.env.NODE_ENV === 'development') {
+                                // Invariant 1: activeViewId should never be in recentViewIds
+                                if (updated.includes(viewId)) {
+                                    console.error('[LRU BUG] activeViewId found in recentViewIds:', viewId, updated);
+                                }
+                                // Invariant 2: No duplicates in recentViewIds
+                                const uniqueSet = new Set(updated);
+                                if (uniqueSet.size !== updated.length) {
+                                    console.error('[LRU BUG] Duplicates in recentViewIds:', updated);
+                                }
+                                // Debug log for instrumentation
+                                if (window.__CIA_DEBUG_RENDER) {
+                                    log.debug(`[LRU] LIVE: ${viewId.slice(0, 8)}, WARM: [${updated.map(id => id.slice(0, 8)).join(', ')}]`);
+                                }
+                            }
+
+                            return updated;
                         });
                     }
                     return viewId;
