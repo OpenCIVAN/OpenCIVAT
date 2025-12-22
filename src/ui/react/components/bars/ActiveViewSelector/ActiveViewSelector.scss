@@ -1,7 +1,9 @@
 /**
  * @file ActiveViewSelector.scss
  * @description Styles for the ActiveViewSelector component.
- * Compact labeled dropdown with colored dot indicator.
+ * 
+ * UPDATED: Works with the shared Dropdown component.
+ * The dropdown panel styling is handled by Dropdown.scss - we just style our content.
  */
 
 @use "theme" as *;
@@ -12,6 +14,11 @@
 
 .active-view-selector {
   position: relative;
+
+  // The Dropdown component wrapper
+  .dropdown {
+    display: inline-flex;
+  }
 }
 
 // =============================================================================
@@ -117,31 +124,28 @@
   flex-shrink: 0;
   transition: transform $transition-fast;
 
+  // Rotate when dropdown is open
   .active-view-selector__trigger[aria-expanded="true"] & {
     transform: rotate(180deg);
   }
 }
 
 // =============================================================================
-// DROPDOWN
+// DROPDOWN CONTENT WRAPPER
+// Styles applied to content inside the Dropdown portal
 // =============================================================================
 
 .active-view-selector__dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 200;
-
+  // Override dropdown-panel defaults if needed
   min-width: 220px;
   max-height: 320px;
+  padding: 0; // Remove default padding, we handle it in sections
+}
 
+.active-view-selector__content-wrapper {
   display: flex;
   flex-direction: column;
-
-  background: $color-bg-elevated;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-md;
-  box-shadow: $shadow-lg;
+  max-height: 320px;
 }
 
 // =============================================================================
@@ -155,16 +159,36 @@
   background: $color-bg-elevated;
 }
 
+.active-view-selector__search-input {
+  width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  font-size: 11px;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent-blue;
+    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+  }
+}
+
 // =============================================================================
-// SCROLLABLE CONTENT
+// CONTENT (scrollable area)
 // =============================================================================
 
 .active-view-selector__content {
   flex: 1;
   overflow-y: auto;
-  min-height: 0; // Important for flex scrolling
+  padding: $spacing-xs 0;
 
-  // Scrollbar styling
+  // Custom scrollbar
   &::-webkit-scrollbar {
     width: 6px;
   }
@@ -174,33 +198,12 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: $color-border-medium;
+    background: $color-border-default;
     border-radius: 3px;
 
     &:hover {
-      background: $color-border-strong;
+      background: $color-border-medium;
     }
-  }
-}
-
-.active-view-selector__search-input {
-  width: 100%;
-  padding: $spacing-xs $spacing-sm;
-  font-size: $font-size-sm;
-  color: $color-text-primary;
-  background: $color-glass-subtle;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-sm;
-  outline: none;
-  transition: all $transition-fast;
-
-  &::placeholder {
-    color: $color-text-muted;
-  }
-
-  &:focus {
-    border-color: $color-accent-blue;
-    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
   }
 }
 
@@ -209,10 +212,10 @@
 // =============================================================================
 
 .active-view-selector__section {
-  padding: $spacing-xs 0;
-
   &:not(:last-child) {
     border-bottom: 1px solid $color-border-subtle;
+    padding-bottom: $spacing-xs;
+    margin-bottom: $spacing-xs;
   }
 }
 
@@ -222,14 +225,10 @@
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
   font-size: 9px;
-  font-weight: $font-weight-medium;
+  font-weight: $font-weight-semibold;
   color: $color-text-muted;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-
-  svg {
-    opacity: 0.6;
-  }
 }
 
 // =============================================================================
@@ -241,9 +240,7 @@
   align-items: center;
   gap: $spacing-sm;
   width: 100%;
-  padding: $spacing-sm $spacing-md;
-  font-size: $font-size-sm;
-  color: $color-text-primary;
+  padding: $spacing-xs $spacing-sm;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -251,18 +248,23 @@
   text-align: left;
 
   &:hover {
-    background: $color-glass-light;
+    background: rgba($color-accent-blue, 0.1);
   }
 
   &--active {
-    background: rgba(var(--view-color-rgb, 96, 165, 250), 0.1);
+    background: rgba($color-accent-blue, 0.15);
+
+    .active-view-selector__item-name {
+      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+    }
   }
 
   &--available {
-    color: $color-text-secondary;
+    opacity: 0.8;
 
     &:hover {
-      color: $color-text-primary;
+      opacity: 1;
     }
   }
 }
@@ -274,35 +276,35 @@
   flex-shrink: 0;
 }
 
-.active-view-selector__item-icon {
-  color: $color-text-muted;
-  flex-shrink: 0;
-}
-
 .active-view-selector__item-name {
   flex: 1;
+  font-size: 11px;
+  color: $color-text-secondary;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .active-view-selector__item-position {
+  font-size: 10px;
   font-family: $font-family-mono;
-  font-size: 10px;
   color: $color-text-muted;
-  flex-shrink: 0;
-}
-
-.active-view-selector__item-type {
-  font-size: 10px;
-  color: $color-text-muted;
-  text-transform: capitalize;
   flex-shrink: 0;
 }
 
 .active-view-selector__item-check {
-  color: var(--view-color, $color-accent-blue);
+  color: $color-accent-blue;
   flex-shrink: 0;
+}
+
+.active-view-selector__item-add {
+  color: $color-text-muted;
+  flex-shrink: 0;
+  transition: color $transition-fast;
+
+  .active-view-selector__item:hover & {
+    color: $color-accent-blue;
+  }
 }
 
 // =============================================================================
@@ -310,8 +312,9 @@
 // =============================================================================
 
 .active-view-selector__empty {
-  padding: $spacing-lg;
+  padding: $spacing-lg $spacing-md;
   text-align: center;
-  font-size: $font-size-sm;
   color: $color-text-muted;
+  font-size: 11px;
+  font-style: italic;
 }

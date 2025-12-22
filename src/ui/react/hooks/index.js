@@ -87,6 +87,12 @@ export {
   THUMBNAIL_STATUS,
 } from "./useThumbnail.js";
 
+export {
+  useViewMetadata,
+  useViewDisplayName,
+  useViewColor,
+} from "./useViewMetadata.js";
+
 // =============================================================================
 // WORKSPACE & VOICE BAR HOOKS
 // =============================================================================

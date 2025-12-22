@@ -79,6 +79,7 @@ import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewpor
 import { ProgressiveLoader } from '@UI/react/components/common/ThumbnailPreview';
 import { RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { Thumbnail } from '@UI/react/components/common/Thumbnail';
+import { CanvasCellHeader } from './CanvasCellHeader.jsx';
 import './CanvasCell.scss';
 
 // =============================================================================
@@ -452,6 +453,20 @@ export const CanvasCell = memo(function CanvasCell({
                 // In full/compact mode, always live
                 const effectiveLifecycle = isThumbnailMode ? lifecycle : 'live';
 
+                // Handler for activating cold views (promotes to LIVE)
+                const handleActivateView = () => {
+                    window.dispatchEvent(new CustomEvent('cia:instance-focused', {
+                        detail: { viewId, source: 'cold-header-activate' }
+                    }));
+                };
+
+                // Handler for trashing the view (moves to Recently Deleted)
+                const handleTrashView = () => {
+                    window.dispatchEvent(new CustomEvent('cia:trash-view', {
+                        detail: { viewId }
+                    }));
+                };
+
                 return (
                     <ViewContent
                         viewId={viewId}
@@ -461,11 +476,14 @@ export const CanvasCell = memo(function CanvasCell({
                         renderMode={renderMode}
                         uiConfig={uiConfig}
                         onClose={() => onRemove?.()}
+                        onTrash={handleTrashView}
                         viewName={placement.content?.name || placement.content?.viewName}
                         viewColor={placement.content?.color?.hex || placement.content?.colorHex}
                         shouldMountViewport={shouldMountViewport}
                         isActiveView={isActiveView}
                         lifecycle={effectiveLifecycle}
+                        onActivate={handleActivateView}
+                        cellWidth={cellSize.width}
                     />
                 );
 
@@ -737,7 +755,8 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
                                 key={type}
                                 className={`canvas-cell__radial-option canvas-cell__radial-option--${color}`}
                                 style={{
-                                    transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                                    '--radial-x': `${x}px`,
+                                    '--radial-y': `${y}px`,
                                     animationDelay: `${index * 0.04}s`,
                                 }}
                                 onClick={(e) => {
@@ -794,81 +813,8 @@ function MiniHeader({ name, color, onClose, onOpenMenu, viewId }) {
     );
 }
 
-// =============================================================================
-// COLD VIEW HEADER - Mimics InstanceViewport header for unmounted views
-// =============================================================================
-// This header gives the illusion of a fully rendered view even when the
-// InstanceViewport isn't mounted. It matches the styling of the real header.
-
-function ColdViewHeader({ name, color, onClose }) {
-    const colorHex = color || '#60a5fa';
-    // Convert hex to RGB for CSS variable
-    const hexToRgb = (hex) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result
-            ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-            : '96, 165, 250';
-    };
-    const colorRgb = hexToRgb(colorHex);
-
-    return (
-        <div
-            className="instance-viewport__header instance-viewport__header--cold"
-            style={{
-                '--instance-color': colorHex,
-                '--instance-color-rgb': colorRgb,
-            }}
-        >
-            {/* Left section - Wrench + Label (wrench is decorative for cold views) */}
-            <div className="instance-viewport__header-left">
-                <button
-                    className="instance-viewport__header-button instance-viewport__header-wrench"
-                    title="Instance Tools (click to activate view)"
-                    disabled
-                >
-                    <Wrench size={12} />
-                </button>
-
-                {/* Instance Label Badge */}
-                <div
-                    className="instance-viewport__label"
-                    style={{
-                        '--instance-color': colorHex,
-                        '--instance-color-rgb': colorRgb,
-                    }}
-                >
-                    <div className="instance-viewport__label-dot" />
-                    <span className="instance-viewport__label-text">
-                        {name || 'View'}
-                    </span>
-                </div>
-            </div>
-
-            {/* Right Controls - minimal for cold views */}
-            <div className="instance-viewport__header-controls">
-                {/* More Menu Button - decorative */}
-                <button
-                    className="instance-viewport__header-button"
-                    title="More options (click to activate view)"
-                    disabled
-                >
-                    <MoreHorizontal size={12} />
-                </button>
-
-                {/* Close button - functional */}
-                {onClose && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onClose(); }}
-                        className="instance-viewport__header-button"
-                        title="Close (view stays in Datasets list)"
-                    >
-                        <X size={12} />
-                    </button>
-                )}
-            </div>
-        </div>
-    );
-}
+// ColdViewHeader has been replaced by CanvasCellHeader component
+// See: ./CanvasCellHeader.jsx
 
 // =============================================================================
 // VIEW CONTENT
@@ -882,12 +828,15 @@ function ViewContent({
     renderMode,
     uiConfig,
     onClose,
+    onTrash,
     onOpenMenu,
     viewName,
     viewColor,
     shouldMountViewport = true,
     isActiveView = false,
     lifecycle = 'live', // 'live' | 'paused' | 'cold'
+    onActivate, // Called when user wants to activate a cold view
+    cellWidth = 400, // For determining header mode
 }) {
     const [isReady, setIsReady] = useState(false);
 
@@ -896,6 +845,12 @@ function ViewContent({
     const isThumbnailMode =
         uiConfig.renderContent === 'thumbnail' ||
         uiConfig.renderContent === 'snapshot';
+
+    // Determine header mode based on cell width
+    const headerMode = cellWidth >= 400 ? 'full' : cellWidth >= 300 ? 'medium' : 'small';
+
+    // Cold mode = thumbnail mode AND viewport NOT mounted
+    const isCold = isThumbnailMode && !shouldMountViewport;
 
     // Show thumbnail overlay unless viewport is mounted AND ready AND live
     // Paused viewports should also show the thumbnail overlay to hide the frozen frame
@@ -906,7 +861,28 @@ function ViewContent({
 
     return (
         <div className="canvas-cell__view-content">
-            {/* Mini header for small modes (THUMBNAIL/SNAPSHOT) when viewport is mounted */}
+            {/* ================================================================
+                HEADER RENDERING - Always visible regardless of lifecycle
+                ================================================================
+                - COLD: Use CanvasCellHeader (lightweight, no instance handler)
+                - LIVE/PAUSED in THUMBNAIL/SNAPSHOT: Use MiniHeader
+                - LIVE/PAUSED in FULL/COMPACT: Header comes from InstanceViewport
+            */}
+
+            {/* Cold view header - shows full header appearance for unmounted viewports */}
+            {/* This gives the illusion of a fully rendered view */}
+            {isCold && (
+                <CanvasCellHeader
+                    viewId={viewId}
+                    onRemove={onClose}
+                    onTrash={onTrash}
+                    onActivate={onActivate}
+                    isCold={true}
+                    headerMode={headerMode}
+                />
+            )}
+
+            {/* Mini header for small modes (THUMBNAIL/SNAPSHOT) when viewport IS mounted */}
             {uiConfig.showMiniHeader && shouldMountViewport && (
                 <MiniHeader
                     name={viewName}
@@ -917,21 +893,16 @@ function ViewContent({
                 />
             )}
 
-            {/* Cold view header - shows real header appearance for unmounted viewports */}
-            {/* This gives the illusion of a fully rendered view */}
-            {isThumbnailMode && !shouldMountViewport && (
-                <ColdViewHeader
-                    name={viewName}
-                    color={viewColor}
-                    onClose={onClose}
-                />
-            )}
+            {/* ================================================================
+                THUMBNAIL/CONTENT AREA
+                ================================================================ */}
 
             {/* Thumbnail overlay - shows OVER the instance when not active */}
             {/* Fades out when viewport becomes ready and is live */}
+            {/* For COLD views, thumbnail sits below the header */}
             {isThumbnailMode && (
                 <div
-                    className={`canvas-cell__thumbnail-overlay ${showThumbnailOverlay ? '' : 'canvas-cell__thumbnail-overlay--hidden'}`}
+                    className={`canvas-cell__thumbnail-overlay ${showThumbnailOverlay ? '' : 'canvas-cell__thumbnail-overlay--hidden'} ${isCold ? 'canvas-cell__thumbnail-overlay--cold' : ''}`}
                 >
                     <Thumbnail
                         viewId={viewId}
@@ -971,6 +942,7 @@ function ViewContent({
                             uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
                             onReady={() => setIsReady(true)}
                             onClose={onClose}
+                            onTrash={onTrash}
                             lifecycle={lifecycle}
                         />
                     </ProgressiveLoader>

@@ -297,18 +297,28 @@
   cursor: pointer;
   pointer-events: auto;
 
+  // Position using CSS variables (set by JS inline style)
+  // This allows hover to reference the same position while adding scale
+  transform: translate(
+    calc(-50% + var(--radial-x, 0px)),
+    calc(-50% + var(--radial-y, 0px))
+  );
+
   // Animate in
   opacity: 0;
   animation: radial-pop-in 0.2s ease-out forwards;
 
-  transition: all 0.15s ease;
+  // Smooth transitions for visual effects (NOT transform - that's handled by hover)
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease;
 
   &:hover {
+    // Preserve position from CSS variables, add scale
     transform: translate(
-        calc(-50% + var(--hover-x, 0px)),
-        calc(-50% + var(--hover-y, 0px))
+        calc(-50% + var(--radial-x, 0px)),
+        calc(-50% + var(--radial-y, 0px))
       )
-      scale(1.15) !important;
+      scale(1.15);
     box-shadow: 0 0 20px var(--option-glow);
   }
 
@@ -361,18 +371,34 @@
   }
 }
 
+// =============================================================================
+// FIXED KEYFRAMES - Uses CSS variables for consistent positioning
+// =============================================================================
+
 @keyframes radial-pop-in {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.3);
+    transform: translate(
+        calc(-50% + var(--radial-x, 0px)),
+        calc(-50% + var(--radial-y, 0px))
+      )
+      scale(0.3);
   }
   60% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(
+        calc(-50% + var(--radial-x, 0px)),
+        calc(-50% + var(--radial-y, 0px))
+      )
+      scale(1.1);
   }
   100% {
     opacity: 1;
-    // Keep the translated position from inline style
+    transform: translate(
+        calc(-50% + var(--radial-x, 0px)),
+        calc(-50% + var(--radial-y, 0px))
+      )
+      scale(1);
   }
 }
 
@@ -852,4 +878,286 @@
 .canvas-cell--drop-zone-swap {
   border-color: rgba(96, 165, 250, 0.5) !important;
   box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3) !important;
+}
+
+// =============================================================================
+// CANVAS CELL HEADER - Lightweight header for cold views
+// =============================================================================
+// This header mimics the InstanceViewport header styling to provide consistent
+// appearance across live/paused/cold states.
+
+.canvas-cell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs $spacing-sm;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+
+  // Solid dark background matching InstanceViewport header
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border-subtle;
+
+  flex-shrink: 0;
+  min-height: 32px;
+
+  // Transition for activation
+  transition: background 0.15s ease;
+
+  &--cold {
+    // Slightly dimmed background to indicate inactive state
+    background: linear-gradient(
+      180deg,
+      rgba($color-bg-secondary, 0.95) 0%,
+      rgba($color-bg-secondary, 0.9) 100%
+    );
+  }
+
+  &:hover {
+    background: $color-bg-secondary;
+  }
+}
+
+// Left section - Wrench + Label
+.canvas-cell-header__left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+// Instance Label Badge - matches InstanceViewport styling
+.canvas-cell-header__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  flex: 1;
+  min-width: 0;
+  max-width: fit-content;
+
+  // Use instance's accent color with low opacity
+  background: rgba(var(--instance-color-rgb), 0.12);
+  border: 1px solid rgba(var(--instance-color-rgb), 0.25);
+  border-radius: $radius-sm;
+
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(var(--instance-color-rgb), 0.18);
+    border-color: rgba(var(--instance-color-rgb), 0.35);
+  }
+}
+
+.canvas-cell-header__label-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--instance-color);
+  box-shadow: 0 0 8px var(--instance-color);
+  flex-shrink: 0;
+}
+
+.canvas-cell-header__label-text {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--instance-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Right side controls container
+.canvas-cell-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+// Header buttons - matches InstanceViewport styling
+.canvas-cell-header__button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: $color-text-primary;
+  }
+
+  &.active {
+    background: rgba($color-accent-primary, 0.15);
+    border-color: rgba($color-accent-primary, 0.3);
+    color: $color-accent-primary;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+      color: $color-text-tertiary;
+    }
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+}
+
+// Wrench button - clickable to activate cold view
+.canvas-cell-header__wrench {
+  display: flex;
+
+  .canvas-cell-header--cold & {
+    // In cold mode, wrench is clickable (not disabled)
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+      background: rgba(var(--instance-color-rgb), 0.15);
+      border-color: rgba(var(--instance-color-rgb), 0.3);
+      color: var(--instance-color);
+    }
+  }
+}
+
+// Menu wrapper
+.canvas-cell-header__menu-wrapper {
+  position: relative;
+}
+
+// Responsive header modes
+.canvas-cell-header--full {
+  .canvas-cell-header__wrench {
+    display: flex;
+  }
+}
+
+.canvas-cell-header--medium {
+  .canvas-cell-header__wrench {
+    display: flex;
+  }
+}
+
+.canvas-cell-header--small {
+  .canvas-cell-header__wrench {
+    display: none;
+  }
+
+  .canvas-cell-header__label {
+    padding: 3px 8px;
+  }
+
+  .canvas-cell-header__label-text {
+    font-size: 10px;
+  }
+}
+
+// =============================================================================
+// CANVAS CELL HEADER DROPDOWN MENU
+// =============================================================================
+
+.canvas-cell-header__menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 180px;
+  padding: 4px;
+  background: rgba(25, 25, 30, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.canvas-cell-header__menu-section {
+  padding: 8px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.canvas-cell-header__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &--danger {
+    color: #f87171;
+
+    &:hover {
+      background: rgba(248, 113, 113, 0.15);
+    }
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  span {
+    flex: 1;
+  }
+}
+
+.canvas-cell-header__menu-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+// =============================================================================
+// COLD VIEW THUMBNAIL POSITIONING
+// =============================================================================
+// When in cold mode, thumbnail should be positioned below the header
+
+.canvas-cell__thumbnail-overlay--cold {
+  // Header takes ~32px, so offset thumbnail content
+  top: 32px;
+  border-radius: 0 0 $radius-md $radius-md;
+
+  // Ensure thumbnail fills the remaining space
+  .thumbnail {
+    border-radius: 0 0 $radius-md $radius-md;
+  }
+
+  .thumbnail__image {
+    border-radius: 0 0 $radius-md $radius-md;
+  }
 }
