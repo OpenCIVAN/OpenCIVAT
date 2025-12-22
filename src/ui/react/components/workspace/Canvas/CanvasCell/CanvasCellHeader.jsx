@@ -191,6 +191,7 @@ function CanvasCellMenu({
  * @param {function} props.onActivate - Called when user clicks to activate (mount InstanceViewport)
  * @param {boolean} props.isCold - Whether the view is in cold mode (no instance mounted)
  * @param {string} props.headerMode - 'full' | 'medium' | 'small' based on cell width
+ * @param {string} props.fallbackColor - Fallback color hex (from placement content) if hook returns no color
  */
 export const CanvasCellHeader = memo(function CanvasCellHeader({
     viewId,
@@ -201,6 +202,7 @@ export const CanvasCellHeader = memo(function CanvasCellHeader({
     onOpenInIsolation,
     isCold = true,
     headerMode = 'full',
+    fallbackColor = null,
 }) {
     const [showMenu, setShowMenu] = useState(false);
     const menuButtonRef = useRef(null);
@@ -208,7 +210,8 @@ export const CanvasCellHeader = memo(function CanvasCellHeader({
     // Get metadata from workspace state (no instance handler required)
     const { displayName, color, isLoading } = useViewMetadata(viewId);
 
-    const colorHex = color?.hex || '#60a5fa';
+    // Use color from hook, fallback to prop, then default to blue
+    const colorHex = color?.hex || fallbackColor || '#60a5fa';
     const colorRgb = hexToRgb(colorHex);
 
     // Handle clicks on header (to activate view)

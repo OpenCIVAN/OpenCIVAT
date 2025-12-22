@@ -2,8 +2,7 @@
  * @file ActiveViewSelector.scss
  * @description Styles for the ActiveViewSelector component.
  * 
- * UPDATED: Works with the shared Dropdown component.
- * The dropdown panel styling is handled by Dropdown.scss - we just style our content.
+ * Works with DropdownPortal for portal rendering.
  */
 
 @use "theme" as *;
@@ -14,11 +13,6 @@
 
 .active-view-selector {
   position: relative;
-
-  // The Dropdown component wrapper
-  .dropdown {
-    display: inline-flex;
-  }
 }
 
 // =============================================================================
@@ -131,16 +125,38 @@
 }
 
 // =============================================================================
-// DROPDOWN CONTENT WRAPPER
-// Styles applied to content inside the Dropdown portal
+// DROPDOWN (rendered via DropdownPortal)
+// The .dropdown-portal class is added by DropdownPortal component
 // =============================================================================
 
 .active-view-selector__dropdown {
-  // Override dropdown-panel defaults if needed
+  // Styles for the dropdown panel
   min-width: 220px;
-  max-height: 320px;
-  padding: 0; // Remove default padding, we handle it in sections
+  max-width: 320px;
+  background: $color-bg-elevated;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  overflow: hidden;
+
+  // Smooth entrance animation
+  animation: dropdown-slide-in 0.15s ease-out;
 }
+
+@keyframes dropdown-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// =============================================================================
+// CONTENT WRAPPER
+// =============================================================================
 
 .active-view-selector__content-wrapper {
   display: flex;

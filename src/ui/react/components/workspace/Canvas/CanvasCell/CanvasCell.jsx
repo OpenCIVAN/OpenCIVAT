@@ -22,9 +22,6 @@ import {
     FileText,
     Box,
     ZoomIn,
-    MoreVertical,
-    MoreHorizontal,
-    Wrench,
     ArrowUp,
     ArrowDown,
     ArrowLeft,
@@ -477,7 +474,6 @@ export const CanvasCell = memo(function CanvasCell({
                         uiConfig={uiConfig}
                         onClose={() => onRemove?.()}
                         onTrash={handleTrashView}
-                        viewName={placement.content?.name || placement.content?.viewName}
                         viewColor={placement.content?.color?.hex || placement.content?.colorHex}
                         shouldMountViewport={shouldMountViewport}
                         isActiveView={isActiveView}
@@ -780,40 +776,8 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
     );
 }
 
-// =============================================================================
-// MINI HEADER - For thumbnail/snapshot modes
-// =============================================================================
-
-function MiniHeader({ name, color, onClose, onOpenMenu, viewId }) {
-    // Use CSS :hover for name reveal - no React state needed
-    return (
-        <div className="canvas-cell__mini-header">
-            <div
-                className="canvas-cell__mini-header-dot"
-                style={{ backgroundColor: color || '#60a5fa' }}
-            />
-            {/* Name revealed via CSS :hover on parent - always rendered but hidden */}
-            <div className="canvas-cell__mini-header-name">{name || 'View'}</div>
-            <div style={{ flex: 1 }} />
-            <button
-                className="canvas-cell__mini-header-btn"
-                onClick={(e) => { e.stopPropagation(); onOpenMenu?.(e); }}
-                title="Options"
-            >
-                <MoreVertical size={12} />
-            </button>
-            <button
-                className="canvas-cell__mini-header-btn canvas-cell__mini-header-close"
-                onClick={(e) => { e.stopPropagation(); onClose?.(); }}
-                title="Remove from canvas"
-            >
-                <X size={12} />
-            </button>
-        </div>
-    );
-}
-
-// ColdViewHeader has been replaced by CanvasCellHeader component
+// MiniHeader has been replaced by CanvasCellHeader component
+// CanvasCellHeader uses useViewMetadata hook for consistent colors
 // See: ./CanvasCellHeader.jsx
 
 // =============================================================================
@@ -829,9 +793,7 @@ function ViewContent({
     uiConfig,
     onClose,
     onTrash,
-    onOpenMenu,
-    viewName,
-    viewColor,
+    viewColor, // Fallback color from placement content (used if hook returns no color)
     shouldMountViewport = true,
     isActiveView = false,
     lifecycle = 'live', // 'live' | 'paused' | 'cold'
@@ -864,32 +826,28 @@ function ViewContent({
             {/* ================================================================
                 HEADER RENDERING - Always visible regardless of lifecycle
                 ================================================================
-                - COLD: Use CanvasCellHeader (lightweight, no instance handler)
-                - LIVE/PAUSED in THUMBNAIL/SNAPSHOT: Use MiniHeader
-                - LIVE/PAUSED in FULL/COMPACT: Header comes from InstanceViewport
+                Uses CanvasCellHeader for all cases in THUMBNAIL/SNAPSHOT mode:
+                - COLD: No viewport mounted, header gives illusion of full view
+                - LOADING: Viewport mounting, header shows while loading
+                - LIVE/PAUSED: Header visible even when viewport is active
+
+                CanvasCellHeader uses useViewMetadata hook for consistent colors.
+                This fixes the bug where headers would default to blue when
+                MiniHeader received undefined color from placement props.
+
+                In FULL/COMPACT mode, header comes from InstanceViewport.
             */}
 
-            {/* Cold view header - shows full header appearance for unmounted viewports */}
-            {/* This gives the illusion of a fully rendered view */}
-            {isCold && (
+            {/* Thumbnail/snapshot mode header - uses hook for consistent metadata */}
+            {isThumbnailMode && (
                 <CanvasCellHeader
                     viewId={viewId}
                     onRemove={onClose}
                     onTrash={onTrash}
                     onActivate={onActivate}
-                    isCold={true}
+                    isCold={isCold}
                     headerMode={headerMode}
-                />
-            )}
-
-            {/* Mini header for small modes (THUMBNAIL/SNAPSHOT) when viewport IS mounted */}
-            {uiConfig.showMiniHeader && shouldMountViewport && (
-                <MiniHeader
-                    name={viewName}
-                    color={viewColor}
-                    onClose={onClose}
-                    onOpenMenu={onOpenMenu}
-                    viewId={viewId}
+                    fallbackColor={viewColor}
                 />
             )}
 
