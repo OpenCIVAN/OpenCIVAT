@@ -5,31 +5,33 @@
 
 import React, { useState } from 'react';
 import {
-    IconUsers,
-    IconLock,
-    IconUnlock,
-    IconEyeOff,
-    IconVolume,
-    IconMessageSquare,
-    IconLogout,
-    IconCrown,
-    IconSettings,
-    IconDelete,
-    IconChevronDown,
-    IconChevronRight,
-    IconUser,
-} from '@UI/react/components/common/Icon';
-import { PublicOutlined, BusinessCenterOutlined, ViewQuiltOutlined } from '@mui/icons-material';
+    Users,
+    Lock,
+    Unlock,
+    EyeOff,
+    Volume2,
+    MessageSquare,
+    Layout,
+    LogOut,
+    Crown,
+    Settings,
+    Trash2,
+    ChevronDown,
+    ChevronRight,
+    Globe,
+    Briefcase,
+    User as UserIcon,
+} from 'lucide-react';
 
 /**
  * Get access icon for room
  */
 function getAccessIcon(access) {
     switch (access) {
-        case 'open': return IconUnlock;
-        case 'invite': return IconLock;
-        case 'invisible': return IconEyeOff;
-        default: return IconUnlock;
+        case 'open': return Unlock;
+        case 'invite': return Lock;
+        case 'invisible': return EyeOff;
+        default: return Unlock;
     }
 }
 
@@ -38,10 +40,10 @@ function getAccessIcon(access) {
  */
 function getTypeIcon(type) {
     switch (type) {
-        case 'project': return PublicOutlined;
-        case 'breakout': return BusinessCenterOutlined;
-        case 'personal': return IconUser;
-        default: return ViewQuiltOutlined;
+        case 'project': return Globe;
+        case 'breakout': return Briefcase;
+        case 'personal': return UserIcon;
+        default: return Layout;
     }
 }
 
@@ -87,11 +89,11 @@ export function RoomCard({ room, onJoin, onLeave, onSettings, onDelete }) {
                     </div>
                     <div className="room-card__meta">
                         <span className="room-card__member-count">
-                            <IconUsers size={10} />
+                            <Users size={10} />
                             {room.members.length}
                         </span>
-                        {room.hasVoice && <IconVolume size={10} />}
-                        {room.hasText && <IconMessageSquare size={10} />}
+                        {room.hasVoice && <Volume2 size={10} />}
+                        {room.hasText && <MessageSquare size={10} />}
                     </div>
                 </div>
 
@@ -107,7 +109,7 @@ export function RoomCard({ room, onJoin, onLeave, onSettings, onDelete }) {
                         </button>
                     )}
                     <span className="room-card__chevron">
-                        {isExpanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
+                        {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                     </span>
                 </div>
             </div>
@@ -127,7 +129,7 @@ export function RoomCard({ room, onJoin, onLeave, onSettings, onDelete }) {
                                     </div>
                                     <span className="room-card__member-name">
                                         {member.name}
-                                        {member.isOwner && <IconCrown size={10} />}
+                                        {member.isOwner && <Crown size={10} />}
                                     </span>
                                 </div>
                             ))}
@@ -140,7 +142,7 @@ export function RoomCard({ room, onJoin, onLeave, onSettings, onDelete }) {
                                 className="room-card__footer-btn room-card__footer-btn--leave"
                                 onClick={() => onLeave(room.id)}
                             >
-                                <IconLogout size={12} />
+                                <LogOut size={12} />
                                 Leave Room
                             </button>
                         )}
@@ -148,7 +150,7 @@ export function RoomCard({ room, onJoin, onLeave, onSettings, onDelete }) {
                             className="room-card__footer-btn"
                             onClick={() => onSettings(room.id)}
                         >
-                            <IconSettings size={12} />
+                            <Settings size={12} />
                             Settings
                         </button>
                         {room.type !== 'project' && (
@@ -156,7 +158,7 @@ export function RoomCard({ room, onJoin, onLeave, onSettings, onDelete }) {
                                 className="room-card__footer-btn room-card__footer-btn--delete"
                                 onClick={() => onDelete(room.id)}
                             >
-                                <IconDelete size={12} />
+                                <Trash2 size={12} />
                             </button>
                         )}
                     </div>

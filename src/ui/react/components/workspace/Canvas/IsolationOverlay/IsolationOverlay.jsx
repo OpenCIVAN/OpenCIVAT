@@ -12,7 +12,7 @@
 // This enables the "bird's eye → drill down" workflow without losing context.
 
 import React, { useCallback, useEffect, useRef } from 'react';
-import { IconClose, IconZoomIn, IconExternalLink, IconMaximize } from '@UI/react/components/common/Icon';
+import { X, ZoomIn, ExternalLink, Maximize2 } from 'lucide-react';
 import './IsolationOverlay.scss';
 
 /**
@@ -116,7 +116,7 @@ export function IsolationOverlay({
                 {/* Header */}
                 <div className="isolation-overlay__header">
                     <div className="isolation-overlay__title">
-                        <IconZoomIn size={14} className="isolation-overlay__icon" />
+                        <ZoomIn size={14} className="isolation-overlay__icon" />
                         <span className="isolation-overlay__name">
                             {cell?.name || 'Isolated View'}
                         </span>
@@ -134,7 +134,7 @@ export function IsolationOverlay({
                                 onClick={onPopOut}
                                 title="Pop out to new window"
                             >
-                                <IconExternalLink size={14} />
+                                <ExternalLink size={14} />
                             </button>
                         )}
                         {onFullscreen && (
@@ -143,7 +143,7 @@ export function IsolationOverlay({
                                 onClick={onFullscreen}
                                 title="Enter fullscreen"
                             >
-                                <IconMaximize size={14} />
+                                <Maximize2 size={14} />
                             </button>
                         )}
                         <button
@@ -151,7 +151,7 @@ export function IsolationOverlay({
                             onClick={onClose}
                             title="Exit isolation (Esc)"
                         >
-                            <IconClose size={16} />
+                            <X size={16} />
                             <span>Exit</span>
                         </button>
                     </div>

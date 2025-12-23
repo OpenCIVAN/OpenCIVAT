@@ -13,12 +13,12 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-    IconBookmark,
-    IconSearch,
-    IconClose,
-    IconAdd,
-    IconSliders,
-} from '@UI/react/components/common/Icon';
+    Bookmark,
+    Search,
+    X,
+    Plus,
+    Sliders,
+} from 'lucide-react';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { getScopeChips } from './constants';
 import { BookmarksSubtab } from './subtabs/BookmarksSubtab';
@@ -46,7 +46,7 @@ function SubTabs({ activeTab, onTabChange }) {
                 data-color="purple"
                 onClick={() => onTabChange('bookmarks')}
             >
-                <IconBookmark size={12} />
+                <Bookmark size={12} />
                 Bookmarks
             </button>
             <button
@@ -54,7 +54,7 @@ function SubTabs({ activeTab, onTabChange }) {
                 data-color="amber"
                 onClick={() => onTabChange('filters')}
             >
-                <IconSliders size={12} />
+                <Sliders size={12} />
                 Filters
             </button>
         </div>
@@ -137,7 +137,7 @@ export function BookmarksFiltersPanelContent({
         <div className="bookmarks-filters-tab">
             {/* Header - ALL CAPS like other tabs */}
             <div className="panel-header panel-header--indigo">
-                <IconBookmark size={14} className="panel-header__icon" />
+                <Bookmark size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Bookmarks & Filters</span>
             </div>
 
@@ -157,7 +157,7 @@ export function BookmarksFiltersPanelContent({
             {/* Search */}
             <div className="bookmarks-filters-tab__search">
                 <div className="search-input">
-                    <IconSearch size={12} className="search-input__icon" />
+                    <Search size={12} className="search-input__icon" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -166,7 +166,7 @@ export function BookmarksFiltersPanelContent({
                     />
                     {searchQuery && (
                         <button className="search-input__clear" onClick={() => setSearchQuery('')}>
-                            <IconClose size={10} />
+                            <X size={10} />
                         </button>
                     )}
                 </div>
@@ -194,7 +194,7 @@ export function BookmarksFiltersPanelContent({
                     className="bookmarks-filters-tab__add-btn"
                     onClick={handleAdd}
                 >
-                    <IconAdd size={12} />
+                    <Plus size={12} />
                     {activeSubTab === 'bookmarks' ? 'Add Bookmark' : 'Save Current Filter'}
                 </button>
             </div>

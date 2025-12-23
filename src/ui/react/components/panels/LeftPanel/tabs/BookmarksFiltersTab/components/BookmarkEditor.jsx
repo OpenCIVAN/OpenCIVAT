@@ -15,19 +15,19 @@
 
 import React, { useState, useCallback, useEffect, memo } from 'react';
 import {
-    IconClose,
-    IconBookmark,
-    IconCamera,
-    IconSave,
-    IconLayers,
-    IconGlobe,
-    IconUsers,
-    IconAdd,
-} from '@UI/react/components/common/Icon';
-import ExploreOutlined from '@mui/icons-material/ExploreOutlined';
-import CompareArrowsOutlined from '@mui/icons-material/CompareArrowsOutlined';
-import PersonOutlined from '@mui/icons-material/PersonOutlined';
-import LabelOutlined from '@mui/icons-material/LabelOutlined';
+    X,
+    Bookmark,
+    Camera,
+    Save,
+    Navigation,
+    Layers,
+    GitCompare,
+    Globe,
+    Users,
+    UserCircle,
+    Tag,
+    Plus,
+} from 'lucide-react';
 import { BOOKMARK_TYPES, BOOKMARK_SCOPES } from '../hooks/useBookmarksTab';
 
 /**
@@ -156,15 +156,15 @@ export const BookmarkEditor = memo(function BookmarkEditor({
     if (!isOpen) return null;
 
     const typeIcons = {
-        position: ExploreOutlined,
-        state: IconLayers,
-        comparison: CompareArrowsOutlined,
+        position: Navigation,
+        state: Layers,
+        comparison: GitCompare,
     };
 
     const scopeIcons = {
-        personal: PersonOutlined,
-        shared: IconUsers,
-        template: IconGlobe,
+        personal: UserCircle,
+        shared: Users,
+        template: Globe,
     };
 
     return (
@@ -172,10 +172,10 @@ export const BookmarkEditor = memo(function BookmarkEditor({
             <div className="bookmark-editor" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="bookmark-editor__header">
-                    <IconBookmark size={16} className="icon-purple" />
+                    <Bookmark size={16} className="icon-purple" />
                     <span>{bookmark ? 'Edit Bookmark' : 'New Bookmark'}</span>
                     <button className="bookmark-editor__close" onClick={onClose}>
-                        <IconClose size={14} />
+                        <X size={14} />
                     </button>
                 </div>
 
@@ -266,7 +266,7 @@ export const BookmarkEditor = memo(function BookmarkEditor({
                                 onClick={handleCaptureCamera}
                                 disabled={!currentCameraState}
                             >
-                                <IconCamera size={12} />
+                                <Camera size={12} />
                                 Capture Current
                             </button>
                         </div>
@@ -293,7 +293,7 @@ export const BookmarkEditor = memo(function BookmarkEditor({
                     <div className="bookmark-editor__field">
                         <label>Tags</label>
                         <div className="bookmark-editor__tags-input">
-                            <LabelOutlined size={12} />
+                            <Tag size={12} />
                             <input
                                 type="text"
                                 value={tagInput}
@@ -306,7 +306,7 @@ export const BookmarkEditor = memo(function BookmarkEditor({
                                 onClick={handleAddTag}
                                 disabled={!tagInput.trim()}
                             >
-                                <IconAdd size={12} />
+                                <Plus size={12} />
                             </button>
                         </div>
                         {tags.length > 0 && (
@@ -318,7 +318,7 @@ export const BookmarkEditor = memo(function BookmarkEditor({
                                             type="button"
                                             onClick={() => handleRemoveTag(tag)}
                                         >
-                                            <IconClose size={8} />
+                                            <X size={8} />
                                         </button>
                                     </span>
                                 ))}
@@ -349,7 +349,7 @@ export const BookmarkEditor = memo(function BookmarkEditor({
                         onClick={handleSave}
                         disabled={isSaving}
                     >
-                        <IconSave size={12} />
+                        <Save size={12} />
                         {isSaving ? 'Saving...' : (bookmark ? 'Update' : 'Create')}
                     </button>
                 </div>

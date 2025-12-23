@@ -2,7 +2,7 @@
 // VR mode toggle button with state feedback
 
 import React, { useState, useEffect, useCallback } from "react";
-import { IconVR, IconLoader } from '@UI/react/components/common/Icon';
+import { Glasses, Loader2 } from 'lucide-react';
 import { SlashedIcon } from "@UI/react/components/common/IconOverlay/IconOverlay.jsx";
 import { vrManager } from "@Core/vr/VRManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
@@ -147,7 +147,7 @@ export function VRButton({
                 title="Checking VR support..."
             >
                 <span className="vr-button__icon">
-                    <IconLoader sx={{ fontSize: size === "lg" ? 18 : size === "md" ? 16 : 14 }} />
+                    <Loader2 size={size === "lg" ? 18 : size === "md" ? 16 : 14} />
                 </span>
                 {showLabel && <span className="vr-button__label">VR</span>}
             </button>
@@ -192,11 +192,11 @@ export function VRButton({
         >
             <span className="vr-button__icon">
                 {isEntering ? (
-                    <IconLoader sx={{ fontSize: iconSize }} className="vr-button__spinner" />
+                    <Loader2 size={iconSize} className="vr-button__spinner" />
                 ) : isInVR ? (
-                    <SlashedIcon icon={IconVR} size={iconSize} />
+                    <SlashedIcon icon={Glasses} size={iconSize} />
                 ) : (
-                    <IconVR sx={{ fontSize: iconSize }} />
+                    <Glasses size={iconSize} />
                 )}
             </span>
 

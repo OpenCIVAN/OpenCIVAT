@@ -8,9 +8,14 @@
 // - Keyboard accessible
 
 import React, { useEffect, useRef, useCallback } from "react";
-import { IconCpu, IconChevronDown, IconGripHorizontal } from '@UI/react/components/common/Icon';
-import TerminalOutlined from '@mui/icons-material/TerminalOutlined';
-import ArticleOutlined from '@mui/icons-material/ArticleOutlined';
+import {
+    Terminal,
+    Cpu,
+    ScrollText,
+    ChevronDown,
+    X,
+    GripHorizontal,
+} from 'lucide-react';
 import {
     useBottomPanel,
     BottomPanelTabs,
@@ -24,19 +29,19 @@ const TABS = [
     {
         id: BottomPanelTabs.LOGS,
         label: "Logs",
-        icon: ArticleOutlined,
+        icon: ScrollText,
         component: LogsTab,
     },
     {
         id: BottomPanelTabs.COMPUTE,
         label: "Compute",
-        icon: IconCpu,
+        icon: Cpu,
         component: () => <ComputePlaceholder />,  // Future implementation
     },
     {
         id: BottomPanelTabs.CONSOLE,
         label: "Console",
-        icon: TerminalOutlined,
+        icon: Terminal,
         component: () => <ConsolePlaceholder />,  // Future implementation
     },
 ];
@@ -45,7 +50,7 @@ const TABS = [
 function ComputePlaceholder() {
     return (
         <div className="bottom-panel__placeholder">
-            <IconCpu sx={{ fontSize: 32 }} />
+            <Cpu size={32} />
             <p>Compute Jobs</p>
             <span>Background processing status will appear here</span>
         </div>
@@ -55,7 +60,7 @@ function ComputePlaceholder() {
 function ConsolePlaceholder() {
     return (
         <div className="bottom-panel__placeholder">
-            <TerminalOutlined sx={{ fontSize: 32 }} />
+            <Terminal size={32} />
             <p>Debug Console</p>
             <span>Interactive debugging coming soon</span>
         </div>
@@ -140,7 +145,7 @@ export function BottomPanel() {
                 onMouseDown={handleMouseDown}
                 title="Drag to resize"
             >
-                <IconGripHorizontal sx={{ fontSize: 14 }} />
+                <GripHorizontal size={14} />
             </div>
 
             {/* Header with tabs */}
@@ -158,7 +163,7 @@ export function BottomPanel() {
                                 className={`bottom-panel__tab ${isActive ? "bottom-panel__tab--active" : ""}`}
                                 onClick={() => panel.setActiveTab(tab.id)}
                             >
-                                <Icon sx={{ fontSize: 14 }} />
+                                <Icon size={14} />
                                 <span>{tab.label}</span>
                             </button>
                         );
@@ -172,7 +177,7 @@ export function BottomPanel() {
                         title="Close panel (Escape)"
                         aria-label="Close panel"
                     >
-                        <IconChevronDown sx={{ fontSize: 16 }} />
+                        <ChevronDown size={16} />
                     </button>
                 </div>
             </div>

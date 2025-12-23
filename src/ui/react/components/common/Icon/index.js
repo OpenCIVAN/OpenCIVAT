@@ -50,8 +50,6 @@ export {
   MoreVertOutlined as IconMoreVertical,
   SettingsOutlined as IconSettings,
   MenuOutlined as IconMenu,
-  BoltOutlined as IconMacro,
-  CompareArrowsOutlined as IconGitCompare,
 } from "@mui/icons-material";
 
 // =============================================================================
@@ -123,7 +121,6 @@ export {
   MyLocationOutlined as IconCrosshair,
   CreateOutlined as IconPencil,
   NearMeOutlined as IconMousePointer,
-  SquareOutlined as IconSquare,
 } from "@mui/icons-material";
 
 // =============================================================================

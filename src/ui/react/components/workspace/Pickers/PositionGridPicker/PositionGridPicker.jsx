@@ -2,13 +2,13 @@
 // NEW FILE - Create this for positioning widgets
 
 import React, { useState } from 'react';
-import { IconCheck } from '@UI/react/components/common/Icon';
 import {
-    SubdirectoryArrowLeftOutlined as CornerDownLeft,
-    SubdirectoryArrowRightOutlined as CornerDownRight,
-    NorthWestOutlined as CornerUpLeft,
-    NorthEastOutlined as CornerUpRight,
-} from '@mui/icons-material';
+    CornerDownLeft,
+    CornerDownRight,
+    CornerUpLeft,
+    CornerUpRight,
+    Check
+} from 'lucide-react';
 
 /**
  * PositionGridPicker
@@ -96,7 +96,7 @@ export function PositionGridPicker({
                                     {/* Check mark for active */}
                                     {isActive && (
                                         <div className="position-grid-check">
-                                            <IconCheck size={14} />
+                                            <Check size={14} />
                                         </div>
                                     )}
                                 </div>

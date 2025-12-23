@@ -13,7 +13,7 @@
  */
 
 import React, { memo, useEffect, useRef } from 'react';
-import { IconSearch, IconClose, IconLoader } from '@UI/react/components/common/Icon';
+import { Search, X, Loader2 } from 'lucide-react';
 
 /**
  * @typedef {Object} SearchInputProps
@@ -88,9 +88,9 @@ function SearchInput({
             {/* Search icon or loading spinner */}
             <div className="global-search__input-icon">
                 {isLoading ? (
-                    <IconLoader size={20} className="global-search__spinner" />
+                    <Loader2 size={20} className="global-search__spinner" />
                 ) : (
-                    <IconSearch size={20} />
+                    <Search size={20} />
                 )}
             </div>
 
@@ -124,7 +124,7 @@ function SearchInput({
                     aria-label="Clear search"
                     tabIndex={-1}
                 >
-                    <IconClose size={18} />
+                    <X size={18} />
                 </button>
             )}
 

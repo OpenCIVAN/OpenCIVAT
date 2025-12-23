@@ -20,7 +20,7 @@
 
 import { useEffect, useCallback, memo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { IconClose, IconMinimize } from '@UI/react/components/common/Icon';
+import { X, Minimize2 } from 'lucide-react';
 import './WorkspaceOverlay.scss';
 
 export const WorkspaceOverlay = memo(function WorkspaceOverlay({
@@ -97,7 +97,7 @@ export const WorkspaceOverlay = memo(function WorkspaceOverlay({
                             aria-label="Close overlay (ESC or ⌘E)"
                             title="Close (ESC or ⌘E)"
                         >
-                            <IconMinimize size={16} />
+                            <Minimize2 size={16} />
                         </button>
                     </div>
                 </div>

@@ -10,22 +10,22 @@
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
 import {
-    IconLayoutGrid,
-    IconGrid3x3,
-    IconMaximize,
-    IconRemove,
-    IconAdd,
-    IconLoader,
-} from '@UI/react/components/common/Icon';
-import AddCircleOutlineOutlined from '@mui/icons-material/AddCircleOutlineOutlined';
-import TouchAppOutlined from '@mui/icons-material/TouchAppOutlined';
-import PanToolOutlined from '@mui/icons-material/PanToolOutlined';
-import CallMergeOutlined from '@mui/icons-material/CallMergeOutlined';
-import ViewWeekOutlined from '@mui/icons-material/ViewWeekOutlined';
-import ViewStreamOutlined from '@mui/icons-material/ViewStreamOutlined';
-import ArrowForwardOutlined from '@mui/icons-material/ArrowForwardOutlined';
-import ArrowDownwardOutlined from '@mui/icons-material/ArrowDownwardOutlined';
-import CloudOffOutlined from '@mui/icons-material/CloudOffOutlined';
+    LayoutGrid,
+    Grid3X3,
+    PlusCircle,
+    MousePointer2,
+    Hand,
+    Merge,
+    Maximize2,
+    Columns3,
+    Rows3,
+    ArrowRight,
+    ArrowDown,
+    WifiOff,
+    Loader2,
+    Minus,
+    Plus,
+} from 'lucide-react';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { loadCanvasSize, saveCanvasSize } from '@UI/react/hooks/canvasState.js';
 import {
@@ -49,10 +49,10 @@ const SPAWN_SIZES = [
 ];
 
 const QUICK_LAYOUTS = [
-    { id: 'single', label: 'Single', icon: IconMaximize, rows: 1, cols: 1 },
-    { id: 'side-by-side', label: 'Side by Side', icon: ViewWeekOutlined, rows: 1, cols: 2 },
-    { id: 'stacked', label: 'Stacked', icon: ViewStreamOutlined, rows: 2, cols: 1 },
-    { id: '2x2', label: '2×2 Grid', icon: IconGrid3x3, rows: 2, cols: 2 },
+    { id: 'single', label: 'Single', icon: Maximize2, rows: 1, cols: 1 },
+    { id: 'side-by-side', label: 'Side by Side', icon: Columns3, rows: 1, cols: 2 },
+    { id: 'stacked', label: 'Stacked', icon: Rows3, rows: 2, cols: 1 },
+    { id: '2x2', label: '2×2 Grid', icon: Grid3X3, rows: 2, cols: 2 },
 ];
 
 // =============================================================================
@@ -101,11 +101,11 @@ function CanvasSizeControl({ rows, cols, onChangeRows, onChangeCols }) {
                         onClick={() => onChangeRows?.(Math.max(1, rows - 1))}
                         disabled={rows <= 1}
                     >
-                        <IconRemove size={12} />
+                        <Minus size={12} />
                     </button>
                     <span className="layout-tab__size-value">{rows}</span>
                     <button onClick={() => onChangeRows?.(rows + 1)}>
-                        <IconAdd size={12} />
+                        <Plus size={12} />
                     </button>
                 </div>
             </div>
@@ -116,11 +116,11 @@ function CanvasSizeControl({ rows, cols, onChangeRows, onChangeCols }) {
                         onClick={() => onChangeCols?.(Math.max(1, cols - 1))}
                         disabled={cols <= 1}
                     >
-                        <IconRemove size={12} />
+                        <Minus size={12} />
                     </button>
                     <span className="layout-tab__size-value">{cols}</span>
                     <button onClick={() => onChangeCols?.(cols + 1)}>
-                        <IconAdd size={12} />
+                        <Plus size={12} />
                     </button>
                 </div>
             </div>
@@ -140,7 +140,7 @@ function CanvasTools({ tool, setTool }) {
                 title="Select - Click to select cells"
                 data-color="blue"
             >
-                <TouchAppOutlined size={14} />
+                <MousePointer2 size={14} />
                 <span>Select</span>
             </button>
             <button
@@ -149,7 +149,7 @@ function CanvasTools({ tool, setTool }) {
                 title="Pan - Drag to pan viewport"
                 data-color="teal"
             >
-                <PanToolOutlined size={14} />
+                <Hand size={14} />
                 <span>Pan</span>
             </button>
             <button
@@ -158,7 +158,7 @@ function CanvasTools({ tool, setTool }) {
                 title="Merge - Select cells to merge/unmerge"
                 data-color="purple"
             >
-                <CallMergeOutlined size={14} />
+                <Merge size={14} />
                 <span>Merge</span>
             </button>
         </div>
@@ -271,11 +271,11 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
         return (
             <div className={`layout-tab layout-tab--loading ${className}`}>
                 <div className="panel-header panel-header--green">
-                    <IconLayoutGrid size={14} className="panel-header__icon" />
+                    <LayoutGrid size={14} className="panel-header__icon" />
                     <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-tab__loading">
-                    <IconLoader size={24} className="spin" />
+                    <Loader2 size={24} className="spin" />
                     <span>Loading canvas...</span>
                 </div>
             </div>
@@ -290,7 +290,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
         <div className={`layout-tab ${className}`}>
             {/* Header */}
             <div className="panel-header panel-header--green">
-                <IconLayoutGrid size={14} className="panel-header__icon" />
+                <LayoutGrid size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Layout</span>
             </div>
 
@@ -299,7 +299,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                 {/* Flow Direction Card */}
                 <div className="layout-tab__card" data-color="purple">
                     <div className="layout-tab__card-header">
-                        <IconLayoutGrid size={10} />
+                        <LayoutGrid size={10} />
                         <span>Flow Direction</span>
                     </div>
                     <p className="layout-tab__card-description">
@@ -310,14 +310,14 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                             className={`layout-tab__direction-btn ${flowDirection === FLOW_DIRECTIONS.ROW ? 'layout-tab__direction-btn--active' : ''}`}
                             onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.ROW)}
                         >
-                            <ArrowForwardOutlined size={14} />
+                            <ArrowRight size={14} />
                             <span>Row</span>
                         </button>
                         <button
                             className={`layout-tab__direction-btn ${flowDirection === FLOW_DIRECTIONS.COLUMN ? 'layout-tab__direction-btn--active' : ''}`}
                             onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.COLUMN)}
                         >
-                            <ArrowDownwardOutlined size={14} />
+                            <ArrowDown size={14} />
                             <span>Col</span>
                         </button>
                     </div>
@@ -326,7 +326,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                 {/* Canvas Size Card */}
                 <div className="layout-tab__card" data-color="blue">
                     <div className="layout-tab__card-header">
-                        <IconGrid3x3 size={10} />
+                        <Grid3X3 size={10} />
                         <span>Canvas Size</span>
                     </div>
                     <CanvasSizeControl
@@ -340,7 +340,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                 {/* New View Size Card */}
                 <div className="layout-tab__card" data-color="green">
                     <div className="layout-tab__card-header">
-                        <AddCircleOutlineOutlined size={10} />
+                        <PlusCircle size={10} />
                         <span>New View Size</span>
                     </div>
                     <SpawnSizePicker value={spawnSize} onChange={setSpawnSize} />
@@ -352,7 +352,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                 {/* Quick Layouts Card */}
                 <div className="layout-tab__card" data-color="amber">
                     <div className="layout-tab__card-header">
-                        <IconGrid3x3 size={10} />
+                        <Grid3X3 size={10} />
                         <span>Quick Layouts</span>
                     </div>
                     <div className="layout-tab__quick-layouts">
@@ -376,7 +376,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                 {/* Canvas Tools Card */}
                 <div className="layout-tab__card" data-color="teal">
                     <div className="layout-tab__card-header">
-                        <TouchAppOutlined size={10} />
+                        <MousePointer2 size={10} />
                         <span>Canvas Tools</span>
                     </div>
                     <CanvasTools tool={tool} setTool={setTool} />

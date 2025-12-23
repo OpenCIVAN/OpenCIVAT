@@ -15,17 +15,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-    IconFolder,
-    IconSave,
-    IconRefresh,
-    IconUsers,
-    IconCopy,
-    IconLink,
-    IconLock,
-    IconMaximize,
-    IconChevronDown,
-} from '@UI/react/components/common/Icon';
-import PublicOutlined from '@mui/icons-material/PublicOutlined';
+    Folder,
+    Globe,
+    Save,
+    RefreshCw,
+    Users,
+    Copy,
+    Link2,
+    Lock,
+    Maximize2,
+    ChevronDown,
+} from 'lucide-react';
 import './SlidingPanel.scss';
 
 // =============================================================================
@@ -129,7 +129,7 @@ export function SlidingPanel({
                 {/* Stars + State Group */}
                 <div className="sliding-panel__group">
                     <PanelButton
-                        icon={IconFolder}
+                        icon={Folder}
                         active={view?.starredWorkspace}
                         color="purple"
                         onClick={onStarWorkspace}
@@ -137,7 +137,7 @@ export function SlidingPanel({
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
-                        icon={PublicOutlined}
+                        icon={Globe}
                         active={view?.starredPersonal}
                         color="amber"
                         onClick={onStarPersonal}
@@ -145,7 +145,7 @@ export function SlidingPanel({
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
-                        icon={IconSave}
+                        icon={Save}
                         active={view?.hasSavedState}
                         color="amber"
                         onClick={onSaveState}
@@ -157,7 +157,7 @@ export function SlidingPanel({
                 {/* Share + Link Group */}
                 <div className="sliding-panel__group">
                     <PanelButton
-                        icon={IconUsers}
+                        icon={Users}
                         active={view?.isShared}
                         color="pink"
                         onClick={onShare}
@@ -165,7 +165,7 @@ export function SlidingPanel({
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
-                        icon={IconLink}
+                        icon={Link2}
                         active={view?.linkedCount > 0}
                         color="teal"
                         badge={view?.linkedCount > 0 ? view.linkedCount : null}
@@ -173,7 +173,7 @@ export function SlidingPanel({
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
-                        icon={IconLock}
+                        icon={Lock}
                         active={view?.isLocked}
                         color="amber"
                         onClick={onLock}
@@ -193,9 +193,9 @@ export function SlidingPanel({
                     onMouseEnter={() => setTooltipText('Canvas Size')}
                     onMouseLeave={() => setTooltipText(null)}
                 >
-                    <IconMaximize size={10} />
+                    <Maximize2 size={10} />
                     <span>{view?.rowSpan || 1}×{view?.colSpan || 1}</span>
-                    <IconChevronDown size={8} />
+                    <ChevronDown size={8} />
                 </button>
             </div>
 

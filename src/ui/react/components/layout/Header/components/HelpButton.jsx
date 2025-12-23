@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { IconHelpCircle } from '@UI/react/components/common/Icon';
+import { HelpCircle } from 'lucide-react';
 
 /**
  * Help button that opens help modal.
@@ -21,7 +21,7 @@ export function HelpButton({ onOpen }) {
             aria-label="Open help"
             type="button"
         >
-            <IconHelpCircle sx={{ fontSize: 18 }} />
+            <HelpCircle size={18} />
         </button>
     );
 }

@@ -29,9 +29,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { IconMapPin, IconClose, IconEdit, IconCheck } from '@UI/react/components/common/Icon';
-import GpsFixedOutlined from '@mui/icons-material/GpsFixedOutlined';
-import DragIndicatorOutlined from '@mui/icons-material/DragIndicatorOutlined';
+import { MapPin, X, Target, Edit3, Check, GripHorizontal } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import './FloatingAnnotationCreator.scss';
 
@@ -196,30 +194,30 @@ export function FloatingAnnotationCreator({
             {/* Header with drag handle */}
             <div className="floating-annotation-creator__header">
                 <div className="floating-annotation-creator__drag-handle">
-                    <DragIndicatorOutlined style={{ fontSize: 14 }} />
+                    <GripHorizontal size={14} />
                 </div>
-                <IconMapPin size={14} className="floating-annotation-creator__icon" />
+                <MapPin size={14} className="floating-annotation-creator__icon" />
                 <span>New Annotation</span>
                 <button
                     className="floating-annotation-creator__close"
                     onClick={onClose}
                     title="Cancel (Esc)"
                 >
-                    <IconClose size={14} />
+                    <X size={14} />
                 </button>
             </div>
 
             {/* Position Display/Edit */}
             <div className="floating-annotation-creator__position">
                 <div className="floating-annotation-creator__position-header">
-                    <GpsFixedOutlined style={{ fontSize: 12 }} />
+                    <Target size={12} />
                     <span>Position</span>
                     <button
                         className="floating-annotation-creator__edit-btn"
                         onClick={() => setEditingPosition(!editingPosition)}
                         title={editingPosition ? 'Done editing' : 'Edit position'}
                     >
-                        {editingPosition ? <IconCheck size={12} /> : <IconEdit size={12} />}
+                        {editingPosition ? <Check size={12} /> : <Edit3 size={12} />}
                     </button>
                 </div>
 
@@ -302,7 +300,7 @@ export function FloatingAnnotationCreator({
                     onClick={handleSubmit}
                     disabled={!text.trim()}
                 >
-                    <IconMapPin size={12} />
+                    <MapPin size={12} />
                     Create
                 </button>
             </div>

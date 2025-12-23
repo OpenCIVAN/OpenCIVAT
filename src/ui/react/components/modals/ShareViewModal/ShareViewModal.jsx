@@ -25,8 +25,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import { PersonOffOutlined } from '@mui/icons-material';
-import { IconShare, IconLink, IconCheck, IconAlertTriangle } from '@UI/react/components/common/Icon';
+import { Share2, Link, UserX, Check, AlertTriangle } from 'lucide-react';
 import { Modal } from '../Modal';
 import { Button } from '../../common/Button';
 import PersonSearch from './PersonSearch';
@@ -325,7 +324,7 @@ function ShareViewModal({
             isOpen={isOpen}
             onClose={handleClose}
             title={modalTitle}
-            icon={IconShare}
+            icon={Share2}
             severity="info"
             size="md"
             testId={testId}
@@ -334,7 +333,7 @@ function ShareViewModal({
                     {/* Copy Link button */}
                     <Button
                         variant="secondary"
-                        icon={linkCopied ? IconCheck : IconLink}
+                        icon={linkCopied ? Check : Link}
                         onClick={handleCopyLink}
                         loading={isCopying}
                         disabled={isStopping}
@@ -348,7 +347,7 @@ function ShareViewModal({
                     {!showStopConfirm ? (
                         <Button
                             variant="ghost"
-                            icon={PersonOffOutlined}
+                            icon={UserX}
                             onClick={handleStopSharingClick}
                             disabled={sharees.length === 0 || isSaving || isStopping}
                         >
@@ -357,7 +356,7 @@ function ShareViewModal({
                     ) : (
                         <div className="share-view-modal__confirm">
                             <span className="share-view-modal__confirm-text">
-                                <IconAlertTriangle size={14} /> Remove all access?
+                                <AlertTriangle size={14} /> Remove all access?
                             </span>
                             <Button
                                 variant="ghost"

@@ -5,85 +5,84 @@ import { createSlashedIcon } from "@UI/react/components/common/IconOverlay";
 
 import {
   // Geometry & 3D
-  IconBox,
-  IconCircle,
-  IconLayers,
+  Box,
+  Circle,
+  Square,
+  Triangle,
+  Layers,
 
   // Measurement & Analysis
-  IconRuler,
-  IconMove,
+  Ruler,
+  Move,
+  BarChart3,
+  TrendingUp,
+  Network,
 
   // Camera & View
-  IconCamera,
-  IconEye,
-  IconEyeOff,
-  IconZoomIn,
-  IconZoomOut,
+  Camera,
+  Eye,
+  EyeOff,
+  Focus,
+  ZoomIn,
+  ZoomOut,
 
   // Tools & Editing
-  IconScissors,
-  IconRotateCcw,
+  Scissors,
+  Wand2,
+  RotateCw,
+  RotateCcw,
+  Move3d,
 
   // Visual Properties
-  IconSun,
-  IconPalette,
-  IconGrid3x3,
-  IconCircleDot,
+  Sun,
+  Palette,
+  Contrast,
+  Rainbow,
+  ThermometerSnowflake,
+  ThermometerSun,
+  Eclipse,
+  Grid,
+  Grid3x3,
+  CircleDot,
+  Droplet,
 
   // Navigation
-  IconMaximize,
-  IconMinimize,
+  Compass,
+  Maximize2,
+  Minimize2,
 
   // UI Actions
-  IconAdd,
-  IconEdit,
-  IconDelete,
-  IconCheck,
-  IconClose,
-  IconRefresh,
-  IconDownload,
-  IconUpload,
-  IconSettings,
-  IconSliders,
-  IconInfo,
+  Plus,
+  Edit3,
+  Trash2,
+  Check,
+  X,
+  RefreshCw,
+  Download,
+  Upload,
+  Settings,
+  Sliders,
+  Info,
 
   // Communication
-  IconMessageSquare,
+  MessageSquare,
+  PencilRuler,
 
   // Data
-  IconDatabase,
-  IconFile,
-} from '@UI/react/components/common/Icon';
+  Database,
+  FileText,
+  Wallpaper,
 
-import {
-  SquareOutlined as IconSquare,
-  ChangeHistoryOutlined as IconTriangle,
-  BarChartOutlined as IconBarChart,
-  TrendingUpOutlined as IconTrendingUp,
-  HubOutlined as IconNetwork,
-  CenterFocusStrongOutlined as IconFocus,
-  AutoFixHighOutlined as IconWand,
-  ThreeDRotationOutlined as IconRotateCw,
-  ViewInArOutlined as IconMove3d,
-  ContrastOutlined as IconContrast,
-  GradientOutlined as IconRainbow,
-  AcUnitOutlined as IconThermometerSnowflake,
-  WbSunnyOutlined as IconThermometerSun,
-  DarkModeOutlined as IconEclipse,
-  GridOnOutlined as IconGrid,
-  OpacityOutlined as IconDroplet,
-  ExploreOutlined as IconCompass,
-  ArchitectureOutlined as IconPencilRuler,
-  WallpaperOutlined as IconWallpaper,
-  SouthEastOutlined as IconCornerDownRight,
-  SouthWestOutlined as IconCornerDownLeft,
-  NorthEastOutlined as IconCornerUpRight,
-  NorthWestOutlined as IconCornerUpLeft,
-} from '@mui/icons-material';
+  // Corner positioning
+  CornerDownRight,
+  CornerDownLeft,
+  CornerUpRight,
+  CornerUpLeft,
+} from 'lucide-react';
 
-const SlashedCompass = createSlashedIcon(IconCompass);
-const SlashedGrid = createSlashedIcon(IconGrid);
-const SlashedRuler = createSlashedIcon(IconRuler);
+const SlashedCompass = createSlashedIcon(Compass);
+const SlashedGrid = createSlashedIcon(Grid);
+const SlashedRuler = createSlashedIcon(Ruler);
 
 /**
  * ICON REGISTRY
@@ -109,166 +108,166 @@ const TOOL_ICON_MAP = {
   // GEOMETRY & 3D
   // Used by: general shapes, bounds, primitives
   // ==========================================================================
-  box: IconBox,
-  cube: IconBox,
-  square: IconSquare,
-  circle: IconCircle,
-  triangle: IconTriangle,
-  layers: IconLayers,
+  box: Box,
+  cube: Box,
+  square: Square,
+  circle: Circle,
+  triangle: Triangle,
+  layers: Layers,
 
   // ==========================================================================
   // MEASUREMENT & ANALYSIS
   // Used by: measurement tools, statistics, data analysis
   // ==========================================================================
-  ruler: IconRuler,
-  measure: IconRuler, // Alias
+  ruler: Ruler,
+  measure: Ruler, // Alias
   "ruler-off": SlashedRuler,
   "measure-off": SlashedRuler,
-  "bar-chart": IconBarChart,
-  trend: IconTrendingUp,
-  network: IconNetwork,
-  graph: IconNetwork, // Alias
+  "bar-chart": BarChart3,
+  trend: TrendingUp,
+  network: Network,
+  graph: Network, // Alias
 
   // ==========================================================================
   // CAMERA & VIEWING
   // Used by: camera controls, view presets, zoom
   // ==========================================================================
-  camera: IconCamera,
-  eye: IconEye,
-  "eye-off": IconEyeOff,
-  focus: IconFocus,
-  "zoom-in": IconZoomIn,
-  "zoom-out": IconZoomOut,
+  camera: Camera,
+  eye: Eye,
+  "eye-off": EyeOff,
+  focus: Focus,
+  "zoom-in": ZoomIn,
+  "zoom-out": ZoomOut,
 
   // ==========================================================================
   // TOOLS & MANIPULATION
   // Used by: transform, clipping, editing tools
   // ==========================================================================
-  scissors: IconScissors,
-  clip: IconScissors, // Alias
-  wand: IconWand,
-  transform: IconWand, // Alias
-  move: IconMove,
-  translate: IconMove, // Alias
-  "rotate-cw": IconRotateCw,
-  "rotate-ccw": IconRotateCcw,
-  rotate: IconRotateCw, // Alias
-  "move-3d": IconMove3d,
-  axes: IconMove3d, // Alias
+  scissors: Scissors,
+  clip: Scissors, // Alias
+  wand: Wand2,
+  transform: Wand2, // Alias
+  move: Move,
+  translate: Move, // Alias
+  "rotate-cw": RotateCw,
+  "rotate-ccw": RotateCcw,
+  rotate: RotateCw, // Alias
+  "move-3d": Move3d,
+  axes: Move3d, // Alias
 
   // ==========================================================================
   // VISUAL PROPERTIES
   // Used by: colormaps, lighting, rendering options
   // ==========================================================================
-  palette: IconPalette,
-  colormap: IconPalette, // Alias
-  sun: IconSun,
-  lighting: IconSun, // Alias
-  contrast: IconContrast,
-  rainbow: IconRainbow,
-  "temp-cold": IconThermometerSnowflake,
-  "temp-hot": IconThermometerSun,
-  eclipse: IconEclipse,
-  grayscale: IconEclipse, // Alias
-  wallpaper: IconWallpaper,
-  texture: IconWallpaper, // Alias
-  grid: IconGrid,
+  palette: Palette,
+  colormap: Palette, // Alias
+  sun: Sun,
+  lighting: Sun, // Alias
+  contrast: Contrast,
+  rainbow: Rainbow,
+  "temp-cold": ThermometerSnowflake,
+  "temp-hot": ThermometerSun,
+  eclipse: Eclipse,
+  grayscale: Eclipse, // Alias
+  wallpaper: Wallpaper,
+  texture: Wallpaper, // Alias
+  grid: Grid,
   "grid-off": SlashedGrid,
-  "grid-3x3": IconGrid3x3,
-  points: IconCircleDot,
-  droplet: IconDroplet,
+  "grid-3x3": Grid3x3,
+  points: CircleDot,
+  droplet: Droplet,
 
   // ==========================================================================
   // NAVIGATION & ORIENTATION
   // Used by: orientation cube, navigation aids
   // ==========================================================================
-  compass: IconCompass,
+  compass: Compass,
   "compass-off": SlashedCompass,
 
   // ==========================================================================
   // CORNER POSITIONING
   // Used by: widget positioning controls
   // ==========================================================================
-  "corner-down-right": IconCornerDownRight,
-  "corner-down-left": IconCornerDownLeft,
-  "corner-up-right": IconCornerUpRight,
-  "corner-up-left": IconCornerUpLeft,
-  "corner-br": IconCornerDownRight, // Alias
-  "corner-bl": IconCornerDownLeft, // Alias
-  "corner-tr": IconCornerUpRight, // Alias
-  "corner-tl": IconCornerUpLeft, // Alias
+  "corner-down-right": CornerDownRight,
+  "corner-down-left": CornerDownLeft,
+  "corner-up-right": CornerUpRight,
+  "corner-up-left": CornerUpLeft,
+  "corner-br": CornerDownRight, // Alias
+  "corner-bl": CornerDownLeft, // Alias
+  "corner-tr": CornerUpRight, // Alias
+  "corner-tl": CornerUpLeft, // Alias
 
   // ==========================================================================
   // ANNOTATIONS & COMMUNICATION
   // Used by: annotations, notes, measurements display
   // ==========================================================================
-  message: IconMessageSquare,
-  annotation: IconMessageSquare, // Alias
-  note: IconMessageSquare, // Alias
-  "pencil-ruler": IconPencilRuler,
+  message: MessageSquare,
+  annotation: MessageSquare, // Alias
+  note: MessageSquare, // Alias
+  "pencil-ruler": PencilRuler,
 
   // ==========================================================================
   // UI ACTIONS
   // Used by: buttons, confirmations, common actions
   // ==========================================================================
-  plus: IconAdd,
-  add: IconAdd, // Alias
-  edit: IconEdit,
-  delete: IconDelete,
-  trash: IconDelete, // Alias
-  check: IconCheck,
-  confirm: IconCheck, // Alias
-  x: IconClose,
-  cancel: IconClose, // Alias
-  close: IconClose, // Alias
-  refresh: IconRefresh,
-  reload: IconRefresh, // Alias
-  fullscreen: IconMaximize,
-  maximize: IconMaximize, // Alias
-  minimize: IconMinimize,
+  plus: Plus,
+  add: Plus, // Alias
+  edit: Edit3,
+  delete: Trash2,
+  trash: Trash2, // Alias
+  check: Check,
+  confirm: Check, // Alias
+  x: X,
+  cancel: X, // Alias
+  close: X, // Alias
+  refresh: RefreshCw,
+  reload: RefreshCw, // Alias
+  fullscreen: Maximize2,
+  maximize: Maximize2, // Alias
+  minimize: Minimize2,
 
   // ==========================================================================
   // DATA & FILES
   // Used by: data info, import/export
   // ==========================================================================
-  database: IconDatabase,
-  data: IconDatabase, // Alias
-  file: IconFile,
-  document: IconFile, // Alias
-  download: IconDownload,
-  export: IconDownload, // Alias
-  upload: IconUpload,
-  import: IconUpload, // Alias
+  database: Database,
+  data: Database, // Alias
+  file: FileText,
+  document: FileText, // Alias
+  download: Download,
+  export: Download, // Alias
+  upload: Upload,
+  import: Upload, // Alias
 
   // ==========================================================================
   // SETTINGS & INFO
   // Used by: configuration, properties, information
   // ==========================================================================
-  settings: IconSettings,
-  config: IconSettings, // Alias
-  sliders: IconSliders,
-  properties: IconSliders, // Alias
-  controls: IconSliders, // Alias
-  info: IconInfo,
-  help: IconInfo, // Alias
+  settings: Settings,
+  config: Settings, // Alias
+  sliders: Sliders,
+  properties: Sliders, // Alias
+  controls: Sliders, // Alias
+  info: Info,
+  help: Info, // Alias
 
   // ==========================================================================
   // FALLBACK
   // ==========================================================================
-  default: IconBox,
+  default: Box,
 };
 
 /**
- * Get Material icon component for a tool
+ * Get Lucide icon component for a tool
  *
  * Priority order:
  * 1. Explicit icon provided by tool definition (tool.icon)
  * 2. Tool's ID if it matches an icon name (tool.id)
- * 3. Default fallback (IconBox)
+ * 3. Default fallback (Box)
  *
  * @param {string} toolId - The tool's unique ID
  * @param {string} [toolIcon] - Optional explicit icon name from tool.icon
- * @returns {React.Component} Material icon component
+ * @returns {React.Component} Lucide icon component
  */
 export function getToolIcon(toolId, toolIcon) {
   // Priority 1: Explicit icon name provided
@@ -314,7 +313,7 @@ export function getAvailableIcons() {
  * Allows features/plugins to add their own icons
  *
  * @param {string} iconName - Name to register
- * @param {React.Component} iconComponent - Material icon component
+ * @param {React.Component} iconComponent - Lucide icon component
  */
 export function registerIcon(iconName, iconComponent) {
   if (TOOL_ICON_MAP[iconName]) {

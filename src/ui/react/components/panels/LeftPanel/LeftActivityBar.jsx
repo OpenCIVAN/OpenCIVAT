@@ -7,7 +7,7 @@
 //      "Soon" badge when explicitly marked as not implemented
 
 import React from 'react';
-import { IconPanelLeftClose, IconChevronRight } from '@UI/react/components/common/Icon';
+import { PanelLeftClose, ChevronRight } from 'lucide-react';
 import { useLeftPanelContext, LEFT_PANEL_TABS } from './LeftPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 // Uses existing styles from LeftPanel.scss - no separate SCSS needed
@@ -88,7 +88,7 @@ export function LeftActivityBar() {
                 title={isOpen ? 'Collapse Panel' : 'Expand Panel'}
                 aria-label={isOpen ? 'Collapse Panel' : 'Expand Panel'}
             >
-                {isOpen ? <IconPanelLeftClose size={18} /> : <IconChevronRight size={18} />}
+                {isOpen ? <PanelLeftClose size={18} /> : <ChevronRight size={18} />}
             </button>
         </div>
     );

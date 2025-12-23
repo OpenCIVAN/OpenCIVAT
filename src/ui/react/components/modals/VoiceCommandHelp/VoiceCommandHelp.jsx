@@ -19,20 +19,18 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-    BuildOutlined,
-    PhoneOutlined,
-    DashboardOutlined
-} from '@mui/icons-material';
-import {
-    IconMic,
-    IconCamera,
-    IconVideo,
-    IconMessageSquare,
-    IconVR,
-    IconHelpCircle,
-    IconSearch,
-    IconChevronDown
-} from '@UI/react/components/common/Icon';
+    Mic,
+    Camera,
+    Layout,
+    Video,
+    MessageSquare,
+    Wrench,
+    Glasses,
+    Phone,
+    HelpCircle,
+    Search,
+    ChevronDown,
+} from 'lucide-react';
 import { Modal } from '@UI/react/components/modals/Modal';
 import { voiceCommandService } from '@Services/voice/voiceCommandService.js';
 import './VoiceCommandHelp.scss';
@@ -43,42 +41,42 @@ import './VoiceCommandHelp.scss';
 const COMMAND_CATEGORIES = {
     camera: {
         label: 'Camera Controls',
-        icon: IconCamera,
+        icon: Camera,
         description: 'Control the 3D view camera',
     },
     instance: {
         label: 'Instance Controls',
-        icon: DashboardOutlined,
+        icon: Layout,
         description: 'Manage visualization windows',
     },
     recording: {
         label: 'Recording',
-        icon: IconVideo,
+        icon: Video,
         description: 'Screen and session recording',
     },
     annotation: {
         label: 'Annotations',
-        icon: IconMessageSquare,
+        icon: MessageSquare,
         description: 'Add notes and markers',
     },
     tool: {
         label: 'Tools',
-        icon: BuildOutlined,
+        icon: Wrench,
         description: 'Switch between tools',
     },
     vr: {
         label: 'VR Controls',
-        icon: IconVR,
+        icon: Glasses,
         description: 'Virtual reality mode',
     },
     'voice-room': {
         label: 'Voice Chat',
-        icon: PhoneOutlined,
+        icon: Phone,
         description: 'Voice communication',
     },
     help: {
         label: 'Help',
-        icon: IconHelpCircle,
+        icon: HelpCircle,
         description: 'Get help',
     },
 };
@@ -214,7 +212,7 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
             isOpen={isOpen}
             onClose={onClose}
             title="Voice Commands"
-            icon={IconMic}
+            icon={Mic}
             size="lg"
         >
             <div className="voice-command-help">
@@ -225,7 +223,7 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
 
                 {/* Search */}
                 <div className="voice-command-help__search">
-                    <IconSearch size={14} className="voice-command-help__search-icon" />
+                    <Search size={14} className="voice-command-help__search-icon" />
                     <input
                         type="text"
                         placeholder="Search commands..."
@@ -241,7 +239,7 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
                     {Object.entries(filteredGroups).map(([category, commands]) => {
                         const categoryInfo = COMMAND_CATEGORIES[category] || {
                             label: category,
-                            icon: IconHelpCircle,
+                            icon: HelpCircle,
                         };
                         const CategoryIcon = categoryInfo.icon;
                         const isExpanded = expandedCategories.has(category);
@@ -258,7 +256,7 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
                                     <span className="voice-command-help__category-count">
                                         {commands.length}
                                     </span>
-                                    <IconChevronDown
+                                    <ChevronDown
                                         size={14}
                                         className={`voice-command-help__chevron ${isExpanded ? 'expanded' : ''}`}
                                     />

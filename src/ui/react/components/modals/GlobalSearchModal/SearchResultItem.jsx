@@ -14,13 +14,13 @@
 
 import React, { memo, useRef, useEffect } from 'react';
 import {
-    IconFolder,
-    IconEye,
-    IconUser,
-    IconMessageSquare,
-    IconUsers
-} from '@UI/react/components/common/Icon';
-import StorageOutlined from '@mui/icons-material/StorageOutlined';
+    Folder,
+    Database,
+    Eye,
+    User,
+    MessageSquare,
+    Users
+} from 'lucide-react';
 
 /**
  * @typedef {Object} SearchResult
@@ -44,12 +44,12 @@ import StorageOutlined from '@mui/icons-material/StorageOutlined';
  * Type to icon mapping
  */
 const TYPE_ICONS = {
-    project: IconFolder,
-    dataset: StorageOutlined,
-    view: IconEye,
-    person: IconUser,
-    annotation: IconMessageSquare,
-    room: IconUsers,
+    project: Folder,
+    dataset: Database,
+    view: Eye,
+    person: User,
+    annotation: MessageSquare,
+    room: Users,
 };
 
 /**
@@ -106,7 +106,7 @@ function SearchResultItem({
     testId
 }) {
     const itemRef = useRef(null);
-    const Icon = TYPE_ICONS[result.type] || IconFolder;
+    const Icon = TYPE_ICONS[result.type] || Folder;
 
     // Scroll into view when selected via keyboard
     useEffect(() => {

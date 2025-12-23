@@ -33,31 +33,28 @@
 
 import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
 import {
-    BookOutlined,
-    CodeOutlined,
-    VideoLibraryOutlined,
-    ArrowForwardOutlined,
-    PlayArrowOutlined,
-    MessageOutlined,
-    BugReportOutlined,
-    RocketLaunchOutlined,
-    DescriptionOutlined,
-    HeadphonesOutlined,
-    DashboardOutlined
-} from '@mui/icons-material';
-import { EmailOutlined } from '@mui/icons-material';
-import {
-    IconHelpCircle,
-    IconUpload,
-    IconEye,
-    IconUsers,
-    IconMessageSquare,
-    IconKeyboard,
-    IconVR,
-    IconVideo,
-    IconExternalLink,
-    IconSend
-} from '@UI/react/components/common/Icon';
+    HelpCircle,
+    Upload,
+    Eye,
+    Layout,
+    Users,
+    MessageSquare,
+    ArrowRight,
+    Keyboard,
+    Book,
+    Code,
+    Glasses,
+    Video,
+    ExternalLink,
+    Play,
+    Mail,
+    MessageCircle,
+    Bug,
+    Send,
+    Rocket,
+    FileText,
+    Headphones
+} from 'lucide-react';
 import Modal from '../Modal/Modal';
 import { Button } from '../../common/Button';
 import HelpSection from './HelpSection';
@@ -68,27 +65,27 @@ import './HelpModal.scss';
  */
 const QUICK_START_STEPS = [
     {
-        icon: IconUpload,
+        icon: Upload,
         title: 'Upload your data files',
         description: 'Drag and drop files or use the Files panel to upload datasets.',
     },
     {
-        icon: IconEye,
+        icon: Eye,
         title: 'Create a view',
         description: 'Select a dataset in the Datasets panel and create a visualization.',
     },
     {
-        icon: DashboardOutlined,
+        icon: Layout,
         title: 'Place on canvas',
         description: 'Drag views onto the canvas to arrange your workspace.',
     },
     {
-        icon: IconUsers,
+        icon: Users,
         title: 'Invite collaborators',
         description: 'Share your project and work together in real-time.',
     },
     {
-        icon: IconMessageSquare,
+        icon: MessageSquare,
         title: 'Add annotations',
         description: 'Mark points of interest and add notes to your visualizations.',
     },
@@ -109,10 +106,10 @@ const KEYBOARD_SHORTCUTS = [
  * Documentation links data
  */
 const DOC_LINKS = [
-    { id: 'guide', label: 'User Guide', href: 'https://docs.cia-web.io/guide', icon: BookOutlined },
-    { id: 'api', label: 'API Reference', href: 'https://docs.cia-web.io/api', icon: CodeOutlined },
-    { id: 'vr', label: 'VR Mode Guide', href: 'https://docs.cia-web.io/vr', icon: IconVR },
-    { id: 'tutorials', label: 'Video Tutorials', href: 'https://docs.cia-web.io/tutorials', icon: VideoLibraryOutlined },
+    { id: 'guide', label: 'User Guide', href: 'https://docs.cia-web.io/guide', icon: Book },
+    { id: 'api', label: 'API Reference', href: 'https://docs.cia-web.io/api', icon: Code },
+    { id: 'vr', label: 'VR Mode Guide', href: 'https://docs.cia-web.io/vr', icon: Glasses },
+    { id: 'tutorials', label: 'Video Tutorials', href: 'https://docs.cia-web.io/tutorials', icon: Video },
 ];
 
 /**
@@ -157,28 +154,28 @@ const SUPPORT_LINKS = [
         id: 'email',
         label: 'Email Support',
         href: 'mailto:support@cia-web.io',
-        icon: EmailOutlined,
+        icon: Mail,
         description: 'Get help from our team',
     },
     {
         id: 'feedback',
         label: 'Send Feedback',
         href: 'https://feedback.cia-web.io',
-        icon: IconSend,
+        icon: Send,
         description: 'Share your thoughts',
     },
     {
         id: 'community',
         label: 'Community Forum',
         href: 'https://community.cia-web.io',
-        icon: MessageOutlined,
+        icon: MessageCircle,
         description: 'Join the discussion',
     },
     {
         id: 'bugs',
         label: 'Report a Bug',
         href: 'https://github.com/cia-web/issues',
-        icon: BugReportOutlined,
+        icon: Bug,
         description: 'Help us improve',
     },
 ];
@@ -321,7 +318,7 @@ function HelpModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Help & Resources"
-            icon={IconHelpCircle}
+            icon={HelpCircle}
             severity="info"
             size="lg"
             footer={footer}
@@ -337,7 +334,7 @@ function HelpModal({
                     <HelpSection
                         id="quickstart"
                         title="Quick Start"
-                        icon={RocketLaunchOutlined}
+                        icon={Rocket}
                         isExpanded={isSectionExpanded('quickstart')}
                         onToggle={() => toggleSection('quickstart')}
                     >
@@ -364,7 +361,7 @@ function HelpModal({
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                Learn More <ArrowForwardOutlined style={{ fontSize: 14 }} />
+                                Learn More <ArrowRight size={14} />
                             </a>
                         </div>
                     </HelpSection>
@@ -375,7 +372,7 @@ function HelpModal({
                     <HelpSection
                         id="shortcuts"
                         title="Keyboard Shortcuts"
-                        icon={IconKeyboard}
+                        icon={Keyboard}
                         isExpanded={isSectionExpanded('shortcuts')}
                         onToggle={() => toggleSection('shortcuts')}
                     >
@@ -418,7 +415,7 @@ function HelpModal({
                     <HelpSection
                         id="documentation"
                         title="Documentation"
-                        icon={DescriptionOutlined}
+                        icon={FileText}
                         isExpanded={isSectionExpanded('documentation')}
                         onToggle={() => toggleSection('documentation')}
                     >
@@ -438,7 +435,7 @@ function HelpModal({
                                         </span>
                                         <span className="doc-links__label">{link.label}</span>
                                         <span className="doc-links__external">
-                                            <IconExternalLink size={14} />
+                                            <ExternalLink size={14} />
                                         </span>
                                     </a>
                                 );
@@ -452,7 +449,7 @@ function HelpModal({
                     <HelpSection
                         id="videos"
                         title="Video Tutorials"
-                        icon={IconVideo}
+                        icon={Video}
                         isExpanded={isSectionExpanded('videos')}
                         onToggle={() => toggleSection('videos')}
                     >
@@ -468,12 +465,12 @@ function HelpModal({
                                     <div className="video-grid__thumbnail">
                                         {/* Placeholder thumbnail */}
                                         <div className="video-grid__placeholder">
-                                            <IconVideo size={24} />
+                                            <Video size={24} />
                                         </div>
                                     </div>
                                     <div className="video-grid__overlay">
                                         <span className="video-grid__play">
-                                            <PlayArrowOutlined style={{ fontSize: 20 }} />
+                                            <Play size={20} />
                                         </span>
                                     </div>
                                     <span className="video-grid__duration">{video.duration}</span>
@@ -489,7 +486,7 @@ function HelpModal({
                     <HelpSection
                         id="support"
                         title="Contact Support"
-                        icon={HeadphonesOutlined}
+                        icon={Headphones}
                         isExpanded={isSectionExpanded('support')}
                         onToggle={() => toggleSection('support')}
                     >

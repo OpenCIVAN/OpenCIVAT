@@ -31,18 +31,18 @@
  */
 
 import React, { useState, useCallback, useEffect, memo } from "react";
-import { IconClose, IconInfo, IconCheckCircle, IconAlertTriangle, IconXCircle } from '@UI/react/components/common/Icon';
+import { X, Info, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import "./Toast.scss";
 
 /**
  * Icon mapping for each toast type.
- * Uses Material UI icons via Icon system.
+ * Uses lucide-react icons.
  */
 const TOAST_ICONS = {
-    info: IconInfo,
-    success: IconCheckCircle,
-    warning: IconAlertTriangle,
-    error: IconXCircle
+    info: Info,
+    success: CheckCircle,
+    warning: AlertTriangle,
+    error: XCircle
 };
 
 /**
@@ -128,7 +128,7 @@ function Toast({
         >
             {/* Icon */}
             <div className="toast__icon" aria-hidden="true">
-                <Icon sx={{ fontSize: 18 }} />
+                <Icon size={18} />
             </div>
 
             {/* Content */}
@@ -155,7 +155,7 @@ function Toast({
                     onClick={handleDismiss}
                     aria-label="Dismiss notification"
                 >
-                    <IconClose sx={{ fontSize: 14 }} aria-hidden="true" />
+                    <X size={14} aria-hidden="true" />
                 </button>
             )}
         </div>

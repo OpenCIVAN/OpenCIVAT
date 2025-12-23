@@ -49,7 +49,7 @@
  */
 
 import React, { memo, useCallback, useRef, useEffect, useState } from 'react';
-import { IconCheck, IconChevronRight } from '@UI/react/components/common/Icon';
+import { Check, ChevronRight } from 'lucide-react';
 import { useDropdownContext } from './Dropdown';
 import './Dropdown.scss';
 
@@ -247,7 +247,7 @@ const MenuItem = memo(function MenuItem({
                 {/* Checkbox/Radio check mark */}
                 {isCheckable && (
                     <span className="dropdown-item__check">
-                        {checked && <IconCheck sx={{ fontSize: 14 }} />}
+                        {checked && <Check size={14} />}
                     </span>
                 )}
 
@@ -269,7 +269,7 @@ const MenuItem = memo(function MenuItem({
                 {/* Submenu arrow */}
                 {hasSubmenu && (
                     <span className="dropdown-item__submenu-arrow">
-                        <IconChevronRight sx={{ fontSize: 14 }} />
+                        <ChevronRight size={14} />
                     </span>
                 )}
             </button>

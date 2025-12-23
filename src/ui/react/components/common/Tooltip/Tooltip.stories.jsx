@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { IconInfo, IconSettings, IconSearch, IconSave, IconDelete, IconEdit, IconShare, IconCopy } from '@UI/react/components/common/Icon';
+import { Info, Settings, Search, Save, Trash2, Edit, Share, Copy } from 'lucide-react';
 import { Tooltip, TooltipProvider } from './index';
 import { Button, IconButton } from '../Button';
 
@@ -43,7 +43,7 @@ export const Default = {
 export const OnIconButton = {
     render: () => (
         <Tooltip content="Open settings">
-            <IconButton icon={IconSettings} label="Settings" />
+            <IconButton icon={Settings} label="Settings" />
         </Tooltip>
     ),
 };
@@ -51,7 +51,7 @@ export const OnIconButton = {
 export const OnButton = {
     render: () => (
         <Tooltip content="Save your changes to the server">
-            <Button variant="primary" icon={IconSave}>
+            <Button variant="primary" icon={Save}>
                 Save
             </Button>
         </Tooltip>
@@ -75,7 +75,7 @@ export const Placements = {
                 <Button variant="secondary">Left</Button>
             </Tooltip>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <IconInfo size={24} style={{ color: '#666' }} />
+                <Info size={24} style={{ color: '#666' }} />
             </div>
             <Tooltip content="Right placement" placement="right">
                 <Button variant="secondary">Right</Button>
@@ -104,7 +104,7 @@ export const RichWithTitle = {
                 />
             }
         >
-            <IconButton icon={IconSearch} label="Search" variant="secondary" />
+            <IconButton icon={Search} label="Search" variant="secondary" />
         </Tooltip>
     ),
 };
@@ -120,7 +120,7 @@ export const RichWithShortcut = {
                 />
             }
         >
-            <Button variant="primary" icon={IconSave}>
+            <Button variant="primary" icon={Save}>
                 Save
             </Button>
         </Tooltip>
@@ -132,13 +132,13 @@ export const RichWithIcon = {
         <Tooltip
             content={
                 <Tooltip.Rich
-                    icon={IconDelete}
+                    icon={Trash2}
                     title="Delete Item"
                     description="This action cannot be undone"
                 />
             }
         >
-            <IconButton icon={IconDelete} label="Delete" variant="danger" />
+            <IconButton icon={Trash2} label="Delete" variant="danger" />
         </Tooltip>
     ),
 };
@@ -154,7 +154,7 @@ export const AllRichTooltips = {
                     />
                 }
             >
-                <IconButton icon={IconEdit} label="Edit" />
+                <IconButton icon={Edit} label="Edit" />
             </Tooltip>
 
             <Tooltip
@@ -166,7 +166,7 @@ export const AllRichTooltips = {
                     />
                 }
             >
-                <IconButton icon={IconShare} label="Share" />
+                <IconButton icon={Share} label="Share" />
             </Tooltip>
 
             <Tooltip
@@ -177,7 +177,7 @@ export const AllRichTooltips = {
                     />
                 }
             >
-                <IconButton icon={IconCopy} label="Copy" />
+                <IconButton icon={Copy} label="Copy" />
             </Tooltip>
         </div>
     ),
@@ -294,17 +294,17 @@ export const ToolbarExample = {
             border: '1px solid #2a2a3a'
         }}>
             <Tooltip content={<Tooltip.Rich title="Edit" shortcut="E" />}>
-                <IconButton icon={IconEdit} label="Edit" size="sm" />
+                <IconButton icon={Edit} label="Edit" size="sm" />
             </Tooltip>
             <Tooltip content={<Tooltip.Rich title="Copy" shortcut="⌘C" />}>
-                <IconButton icon={IconCopy} label="Copy" size="sm" />
+                <IconButton icon={Copy} label="Copy" size="sm" />
             </Tooltip>
             <Tooltip content={<Tooltip.Rich title="Share" shortcut="⌘⇧S" />}>
-                <IconButton icon={IconShare} label="Share" size="sm" />
+                <IconButton icon={Share} label="Share" size="sm" />
             </Tooltip>
             <div style={{ width: '1px', background: '#2a2a3a', margin: '0 4px' }} />
             <Tooltip content={<Tooltip.Rich title="Delete" description="Cannot be undone" />}>
-                <IconButton icon={IconDelete} label="Delete" size="sm" variant="danger" />
+                <IconButton icon={Trash2} label="Delete" size="sm" variant="danger" />
             </Tooltip>
         </div>
     ),

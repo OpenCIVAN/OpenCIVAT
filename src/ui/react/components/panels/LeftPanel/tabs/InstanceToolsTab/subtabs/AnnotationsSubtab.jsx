@@ -9,20 +9,20 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-    IconMapPin,
-    IconEye,
-    IconEyeOff,
-    IconMoreHorizontal,
-    IconBox,
-    IconRuler,
-    IconAdd,
-    IconLoader,
-    IconMove,
-} from '@UI/react/components/common/Icon';
-import NorthEastOutlined from '@mui/icons-material/NorthEastOutlined';
-import SubdirectoryArrowRightOutlined from '@mui/icons-material/SubdirectoryArrowRightOutlined';
-import TextFieldsOutlined from '@mui/icons-material/TextFieldsOutlined';
-import MyLocationOutlined from '@mui/icons-material/MyLocationOutlined';
+    MapPin,
+    ArrowUpRight,
+    Eye,
+    EyeOff,
+    MoreHorizontal,
+    Box,
+    Ruler,
+    CornerUpRight,
+    Plus,
+    Loader,
+    TextCursor,
+    Crosshair,
+    Move,
+} from 'lucide-react';
 import { useAnnotations } from '@UI/react/hooks/useAnnotations.js';
 import { FloatingAnnotationCreator } from '@UI/react/components/modals/FloatingAnnotationCreator';
 import { AnnotationContextMenu } from '@UI/react/components/modals/AnnotationContextMenu';
@@ -34,11 +34,11 @@ import { logInfo, logSuccess, logWarning } from '@Utils/logger.js';
 // =============================================================================
 
 const ANNOTATION_TYPES = {
-    point: { icon: IconMapPin, label: 'Point', color: 'blue' },
-    region: { icon: IconBox, label: 'Region', color: 'green' },
-    measurement: { icon: IconRuler, label: 'Measure', color: 'amber' },
-    angle: { icon: SubdirectoryArrowRightOutlined, label: 'Angle', color: 'purple' },
-    text: { icon: TextFieldsOutlined, label: 'Text', color: 'pink' },
+    point: { icon: MapPin, label: 'Point', color: 'blue' },
+    region: { icon: Box, label: 'Region', color: 'green' },
+    measurement: { icon: Ruler, label: 'Measure', color: 'amber' },
+    angle: { icon: CornerUpRight, label: 'Angle', color: 'purple' },
+    text: { icon: TextCursor, label: 'Text', color: 'pink' },
 };
 
 // =============================================================================
@@ -66,10 +66,10 @@ function AnnotationListItem({ annotation, onToggleVisibility }) {
                 onClick={() => onToggleVisibility?.(annotation)}
                 title={isVisible ? 'Hide' : 'Show'}
             >
-                {isVisible ? <IconEye size={12} /> : <IconEyeOff size={12} />}
+                {isVisible ? <Eye size={12} /> : <EyeOff size={12} />}
             </button>
             <button className="annotation-list-item__more" title="More options">
-                <IconMoreHorizontal size={12} />
+                <MoreHorizontal size={12} />
             </button>
         </div>
     );
@@ -408,7 +408,7 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
             {/* Loading state */}
             {isLoading && (
                 <div className="annotations-subtab__loading">
-                    <IconLoader size={16} className="spin" />
+                    <Loader size={16} className="spin" />
                     <span>Loading...</span>
                 </div>
             )}
@@ -425,7 +425,7 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
                 <>
                     {annotations.length === 0 ? (
                         <div className="annotations-subtab__empty">
-                            <IconMapPin size={24} />
+                            <MapPin size={24} />
                             <p>No annotations on this instance</p>
                             <span>Use the annotation tool to add markers</span>
                         </div>
@@ -451,14 +451,14 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
                     onClick={handleStartAnnotating}
                     disabled={!datasetId || annotationMode}
                 >
-                    <MyLocationOutlined size={11} />
+                    <Crosshair size={11} />
                     <span>{annotationMode ? 'Click model...' : 'Click to Add'}</span>
                 </button>
                 <button
                     className="annotations-subtab__footer-btn annotations-subtab__footer-btn--open"
                     onClick={handleOpenFullPanel}
                 >
-                    <NorthEastOutlined size={11} />
+                    <ArrowUpRight size={11} />
                     <span>Open Panel</span>
                 </button>
             </div>
@@ -466,7 +466,7 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
             {/* Annotation mode indicator - for creating new annotations */}
             {annotationMode && !moveMode && (
                 <div className="annotations-subtab__mode-indicator">
-                    <MyLocationOutlined size={12} className="pulse" />
+                    <Crosshair size={12} className="pulse" />
                     <span>Click on the 3D model to place annotation</span>
                     <button onClick={() => setAnnotationMode(false)}>Cancel</button>
                 </div>
@@ -475,7 +475,7 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
             {/* Move mode indicator */}
             {moveMode && movingAnnotation && (
                 <div className="annotations-subtab__mode-indicator annotations-subtab__mode-indicator--move">
-                    <IconMove size={12} className="pulse" />
+                    <Move size={12} className="pulse" />
                     <span>Click to move: {movingAnnotation.label || movingAnnotation.text || 'Annotation'}</span>
                     <button onClick={handleCancelMove}>Cancel</button>
                 </div>

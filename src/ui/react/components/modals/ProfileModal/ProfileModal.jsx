@@ -27,21 +27,19 @@
 
 import React, { memo, useCallback, useState } from 'react';
 import {
-    PhoneOutlined,
-    NavigationOutlined,
-    ShieldOutlined
-} from '@mui/icons-material';
-import { EmailOutlined } from '@mui/icons-material';
-import {
-    IconClock,
-    IconEye,
-    IconMessageSquare,
-    IconCopy,
-    IconCheck,
-    IconCrown,
-    IconUser,
-    IconUserCheck
-} from '@UI/react/components/common/Icon';
+    Mail,
+    Clock,
+    Eye,
+    MessageSquare,
+    Phone,
+    Navigation,
+    Copy,
+    Check,
+    Crown,
+    Shield,
+    User,
+    UserCheck
+} from 'lucide-react';
 import Modal from '../Modal/Modal';
 import { Button } from '../../common/Button';
 import { STATUS_CONFIG, getStatusLabel } from '@UI/react/utils/statusConfig';
@@ -51,10 +49,10 @@ import './ProfileModal.scss';
  * Role configuration with icons and labels
  */
 const ROLE_CONFIG = {
-    owner: { label: 'Owner', icon: IconCrown },
-    admin: { label: 'Admin', icon: ShieldOutlined },
-    member: { label: 'Member', icon: IconUserCheck },
-    viewer: { label: 'Viewer', icon: IconUser },
+    owner: { label: 'Owner', icon: Crown },
+    admin: { label: 'Admin', icon: Shield },
+    member: { label: 'Member', icon: UserCheck },
+    viewer: { label: 'Viewer', icon: User },
 };
 
 /**
@@ -244,7 +242,7 @@ function ProfileModal({
                 {email && (
                     <div className="profile-modal__info-row">
                         <span className="profile-modal__info-row__icon">
-                            <EmailOutlined style={{ fontSize: 16 }} />
+                            <Mail size={16} />
                         </span>
                         <span className="profile-modal__info-row__value">{email}</span>
                         <button
@@ -254,7 +252,7 @@ function ProfileModal({
                             aria-label={copied ? 'Copied to clipboard' : 'Copy email to clipboard'}
                             title={copied ? 'Copied!' : 'Copy email'}
                         >
-                            {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                            {copied ? <Check size={14} /> : <Copy size={14} />}
                         </button>
                     </div>
                 )}
@@ -262,7 +260,7 @@ function ProfileModal({
                 {/* Last active */}
                 <div className="profile-modal__info-row">
                     <span className="profile-modal__info-row__icon">
-                        <IconClock size={16} />
+                        <Clock size={16} />
                     </span>
                     <span className="profile-modal__info-row__value">{lastActiveText}</span>
                 </div>
@@ -271,7 +269,7 @@ function ProfileModal({
                 {currentView && (
                     <div className="profile-modal__info-row">
                         <span className="profile-modal__info-row__icon">
-                            <IconEye size={16} />
+                            <Eye size={16} />
                         </span>
                         <span className="profile-modal__info-row__label">Viewing:</span>
                         <span className="profile-modal__info-row__value">{currentView}</span>
@@ -285,7 +283,7 @@ function ProfileModal({
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={IconMessageSquare}
+                        icon={MessageSquare}
                         onClick={handleMessage}
                         className="profile-modal__action-btn"
                     >
@@ -296,7 +294,7 @@ function ProfileModal({
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={PhoneOutlined}
+                        icon={Phone}
                         onClick={handleInviteToVoice}
                         className="profile-modal__action-btn"
                     >
@@ -307,7 +305,7 @@ function ProfileModal({
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={NavigationOutlined}
+                        icon={Navigation}
                         onClick={handleGoToView}
                         className="profile-modal__action-btn"
                     >

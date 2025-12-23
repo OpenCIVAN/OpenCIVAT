@@ -21,13 +21,15 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import {
-    IconUsers,
-    IconDoorOpen,
-    IconMessageSquare,
-    IconFile,
-    IconVideo,
-} from '@UI/react/components/common/Icon';
-import { MicOutlined, TimelineOutlined, TuneOutlined } from '@mui/icons-material';
+    Users,
+    Mic2,
+    DoorOpen,
+    MessageSquare,
+    Activity,
+    FileText,
+    Video,
+    SlidersHorizontal,
+} from 'lucide-react';
 
 // =============================================================================
 // TAB CONFIGURATION - SINGLE SOURCE OF TRUTH
@@ -43,7 +45,7 @@ export const RIGHT_PANEL_TABS = [
     // PRESENCE & LOCATION
     {
         id: 'people',
-        icon: IconUsers,
+        icon: Users,
         label: 'People',
         color: 'pink',
         group: 'presence',
@@ -51,7 +53,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'voice',
-        icon: MicOutlined,
+        icon: Mic2,
         label: 'Voice',
         color: 'green',
         group: 'presence',
@@ -59,7 +61,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'rooms',
-        icon: IconDoorOpen,
+        icon: DoorOpen,
         label: 'Rooms',
         color: 'purple',
         group: 'presence',
@@ -68,7 +70,7 @@ export const RIGHT_PANEL_TABS = [
     // COMMUNICATION
     {
         id: 'chat',
-        icon: IconMessageSquare,
+        icon: MessageSquare,
         label: 'Chat',
         color: 'blue',
         group: 'communication',
@@ -76,7 +78,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'activity',
-        icon: TimelineOutlined,
+        icon: Activity,
         label: 'Activity',
         color: 'amber',
         group: 'communication',
@@ -85,7 +87,7 @@ export const RIGHT_PANEL_TABS = [
     // DOCUMENTATION
     {
         id: 'notes',
-        icon: IconFile,
+        icon: FileText,
         label: 'Notes',
         color: 'teal',
         group: 'documentation',
@@ -93,7 +95,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'recording',
-        icon: IconVideo,
+        icon: Video,
         label: 'Recording',
         color: 'red',
         group: 'documentation',
@@ -102,7 +104,7 @@ export const RIGHT_PANEL_TABS = [
     // SETTINGS
     {
         id: 'settings',
-        icon: TuneOutlined,
+        icon: SlidersHorizontal,
         label: 'Settings',
         color: 'gray',
         group: 'settings',

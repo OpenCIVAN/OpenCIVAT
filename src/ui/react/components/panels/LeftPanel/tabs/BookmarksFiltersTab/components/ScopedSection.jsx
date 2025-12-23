@@ -6,7 +6,7 @@
  */
 
 import React, { memo } from 'react';
-import { IconChevronDown, IconChevronRight } from '@UI/react/components/common/Icon';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getScopeConfig } from '../constants';
 
 /**
@@ -50,7 +50,7 @@ export const ScopedSection = memo(function ScopedSection({
                 onClick={onToggle}
             >
                 <span className="scoped-section__chevron">
-                    {expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
+                    {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </span>
                 <Icon size={12} className={`icon-${config.color}`} />
                 <span className="scoped-section__label">{config.label}</span>

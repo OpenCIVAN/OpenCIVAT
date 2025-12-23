@@ -26,17 +26,15 @@
 
 import React, { memo, useState, useCallback, useEffect } from 'react';
 import {
-    CreateNewFolderOutlined,
-    ScienceOutlined,
-    BarChartOutlined
-} from '@mui/icons-material';
-import {
-    IconFile,
-    IconUsers,
-    IconLock,
-    IconBuilding,
-    IconCheck
-} from '@UI/react/components/common/Icon';
+    FolderPlus,
+    File,
+    FlaskConical,
+    BarChart3,
+    Users,
+    Lock,
+    Building,
+    Check
+} from 'lucide-react';
 import { FormModal, FormField } from '../FormModal';
 import './NewProjectModal.scss';
 
@@ -48,25 +46,25 @@ const PROJECT_TEMPLATES = [
         value: 'blank',
         label: 'Blank Project',
         description: 'Start from scratch with an empty canvas',
-        icon: IconFile,
+        icon: File,
     },
     {
         value: 'research',
         label: 'Research Lab',
         description: 'Pre-configured for scientific data analysis',
-        icon: ScienceOutlined,
+        icon: FlaskConical,
     },
     {
         value: 'analysis',
         label: 'Data Analysis',
         description: 'Includes common analysis tools and layouts',
-        icon: BarChartOutlined,
+        icon: BarChart3,
     },
     {
         value: 'review',
         label: 'Collaborative Review',
         description: 'Optimized for team review sessions',
-        icon: IconUsers,
+        icon: Users,
     },
 ];
 
@@ -78,19 +76,19 @@ const VISIBILITY_OPTIONS = [
         value: 'private',
         label: 'Private',
         description: 'Only you can access',
-        icon: IconLock,
+        icon: Lock,
     },
     {
         value: 'team',
         label: 'Team',
         description: 'Team members can access',
-        icon: IconUsers,
+        icon: Users,
     },
     {
         value: 'organization',
         label: 'Organization',
         description: 'Everyone in your org',
-        icon: IconBuilding,
+        icon: Building,
     },
 ];
 
@@ -148,7 +146,7 @@ const TemplateSelector = memo(function TemplateSelector({
                             </span>
                         </span>
                         <span className="new-project-modal__template-option__check">
-                            <IconCheck size={16} />
+                            <Check size={16} />
                         </span>
                     </button>
                 );
@@ -288,7 +286,7 @@ function NewProjectModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Create New Project"
-            icon={CreateNewFolderOutlined}
+            icon={FolderPlus}
             submitLabel="Create Project"
             submittingLabel="Creating..."
             onSubmit={handleSubmit}

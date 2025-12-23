@@ -11,7 +11,7 @@
  */
 
 import { memo, useState, useCallback } from 'react';
-import { IconEye, IconSend } from '@UI/react/components/common/Icon';
+import { Eye, Send } from 'lucide-react';
 import './CollaboratorAvatar.scss';
 
 export const CollaboratorAvatar = memo(function CollaboratorAvatar({
@@ -75,7 +75,7 @@ export const CollaboratorAvatar = memo(function CollaboratorAvatar({
                             onClick={handleFollow}
                             title={`Follow ${collaborator.name}`}
                         >
-                            <IconEye size={10} />
+                            <Eye size={10} />
                         </button>
                     )}
                     {onInvite && (
@@ -84,7 +84,7 @@ export const CollaboratorAvatar = memo(function CollaboratorAvatar({
                             onClick={handleInvite}
                             title={`Invite ${collaborator.name}`}
                         >
-                            <IconSend size={10} />
+                            <Send size={10} />
                         </button>
                     )}
                 </div>

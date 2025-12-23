@@ -13,15 +13,15 @@
 
 import React, { memo, useMemo } from 'react';
 import {
-    IconCamera,
-    IconSliders,
-    IconEye,
-} from '@UI/react/components/common/Icon';
-import DashboardOutlined from '@mui/icons-material/DashboardOutlined';
-import GpsFixedOutlined from '@mui/icons-material/GpsFixedOutlined';
-import PaletteOutlined from '@mui/icons-material/PaletteOutlined';
-import ToggleOffOutlined from '@mui/icons-material/ToggleOffOutlined';
-import ToggleOnOutlined from '@mui/icons-material/ToggleOnOutlined';
+    Camera,
+    Sliders,
+    Layout,
+    Crosshair,
+    Palette,
+    Eye,
+    ToggleLeft,
+    ToggleRight,
+} from 'lucide-react';
 import './LinkPropertyRow.scss';
 
 // =============================================================================
@@ -29,12 +29,12 @@ import './LinkPropertyRow.scss';
 // =============================================================================
 
 export const LINK_PROPERTIES = [
-    { id: 'camera', label: 'Camera', icon: IconCamera, desc: 'Sync view angle & zoom' },
-    { id: 'filters', label: 'Filters', icon: IconSliders, desc: 'Sync active filters' },
-    { id: 'widgets', label: 'Widgets', icon: DashboardOutlined, desc: 'Sync widget states' },
-    { id: 'cursors', label: 'Cursors', icon: GpsFixedOutlined, desc: 'Show collaborator cursors' },
-    { id: 'colorMaps', label: 'Colors', icon: PaletteOutlined, desc: 'Sync color mapping' },
-    { id: 'annotationDisplay', label: 'Annot.', icon: IconEye, desc: 'Sync annotation visibility' },
+    { id: 'camera', label: 'Camera', icon: Camera, desc: 'Sync view angle & zoom' },
+    { id: 'filters', label: 'Filters', icon: Sliders, desc: 'Sync active filters' },
+    { id: 'widgets', label: 'Widgets', icon: Layout, desc: 'Sync widget states' },
+    { id: 'cursors', label: 'Cursors', icon: Crosshair, desc: 'Show collaborator cursors' },
+    { id: 'colorMaps', label: 'Colors', icon: Palette, desc: 'Sync color mapping' },
+    { id: 'annotationDisplay', label: 'Annot.', icon: Eye, desc: 'Sync annotation visibility' },
 ];
 
 // =============================================================================
@@ -147,7 +147,7 @@ export const LinkPropertyRow = memo(function LinkPropertyRow({
                     disabled={disabled}
                     title={allEnabled ? 'Unlink all properties' : 'Link all properties'}
                 >
-                    {allEnabled ? <ToggleOnOutlined size={14} /> : <ToggleOffOutlined size={14} />}
+                    {allEnabled ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
                     <span>{allEnabled ? 'All' : 'None'}</span>
                 </button>
             </div>

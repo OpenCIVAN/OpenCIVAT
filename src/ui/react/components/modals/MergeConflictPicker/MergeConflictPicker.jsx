@@ -20,8 +20,7 @@
  */
 
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { MergeOutlined, GridViewOutlined } from '@mui/icons-material';
-import { IconArchive, IconCheck } from '@UI/react/components/common/Icon';
+import { Merge, Archive, LayoutGrid, Check } from 'lucide-react';
 import { Modal } from '../Modal';
 import { Button } from '../../common/Button';
 import ViewCard from './ViewCard';
@@ -35,13 +34,13 @@ const DISPLACED_OPTIONS = [
         value: 'close',
         label: 'Close (Move to Not Placed)',
         description: 'Views will be removed from canvas but remain in your views list',
-        icon: IconArchive,
+        icon: Archive,
     },
     {
         value: 'autoflow',
         label: 'Autoflow to available cells',
         description: 'Views will be placed in the nearest empty cells',
-        icon: GridViewOutlined,
+        icon: LayoutGrid,
     },
 ];
 
@@ -206,7 +205,7 @@ function MergeConflictPicker({
             isOpen={isOpen}
             onClose={onClose}
             title="Choose View for Merged Cell"
-            icon={MergeOutlined}
+            icon={Merge}
             severity="info"
             size="md"
             testId={testId}
@@ -219,7 +218,7 @@ function MergeConflictPicker({
                         variant="primary"
                         onClick={handleMerge}
                         disabled={!canMerge}
-                        icon={MergeOutlined}
+                        icon={Merge}
                     >
                         Merge
                     </Button>
@@ -311,7 +310,7 @@ function MergeConflictPicker({
                         tabIndex={0}
                         aria-label="Remember my choice for this session"
                     >
-                        {rememberChoice && <IconCheck size={12} />}
+                        {rememberChoice && <Check size={12} />}
                     </span>
                     <span
                         className="merge-conflict-picker__remember__label"

@@ -2,7 +2,7 @@
 // Visual color swatch grid for colormap selection
 
 import React, { useState } from 'react';
-import { IconCheck } from '@UI/react/components/common/Icon';
+import { Check } from 'lucide-react';
 
 /**
  * ColorSwatchGrid
@@ -113,7 +113,7 @@ export function ColorSwatchGrid({
                             {/* Check mark for active */}
                             {isActive && (
                                 <div className="swatch-check">
-                                    <IconCheck size={14} />
+                                    <Check size={14} />
                                 </div>
                             )}
                         </div>

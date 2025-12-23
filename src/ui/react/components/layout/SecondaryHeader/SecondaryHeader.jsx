@@ -32,7 +32,7 @@
  */
 
 import React, { memo } from 'react';
-import { IconLayoutGrid, IconMaximize, IconLayers } from '@UI/react/components/common/Icon';
+import { LayoutGrid, Maximize2, Layers } from 'lucide-react';
 
 // Shared bar components (from common bars/ folder)
 import { StackedNavBlock, ActiveViewSelector, SegmentedToggle, WorkspaceSelector, RoomPresenceIndicator } from '@UI/react/components/bars';
@@ -47,9 +47,9 @@ import './SecondaryHeader.scss';
 // =============================================================================
 
 const VIEW_MODE_OPTIONS = [
-    { value: 'normal', icon: IconLayoutGrid, label: 'Normal View', accent: 'var(--color-accent-blue)' },
-    { value: 'isolation', icon: IconMaximize, label: 'Isolation Mode', accent: 'var(--color-accent-amber)' },
-    { value: 'subset', icon: IconLayers, label: 'Subset Mode', accent: 'var(--color-accent-purple)' },
+    { value: 'normal', icon: LayoutGrid, label: 'Normal View', accent: 'var(--color-accent-blue)' },
+    { value: 'isolation', icon: Maximize2, label: 'Isolation Mode', accent: 'var(--color-accent-amber)' },
+    { value: 'subset', icon: Layers, label: 'Subset Mode', accent: 'var(--color-accent-purple)' },
 ];
 
 // =============================================================================

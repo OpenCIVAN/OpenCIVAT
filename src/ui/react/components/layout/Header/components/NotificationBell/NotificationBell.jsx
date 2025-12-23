@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { IconBell } from '@UI/react/components/common/Icon';
+import { Bell } from 'lucide-react';
 import { Dropdown } from '@UI/react/components/common/Dropdown';
 
 /**
@@ -32,7 +32,7 @@ export function NotificationBell({
                     type="button"
                     aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
                 >
-                    <IconBell sx={{ fontSize: 18 }} />
+                    <Bell size={18} />
                     {unreadCount > 0 && (
                         <span className="notification-bell__badge">
                             {unreadCount > 99 ? '99+' : unreadCount}

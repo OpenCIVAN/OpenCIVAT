@@ -10,14 +10,14 @@
 
 import React, { memo, useState, useCallback, useRef } from 'react';
 import {
-    IconGripVertical,
-    IconDelete,
-    IconFolder,
-    IconUsers,
-    IconLink,
-} from '@UI/react/components/common/Icon';
-import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
-import PublicOutlined from '@mui/icons-material/PublicOutlined';
+    GripVertical,
+    LayoutGrid,
+    Trash2,
+    Folder,
+    Globe,
+    Users,
+    Link2,
+} from 'lucide-react';
 import { Thumbnail } from '@UI/react/components/common/Thumbnail';
 import './ViewItem.scss';
 
@@ -100,7 +100,7 @@ export const InactiveViewItem = memo(function InactiveViewItem({
             <div className="view-item__row">
                 {/* Drag Handle */}
                 <div className="view-item__drag-handle">
-                    <IconGripVertical size={14} />
+                    <GripVertical size={14} />
                 </div>
 
                 {/* Thumbnail (dimmed for inactive) */}
@@ -124,10 +124,10 @@ export const InactiveViewItem = memo(function InactiveViewItem({
                 {/* Minimal status indicators */}
                 {!isHovered && (hasStars || hasSharing) && (
                     <div className="view-item__status-icons view-item__status-icons--minimal">
-                        {view.starredWorkspace && <IconFolder size={10} className="icon-purple" />}
-                        {view.starredPersonal && <PublicOutlined size={10} className="icon-amber" />}
-                        {view.isShared && <IconUsers size={10} className="icon-pink" />}
-                        {view.linkedCount > 0 && <IconLink size={10} className="icon-teal" />}
+                        {view.starredWorkspace && <Folder size={10} className="icon-purple" />}
+                        {view.starredPersonal && <Globe size={10} className="icon-amber" />}
+                        {view.isShared && <Users size={10} className="icon-pink" />}
+                        {view.linkedCount > 0 && <Link2 size={10} className="icon-teal" />}
                     </div>
                 )}
 
@@ -139,14 +139,14 @@ export const InactiveViewItem = memo(function InactiveViewItem({
                             onClick={(e) => { e.stopPropagation(); handleClick(); }}
                             title="Place on Canvas"
                         >
-                            <GridViewOutlined size={12} />
+                            <LayoutGrid size={12} />
                         </button>
                         <button
                             className="view-item__action-btn view-item__action-btn--danger"
                             onClick={handleTrash}
                             title="Move to Trash"
                         >
-                            <IconDelete size={12} />
+                            <Trash2 size={12} />
                         </button>
                     </div>
                 )}

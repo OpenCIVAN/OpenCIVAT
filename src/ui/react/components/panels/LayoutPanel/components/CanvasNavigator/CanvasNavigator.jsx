@@ -7,34 +7,34 @@
 import React, { memo, useState, useMemo, useCallback, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import {
-    IconGrid3x3,
-    IconChevronUp,
-    IconChevronDown,
-    IconChevronLeft,
-    IconChevronRight,
-    IconHome,
-    IconZoomIn,
-    IconZoomOut,
-    IconAdd,
-    IconRemove,
-    IconClose,
-    IconDelete,
-    IconPin,
-    IconMove,
-} from '@UI/react/components/common/Icon';
-import MyLocationOutlined from '@mui/icons-material/MyLocationOutlined';
-import TextFieldsOutlined from '@mui/icons-material/TextFieldsOutlined';
-import TagOutlined from '@mui/icons-material/TagOutlined';
-import NavigationOutlined from '@mui/icons-material/NavigationOutlined';
-import EditOutlined from '@mui/icons-material/EditOutlined';
-import ViewSidebarOutlined from '@mui/icons-material/ViewSidebarOutlined';
-import MinimizeOutlined from '@mui/icons-material/MinimizeOutlined';
-import NorthWestOutlined from '@mui/icons-material/NorthWestOutlined';
-import NorthEastOutlined from '@mui/icons-material/NorthEastOutlined';
-import SouthWestOutlined from '@mui/icons-material/SouthWestOutlined';
-import SouthEastOutlined from '@mui/icons-material/SouthEastOutlined';
-import CallMergeOutlined from '@mui/icons-material/CallMergeOutlined';
-import CallSplitOutlined from '@mui/icons-material/CallSplitOutlined';
+    Grid3X3,
+    ChevronUp,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    Home,
+    Crosshair,
+    ZoomIn,
+    ZoomOut,
+    Type,
+    Hash,
+    Plus,
+    Minus,
+    X,
+    Navigation,
+    Edit3,
+    PanelLeft,
+    Minimize2,
+    CornerUpLeft,
+    CornerUpRight,
+    CornerDownLeft,
+    CornerDownRight,
+    Pin,
+    Move,
+    Combine,
+    Split,
+    Trash2,
+} from 'lucide-react';
 import { useLayoutPanelContext, DOCK_POSITIONS } from "../../LayoutPanelContext";
 
 // =============================================================================
@@ -204,9 +204,9 @@ const HoldButton = memo(({ children, onActivate, disabled, title, size = 'xs', c
     const { start, stop } = usePressAndHold(safeCallback);
 
     const sizes = {
-        xs: { width: 18, height: 18 },
-        sm: { width: 22, height: 22 },
-        md: { width: 26, height: 26 },
+        xs: { width: 18, height: 18, fontSize: 8 },
+        sm: { width: 22, height: 22, fontSize: 9 },
+        md: { width: 26, height: 26, fontSize: 10 },
     };
     const s = sizes[size];
 
@@ -232,6 +232,7 @@ const HoldButton = memo(({ children, onActivate, disabled, title, size = 'xs', c
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 opacity: disabled ? 0.4 : 1,
                 transition: 'all 0.15s ease',
+                fontSize: s.fontSize,
                 ...style,
             }}
         >
@@ -264,7 +265,7 @@ const NumberSpinner = memo(({ value, onChange, min = 1, max = 10, label, color, 
                 disabled={safeValue <= min}
                 title={`Decrease (min: ${min})`}
             >
-                <IconRemove sx={{ fontSize: compact ? 8 : 10 }} />
+                <Minus size={compact ? 8 : 10} />
             </HoldButton>
             <span style={{
                 minWidth: compact ? 22 : 26,
@@ -286,7 +287,7 @@ const NumberSpinner = memo(({ value, onChange, min = 1, max = 10, label, color, 
                 disabled={safeValue >= max}
                 title={`Increase (max: ${max})`}
             >
-                <IconAdd sx={{ fontSize: compact ? 8 : 10 }} />
+                <Plus size={compact ? 8 : 10} />
             </HoldButton>
         </div>
     );
@@ -310,15 +311,15 @@ const DockPositionPicker = memo(({ currentPosition, onPositionChange, onClose })
         boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
     }}>
         {[
-            { pos: DOCK_POSITIONS.TOP_LEFT, icon: NorthWestOutlined },
+            { pos: DOCK_POSITIONS.TOP_LEFT, icon: CornerUpLeft },
             { pos: null },
-            { pos: DOCK_POSITIONS.TOP_RIGHT, icon: NorthEastOutlined },
-            { pos: DOCK_POSITIONS.LEFT_PANEL, icon: ViewSidebarOutlined },
-            { pos: DOCK_POSITIONS.FLOAT, icon: IconMove },
-            { pos: DOCK_POSITIONS.MINIMIZED, icon: MinimizeOutlined },
-            { pos: DOCK_POSITIONS.BOTTOM_LEFT, icon: SouthWestOutlined },
+            { pos: DOCK_POSITIONS.TOP_RIGHT, icon: CornerUpRight },
+            { pos: DOCK_POSITIONS.LEFT_PANEL, icon: PanelLeft },
+            { pos: DOCK_POSITIONS.FLOAT, icon: Move },
+            { pos: DOCK_POSITIONS.MINIMIZED, icon: Minimize2 },
+            { pos: DOCK_POSITIONS.BOTTOM_LEFT, icon: CornerDownLeft },
             { pos: null },
-            { pos: DOCK_POSITIONS.BOTTOM_RIGHT, icon: SouthEastOutlined },
+            { pos: DOCK_POSITIONS.BOTTOM_RIGHT, icon: CornerDownRight },
         ].map(({ pos, icon: Icon }, idx) => (
             pos ? (
                 <button
@@ -339,7 +340,7 @@ const DockPositionPicker = memo(({ currentPosition, onPositionChange, onClose })
                         transition: 'all 0.15s ease',
                     }}
                 >
-                    <Icon sx={{ fontSize: 12 }} />
+                    <Icon size={12} />
                 </button>
             ) : (
                 <div key={`empty-${idx}`} style={{ width: 28, height: 28 }} />
@@ -659,7 +660,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                     cursor: 'grab',
                 }}
             >
-                <IconGrid3x3 sx={{ fontSize: 12, color: tokens.accentAmber }} />
+                <Grid3X3 size={12} style={{ color: tokens.accentAmber }} />
                 <span style={{ fontSize: 10, fontWeight: 600, color: tokens.textSecondary, flex: 1 }}>
                     Canvas Navigator
                 </span>
@@ -673,7 +674,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => { setMode(NAV_MODES.NAVIGATE); setSelectedCells([]); }}
                         title="Navigate Mode"
                     >
-                        <NavigationOutlined sx={{ fontSize: 9 }} />
+                        <Navigation size={9} />
                     </NavBtn>
                     <NavBtn
                         size="xs"
@@ -682,7 +683,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => setMode(NAV_MODES.EDIT)}
                         title="Edit Mode (select cells)"
                     >
-                        <EditOutlined sx={{ fontSize: 9 }} />
+                        <Edit3 size={9} />
                     </NavBtn>
                 </div>
 
@@ -694,7 +695,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => setDisplayMode(DISPLAY_MODES.NAMES)}
                         title="Show Names"
                     >
-                        <TextFieldsOutlined sx={{ fontSize: 8 }} />
+                        <Type size={8} />
                     </NavBtn>
                     <NavBtn
                         size="xs"
@@ -702,7 +703,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => setDisplayMode(DISPLAY_MODES.NUMBERS)}
                         title="Show Numbers"
                     >
-                        <TagOutlined sx={{ fontSize: 8 }} />
+                        <Hash size={8} />
                     </NavBtn>
                     <NavBtn
                         size="xs"
@@ -722,7 +723,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         title="Dock Position"
                         active={showDockPicker}
                     >
-                        <IconPin sx={{ fontSize: 9 }} />
+                        <Pin size={9} />
                     </NavBtn>
                     {showDockPicker && (
                         <DockPositionPicker
@@ -740,7 +741,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => setDockPosition(DOCK_POSITIONS.MINIMIZED)}
                         title="Minimize"
                     >
-                        <IconClose sx={{ fontSize: 9 }} />
+                        <X size={9} />
                     </NavBtn>
                 )}
             </div>
@@ -783,7 +784,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         }}
                         title="Merge selected cells"
                     >
-                        <CallMergeOutlined sx={{ fontSize: 9 }} />
+                        <Combine size={9} />
                     </NavBtn>
                     <NavBtn
                         size="xs"
@@ -801,7 +802,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         }}
                         title="Unmerge cell"
                     >
-                        <CallSplitOutlined sx={{ fontSize: 9 }} />
+                        <Split size={9} />
                     </NavBtn>
                     <NavBtn
                         size="xs"
@@ -824,7 +825,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         }}
                         title="Delete selected"
                     >
-                        <IconDelete sx={{ fontSize: 9 }} />
+                        <Trash2 size={9} />
                     </NavBtn>
                 </div>
             )}
@@ -917,7 +918,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                     }}
                                 >
                                     {isHome && !cell && (
-                                        <IconHome sx={{ fontSize: Math.max(10, 12 * minimapZoom), color: tokens.accentPink }} />
+                                        <Home size={Math.max(10, 12 * minimapZoom)} style={{ color: tokens.accentPink }} />
                                     )}
                                     {cell && getCellDisplay(cell, cellIndex)}
                                     {isHome && cell && (
@@ -981,7 +982,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 disabled={viewport.row <= 0}
                                 title="Move Up"
                             >
-                                <IconChevronUp sx={{ fontSize: 12 }} />
+                                <ChevronUp size={12} />
                             </NavBtn>
                             <div style={{ display: 'flex', gap: 0 }}>
                                 <NavBtn
@@ -990,7 +991,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                     disabled={viewport.col <= 0}
                                     title="Move Left"
                                 >
-                                    <IconChevronLeft sx={{ fontSize: 12 }} />
+                                    <ChevronLeft size={12} />
                                 </NavBtn>
                                 <NavBtn
                                     size="sm"
@@ -1000,7 +1001,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                     disabled={!homepoint}
                                     title="Go to Homepoint"
                                 >
-                                    <IconHome sx={{ fontSize: 10 }} />
+                                    <Home size={10} />
                                 </NavBtn>
                                 <NavBtn
                                     size="sm"
@@ -1008,7 +1009,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                     disabled={viewport.col + viewportSize.cols >= canvasSize.cols}
                                     title="Move Right"
                                 >
-                                    <IconChevronRight sx={{ fontSize: 12 }} />
+                                    <ChevronRight size={12} />
                                 </NavBtn>
                             </div>
                             <NavBtn
@@ -1017,7 +1018,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 disabled={viewport.row + viewportSize.rows >= canvasSize.rows}
                                 title="Move Down"
                             >
-                                <IconChevronDown sx={{ fontSize: 12 }} />
+                                <ChevronDown size={12} />
                             </NavBtn>
                             <span style={{
                                 fontSize: 9,
@@ -1041,7 +1042,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 color={tokens.accentPink}
                                 title="Set homepoint"
                             >
-                                <MyLocationOutlined sx={{ fontSize: 10 }} />
+                                <Crosshair size={10} />
                             </NavBtn>
                             {homepoint ? (
                                 <>
@@ -1053,7 +1054,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                         {homepoint.col},{homepoint.row}
                                     </span>
                                     <NavBtn size="xs" onClick={clearHomepoint} title="Clear" color={tokens.accentRed}>
-                                        <IconClose sx={{ fontSize: 7 }} />
+                                        <X size={7} />
                                     </NavBtn>
                                 </>
                             ) : (
@@ -1071,7 +1072,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 onClick={() => setMinimapZoom(Math.max(0.5, minimapZoom - 0.25))}
                                 disabled={minimapZoom <= 0.5}
                             >
-                                <IconZoomOut sx={{ fontSize: 10 }} />
+                                <ZoomOut size={10} />
                             </NavBtn>
                             <span style={{
                                 fontSize: 9,
@@ -1087,7 +1088,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 onClick={() => setMinimapZoom(Math.min(2, minimapZoom + 0.25))}
                                 disabled={minimapZoom >= 2}
                             >
-                                <IconZoomIn sx={{ fontSize: 10 }} />
+                                <ZoomIn size={10} />
                             </NavBtn>
                         </div>
                     </div>

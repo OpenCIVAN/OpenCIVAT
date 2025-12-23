@@ -24,19 +24,19 @@
 
 import React, { useCallback } from 'react';
 import {
-    IconFolderOpen,
-    IconFolderPlus,
-    IconSearch,
-    IconClose,
-    IconGrid3x3,
-    IconFilter,
-    IconStar,
-    IconFolder,
-    IconDatabase,
-    IconLoader,
-} from '@UI/react/components/common/Icon';
-import ViewListOutlined from '@mui/icons-material/ViewListOutlined';
-import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
+    FolderOpen,
+    FolderPlus,
+    Search,
+    X,
+    List,
+    Grid3X3,
+    ArrowUpDown,
+    Filter,
+    Star,
+    Folder,
+    Database,
+    Loader,
+} from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -186,11 +186,11 @@ export function FilesPanelContent({
         <div className="files-tab">
             {/* Header */}
             <div className="panel-header panel-header--orange">
-                <IconFolderOpen size={14} className="panel-header__icon" />
+                <FolderOpen size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__actions">
                     <button className="panel-header__action-btn" title="New Folder">
-                        <IconFolderPlus size={14} />
+                        <FolderPlus size={14} />
                     </button>
                 </div>
             </div>
@@ -198,7 +198,7 @@ export function FilesPanelContent({
             {/* Search */}
             <div className="panel-search">
                 <div className="panel-search__wrapper">
-                    <IconSearch size={12} className="search-icon" />
+                    <Search size={12} className="search-icon" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -207,7 +207,7 @@ export function FilesPanelContent({
                     />
                     {searchQuery && (
                         <button className="clear-button" onClick={() => setSearchQuery('')}>
-                            <IconClose size={10} />
+                            <X size={10} />
                         </button>
                     )}
                 </div>
@@ -221,18 +221,18 @@ export function FilesPanelContent({
                         onClick={() => setViewMode('list')}
                         title="List view"
                     >
-                        <ViewListOutlined size={11} />
+                        <List size={11} />
                     </button>
                     <button
                         className={`panel-toolbar__toggle ${viewMode === 'grid' ? 'active' : ''}`}
                         onClick={() => setViewMode('grid')}
                         title="Grid view"
                     >
-                        <IconGrid3x3 size={11} />
+                        <Grid3X3 size={11} />
                     </button>
                 </div>
                 <button className="filter-toggle">
-                    <SwapVertOutlined size={9} />
+                    <ArrowUpDown size={9} />
                     <span>Date</span>
                 </button>
                 <div className="panel-toolbar__spacer" />
@@ -240,7 +240,7 @@ export function FilesPanelContent({
                     className={`filter-toggle ${showFilters || activeFilters.types.length > 0 ? 'active' : ''}`}
                     onClick={() => setShowFilters(!showFilters)}
                 >
-                    <IconFilter size={9} />
+                    <Filter size={9} />
                     {activeFilters.types.length > 0 && (
                         <span className="count">{activeFilters.types.length}</span>
                     )}
@@ -253,7 +253,7 @@ export function FilesPanelContent({
             {/* Loading indicator */}
             {isLoading && (
                 <div className="panel-loading">
-                    <IconLoader size={16} className="spin" />
+                    <Loader size={16} className="spin" />
                     <span>Loading files...</span>
                 </div>
             )}
@@ -296,7 +296,7 @@ export function FilesPanelContent({
             >
                 <ResizableSection
                     id="starred"
-                    icon={IconStar}
+                    icon={Star}
                     iconColorClass="icon-amber"
                     label="Starred"
                     count={starredFiles.length}
@@ -310,7 +310,7 @@ export function FilesPanelContent({
 
                 <ResizableSection
                     id="loaded"
-                    icon={IconDatabase}
+                    icon={Database}
                     iconColorClass="icon-teal"
                     label="Loaded Datasets"
                     count={loadedDatasetsFormatted.length}
@@ -324,7 +324,7 @@ export function FilesPanelContent({
 
                 <ResizableSection
                     id="all"
-                    icon={IconFolder}
+                    icon={Folder}
                     iconColorClass="icon-blue"
                     label="All Files"
                     count={files.length}

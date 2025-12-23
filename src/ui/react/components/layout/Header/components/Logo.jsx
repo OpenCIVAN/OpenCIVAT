@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import HexagonOutlined from '@mui/icons-material/HexagonOutlined';
+import { Hexagon } from 'lucide-react';
 
 /**
  * Logo component that navigates to dashboard on click.
@@ -24,7 +24,7 @@ export function Logo({ onNavigate }) {
             aria-label="Go to dashboard"
             type="button"
         >
-            <HexagonOutlined sx={{ fontSize: 28 }} />
+            <Hexagon size={28} />
         </button>
     );
 }

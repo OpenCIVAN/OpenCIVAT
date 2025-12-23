@@ -22,7 +22,7 @@
  */
 
 import React, { memo, useState, useRef, useCallback } from 'react';
-import { IconClose } from '@UI/react/components/common/Icon';
+import { X } from 'lucide-react';
 
 /**
  * Email validation regex
@@ -257,7 +257,7 @@ function EmailTagInput({
                             aria-label={`Remove ${email}`}
                             tabIndex={-1}
                         >
-                            <IconClose size={10} />
+                            <X size={10} />
                         </button>
                     </span>
                 );

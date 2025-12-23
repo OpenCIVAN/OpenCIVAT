@@ -9,8 +9,7 @@
 // - VR-compatible (no hover dependency)
 
 import React, { useCallback } from 'react';
-import { IconAdd, IconRemove, IconDelete, IconMaximize, IconClose } from '@UI/react/components/common/Icon';
-import { UnfoldMoreOutlined as ArrowUpDown, UnfoldMoreHorizontalOutlined as ArrowLeftRight } from '@mui/icons-material';
+import { Plus, Minus, Trash2, Maximize2, ArrowUpDown, ArrowLeftRight, X } from 'lucide-react';
 import './FloatingResizePopover.scss';
 
 /**
@@ -76,13 +75,13 @@ export function FloatingResizePopover({
                     onClick={onClose}
                     title="Close"
                 >
-                    <IconClose size={12} />
+                    <X size={12} />
                 </button>
             </div>
 
             {/* Size display */}
             <div className="floating-resize-popover__size-display">
-                <IconMaximize size={12} />
+                <Maximize2 size={12} />
                 <span>{colSpan}×{rowSpan}</span>
             </div>
 
@@ -91,7 +90,7 @@ export function FloatingResizePopover({
                 {/* Height controls */}
                 <div className="floating-resize-popover__control-group">
                     <span className="floating-resize-popover__control-label">
-                        <ArrowUpDown sx={{ fontSize: 10 }} />
+                        <ArrowUpDown size={10} />
                         Height
                     </span>
                     <div className="floating-resize-popover__control-buttons">
@@ -101,7 +100,7 @@ export function FloatingResizePopover({
                             disabled={rowSpan <= minSpan}
                             title="Decrease height"
                         >
-                            <IconRemove size={12} />
+                            <Minus size={12} />
                         </button>
                         <span className="floating-resize-popover__control-value">
                             {rowSpan}
@@ -112,7 +111,7 @@ export function FloatingResizePopover({
                             disabled={rowSpan >= maxSpan}
                             title="Increase height"
                         >
-                            <IconAdd size={12} />
+                            <Plus size={12} />
                         </button>
                     </div>
                 </div>
@@ -120,7 +119,7 @@ export function FloatingResizePopover({
                 {/* Width controls */}
                 <div className="floating-resize-popover__control-group">
                     <span className="floating-resize-popover__control-label">
-                        <ArrowLeftRight sx={{ fontSize: 10 }} />
+                        <ArrowLeftRight size={10} />
                         Width
                     </span>
                     <div className="floating-resize-popover__control-buttons">
@@ -130,7 +129,7 @@ export function FloatingResizePopover({
                             disabled={colSpan <= minSpan}
                             title="Decrease width"
                         >
-                            <IconRemove size={12} />
+                            <Minus size={12} />
                         </button>
                         <span className="floating-resize-popover__control-value">
                             {colSpan}
@@ -141,7 +140,7 @@ export function FloatingResizePopover({
                             disabled={colSpan >= maxSpan}
                             title="Increase width"
                         >
-                            <IconAdd size={12} />
+                            <Plus size={12} />
                         </button>
                     </div>
                 </div>
@@ -153,7 +152,7 @@ export function FloatingResizePopover({
                 onClick={handleRemove}
                 title="Remove from canvas"
             >
-                <IconDelete size={12} />
+                <Trash2 size={12} />
                 Remove
             </button>
         </div>

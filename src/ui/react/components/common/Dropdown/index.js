@@ -12,15 +12,15 @@
  * // Basic dropdown menu
  * import { Dropdown, DropdownMenu } from '@UI/react/components/common/Dropdown';
  * import { Button } from '@UI/react/components/common/Button';
- * import { IconSettings, IconUser, IconLogout } from '@UI/react/components/common/Icon';
+ * import { Settings, User, LogOut } from 'lucide-react';
  *
  * <Dropdown trigger={<Button variant="ghost">Options</Button>}>
  *   <DropdownMenu
  *     items={[
- *       { id: 'profile', label: 'Profile', icon: IconUser },
- *       { id: 'settings', label: 'Settings', icon: IconSettings },
+ *       { id: 'profile', label: 'Profile', icon: User },
+ *       { id: 'settings', label: 'Settings', icon: Settings },
  *       { type: 'separator' },
- *       { id: 'logout', label: 'Sign Out', icon: IconLogout, danger: true }
+ *       { id: 'logout', label: 'Sign Out', icon: LogOut, danger: true }
  *     ]}
  *     onSelect={(item) => handleAction(item.id)}
  *   />

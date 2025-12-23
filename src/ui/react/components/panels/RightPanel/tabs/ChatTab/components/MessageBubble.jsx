@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { IconDelete } from '@UI/react/components/common/Icon';
+import { Trash2 } from 'lucide-react';
 
 /**
  * @typedef {Object} Message
@@ -78,7 +78,7 @@ export function MessageBubble({ message, currentUserId, onDelete }) {
                     onClick={() => onDelete(message.id)}
                     title="Delete message"
                 >
-                    <IconDelete size={12} />
+                    <Trash2 size={12} />
                 </button>
             )}
         </div>

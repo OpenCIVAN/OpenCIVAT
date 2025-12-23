@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { WorkspaceOverlay } from './index';
-import { IconGrid3x3, IconSettings, IconUsers, IconLayers } from '@UI/react/components/common/Icon';
+import { Grid3x3, Settings, Users, Layers } from 'lucide-react';
 
 export default {
     title: 'Common/WorkspaceOverlay',
@@ -85,7 +85,7 @@ export const WithHeaderActions = () => {
                         color: 'rgba(255,255,255,0.5)',
                         cursor: 'pointer'
                     }}>
-                        <IconSettings size={16} />
+                        <Settings size={16} />
                     </button>
                 </>
             }
@@ -126,7 +126,7 @@ export const ExpandedGridPreview = () => {
                         fontSize: '13px',
                         cursor: 'pointer'
                     }}>
-                        <IconLayers size={14} />
+                        <Layers size={14} />
                         Edit Mode
                     </button>
                 </>
@@ -227,7 +227,7 @@ export const PresenceOverlay = () => {
                         background: 'rgba(251, 113, 133, 0.1)',
                         borderRadius: '4px',
                     }}>
-                        <IconUsers size={14} style={{ color: '#fb7185' }} />
+                        <Users size={14} style={{ color: '#fb7185' }} />
                         <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
                             3 online
                         </span>

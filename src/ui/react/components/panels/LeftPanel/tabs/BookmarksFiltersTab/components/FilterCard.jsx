@@ -14,19 +14,19 @@
 
 import React, { useState, memo } from 'react';
 import {
-    IconFilter,
-    IconPin,
-    IconDelete,
-    IconPlay,
-    IconEdit,
-    IconCopy,
-    IconDownload,
-    IconMoreHorizontal,
-    IconEye,
-    IconDatabase,
-} from '@UI/react/components/common/Icon';
-import PinOffOutlined from '@mui/icons-material/PushPinOutlined';
-import LayoutOutlined from '@mui/icons-material/DashboardOutlined';
+    Filter,
+    Pin,
+    PinOff,
+    Trash2,
+    Play,
+    Edit3,
+    Copy,
+    Download,
+    MoreHorizontal,
+    Eye,
+    Database,
+    Layout,
+} from 'lucide-react';
 import { getScopeConfig } from '../constants';
 
 /**
@@ -38,13 +38,13 @@ import { getScopeConfig } from '../constants';
 function getFilterScopeIcon(scope) {
     switch (scope) {
         case 'view':
-            return { icon: IconEye, color: 'blue' };
+            return { icon: Eye, color: 'blue' };
         case 'dataset':
-            return { icon: IconDatabase, color: 'teal' };
+            return { icon: Database, color: 'teal' };
         case 'workspace':
-            return { icon: LayoutOutlined, color: 'purple' };
+            return { icon: Layout, color: 'purple' };
         default:
-            return { icon: IconFilter, color: 'gray' };
+            return { icon: Filter, color: 'gray' };
     }
 }
 
@@ -151,17 +151,17 @@ export const FilterCard = memo(function FilterCard({
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={handleApply}
             >
-                <IconFilter size={14} className={`icon-${scopeIcon.color}`} />
+                <Filter size={14} className={`icon-${scopeIcon.color}`} />
                 <span className="filter-card__name">{filter.name}</span>
                 {filter.isPinned && (
-                    <IconPin size={10} className="filter-card__pin-indicator" fill="currentColor" />
+                    <Pin size={10} className="filter-card__pin-indicator" fill="currentColor" />
                 )}
                 <button
                     className="filter-card__apply-btn"
                     onClick={handleApply}
                     style={{ opacity: isHovered ? 1 : 0 }}
                 >
-                    <IconPlay size={10} />
+                    <Play size={10} />
                 </button>
             </div>
         );
@@ -175,7 +175,7 @@ export const FilterCard = memo(function FilterCard({
         >
             {/* Type icon */}
             <div className="filter-card__icon">
-                <IconFilter size={16} />
+                <Filter size={16} />
             </div>
 
             {/* Content */}
@@ -231,9 +231,9 @@ export const FilterCard = memo(function FilterCard({
                     title={filter.isPinned ? 'Unpin' : 'Pin'}
                 >
                     {filter.isPinned ? (
-                        <IconPin size={10} fill="currentColor" />
+                        <Pin size={10} fill="currentColor" />
                     ) : (
-                        <PinOffOutlined sx={{ fontSize: 10 }} />
+                        <PinOff size={10} />
                     )}
                 </button>
 
@@ -244,26 +244,26 @@ export const FilterCard = memo(function FilterCard({
                             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                             title="More actions"
                         >
-                            <IconMoreHorizontal size={10} />
+                            <MoreHorizontal size={10} />
                         </button>
 
                         {/* Context menu */}
                         {showMenu && (
                             <div className="filter-card__menu">
                                 <button onClick={handleEdit}>
-                                    <IconEdit size={10} />
+                                    <Edit3 size={10} />
                                     Edit
                                 </button>
                                 <button onClick={handleDuplicate}>
-                                    <IconCopy size={10} />
+                                    <Copy size={10} />
                                     Duplicate
                                 </button>
                                 <button onClick={handleExport}>
-                                    <IconDownload size={10} />
+                                    <Download size={10} />
                                     Export
                                 </button>
                                 <button onClick={handleDelete} className="danger">
-                                    <IconDelete size={10} />
+                                    <Trash2 size={10} />
                                     Delete
                                 </button>
                             </div>
@@ -278,7 +278,7 @@ export const FilterCard = memo(function FilterCard({
                 onClick={handleApply}
                 title="Apply filter"
             >
-                <IconPlay size={10} /> Apply
+                <Play size={10} /> Apply
             </button>
         </div>
     );

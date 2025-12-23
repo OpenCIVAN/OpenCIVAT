@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import {
-  IconBox,
-  IconCamera,
-  IconSquare,
-  IconMaximize,
-} from '@UI/react/components/common/Icon';
-import { ChangeHistoryOutlined as Triangle } from '@mui/icons-material';
+  Box,
+  Camera,
+  Square,
+  Triangle,
+  Maximize2
+} from 'lucide-react';
 
 /**
  * CameraViewGridPicker
@@ -22,13 +22,13 @@ export function CameraViewGridPicker({
 }) {
   const [hoveredCell, setHoveredCell] = useState(null);
 
-  // Map icon strings to Icon components
+  // Map icon strings to Lucide components
   const iconMap = {
-    'camera': IconCamera,
-    'box': IconBox,
-    'square': IconSquare,
+    'camera': Camera,
+    'box': Box,
+    'square': Square,
     'triangle': Triangle,
-    'maximize-2': IconMaximize,
+    'maximize-2': Maximize2,
   };
 
   // Build map for easy lookup
@@ -71,7 +71,7 @@ export function CameraViewGridPicker({
               }
 
               // Get the icon component
-              const IconComponent = iconMap[view.icon] || IconCamera;
+              const IconComponent = iconMap[view.icon] || Camera;
               const isHovered = hoveredCell === view.id;
 
               return (

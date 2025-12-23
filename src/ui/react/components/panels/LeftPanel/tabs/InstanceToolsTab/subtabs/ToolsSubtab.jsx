@@ -3,11 +3,11 @@
 
 import React from 'react';
 import {
-    IconTools,
-    IconChevronDown,
-    IconChevronRight,
-    IconBox,
-} from '@UI/react/components/common/Icon';
+    Wrench,
+    ChevronDown,
+    ChevronRight,
+    Box,
+} from 'lucide-react';
 import { getIcon, ICON_MAP } from '../iconMap.js';
 
 // =============================================================================
@@ -28,7 +28,7 @@ function ToolButton({ tool, onClick }) {
         >
             <Icon size={16} />
             {tool.hasDropdown && (
-                <IconChevronDown size={8} className="tool-button__dropdown-indicator" />
+                <ChevronDown size={8} className="tool-button__dropdown-indicator" />
             )}
         </button>
     );
@@ -222,7 +222,7 @@ function ToolMenu({ tool, expanded, onToggle }) {
                         <span className="tool-menu__hint">{tool.description}</span>
                     )}
                 </div>
-                {expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
+                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </button>
             {expanded && tool.options && (
                 <div className="tool-menu__options">
@@ -247,7 +247,7 @@ export function ToolsList({ tools, expandedMenus, onToggleMenu }) {
     if (!tools || tools.length === 0) {
         return (
             <div className="tools-list__empty">
-                <IconTools size={14} />
+                <Wrench size={14} />
                 <span>No tools available - load data to see tools</span>
             </div>
         );

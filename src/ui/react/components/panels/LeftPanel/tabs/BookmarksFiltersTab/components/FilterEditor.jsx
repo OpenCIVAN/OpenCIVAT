@@ -14,17 +14,17 @@
 
 import React, { useState, useCallback, useEffect, memo } from 'react';
 import {
-    IconClose,
-    IconFilter,
-    IconSave,
-    IconEye,
-    IconDatabase,
-    IconAdd,
-    IconDownload,
-    IconUpload,
-} from '@UI/react/components/common/Icon';
-import DashboardOutlined from '@mui/icons-material/DashboardOutlined';
-import LabelOutlined from '@mui/icons-material/LabelOutlined';
+    X,
+    Filter,
+    Save,
+    Eye,
+    Database,
+    Layout,
+    Tag,
+    Plus,
+    Download,
+    Upload,
+} from 'lucide-react';
 import { FILTER_SCOPES } from '../hooks/useFiltersTab';
 
 /**
@@ -164,9 +164,9 @@ export const FilterEditor = memo(function FilterEditor({
     if (!isOpen) return null;
 
     const scopeIcons = {
-        view: IconEye,
-        dataset: IconDatabase,
-        workspace: DashboardOutlined,
+        view: Eye,
+        dataset: Database,
+        workspace: Layout,
     };
 
     return (
@@ -174,10 +174,10 @@ export const FilterEditor = memo(function FilterEditor({
             <div className="filter-editor" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="filter-editor__header">
-                    <IconFilter size={16} className="icon-amber" />
+                    <Filter size={16} className="icon-amber" />
                     <span>{filter ? 'Edit Filter' : 'Save Filter'}</span>
                     <button className="filter-editor__close" onClick={onClose}>
-                        <IconClose size={14} />
+                        <X size={14} />
                     </button>
                 </div>
 
@@ -246,7 +246,7 @@ export const FilterEditor = memo(function FilterEditor({
                                 onClick={handleCaptureFilter}
                                 disabled={!currentFilterConfig}
                             >
-                                <IconDownload size={12} />
+                                <Download size={12} />
                                 Capture Current
                             </button>
                         </div>
@@ -259,7 +259,7 @@ export const FilterEditor = memo(function FilterEditor({
                     <div className="filter-editor__field">
                         <label>Tags</label>
                         <div className="filter-editor__tags-input">
-                            <LabelOutlined size={12} />
+                            <Tag size={12} />
                             <input
                                 type="text"
                                 value={tagInput}
@@ -272,7 +272,7 @@ export const FilterEditor = memo(function FilterEditor({
                                 onClick={handleAddTag}
                                 disabled={!tagInput.trim()}
                             >
-                                <IconAdd size={12} />
+                                <Plus size={12} />
                             </button>
                         </div>
                         {tags.length > 0 && (
@@ -284,7 +284,7 @@ export const FilterEditor = memo(function FilterEditor({
                                             type="button"
                                             onClick={() => handleRemoveTag(tag)}
                                         >
-                                            <IconClose size={8} />
+                                            <X size={8} />
                                         </button>
                                     </span>
                                 ))}
@@ -315,7 +315,7 @@ export const FilterEditor = memo(function FilterEditor({
                         onClick={handleSave}
                         disabled={isSaving}
                     >
-                        <IconSave size={12} />
+                        <Save size={12} />
                         {isSaving ? 'Saving...' : (filter ? 'Update' : 'Save')}
                     </button>
                 </div>

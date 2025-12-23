@@ -9,13 +9,13 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
-    IconTools,
-    IconLayers,
-    IconMapPin,
-    IconSettings,
-} from '@UI/react/components/common/Icon';
-import MonitorOutlined from '@mui/icons-material/MonitorOutlined';
-import BoltOutlined from '@mui/icons-material/BoltOutlined';
+    Wrench,
+    Monitor,
+    Zap,
+    Layers,
+    MapPin,
+    Settings,
+} from 'lucide-react';
 
 // Import subtab components
 import { ToolsList } from './subtabs/ToolsSubtab';
@@ -33,9 +33,9 @@ import './InstanceToolsTab.scss';
 // =============================================================================
 
 const SUBTABS = [
-    { id: 'tools', label: 'Tools', icon: BoltOutlined, color: 'amber' },
-    { id: 'layers', label: 'Layers', icon: IconLayers, color: 'purple' },
-    { id: 'annotations', label: 'Annotations', icon: IconMapPin, color: 'pink' },
+    { id: 'tools', label: 'Tools', icon: Zap, color: 'amber' },
+    { id: 'layers', label: 'Layers', icon: Layers, color: 'purple' },
+    { id: 'annotations', label: 'Annotations', icon: MapPin, color: 'pink' },
 ];
 
 // =============================================================================
@@ -114,7 +114,7 @@ function ToolsSubtab({ activeInstance }) {
 function NoInstancePlaceholder() {
     return (
         <div className="instance-tools-tab__no-instance">
-            <MonitorOutlined size={32} />
+            <Monitor size={32} />
             <h3>No Instance Selected</h3>
             <p>Click on an instance viewport to select it and view its tools.</p>
             <span className="instance-tools-tab__no-instance-hint">
@@ -271,7 +271,7 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                 PANEL HEADER - Matches Files and Datasets tabs
                 ============================================================ */}
             <div className="panel-header panel-header--amber">
-                <IconTools size={14} className="panel-header__icon" />
+                <Wrench size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Instance Tools</span>
                 {activeInstance && (
                     <span className="panel-header__count">1 active</span>
@@ -291,7 +291,7 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                         className="instance-tools-tab__instance-header"
                         style={{ '--instance-color': instanceInfo?.color || 'var(--color-accent-blue)' }}
                     >
-                        <MonitorOutlined size={14} />
+                        <Monitor size={14} />
                         <div className="instance-tools-tab__instance-info">
                             <span className="instance-tools-tab__instance-name">
                                 {instanceInfo?.name || 'Untitled View'}

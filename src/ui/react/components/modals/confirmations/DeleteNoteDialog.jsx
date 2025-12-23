@@ -15,8 +15,7 @@
  */
 
 import React from 'react';
-import { StickyNoteOutlined } from '@mui/icons-material';
-import { IconArchive, IconDelete } from '@UI/react/components/common/Icon';
+import { StickyNote, Archive, Trash2 } from 'lucide-react';
 import { Modal } from '../Modal';
 
 /**
@@ -74,11 +73,11 @@ export function DeleteNoteDialog({
             </button>
             <div style={{ flex: 1 }} /> {/* Spacer */}
             <button className="btn btn--warning" onClick={handleArchive}>
-                <IconArchive size={14} />
+                <Archive size={14} />
                 Archive
             </button>
             <button className="btn btn--danger" onClick={handleDelete}>
-                <IconDelete size={14} />
+                <Trash2 size={14} />
                 Delete Permanently
             </button>
         </div>
@@ -89,7 +88,7 @@ export function DeleteNoteDialog({
             isOpen={isOpen}
             onClose={onClose}
             title="Delete Note?"
-            icon={StickyNoteOutlined}
+            icon={StickyNote}
             severity="warning"
             size="sm"
             footer={renderFooter()}

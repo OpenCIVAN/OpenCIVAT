@@ -23,7 +23,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Modal } from '@UI/react/components/modals/Modal';
-import { IconMapPin } from '@UI/react/components/common/Icon';
+import { MapPin } from 'lucide-react';
 import './AnnotationModal.scss';
 
 /**
@@ -133,7 +133,7 @@ export function AnnotationModal({
         onClick={handleSubmit}
         disabled={!text.trim()}
       >
-        <IconMapPin size={14} />
+        <MapPin size={14} />
         Create Annotation
       </button>
     </>
@@ -144,7 +144,7 @@ export function AnnotationModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Create Annotation"
-      icon={IconMapPin}
+      icon={MapPin}
       size="sm"
       footer={renderFooter()}
     >

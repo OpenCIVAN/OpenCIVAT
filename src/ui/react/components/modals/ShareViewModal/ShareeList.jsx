@@ -20,7 +20,7 @@
  */
 
 import React, { memo, useCallback } from 'react';
-import { IconClose, IconUsers } from '@UI/react/components/common/Icon';
+import { X, Users } from 'lucide-react';
 import { DropdownSelect } from '../../common/Dropdown';
 import { getInitials } from './PersonSearch';
 
@@ -88,7 +88,7 @@ const ShareeItem = memo(function ShareeItem({
                 {sharee.avatar ? (
                     <img src={sharee.avatar} alt="" />
                 ) : sharee.isGroup ? (
-                    <IconUsers size={18} />
+                    <Users size={18} />
                 ) : (
                     getInitials(sharee.name)
                 )}
@@ -120,7 +120,7 @@ const ShareeItem = memo(function ShareeItem({
                 aria-label={`Remove ${sharee.name}`}
                 title={`Remove ${sharee.name}`}
             >
-                <IconClose size={16} />
+                <X size={16} />
             </button>
         </div>
     );

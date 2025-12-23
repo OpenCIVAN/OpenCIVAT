@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { IconArchive, IconUserCog, IconDelete, IconAlertTriangle } from '@UI/react/components/common/Icon';
+import { Archive, UserCog, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@UI/react/components/common/Button';
 import '../SettingsTab.scss';
 
@@ -45,7 +45,7 @@ function ConfirmDialog({ title, message, confirmText, onConfirm, onCancel }) {
         <div className="settings-tab__confirm-overlay">
             <div className="settings-tab__confirm-dialog">
                 <div className="settings-tab__confirm-header">
-                    <IconAlertTriangle size={20} className="settings-tab__confirm-icon" />
+                    <AlertTriangle size={20} className="settings-tab__confirm-icon" />
                     <h3>{title}</h3>
                 </div>
                 <p className="settings-tab__confirm-message">{message}</p>
@@ -121,13 +121,13 @@ export function DangerZone({ project }) {
     return (
         <div className="settings-tab__section settings-tab__section--danger">
             <div className="settings-tab__danger-warning">
-                <IconAlertTriangle size={14} />
+                <AlertTriangle size={14} />
                 <span>These actions are permanent and cannot be undone.</span>
             </div>
 
             <div className="settings-tab__danger-actions">
                 <DangerAction
-                    icon={IconArchive}
+                    icon={Archive}
                     title="Archive Project"
                     description="Make this project read-only. All data will be preserved but no changes can be made."
                     buttonText="Archive"
@@ -136,7 +136,7 @@ export function DangerZone({ project }) {
                 />
 
                 <DangerAction
-                    icon={IconUserCog}
+                    icon={UserCog}
                     title="Transfer Ownership"
                     description="Transfer this project to another team member. They will become the new owner."
                     buttonText="Transfer"
@@ -145,7 +145,7 @@ export function DangerZone({ project }) {
                 />
 
                 <DangerAction
-                    icon={IconDelete}
+                    icon={Trash2}
                     title="Delete Project"
                     description="Permanently delete this project and all its data. This action cannot be undone."
                     buttonText="Delete"

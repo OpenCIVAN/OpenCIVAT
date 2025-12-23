@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { IconMicOff, IconVolume, IconCircle } from '@UI/react/components/common/Icon';
+import { MicOff, Volume2, Circle } from 'lucide-react';
 
 /**
  * @typedef {Object} Participant
@@ -40,7 +40,7 @@ export function ParticipantCard({ participant, onAdjustVolume }) {
                 {(participant.name || participant.identity || '?').charAt(0).toUpperCase()}
                 {participant.isSpeaking && (
                     <div className="participant-card__speaking-indicator">
-                        <IconCircle size={8} />
+                        <Circle size={8} />
                     </div>
                 )}
             </div>
@@ -51,7 +51,7 @@ export function ParticipantCard({ participant, onAdjustVolume }) {
                     {participant.isLocal && <span className="participant-card__you"> (You)</span>}
                 </div>
                 <div className="participant-card__status">
-                    {participant.isMuted && <IconMicOff size={10} />}
+                    {participant.isMuted && <MicOff size={10} />}
                     {!participant.isMuted && (
                         <span className="participant-card__status-text">
                             {participant.isSpeaking ? 'Speaking' : 'Connected'}
@@ -67,7 +67,7 @@ export function ParticipantCard({ participant, onAdjustVolume }) {
                         title="Adjust volume"
                         onClick={() => onAdjustVolume?.(participant.id)}
                     >
-                        <IconVolume size={14} />
+                        <Volume2 size={14} />
                     </button>
                 </div>
             )}

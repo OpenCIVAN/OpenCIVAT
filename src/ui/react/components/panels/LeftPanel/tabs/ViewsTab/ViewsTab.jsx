@@ -19,21 +19,21 @@
 
 import React, { useMemo, useCallback, useContext } from 'react';
 import {
-    IconEye,
-    IconEyeOff,
-    IconDelete,
-    IconAdd,
-    IconSearch,
-    IconClose,
-    IconGrid3x3,
-    IconLayers,
-    IconClock,
-    IconLayoutGrid,
-    IconDatabase,
-    IconChevronDown,
-    IconChevronRight,
-} from '@UI/react/components/common/Icon';
-import ViewListOutlined from '@mui/icons-material/ViewListOutlined';
+    Eye,
+    EyeOff,
+    Trash2,
+    Plus,
+    Search,
+    X,
+    Grid3X3,
+    Layers,
+    Clock,
+    LayoutList,
+    LayoutGrid,
+    Database,
+    ChevronDown,
+    ChevronRight,
+} from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -67,10 +67,10 @@ const VIEW_FILTERS = [
 // =============================================================================
 
 const VIEW_MODE_OPTIONS = [
-    { id: VIEW_MODES.BY_STATUS, icon: ViewListOutlined, label: 'By Status' },
-    { id: VIEW_MODES.BY_DATASET, icon: IconDatabase, label: 'By Dataset' },
-    { id: VIEW_MODES.LIST, icon: IconLayers, label: 'List' },
-    { id: VIEW_MODES.GRID, icon: IconLayoutGrid, label: 'Grid' },
+    { id: VIEW_MODES.BY_STATUS, icon: LayoutList, label: 'By Status' },
+    { id: VIEW_MODES.BY_DATASET, icon: Database, label: 'By Dataset' },
+    { id: VIEW_MODES.LIST, icon: Layers, label: 'List' },
+    { id: VIEW_MODES.GRID, icon: LayoutGrid, label: 'Grid' },
 ];
 
 // =============================================================================
@@ -117,8 +117,8 @@ function DatasetGroup({ dataset, views, isExpanded, onToggle, handlers }) {
                 className="views-tab__dataset-header"
                 onClick={onToggle}
             >
-                {isExpanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
-                <IconDatabase size={12} className="icon-teal" />
+                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                <Database size={12} className="icon-teal" />
                 <span className="views-tab__dataset-name">{dataset.name}</span>
                 <span className="views-tab__dataset-counts">
                     <span className="views-tab__dataset-active">{activeCount}</span>
@@ -237,7 +237,7 @@ export function ViewsPanelContent({ workspaceId }) {
             {/* Canvas Navigator */}
             <ResizableSection
                 id="navigator"
-                icon={IconGrid3x3}
+                icon={Grid3X3}
                 iconColorClass="icon-purple"
                 label="Canvas Navigator"
                 collapsible
@@ -252,14 +252,14 @@ export function ViewsPanelContent({ workspaceId }) {
             {/* On Canvas Section */}
             <ResizableSection
                 id="onCanvas"
-                icon={IconEye}
+                icon={Eye}
                 iconColorClass="icon-green"
                 label="On Canvas"
                 count={onCanvasViews.length}
             >
                 {onCanvasViews.length === 0 ? (
                     <EmptyState
-                        icon={IconEye}
+                        icon={Eye}
                         title="No views on canvas"
                         description="Drag views here or click to place"
                         size="sm"
@@ -280,14 +280,14 @@ export function ViewsPanelContent({ workspaceId }) {
             {/* Not Placed Section */}
             <ResizableSection
                 id="notPlaced"
-                icon={IconEyeOff}
+                icon={EyeOff}
                 iconColorClass="icon-gray"
                 label="Not Placed"
                 count={notPlacedViews.length}
             >
                 {notPlacedViews.length === 0 ? (
                     <EmptyState
-                        icon={IconLayers}
+                        icon={Layers}
                         title="All views are placed"
                         description="Create new views from Datasets tab"
                         size="sm"
@@ -309,7 +309,7 @@ export function ViewsPanelContent({ workspaceId }) {
             {/* Recently Deleted Section */}
             <ResizableSection
                 id="deleted"
-                icon={IconDelete}
+                icon={Trash2}
                 iconColorClass="icon-red"
                 label="Recently Deleted"
                 count={recentlyDeletedViews.length}
@@ -317,7 +317,7 @@ export function ViewsPanelContent({ workspaceId }) {
             >
                 {recentlyDeletedViews.length === 0 ? (
                     <EmptyState
-                        icon={IconClock}
+                        icon={Clock}
                         title="No deleted views"
                         description="Deleted views appear here for 30 days"
                         size="sm"
@@ -349,7 +349,7 @@ export function ViewsPanelContent({ workspaceId }) {
             <div className="views-tab__dataset-list">
                 {viewsByDataset.length === 0 ? (
                     <EmptyState
-                        icon={IconDatabase}
+                        icon={Database}
                         title="No views"
                         description="Load a dataset to create views"
                         size="sm"
@@ -372,7 +372,7 @@ export function ViewsPanelContent({ workspaceId }) {
             {recentlyDeletedViews.length > 0 && (
                 <div className="views-tab__trash-section">
                     <div className="views-tab__trash-header">
-                        <IconDelete size={12} className="icon-red" />
+                        <Trash2 size={12} className="icon-red" />
                         <span>Recently Deleted ({recentlyDeletedViews.length})</span>
                     </div>
                     <div className="views-tab__trash-list">
@@ -401,7 +401,7 @@ export function ViewsPanelContent({ workspaceId }) {
             <div className="views-tab__list views-tab__list--scrollable">
                 {views.length === 0 ? (
                     <EmptyState
-                        icon={IconLayers}
+                        icon={Layers}
                         title="No views"
                         description="Load a dataset to create views"
                         size="sm"
@@ -460,7 +460,7 @@ export function ViewsPanelContent({ workspaceId }) {
         <div className="views-tab">
             {/* Header */}
             <div className="panel-header panel-header--purple">
-                <IconLayers size={14} className="panel-header__icon" />
+                <Layers size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Views</span>
             </div>
 
@@ -468,7 +468,7 @@ export function ViewsPanelContent({ workspaceId }) {
             <div className="views-tab__toolbar">
                 {/* Search */}
                 <div className="views-tab__search">
-                    <IconSearch size={12} className="views-tab__search-icon" />
+                    <Search size={12} className="views-tab__search-icon" />
                     <input
                         type="text"
                         className="views-tab__search-input"
@@ -481,7 +481,7 @@ export function ViewsPanelContent({ workspaceId }) {
                             className="views-tab__search-clear"
                             onClick={() => setSearchQuery('')}
                         >
-                            <IconClose size={10} />
+                            <X size={10} />
                         </button>
                     )}
                 </div>
@@ -525,7 +525,7 @@ export function ViewsPanelContent({ workspaceId }) {
                     className="panel-footer__btn panel-footer__btn--primary"
                     onClick={handleCreateView}
                 >
-                    <IconAdd size={11} />
+                    <Plus size={11} />
                     <span>New View</span>
                 </button>
             </div>

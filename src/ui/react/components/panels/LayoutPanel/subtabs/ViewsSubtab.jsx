@@ -17,15 +17,15 @@
  * - Grouping by dataset
  */
 import React, { memo, useCallback, useState, useMemo } from 'react';
-import { IconSearch, IconClose, IconDatabase, IconFilter, IconLayers, IconChevronDown, IconChevronRight, IconShare, IconLink } from '@UI/react/components/common/Icon';
+import { Search, X, Database, Filter, Layers, ChevronDown, ChevronRight, Share2, Link2 } from 'lucide-react';
 import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import './ViewsSubtab.scss';
 
 // Filter chip configuration for Views
 const VIEW_FILTERS = [
-    { id: 'shared', label: 'Shared', icon: IconShare, color: 'pink' },
-    { id: 'linked', label: 'Linked', icon: IconLink, color: 'teal' },
+    { id: 'shared', label: 'Shared', icon: Share2, color: 'pink' },
+    { id: 'linked', label: 'Linked', icon: Link2, color: 'teal' },
 ];
 
 // View colors for display - matches INSTANCE_COLORS in CanvasNavigator
@@ -210,7 +210,7 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         return (
             <div className="views-subtab views-subtab--empty">
                 <div className="views-subtab__empty">
-                    <IconLayers sx={{ fontSize: 24 }} />
+                    <Layers size={24} />
                     <p>No views on canvas</p>
                     <p className="views-subtab__empty-hint">
                         Drag a dataset to the canvas to create a view
@@ -224,7 +224,7 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
         <div className="views-subtab">
             {/* Search */}
             <div className="views-subtab__search">
-                <IconSearch sx={{ fontSize: 12 }} className="views-subtab__search-icon" />
+                <Search size={12} className="views-subtab__search-icon" />
                 <input
                     className="views-subtab__search-input"
                     type="text"
@@ -237,14 +237,14 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                         className="views-subtab__search-clear"
                         onClick={() => setSearchQuery('')}
                     >
-                        <IconClose sx={{ fontSize: 10 }} />
+                        <X size={10} />
                     </button>
                 )}
             </div>
 
             {/* Filters */}
             <div className="views-subtab__filters">
-                <IconFilter sx={{ fontSize: 10 }} className="views-subtab__filter-icon" />
+                <Filter size={10} className="views-subtab__filter-icon" />
                 <ChipGroup
                     chips={VIEW_FILTERS}
                     activeChips={activeFilters}
@@ -263,7 +263,7 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                     className={`views-subtab__group-btn ${groupByDataset ? 'views-subtab__group-btn--active' : ''}`}
                     onClick={() => setGroupByDataset?.(!groupByDataset)}
                 >
-                    <IconDatabase sx={{ fontSize: 10 }} /> Group
+                    <Database size={10} /> Group
                 </button>
                 {activeFilters.length > 0 && (
                     <button
@@ -292,11 +292,11 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                             >
                                 <button className="views-subtab__group-toggle">
                                     {collapsedGroups.has(group.key)
-                                        ? <IconChevronRight sx={{ fontSize: 10 }} />
-                                        : <IconChevronDown sx={{ fontSize: 10 }} />
+                                        ? <ChevronRight size={10} />
+                                        : <ChevronDown size={10} />
                                     }
                                 </button>
-                                <IconDatabase sx={{ fontSize: 10 }} className="views-subtab__group-icon" />
+                                <Database size={10} className="views-subtab__group-icon" />
                                 <span className="views-subtab__group-name">{group.name}</span>
                                 <span className="views-subtab__group-count">
                                     ({group.cells.length})

@@ -5,8 +5,7 @@
  */
 
 import React from 'react';
-import { IconCalendar, IconUsers, IconDoorOpen, IconCrown } from '@UI/react/components/common/Icon';
-import { StorageOutlined } from '@mui/icons-material';
+import { Calendar, Users, DoorOpen, HardDrive, Crown } from 'lucide-react';
 import '../SettingsTab.scss';
 
 /**
@@ -73,22 +72,22 @@ export function ProjectInfo({ project }) {
             {/* Project stats */}
             <div className="settings-tab__info-grid">
                 <InfoRow
-                    icon={IconCalendar}
+                    icon={Calendar}
                     label="Created"
                     value={createdDate}
                 />
                 <InfoRow
-                    icon={IconUsers}
+                    icon={Users}
                     label="Members"
                     value={project.memberCount}
                 />
                 <InfoRow
-                    icon={IconDoorOpen}
+                    icon={DoorOpen}
                     label="Rooms"
                     value={project.roomCount}
                 />
                 <InfoRow
-                    icon={StorageOutlined}
+                    icon={HardDrive}
                     label="Storage"
                     value={project.storageUsed}
                 />
@@ -97,7 +96,7 @@ export function ProjectInfo({ project }) {
             {/* Owner info */}
             {project.owner && (
                 <div className="settings-tab__owner-info">
-                    <IconCrown size={12} />
+                    <Crown size={12} />
                     <span>Owned by</span>
                     <span className="settings-tab__owner-name">{project.owner.name}</span>
                 </div>

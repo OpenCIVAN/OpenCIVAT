@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { IconUserCheck } from '@UI/react/components/common/Icon';
+import { UserCheck } from 'lucide-react';
 import { Modal } from '../Modal';
 import { DropdownSelect } from '../../common/Dropdown';
 
@@ -102,7 +102,7 @@ export function TransferOwnershipDialog({
             isOpen={isOpen}
             onClose={onClose}
             title="Transfer Ownership"
-            icon={IconUserCheck}
+            icon={UserCheck}
             severity="warning"
             size="md"
             footer={renderFooter()}

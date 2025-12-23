@@ -19,15 +19,15 @@
 
 import React, { memo } from 'react';
 import {
-    IconSearch,
-    IconClock,
-    IconFolder,
-    IconEye,
-    IconUsers,
-    IconMessageSquare
-} from '@UI/react/components/common/Icon';
-import StorageOutlined from '@mui/icons-material/StorageOutlined';
-import HelpOutlineOutlined from '@mui/icons-material/HelpOutlineOutlined';
+    Search,
+    Clock,
+    Folder,
+    Database,
+    Eye,
+    Users,
+    MessageSquare,
+    FileQuestion
+} from 'lucide-react';
 import { SearchResultItem, TYPE_LABELS } from './SearchResultItem';
 import { EmptyState as CommonEmptyState } from '@UI/react/components/common/EmptyState';
 
@@ -56,12 +56,12 @@ import { EmptyState as CommonEmptyState } from '@UI/react/components/common/Empt
  * Group type icons for headers
  */
 const GROUP_ICONS = {
-    project: IconFolder,
-    dataset: StorageOutlined,
-    view: IconEye,
-    person: IconUsers,
-    annotation: IconMessageSquare,
-    room: IconUsers,
+    project: Folder,
+    dataset: Database,
+    view: Eye,
+    person: Users,
+    annotation: MessageSquare,
+    room: Users,
 };
 
 /**
@@ -85,7 +85,7 @@ const EmptyState = memo(function EmptyState({ query, type = 'no-results' }) {
         return (
             <div className="global-search__empty">
                 <CommonEmptyState
-                    icon={HelpOutlineOutlined}
+                    icon={FileQuestion}
                     title={`No results found for "${query}"`}
                     description="Try adjusting your search or filter criteria"
                 />
@@ -96,7 +96,7 @@ const EmptyState = memo(function EmptyState({ query, type = 'no-results' }) {
     return (
         <div className="global-search__empty">
             <CommonEmptyState
-                icon={IconSearch}
+                icon={Search}
                 title="Start typing to search"
                 description="Search across projects, datasets, views, and more"
             />
@@ -136,7 +136,7 @@ const RecentSearches = memo(function RecentSearches({
                         className="global-search__recent-item"
                         onClick={() => onSelect(query)}
                     >
-                        <IconClock size={14} />
+                        <Clock size={14} />
                         <span>{query}</span>
                     </button>
                 ))}
@@ -156,7 +156,7 @@ const ResultGroup = memo(function ResultGroup({
     startIndex,
     onSelect
 }) {
-    const Icon = GROUP_ICONS[type] || IconFolder;
+    const Icon = GROUP_ICONS[type] || Folder;
     const label = GROUP_LABELS[type] || type;
 
     return (

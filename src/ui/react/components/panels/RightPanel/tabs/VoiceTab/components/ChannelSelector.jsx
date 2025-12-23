@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { IconRadio, IconChevronDown } from '@UI/react/components/common/Icon';
+import { Radio, ChevronDown } from 'lucide-react';
 
 /**
  * @typedef {Object} Channel
@@ -39,12 +39,12 @@ export function ChannelSelector({ channels, currentChannel, onSelect, disabled }
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
             >
-                <IconRadio size={14} className="channel-selector__icon" />
+                <Radio size={14} className="channel-selector__icon" />
                 <span className="channel-selector__name">{current?.name || 'Select Room'}</span>
                 {current?.participants > 0 && (
                     <span className="channel-selector__count">{current.participants}</span>
                 )}
-                <IconChevronDown size={12} className={`channel-selector__chevron ${isOpen ? 'open' : ''}`} />
+                <ChevronDown size={12} className={`channel-selector__chevron ${isOpen ? 'open' : ''}`} />
             </button>
 
             {isOpen && (
@@ -60,7 +60,7 @@ export function ChannelSelector({ channels, currentChannel, onSelect, disabled }
                                     setIsOpen(false);
                                 }}
                             >
-                                <IconRadio size={12} />
+                                <Radio size={12} />
                                 <span className="channel-selector__option-name">{channel.name}</span>
                                 {channel.participants > 0 && (
                                     <span className="channel-selector__option-count">{channel.participants}</span>

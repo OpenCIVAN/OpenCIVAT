@@ -8,7 +8,7 @@
 // - Collapsed sections anchor appropriately (top→top, bottom→bottom, middle→below)
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { IconChevronDown, IconChevronRight } from '@UI/react/components/common/Icon';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import './ResizableSections.scss';
 
 // =============================================================================
@@ -31,7 +31,7 @@ function SectionHeader({
             onClick={onToggle}
         >
             <span className="resizable-section__chevron">
-                {isExpanded ? <IconChevronDown sx={{ fontSize: 10 }} /> : <IconChevronRight sx={{ fontSize: 10 }} />}
+                {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
             </span>
             {Icon && <Icon size={11} className={`resizable-section__icon ${iconColorClass || ''}`} />}
             <span className="resizable-section__label">{label}</span>

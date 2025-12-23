@@ -17,8 +17,7 @@
  */
 
 import React from 'react';
-import { IconAdd, IconSearch, IconClose } from '@UI/react/components/common/Icon';
-import { PublicOutlined, ViewQuiltOutlined } from '@mui/icons-material';
+import { Plus, Globe, Layout, Search, X } from 'lucide-react';
 import { ResizableSections } from '@UI/react/components/common/ResizableSections';
 
 import { useRoomsTab } from './hooks/useRoomsTab';
@@ -33,9 +32,9 @@ import './RoomsTab.scss';
 // =============================================================================
 
 const GROUP_ICONS = {
-    project: PublicOutlined,
-    breakout: ViewQuiltOutlined,
-    personal: ViewQuiltOutlined,
+    project: Globe,
+    breakout: Layout,
+    personal: Layout,
 };
 
 // =============================================================================
@@ -94,14 +93,14 @@ export function RoomsTab({ workspaceId }) {
                     onClick={() => setShowCreateForm(true)}
                     title="Create breakout room"
                 >
-                    <IconAdd size={14} />
+                    <Plus size={14} />
                 </button>
             ),
             content: (
                 <div className="rooms-list">
                     {/* Search */}
                     <div className="rooms-list__search">
-                        <IconSearch size={12} />
+                        <Search size={12} />
                         <input
                             type="text"
                             value={searchQuery}
@@ -110,7 +109,7 @@ export function RoomsTab({ workspaceId }) {
                         />
                         {searchQuery && (
                             <button onClick={() => setSearchQuery('')}>
-                                <IconClose size={10} />
+                                <X size={10} />
                             </button>
                         )}
                     </div>
@@ -158,10 +157,10 @@ export function RoomsTab({ workspaceId }) {
                     {/* Empty state */}
                     {rooms.length === 0 && (
                         <div className="rooms-list__empty">
-                            <ViewQuiltOutlined size={24} />
+                            <Layout size={24} />
                             <span>No rooms available</span>
                             <button onClick={() => setShowCreateForm(true)}>
-                                <IconAdd size={12} />
+                                <Plus size={12} />
                                 Create Room
                             </button>
                         </div>

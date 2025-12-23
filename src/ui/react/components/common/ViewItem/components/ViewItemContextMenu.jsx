@@ -9,17 +9,17 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-    IconEdit,
-    IconCopy,
-    IconSettings,
-    IconClose,
-    IconDelete,
-    IconShare,
-    IconSave,
-    IconExternalLink,
-} from '@UI/react/components/common/Icon';
-import NavigationOutlined from '@mui/icons-material/NavigationOutlined';
-import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
+    Navigation,
+    LayoutGrid,
+    Pencil,
+    Copy,
+    Settings,
+    X,
+    Trash2,
+    Share2,
+    Save,
+    ExternalLink,
+} from 'lucide-react';
 import './ViewItemContextMenu.scss';
 
 // =============================================================================
@@ -162,14 +162,14 @@ export function ViewItemContextMenu({
             {/* Navigation / Placement */}
             {isPlaced ? (
                 <MenuItem
-                    icon={NavigationOutlined}
+                    icon={Navigation}
                     label="Go to Location"
                     shortcut={view?.position ? `[${view.position.row + 1},${view.position.col + 1}]` : null}
                     onClick={onNavigate}
                 />
             ) : (
                 <MenuItem
-                    icon={GridViewOutlined}
+                    icon={LayoutGrid}
                     label="Place on Canvas"
                     primary
                     onClick={onPlaceOnCanvas}
@@ -179,26 +179,26 @@ export function ViewItemContextMenu({
             <div className="view-context-menu__divider" />
 
             {/* Edit Actions */}
-            <MenuItem icon={IconEdit} label="Rename" shortcut="F2" onClick={onRename} />
-            <MenuItem icon={IconCopy} label="Duplicate View" shortcut="⌘D" onClick={onDuplicate} />
-            <MenuItem icon={IconShare} label="Share..." onClick={onShare} />
-            <MenuItem icon={IconSettings} label="View Settings..." onClick={onSettings} />
+            <MenuItem icon={Pencil} label="Rename" shortcut="F2" onClick={onRename} />
+            <MenuItem icon={Copy} label="Duplicate View" shortcut="⌘D" onClick={onDuplicate} />
+            <MenuItem icon={Share2} label="Share..." onClick={onShare} />
+            <MenuItem icon={Settings} label="View Settings..." onClick={onSettings} />
 
             <div className="view-context-menu__divider" />
 
             {/* State Actions */}
-            <MenuItem icon={IconSave} label="Save Current State" onClick={onSaveState} />
+            <MenuItem icon={Save} label="Save Current State" onClick={onSaveState} />
             {onOpenInNewWindow && (
-                <MenuItem icon={IconExternalLink} label="Open in New Window" onClick={onOpenInNewWindow} />
+                <MenuItem icon={ExternalLink} label="Open in New Window" onClick={onOpenInNewWindow} />
             )}
 
             <div className="view-context-menu__divider" />
 
             {/* Destructive Actions */}
             {isPlaced && (
-                <MenuItem icon={IconClose} label="Remove from Canvas" onClick={onRemoveFromCanvas} />
+                <MenuItem icon={X} label="Remove from Canvas" onClick={onRemoveFromCanvas} />
             )}
-            <MenuItem icon={IconDelete} label="Move to Trash" danger onClick={onTrash} />
+            <MenuItem icon={Trash2} label="Move to Trash" danger onClick={onTrash} />
         </div>
     );
 

@@ -55,7 +55,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal } from '../Modal';
-import { IconInfo, IconAlertTriangle, IconDelete } from '@UI/react/components/common/Icon';
+import { Info, AlertTriangle, Trash2 } from 'lucide-react';
 import './ConfirmationDialog.scss';
 
 /**
@@ -89,9 +89,9 @@ import './ConfirmationDialog.scss';
  * Used when no custom icon is provided.
  */
 const DEFAULT_ICONS = {
-    info: IconInfo,
-    warning: IconAlertTriangle,
-    danger: IconDelete
+    info: Info,
+    warning: AlertTriangle,
+    danger: Trash2
 };
 
 /**

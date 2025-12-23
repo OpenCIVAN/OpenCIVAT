@@ -10,18 +10,18 @@
 
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import {
-    IconGripVertical,
-    IconClose,
-    IconFolder,
-    IconSave,
-    IconUsers,
-    IconLink,
-    IconLock,
-    IconFilter,
-    IconSettings,
-} from '@UI/react/components/common/Icon';
-import PublicOutlined from '@mui/icons-material/PublicOutlined';
-import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
+    GripVertical,
+    X,
+    Folder,
+    Globe,
+    Save,
+    Users,
+    Link2,
+    Lock,
+    Filter,
+    Settings,
+    LayoutGrid,
+} from 'lucide-react';
 import { SlidingPanel } from './components/SlidingPanel';
 import { ViewItemContextMenu } from './components/ViewItemContextMenu';
 import { ViewSettingsModal } from '@UI/react/components/modals/ViewSettingsModal';
@@ -33,13 +33,13 @@ import './ViewItem.scss';
 // =============================================================================
 
 const STATUS_ICONS = {
-    starredWorkspace: { icon: IconFolder, color: 'purple', tooltip: 'Saved to Workspace' },
-    starredPersonal: { icon: PublicOutlined, color: 'amber', tooltip: 'Saved to Personal' },
-    hasSavedState: { icon: IconSave, color: 'amber', tooltip: 'Has saved state' },
-    isShared: { icon: IconUsers, color: 'pink', tooltip: 'Shared' },
-    isLocked: { icon: IconLock, color: 'amber', tooltip: 'Locked' },
-    hasLinks: { icon: IconLink, color: 'teal', tooltip: 'Linked properties' },
-    hasFilters: { icon: IconFilter, color: 'purple', tooltip: 'Active filters' },
+    starredWorkspace: { icon: Folder, color: 'purple', tooltip: 'Saved to Workspace' },
+    starredPersonal: { icon: Globe, color: 'amber', tooltip: 'Saved to Personal' },
+    hasSavedState: { icon: Save, color: 'amber', tooltip: 'Has saved state' },
+    isShared: { icon: Users, color: 'pink', tooltip: 'Shared' },
+    isLocked: { icon: Lock, color: 'amber', tooltip: 'Locked' },
+    hasLinks: { icon: Link2, color: 'teal', tooltip: 'Linked properties' },
+    hasFilters: { icon: Filter, color: 'purple', tooltip: 'Active filters' },
 };
 
 // =============================================================================
@@ -249,7 +249,7 @@ export const ViewItem = memo(function ViewItem({
                     onMouseDown={(e) => onDragStart?.(e, view.id)}
                     onMouseUp={onDragEnd}
                 >
-                    <IconGripVertical size={14} />
+                    <GripVertical size={14} />
                 </div>
 
                 {/* Thumbnail with Status Ring */}
@@ -321,7 +321,7 @@ export const ViewItem = memo(function ViewItem({
                             onClick={(e) => { e.stopPropagation(); handleOpenSettings(); }}
                             title="Settings"
                         >
-                            <IconSettings size={12} />
+                            <Settings size={12} />
                         </button>
                         {isPlaced ? (
                             <button
@@ -329,7 +329,7 @@ export const ViewItem = memo(function ViewItem({
                                 onClick={(e) => { e.stopPropagation(); handleClose(); }}
                                 title="Remove from Canvas"
                             >
-                                <IconClose size={12} />
+                                <X size={12} />
                             </button>
                         ) : (
                             <button
@@ -337,7 +337,7 @@ export const ViewItem = memo(function ViewItem({
                                 onClick={(e) => { e.stopPropagation(); handlePlaceOnCanvas(); }}
                                 title="Place on Canvas"
                             >
-                                <GridViewOutlined size={12} />
+                                <LayoutGrid size={12} />
                             </button>
                         )}
                     </div>

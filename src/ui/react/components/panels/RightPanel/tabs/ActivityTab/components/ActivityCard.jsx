@@ -5,19 +5,19 @@
 
 import React from 'react';
 import {
-    IconClock,
-    IconDatabase,
-    IconUser,
-    IconEye,
-    IconMessageSquare,
-    IconShare,
-    IconUpload,
-    IconDownload,
-    IconDelete,
-    IconEdit,
-    IconRefresh,
-    IconCircle,
-} from '@UI/react/components/common/Icon';
+    Clock,
+    User,
+    Database,
+    Eye,
+    MessageSquare,
+    Share2,
+    Upload,
+    Download,
+    Trash2,
+    Edit3,
+    RefreshCw,
+    Circle,
+} from 'lucide-react';
 import { formatTimestamp } from '@Utils/formatters.js';
 
 /**
@@ -25,17 +25,17 @@ import { formatTimestamp } from '@Utils/formatters.js';
  */
 function getActivityIcon(type) {
     switch (type) {
-        case 'view': return IconEye;
-        case 'dataset': return IconDatabase;
-        case 'annotation': return IconMessageSquare;
-        case 'share': return IconShare;
-        case 'upload': return IconUpload;
-        case 'download': return IconDownload;
-        case 'delete': return IconDelete;
-        case 'edit': return IconEdit;
-        case 'join': return IconUser;
-        case 'system': return IconRefresh;
-        default: return IconCircle;
+        case 'view': return Eye;
+        case 'dataset': return Database;
+        case 'annotation': return MessageSquare;
+        case 'share': return Share2;
+        case 'upload': return Upload;
+        case 'download': return Download;
+        case 'delete': return Trash2;
+        case 'edit': return Edit3;
+        case 'join': return User;
+        case 'system': return RefreshCw;
+        default: return Circle;
     }
 }
 
@@ -87,7 +87,7 @@ export function ActivityCard({ activity }) {
                     )}
                 </div>
                 <div className="activity-card__time">
-                    <IconClock size={10} />
+                    <Clock size={10} />
                     <span>{formatTimestamp(activity.timestamp)}</span>
                 </div>
             </div>

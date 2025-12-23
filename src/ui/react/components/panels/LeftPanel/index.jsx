@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { IconPanelLeftClose, IconChevronRight } from '@UI/react/components/common/Icon';
+import { PanelLeftClose, ChevronRight } from 'lucide-react';
 
 // Import tab config and renderer from the SINGLE SOURCE OF TRUTH
 import {
@@ -97,7 +97,7 @@ function ActivityBar({
                 title={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
                 aria-label={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
             >
-                {isPanelOpen ? <IconPanelLeftClose size={18} /> : <IconChevronRight size={18} />}
+                {isPanelOpen ? <PanelLeftClose size={18} /> : <ChevronRight size={18} />}
             </button>
         </div>
     );

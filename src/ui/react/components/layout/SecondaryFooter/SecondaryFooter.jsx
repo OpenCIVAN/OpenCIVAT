@@ -24,17 +24,11 @@
 
 import React, { useCallback, memo } from 'react';
 import {
-    IconMap,
-    IconUndo,
-    IconRedo,
-} from '@UI/react/components/common/Icon';
-import StickyNote2Outlined from '@mui/icons-material/StickyNote2Outlined';
-import ArrowForwardOutlined from '@mui/icons-material/ArrowForwardOutlined';
-import ArrowDownwardOutlined from '@mui/icons-material/ArrowDownwardOutlined';
-import TouchAppOutlined from '@mui/icons-material/TouchAppOutlined';
-import PanToolOutlined from '@mui/icons-material/PanToolOutlined';
-import MergeTypeOutlined from '@mui/icons-material/MergeTypeOutlined';
-import EditOutlined from '@mui/icons-material/EditOutlined';
+    Map, StickyNote,
+    ArrowRight, ArrowDown,
+    MousePointer2, Hand, Combine, Pencil,
+    Undo2, Redo2,
+} from 'lucide-react';
 
 // Shared bar components (from common bars/ folder)
 import {
@@ -54,14 +48,14 @@ import './SecondaryFooter.scss';
 // =============================================================================
 
 const FLOW_OPTIONS = [
-    { value: 'row', icon: ArrowForwardOutlined, label: 'Row Flow', accent: 'var(--color-accent-blue)' },
-    { value: 'column', icon: ArrowDownwardOutlined, label: 'Column Flow', accent: 'var(--color-accent-blue)' },
+    { value: 'row', icon: ArrowRight, label: 'Row Flow', accent: 'var(--color-accent-blue)' },
+    { value: 'column', icon: ArrowDown, label: 'Column Flow', accent: 'var(--color-accent-blue)' },
 ];
 
 const EDIT_TOOLS = [
-    { id: 'select', icon: TouchAppOutlined, label: 'Select', accent: 'var(--color-accent-blue)' },
-    { id: 'pan', icon: PanToolOutlined, label: 'Pan', accent: 'var(--color-accent-teal)' },
-    { id: 'merge', icon: MergeTypeOutlined, label: 'Merge Cells', accent: 'var(--color-accent-purple)' },
+    { id: 'select', icon: MousePointer2, label: 'Select', accent: 'var(--color-accent-blue)' },
+    { id: 'pan', icon: Hand, label: 'Pan', accent: 'var(--color-accent-teal)' },
+    { id: 'merge', icon: Combine, label: 'Merge Cells', accent: 'var(--color-accent-purple)' },
 ];
 
 // =============================================================================
@@ -124,14 +118,14 @@ function SecondaryFooter({
             {/* ================================================================= */}
             <div className="secondary-footer__zone secondary-footer__zone--left">
                 <LabeledIconButton
-                    icon={IconMap}
+                    icon={Map}
                     label="Navigator"
                     active={navigatorOpen}
                     accent="var(--color-accent-teal)"
                     onClick={onToggleNavigator}
                 />
                 <LabeledIconButton
-                    icon={StickyNote2Outlined}
+                    icon={StickyNote}
                     label="Scratchpad"
                     active={scratchpadOpen}
                     accent="var(--color-accent-amber)"
@@ -166,7 +160,7 @@ function SecondaryFooter({
                     ))}
                     <div className="secondary-footer__divider secondary-footer__divider--small" />
                     <IconButton
-                        icon={EditOutlined}
+                        icon={Pencil}
                         label="Toggle Edit Mode"
                         active={isEditMode}
                         size="sm"
@@ -179,14 +173,14 @@ function SecondaryFooter({
                 {/* Undo/Redo */}
                 <ButtonGroup gap="sm">
                     <IconButton
-                        icon={IconUndo}
+                        icon={Undo2}
                         label="Undo"
                         size="sm"
                         disabled={!canUndo}
                         onClick={onUndo}
                     />
                     <IconButton
-                        icon={IconRedo}
+                        icon={Redo2}
                         label="Redo"
                         size="sm"
                         disabled={!canRedo}

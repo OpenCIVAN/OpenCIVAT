@@ -5,13 +5,13 @@
 
 import React from 'react';
 import {
-    IconChevronDown,
-    IconUser,
-    IconSettings,
-    IconLogout,
-} from '@UI/react/components/common/Icon';
-import KeyboardOutlined from '@mui/icons-material/KeyboardOutlined';
-import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
+    ChevronDown,
+    User,
+    Settings,
+    Keyboard,
+    Shield,
+    LogOut,
+} from 'lucide-react';
 import { Dropdown } from '@UI/react/components/common/Dropdown';
 
 /**
@@ -31,19 +31,19 @@ export function UserMenu({ user, onNavigate, onSignOut }) {
     const menuItems = [
         {
             id: 'profile',
-            icon: IconUser,
+            icon: User,
             label: 'Profile',
             path: '/profile',
         },
         {
             id: 'settings',
-            icon: IconSettings,
+            icon: Settings,
             label: 'Settings',
             path: '/settings',
         },
         {
             id: 'shortcuts',
-            icon: KeyboardOutlined,
+            icon: Keyboard,
             label: 'Keyboard Shortcuts',
             action: 'shortcuts',
         },
@@ -53,7 +53,7 @@ export function UserMenu({ user, onNavigate, onSignOut }) {
     if (user?.isAdmin) {
         menuItems.push({
             id: 'admin',
-            icon: ShieldOutlined,
+            icon: Shield,
             label: 'Admin',
             path: '/admin',
         });
@@ -92,10 +92,10 @@ export function UserMenu({ user, onNavigate, onSignOut }) {
                         {user?.avatar ? (
                             <img src={user.avatar} alt={user.name} />
                         ) : (
-                            <IconUser sx={{ fontSize: 16 }} />
+                            <User size={16} />
                         )}
                     </div>
-                    <IconChevronDown sx={{ fontSize: 14 }} />
+                    <ChevronDown size={14} />
                 </button>
             }
             placement="bottom-end"
@@ -148,7 +148,7 @@ export function UserMenu({ user, onNavigate, onSignOut }) {
                     onClick={onSignOut}
                     type="button"
                 >
-                    <IconLogout sx={{ fontSize: 16 }} />
+                    <LogOut size={16} />
                     Sign Out
                 </button>
             </div>

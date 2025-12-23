@@ -1,67 +1,71 @@
+import * as LucideIcons from 'lucide-react';
 import * as MaterialIcons from "@mui/icons-material";
 
-// Icon registry with semantic names (Material icons only)
+// Current library preference
+let currentLibrary = "material"; // or 'lucide'
+
+// Icon registry with semantic names
 const ICON_MAP = {
   // VR & 3D
-  vr: "ViewInArOutlined",
-  rotate3d: "ThreeDRotationOutlined",
-  gesture: "GestureOutlined",
-  spatialAudio: "SpatialAudioOffOutlined",
-  volume3d: "ViewInArOutlined",
+  vr: { lucide: "Glasses", material: "ViewInAr" },
+  rotate3d: { lucide: "RotateCcw", material: "ThreeDRotation" },
+  gesture: { lucide: "Move", material: "Gesture" },
+  spatialAudio: { lucide: "Mic", material: "SpatialAudio" },
+  volume3d: { lucide: "Box", material: "ViewInAr" },
 
   // Navigation
-  pan: "OpenWithOutlined",
-  zoom: "ZoomInOutlined",
-  fit: "CenterFocusStrongOutlined",
-  reset: "RefreshOutlined",
-  camera: "CameraAltOutlined",
-  eye: "VisibilityOutlined",
-  eyeOff: "VisibilityOffOutlined",
-  fullscreen: "FullscreenOutlined",
+  pan: { lucide: "Move", material: "OpenWith" },
+  zoom: { lucide: "ZoomIn", material: "ZoomIn" },
+  fit: { lucide: "Maximize", material: "CenterFocusStrong" },
+  reset: { lucide: "RotateCcw", material: "Refresh" },
+  camera: { lucide: "Camera", material: "Camera" },
+  eye: { lucide: "Eye", material: "Visibility" },
+  eyeOff: { lucide: "EyeOff", material: "VisibilityOff" },
+  fullscreen: { lucide: "Maximize", material: "Fullscreen" },
 
   // Tools
-  clip: "ContentCutOutlined",
-  measure: "StraightenOutlined",
-  annotate: "CommentOutlined",
-  colorMap: "PaletteOutlined",
-  representation: "LayersOutlined",
-  filter: "FilterAltOutlined",
+  clip: { lucide: "Scissors", material: "ContentCut" },
+  measure: { lucide: "Ruler", material: "Straighten" },
+  annotate: { lucide: "MessageSquare", material: "Comment" },
+  colorMap: { lucide: "Palette", material: "Palette" },
+  representation: { lucide: "Layers", material: "Layers" },
+  filter: { lucide: "Settings", material: "FilterAlt" },
 
   // Data
-  dataset: "DatasetOutlined",
-  file: "DescriptionOutlined",
-  image: "ImageOutlined",
-  download: "DownloadOutlined",
-  upload: "UploadOutlined",
+  dataset: { lucide: "Box", material: "Dataset" },
+  file: { lucide: "FileText", material: "Description" },
+  image: { lucide: "Image", material: "Image" },
+  download: { lucide: "Download", material: "Download" },
+  upload: { lucide: "Upload", material: "Upload" },
 
   // UI Actions
-  close: "CloseOutlined",
-  add: "AddOutlined",
-  check: "CheckOutlined",
-  delete: "DeleteOutlined",
-  copy: "ContentCopyOutlined",
-  settings: "SettingsOutlined",
-  menu: "MoreHorizOutlined",
-  menuVertical: "MoreVertOutlined",
-  undo: "UndoOutlined",
-  redo: "RedoOutlined",
-  search: "SearchOutlined",
-  link: "LinkOutlined",
-  pin: "PushPinOutlined",
-  grid: "GridViewOutlined",
-  tools: "BuildOutlined",
+  close: { lucide: "X", material: "Close" },
+  add: { lucide: "Plus", material: "Add" },
+  check: { lucide: "Check", material: "Check" },
+  delete: { lucide: "Trash2", material: "Delete" },
+  copy: { lucide: "Copy", material: "ContentCopy" },
+  settings: { lucide: "Settings", material: "Settings" },
+  menu: { lucide: "MoreHorizontal", material: "MoreHoriz" },
+  menuVertical: { lucide: "MoreVertical", material: "MoreVert" },
+  undo: { lucide: "Undo", material: "Undo" },
+  redo: { lucide: "Redo", material: "Redo" },
+  search: { lucide: "Search", material: "Search" },
+  link: { lucide: "Link", material: "Link" },
+  pin: { lucide: "Pin", material: "PushPin" },
+  grid: { lucide: "Grid", material: "GridView" },
+  tools: { lucide: "Wrench", material: "Build" },
 
   // Collaboration
-  users: "GroupOutlined",
-  mic: "MicOutlined",
-  play: "PlayArrowOutlined",
-  pause: "PauseOutlined",
+  users: { lucide: "Users", material: "Group" },
+  mic: { lucide: "Mic", material: "Mic" },
+  play: { lucide: "Play", material: "PlayArrow" },
+  pause: { lucide: "Pause", material: "Pause" },
 
   // Scientific
-  biotech: "BiotechOutlined",
-  science: "ScienceOutlined",
-  microscope: "BiotechOutlined",
-  memory: "MemoryOutlined",
+  biotech: { lucide: "Box", material: "Biotech" },
+  science: { lucide: "Box", material: "Science" },
+  microscope: { lucide: "Eye", material: "Microscope" },
+  memory: { lucide: "Box", material: "Memory" },
 };
 
 // Custom icons registered at runtime (for plugins)
@@ -79,13 +83,19 @@ export function getIcon(name) {
   }
 
   // Get from registry
-  const iconName = ICON_MAP[name];
-  if (!iconName) {
+  const mapping = ICON_MAP[name];
+  if (!mapping) {
     console.warn(`Unknown icon: ${name}`);
-    return MaterialIcons.HelpOutlineOutlined;
+    return currentLibrary === "material"
+      ? MaterialIcons.HelpOutline
+      : LucideIcons.HelpCircle;
   }
 
-  return MaterialIcons[iconName] || MaterialIcons.HelpOutlineOutlined;
+  // Return based on current library preference
+  const iconName = mapping[currentLibrary];
+  const library = currentLibrary === "material" ? MaterialIcons : LucideIcons;
+
+  return library[iconName] || LucideIcons.Box;
 }
 
 /**
@@ -117,11 +127,23 @@ export function registerIcon(name, component) {
 }
 
 /**
+ * Switch icon library globally
+ * @param {'lucide' | 'material'} library
+ */
+export function setIconLibrary(library) {
+  if (library !== "lucide" && library !== "material") {
+    console.error(`Invalid library: ${library}`);
+    return;
+  }
+  currentLibrary = library;
+}
+
+/**
  * Get current icon library
- * @returns {'material'}
+ * @returns {'lucide' | 'material'}
  */
 export function getIconLibrary() {
-  return "material";
+  return currentLibrary;
 }
 
 /**

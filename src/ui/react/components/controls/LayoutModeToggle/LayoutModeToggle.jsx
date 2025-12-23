@@ -3,7 +3,7 @@
 // Designed for use in SecondaryBottomBar left zone
 
 import React from 'react';
-import { IconGrid3x3, IconMaximize, IconLayers } from '@UI/react/components/common/Icon';
+import { Grid3X3, Maximize2, Layers } from 'lucide-react';
 import { useLayoutModeToggle, LAYOUT_MODES, LAYOUT_MODE_INFO } from './LayoutModeToggle.logic.js';
 import './LayoutModeToggle.scss';
 
@@ -12,17 +12,17 @@ import './LayoutModeToggle.scss';
  */
 const MODE_CONFIG = {
     [LAYOUT_MODES.NORMAL]: {
-        icon: IconGrid3x3,
+        icon: Grid3X3,
         label: 'Normal',
         title: 'Normal View - Standard grid layout',
     },
     [LAYOUT_MODES.ISOLATION]: {
-        icon: IconMaximize,
+        icon: Maximize2,
         label: 'Isolation',
         title: 'Isolation Mode - Focus on single cell',
     },
     [LAYOUT_MODES.SUBSET]: {
-        icon: IconLayers,
+        icon: Layers,
         label: 'Subset',
         title: 'Subset Mode - Filtered cell view',
     },

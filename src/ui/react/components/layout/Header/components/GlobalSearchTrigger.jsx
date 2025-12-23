@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { IconSearch } from '@UI/react/components/common/Icon';
+import { Search } from 'lucide-react';
 
 /**
  * Global search trigger button with Cmd/Ctrl + K shortcut.
@@ -33,7 +33,7 @@ export function GlobalSearchTrigger({ onOpen }) {
             aria-label="Open search"
             type="button"
         >
-            <IconSearch sx={{ fontSize: 18 }} />
+            <Search size={18} />
         </button>
     );
 }

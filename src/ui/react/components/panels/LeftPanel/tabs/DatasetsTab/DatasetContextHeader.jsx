@@ -6,8 +6,7 @@
  */
 
 import { memo } from 'react';
-import { IconDatabase, IconClose, IconAdd } from '@UI/react/components/common/Icon';
-import ArrowRightOutlined from '@mui/icons-material/ArrowRightOutlined';
+import { Database, X, Plus, ArrowRight } from 'lucide-react';
 import './DatasetContextHeader.scss';
 
 export const DatasetContextHeader = memo(function DatasetContextHeader({
@@ -25,7 +24,7 @@ export const DatasetContextHeader = memo(function DatasetContextHeader({
             style={{ '--dataset-color': dataset.color || '#7dd3fc' }}
         >
             <div className="dataset-context-header__info">
-                <IconDatabase size={14} className="dataset-context-header__icon" />
+                <Database size={14} className="dataset-context-header__icon" />
                 <span className="dataset-context-header__name">{dataset.name}</span>
                 <span className="dataset-context-header__count">
                     {viewCount} view{viewCount !== 1 ? 's' : ''}
@@ -38,7 +37,7 @@ export const DatasetContextHeader = memo(function DatasetContextHeader({
                     onClick={onCloseAll}
                     title="Close all views from this dataset"
                 >
-                    <IconClose size={12} />
+                    <X size={12} />
                     <span>Close All</span>
                 </button>
 
@@ -47,7 +46,7 @@ export const DatasetContextHeader = memo(function DatasetContextHeader({
                     onClick={onSpawn}
                     title="Spawn new view"
                 >
-                    <IconAdd size={12} />
+                    <Plus size={12} />
                     <span>Spawn</span>
                 </button>
 
@@ -56,7 +55,7 @@ export const DatasetContextHeader = memo(function DatasetContextHeader({
                     onClick={onGoToDataset}
                     title="Go to dataset"
                 >
-                    <ArrowRightOutlined sx={{ fontSize: 12 }} />
+                    <ArrowRight size={12} />
                     <span>Go to Dataset</span>
                 </button>
             </div>

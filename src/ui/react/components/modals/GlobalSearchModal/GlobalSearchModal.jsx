@@ -44,13 +44,13 @@
 
 import React, { memo, useCallback, useEffect } from 'react';
 import {
-    IconSearch,
-    IconFolder,
-    IconEye,
-    IconUsers,
-    IconMessageSquare
-} from '@UI/react/components/common/Icon';
-import StorageOutlined from '@mui/icons-material/StorageOutlined';
+    Search,
+    Folder,
+    Database,
+    Eye,
+    Users,
+    MessageSquare
+} from 'lucide-react';
 import { Modal } from '../Modal';
 import { SearchInput } from './SearchInput';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
@@ -62,12 +62,12 @@ import './GlobalSearchModal.scss';
  * Available search filters configuration
  */
 const SEARCH_FILTERS = [
-    { id: 'all', label: 'All', icon: IconSearch },
-    { id: 'projects', label: 'Projects', icon: IconFolder },
-    { id: 'datasets', label: 'Datasets', icon: StorageOutlined },
-    { id: 'views', label: 'Views', icon: IconEye },
-    { id: 'people', label: 'People', icon: IconUsers },
-    { id: 'annotations', label: 'Annotations', icon: IconMessageSquare },
+    { id: 'all', label: 'All', icon: Search },
+    { id: 'projects', label: 'Projects', icon: Folder },
+    { id: 'datasets', label: 'Datasets', icon: Database },
+    { id: 'views', label: 'Views', icon: Eye },
+    { id: 'people', label: 'People', icon: Users },
+    { id: 'annotations', label: 'Annotations', icon: MessageSquare },
 ];
 
 /**

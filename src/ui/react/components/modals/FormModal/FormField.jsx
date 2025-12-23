@@ -26,7 +26,7 @@
  */
 
 import React, { useState, useRef, useCallback, memo } from 'react';
-import { IconChevronDown, IconClose } from '@UI/react/components/common/Icon';
+import { ChevronDown, X } from 'lucide-react';
 
 /**
  * @typedef {Object} FormFieldProps
@@ -177,7 +177,7 @@ const SelectField = memo(function SelectField({
                     </option>
                 ))}
             </select>
-            <IconChevronDown className="form-field__select-icon" size={16} />
+            <ChevronDown className="form-field__select-icon" size={16} />
         </div>
     );
 });
@@ -347,7 +347,7 @@ const TagInputField = memo(function TagInputField({
                         disabled={disabled}
                         aria-label={`Remove ${tag}`}
                     >
-                        <IconClose size={12} />
+                        <X size={12} />
                     </button>
                 </span>
             ))}

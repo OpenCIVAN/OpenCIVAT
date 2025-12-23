@@ -9,25 +9,25 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-    IconMapPin,
-    IconSearch,
-    IconClose,
-    IconFilter,
-    IconDatabase,
-    IconLayoutGrid,
-    IconCircle,
-    IconBox,
-    IconRuler,
-    IconEye,
-    IconEyeOff,
-    IconMoreHorizontal,
-    IconChevronRight,
-    IconChevronDown,
-    IconExternalLink,
-    IconAdd,
-    IconLoader,
-} from '@UI/react/components/common/Icon';
-import SubdirectoryArrowRightOutlined from '@mui/icons-material/SubdirectoryArrowRightOutlined';
+    MapPin,
+    Search,
+    X,
+    Filter,
+    Database,
+    LayoutGrid,
+    Circle,
+    Box,
+    Ruler,
+    CornerUpRight,
+    Eye,
+    EyeOff,
+    MoreHorizontal,
+    ChevronRight,
+    ChevronDown,
+    ExternalLink,
+    Plus,
+    Loader,
+} from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -49,11 +49,11 @@ const ANNOTATION_SCOPES = [
 ];
 
 const ANNOTATION_TYPES = {
-    point: { icon: IconMapPin, label: 'Point', color: 'blue' },
-    region: { icon: IconBox, label: 'Region', color: 'green' },
-    measurement: { icon: IconRuler, label: 'Measure', color: 'amber' },
-    angle: { icon: SubdirectoryArrowRightOutlined, label: 'Angle', color: 'purple' },
-    text: { icon: IconMapPin, label: 'Text', color: 'pink' },
+    point: { icon: MapPin, label: 'Point', color: 'blue' },
+    region: { icon: Box, label: 'Region', color: 'green' },
+    measurement: { icon: Ruler, label: 'Measure', color: 'amber' },
+    angle: { icon: CornerUpRight, label: 'Angle', color: 'purple' },
+    text: { icon: MapPin, label: 'Text', color: 'pink' },
 };
 
 const DEFAULT_SECTION_STATES = {
@@ -107,10 +107,10 @@ function AnnotationItem({ annotation, onToggleVisibility }) {
                 onClick={() => onToggleVisibility?.(annotation)}
                 title={isVisible ? 'Hide' : 'Show'}
             >
-                {isVisible ? <IconEye size={12} /> : <IconEyeOff size={12} />}
+                {isVisible ? <Eye size={12} /> : <EyeOff size={12} />}
             </button>
             <button className="annotation-item__more" title="More options">
-                <IconMoreHorizontal size={12} />
+                <MoreHorizontal size={12} />
             </button>
         </div>
     );
@@ -127,8 +127,8 @@ function DatasetGroup({ dataset, annotations, onToggleVisibility }) {
                 className="dataset-group__header"
                 onClick={() => setExpanded(!expanded)}
             >
-                {expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
-                <IconDatabase size={12} className="dataset-group__icon" />
+                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                <Database size={12} className="dataset-group__icon" />
                 <span className="dataset-group__name">{dataset?.name || 'Unknown Dataset'}</span>
                 <span className="dataset-group__count">{annotations.length}</span>
             </button>
@@ -234,7 +234,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
         <div className="annotations-tab">
             {/* Header - ALL CAPS like other tabs */}
             <div className="panel-header panel-header--pink">
-                <IconMapPin size={16} className="panel-header__icon" />
+                <MapPin size={16} className="panel-header__icon" />
                 <span className="panel-header__title">Annotations</span>
                 <span className="panel-header__count">{stats.total}</span>
             </div>
@@ -256,7 +256,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
             {/* Search */}
             <div className="annotations-tab__search">
                 <div className="search-input">
-                    <IconSearch size={12} className="search-input__icon" />
+                    <Search size={12} className="search-input__icon" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -268,7 +268,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
                             className="search-input__clear"
                             onClick={() => setSearchQuery('')}
                         >
-                            <IconClose size={10} />
+                            <X size={10} />
                         </button>
                     )}
                 </div>
@@ -292,7 +292,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
             {/* Loading state */}
             {isLoading && (
                 <div className="annotations-tab__loading">
-                    <IconLoader size={16} className="spin" />
+                    <Loader size={16} className="spin" />
                     <span>Loading annotations...</span>
                 </div>
             )}
@@ -314,14 +314,14 @@ export function AnnotationsPanelContent({ workspaceId }) {
                     {/* Dataset Annotations */}
                     <ResizableSection
                         id="dataset"
-                        icon={IconDatabase}
+                        icon={Database}
                         iconColorClass="icon-blue"
                         label="Dataset Annotations"
                         count={datasetAnnotationCount}
                     >
                         <div className="annotations-tab__section-content">
                             {Object.keys(filteredByDataset).length === 0 ? (
-                                <EmptyState icon={IconMapPin} title="No dataset annotations" size="sm" />
+                                <EmptyState icon={MapPin} title="No dataset annotations" size="sm" />
                             ) : (
                                 Object.entries(filteredByDataset).map(([dsId, anns]) => (
                                     <DatasetGroup
@@ -338,13 +338,13 @@ export function AnnotationsPanelContent({ workspaceId }) {
                     {/* Workspace Annotations - placeholder for workspace-level annotations */}
                     <ResizableSection
                         id="workspace"
-                        icon={IconLayoutGrid}
+                        icon={LayoutGrid}
                         iconColorClass="icon-amber"
                         label="Workspace Annotations"
                         count={0}
                     >
                         <div className="annotations-tab__section-content">
-                            <EmptyState icon={IconMapPin} title="No workspace annotations" size="sm" />
+                            <EmptyState icon={MapPin} title="No workspace annotations" size="sm" />
                         </div>
                     </ResizableSection>
                 </ResizableSectionsContainer>
@@ -353,11 +353,11 @@ export function AnnotationsPanelContent({ workspaceId }) {
             {/* Footer - fixed at bottom */}
             <div className="panel-footer">
                 <button className="panel-footer__btn panel-footer__btn--primary">
-                    <IconAdd size={11} />
+                    <Plus size={11} />
                     <span>New Annotation</span>
                 </button>
                 <button className="panel-footer__btn" title="Open full annotations panel">
-                    <IconExternalLink size={11} />
+                    <ExternalLink size={11} />
                     <span>Open Panel</span>
                 </button>
             </div>

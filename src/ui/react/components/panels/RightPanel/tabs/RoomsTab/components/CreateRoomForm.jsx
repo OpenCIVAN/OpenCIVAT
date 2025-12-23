@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { IconClose, IconLock, IconUnlock, IconEyeOff, IconVolume, IconMessageSquare } from '@UI/react/components/common/Icon';
+import { X, Lock, Unlock, EyeOff, Volume2, MessageSquare } from 'lucide-react';
 
 /**
  * @typedef {Object} CreateRoomFormProps
@@ -37,7 +37,7 @@ export function CreateRoomForm({ onSubmit, onCancel }) {
             <div className="create-room-form__header">
                 <span>Create Breakout Room</span>
                 <button type="button" onClick={onCancel}>
-                    <IconClose size={14} />
+                    <X size={14} />
                 </button>
             </div>
 
@@ -60,7 +60,7 @@ export function CreateRoomForm({ onSubmit, onCancel }) {
                         className={access === 'open' ? 'active' : ''}
                         onClick={() => setAccess('open')}
                     >
-                        <IconUnlock size={12} />
+                        <Unlock size={12} />
                         Open
                     </button>
                     <button
@@ -68,7 +68,7 @@ export function CreateRoomForm({ onSubmit, onCancel }) {
                         className={access === 'invite' ? 'active' : ''}
                         onClick={() => setAccess('invite')}
                     >
-                        <IconLock size={12} />
+                        <Lock size={12} />
                         Invite Only
                     </button>
                     <button
@@ -76,7 +76,7 @@ export function CreateRoomForm({ onSubmit, onCancel }) {
                         className={access === 'invisible' ? 'active' : ''}
                         onClick={() => setAccess('invisible')}
                     >
-                        <IconEyeOff size={12} />
+                        <EyeOff size={12} />
                         Private
                     </button>
                 </div>
@@ -91,7 +91,7 @@ export function CreateRoomForm({ onSubmit, onCancel }) {
                             checked={hasVoice}
                             onChange={(e) => setHasVoice(e.target.checked)}
                         />
-                        <IconVolume size={12} />
+                        <Volume2 size={12} />
                         Voice Chat
                     </label>
                     <label className="create-room-form__checkbox">
@@ -100,7 +100,7 @@ export function CreateRoomForm({ onSubmit, onCancel }) {
                             checked={hasText}
                             onChange={(e) => setHasText(e.target.checked)}
                         />
-                        <IconMessageSquare size={12} />
+                        <MessageSquare size={12} />
                         Text Chat
                     </label>
                 </div>

@@ -4,8 +4,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { IconClose, IconRemove, IconMaximize, IconMinimize, IconGripVertical } from '@UI/react/components/common/Icon';
-import PushPinOutlined from '@mui/icons-material/PushPinOutlined';
+import { X, Minus, Maximize2, Minimize2, PinOff, GripVertical } from 'lucide-react';
 import { useFloatingPanels, FLOATING_PANEL_DEFAULTS } from './FloatingPanelContext';
 import './FloatingPanel.scss';
 
@@ -161,11 +160,11 @@ export function FloatingPanel({
                 onMouseDown={handleDragStart}
             >
                 <div className="floating-panel__drag-handle">
-                    <IconGripVertical sx={{ fontSize: 14 }} />
+                    <GripVertical size={14} />
                 </div>
                 {Icon && (
                     <div className="floating-panel__icon">
-                        <Icon sx={{ fontSize: 16 }} />
+                        <Icon size={16} />
                     </div>
                 )}
                 <div className="floating-panel__title">{title}</div>
@@ -176,21 +175,21 @@ export function FloatingPanel({
                         onClick={() => setMinimized(!minimized)}
                         title={minimized ? 'Expand' : 'Minimize'}
                     >
-                        {minimized ? <IconMaximize sx={{ fontSize: 14 }} /> : <IconRemove sx={{ fontSize: 14 }} />}
+                        {minimized ? <Maximize2 size={14} /> : <Minus size={14} />}
                     </button>
                     <button
                         className="floating-panel__control-btn"
                         onClick={handleDock}
                         title="Dock panel"
                     >
-                        <PushPinOutlined sx={{ fontSize: 14 }} />
+                        <PinOff size={14} />
                     </button>
                     <button
                         className="floating-panel__control-btn floating-panel__control-btn--close"
                         onClick={handleDock}
                         title="Close"
                     >
-                        <IconClose sx={{ fontSize: 14 }} />
+                        <X size={14} />
                     </button>
                 </div>
             </div>

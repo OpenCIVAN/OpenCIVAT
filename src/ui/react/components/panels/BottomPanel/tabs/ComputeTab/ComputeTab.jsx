@@ -7,10 +7,18 @@
 // - VTK Python worker jobs
 
 import React, { useMemo } from "react";
-import { IconCpu, IconClock, IconLoader, IconRefresh, IconDelete, IconPlay, IconPause } from '@UI/react/components/common/Icon';
-import CheckCircleOutlineOutlined from '@mui/icons-material/CheckCircleOutlineOutlined';
-import CancelOutlined from '@mui/icons-material/CancelOutlined';
-import StopCircleOutlined from '@mui/icons-material/StopCircleOutlined';
+import {
+    Cpu,
+    Clock,
+    CheckCircle,
+    XCircle,
+    Loader,
+    RefreshCw,
+    Trash2,
+    Play,
+    Pause,
+    StopCircle,
+} from 'lucide-react';
 import { useComputeJobs } from "@UI/react/hooks/useComputeJobs.js";
 import "./ComputeTab.scss";
 
@@ -26,11 +34,11 @@ const JOB_TYPES = {
 
 // Status icons and colors
 const STATUS_CONFIG = {
-    pending: { icon: IconClock, color: "#FFA726", label: "Pending" },
-    running: { icon: IconLoader, color: "#2196F3", label: "Running", animate: true },
-    completed: { icon: CheckCircleOutlineOutlined, color: "#4CAF50", label: "Completed" },
-    failed: { icon: CancelOutlined, color: "#f44336", label: "Failed" },
-    paused: { icon: IconPause, color: "#9E9E9E", label: "Paused" },
+    pending: { icon: Clock, color: "#FFA726", label: "Pending" },
+    running: { icon: Loader, color: "#2196F3", label: "Running", animate: true },
+    completed: { icon: CheckCircle, color: "#4CAF50", label: "Completed" },
+    failed: { icon: XCircle, color: "#f44336", label: "Failed" },
+    paused: { icon: Pause, color: "#9E9E9E", label: "Paused" },
 };
 
 /**
@@ -104,7 +112,7 @@ function JobRow({ job, onCancel, onRetry }) {
             {/* Status */}
             <div className="compute-tab__job-status" style={{ color: statusConfig.color }}>
                 <StatusIcon
-                    sx={{ fontSize: 14 }}
+                    size={14}
                     className={statusConfig.animate ? "animate-spin" : ""}
                 />
                 <span>{statusConfig.label}</span>
@@ -131,7 +139,7 @@ function JobRow({ job, onCancel, onRetry }) {
                         title="Cancel job"
                         className="compute-tab__job-action compute-tab__job-action--cancel"
                     >
-                        <StopCircleOutlined sx={{ fontSize: 14 }} />
+                        <StopCircle size={14} />
                     </button>
                 )}
                 {job.status === "failed" && (
@@ -140,7 +148,7 @@ function JobRow({ job, onCancel, onRetry }) {
                         title="Retry job"
                         className="compute-tab__job-action compute-tab__job-action--retry"
                     >
-                        <IconRefresh sx={{ fontSize: 14 }} />
+                        <RefreshCw size={14} />
                     </button>
                 )}
             </div>
@@ -208,19 +216,19 @@ export function ComputeTab() {
                     <div className="compute-tab__counts">
                         {counts.running > 0 && (
                             <span className="compute-tab__count compute-tab__count--running">
-                                <IconLoader sx={{ fontSize: 12 }} className="animate-spin" />
+                                <Loader size={12} className="animate-spin" />
                                 {counts.running} running
                             </span>
                         )}
                         {counts.pending > 0 && (
                             <span className="compute-tab__count compute-tab__count--pending">
-                                <IconClock sx={{ fontSize: 12 }} />
+                                <Clock size={12} />
                                 {counts.pending} pending
                             </span>
                         )}
                         {counts.failed > 0 && (
                             <span className="compute-tab__count compute-tab__count--failed">
-                                <CancelOutlined sx={{ fontSize: 12 }} />
+                                <XCircle size={12} />
                                 {counts.failed} failed
                             </span>
                         )}
@@ -236,7 +244,7 @@ export function ComputeTab() {
                         onClick={refresh}
                         title="Refresh"
                     >
-                        <IconRefresh sx={{ fontSize: 14 }} />
+                        <RefreshCw size={14} />
                     </button>
                     {counts.completed > 0 && (
                         <button
@@ -244,7 +252,7 @@ export function ComputeTab() {
                             onClick={clearCompleted}
                             title="Clear completed"
                         >
-                            <IconDelete sx={{ fontSize: 14 }} />
+                            <Trash2 size={14} />
                             Clear
                         </button>
                     )}
@@ -255,12 +263,12 @@ export function ComputeTab() {
             <div className="compute-tab__jobs">
                 {isLoading ? (
                     <div className="compute-tab__loading">
-                        <IconLoader sx={{ fontSize: 24 }} className="animate-spin" />
+                        <Loader size={24} className="animate-spin" />
                         <span>Loading jobs...</span>
                     </div>
                 ) : orderedJobs.length === 0 ? (
                     <div className="compute-tab__empty">
-                        <IconCpu sx={{ fontSize: 32 }} />
+                        <Cpu size={32} />
                         <p>No compute jobs</p>
                         <span>Background processing tasks will appear here</span>
                     </div>

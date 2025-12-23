@@ -21,18 +21,18 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import {
-    IconMessageSquare,
-    IconMic,
-    IconLock,
-    IconUnlock,
-    IconEyeOff,
-    IconClock,
-    IconSave,
-    IconUsers,
-    IconCheck,
-    IconAlertCircle,
-    IconLayout
-} from '@UI/react/components/common/Icon';
+    MessageSquare,
+    Mic,
+    Layout,
+    Lock,
+    Unlock,
+    EyeOff,
+    Clock,
+    Save,
+    Users,
+    Check,
+    AlertCircle
+} from 'lucide-react';
 
 import { FormModal } from "@UI/react/components/modals/FormModal";
 import { FormField } from "@UI/react/components/modals/FormModal";
@@ -47,19 +47,19 @@ import "./CreateRoomModal.scss";
 const ACCESS_OPTIONS = [
     {
         id: "open",
-        icon: IconUnlock,
+        icon: Unlock,
         label: "Open",
         description: "Anyone can join"
     },
     {
         id: "invite",
-        icon: IconLock,
+        icon: Lock,
         label: "Invite Only",
         description: "Only invited users can join"
     },
     {
         id: "invisible",
-        icon: IconEyeOff,
+        icon: EyeOff,
         label: "Invisible",
         description: "Hidden from non-members"
     },
@@ -68,13 +68,13 @@ const ACCESS_OPTIONS = [
 const PERSISTENCE_OPTIONS = [
     {
         id: "session",
-        icon: IconClock,
+        icon: Clock,
         label: "Session",
         description: "Temporary - closes when empty"
     },
     {
         id: "persistent",
-        icon: IconSave,
+        icon: Save,
         label: "Persistent",
         description: "Stays open for future use"
     },
@@ -221,7 +221,7 @@ export function CreateRoomModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Create Breakout Room"
-            icon={IconUsers}
+            icon={Users}
             submitLabel="Create Room"
             onSubmit={handleSubmit}
             isSubmitting={isCreating}
@@ -232,7 +232,7 @@ export function CreateRoomModal({
                 {/* Submit error */}
                 {errors.submit && (
                     <div className="create-room-modal__submit-error">
-                        <IconAlertCircle size={14} />
+                        <AlertCircle size={14} />
                         {errors.submit}
                     </div>
                 )}
@@ -273,7 +273,7 @@ export function CreateRoomModal({
                             className={`create-room-modal__toggle ${hasText ? "active" : ""}`}
                             onClick={() => setHasText(!hasText)}
                         >
-                            <IconMessageSquare size={16} />
+                            <MessageSquare size={16} />
                             <span>Text Chat</span>
                         </button>
                         <button
@@ -281,7 +281,7 @@ export function CreateRoomModal({
                             className={`create-room-modal__toggle ${hasVoice ? "active" : ""}`}
                             onClick={() => setHasVoice(!hasVoice)}
                         >
-                            <IconMic size={16} />
+                            <Mic size={16} />
                             <span>Voice</span>
                         </button>
                         <button
@@ -289,13 +289,13 @@ export function CreateRoomModal({
                             className={`create-room-modal__toggle ${hasWorkspace ? "active" : ""}`}
                             onClick={() => setHasWorkspace(!hasWorkspace)}
                         >
-                            <IconLayout style={{ fontSize: 16 }} />
+                            <Layout size={16} />
                             <span>Workspace</span>
                         </button>
                     </div>
                     {errors.features && (
                         <span className="create-room-modal__error">
-                            <IconAlertCircle size={12} /> {errors.features}
+                            <AlertCircle size={12} /> {errors.features}
                         </span>
                     )}
                 </div>
@@ -318,7 +318,7 @@ export function CreateRoomModal({
                                         <span className="create-room-modal__option-label">{option.label}</span>
                                         <span className="create-room-modal__option-desc">{option.description}</span>
                                     </div>
-                                    {access === option.id && <IconCheck size={16} className="create-room-modal__check" />}
+                                    {access === option.id && <Check size={16} className="create-room-modal__check" />}
                                 </button>
                             );
                         })}
@@ -343,7 +343,7 @@ export function CreateRoomModal({
                                         <span className="create-room-modal__option-label">{option.label}</span>
                                         <span className="create-room-modal__option-desc">{option.description}</span>
                                     </div>
-                                    {persistence === option.id && <IconCheck size={16} className="create-room-modal__check" />}
+                                    {persistence === option.id && <Check size={16} className="create-room-modal__check" />}
                                 </button>
                             );
                         })}
@@ -354,7 +354,7 @@ export function CreateRoomModal({
                 {access !== "open" && (
                     <div className="create-room-modal__section">
                         <label className="create-room-modal__section-label">
-                            <IconUsers size={14} />
+                            <Users size={14} />
                             Invite Users
                         </label>
                         <input
@@ -399,7 +399,7 @@ export function CreateRoomModal({
                                     >
                                         <UserAvatar userName={user.userName} color={user.userColor} size="sm" />
                                         <span>{user.userName}</span>
-                                        {isUserSelected(user) && <IconCheck size={14} className="create-room-modal__user-check" />}
+                                        {isUserSelected(user) && <Check size={14} className="create-room-modal__user-check" />}
                                     </button>
                                 ))
                             )}

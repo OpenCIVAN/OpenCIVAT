@@ -15,22 +15,19 @@
 
 import React, { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
-    IconAdd,
-    IconClose,
-    IconLayoutGrid,
-    IconFile,
-    IconBox,
-    IconZoomIn,
-    IconNote,
-    IconImage,
-} from '@UI/react/components/common/Icon';
-import {
-    ArrowUpwardOutlined as ArrowUp,
-    ArrowDownwardOutlined as ArrowDown,
-    ArrowBackOutlined as ArrowLeft,
-    ArrowForwardOutlined as ArrowRight,
-    SwapHorizOutlined as ArrowLeftRight,
-} from '@mui/icons-material';
+    Plus,
+    X,
+    LayoutGrid,
+    FileImage,
+    FileText,
+    Box,
+    ZoomIn,
+    ArrowUp,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+    ArrowLeftRight,
+} from 'lucide-react';
 
 // =============================================================================
 // DROP ZONE CONSTANTS
@@ -88,10 +85,10 @@ import './CanvasCell.scss';
 
 // Content type options for the radial menu - positioned in cross pattern
 const CONTENT_OPTIONS = [
-    { type: 'view', icon: IconBox, label: 'Add View', color: 'blue' },
-    { type: 'notes', icon: IconNote, label: 'Add Notes', color: 'amber' },
-    { type: 'image', icon: IconImage, label: 'Add Image', color: 'teal' },
-    { type: 'grid', icon: IconLayoutGrid, label: 'Add Grid', color: 'purple' },
+    { type: 'view', icon: Box, label: 'Add View', color: 'blue' },
+    { type: 'notes', icon: FileText, label: 'Add Notes', color: 'amber' },
+    { type: 'image', icon: FileImage, label: 'Add Image', color: 'teal' },
+    { type: 'grid', icon: LayoutGrid, label: 'Add Grid', color: 'purple' },
 ];
 
 // =============================================================================
@@ -517,7 +514,7 @@ export const CanvasCell = memo(function CanvasCell({
                                 }}
                                 title="Remove invalid placement"
                             >
-                                <IconClose size={14} />
+                                <X size={14} />
                                 <span>Remove</span>
                             </button>
                         )}
@@ -575,7 +572,7 @@ export const CanvasCell = memo(function CanvasCell({
             {/* Isolation mode indicator (for small cells) */}
             {(renderMode === RENDER_MODES.THUMBNAIL || renderMode === RENDER_MODES.SNAPSHOT) && !isEmpty && (
                 <div className="canvas-cell__isolation-hint">
-                    <IconZoomIn size={12} />
+                    <ZoomIn size={12} />
                 </div>
             )}
 
@@ -711,7 +708,7 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
     if (renderMode === RENDER_MODES.THUMBNAIL) {
         return (
             <div className="canvas-cell__empty-thumbnail">
-                <IconAdd size={12} />
+                <Plus size={12} />
             </div>
         );
     }
@@ -734,7 +731,7 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
                 onClick={handleCenterClick}
                 title={showRadial ? 'Close menu' : 'Add content'}
             >
-                {showRadial ? <IconClose size={20} /> : <IconAdd size={20} />}
+                {showRadial ? <X size={20} /> : <Plus size={20} />}
             </button>
 
             {/* Radial options - positioned around center button */}
@@ -871,7 +868,7 @@ function ViewContent({
                         instanceType="vtk"
                         fallback={
                             <div className="canvas-cell__thumbnail-placeholder">
-                                <IconBox size={uiConfig.renderContent === 'snapshot' ? 16 : 24} />
+                                <Box size={uiConfig.renderContent === 'snapshot' ? 16 : 24} />
                             </div>
                         }
                     />
@@ -921,7 +918,7 @@ function NotesPlaceholder({ notesId, renderMode, onClose }) {
     if (renderMode === RENDER_MODES.SNAPSHOT || renderMode === RENDER_MODES.THUMBNAIL) {
         return (
             <div className="canvas-cell__notes-mini">
-                <IconFile size={renderMode === RENDER_MODES.SNAPSHOT ? 16 : 20} />
+                <FileText size={renderMode === RENDER_MODES.SNAPSHOT ? 16 : 20} />
             </div>
         );
     }
@@ -939,7 +936,7 @@ function NotesPlaceholder({ notesId, renderMode, onClose }) {
                     }}
                     title="Remove notes"
                 >
-                    <IconClose size={14} />
+                    <X size={14} />
                 </button>
             </div>
             <div className="canvas-cell__notes-body">
@@ -959,7 +956,7 @@ function ImagePlaceholder({ imageId, renderMode, onClose }) {
     if (renderMode === RENDER_MODES.SNAPSHOT || renderMode === RENDER_MODES.THUMBNAIL) {
         return (
             <div className="canvas-cell__image-mini">
-                <IconImage size={renderMode === RENDER_MODES.SNAPSHOT ? 16 : 20} />
+                <FileImage size={renderMode === RENDER_MODES.SNAPSHOT ? 16 : 20} />
             </div>
         );
     }
@@ -977,7 +974,7 @@ function ImagePlaceholder({ imageId, renderMode, onClose }) {
                     }}
                     title="Remove image"
                 >
-                    <IconClose size={14} />
+                    <X size={14} />
                 </button>
             </div>
             <div className="canvas-cell__image-body">

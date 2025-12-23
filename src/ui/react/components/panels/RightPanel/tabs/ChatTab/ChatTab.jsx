@@ -17,8 +17,7 @@
  */
 
 import React, { useRef, useEffect } from 'react';
-import { IconMessageSquare, IconLoader } from '@UI/react/components/common/Icon';
-import { PublicOutlined } from '@mui/icons-material';
+import { MessageSquare, Globe, Loader } from 'lucide-react';
 
 import { useChatTab } from './hooks/useChatTab';
 import { MessageBubble } from './components/MessageBubble';
@@ -63,17 +62,17 @@ export function ChatTab({ workspaceId }) {
         <div className="chat-tab">
             {/* Header */}
             <div className="panel-header">
-                <IconMessageSquare size={14} className="panel-header__icon file-icon--blue" />
+                <MessageSquare size={14} className="panel-header__icon file-icon--blue" />
                 <span className="panel-header__title">Chat</span>
                 <div className="panel-header__status">
                     {isLoading ? (
                         <span className="chat-status chat-status--loading">
-                            <IconLoader size={12} className="spin" />
+                            <Loader size={12} className="spin" />
                             Syncing...
                         </span>
                     ) : isSynced ? (
                         <span className="chat-status chat-status--connected">
-                            <PublicOutlined size={12} />
+                            <Globe size={12} />
                             Connected
                         </span>
                     ) : (
@@ -86,7 +85,7 @@ export function ChatTab({ workspaceId }) {
 
             {/* Room indicator */}
             <div className="chat-tab__room-indicator">
-                <PublicOutlined size={12} />
+                <Globe size={12} />
                 <span>Room Chat</span>
                 <span className="chat-tab__message-count">{messages.length} messages</span>
             </div>
@@ -95,12 +94,12 @@ export function ChatTab({ workspaceId }) {
             <div className="chat-tab__messages">
                 {isLoading ? (
                     <div className="chat-tab__loading">
-                        <IconLoader size={24} className="spin" />
+                        <Loader size={24} className="spin" />
                         <span>Loading messages...</span>
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="chat-tab__empty">
-                        <IconMessageSquare size={32} strokeWidth={1} />
+                        <MessageSquare size={32} strokeWidth={1} />
                         <span>No messages yet</span>
                         <span className="chat-tab__empty-hint">Start the conversation!</span>
                     </div>

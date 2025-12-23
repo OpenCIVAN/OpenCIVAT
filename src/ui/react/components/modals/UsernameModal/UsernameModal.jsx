@@ -20,7 +20,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { IconUser } from '@UI/react/components/common/Icon';
+import { User } from 'lucide-react';
 import './UsernameModal.scss';
 
 /**
@@ -78,7 +78,7 @@ export function UsernameModal({ onSubmit }) {
         {/* Logo */}
         <div className="username-modal__header">
           <div className="username-modal__logo">
-            <IconUser size={32} />
+            <User size={32} />
           </div>
           <h1 className="username-modal__title">CIA Web</h1>
           <p className="username-modal__subtitle">

@@ -2,7 +2,7 @@
 // Sliding panel component with glassmorphism theme
 
 import React from "react";
-import { IconClose } from '@UI/react/components/common/Icon';
+import { X } from 'lucide-react';
 import "./ToolPanel.scss";
 
 /**
@@ -36,7 +36,7 @@ export function ToolPanel({
                     className="tool-panel__close"
                     aria-label="Close panel"
                 >
-                    <IconClose sx={{ fontSize: 16 }} />
+                    <X size={16} />
                 </button>
             </div>
 

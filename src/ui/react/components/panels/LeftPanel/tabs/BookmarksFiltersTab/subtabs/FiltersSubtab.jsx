@@ -12,8 +12,7 @@
  */
 
 import React, { memo, useCallback, useRef } from 'react';
-import { IconLoader, IconUpload, IconDownload } from '@UI/react/components/common/Icon';
-import AlertCircleOutlined from '@mui/icons-material/ErrorOutline';
+import { Loader2, AlertCircle, Upload, Download } from 'lucide-react';
 import { FilterCard } from '../components/FilterCard';
 import { FilterEditor } from '../components/FilterEditor';
 import { ScopedSection } from '../components/ScopedSection';
@@ -110,7 +109,7 @@ export const FiltersSubtab = memo(function FiltersSubtab({
     if (isLoading) {
         return (
             <div className="bookmarks-filters-tab__loading">
-                <IconLoader size={24} className="spin" />
+                <Loader2 size={24} className="spin" />
                 <span>Loading filters...</span>
             </div>
         );
@@ -120,7 +119,7 @@ export const FiltersSubtab = memo(function FiltersSubtab({
     if (error) {
         return (
             <div className="bookmarks-filters-tab__error">
-                <AlertCircleOutlined sx={{ fontSize: 24 }} />
+                <AlertCircle size={24} />
                 <span>Failed to load filters</span>
                 <button className="retry-btn" onClick={refetch}>Retry</button>
             </div>
@@ -142,7 +141,7 @@ export const FiltersSubtab = memo(function FiltersSubtab({
                         className="bookmarks-filters-tab__import-btn"
                         onClick={handleImportClick}
                     >
-                        <IconUpload size={12} />
+                        <Upload size={12} />
                         Import Filters
                     </button>
                 </div>
@@ -173,7 +172,7 @@ export const FiltersSubtab = memo(function FiltersSubtab({
                     onClick={handleImportClick}
                     title="Import filters from file"
                 >
-                    <IconUpload size={12} />
+                    <Upload size={12} />
                     Import
                 </button>
                 <button
@@ -181,7 +180,7 @@ export const FiltersSubtab = memo(function FiltersSubtab({
                     onClick={handleExportAll}
                     title="Export all filters"
                 >
-                    <IconDownload size={12} />
+                    <Download size={12} />
                     Export All
                 </button>
                 <input

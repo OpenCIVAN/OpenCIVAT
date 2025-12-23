@@ -20,16 +20,16 @@
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-    IconClose,
-    IconDelete,
-    IconMoreHorizontal,
-    IconTools,
-    IconMaximize,
-    IconCopy,
-    IconCamera,
-    IconBookmark,
-    IconLink,
-} from '@UI/react/components/common/Icon';
+    X,
+    Trash2,
+    MoreHorizontal,
+    Wrench,
+    Maximize2,
+    Copy,
+    Camera,
+    Bookmark,
+    Link,
+} from 'lucide-react';
 import { useViewMetadata } from '@UI/react/hooks/useViewMetadata.js';
 
 // ============================================================================
@@ -134,7 +134,7 @@ function CanvasCellMenu({
                     className="canvas-cell-header__menu-item"
                     onClick={() => handleItemClick(onOpenInIsolation)}
                 >
-                    <IconMaximize size={14} />
+                    <Maximize2 size={14} />
                     <span>Open in Isolation</span>
                 </button>
             )}
@@ -144,7 +144,7 @@ function CanvasCellMenu({
                     className="canvas-cell-header__menu-item"
                     onClick={() => handleItemClick(onDuplicate)}
                 >
-                    <IconCopy size={14} />
+                    <Copy size={14} />
                     <span>Duplicate View</span>
                 </button>
             )}
@@ -156,7 +156,7 @@ function CanvasCellMenu({
                 className="canvas-cell-header__menu-item"
                 onClick={() => handleItemClick(onRemove)}
             >
-                <IconClose size={14} />
+                <X size={14} />
                 <span>Remove from Canvas</span>
             </button>
 
@@ -165,7 +165,7 @@ function CanvasCellMenu({
                     className="canvas-cell-header__menu-item canvas-cell-header__menu-item--danger"
                     onClick={() => handleItemClick(onTrash)}
                 >
-                    <IconDelete size={14} />
+                    <Trash2 size={14} />
                     <span>Delete View</span>
                 </button>
             )}
@@ -243,7 +243,7 @@ export const CanvasCellHeader = memo(function CanvasCellHeader({
                         }}
                         disabled={false}
                     >
-                        <IconTools size={12} />
+                        <Wrench size={12} />
                     </button>
                 )}
 
@@ -274,7 +274,7 @@ export const CanvasCellHeader = memo(function CanvasCellHeader({
                         className={`canvas-cell-header__button ${showMenu ? 'active' : ''}`}
                         title="More options"
                     >
-                        <IconMoreHorizontal size={12} />
+                        <MoreHorizontal size={12} />
                     </button>
                     <CanvasCellMenu
                         isOpen={showMenu}
@@ -298,7 +298,7 @@ export const CanvasCellHeader = memo(function CanvasCellHeader({
                         className="canvas-cell-header__button"
                         title="Remove from canvas (view stays in Datasets list)"
                     >
-                        <IconClose size={12} />
+                        <X size={12} />
                     </button>
                 )}
             </div>

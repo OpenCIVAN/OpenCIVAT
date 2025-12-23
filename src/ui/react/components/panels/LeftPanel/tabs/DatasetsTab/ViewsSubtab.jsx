@@ -10,24 +10,24 @@
 
 import { memo, useState, useCallback, useMemo } from 'react';
 import {
-    IconChevronDown,
-    IconDatabase,
-    IconClock,
-} from '@UI/react/components/common/Icon';
-import ArrowUpDownOutlined from '@mui/icons-material/SwapVertOutlined';
-import LayoutGridOutlined from '@mui/icons-material/GridOnOutlined';
-import SortAscOutlined from '@mui/icons-material/SortByAlphaOutlined';
+    ArrowUpDown,
+    ChevronDown,
+    LayoutGrid,
+    Database,
+    Clock,
+    SortAsc,
+} from 'lucide-react';
 import { ViewItem } from './ViewItem';
 import { DatasetContextHeader } from './DatasetContextHeader';
 import './ViewsSubtab.scss';
 
 // Sort options
 const SORT_OPTIONS = [
-    { id: 'row', label: 'Row', icon: LayoutGridOutlined },
-    { id: 'column', label: 'Column', icon: LayoutGridOutlined },
-    { id: 'name', label: 'Name', icon: SortAscOutlined },
-    { id: 'dataset', label: 'Dataset', icon: IconDatabase },
-    { id: 'recent', label: 'Recently Active', icon: IconClock },
+    { id: 'row', label: 'Row', icon: LayoutGrid },
+    { id: 'column', label: 'Column', icon: LayoutGrid },
+    { id: 'name', label: 'Name', icon: SortAsc },
+    { id: 'dataset', label: 'Dataset', icon: Database },
+    { id: 'recent', label: 'Recently Active', icon: Clock },
 ];
 
 // Group options
@@ -141,9 +141,9 @@ export const ViewsSubtab = memo(function ViewsSubtab({
                             setGroupMenuOpen(false);
                         }}
                     >
-                        <ArrowUpDownOutlined sx={{ fontSize: 12 }} />
+                        <ArrowUpDown size={12} />
                         <span>Sort: {SORT_OPTIONS.find(o => o.id === sortBy)?.label}</span>
-                        <IconChevronDown size={12} />
+                        <ChevronDown size={12} />
                     </button>
 
                     {sortMenuOpen && (
@@ -177,9 +177,9 @@ export const ViewsSubtab = memo(function ViewsSubtab({
                             setSortMenuOpen(false);
                         }}
                     >
-                        <LayoutGridOutlined sx={{ fontSize: 12 }} />
+                        <LayoutGrid size={12} />
                         <span>Group: {GROUP_OPTIONS.find(o => o.id === groupBy)?.label}</span>
-                        <IconChevronDown size={12} />
+                        <ChevronDown size={12} />
                     </button>
 
                     {groupMenuOpen && (

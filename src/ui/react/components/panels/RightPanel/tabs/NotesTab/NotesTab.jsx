@@ -18,13 +18,13 @@
 
 import React from 'react';
 import {
-    IconFile,
-    IconSearch,
-    IconAdd,
-    IconDownload,
-    IconPin,
-    IconClose,
-} from '@UI/react/components/common/Icon';
+    FileText,
+    Search,
+    Plus,
+    Download,
+    Pin,
+    X,
+} from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -79,7 +79,7 @@ export function NotesTab({ workspaceId }) {
         return (
             <div className="notes-tab">
                 <div className="panel-header">
-                    <IconFile size={14} className="panel-header__icon file-icon--teal" />
+                    <FileText size={14} className="panel-header__icon file-icon--teal" />
                     <span className="panel-header__title">Notes</span>
                 </div>
                 <NoteEditor
@@ -96,7 +96,7 @@ export function NotesTab({ workspaceId }) {
         return (
             <div className="notes-tab">
                 <div className="panel-header">
-                    <IconFile size={14} className="panel-header__icon file-icon--teal" />
+                    <FileText size={14} className="panel-header__icon file-icon--teal" />
                     <span className="panel-header__title">Notes</span>
                 </div>
                 <NoteEditor
@@ -112,7 +112,7 @@ export function NotesTab({ workspaceId }) {
         <div className="notes-tab">
             {/* Header */}
             <div className="panel-header">
-                <IconFile size={14} className="panel-header__icon file-icon--teal" />
+                <FileText size={14} className="panel-header__icon file-icon--teal" />
                 <span className="panel-header__title">Notes</span>
                 <span className="panel-header__count">{notes.length} notes</span>
             </div>
@@ -120,7 +120,7 @@ export function NotesTab({ workspaceId }) {
             {/* Search */}
             <div className="panel-search">
                 <div className="panel-search__wrapper">
-                    <IconSearch size={12} className="search-icon" />
+                    <Search size={12} className="search-icon" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -132,7 +132,7 @@ export function NotesTab({ workspaceId }) {
                             className="clear-button"
                             onClick={() => setSearchQuery('')}
                         >
-                            <IconClose size={10} />
+                            <X size={10} />
                         </button>
                     )}
                 </div>
@@ -147,7 +147,7 @@ export function NotesTab({ workspaceId }) {
                 {pinnedNotes.length > 0 && (
                     <ResizableSection
                         id="pinned"
-                        icon={IconPin}
+                        icon={Pin}
                         iconColorClass="icon-amber"
                         label="Pinned"
                         count={pinnedNotes.length}
@@ -169,7 +169,7 @@ export function NotesTab({ workspaceId }) {
                 {/* All Notes */}
                 <ResizableSection
                     id="all"
-                    icon={IconFile}
+                    icon={FileText}
                     iconColorClass="icon-teal"
                     label="All Notes"
                     count={unpinnedNotes.length}
@@ -194,11 +194,11 @@ export function NotesTab({ workspaceId }) {
                     className="panel-footer__btn panel-footer__btn--primary"
                     onClick={() => setShowNewNote(true)}
                 >
-                    <IconAdd size={11} />
+                    <Plus size={11} />
                     <span>New Note</span>
                 </button>
                 <button className="panel-footer__btn panel-footer__btn--icon">
-                    <IconDownload size={11} />
+                    <Download size={11} />
                 </button>
             </div>
         </div>
