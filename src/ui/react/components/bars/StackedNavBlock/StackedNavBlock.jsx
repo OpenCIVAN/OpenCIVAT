@@ -45,7 +45,7 @@ export const NAV_DIRECTIONS = {
  */
 const NavButton = memo(function NavButton({
     id,
-    icon: Icon,
+    icon,
     label,
     active = false,
     accent,
@@ -69,7 +69,7 @@ const NavButton = memo(function NavButton({
             aria-label={label}
             data-hovered={hovered}
         >
-            <Icon size={14} strokeWidth={1.5} />
+            <Icon name={icon} size={14} />
         </button>
     );
 });
@@ -90,7 +90,7 @@ const NavButton = memo(function NavButton({
  * @param {string} [props.className] - Additional CSS class
  */
 function StackedNavBlock({
-    position = { col: 0, row: 0 },
+    position = { row: 0, col: 0 },
     isAtOrigin = true,
     onNavigate,
     onHome,
@@ -98,7 +98,7 @@ function StackedNavBlock({
     className = '',
 }) {
     // Format position for display
-    const positionText = `${position.col}, ${position.row}`;
+    const positionText = `${position.row}, ${position.col}`;
 
     // Handle D-pad navigation
     const handleNavigate = useCallback((direction) => {

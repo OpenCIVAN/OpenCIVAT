@@ -159,7 +159,7 @@ function VoiceControlsPanel({
                 />
                 <div className="voice-controls-panel__divider" />
                 <VoiceButton
-                    icon={isInChannel ? 'joinVoice' : 'leaveVoice'}
+                    icon={isInChannel ? 'leaveVoice' : 'joinVoice'}
                     label={isInChannel ? 'Leave Channel' : 'Join Channel'}
                     accent={isInChannel ? 'var(--color-accent-red)' : 'var(--color-accent-green)'}
                     onClick={onJoinLeave}
