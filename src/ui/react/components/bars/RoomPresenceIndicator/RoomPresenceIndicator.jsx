@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { IconGlobe, IconGitBranch, IconUser, IconUsers, IconChevronDown, IconLock, IconAdd, IconCheck } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 
 import './RoomPresenceIndicator.scss';
@@ -24,9 +24,9 @@ import './RoomPresenceIndicator.scss';
 const MAX_AVATARS = 4;
 
 const ROOM_TYPES = {
-    main: { icon: IconGlobe, color: 'blue', label: 'Main Room' },
-    breakout: { icon: IconGitBranch, color: 'purple', label: 'Breakout' },
-    personal: { icon: IconUser, color: 'green', label: 'Personal Space' },
+    main: { icon: 'globe', color: 'blue', label: 'Main Room' },
+    breakout: { icon: 'gitBranch', color: 'purple', label: 'Breakout' },
+    personal: { icon: 'user', color: 'green', label: 'Personal Space' },
 };
 
 // =============================================================================
@@ -58,7 +58,7 @@ export function RoomPresenceIndicator({
     // Get room type config
     const roomType = room?.type || 'main';
     const typeConfig = ROOM_TYPES[roomType] || ROOM_TYPES.main;
-    const RoomIcon = typeConfig.icon;
+    const roomIcon = typeConfig.icon;
 
     // Visible members (max 4)
     const visibleMembers = members.slice(0, MAX_AVATARS);
@@ -133,12 +133,12 @@ export function RoomPresenceIndicator({
                 <div className="room-presence__info">
                     <span className="room-presence__label">Currently In</span>
                     <div className="room-presence__room">
-                        <RoomIcon sx={{ fontSize: 12 }} className="room-presence__icon" />
+                        <Icon name={roomIcon} size={12} className="room-presence__icon" />
                         <span className="room-presence__name">
                             {room?.name || 'Main Room'}
                         </span>
                         {room?.isLocked && (
-                            <IconLock sx={{ fontSize: 10 }} className="room-presence__lock" />
+                            <Icon name="lock" size={10} className="room-presence__lock" />
                         )}
                     </div>
                 </div>
@@ -174,8 +174,8 @@ export function RoomPresenceIndicator({
                 )}
 
                 {/* Chevron */}
-                <IconChevronDown
-                    sx={{ fontSize: 12 }}
+                <Icon name="chevronDown"
+                    size={12}
                     className={`room-presence__chevron ${isOpen ? 'room-presence__chevron--open' : ''}`}
                 />
             </button>
@@ -187,7 +187,7 @@ export function RoomPresenceIndicator({
                     {groupedRooms.main?.length > 0 && (
                         <div className="room-presence__section">
                             <div className="room-presence__section-header" data-color="blue">
-                                <IconGlobe sx={{ fontSize: 10 }} />
+                                <Icon name="globe" size={10} />
                                 <span>Project Rooms</span>
                             </div>
                             {groupedRooms.main.map((r) => {
@@ -201,15 +201,15 @@ export function RoomPresenceIndicator({
                                         role="option"
                                         aria-selected={isActive}
                                     >
-                                        <IconGlobe sx={{ fontSize: 12 }} className="room-presence__item-icon" />
+                                        <Icon name="globe" size={12} className="room-presence__item-icon" />
                                         <span className="room-presence__item-name">{r.name}</span>
                                         {r.memberCount !== undefined && (
                                             <span className="room-presence__item-count">
-                                                <IconUsers sx={{ fontSize: 10 }} />
+                                                <Icon name="users" size={10} />
                                                 {r.memberCount}
                                             </span>
                                         )}
-                                        {isActive && <IconCheck sx={{ fontSize: 12 }} className="room-presence__item-check" />}
+                                        {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
                                     </button>
                                 );
                             })}
@@ -220,7 +220,7 @@ export function RoomPresenceIndicator({
                     {groupedRooms.breakout?.length > 0 && (
                         <div className="room-presence__section">
                             <div className="room-presence__section-header" data-color="purple">
-                                <IconGitBranch sx={{ fontSize: 10 }} />
+                                <Icon name="gitBranch" size={10} />
                                 <span>Breakout Rooms</span>
                             </div>
                             {groupedRooms.breakout.map((r) => {
@@ -234,16 +234,16 @@ export function RoomPresenceIndicator({
                                         role="option"
                                         aria-selected={isActive}
                                     >
-                                        <IconGitBranch sx={{ fontSize: 12 }} className="room-presence__item-icon" />
+                                        <Icon name="gitBranch" size={12} className="room-presence__item-icon" />
                                         <span className="room-presence__item-name">{r.name}</span>
-                                        {r.isLocked && <IconLock sx={{ fontSize: 10 }} className="room-presence__item-lock" />}
+                                        {r.isLocked && <Icon name="lock" size={10} className="room-presence__item-lock" />}
                                         {r.memberCount !== undefined && (
                                             <span className="room-presence__item-count">
-                                                <IconUsers sx={{ fontSize: 10 }} />
+                                                <Icon name="users" size={10} />
                                                 {r.memberCount}
                                             </span>
                                         )}
-                                        {isActive && <IconCheck sx={{ fontSize: 12 }} className="room-presence__item-check" />}
+                                        {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
                                     </button>
                                 );
                             })}
@@ -254,7 +254,7 @@ export function RoomPresenceIndicator({
                     {groupedRooms.personal?.length > 0 && (
                         <div className="room-presence__section">
                             <div className="room-presence__section-header" data-color="green">
-                                <IconUser sx={{ fontSize: 10 }} />
+                                <Icon name="user" size={10} />
                                 <span>Personal Spaces</span>
                             </div>
                             {groupedRooms.personal.map((r) => {
@@ -268,9 +268,9 @@ export function RoomPresenceIndicator({
                                         role="option"
                                         aria-selected={isActive}
                                     >
-                                        <IconUser sx={{ fontSize: 12 }} className="room-presence__item-icon" />
+                                        <Icon name="user" size={12} className="room-presence__item-icon" />
                                         <span className="room-presence__item-name">{r.name}</span>
-                                        {isActive && <IconCheck sx={{ fontSize: 12 }} className="room-presence__item-check" />}
+                                        {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
                                     </button>
                                 );
                             })}
@@ -292,7 +292,7 @@ export function RoomPresenceIndicator({
                                 onClick={() => { onClick(); setIsOpen(false); }}
                                 type="button"
                             >
-                                <IconUsers sx={{ fontSize: 12 }} />
+                                <Icon name="users" size={12} />
                                 <span>View All Rooms</span>
                             </button>
                         )}
@@ -302,7 +302,7 @@ export function RoomPresenceIndicator({
                                 onClick={handleCreateRoom}
                                 type="button"
                             >
-                                <IconAdd sx={{ fontSize: 12 }} />
+                                <Icon name="add" size={12} />
                                 <span>Create Room</span>
                             </button>
                         )}

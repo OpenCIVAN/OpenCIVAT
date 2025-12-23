@@ -3,7 +3,7 @@
 // FIXED: Positioned as overlay (not push layout) per design spec
 
 import React, { useState, useEffect } from "react";
-import { IconAlertTriangle, IconClose } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { DevUserSwitcher } from "@UI/react/components/dev/DevUserSwitcher.jsx";
 import "./DevModeBanner.scss";
 
@@ -44,7 +44,7 @@ export function DevModeBanner({
     return (
         <div className="dev-mode-banner">
             <div className="dev-mode-banner__content">
-                <IconAlertTriangle sx={{ fontSize: 14 }} className="dev-mode-banner__icon" />
+                <Icon name="warning" size={14} className="dev-mode-banner__icon" />
                 <span className="dev-mode-banner__message">{message}</span>
                 <DevUserSwitcher compact />
             </div>
@@ -53,7 +53,7 @@ export function DevModeBanner({
                 onClick={handleDismiss}
                 title="Dismiss (will reappear on refresh)"
             >
-                <IconClose sx={{ fontSize: 12 }} />
+                <Icon name="close" size={12} />
             </button>
         </div>
     );

@@ -20,14 +20,14 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { IconMic, IconMicOff, IconHeadset, IconHeadsetOff, IconPhone, IconPhoneOff, IconUsers, IconChevronDown, IconCheck, IconSettings } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import './VoiceControlsPanel.scss';
 
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
 
-const VoiceButton = memo(function VoiceButton({ icon: Icon, label, active, accent, onClick, grouped }) {
+const VoiceButton = memo(function VoiceButton({ icon, label, active, accent, onClick, grouped }) {
     const [hovered, setHovered] = useState(false);
 
     return (
@@ -42,7 +42,7 @@ const VoiceButton = memo(function VoiceButton({ icon: Icon, label, active, accen
             aria-label={label}
             data-hovered={hovered}
         >
-            <Icon sx={{ fontSize: 14 }} />
+            <Icon name={icon} size={14} />
         </button>
     );
 });
@@ -82,14 +82,14 @@ const ChannelSelector = memo(function ChannelSelector({ currentChannel, channels
                 onClick={() => setIsOpen(!isOpen)}
                 aria-expanded={isOpen}
             >
-                <IconHeadset sx={{ fontSize: 12 }} className="voice-controls-panel__channel-icon" />
+                <Icon name="headset" size={12} className="voice-controls-panel__channel-icon" />
                 <div className="voice-controls-panel__channel-info">
                     <span className="voice-controls-panel__channel-label">Voice Channel</span>
                     <span className="voice-controls-panel__channel-name">
                         {currentChannel?.name || 'Not connected'}
                     </span>
                 </div>
-                <IconChevronDown sx={{ fontSize: 10 }} className="voice-controls-panel__channel-chevron" />
+                <Icon name="chevronDown" size={10} className="voice-controls-panel__channel-chevron" />
             </button>
 
             {isOpen && channels.length > 0 && (
@@ -103,15 +103,15 @@ const ChannelSelector = memo(function ChannelSelector({ currentChannel, channels
                                 className={`voice-controls-panel__channel-item ${isActive ? 'voice-controls-panel__channel-item--active' : ''}`}
                                 onClick={() => handleSelect(channel)}
                             >
-                                <IconHeadset sx={{ fontSize: 12 }} className="voice-controls-panel__channel-item-icon" />
+                                <Icon name="headset" size={12} className="voice-controls-panel__channel-item-icon" />
                                 <span className="voice-controls-panel__channel-item-name">{channel.name}</span>
                                 {channel.participantCount !== undefined && (
                                     <span className="voice-controls-panel__channel-item-count">
-                                        <IconUsers sx={{ fontSize: 10 }} />
+                                        <Icon name="users" size={10} />
                                         {channel.participantCount}
                                     </span>
                                 )}
-                                {isActive && <IconCheck sx={{ fontSize: 12 }} className="voice-controls-panel__channel-item-check" />}
+                                {isActive && <Icon name="check" size={12} className="voice-controls-panel__channel-item-check" />}
                             </button>
                         );
                     })}
@@ -142,7 +142,7 @@ function VoiceControlsPanel({
         <div className={`voice-controls-panel ${className}`}>
             <div className="voice-controls-panel__buttons">
                 <VoiceButton
-                    icon={isMuted ? IconMicOff : IconMic}
+                    icon={isMuted ? 'micOff' : 'mic'}
                     label={isMuted ? 'Unmute' : 'Mute'}
                     active={!isMuted && isInChannel}
                     accent={isMuted ? 'var(--color-accent-red)' : 'var(--color-accent-green)'}
@@ -150,7 +150,7 @@ function VoiceControlsPanel({
                     grouped
                 />
                 <VoiceButton
-                    icon={isDeafened ? IconHeadsetOff : IconHeadset}
+                    icon={isDeafened ? 'headsetOff' : 'headset'}
                     label={isDeafened ? 'Undeafen' : 'Deafen'}
                     active={!isDeafened && isInChannel}
                     accent={isDeafened ? 'var(--color-accent-red)' : 'var(--color-text-tertiary)'}
@@ -159,7 +159,7 @@ function VoiceControlsPanel({
                 />
                 <div className="voice-controls-panel__divider" />
                 <VoiceButton
-                    icon={isInChannel ? IconPhoneOff : IconPhone}
+                    icon={isInChannel ? 'joinVoice' : 'leaveVoice'}
                     label={isInChannel ? 'Leave Channel' : 'Join Channel'}
                     accent={isInChannel ? 'var(--color-accent-red)' : 'var(--color-accent-green)'}
                     onClick={onJoinLeave}
@@ -173,7 +173,7 @@ function VoiceControlsPanel({
                 onSelect={onChangeChannel}
             />
 
-            <VoiceButton icon={IconSettings} label="Voice Settings" onClick={onOpenSettings} />
+            <VoiceButton icon='settings' label="Voice Settings" onClick={onOpenSettings} />
         </div>
     );
 }

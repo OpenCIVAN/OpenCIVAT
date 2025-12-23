@@ -2,7 +2,7 @@
 // Sign In button component for unauthenticated users
 
 import React, { useState } from "react";
-import { IconLogin, IconLoader } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useAuth } from "@UI/react/hooks/useAuth.js";
 import "./LoginButton.scss";
 
@@ -37,9 +37,9 @@ export function LoginButton({ variant = "default", className = "" }) {
                 title="Sign In"
             >
                 {isLoading ? (
-                    <IconLoader sx={{ fontSize: 16 }} className="login-button__spinner" />
+                    <Icon name="loader" size={16} className="login-button__spinner" />
                 ) : (
-                    <IconLogin sx={{ fontSize: 16 }} />
+                    <Icon name="login" size={16} />
                 )}
             </button>
         );
@@ -54,12 +54,12 @@ export function LoginButton({ variant = "default", className = "" }) {
             >
                 {isLoading ? (
                     <>
-                        <IconLoader sx={{ fontSize: 18 }} className="login-button__spinner" />
+                        <Icon name="loader" size={18} className="login-button__spinner" />
                         <span>Signing in...</span>
                     </>
                 ) : (
                     <>
-                        <IconLogin sx={{ fontSize: 18 }} />
+                        <Icon name="login" size={18} />
                         <span>Sign In with SSO</span>
                     </>
                 )}
@@ -76,12 +76,12 @@ export function LoginButton({ variant = "default", className = "" }) {
         >
             {isLoading ? (
                 <>
-                    <IconLoader sx={{ fontSize: 16 }} className="login-button__spinner" />
+                    <Icon name="loader" size={16} className="login-button__spinner" />
                     <span>Signing in...</span>
                 </>
             ) : (
                 <>
-                    <IconLogin sx={{ fontSize: 16 }} />
+                    <Icon name="login" size={16} />
                     <span>Sign In</span>
                 </>
             )}

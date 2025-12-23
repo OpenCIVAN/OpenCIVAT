@@ -223,6 +223,9 @@ import {
     MonitorOutlined,
     DesktopWindowsOutlined,
     HeadphonesOutlined,
+    HeadsetMicOutlined,
+    RecordVoiceOverOutlined,
+    VoiceOverOffOutlined,
 
     // Misc
     KeyboardOutlined,
@@ -346,6 +349,7 @@ const ICON_MAP = {
     // H
     hardDrive: DnsOutlined,
     headphones: HeadphonesOutlined,
+    headset: HeadsetMicOutlined,
     help: HelpOutlineOutlined,
     helpCircle: HelpOutlineOutlined,
     hexagon: HexagonOutlined,
@@ -356,6 +360,9 @@ const ICON_MAP = {
     imageOff: HideImageOutlined,
     info: InfoOutlined,
 
+    // J
+    joinVoice: RecordVoiceOverOutlined,
+
     // K
     keyboard: KeyboardOutlined,
 
@@ -363,6 +370,7 @@ const ICON_MAP = {
     layers: LayersOutlined,
     layout: DashboardOutlined,
     layoutGrid: GridViewOutlined,
+    leaveVoice: VoiceOverOffOutlined,
     link: LinkOutlined,
     link2: InsertLinkOutlined,
     linkOff: LinkOffOutlined,

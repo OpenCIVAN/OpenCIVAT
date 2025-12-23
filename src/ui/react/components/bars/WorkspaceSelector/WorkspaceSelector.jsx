@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { IconGlobe, IconGitBranch, IconUser, IconChevronDown, IconAdd, IconCheck } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import './WorkspaceSelector.scss';
 
@@ -24,19 +24,19 @@ import './WorkspaceSelector.scss';
 
 const WORKSPACE_TYPES = {
     project: {
-        icon: IconGlobe,
+        icon: 'globe',
         color: 'blue',
         label: 'Project',
         rgb: '96, 165, 250',
     },
     breakout: {
-        icon: IconGitBranch,
+        icon: 'gitBranch',
         color: 'purple',
         label: 'Breakout',
         rgb: '167, 139, 250',
     },
     personal: {
-        icon: IconUser,
+        icon: 'user',
         color: 'green',
         label: 'Personal',
         rgb: '74, 222, 128',
@@ -68,7 +68,7 @@ export function WorkspaceSelector({
 
     // Get type config for current workspace
     const typeConfig = WORKSPACE_TYPES[workspace?.type] || WORKSPACE_TYPES.project;
-    const TypeIcon = typeConfig.icon;
+    const typeIcon = typeConfig.icon;
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -131,7 +131,7 @@ export function WorkspaceSelector({
                 aria-expanded={isOpen}
                 aria-haspopup="listbox"
             >
-                <TypeIcon sx={{ fontSize: 14 }} className="workspace-selector__icon" />
+                <Icon name={typeIcon} size={14} className="workspace-selector__icon" />
 
                 <div className="workspace-selector__info">
                     <span className="workspace-selector__label">Workspace</span>
@@ -140,8 +140,8 @@ export function WorkspaceSelector({
                     </span>
                 </div>
 
-                <IconChevronDown
-                    sx={{ fontSize: 12 }}
+                <Icon name="chevronDown"
+                    size={12}
                     className={`workspace-selector__chevron ${isOpen ? 'workspace-selector__chevron--open' : ''}`}
                 />
             </button>
@@ -153,7 +153,7 @@ export function WorkspaceSelector({
                     {grouped.project?.length > 0 && (
                         <div className="workspace-selector__section">
                             <div className="workspace-selector__section-header" data-color="blue">
-                                <IconGlobe sx={{ fontSize: 10 }} />
+                                <Icon name="globe" size={10} />
                                 <span>Project Workspaces</span>
                             </div>
                             {grouped.project.map((ws) => {
@@ -168,9 +168,9 @@ export function WorkspaceSelector({
                                         aria-selected={isActive}
                                         style={{ '--ws-color-rgb': WORKSPACE_TYPES.project.rgb }}
                                     >
-                                        <IconGlobe sx={{ fontSize: 12 }} className="workspace-selector__item-icon" />
+                                        <Icon name="globe" size={12} className="workspace-selector__item-icon" />
                                         <span className="workspace-selector__item-name">{ws.name}</span>
-                                        {isActive && <IconCheck sx={{ fontSize: 12 }} className="workspace-selector__item-check" />}
+                                        {isActive && <Icon name="check" size={12} className="workspace-selector__item-check" />}
                                     </button>
                                 );
                             })}
@@ -181,7 +181,7 @@ export function WorkspaceSelector({
                     {grouped.breakout?.length > 0 && (
                         <div className="workspace-selector__section">
                             <div className="workspace-selector__section-header" data-color="purple">
-                                <IconGitBranch sx={{ fontSize: 10 }} />
+                                <Icon name="gitBranch" size={10} />
                                 <span>Breakout Rooms</span>
                             </div>
                             {grouped.breakout.map((ws) => {
@@ -196,9 +196,9 @@ export function WorkspaceSelector({
                                         aria-selected={isActive}
                                         style={{ '--ws-color-rgb': WORKSPACE_TYPES.breakout.rgb }}
                                     >
-                                        <IconGitBranch sx={{ fontSize: 12 }} className="workspace-selector__item-icon" />
+                                        <Icon name="gitBranch" size={12} className="workspace-selector__item-icon" />
                                         <span className="workspace-selector__item-name">{ws.name}</span>
-                                        {isActive && <IconCheck sx={{ fontSize: 12 }} className="workspace-selector__item-check" />}
+                                        {isActive && <Icon name="check" size={12} className="workspace-selector__item-check" />}
                                     </button>
                                 );
                             })}
@@ -209,7 +209,7 @@ export function WorkspaceSelector({
                     {grouped.personal?.length > 0 && (
                         <div className="workspace-selector__section">
                             <div className="workspace-selector__section-header" data-color="green">
-                                <IconUser sx={{ fontSize: 10 }} />
+                                <Icon name="user" size={10} />
                                 <span>Personal</span>
                             </div>
                             {grouped.personal.map((ws) => {
@@ -224,9 +224,9 @@ export function WorkspaceSelector({
                                         aria-selected={isActive}
                                         style={{ '--ws-color-rgb': WORKSPACE_TYPES.personal.rgb }}
                                     >
-                                        <IconUser sx={{ fontSize: 12 }} className="workspace-selector__item-icon" />
+                                        <Icon name="user" size={12} className="workspace-selector__item-icon" />
                                         <span className="workspace-selector__item-name">{ws.name}</span>
-                                        {isActive && <IconCheck sx={{ fontSize: 12 }} className="workspace-selector__item-check" />}
+                                        {isActive && <Icon name="check" size={12} className="workspace-selector__item-check" />}
                                     </button>
                                 );
                             })}
@@ -247,7 +247,7 @@ export function WorkspaceSelector({
                             onClick={handleCreate}
                             type="button"
                         >
-                            <IconAdd sx={{ fontSize: 12 }} />
+                            <Icon name="add" size={12} />
                             <span>New Workspace</span>
                         </button>
                     </div>

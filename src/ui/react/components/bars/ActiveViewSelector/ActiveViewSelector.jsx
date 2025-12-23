@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useCallback, useRef } from 'react';
-import { IconChevronDown, IconCheck, IconAdd, IconMapPin, IconEye } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { DropdownPortal } from '@UI/react/components/common/DropdownPortal';
 
 import './ActiveViewSelector.scss';
@@ -132,7 +132,7 @@ export function ActiveViewSelector({
                 </div>
 
                 {/* Chevron */}
-                <IconChevronDown sx={{ fontSize: 12 }} className="active-view-selector__chevron" />
+                <Icon name="chevronDown" size={12} className="active-view-selector__chevron" />
             </button>
 
             {/* Dropdown via Portal */}
@@ -165,7 +165,7 @@ export function ActiveViewSelector({
                         {filteredOnCanvas.length > 0 && (
                             <div className="active-view-selector__section">
                                 <div className="active-view-selector__section-header">
-                                    <IconMapPin sx={{ fontSize: 12 }} />
+                                    <Icon name="mapPin" size={12} />
                                     <span>On Canvas</span>
                                 </div>
                                 {filteredOnCanvas.map((view, index) => {
@@ -192,7 +192,7 @@ export function ActiveViewSelector({
                                                     {view.position.col}, {view.position.row}
                                                 </span>
                                             )}
-                                            {isActive && <IconCheck sx={{ fontSize: 12 }} className="active-view-selector__item-check" />}
+                                            {isActive && <Icon name="check" size={12} className="active-view-selector__item-check" />}
                                         </button>
                                     );
                                 })}
@@ -203,7 +203,7 @@ export function ActiveViewSelector({
                         {filteredAvailable.length > 0 && (
                             <div className="active-view-selector__section">
                                 <div className="active-view-selector__section-header">
-                                    <IconEye sx={{ fontSize: 10 }} />
+                                    <Icon name="eye" size={10} />
                                     <span>Available to Place</span>
                                 </div>
                                 {filteredAvailable.map((view, index) => {
@@ -224,7 +224,7 @@ export function ActiveViewSelector({
                                                 style={{ background: viewColor, opacity: 0.6 }}
                                             />
                                             <span className="active-view-selector__item-name">{view.name}</span>
-                                            <IconAdd sx={{ fontSize: 10 }} className="active-view-selector__item-add" />
+                                            <Icon name="add" size={10} className="active-view-selector__item-add" />
                                         </button>
                                     );
                                 })}

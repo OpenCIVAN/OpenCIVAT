@@ -6,7 +6,7 @@
 // UPDATED: Now uses useScratchPadFloating hook for proper floating panel integration
 
 import React, { useCallback } from "react";
-import { IconMap, IconStickyNote } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Tooltip } from "@UI/react/components/common/Tooltip";
 import { useScratchPadFloating } from "@UI/react/components/panels/FloatingPanel/ScratchPadFloating";
 import { useLayoutPanelContext, DOCK_POSITIONS } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
@@ -75,7 +75,7 @@ export function PopoutButtons({ onToggleNavigator }) {
                     aria-pressed={isNavigatorFloating}
                     type="button"
                 >
-                    <IconMap sx={{ fontSize: 16 }} />
+                    <Icon name="map" size={16} />
                 </button>
             </Tooltip>
 
@@ -87,7 +87,7 @@ export function PopoutButtons({ onToggleNavigator }) {
                     aria-pressed={scratchPad.isOpen}
                     type="button"
                 >
-                    <IconStickyNote sx={{ fontSize: 16 }} />
+                    <Icon name="stickyNote" size={16} />
                 </button>
             </Tooltip>
         </div>

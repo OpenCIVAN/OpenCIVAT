@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { IconHome, IconBookmark, IconChevronUp, IconChevronDown, IconChevronLeft, IconChevronRight } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 
 import './CanvasNavigation.scss';
@@ -38,7 +38,7 @@ export function CanvasNavigation({
                     type="button"
                     aria-label="Go to origin"
                 >
-                    <IconHome sx={{ fontSize: 16 }} />
+                    <Icon name="home" size={16} />
                 </button>
             </Tooltip>
 
@@ -50,7 +50,7 @@ export function CanvasNavigation({
                     type="button"
                     aria-label="Saved positions"
                 >
-                    <IconBookmark sx={{ fontSize: 16 }} />
+                    <Icon name="bookmark" size={16} />
                 </button>
             </Tooltip>
 
@@ -63,7 +63,7 @@ export function CanvasNavigation({
                     type="button"
                     aria-label="Move up"
                 >
-                    <IconChevronUp sx={{ fontSize: 12 }} />
+                    <Icon name="chevronUp" size={12} />
                 </button>
                 <div className="canvas-navigation__dpad-row">
                     <button
@@ -73,7 +73,7 @@ export function CanvasNavigation({
                         type="button"
                         aria-label="Move left"
                     >
-                        <IconChevronLeft sx={{ fontSize: 12 }} />
+                        <Icon name="chevronLeft" size={12} />
                     </button>
                     <button
                         className="canvas-navigation__dpad-btn"
@@ -82,7 +82,7 @@ export function CanvasNavigation({
                         type="button"
                         aria-label="Move right"
                     >
-                        <IconChevronRight sx={{ fontSize: 12 }} />
+                        <Icon name="chevronRight" size={12} />
                     </button>
                 </div>
                 <button
@@ -92,7 +92,7 @@ export function CanvasNavigation({
                     type="button"
                     aria-label="Move down"
                 >
-                    <IconChevronDown sx={{ fontSize: 12 }} />
+                    <Icon name="chevronDown" size={12} />
                 </button>
             </div>
 

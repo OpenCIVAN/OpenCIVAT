@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { IconCanvasSize, IconAdd, IconRemove } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Dropdown } from '@UI/react/components/common/Dropdown';
 
 import './CanvasSizeDisplay.scss';
@@ -27,7 +27,7 @@ export function CanvasSizeDisplay({ size = { cols: 2, rows: 2 }, onChange }) {
         <Dropdown
             trigger={
                 <button className="canvas-size-display" type="button" title="Canvas size">
-                    <IconCanvasSize sx={{ fontSize: 14 }} />
+                    <Icon name="canvasSize" size={14} />
                     <span>
                         {size.cols} × {size.rows}
                     </span>
@@ -45,7 +45,7 @@ export function CanvasSizeDisplay({ size = { cols: 2, rows: 2 }, onChange }) {
                             type="button"
                             aria-label="Decrease columns"
                         >
-                            <IconRemove sx={{ fontSize: 14 }} />
+                            <Icon name="remove" size={14} />
                         </button>
                         <span>{size.cols}</span>
                         <button
@@ -54,7 +54,7 @@ export function CanvasSizeDisplay({ size = { cols: 2, rows: 2 }, onChange }) {
                             type="button"
                             aria-label="Increase columns"
                         >
-                            <IconAdd sx={{ fontSize: 14 }} />
+                            <Icon name="add" size={14} />
                         </button>
                     </div>
                 </div>
@@ -67,7 +67,7 @@ export function CanvasSizeDisplay({ size = { cols: 2, rows: 2 }, onChange }) {
                             type="button"
                             aria-label="Decrease rows"
                         >
-                            <IconRemove sx={{ fontSize: 14 }} />
+                            <Icon name="remove" size={14} />
                         </button>
                         <span>{size.rows}</span>
                         <button
@@ -76,7 +76,7 @@ export function CanvasSizeDisplay({ size = { cols: 2, rows: 2 }, onChange }) {
                             type="button"
                             aria-label="Increase rows"
                         >
-                            <IconAdd sx={{ fontSize: 14 }} />
+                            <Icon name="add" size={14} />
                         </button>
                     </div>
                 </div>
