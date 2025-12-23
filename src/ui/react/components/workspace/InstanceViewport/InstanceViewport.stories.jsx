@@ -13,7 +13,7 @@ import {
     ChevronDown,
     Box,
     Layers,
-} from "lucide-react";
+} from 'lucide-react';
 import "./InstanceViewport.scss";
 
 /**

@@ -31,7 +31,7 @@
  */
 
 import React, { useState, useCallback, useEffect, memo } from "react";
-import { X, Info, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { X, Info, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import "./Toast.scss";
 
 /**

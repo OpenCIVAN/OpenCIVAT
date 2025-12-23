@@ -1,6 +1,6 @@
 // src/ui/react/components/workspace/SliderMenuOption.stories.jsx
 import React, { useState } from "react";
-import { Circle, Sun, Volume2, Maximize, RotateCcw, Layers } from "lucide-react";
+import { Circle, Sun, Volume2, Maximize, RotateCcw, Layers } from 'lucide-react';
 import { SliderMenuOption } from "./SliderMenuOption";
 
 export default {

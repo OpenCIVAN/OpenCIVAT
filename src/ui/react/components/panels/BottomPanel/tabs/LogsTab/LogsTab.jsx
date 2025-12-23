@@ -18,7 +18,7 @@ import {
     XCircle,
     Clock,
     ChevronDown,
-} from "lucide-react";
+} from 'lucide-react';
 import { useLogging } from "@UI/react/hooks/useLogging.js";
 import { LogType } from "@Utils/logger.js";
 import "./LogsTab.scss";

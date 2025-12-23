@@ -32,7 +32,7 @@ import {
     Users,
     Check,
     AlertCircle
-} from "lucide-react";
+} from 'lucide-react';
 
 import { FormModal } from "@UI/react/components/modals/FormModal";
 import { FormField } from "@UI/react/components/modals/FormModal";

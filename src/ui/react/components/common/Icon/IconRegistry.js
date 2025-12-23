@@ -1,4 +1,4 @@
-import * as LucideIcons from "lucide-react";
+import * as LucideIcons from 'lucide-react';
 import * as MaterialIcons from "@mui/icons-material";
 
 // Current library preference

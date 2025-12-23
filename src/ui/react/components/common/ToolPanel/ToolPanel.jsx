@@ -2,7 +2,7 @@
 // Sliding panel component with glassmorphism theme
 
 import React from "react";
-import { X } from "lucide-react";
+import { X } from 'lucide-react';
 import "./ToolPanel.scss";
 
 /**

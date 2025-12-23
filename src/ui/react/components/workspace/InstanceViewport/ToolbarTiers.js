@@ -32,7 +32,7 @@ import {
   RotateCcw,
   Scan,
   MousePointer2,
-} from "lucide-react";
+} from 'lucide-react';
 
 // ============================================================================
 // TOOL GROUPS - Organized by functionality

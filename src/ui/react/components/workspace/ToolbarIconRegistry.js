@@ -78,7 +78,7 @@ import {
   CornerDownLeft,
   CornerUpRight,
   CornerUpLeft,
-} from "lucide-react";
+} from 'lucide-react';
 
 const SlashedCompass = createSlashedIcon(Compass);
 const SlashedGrid = createSlashedIcon(Grid);

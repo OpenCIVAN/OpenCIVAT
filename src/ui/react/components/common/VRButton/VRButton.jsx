@@ -2,7 +2,7 @@
 // VR mode toggle button with state feedback
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Glasses, Loader2 } from "lucide-react";
+import { Glasses, Loader2 } from 'lucide-react';
 import { SlashedIcon } from "@UI/react/components/common/IconOverlay/IconOverlay.jsx";
 import { vrManager } from "@Core/vr/VRManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";

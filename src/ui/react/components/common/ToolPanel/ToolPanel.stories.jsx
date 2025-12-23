@@ -1,6 +1,6 @@
 // src/ui/react/components/common/ToolPanel.stories.jsx
 import React from "react";
-import { Folder, Settings, Database, Users } from "lucide-react";
+import { Folder, Settings, Database, Users } from 'lucide-react';
 import { ToolPanel } from "./ToolPanel";
 
 export default {

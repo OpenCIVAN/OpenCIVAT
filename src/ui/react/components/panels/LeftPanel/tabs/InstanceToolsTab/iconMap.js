@@ -41,7 +41,7 @@ import {
   Wrench,
   Layers,
   Minus,
-} from "lucide-react";
+} from 'lucide-react';
 
 export const ICON_MAP = {
   "mouse-pointer": MousePointer,

@@ -34,7 +34,7 @@ import {
     Combine,
     Split,
     Trash2,
-} from "lucide-react";
+} from 'lucide-react';
 import { useLayoutPanelContext, DOCK_POSITIONS } from "../../LayoutPanelContext";
 
 // =============================================================================

@@ -18,7 +18,7 @@ import {
     Play,
     Pause,
     StopCircle,
-} from "lucide-react";
+} from 'lucide-react';
 import { useComputeJobs } from "@UI/react/hooks/useComputeJobs.js";
 import "./ComputeTab.scss";
 

@@ -4,7 +4,7 @@
  * Contains all shortcut categories and their respective key bindings.
  */
 
-import { Settings, Navigation, Layout, Wrench, Users } from "lucide-react";
+import { Settings, Navigation, Layout, Wrench, Users } from 'lucide-react';
 
 /**
  * Detect if running on Mac platform

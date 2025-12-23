@@ -12,7 +12,7 @@
  * const color = getStatusColor(user.status);
  */
 
-import { Circle, Clock, Coffee, XCircle } from "lucide-react";
+import { Circle, Clock, Coffee, XCircle } from 'lucide-react';
 
 /**
  * Status types available in CIA Web

@@ -7,7 +7,7 @@
 // Place this in the Header or SecondaryFooter for easy access.
 
 import React, { useState, useRef, useEffect, memo } from "react";
-import { Users, ChevronDown, Check, Building, UserCircle } from "lucide-react";
+import { Users, ChevronDown, Check, Building, UserCircle } from 'lucide-react';
 import { useDevUser } from "@UI/react/context/DevUserContext.jsx";
 import { getUserInitials } from "@Config/mockUsers.js";
 import "./DevUserSwitcher.scss";

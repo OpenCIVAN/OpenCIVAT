@@ -15,7 +15,7 @@ import {
     ChevronDown,
     X,
     GripHorizontal,
-} from "lucide-react";
+} from 'lucide-react';
 import {
     useBottomPanel,
     BottomPanelTabs,

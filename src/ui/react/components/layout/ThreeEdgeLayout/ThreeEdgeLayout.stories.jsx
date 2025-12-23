@@ -11,7 +11,7 @@ import {
     Glasses,
     ChevronDown,
     Globe,
-} from "lucide-react";
+} from 'lucide-react';
 import { ThreeEdgeLayout, useLayoutContext } from "./ThreeEdgeLayout";
 import "./ThreeEdgeLayout.scss";
 
