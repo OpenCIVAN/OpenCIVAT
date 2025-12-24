@@ -13,7 +13,7 @@
  * <HelpSection
  *   id="quickstart"
  *   title="Quick Start"
- *   icon={Rocket}
+ *   icon="rocket"
  *   isExpanded={expandedSection === 'quickstart'}
  *   onToggle={() => toggleSection('quickstart')}
  * >
@@ -22,13 +22,13 @@
  */
 
 import React, { memo, useRef, useId } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} HelpSectionProps
  * @property {string} id - Unique section identifier
  * @property {string} title - Section title text
- * @property {React.ComponentType} [icon] - Lucide icon component
+ * @property {string} [icon] - Icon name string (e.g., "rocket", "settings")
  * @property {boolean} isExpanded - Whether section content is visible
  * @property {() => void} onToggle - Toggle expand/collapse handler
  * @property {React.ReactNode} children - Section content
@@ -44,7 +44,7 @@ import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 function HelpSection({
     id,
     title,
-    icon: Icon,
+    icon,           // Now a string like "rocket", not a component
     isExpanded,
     onToggle,
     children,
@@ -85,9 +85,9 @@ function HelpSection({
                 type="button"
             >
                 <span className="help-section__title">
-                    {Icon && (
+                    {icon && (
                         <span className="help-section__icon">
-                            <Icon size={18} />
+                            <Icon name={icon} size={18} />
                         </span>
                     )}
                     <span>{title}</span>

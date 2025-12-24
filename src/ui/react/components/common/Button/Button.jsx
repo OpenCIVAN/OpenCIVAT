@@ -15,8 +15,8 @@
  * - Ref forwarding for focus management
  *
  * @example
- * // Primary button with icon
- * <Button variant="primary" icon={Save} onClick={handleSave}>
+ * // Primary button with icon (string name)
+ * <Button variant="primary" icon="save" onClick={handleSave}>
  *   Save Changes
  * </Button>
  *
@@ -28,21 +28,21 @@
  *
  * @example
  * // Danger button
- * <Button variant="danger" icon={Trash2}>
+ * <Button variant="danger" icon="delete">
  *   Delete
  * </Button>
  */
 
 import React, { forwardRef, memo, useCallback } from 'react';
-import { IconLoader } from '@UI/react/components/common/Icon';
+import { Icon, IconLoader } from '@UI/react/components/common/Icon';
 import './Button.scss';
 
 /**
  * @typedef {Object} ButtonProps
  * @property {'primary'|'secondary'|'danger'|'ghost'|'link'} [variant='primary'] - Button style variant
  * @property {'sm'|'md'|'lg'} [size='md'] - Button size
- * @property {React.ComponentType} [icon] - Lucide icon to show before label
- * @property {React.ComponentType} [iconRight] - Lucide icon to show after label
+ * @property {string} [icon] - Icon name string to show before label (e.g., "save", "delete")
+ * @property {string} [iconRight] - Icon name string to show after label
  * @property {boolean} [iconOnly=false] - If true, renders as icon button (requires icon prop)
  * @property {boolean} [loading=false] - Show loading spinner, disable button
  * @property {boolean} [disabled=false] - Disable button
@@ -58,7 +58,7 @@ import './Button.scss';
 /**
  * Icon sizes mapped to button sizes.
  */
-const ICON_SIZES = {
+const BUTTON_ICON_SIZES = {
     sm: 14,
     md: 16,
     lg: 18
@@ -77,8 +77,8 @@ const Button = forwardRef(function Button(
         children,
         variant = 'primary',
         size = 'md',
-        icon: Icon,
-        iconRight: IconRight,
+        icon,           // Now a string like "save", not a component
+        iconRight,      // Now a string like "chevronRight"
         iconOnly = false,
         loading = false,
         disabled = false,
@@ -96,7 +96,7 @@ const Button = forwardRef(function Button(
     const isDisabled = disabled || loading;
 
     // Get icon size based on button size
-    const iconSize = ICON_SIZES[size] || ICON_SIZES.md;
+    const iconSize = BUTTON_ICON_SIZES[size] || BUTTON_ICON_SIZES.md;
 
     // Build class names
     const classNames = [
@@ -139,34 +139,6 @@ const Button = forwardRef(function Button(
         }
     }, [isDisabled, onClick]);
 
-    // Render the button content
-    const renderContent = () => {
-        if (loading) {
-            return (
-                <>
-                    <IconLoader className="btn__spinner" size={iconSize} aria-hidden="true" />
-                    {!iconOnly && children && <span className="btn__text">{children}</span>}
-                </>
-            );
-        }
-
-        return (
-            <>
-                {Icon && (
-                    <span className="btn__icon btn__icon--left" aria-hidden="true">
-                        <Icon size={iconSize} />
-                    </span>
-                )}
-                {!iconOnly && children && <span className="btn__text">{children}</span>}
-                {IconRight && (
-                    <span className="btn__icon btn__icon--right" aria-hidden="true">
-                        <IconRight size={iconSize} />
-                    </span>
-                )}
-            </>
-        );
-    };
-
     return (
         <button
             ref={ref}
@@ -177,11 +149,29 @@ const Button = forwardRef(function Button(
             onKeyDown={handleKeyDown}
             aria-busy={loading}
             aria-disabled={isDisabled}
+            title={tooltip}
             data-testid={testId}
             {...props}
         >
-            {renderContent()}
-            {tooltip && <span className="btn__tooltip">{tooltip}</span>}
+            {/* Loading spinner */}
+            {loading && (
+                <IconLoader className="btn__spinner" size={iconSize} aria-hidden="true" />
+            )}
+
+            {/* Left icon */}
+            {!loading && icon && (
+                <Icon name={icon} size={iconSize} className="btn__icon btn__icon--left" aria-hidden="true" />
+            )}
+
+            {/* Button label */}
+            {children && (
+                <span className="btn__label">{children}</span>
+            )}
+
+            {/* Right icon */}
+            {!loading && iconRight && (
+                <Icon name={iconRight} size={iconSize} className="btn__icon btn__icon--right" aria-hidden="true" />
+            )}
         </button>
     );
 });

@@ -4,16 +4,16 @@
  * when lists, searches, or data are empty.
  *
  * Features:
- * - Customizable icon (Lucide icons)
+ * - Icon via string name (uses centralized Icon system)
  * - Title and description text
  * - Optional action button
  * - Multiple size variants
  * - Muted, subtle styling that doesn't distract
  *
  * @example
- * // Basic usage
+ * // Basic usage (icon as string name)
  * <EmptyState
- *   icon={Search}
+ *   icon="search"
  *   title="No results found"
  *   description="Try adjusting your search criteria"
  * />
@@ -21,7 +21,7 @@
  * @example
  * // With action button
  * <EmptyState
- *   icon={FolderPlus}
+ *   icon="folderPlus"
  *   title="No projects yet"
  *   description="Create your first project to get started"
  *   action={{ label: 'Create Project', onClick: handleCreate }}
@@ -30,13 +30,14 @@
  * @example
  * // Small variant for inline use
  * <EmptyState
- *   icon={MessageSquare}
+ *   icon="messageSquare"
  *   title="No messages"
  *   size="sm"
  * />
  */
 
 import React, { memo } from 'react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Button } from '../Button';
 import './EmptyState.scss';
 
@@ -49,7 +50,7 @@ import './EmptyState.scss';
 
 /**
  * @typedef {Object} EmptyStateProps
- * @property {React.ComponentType} [icon] - Lucide icon component
+ * @property {string} [icon] - Icon name string (e.g., "search", "folder", "messageSquare")
  * @property {string} title - Main message
  * @property {string} [description] - Secondary description text
  * @property {EmptyStateAction} [action] - Optional action button
@@ -61,7 +62,7 @@ import './EmptyState.scss';
 /**
  * Icon sizes mapped to component sizes
  */
-const ICON_SIZES = {
+const EMPTY_STATE_ICON_SIZES = {
     sm: 24,
     md: 48,
     lg: 64,
@@ -74,7 +75,7 @@ const ICON_SIZES = {
  * @returns {React.ReactElement} The rendered empty state
  */
 function EmptyState({
-    icon: Icon,
+    icon,           // Now a string like "search", not a component
     title,
     description,
     action,
@@ -82,7 +83,7 @@ function EmptyState({
     className = '',
     testId,
 }) {
-    const iconSize = ICON_SIZES[size] || ICON_SIZES.md;
+    const iconSize = EMPTY_STATE_ICON_SIZES[size] || EMPTY_STATE_ICON_SIZES.md;
 
     const classNames = [
         'empty-state',
@@ -92,9 +93,9 @@ function EmptyState({
 
     return (
         <div className={classNames} data-testid={testId}>
-            {Icon && (
+            {icon && (
                 <div className="empty-state__icon">
-                    <Icon size={iconSize} />
+                    <Icon name={icon} size={iconSize} />
                 </div>
             )}
 

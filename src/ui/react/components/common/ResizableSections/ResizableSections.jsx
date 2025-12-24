@@ -16,7 +16,7 @@ import './ResizableSections.scss';
 // =============================================================================
 
 function SectionHeader({
-    icon: Icon,
+    icon,           // Now a string like "folder", not a component
     iconColorClass,
     label,
     count,
@@ -31,9 +31,9 @@ function SectionHeader({
             onClick={onToggle}
         >
             <span className="resizable-section__chevron">
-                {isExpanded ? <Icon name="chevronDown" size={10} /> : <Icon name="chevronRight" size={10} />}
+                <Icon name={isExpanded ? "chevronDown" : "chevronRight"} size={10} />
             </span>
-            {Icon && <Icon size={11} className={`resizable-section__icon ${iconColorClass || ''}`} />}
+            {icon && <Icon name={icon} size={11} className={`resizable-section__icon ${iconColorClass || ''}`} />}
             <span className="resizable-section__label">{label}</span>
             {badge > 0 && (
                 <span className="resizable-section__badge">{badge}</span>
@@ -69,7 +69,7 @@ function ResizeDivider({ onDragStart, isActive }) {
 
 export function ResizableSection({
     id,
-    icon,
+    icon,           // String icon name like "folder"
     iconColorClass,
     label,
     count,

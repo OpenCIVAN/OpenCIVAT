@@ -14,9 +14,9 @@
  * - Ref forwarding for focus management
  *
  * @example
- * // Basic icon button (no visual tooltip, just aria-label)
+ * // Basic icon button (string name)
  * <IconButton
- *   icon={IconSettings}
+ *   icon="settings"
  *   label="Settings"
  *   onClick={openSettings}
  * />
@@ -24,7 +24,7 @@
  * @example
  * // With built-in tooltip (uses label text)
  * <IconButton
- *   icon={IconDownload}
+ *   icon="download"
  *   label="Download file"
  *   tooltip={true}
  *   variant="primary"
@@ -33,7 +33,7 @@
  * @example
  * // With custom tooltip text
  * <IconButton
- *   icon={IconSave}
+ *   icon="save"
  *   label="Save"
  *   tooltip="Save changes (Ctrl+S)"
  * />
@@ -49,12 +49,12 @@
  */
 
 import React, { forwardRef, memo, useCallback } from 'react';
-import { IconLoader } from '@UI/react/components/common/Icon';
+import { Icon, IconLoader } from '@UI/react/components/common/Icon';
 import './Button.scss';
 
 /**
  * @typedef {Object} IconButtonProps
- * @property {React.ComponentType} icon - Lucide icon component (required)
+ * @property {string} icon - Icon name string (e.g., "settings", "save", "delete")
  * @property {string} label - Accessible label (required for a11y)
  * @property {'primary'|'secondary'|'danger'|'ghost'} [variant='ghost'] - Button style
  * @property {'sm'|'md'|'lg'} [size='md'] - Button size
@@ -70,7 +70,7 @@ import './Button.scss';
 /**
  * Icon sizes mapped to button sizes.
  */
-const ICON_SIZES = {
+const ICON_BUTTON_SIZES = {
     sm: 14,
     md: 18,
     lg: 20
@@ -86,7 +86,7 @@ const ICON_SIZES = {
  */
 const IconButton = forwardRef(function IconButton(
     {
-        icon: Icon,
+        icon,           // Now a string like "settings", not a component
         label,
         variant = 'ghost',
         size = 'md',
@@ -105,7 +105,7 @@ const IconButton = forwardRef(function IconButton(
     const isDisabled = disabled || loading;
 
     // Get icon size based on button size
-    const iconSize = ICON_SIZES[size] || ICON_SIZES.md;
+    const iconSize = ICON_BUTTON_SIZES[size] || ICON_BUTTON_SIZES.md;
 
     // Tooltip is opt-in: pass string for custom text, true to use label, false/omit to disable
     // This prevents double tooltips when using the Tooltip wrapper component
@@ -169,7 +169,7 @@ const IconButton = forwardRef(function IconButton(
             {loading ? (
                 <IconLoader className="icon-btn__spinner" size={iconSize} aria-hidden="true" />
             ) : (
-                Icon && <Icon size={iconSize} aria-hidden="true" />
+                icon && <Icon name={icon} size={iconSize} aria-hidden="true" />
             )}
             {tooltipText && <span className="icon-btn__tooltip">{tooltipText}</span>}
         </button>

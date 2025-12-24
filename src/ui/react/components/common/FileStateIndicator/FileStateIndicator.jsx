@@ -17,7 +17,7 @@
  */
 
 import React, { memo } from 'react';
-import { IconCircle, IconLoader, IconAlertTriangle, IconLock } from '@UI/react/components/common/Icon';
+import { Icon, IconCircle, IconLoader, IconAlertTriangle, IconLock } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 import './FileStateIndicator.scss';
 
@@ -38,14 +38,14 @@ import './FileStateIndicator.scss';
 export const FILE_STATE_CONFIG = {
     stored: {
         color: 'var(--color-text-muted)',
-        icon: IconCircle,
+        icon: "circle",
         label: 'Stored',
         description: 'In storage, not loaded as dataset',
         fill: false,
     },
     loading: {
         color: 'var(--color-accent-blue)',
-        icon: IconLoader,
+        icon: "loader",
         label: 'Loading',
         description: 'Currently loading into memory',
         fill: false,
@@ -53,14 +53,14 @@ export const FILE_STATE_CONFIG = {
     },
     loaded: {
         color: 'var(--color-accent-green)',
-        icon: IconCircle,
+        icon: "circle",
         label: 'Loaded',
         description: 'Active as dataset in Datasets Tab',
         fill: true,
     },
     processing: {
         color: 'var(--color-accent-amber)',
-        icon: IconLoader,
+        icon: "loader",
         label: 'Processing',
         description: 'Server-side compute running',
         fill: false,
@@ -68,14 +68,14 @@ export const FILE_STATE_CONFIG = {
     },
     error: {
         color: 'var(--color-accent-red)',
-        icon: IconAlertTriangle,
+        icon: "alertTriangle",
         label: 'Error',
         description: 'Failed to process or validate',
         fill: false,
     },
     restricted: {
         color: 'var(--color-text-muted)',
-        icon: IconLock,
+        icon: "lock",
         label: 'Restricted',
         description: "You don't have access to this file",
         fill: false,
@@ -113,7 +113,6 @@ export const FileStateIndicator = memo(function FileStateIndicator({
 }) {
     const config = FILE_STATE_CONFIG[state] || FILE_STATE_CONFIG.stored;
     const sizeConfig = SIZES[size] || SIZES.sm;
-    const Icon = config.icon;
 
     const indicator = (
         <span
@@ -121,7 +120,8 @@ export const FileStateIndicator = memo(function FileStateIndicator({
             style={{ '--state-color': config.color }}
         >
             <Icon
-                sx={{ fontSize: sizeConfig.icon }}
+                name={config.icon}
+                size={sizeConfig.icon}
                 fill={config.fill ? 'currentColor' : 'none'}
             />
         </span>

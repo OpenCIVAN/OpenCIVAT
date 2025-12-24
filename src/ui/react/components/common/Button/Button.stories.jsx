@@ -1,6 +1,6 @@
 // src/ui/react/components/common/Button/Button.stories.jsx
 import React from "react";
-import { Plus, Save, Trash2, Settings, Play, Pause, ChevronRight, Download, Upload, Edit } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Button, IconButton, ButtonGroup } from "./index";
 import { Icon } from '@UI/react/components/common/Icon';
 
@@ -80,7 +80,7 @@ export const Success = {
         children: "Save Changes",
         variant: "success",
         size: "md",
-        icon: <Save size={16} />,
+        icon: <Icon name="save" size={16} />,
     },
 };
 
@@ -175,7 +175,7 @@ export const IconButtonPrimary = {
 export const IconButtonActive = {
     render: () => (
         <IconButton variant="default" size="md" active tooltip="Playing">
-            <Play size={18} />
+            <Icon name="play" size={18} />
         </IconButton>
     ),
 };
@@ -197,8 +197,8 @@ export const IconButtonSizes = {
 export const ButtonGroupExample = {
     render: () => (
         <ButtonGroup>
-            <IconButton><Play size={16} /></IconButton>
-            <IconButton><Pause size={16} /></IconButton>
+            <IconButton><Icon name="play" size={16} /></IconButton>
+            <IconButton><Icon name="pause" size={16} /></IconButton>
             <IconButton active><Icon name="settings" size={16} /></IconButton>
         </ButtonGroup>
     ),
@@ -240,8 +240,8 @@ export const LoadingVariants = {
 export const IconButtonLoading = {
     render: () => (
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <IconButton loading tooltip="Uploading..."><Upload size={18} /></IconButton>
-            <IconButton loading variant="primary"><Download size={18} /></IconButton>
+            <IconButton loading tooltip="Uploading..."><Icon name="upload" size={18} /></IconButton>
+            <IconButton loading variant="primary"><Icon name="download" size={18} /></IconButton>
         </div>
     ),
 };
@@ -286,12 +286,12 @@ export const ButtonGroupAlignments = {
 export const ButtonsWithTooltips = {
     render: () => (
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <Button variant="primary" icon={Save} tooltip="Save your changes">
+            <Button variant="primary" icon="save" tooltip="Save your changes">
                 Save
             </Button>
-            <IconButton icon={Settings} tooltip="Open settings" label="Settings" />
-            <IconButton icon={Edit} tooltip="Edit item" variant="secondary" label="Edit" />
-            <IconButton icon={Trash2} tooltip="Delete item" variant="danger" label="Delete" />
+            <IconButton icon="settings" tooltip="Open settings" label="Settings" />
+            <IconButton icon="edit" tooltip="Edit item" variant="secondary" label="Edit" />
+            <IconButton icon="delete" tooltip="Delete item" variant="danger" label="Delete" />
         </div>
     ),
 };

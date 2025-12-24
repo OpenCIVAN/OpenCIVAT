@@ -312,7 +312,7 @@ function HelpModal({
                     <HelpSection
                         id="quickstart"
                         title="Quick Start"
-                        icon={Rocket}
+                        icon="rocket"
                         isExpanded={isSectionExpanded('quickstart')}
                         onToggle={() => toggleSection('quickstart')}
                     >

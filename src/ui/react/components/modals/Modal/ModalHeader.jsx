@@ -13,7 +13,7 @@
  * <ModalHeader
  *   title="Delete Item?"
  *   titleId="modal-title-1"
- *   icon={Trash2}
+ *   icon="delete"
  *   severity="danger"
  *   showCloseButton={true}
  *   onClose={handleClose}
@@ -27,7 +27,7 @@ import { Icon } from '@UI/react/components/common/Icon';
  * @typedef {Object} ModalHeaderProps
  * @property {string} title - The modal title text
  * @property {string} titleId - Unique ID for the title element (for aria-labelledby)
- * @property {React.ComponentType} [icon] - Lucide icon component to display
+ * @property {string} [icon] - Icon name string (e.g., "delete", "warning", "info")
  * @property {'info'|'warning'|'danger'|'success'} [severity='info'] - Severity level for icon color
  * @property {boolean} [showCloseButton=true] - Whether to show the close button
  * @property {() => void} [onClose] - Callback when close button is clicked
@@ -42,7 +42,7 @@ import { Icon } from '@UI/react/components/common/Icon';
 function ModalHeader({
     title,
     titleId,
-    icon: HeaderIcon,
+    icon,           // Now a string like "delete", not a component
     severity = 'info',
     showCloseButton = true,
     onClose
@@ -50,9 +50,9 @@ function ModalHeader({
     return (
         <div className="modal__header">
             <div className="modal__header-content">
-                {HeaderIcon && (
+                {icon && (
                     <div className={`modal__icon modal__icon--${severity}`}>
-                        <HeaderIcon size={20} aria-hidden="true" />
+                        <Icon name={icon} size={20} aria-hidden="true" />
                     </div>
                 )}
                 <h2

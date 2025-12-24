@@ -150,20 +150,49 @@ function formatShortcut(shortcut) {
  */
 
 /**
+ * @typedef {Object} RichTooltipProps
+ * @property {string} title - Tooltip title (bold)
+ * @property {string} [description] - Secondary description text
+ * @property {string} [shortcut] - Keyboard shortcut to display
+ * @property {string|React.ReactNode} [icon] - Icon name string or pre-rendered element
+ */
+
+/**
  * Rich tooltip content with title, description, and shortcut.
+ * 
+ * FIXED: Now properly handles icon as either:
+ * - A string icon name: "search", "save", "delete"
+ * - A pre-rendered React element: <Icon name="search" size={14} />
  *
  * @param {RichTooltipProps} props - Component props
  * @returns {React.ReactElement} The rendered rich tooltip content
  */
-function RichTooltip({ title, description, shortcut, icon: Icon }) {
+function RichTooltip({ title, description, shortcut, icon }) {
     const shortcutParts = formatShortcut(shortcut);
+
+    // Render icon - handle both string names and pre-rendered elements
+    const renderIcon = () => {
+        if (!icon) return null;
+
+        // If it's already a React element, render it directly
+        if (isValidElement(icon)) {
+            return icon;
+        }
+
+        // If it's a string, use the Icon component
+        if (typeof icon === 'string') {
+            return <Icon name={icon} size={14} />;
+        }
+
+        return null;
+    };
 
     return (
         <div className="tooltip__rich">
             <div className="tooltip__rich-header">
-                {Icon && (
+                {icon && (
                     <span className="tooltip__rich-icon">
-                        {isValidElement(Icon) ? Icon : <Icon size={14} />}
+                        {renderIcon()}
                     </span>
                 )}
                 <span className="tooltip__title">{title}</span>

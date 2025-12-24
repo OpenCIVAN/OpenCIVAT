@@ -36,7 +36,7 @@
  *         isOpen={isOpen}
  *         onClose={close}
  *         title="Delete Item?"
- *         icon={Trash2}
+ *         icon="delete"
  *         severity="danger"
  *         size="sm"
  *         footer={
