@@ -1,0 +1,105 @@
+/**
+ * Adaptive Button Styles
+ */
+
+.adaptive-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--button-gap);
+  height: var(--button-height);
+  padding: 0 var(--button-padding);
+  font-size: var(--button-font-size);
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+  user-select: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-blue);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--full-width {
+    width: 100%;
+  }
+
+  // Variants
+  &--primary {
+    background: var(--color-accent-blue);
+    color: var(--color-bg-base);
+
+    &:hover:not(:disabled) {
+      background: var(--color-accent-blue-hover);
+    }
+
+    &.adaptive-button--active {
+      background: var(--color-accent-blue-active);
+    }
+  }
+
+  &--secondary {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-default);
+
+    &:hover:not(:disabled) {
+      background: var(--color-bg-tertiary);
+      border-color: var(--color-border-hover);
+    }
+
+    &.adaptive-button--active {
+      background: var(--color-bg-tertiary);
+      border-color: var(--color-accent-blue);
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--color-text-secondary);
+
+    &:hover:not(:disabled) {
+      background: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+    }
+
+    &.adaptive-button--active {
+      background: var(--color-bg-secondary);
+      color: var(--color-accent-blue);
+    }
+  }
+
+  &--danger {
+    background: var(--color-error);
+    color: white;
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.1);
+    }
+  }
+
+  // VR mode adjustments
+  &--vr {
+    border-radius: 8px;
+
+    // Larger touch feedback area
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 12px;
+    }
+  }
+
+  &__label {
+    line-height: 1;
+  }
+}
