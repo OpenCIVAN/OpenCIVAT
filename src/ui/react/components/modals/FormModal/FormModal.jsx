@@ -30,7 +30,7 @@
 
 import React, { useCallback, useEffect, useRef, memo } from 'react';
 import { Modal } from '../Modal';
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import './FormModal.scss';
 
 /**
@@ -153,7 +153,7 @@ function FormModal({
             >
                 {isSubmitting ? (
                     <>
-                        <Loader2 className="btn__spinner" size={16} />
+                        <Icon name="loader" className="btn__spinner" size={16} />
                         <span>{submittingLabel}</span>
                     </>
                 ) : (

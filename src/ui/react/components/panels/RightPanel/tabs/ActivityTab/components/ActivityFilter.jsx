@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Filter, ChevronDown } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} ActivityFilterProps
@@ -30,9 +30,9 @@ export function ActivityFilter({ filters, activeFilter, onFilterChange }) {
                 className="activity-filter__trigger"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <Filter size={12} />
+                <Icon name="filter" size={12} />
                 <span>{current.label}</span>
-                <ChevronDown size={10} className={isOpen ? 'open' : ''} />
+                <Icon name="chevronDown" size={10} className={isOpen ? 'open' : ''} />
             </button>
 
             {isOpen && (

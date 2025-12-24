@@ -13,7 +13,7 @@
  */
 
 import { memo, useState, useCallback, useMemo } from 'react';
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import './DPadController.scss';
 
 export const DPadController = memo(function DPadController({
@@ -56,7 +56,7 @@ export const DPadController = memo(function DPadController({
                 disabled={boundaries.atTop}
                 aria-label="Navigate up"
             >
-                <ChevronUp size={14} />
+                <Icon name="chevronUp" size={14} />
             </button>
 
             {/* Left */}
@@ -66,7 +66,7 @@ export const DPadController = memo(function DPadController({
                 disabled={boundaries.atLeft}
                 aria-label="Navigate left"
             >
-                <ChevronLeft size={14} />
+                <Icon name="chevronLeft" size={14} />
             </button>
 
             {/* Center/Home */}
@@ -75,7 +75,7 @@ export const DPadController = memo(function DPadController({
                 onClick={onHome}
                 aria-label="Go to home"
             >
-                <Home size={12} />
+                <Icon name="home" size={12} />
             </button>
 
             {/* Right */}
@@ -85,7 +85,7 @@ export const DPadController = memo(function DPadController({
                 disabled={boundaries.atRight}
                 aria-label="Navigate right"
             >
-                <ChevronRight size={14} />
+                <Icon name="chevronRight" size={14} />
             </button>
 
             {/* Down */}
@@ -95,7 +95,7 @@ export const DPadController = memo(function DPadController({
                 disabled={boundaries.atBottom}
                 aria-label="Navigate down"
             >
-                <ChevronDown size={14} />
+                <Icon name="chevronDown" size={14} />
             </button>
         </div>
     );

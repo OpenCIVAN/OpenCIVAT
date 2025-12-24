@@ -8,19 +8,7 @@
 // - Close All, Delete All (with confirmation)
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-    ArrowLeftRight,
-    Combine,
-    AlignLeft,
-    AlignRight,
-    AlignStartVertical,
-    AlignEndVertical,
-    Copy,
-    Bookmark,
-    Link,
-    X,
-    Trash2,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import './SelectionContextMenu.scss';
 
 /**
@@ -152,7 +140,7 @@ export function SelectionContextMenu({
                             onClose?.();
                         }}
                     >
-                        <ArrowLeftRight size={14} />
+                        <Icon name="arrowLeftRight" size={14} />
                         <span>Swap Positions</span>
                         {viewCount !== 2 && <span className="selection-context-menu__hint">2 views</span>}
                     </button>
@@ -166,14 +154,14 @@ export function SelectionContextMenu({
                             onClose?.();
                         }}
                     >
-                        <Combine size={14} />
+                        <Icon name="combine" size={14} />
                         <span>Merge Cells</span>
                     </button>
 
                     {/* Align submenu */}
                     <div className="selection-context-menu__submenu-container">
                         <button className="selection-context-menu__item" disabled={selectedCount < 2}>
-                            <AlignLeft size={14} />
+                            <Icon name="alignLeft" size={14} />
                             <span>Align</span>
                             <span className="selection-context-menu__arrow">▶</span>
                         </button>
@@ -182,28 +170,28 @@ export function SelectionContextMenu({
                                 className="selection-context-menu__item"
                                 onClick={() => { onAlign?.('left'); onClose?.(); }}
                             >
-                                <AlignLeft size={14} />
+                                <Icon name="alignLeft" size={14} />
                                 <span>Left</span>
                             </button>
                             <button
                                 className="selection-context-menu__item"
                                 onClick={() => { onAlign?.('right'); onClose?.(); }}
                             >
-                                <AlignRight size={14} />
+                                <Icon name="alignRight" size={14} />
                                 <span>Right</span>
                             </button>
                             <button
                                 className="selection-context-menu__item"
                                 onClick={() => { onAlign?.('top'); onClose?.(); }}
                             >
-                                <AlignStartVertical size={14} />
+                                <Icon name="alignStartVertical" size={14} />
                                 <span>Top</span>
                             </button>
                             <button
                                 className="selection-context-menu__item"
                                 onClick={() => { onAlign?.('bottom'); onClose?.(); }}
                             >
-                                <AlignEndVertical size={14} />
+                                <Icon name="alignEndVertical" size={14} />
                                 <span>Bottom</span>
                             </button>
                         </div>
@@ -221,7 +209,7 @@ export function SelectionContextMenu({
                             onClose?.();
                         }}
                     >
-                        <Copy size={14} />
+                        <Icon name="copy" size={14} />
                         <span>Copy Layout</span>
                     </button>
 
@@ -232,7 +220,7 @@ export function SelectionContextMenu({
                             onClose?.();
                         }}
                     >
-                        <Bookmark size={14} />
+                        <Icon name="bookmark" size={14} />
                         <span>Save as Bookmark</span>
                     </button>
 
@@ -244,7 +232,7 @@ export function SelectionContextMenu({
                             onClose?.();
                         }}
                     >
-                        <Link size={14} />
+                        <Icon name="link" size={14} />
                         <span>Link Selected</span>
                         {viewCount < 2 && <span className="selection-context-menu__hint">2+ views</span>}
                     </button>
@@ -262,7 +250,7 @@ export function SelectionContextMenu({
                             onClose?.();
                         }}
                     >
-                        <X size={14} />
+                        <Icon name="close" size={14} />
                         <span>Close All Views</span>
                     </button>
 
@@ -271,7 +259,7 @@ export function SelectionContextMenu({
                         disabled={viewCount === 0}
                         onClick={handleDeleteClick}
                     >
-                        <Trash2 size={14} />
+                        <Icon name="delete" size={14} />
                         <span>{showDeleteConfirm ? 'Click again to confirm' : 'Delete All Views'}</span>
                     </button>
                 </div>

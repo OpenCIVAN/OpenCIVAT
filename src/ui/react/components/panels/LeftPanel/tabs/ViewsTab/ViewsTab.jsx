@@ -18,22 +18,7 @@
  */
 
 import React, { useMemo, useCallback, useContext } from 'react';
-import {
-    Eye,
-    EyeOff,
-    Trash2,
-    Plus,
-    Search,
-    X,
-    Grid3X3,
-    Layers,
-    Clock,
-    LayoutList,
-    LayoutGrid,
-    Database,
-    ChevronDown,
-    ChevronRight,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -67,10 +52,10 @@ const VIEW_FILTERS = [
 // =============================================================================
 
 const VIEW_MODE_OPTIONS = [
-    { id: VIEW_MODES.BY_STATUS, icon: LayoutList, label: 'By Status' },
-    { id: VIEW_MODES.BY_DATASET, icon: Database, label: 'By Dataset' },
-    { id: VIEW_MODES.LIST, icon: Layers, label: 'List' },
-    { id: VIEW_MODES.GRID, icon: LayoutGrid, label: 'Grid' },
+    { id: VIEW_MODES.BY_STATUS, icon: 'layoutList', label: 'By Status' },
+    { id: VIEW_MODES.BY_DATASET, icon: 'database', label: 'By Dataset' },
+    { id: VIEW_MODES.LIST, icon: 'layers', label: 'List' },
+    { id: VIEW_MODES.GRID, icon: 'layoutGrid', label: 'Grid' },
 ];
 
 // =============================================================================
@@ -117,8 +102,8 @@ function DatasetGroup({ dataset, views, isExpanded, onToggle, handlers }) {
                 className="views-tab__dataset-header"
                 onClick={onToggle}
             >
-                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                <Database size={12} className="icon-teal" />
+                {isExpanded ? <Icon name="chevronDown" size={12} /> : <Icon name="chevronRight" size={12} />}
+                <Icon name="database" size={12} className="icon-teal" />
                 <span className="views-tab__dataset-name">{dataset.name}</span>
                 <span className="views-tab__dataset-counts">
                     <span className="views-tab__dataset-active">{activeCount}</span>
@@ -372,7 +357,7 @@ export function ViewsPanelContent({ workspaceId }) {
             {recentlyDeletedViews.length > 0 && (
                 <div className="views-tab__trash-section">
                     <div className="views-tab__trash-header">
-                        <Trash2 size={12} className="icon-red" />
+                        <Icon name="delete" size={12} className="icon-red" />
                         <span>Recently Deleted ({recentlyDeletedViews.length})</span>
                     </div>
                     <div className="views-tab__trash-list">
@@ -460,7 +445,7 @@ export function ViewsPanelContent({ workspaceId }) {
         <div className="views-tab">
             {/* Header */}
             <div className="panel-header panel-header--purple">
-                <Layers size={14} className="panel-header__icon" />
+                <Icon name="layers" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Views</span>
             </div>
 
@@ -468,7 +453,7 @@ export function ViewsPanelContent({ workspaceId }) {
             <div className="views-tab__toolbar">
                 {/* Search */}
                 <div className="views-tab__search">
-                    <Search size={12} className="views-tab__search-icon" />
+                    <Icon name="search" size={12} className="views-tab__search-icon" />
                     <input
                         type="text"
                         className="views-tab__search-input"
@@ -481,7 +466,7 @@ export function ViewsPanelContent({ workspaceId }) {
                             className="views-tab__search-clear"
                             onClick={() => setSearchQuery('')}
                         >
-                            <X size={10} />
+                            <Icon name="close" size={10} />
                         </button>
                     )}
                 </div>
@@ -525,7 +510,7 @@ export function ViewsPanelContent({ workspaceId }) {
                     className="panel-footer__btn panel-footer__btn--primary"
                     onClick={handleCreateView}
                 >
-                    <Plus size={11} />
+                    <Icon name="add" size={11} />
                     <span>New View</span>
                 </button>
             </div>

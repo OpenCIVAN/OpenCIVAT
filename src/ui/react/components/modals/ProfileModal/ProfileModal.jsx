@@ -26,20 +26,7 @@
  */
 
 import React, { memo, useCallback, useState } from 'react';
-import {
-    Mail,
-    Clock,
-    Eye,
-    MessageSquare,
-    Phone,
-    Navigation,
-    Copy,
-    Check,
-    Crown,
-    Shield,
-    User,
-    UserCheck
-} from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import Modal from '../Modal/Modal';
 import { Button } from '../../common/Button';
 import { STATUS_CONFIG, getStatusLabel } from '@UI/react/utils/statusConfig';
@@ -252,7 +239,7 @@ function ProfileModal({
                             aria-label={copied ? 'Copied to clipboard' : 'Copy email to clipboard'}
                             title={copied ? 'Copied!' : 'Copy email'}
                         >
-                            {copied ? <Check size={14} /> : <Copy size={14} />}
+                            {copied ? <Icon name="check" size={14} /> : <Copy size={14} />}
                         </button>
                     </div>
                 )}

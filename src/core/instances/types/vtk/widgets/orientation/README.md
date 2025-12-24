@@ -63,7 +63,7 @@ vtkOrientationWidget.cleanup(instanceId);
 {
   id: "toggle-orientation",
   type: "toggle",
-  icon: "Compass",
+  icon: "compass",
   label: "Orientation Cube",
   isActive: (instanceData) => {
     return vtkOrientationWidget.isEnabled(instanceData.instanceId);

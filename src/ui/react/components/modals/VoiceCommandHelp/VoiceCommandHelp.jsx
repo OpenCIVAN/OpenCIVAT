@@ -18,19 +18,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import {
-    Mic,
-    Camera,
-    Layout,
-    Video,
-    MessageSquare,
-    Wrench,
-    Glasses,
-    Phone,
-    HelpCircle,
-    Search,
-    ChevronDown,
-} from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '@UI/react/components/modals/Modal';
 import { voiceCommandService } from '@Services/voice/voiceCommandService.js';
 import './VoiceCommandHelp.scss';
@@ -41,42 +29,42 @@ import './VoiceCommandHelp.scss';
 const COMMAND_CATEGORIES = {
     camera: {
         label: 'Camera Controls',
-        icon: Camera,
+        icon: 'camera',
         description: 'Control the 3D view camera',
     },
     instance: {
         label: 'Instance Controls',
-        icon: Layout,
+        icon: 'layout',
         description: 'Manage visualization windows',
     },
     recording: {
         label: 'Recording',
-        icon: Video,
+        icon: 'video',
         description: 'Screen and session recording',
     },
     annotation: {
         label: 'Annotations',
-        icon: MessageSquare,
+        icon: 'messageSquare',
         description: 'Add notes and markers',
     },
     tool: {
         label: 'Tools',
-        icon: Wrench,
+        icon: 'wrench',
         description: 'Switch between tools',
     },
     vr: {
         label: 'VR Controls',
-        icon: Glasses,
+        icon: 'glasses',
         description: 'Virtual reality mode',
     },
     'voice-room': {
         label: 'Voice Chat',
-        icon: Phone,
+        icon: 'phone',
         description: 'Voice communication',
     },
     help: {
         label: 'Help',
-        icon: HelpCircle,
+        icon: 'helpCircle',
         description: 'Get help',
     },
 };
@@ -212,7 +200,7 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
             isOpen={isOpen}
             onClose={onClose}
             title="Voice Commands"
-            icon={Mic}
+            icon='mic'
             size="lg"
         >
             <div className="voice-command-help">
@@ -223,7 +211,7 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
 
                 {/* Search */}
                 <div className="voice-command-help__search">
-                    <Search size={14} className="voice-command-help__search-icon" />
+                    <Icon name="search" size={14} className="voice-command-help__search-icon" />
                     <input
                         type="text"
                         placeholder="Search commands..."
@@ -239,9 +227,9 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
                     {Object.entries(filteredGroups).map(([category, commands]) => {
                         const categoryInfo = COMMAND_CATEGORIES[category] || {
                             label: category,
-                            icon: HelpCircle,
+                            icon: 'helpCircle',
                         };
-                        const CategoryIcon = categoryInfo.icon;
+                        const categoryIcon = categoryInfo.icon;
                         const isExpanded = expandedCategories.has(category);
 
                         return (
@@ -251,12 +239,12 @@ export function VoiceCommandHelp({ isOpen, onClose }) {
                                     onClick={() => toggleCategory(category)}
                                     aria-expanded={isExpanded}
                                 >
-                                    <CategoryIcon size={16} />
+                                    <Icon name={categoryIcon} size={16} />
                                     <span>{categoryInfo.label}</span>
                                     <span className="voice-command-help__category-count">
                                         {commands.length}
                                     </span>
-                                    <ChevronDown
+                                    <Icon name="chevronDown"
                                         size={14}
                                         className={`voice-command-help__chevron ${isExpanded ? 'expanded' : ''}`}
                                     />

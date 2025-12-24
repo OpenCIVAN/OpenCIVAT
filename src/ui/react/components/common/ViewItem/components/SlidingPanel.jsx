@@ -14,25 +14,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import {
-    Folder,
-    Globe,
-    Save,
-    RefreshCw,
-    Users,
-    Copy,
-    Link2,
-    Lock,
-    Maximize2,
-    ChevronDown,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import './SlidingPanel.scss';
 
 // =============================================================================
 // PANEL BUTTON COMPONENT
 // =============================================================================
 
-function PanelButton({ icon: Icon, active, color, badge, onClick, onHover, onLeave }) {
+function PanelButton({ icon, active, color, badge, onClick, onHover, onLeave }) {
     const activeClass = active ? `sliding-panel__btn--active sliding-panel__btn--${color}` : '';
 
     return (
@@ -45,7 +34,7 @@ function PanelButton({ icon: Icon, active, color, badge, onClick, onHover, onLea
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
         >
-            <Icon size={12} />
+            <Icon name={icon} size={12} />
             {badge && <span className="sliding-panel__btn-badge">{badge}</span>}
         </button>
     );
@@ -129,7 +118,7 @@ export function SlidingPanel({
                 {/* Stars + State Group */}
                 <div className="sliding-panel__group">
                     <PanelButton
-                        icon={Folder}
+                        icon="folder"
                         active={view?.starredWorkspace}
                         color="purple"
                         onClick={onStarWorkspace}
@@ -137,7 +126,7 @@ export function SlidingPanel({
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
-                        icon={Globe}
+                        icon="globe"
                         active={view?.starredPersonal}
                         color="amber"
                         onClick={onStarPersonal}
@@ -145,7 +134,7 @@ export function SlidingPanel({
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
-                        icon={Save}
+                        icon="save"
                         active={view?.hasSavedState}
                         color="amber"
                         onClick={onSaveState}
@@ -157,7 +146,7 @@ export function SlidingPanel({
                 {/* Share + Link Group */}
                 <div className="sliding-panel__group">
                     <PanelButton
-                        icon={Users}
+                        icon="users"
                         active={view?.isShared}
                         color="pink"
                         onClick={onShare}
@@ -165,7 +154,7 @@ export function SlidingPanel({
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
-                        icon={Link2}
+                        icon="link"
                         active={view?.linkedCount > 0}
                         color="teal"
                         badge={view?.linkedCount > 0 ? view.linkedCount : null}
@@ -173,7 +162,7 @@ export function SlidingPanel({
                         onLeave={() => setTooltipText(null)}
                     />
                     <PanelButton
-                        icon={Lock}
+                        icon="unlock"
                         active={view?.isLocked}
                         color="amber"
                         onClick={onLock}
@@ -193,9 +182,9 @@ export function SlidingPanel({
                     onMouseEnter={() => setTooltipText('Canvas Size')}
                     onMouseLeave={() => setTooltipText(null)}
                 >
-                    <Maximize2 size={10} />
+                    <Icon name="maximize" size={10} />
                     <span>{view?.rowSpan || 1}×{view?.colSpan || 1}</span>
-                    <ChevronDown size={8} />
+                    <Icon name="chevronDown" size={8} />
                 </button>
             </div>
 

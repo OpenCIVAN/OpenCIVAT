@@ -21,7 +21,7 @@
  */
 
 import React, { memo } from 'react';
-import { X } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} ModalHeaderProps
@@ -42,7 +42,7 @@ import { X } from 'lucide-react';
 function ModalHeader({
     title,
     titleId,
-    icon: Icon,
+    icon: HeaderIcon,
     severity = 'info',
     showCloseButton = true,
     onClose
@@ -50,9 +50,9 @@ function ModalHeader({
     return (
         <div className="modal__header">
             <div className="modal__header-content">
-                {Icon && (
+                {HeaderIcon && (
                     <div className={`modal__icon modal__icon--${severity}`}>
-                        <Icon size={20} aria-hidden="true" />
+                        <HeaderIcon size={20} aria-hidden="true" />
                     </div>
                 )}
                 <h2
@@ -70,7 +70,7 @@ function ModalHeader({
                     onClick={onClose}
                     aria-label="Close modal"
                 >
-                    <X size={18} aria-hidden="true" />
+                    <Icon name="close" size={18} />
                 </button>
             )}
         </div>

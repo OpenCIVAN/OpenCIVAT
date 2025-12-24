@@ -9,7 +9,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import {
     useLeftPanelContext,
@@ -98,7 +98,7 @@ export function LeftPanelContent({ workspaceId = 'default' }) {
                     onClick={handlePopOut}
                     title="Pop out to floating window"
                 >
-                    <ExternalLink size={12} />
+                    <Icon name="externalLink" size={12} />
                 </button>
             </div>
 

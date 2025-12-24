@@ -162,3 +162,27 @@ export function hasIcon(name) {
 export function getAvailableIcons() {
   return [...Object.keys(ICON_MAP), ...Object.keys(customIcons)];
 }
+
+/**
+ * Get icon component by Lucide icon name (for dynamic file type icons)
+ * This is used when icon names come from external sources like file type configs.
+ * @param {string} lucideName - Lucide icon name (e.g., "Box", "Database", "FileText")
+ * @returns {React.Component} Icon component
+ */
+export function getLucideIcon(lucideName) {
+  if (!lucideName) {
+    return LucideIcons.Box;
+  }
+  // Ensure first letter is capitalized for Lucide lookup
+  const normalizedName = lucideName.charAt(0).toUpperCase() + lucideName.slice(1);
+  return LucideIcons[normalizedName] || LucideIcons.Box;
+}
+
+/**
+ * Alias for getIcon - returns the icon component for use where a component is needed
+ * @param {string} name - Semantic icon name
+ * @returns {React.Component} Icon component
+ */
+export function getIconComponent(name) {
+  return getIcon(name);
+}

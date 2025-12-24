@@ -12,7 +12,7 @@
  * // Basic dropdown menu
  * import { Dropdown, DropdownMenu } from '@UI/react/components/common/Dropdown';
  * import { Button } from '@UI/react/components/common/Button';
- * import { Settings, User, LogOut } from 'lucide-react';
+ * import { Icon } from '@UI/react/components/common/Icon';
  *
  * <Dropdown trigger={<Button variant="ghost">Options</Button>}>
  *   <DropdownMenu

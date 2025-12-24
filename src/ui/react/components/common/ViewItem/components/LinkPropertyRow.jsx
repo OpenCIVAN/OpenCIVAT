@@ -12,16 +12,7 @@
  */
 
 import React, { memo, useMemo } from 'react';
-import {
-    Camera,
-    Sliders,
-    Layout,
-    Crosshair,
-    Palette,
-    Eye,
-    ToggleLeft,
-    ToggleRight,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import './LinkPropertyRow.scss';
 
 // =============================================================================
@@ -29,12 +20,12 @@ import './LinkPropertyRow.scss';
 // =============================================================================
 
 export const LINK_PROPERTIES = [
-    { id: 'camera', label: 'Camera', icon: Camera, desc: 'Sync view angle & zoom' },
-    { id: 'filters', label: 'Filters', icon: Sliders, desc: 'Sync active filters' },
-    { id: 'widgets', label: 'Widgets', icon: Layout, desc: 'Sync widget states' },
-    { id: 'cursors', label: 'Cursors', icon: Crosshair, desc: 'Show collaborator cursors' },
-    { id: 'colorMaps', label: 'Colors', icon: Palette, desc: 'Sync color mapping' },
-    { id: 'annotationDisplay', label: 'Annot.', icon: Eye, desc: 'Sync annotation visibility' },
+    { id: 'camera', label: 'Camera', icon: 'camera', desc: 'Sync view angle & zoom' },
+    { id: 'filters', label: 'Filters', icon: 'sliders', desc: 'Sync active filters' },
+    { id: 'widgets', label: 'Widgets', icon: 'layout', desc: 'Sync widget states' },
+    { id: 'cursors', label: 'Cursors', icon: 'crosshair', desc: 'Show collaborator cursors' },
+    { id: 'colorMaps', label: 'Colors', icon: 'palette', desc: 'Sync color mapping' },
+    { id: 'annotationDisplay', label: 'Annot.', icon: 'eye', desc: 'Sync annotation visibility' },
 ];
 
 // =============================================================================
@@ -48,7 +39,7 @@ const LinkPropertyItem = memo(function LinkPropertyItem({
     disabled,
     onChange,      // (propertyId, newConfig) => void
 }) {
-    const Icon = property.icon;
+    const iconName = property.icon;
     const isEnabled = config?.enabled ?? false;
     const parentId = config?.parentId ?? null;
 
@@ -76,7 +67,7 @@ const LinkPropertyItem = memo(function LinkPropertyItem({
                 disabled={disabled}
                 title={`${isEnabled ? 'Disable' : 'Enable'} ${property.label} linking`}
             >
-                <Icon size={12} />
+                <Icon name={iconName} size={12} />
             </button>
 
             {/* Label */}
@@ -147,7 +138,7 @@ export const LinkPropertyRow = memo(function LinkPropertyRow({
                     disabled={disabled}
                     title={allEnabled ? 'Unlink all properties' : 'Link all properties'}
                 >
-                    {allEnabled ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                    {allEnabled ? <Icon name="toggleRight" size={14} /> : <Icon name="toggleLeft" size={14} />}
                     <span>{allEnabled ? 'All' : 'None'}</span>
                 </button>
             </div>

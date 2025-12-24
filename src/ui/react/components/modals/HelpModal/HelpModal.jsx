@@ -32,29 +32,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
-import {
-    HelpCircle,
-    Upload,
-    Eye,
-    Layout,
-    Users,
-    MessageSquare,
-    ArrowRight,
-    Keyboard,
-    Book,
-    Code,
-    Glasses,
-    Video,
-    ExternalLink,
-    Play,
-    Mail,
-    MessageCircle,
-    Bug,
-    Send,
-    Rocket,
-    FileText,
-    Headphones
-} from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import Modal from '../Modal/Modal';
 import { Button } from '../../common/Button';
 import HelpSection from './HelpSection';

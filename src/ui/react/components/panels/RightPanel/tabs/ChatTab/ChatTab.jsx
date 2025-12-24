@@ -17,7 +17,7 @@
  */
 
 import React, { useRef, useEffect } from 'react';
-import { MessageSquare, Globe, Loader } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import { useChatTab } from './hooks/useChatTab';
 import { MessageBubble } from './components/MessageBubble';
@@ -62,17 +62,17 @@ export function ChatTab({ workspaceId }) {
         <div className="chat-tab">
             {/* Header */}
             <div className="panel-header">
-                <MessageSquare size={14} className="panel-header__icon file-icon--blue" />
+                <Icon name="messageSquare" size={14} className="panel-header__icon file-icon--blue" />
                 <span className="panel-header__title">Chat</span>
                 <div className="panel-header__status">
                     {isLoading ? (
                         <span className="chat-status chat-status--loading">
-                            <Loader size={12} className="spin" />
+                            <Icon name="loader" size={12} className="spin" />
                             Syncing...
                         </span>
                     ) : isSynced ? (
                         <span className="chat-status chat-status--connected">
-                            <Globe size={12} />
+                            <Icon name="globe" size={12} />
                             Connected
                         </span>
                     ) : (
@@ -85,7 +85,7 @@ export function ChatTab({ workspaceId }) {
 
             {/* Room indicator */}
             <div className="chat-tab__room-indicator">
-                <Globe size={12} />
+                <Icon name="globe" size={12} />
                 <span>Room Chat</span>
                 <span className="chat-tab__message-count">{messages.length} messages</span>
             </div>
@@ -94,12 +94,12 @@ export function ChatTab({ workspaceId }) {
             <div className="chat-tab__messages">
                 {isLoading ? (
                     <div className="chat-tab__loading">
-                        <Loader size={24} className="spin" />
+                        <Icon name="loader" size={24} className="spin" />
                         <span>Loading messages...</span>
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="chat-tab__empty">
-                        <MessageSquare size={32} strokeWidth={1} />
+                        <Icon name="messageSquare" size={32} strokeWidth={1} />
                         <span>No messages yet</span>
                         <span className="chat-tab__empty-hint">Start the conversation!</span>
                     </div>

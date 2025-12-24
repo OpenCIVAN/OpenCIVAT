@@ -5,32 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-    Settings,
-    User,
-    LogOut,
-    ChevronDown,
-    Edit,
-    Copy,
-    Trash2,
-    Share,
-    Download,
-    Upload,
-    FolderPlus,
-    FilePlus,
-    MoreHorizontal,
-    Check,
-    Bold,
-    Italic,
-    Underline,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    Bug,
-    Sparkles,
-    Folder,
-    Database
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Dropdown, DropdownMenu, DropdownSelect } from './index';
 import { Button, IconButton } from '../Button';
 
@@ -56,14 +31,14 @@ export default {
 export const BasicMenu = {
     render: () => (
         <Dropdown
-            trigger={<Button variant="secondary" iconRight={ChevronDown}>Options</Button>}
+            trigger={<Button variant="secondary" iconRight="chevronDown">Options</Button>}
         >
             <DropdownMenu
                 items={[
-                    { id: 'profile', label: 'Profile', icon: User },
-                    { id: 'settings', label: 'Settings', icon: Settings },
+                    { id: 'profile', label: 'Profile', icon: 'user' },
+                    { id: 'settings', label: 'Settings', icon: 'settings' },
                     { type: 'separator' },
-                    { id: 'logout', label: 'Sign Out', icon: LogOut, danger: true },
+                    { id: 'logout', label: 'Sign Out', icon: 'logout', danger: true },
                 ]}
                 onSelect={(item) => console.log('Selected:', item.id)}
             />
@@ -79,10 +54,10 @@ export const WithShortcuts = {
             <DropdownMenu
                 items={[
                     { id: 'cut', label: 'Cut', shortcut: '⌘X' },
-                    { id: 'copy', label: 'Copy', icon: Copy, shortcut: '⌘C' },
+                    { id: 'copy', label: 'Copy', icon: 'copy', shortcut: '⌘C' },
                     { id: 'paste', label: 'Paste', shortcut: '⌘V' },
                     { type: 'separator' },
-                    { id: 'delete', label: 'Delete', icon: Trash2, shortcut: '⌫', danger: true },
+                    { id: 'delete', label: 'Delete', icon: 'delete', shortcut: '⌫', danger: true },
                 ]}
                 onSelect={(item) => console.log('Selected:', item.id)}
             />
@@ -98,12 +73,12 @@ export const WithHeaders = {
             <DropdownMenu
                 items={[
                     { type: 'header', label: 'Create' },
-                    { id: 'new-file', label: 'New File', icon: FilePlus },
-                    { id: 'new-folder', label: 'New Folder', icon: FolderPlus },
+                    { id: 'new-file', label: 'New File', icon: 'file' },
+                    { id: 'new-folder', label: 'New Folder', icon: 'folderPlus' },
                     { type: 'separator' },
                     { type: 'header', label: 'Import/Export' },
-                    { id: 'upload', label: 'Upload', icon: Upload },
-                    { id: 'download', label: 'Download', icon: Download },
+                    { id: 'upload', label: 'Upload', icon: 'upload' },
+                    { id: 'download', label: 'Download', icon: 'download' },
                 ]}
                 onSelect={(item) => console.log('Selected:', item.id)}
             />
@@ -114,15 +89,15 @@ export const WithHeaders = {
 export const IconButtonTrigger = {
     render: () => (
         <Dropdown
-            trigger={<IconButton icon={MoreHorizontal} label="More options" />}
+            trigger={<IconButton icon="moreHorizontal" label="More options" />}
         >
             <DropdownMenu
                 items={[
-                    { id: 'edit', label: 'Edit', icon: Edit },
-                    { id: 'share', label: 'Share', icon: Share },
-                    { id: 'copy', label: 'Duplicate', icon: Copy },
+                    { id: 'edit', label: 'Edit', icon: 'edit' },
+                    { id: 'share', label: 'Share', icon: 'share' },
+                    { id: 'copy', label: 'Duplicate', icon: 'copy' },
                     { type: 'separator' },
-                    { id: 'delete', label: 'Delete', icon: Trash2, danger: true },
+                    { id: 'delete', label: 'Delete', icon: 'delete', danger: true },
                 ]}
                 onSelect={(item) => console.log('Selected:', item.id)}
             />
@@ -147,9 +122,9 @@ export const CheckboxItems = {
             >
                 <DropdownMenu
                     items={[
-                        { id: 'bold', label: 'Bold', type: 'checkbox', checked: bold, icon: Bold, onClick: () => setBold(!bold) },
-                        { id: 'italic', label: 'Italic', type: 'checkbox', checked: italic, icon: Italic, onClick: () => setItalic(!italic) },
-                        { id: 'underline', label: 'Underline', type: 'checkbox', checked: underline, icon: Underline, onClick: () => setUnderline(!underline) },
+                        { id: 'bold', label: 'Bold', type: 'checkbox', checked: bold, icon: 'edit', onClick: () => setBold(!bold) },
+                        { id: 'italic', label: 'Italic', type: 'checkbox', checked: italic, icon: 'edit', onClick: () => setItalic(!italic) },
+                        { id: 'underline', label: 'Underline', type: 'checkbox', checked: underline, icon: 'edit', onClick: () => setUnderline(!underline) },
                     ]}
                 />
             </Dropdown>
@@ -168,9 +143,9 @@ export const RadioItems = {
             >
                 <DropdownMenu
                     items={[
-                        { id: 'left', label: 'Left', type: 'radio', checked: align === 'left', icon: AlignLeft, onClick: () => setAlign('left') },
-                        { id: 'center', label: 'Center', type: 'radio', checked: align === 'center', icon: AlignCenter, onClick: () => setAlign('center') },
-                        { id: 'right', label: 'Right', type: 'radio', checked: align === 'right', icon: AlignRight, onClick: () => setAlign('right') },
+                        { id: 'left', label: 'Left', type: 'radio', checked: align === 'left', icon: 'layout', onClick: () => setAlign('left') },
+                        { id: 'center', label: 'Center', type: 'radio', checked: align === 'center', icon: 'layout', onClick: () => setAlign('center') },
+                        { id: 'right', label: 'Right', type: 'radio', checked: align === 'right', icon: 'layout', onClick: () => setAlign('right') },
                     ]}
                 />
             </Dropdown>
@@ -251,10 +226,10 @@ export const SelectWithIcons = {
             <div style={{ width: '250px' }}>
                 <DropdownSelect
                     options={[
-                        { value: 'bug', label: 'Bug', icon: Bug },
-                        { value: 'feature', label: 'Feature Request', icon: Sparkles },
-                        { value: 'project', label: 'Project', icon: Folder },
-                        { value: 'dataset', label: 'Dataset', icon: Database },
+                        { value: 'bug', label: 'Bug', icon: 'warning' },
+                        { value: 'feature', label: 'Feature Request', icon: 'star' },
+                        { value: 'project', label: 'Project', icon: 'folder' },
+                        { value: 'dataset', label: 'Dataset', icon: 'database' },
                     ]}
                     value={value}
                     onChange={setValue}
@@ -466,11 +441,11 @@ export const WithDisabledItems = {
         >
             <DropdownMenu
                 items={[
-                    { id: 'edit', label: 'Edit', icon: Edit },
-                    { id: 'share', label: 'Share', icon: Share, disabled: true },
-                    { id: 'copy', label: 'Duplicate', icon: Copy },
+                    { id: 'edit', label: 'Edit', icon: 'edit' },
+                    { id: 'share', label: 'Share', icon: 'share', disabled: true },
+                    { id: 'copy', label: 'Duplicate', icon: 'copy' },
                     { type: 'separator' },
-                    { id: 'delete', label: 'Delete', icon: Trash2, danger: true, disabled: true },
+                    { id: 'delete', label: 'Delete', icon: 'delete', danger: true, disabled: true },
                 ]}
                 onSelect={(item) => console.log('Selected:', item.id)}
             />

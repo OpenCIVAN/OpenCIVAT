@@ -7,7 +7,7 @@
 //      "Soon" badge when explicitly marked as not implemented
 
 import React from 'react';
-import { PanelLeftClose, ChevronRight } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useLeftPanelContext, LEFT_PANEL_TABS } from './LeftPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 // Uses existing styles from LeftPanel.scss - no separate SCSS needed
@@ -55,7 +55,7 @@ export function LeftActivityBar() {
             {/* Tab buttons */}
             <div className="left-panel__activity-tabs">
                 {LEFT_PANEL_TABS.map((tab) => {
-                    const Icon = tab.icon;
+                    const iconName = tab.icon;
                     const isActive = activeTab === tab.id;
 
                     return (
@@ -68,7 +68,7 @@ export function LeftActivityBar() {
                             aria-label={tab.label}
                             aria-selected={isActive}
                         >
-                            <Icon size={18} />
+                            <Icon name={iconName} size={18} />
                             {/* FIX: Only show "Soon" if explicitly set to false */}
                             {tab.implemented === false && (
                                 <span className="left-panel__activity-badge">Soon</span>
@@ -88,7 +88,7 @@ export function LeftActivityBar() {
                 title={isOpen ? 'Collapse Panel' : 'Expand Panel'}
                 aria-label={isOpen ? 'Collapse Panel' : 'Expand Panel'}
             >
-                {isOpen ? <PanelLeftClose size={18} /> : <ChevronRight size={18} />}
+                {isOpen ? <Icon name="panelLeftClose" size={18} /> : <Icon name="chevronRight" size={18} />}
             </button>
         </div>
     );

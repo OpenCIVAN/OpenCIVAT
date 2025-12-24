@@ -24,7 +24,7 @@
  * @example
  * // With severity and icon
  * import { Modal, useModal } from '@UI/react/components/modals/Modal';
- * import { Trash2 } from 'lucide-react';
+ * import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
  *
  * function DeleteModal({ onDelete }) {
  *   const { isOpen, open, close } = useModal();

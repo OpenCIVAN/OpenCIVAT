@@ -13,7 +13,6 @@
  */
 
 import React, { useMemo } from 'react';
-import { Mic, Users } from 'lucide-react';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -73,14 +72,14 @@ export function RoomSubtab({
         >
             <ResizableSection
                 id="voice"
-                icon={Mic}
+                icon="mic"
                 iconColorClass="icon-green"
                 label="In Voice"
                 count={filteredInVoice.length}
             >
                 {filteredInVoice.length === 0 ? (
                     <EmptyState
-                        icon={Mic}
+                        icon="mic"
                         title="No one in voice"
                         size="sm"
                     />
@@ -99,14 +98,14 @@ export function RoomSubtab({
 
             <ResizableSection
                 id="room"
-                icon={Users}
+                icon="users"
                 iconColorClass="icon-blue"
                 label="In Room"
                 count={filteredNotInVoice.length}
             >
                 {filteredNotInVoice.length === 0 ? (
                     <EmptyState
-                        icon={Users}
+                        icon="users"
                         title="No other users in room"
                         size="sm"
                     />

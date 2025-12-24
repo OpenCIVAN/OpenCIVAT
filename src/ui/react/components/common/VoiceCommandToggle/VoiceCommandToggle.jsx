@@ -8,7 +8,7 @@
 // - processing: Orange microphone, spinning indicator
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Mic, MicOff, HelpCircle } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useVoiceCommands } from "@UI/react/hooks/useVoiceCommands.js";
 import { VoiceCommandHelp } from "@UI/react/components/modals/VoiceCommandHelp";
 import "./VoiceCommandToggle.scss";
@@ -159,7 +159,7 @@ export function VoiceCommandToggle({
                     aria-pressed={isEnabled}
                 >
                     <span className="voice-toggle__icon">
-                        {isEnabled ? <Mic size={iconSize} /> : <MicOff size={iconSize} />}
+                        {isEnabled ? <Icon name="mic" size={iconSize} /> : <Icon name="micOff" size={iconSize} />}
                     </span>
 
                     {showLabel && <span className="voice-toggle__label">{getLabel()}</span>}
@@ -182,7 +182,7 @@ export function VoiceCommandToggle({
                         title="Voice command help (?)"
                         aria-label="Voice command help"
                     >
-                        <HelpCircle size={helpIconSize} />
+                        <Icon name="help" size={helpIconSize} />
                     </button>
                 )}
             </div>

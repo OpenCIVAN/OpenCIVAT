@@ -26,30 +26,7 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import {
-    Settings,
-    Folder,
-    Globe,
-    Save,
-    RefreshCw,
-    Lock,
-    Users,
-    Layers,
-    ExternalLink,
-    Maximize2,
-    Link2,
-    Camera,
-    Filter,
-    Palette,
-    Target,
-    Zap,
-    MousePointer2,
-    Move,
-    Trash2,
-    Copy,
-    Pencil,
-    X,
-} from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 
 import { Modal } from '@UI/react/components/modals/Modal';
 
@@ -57,11 +34,11 @@ import './ViewSettingsModal.scss';
 
 // Link property configuration
 const LINK_PROPERTIES = [
-    { id: 'camera', icon: Camera, label: 'Link Camera', color: 'teal' },
-    { id: 'filters', icon: Filter, label: 'Link Filters', color: 'purple' },
-    { id: 'colorMap', icon: Palette, label: 'Link Color Map', color: 'pink' },
-    { id: 'widgets', icon: Layers, label: 'Link Widgets', color: 'amber' },
-    { id: 'cursor', icon: Target, label: 'Link Cursor', color: 'blue' },
+    { id: 'camera', icon: 'camera', label: 'Link Camera', color: 'teal' },
+    { id: 'filters', icon: 'filter', label: 'Link Filters', color: 'purple' },
+    { id: 'colorMap', icon: 'palette', label: 'Link Color Map', color: 'pink' },
+    { id: 'widgets', icon: 'layers', label: 'Link Widgets', color: 'amber' },
+    { id: 'cursor', icon: 'target', label: 'Link Cursor', color: 'blue' },
 ];
 
 export function ViewSettingsModal({
@@ -302,7 +279,7 @@ export function ViewSettingsModal({
                                     className="view-settings-modal__share-btn"
                                     onClick={onShare}
                                 >
-                                    <Users size={12} />
+                                    <Icon name="users" size={12} />
                                     Share View
                                 </button>
                             </div>

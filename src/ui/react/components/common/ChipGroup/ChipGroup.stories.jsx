@@ -3,20 +3,7 @@
 
 import { useState } from 'react';
 import { ChipGroup, Chip, useChipGroup } from './ChipGroup';
-import {
-    Globe,
-    Users,
-    UserCircle,
-    MapPin,
-    Ruler,
-    Square,
-    MessageSquare,
-    Eye,
-    EyeOff,
-    Filter,
-    Tag,
-    Star,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 export default {
     title: 'Common/ChipGroup',
@@ -72,9 +59,9 @@ export const ScopeFilters = () => {
     const [active, setActive] = useState(['project', 'room', 'personal']);
 
     const chips = [
-        { id: 'project', label: 'Project', icon: Globe, color: 'amber' },
-        { id: 'room', label: 'This Room', icon: Users, color: 'teal' },
-        { id: 'personal', label: 'Personal', icon: UserCircle, color: 'blue' },
+        { id: 'project', label: 'Project', icon: 'globe', color: 'amber' },
+        { id: 'room', label: 'This Room', icon: 'users', color: 'teal' },
+        { id: 'personal', label: 'Personal', icon: 'userCircle', color: 'blue' },
     ];
 
     const handleToggle = (id) => {
@@ -107,10 +94,10 @@ export const AnnotationTypeFilters = () => {
     const [active, setActive] = useState(['point', 'ruler']);
 
     const chips = [
-        { id: 'point', label: 'Point', icon: MapPin, color: 'blue' },
-        { id: 'ruler', label: 'Ruler', icon: Ruler, color: 'green' },
-        { id: 'region', label: 'Region', icon: Square, color: 'purple' },
-        { id: 'note', label: 'Note', icon: MessageSquare, color: 'amber' },
+        { id: 'point', label: 'Point', icon: 'mapPin', color: 'blue' },
+        { id: 'ruler', label: 'Ruler', icon: 'ruler', color: 'green' },
+        { id: 'region', label: 'Region', icon: 'box', color: 'purple' },
+        { id: 'note', label: 'Note', icon: 'messageSquare', color: 'amber' },
     ];
 
     const handleToggle = (id) => {
@@ -143,9 +130,9 @@ export const WithCounts = () => {
     const [active, setActive] = useState(['project', 'personal']);
 
     const chips = [
-        { id: 'project', label: 'Project', icon: Globe, color: 'amber', count: 12 },
-        { id: 'room', label: 'Room', icon: Users, color: 'teal', count: 5 },
-        { id: 'personal', label: 'Personal', icon: UserCircle, color: 'blue', count: 23 },
+        { id: 'project', label: 'Project', icon: 'globe', color: 'amber', count: 12 },
+        { id: 'room', label: 'Room', icon: 'users', color: 'teal', count: 5 },
+        { id: 'personal', label: 'Personal', icon: 'userCircle', color: 'blue', count: 23 },
     ];
 
     const handleToggle = (id) => {
@@ -174,9 +161,9 @@ export const WithUseChipGroupHook = () => {
     const { activeChips, toggle, selectAll, clearAll } = useChipGroup(['starred']);
 
     const chips = [
-        { id: 'starred', label: 'Starred', icon: Star, color: 'amber' },
-        { id: 'recent', label: 'Recent', icon: Eye, color: 'blue' },
-        { id: 'shared', label: 'Shared', icon: Users, color: 'pink' },
+        { id: 'starred', label: 'Starred', icon: 'star', color: 'amber' },
+        { id: 'recent', label: 'Recent', icon: 'eye', color: 'blue' },
+        { id: 'shared', label: 'Shared', icon: 'users', color: 'pink' },
     ];
 
     return (
@@ -228,8 +215,8 @@ export const SmallSize = () => {
     const [active, setActive] = useState(['visible']);
 
     const chips = [
-        { id: 'visible', label: 'Visible', icon: Eye, color: 'green' },
-        { id: 'hidden', label: 'Hidden', icon: EyeOff, color: 'red' },
+        { id: 'visible', label: 'Visible', icon: 'eye', color: 'green' },
+        { id: 'hidden', label: 'Hidden', icon: 'eyeOff', color: 'red' },
     ];
 
     const handleToggle = (id) => {
@@ -258,9 +245,9 @@ export const WithDisabledChip = () => {
     const [active, setActive] = useState(['filter1']);
 
     const chips = [
-        { id: 'filter1', label: 'Active Filter', icon: Filter, color: 'blue' },
-        { id: 'filter2', label: 'Available', icon: Filter, color: 'green' },
-        { id: 'filter3', label: 'Premium Only', icon: Star, color: 'amber', disabled: true },
+        { id: 'filter1', label: 'Active Filter', icon: 'filter', color: 'blue' },
+        { id: 'filter2', label: 'Available', icon: 'filter', color: 'green' },
+        { id: 'filter3', label: 'Premium Only', icon: 'star', color: 'amber', disabled: true },
     ];
 
     const handleToggle = (id) => {
@@ -323,16 +310,16 @@ export const InPanelContext = () => {
     const [activeTypes, setActiveTypes] = useState(['point', 'ruler', 'region', 'note']);
 
     const scopeChips = [
-        { id: 'project', label: 'Project', icon: Globe, color: 'amber', count: 8 },
-        { id: 'room', label: 'Room', icon: Users, color: 'teal', count: 3 },
-        { id: 'personal', label: 'Personal', icon: UserCircle, color: 'blue', count: 12 },
+        { id: 'project', label: 'Project', icon: 'globe', color: 'amber', count: 8 },
+        { id: 'room', label: 'Room', icon: 'users', color: 'teal', count: 3 },
+        { id: 'personal', label: 'Personal', icon: 'userCircle', color: 'blue', count: 12 },
     ];
 
     const typeChips = [
-        { id: 'point', label: 'Point', icon: MapPin, color: 'blue' },
-        { id: 'ruler', label: 'Ruler', icon: Ruler, color: 'green' },
-        { id: 'region', label: 'Region', icon: Square, color: 'purple' },
-        { id: 'note', label: 'Note', icon: MessageSquare, color: 'amber' },
+        { id: 'point', label: 'Point', icon: 'mapPin', color: 'blue' },
+        { id: 'ruler', label: 'Ruler', icon: 'ruler', color: 'green' },
+        { id: 'region', label: 'Region', icon: 'box', color: 'purple' },
+        { id: 'note', label: 'Note', icon: 'messageSquare', color: 'amber' },
     ];
 
     const toggleScope = (id) => {
@@ -362,7 +349,7 @@ export const InPanelContext = () => {
                 alignItems: 'center',
                 gap: '8px',
             }}>
-                <MapPin size={14} style={{ color: '#f472b6' }} />
+                <Icon name="mapPin" size={14} color="#f472b6" />
                 <span style={{ color: '#e0e0e0', fontWeight: 600, fontSize: '13px' }}>
                     Annotations
                 </span>

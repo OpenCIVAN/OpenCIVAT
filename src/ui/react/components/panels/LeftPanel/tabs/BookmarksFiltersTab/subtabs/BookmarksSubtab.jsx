@@ -13,7 +13,7 @@
  */
 
 import React, { memo } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { BookmarkCard } from '../components/BookmarkCard';
 import { BookmarkEditor } from '../components/BookmarkEditor';
 import { ScopedSection } from '../components/ScopedSection';
@@ -67,7 +67,7 @@ export const BookmarksSubtab = memo(function BookmarksSubtab({
     if (isLoading) {
         return (
             <div className="bookmarks-filters-tab__loading">
-                <Loader2 size={24} className="spin" />
+                <Icon name="loader" size={24} className="spin" />
                 <span>Loading bookmarks...</span>
             </div>
         );
@@ -77,7 +77,7 @@ export const BookmarksSubtab = memo(function BookmarksSubtab({
     if (error) {
         return (
             <div className="bookmarks-filters-tab__error">
-                <AlertCircle size={24} />
+                <Icon name="alertCircle" size={24} />
                 <span>Failed to load bookmarks</span>
                 <button className="retry-btn" onClick={refetch}>Retry</button>
             </div>

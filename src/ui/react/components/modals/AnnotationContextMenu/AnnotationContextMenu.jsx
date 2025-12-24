@@ -29,7 +29,7 @@
  */
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Edit3, Move, Trash2, Eye, EyeOff, X } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import { createPortal } from 'react-dom';
 import './AnnotationContextMenu.scss';
 

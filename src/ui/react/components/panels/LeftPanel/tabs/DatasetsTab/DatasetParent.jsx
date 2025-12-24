@@ -2,8 +2,7 @@
 // Parent/folder node for a dataset in the tree view
 
 import React, { useState, useCallback } from 'react';
-import { ChevronDown, ChevronRight, MoreHorizontal, Settings } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { Icon, getLucideIcon } from '@UI/react/components/common/Icon';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
 
@@ -14,8 +13,7 @@ const getDatasetTypeConfig = (fileType) => {
     const displayInfo = getFileTypeDisplayInfo(fileType);
 
     if (displayInfo) {
-        const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
-        const IconComponent = LucideIcons[iconName] || LucideIcons.Database;
+        const IconComponent = getLucideIcon(displayInfo.icon);
 
         return {
             icon: IconComponent,
@@ -23,7 +21,7 @@ const getDatasetTypeConfig = (fileType) => {
         };
     }
 
-    return { icon: LucideIcons.Database, color: null };
+    return { icon: getLucideIcon('Database'), color: null };
 };
 
 /**
@@ -50,7 +48,7 @@ export function DatasetParent({
     const [isHovered, setIsHovered] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const typeConfig = getDatasetTypeConfig(dataset.fileType);
-    const Icon = typeConfig.icon;
+    const TypeIcon = typeConfig.icon;
 
     const handleContextMenu = useCallback((e) => {
         e.preventDefault();
@@ -67,14 +65,14 @@ export function DatasetParent({
                 onMouseLeave={() => setIsHovered(false)}
             >
                 <span className="dataset-parent__chevron">
-                    {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                    {isExpanded ? <Icon name="chevronDown" size={10} /> : <Icon name="chevronRight" size={10} />}
                 </span>
 
                 <span
                     className="dataset-parent__icon"
                     style={typeConfig.color ? { color: typeConfig.color } : undefined}
                 >
-                    <Icon size={14} />
+                    <TypeIcon size={14} />
                 </span>
 
                 <span className="dataset-parent__name">
@@ -95,13 +93,13 @@ export function DatasetParent({
                             }}
                             title="Dataset settings"
                         >
-                            <Settings size={12} />
+                            <Icon name="settings" size={12} />
                         </button>
                         <button
                             className="dataset-parent__more-btn"
                             onClick={(e) => { e.stopPropagation(); handleContextMenu(e); }}
                         >
-                            <MoreHorizontal size={12} />
+                            <Icon name="moreHorizontal" size={12} />
                         </button>
                     </>
                 )}

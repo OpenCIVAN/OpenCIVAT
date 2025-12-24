@@ -6,35 +6,7 @@
 
 import React, { memo, useState, useMemo, useCallback, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
-import {
-    Grid3X3,
-    ChevronUp,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    Home,
-    Crosshair,
-    ZoomIn,
-    ZoomOut,
-    Type,
-    Hash,
-    Plus,
-    Minus,
-    X,
-    Navigation,
-    Edit3,
-    PanelLeft,
-    Minimize2,
-    CornerUpLeft,
-    CornerUpRight,
-    CornerDownLeft,
-    CornerDownRight,
-    Pin,
-    Move,
-    Combine,
-    Split,
-    Trash2,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useLayoutPanelContext, DOCK_POSITIONS } from "../../LayoutPanelContext";
 
 // =============================================================================
@@ -311,15 +283,15 @@ const DockPositionPicker = memo(({ currentPosition, onPositionChange, onClose })
         boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
     }}>
         {[
-            { pos: DOCK_POSITIONS.TOP_LEFT, icon: CornerUpLeft },
+            { pos: DOCK_POSITIONS.TOP_LEFT, icon: 'cornerUpLeft' },
             { pos: null },
-            { pos: DOCK_POSITIONS.TOP_RIGHT, icon: CornerUpRight },
-            { pos: DOCK_POSITIONS.LEFT_PANEL, icon: PanelLeft },
-            { pos: DOCK_POSITIONS.FLOAT, icon: Move },
-            { pos: DOCK_POSITIONS.MINIMIZED, icon: Minimize2 },
-            { pos: DOCK_POSITIONS.BOTTOM_LEFT, icon: CornerDownLeft },
+            { pos: DOCK_POSITIONS.TOP_RIGHT, icon: 'cornerUpRight' },
+            { pos: DOCK_POSITIONS.LEFT_PANEL, icon: 'panelLeft' },
+            { pos: DOCK_POSITIONS.FLOAT, icon: 'move' },
+            { pos: DOCK_POSITIONS.MINIMIZED, icon: 'minimize2' },
+            { pos: DOCK_POSITIONS.BOTTOM_LEFT, icon: 'cornerDownLeft' },
             { pos: null },
-            { pos: DOCK_POSITIONS.BOTTOM_RIGHT, icon: CornerDownRight },
+            { pos: DOCK_POSITIONS.BOTTOM_RIGHT, icon: 'cornerDownRight' },
         ].map(({ pos, icon: Icon }, idx) => (
             pos ? (
                 <button
@@ -723,7 +695,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         title="Dock Position"
                         active={showDockPicker}
                     >
-                        <Pin size={9} />
+                        <Icon name="pin" size={9} />
                     </NavBtn>
                     {showDockPicker && (
                         <DockPositionPicker
@@ -741,7 +713,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         onClick={() => setDockPosition(DOCK_POSITIONS.MINIMIZED)}
                         title="Minimize"
                     >
-                        <X size={9} />
+                        <Icon name="close" size={9} />
                     </NavBtn>
                 )}
             </div>
@@ -825,7 +797,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         }}
                         title="Delete selected"
                     >
-                        <Trash2 size={9} />
+                        <Icon name="delete" size={9} />
                     </NavBtn>
                 </div>
             )}
@@ -1009,7 +981,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                     disabled={viewport.col + viewportSize.cols >= canvasSize.cols}
                                     title="Move Right"
                                 >
-                                    <ChevronRight size={12} />
+                                    <Icon name="chevronRight" size={12} />
                                 </NavBtn>
                             </div>
                             <NavBtn
@@ -1018,7 +990,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 disabled={viewport.row + viewportSize.rows >= canvasSize.rows}
                                 title="Move Down"
                             >
-                                <ChevronDown size={12} />
+                                <Icon name="chevronDown" size={12} />
                             </NavBtn>
                             <span style={{
                                 fontSize: 9,
@@ -1042,7 +1014,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                 color={tokens.accentPink}
                                 title="Set homepoint"
                             >
-                                <Crosshair size={10} />
+                                <Icon name="crosshair" size={10} />
                             </NavBtn>
                             {homepoint ? (
                                 <>
@@ -1054,7 +1026,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                         {homepoint.col},{homepoint.row}
                                     </span>
                                     <NavBtn size="xs" onClick={clearHomepoint} title="Clear" color={tokens.accentRed}>
-                                        <X size={7} />
+                                        <Icon name="close" size={7} />
                                     </NavBtn>
                                 </>
                             ) : (

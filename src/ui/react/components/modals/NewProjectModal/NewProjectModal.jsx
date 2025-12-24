@@ -25,16 +25,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect } from 'react';
-import {
-    FolderPlus,
-    File,
-    FlaskConical,
-    BarChart3,
-    Users,
-    Lock,
-    Building,
-    Check
-} from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import { FormModal, FormField } from '../FormModal';
 import './NewProjectModal.scss';
 
@@ -146,7 +137,7 @@ const TemplateSelector = memo(function TemplateSelector({
                             </span>
                         </span>
                         <span className="new-project-modal__template-option__check">
-                            <Check size={16} />
+                            <Icon name="check" size={16} />
                         </span>
                     </button>
                 );

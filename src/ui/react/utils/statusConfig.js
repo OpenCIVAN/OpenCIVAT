@@ -13,6 +13,8 @@
  */
 
 import { Circle, Clock, Coffee, XCircle } from 'lucide-react';
+import React from 'react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * Status types available in CIA Web
@@ -25,7 +27,7 @@ import { Circle, Clock, Coffee, XCircle } from 'lucide-react';
 export const STATUS_CONFIG = {
   online: {
     id: "online",
-    icon: Circle,
+    icon: 'circle',
     label: "Online",
     description: "Available and active",
     color: "var(--status-online)",
@@ -34,7 +36,7 @@ export const STATUS_CONFIG = {
   },
   idle: {
     id: "idle",
-    icon: Clock,
+    icon: 'clock',
     label: "Idle",
     description: "Temporarily away",
     color: "var(--status-idle)",
@@ -43,7 +45,7 @@ export const STATUS_CONFIG = {
   },
   away: {
     id: "away",
-    icon: Coffee,
+    icon: 'coffee',
     label: "Away",
     description: "Away for a while",
     color: "var(--status-away)",
@@ -52,7 +54,7 @@ export const STATUS_CONFIG = {
   },
   dnd: {
     id: "dnd",
-    icon: XCircle,
+    icon: 'xCircle',
     label: "Do Not Disturb",
     description: "Mute notifications",
     color: "var(--status-dnd)",
@@ -61,7 +63,7 @@ export const STATUS_CONFIG = {
   },
   offline: {
     id: "offline",
-    icon: Circle,
+    icon: 'circle',
     label: "Offline",
     description: "Not connected",
     color: "var(--status-offline)",
@@ -71,7 +73,7 @@ export const STATUS_CONFIG = {
   // Alias for 'online' - some components use 'active' instead
   active: {
     id: "active",
-    icon: Circle,
+    icon: 'circle',
     label: "Active",
     description: "Available and active",
     color: "var(--status-online)",
@@ -81,7 +83,7 @@ export const STATUS_CONFIG = {
   // Alias for 'busy' - ProfileModal uses this instead of 'dnd'
   busy: {
     id: "busy",
-    icon: XCircle,
+    icon: 'xCircle',
     label: "Busy",
     description: "Do not disturb",
     color: "var(--status-dnd)",
@@ -114,10 +116,10 @@ export const ALL_STATUSES = [
 /**
  * Get the icon component for a status
  * @param {StatusType} status - Status type
- * @returns {React.ComponentType} Lucide icon component
+ * @returns {React.ComponentType} Icon component
  */
 export function getStatusIcon(status) {
-  return STATUS_CONFIG[status]?.icon || Circle;
+  return <Icon name={STATUS_CONFIG[status]?.icon || 'circle'} />;
 }
 
 /**

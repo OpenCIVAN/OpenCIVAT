@@ -22,7 +22,7 @@
  */
 
 import React, { memo, useRef, useId } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} HelpSectionProps

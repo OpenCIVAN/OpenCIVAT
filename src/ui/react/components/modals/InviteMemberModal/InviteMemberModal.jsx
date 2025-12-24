@@ -26,12 +26,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import {
-    UserPlus,
-    Eye,
-    User,
-    Shield
-} from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import { FormModal, FormField } from '../FormModal';
 import EmailTagInput, { isValidEmail } from './EmailTagInput';
 import './InviteMemberModal.scss';
@@ -44,19 +39,19 @@ const ROLE_OPTIONS = [
         value: 'viewer',
         label: 'Viewer',
         description: 'Can view content but not make changes',
-        icon: Eye,
+        icon: 'eye',
     },
     {
         value: 'member',
         label: 'Member',
         description: 'Can view, edit, and create content',
-        icon: User,
+        icon: 'user',
     },
     {
         value: 'admin',
         label: 'Admin',
         description: 'Full access including project settings',
-        icon: Shield,
+        icon: 'shield',
     },
 ];
 
@@ -89,7 +84,6 @@ const RoleSelector = memo(function RoleSelector({
     return (
         <div className="role-selector" role="radiogroup" aria-label="Member role">
             {ROLE_OPTIONS.map((option) => {
-                const Icon = option.icon;
                 const isSelected = value === option.value;
 
                 return (
@@ -103,7 +97,7 @@ const RoleSelector = memo(function RoleSelector({
                         aria-checked={isSelected}
                     >
                         <span className="role-selector__icon">
-                            <Icon size={18} />
+                            <Icon name={option.icon} size={18} />
                         </span>
                         <span className="role-selector__content">
                             <span className="role-selector__label">{option.label}</span>
@@ -240,7 +234,7 @@ function InviteMemberModal({
             isOpen={isOpen}
             onClose={onClose}
             title={`Invite to ${projectName}`}
-            icon={UserPlus}
+            icon={getIconComponent('userPlus')}
             submitLabel={submitLabel}
             submittingLabel="Sending..."
             onSubmit={handleSubmit}

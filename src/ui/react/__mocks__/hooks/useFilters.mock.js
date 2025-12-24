@@ -114,31 +114,31 @@ const MOCK_SAVED_FILTERS = [
 export const FILTER_TYPES = {
   threshold: {
     name: "Threshold",
-    icon: "Filter",
+    icon: "filter",
     color: "#60a5fa",
     fields: ["min", "max", "dataArray"],
   },
   windowLevel: {
     name: "Window/Level",
-    icon: "SlidersHorizontal",
+    icon: "slidersHorizontal",
     color: "#34d399",
     fields: ["window", "level"],
   },
   curvature: {
     name: "Curvature",
-    icon: "Spline",
+    icon: "spline",
     color: "#c084fc",
     fields: ["threshold", "colorMap"],
   },
   density: {
     name: "Density",
-    icon: "ScatterChart",
+    icon: "scatterChart",
     color: "#fbbf24",
     fields: ["minDensity", "radius"],
   },
   clip: {
     name: "Clip Plane",
-    icon: "Scissors",
+    icon: "scissors",
     color: "#fb7185",
     fields: ["normal", "origin"],
   },

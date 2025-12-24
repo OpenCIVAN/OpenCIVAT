@@ -20,7 +20,7 @@
  */
 
 import React, { memo, forwardRef, useCallback } from 'react';
-import { Check, Image } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} ViewOption
@@ -129,7 +129,7 @@ const ViewCard = forwardRef(function ViewCard(
 
             {/* Selection checkmark */}
             <span className="view-card__check" aria-hidden="true">
-                <Check size={12} />
+                <Icon name="check" size={12} />
             </span>
         </div>
     );

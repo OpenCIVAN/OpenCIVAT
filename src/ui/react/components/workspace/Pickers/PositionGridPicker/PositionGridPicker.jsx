@@ -2,20 +2,14 @@
 // NEW FILE - Create this for positioning widgets
 
 import React, { useState } from 'react';
-import {
-    CornerDownLeft,
-    CornerDownRight,
-    CornerUpLeft,
-    CornerUpRight,
-    Check
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * PositionGridPicker
- * 
+ *
  * 2x2 grid for selecting corner positions.
  * Used for orientation widget, overlays, etc.
- * 
+ *
  * Grid layout:
  * ┌──────────┬──────────┐
  * │ TOP_LEFT │ TOP_RIGHT│
@@ -31,12 +25,12 @@ export function PositionGridPicker({
 }) {
     const [hoveredCell, setHoveredCell] = useState(null);
 
-    // Map icon strings to Lucide components
+    // Map icon strings to icon names
     const iconMap = {
-        'corner-up-left': CornerUpLeft,
-        'corner-up-right': CornerUpRight,
-        'corner-down-left': CornerDownLeft,
-        'corner-down-right': CornerDownRight,
+        'corner-up-left': 'cornerUpLeft',
+        'corner-up-right': 'cornerUpRight',
+        'corner-down-left': 'cornerDownLeft',
+        'corner-down-right': 'cornerDownRight',
     };
 
     // Build map for easy lookup
@@ -76,8 +70,8 @@ export function PositionGridPicker({
                                 );
                             }
 
-                            // Get the icon component
-                            const IconComponent = iconMap[position.icon] || CornerDownRight;
+                            // Get the icon name
+                            const iconName = iconMap[position.icon] || 'cornerDownRight';
                             const isActive = currentPosition === position.id;
                             const isHovered = hoveredCell === position.id;
 
@@ -90,13 +84,13 @@ export function PositionGridPicker({
                                     onMouseLeave={() => setHoveredCell(null)}
                                     title={position.label}
                                 >
-                                    <IconComponent size={16} className="position-grid-icon" />
+                                    <Icon name={iconName} size={16} className="position-grid-icon" />
                                     <span className="position-grid-label">{position.label}</span>
 
                                     {/* Check mark for active */}
                                     {isActive && (
                                         <div className="position-grid-check">
-                                            <Check size={14} />
+                                            <Icon name="check" size={14} />
                                         </div>
                                     )}
                                 </div>

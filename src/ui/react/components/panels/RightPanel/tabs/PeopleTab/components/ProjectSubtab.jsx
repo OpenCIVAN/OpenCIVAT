@@ -12,7 +12,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Globe, Home } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { MemberRow } from '@UI/react/components/common/MemberRow';
 import { EmptyState } from '@UI/react/components/common/EmptyState';
 import { useProjectPresence } from '@UI/react/hooks/useRoomPresence.js';
@@ -72,7 +72,7 @@ export function ProjectSubtab({
 
             {filteredUsers.length === 0 ? (
                 <EmptyState
-                    icon={Globe}
+                    icon="globe"
                     title="No users online"
                     description="No project members are currently online"
                     size="sm"
@@ -81,7 +81,7 @@ export function ProjectSubtab({
                 roomIds.map(roomId => (
                     <div key={roomId} className="people-tab__room-group">
                         <div className="people-tab__room-header">
-                            <Home size={10} />
+                            <Icon name="home" size={10} />
                             <span>{groupedByRoom[roomId].roomName}</span>
                             <span className="people-tab__room-count">
                                 ({groupedByRoom[roomId].users.length})

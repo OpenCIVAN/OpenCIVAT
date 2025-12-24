@@ -21,25 +21,7 @@ import { ui as log } from "@Utils/logger.js";
  */
 
 import { memo, useCallback, useState, useRef, useEffect } from 'react';
-import {
-    Edit3,
-    Save,
-    X,
-    Undo2,
-    Redo2,
-    Grid3x3,
-    GitBranch,
-    Home,
-    Users,
-    Eye,
-    Plus,
-    Minus,
-    ZoomIn,
-    ZoomOut,
-    Minimize2,
-    Maximize2,
-    RotateCcw,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useGridLayoutPreview } from './GridLayoutPreview.logic';
 import { useViewportSize } from '@UI/react/hooks';
 import { DPadController } from './components/DPadController';
@@ -53,7 +35,7 @@ import './GridLayoutPreview.scss';
 const CONTEXT_CONFIG = {
     layout: {
         title: 'Layout',
-        icon: Grid3x3,
+        icon: 'grid3x3',
         showEditMode: true,
         showDPad: true,
         showPresets: true,
@@ -61,7 +43,7 @@ const CONTEXT_CONFIG = {
     },
     presence: {
         title: 'Presence',
-        icon: Users,
+        icon: 'users',
         showEditMode: false,
         showDPad: true,
         showCollaborators: true,
@@ -69,7 +51,7 @@ const CONTEXT_CONFIG = {
     },
     homepoints: {
         title: 'Homepoints',
-        icon: Home,
+        icon: 'home',
         showEditMode: false,
         showDPad: true,
         showHomepoint: true,
@@ -77,7 +59,7 @@ const CONTEXT_CONFIG = {
     },
     views: {
         title: 'Views',
-        icon: Eye,
+        icon: 'eye',
         showEditMode: false,
         showDPad: false,
         showDropZone: true,
@@ -282,8 +264,6 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
         return collaborators.filter(c => c.position?.row === row && c.position?.col === col);
     }, [collaborators]);
 
-    const ContextIcon = config.icon;
-
     // Conditional rendering - show minimal UI when not expanded
     if (!isExpanded && context === 'views') {
         return (
@@ -296,7 +276,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                 onDrop={handleExternalDrop}
             >
                 <div className="grid-layout-preview__collapsed-content">
-                    <ContextIcon size={16} />
+                    <Icon name={config.icon} size={16} />
                     <span className="grid-layout-preview__collapsed-text">Drop view here</span>
                 </div>
             </div>
@@ -315,7 +295,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
             {/* Header */}
             <div className="grid-layout-preview__header">
                 <div className="grid-layout-preview__header-left">
-                    <ContextIcon size={14} className="grid-layout-preview__header-icon" />
+                    <Icon name={config.icon} size={14} className="grid-layout-preview__header-icon" />
                     <span className="grid-layout-preview__header-title">{config.title}</span>
 
                     {config.headerBadge && (
@@ -343,14 +323,14 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                             onClick={() => setIsEditMode(!isEditMode)}
                             title={isEditMode ? 'Exit edit mode' : 'Enter edit mode'}
                         >
-                            <Edit3 size={14} />
+                            <Icon name="edit" size={14} />
                         </button>
                     )}
 
                     {/* Presets button (layout context) */}
                     {config.showPresets && (
                         <button className="grid-layout-preview__presets-btn" title="Layout presets">
-                            <GitBranch size={14} />
+                            <Icon name="gitBranch" size={14} />
                         </button>
                     )}
                 </div>
@@ -462,7 +442,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                             onClick={() => setZoom(viewport.zoom - 0.25)}
                             disabled={viewport.zoom <= 0.5}
                         >
-                            <ZoomOut size={12} />
+                            <Icon name="zoomOut" size={12} />
                         </button>
                         <span className="grid-layout-preview__zoom-value">
                             {Math.round(viewport.zoom * 100)}%
@@ -472,7 +452,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                             onClick={() => setZoom(viewport.zoom + 0.25)}
                             disabled={viewport.zoom >= 2}
                         >
-                            <ZoomIn size={12} />
+                            <Icon name="zoomIn" size={12} />
                         </button>
                     </div>
 
@@ -484,7 +464,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                             disabled={isMinSize}
                             title="Focus (show fewer cells)"
                         >
-                            <Minimize2 size={12} />
+                            <Icon name="minimize2" size={12} />
                         </button>
                         <span className="grid-layout-preview__viewport-size-value">
                             {viewportSize.rows}×{viewportSize.cols}
@@ -495,7 +475,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                             disabled={isMaxSize}
                             title="Overview (show more cells)"
                         >
-                            <Maximize2 size={12} />
+                            <Icon name="maximize2" size={12} />
                         </button>
                         <button
                             className="grid-layout-preview__viewport-size-btn grid-layout-preview__viewport-size-btn--reset"
@@ -503,7 +483,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                             disabled={isDefaultSize}
                             title="Reset to default size"
                         >
-                            <RotateCcw size={10} />
+                            <Icon name="rotateCcw" size={10} />
                         </button>
                     </div>
 
@@ -551,7 +531,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                                 disabled={!canUndo}
                                 title="Undo"
                             >
-                                <Undo2 size={14} />
+                                <Icon name="undo2" size={14} />
                             </button>
                             <button
                                 className="grid-layout-preview__action-btn"
@@ -559,7 +539,7 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                                 disabled={!canRedo}
                                 title="Redo"
                             >
-                                <Redo2 size={14} />
+                                <Icon name="redo2" size={14} />
                             </button>
                         </>
                     )}
@@ -572,14 +552,14 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                                 onClick={cancelChanges}
                                 title="Cancel changes"
                             >
-                                <X size={14} />
+                                <Icon name="close" size={14} />
                             </button>
                             <button
                                 className="grid-layout-preview__apply-btn"
                                 onClick={applyChanges}
                                 title="Apply changes"
                             >
-                                <Save size={14} />
+                                <Icon name="save" size={14} />
                                 Apply
                             </button>
                         </>

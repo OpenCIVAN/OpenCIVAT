@@ -4,14 +4,7 @@
 // FIXED: Now accepts activeInstance and manages layers state internally
 
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-    Users,
-    MapPin,
-    Box,
-    Eye,
-    EyeOff,
-    ChevronRight,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 // =============================================================================
 // LAYER TOGGLE COMPONENT
@@ -24,7 +17,7 @@ function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onTogg
                 className={`layer-toggle__btn ${enabled ? 'layer-toggle__btn--active' : ''}`}
                 onClick={onToggle}
             >
-                {enabled ? <Eye size={14} /> : <EyeOff size={14} />}
+                {enabled ? <Icon name="eye" size={14} /> : <Icon name="eyeOff" size={14} />}
             </button>
             <div className="layer-toggle__info">
                 <div className="layer-toggle__label">
@@ -50,7 +43,7 @@ function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onTogg
                 </div>
             )}
             <button className="layer-toggle__manage">
-                <ChevronRight size={14} />
+                <Icon name="chevronRight" size={14} />
             </button>
         </div>
     );

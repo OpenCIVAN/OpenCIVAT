@@ -9,7 +9,7 @@
  */
 
 import React, { memo, useState, useCallback } from 'react';
-import { RotateCcw, X, AlertTriangle } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import './ViewItem.scss';
 
 // =============================================================================
@@ -100,7 +100,7 @@ export const TrashedViewItem = memo(function TrashedViewItem({
             <div className="trashed-view-item__info">
                 <span className="trashed-view-item__name">{view?.name || 'Unnamed View'}</span>
                 <span className={`trashed-view-item__expires ${isExpiringSoon ? 'trashed-view-item__expires--warning' : ''}`}>
-                    {isExpiringSoon && <AlertTriangle size={10} />}
+                    {isExpiringSoon && <Icon name="warning" size={10} />}
                     {expiryText}
                 </span>
             </div>
@@ -112,7 +112,7 @@ export const TrashedViewItem = memo(function TrashedViewItem({
                     onClick={handleRestore}
                     title="Restore view"
                 >
-                    <RotateCcw size={12} />
+                    <Icon name="rotateCcw" size={12} />
                     {isHovered && <span>Restore</span>}
                 </button>
                 <button
@@ -120,7 +120,7 @@ export const TrashedViewItem = memo(function TrashedViewItem({
                     onClick={handleDeleteClick}
                     title={confirmDelete ? 'Click again to confirm' : 'Delete permanently'}
                 >
-                    <X size={12} />
+                    <Icon name="close" size={12} />
                     {confirmDelete && <span>Confirm?</span>}
                 </button>
             </div>

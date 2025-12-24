@@ -20,16 +20,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import {
-    Users,
-    Mic2,
-    DoorOpen,
-    MessageSquare,
-    Activity,
-    FileText,
-    Video,
-    SlidersHorizontal,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 // =============================================================================
 // TAB CONFIGURATION - SINGLE SOURCE OF TRUTH
@@ -45,7 +36,7 @@ export const RIGHT_PANEL_TABS = [
     // PRESENCE & LOCATION
     {
         id: 'people',
-        icon: Users,
+        icon: 'users',
         label: 'People',
         color: 'pink',
         group: 'presence',
@@ -53,7 +44,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'voice',
-        icon: Mic2,
+        icon: 'mic',
         label: 'Voice',
         color: 'green',
         group: 'presence',
@@ -61,7 +52,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'rooms',
-        icon: DoorOpen,
+        icon: 'doorOpen',
         label: 'Rooms',
         color: 'purple',
         group: 'presence',
@@ -70,7 +61,7 @@ export const RIGHT_PANEL_TABS = [
     // COMMUNICATION
     {
         id: 'chat',
-        icon: MessageSquare,
+        icon: 'messageSquare',
         label: 'Chat',
         color: 'blue',
         group: 'communication',
@@ -78,7 +69,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'activity',
-        icon: Activity,
+        icon: 'activity',
         label: 'Activity',
         color: 'amber',
         group: 'communication',
@@ -87,7 +78,7 @@ export const RIGHT_PANEL_TABS = [
     // DOCUMENTATION
     {
         id: 'notes',
-        icon: FileText,
+        icon: 'file',
         label: 'Notes',
         color: 'teal',
         group: 'documentation',
@@ -95,7 +86,7 @@ export const RIGHT_PANEL_TABS = [
     },
     {
         id: 'recording',
-        icon: Video,
+        icon: 'video',
         label: 'Recording',
         color: 'red',
         group: 'documentation',
@@ -104,7 +95,7 @@ export const RIGHT_PANEL_TABS = [
     // SETTINGS
     {
         id: 'settings',
-        icon: SlidersHorizontal,
+        icon: 'settings',
         label: 'Settings',
         color: 'gray',
         group: 'settings',
@@ -166,13 +157,13 @@ export function isRightPanelTabRegistered(tabId) {
  */
 function PlaceholderContent({ tabId }) {
     const tab = RIGHT_PANEL_TABS.find(t => t.id === tabId);
-    const Icon = tab?.icon;
+    const iconName = tab?.icon;
 
     return (
         <div className="right-panel__placeholder">
-            {Icon && (
+            {iconName && (
                 <div className="right-panel__placeholder-icon" data-color={tab?.color}>
-                    <Icon size={32} />
+                    <Icon name={iconName} size={32} />
                 </div>
             )}
             <div className="right-panel__placeholder-title">

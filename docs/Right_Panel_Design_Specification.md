@@ -77,14 +77,14 @@ The Right Panel is the **collaboration hub** of CIA Web, providing tools for com
 
 ```javascript
 const RIGHT_PANEL_TABS = [
-  { id: 'people', icon: Users, label: 'People', color: 'pink' },
-  { id: 'voice', icon: Mic2, label: 'Voice', color: 'green' },
-  { id: 'rooms', icon: DoorOpen, label: 'Rooms', color: 'purple' },
-  { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'blue' },
-  { id: 'activity', icon: Activity, label: 'Activity', color: 'amber' },
-  { id: 'notes', icon: FileText, label: 'Notes', color: 'teal' },
-  { id: 'recording', icon: Video, label: 'Recording', color: 'red' },
-  { id: 'settings', icon: SlidersHorizontal, label: 'Settings', color: 'gray' },
+  { id: 'people', icon: 'users', label: 'People', color: 'pink' },
+  { id: 'voice', icon: 'mic2', label: 'Voice', color: 'green' },
+  { id: 'rooms', icon: 'doorOpen', label: 'Rooms', color: 'purple' },
+  { id: 'chat', icon: 'messageSquare', label: 'Chat', color: 'blue' },
+  { id: 'activity', icon: 'activity', label: 'Activity', color: 'amber' },
+  { id: 'notes', icon: 'fileText', label: 'Notes', color: 'teal' },
+  { id: 'recording', icon: 'video', label: 'Recording', color: 'red' },
+  { id: 'settings', icon: 'slidersHorizontal', label: 'Settings', color: 'gray' },
 ];
 
 const DIVIDERS_AFTER = ['rooms', 'activity', 'recording'];

@@ -17,17 +17,7 @@
  */
 
 import React from 'react';
-import {
-    Users,
-    Search,
-    X,
-    UserPlus,
-    Settings,
-    Hand,
-    Home,
-    Layout,
-    Globe,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import { usePeopleTab, SUBTABS } from './hooks/usePeopleTab';
 import { RoomSubtab } from './components/RoomSubtab';
@@ -41,9 +31,9 @@ import './PeopleTab.scss';
 // =============================================================================
 
 const SUBTAB_ICONS = {
-    room: Home,
-    breakout: Layout,
-    project: Globe,
+    room: 'home',
+    breakout: 'layout',
+    project: 'globe',
 };
 
 // =============================================================================
@@ -57,7 +47,7 @@ function SubtabToggle({ activeTab, subtabs, onChange }) {
     return (
         <div className="people-tab__subtab-toggle">
             {subtabs.map(({ id, label, color }) => {
-                const Icon = SUBTAB_ICONS[id];
+                const iconName = SUBTAB_ICONS[id];
                 const isActive = activeTab === id;
 
                 return (
@@ -70,7 +60,7 @@ function SubtabToggle({ activeTab, subtabs, onChange }) {
                             background: isActive ? `${color}22` : undefined,
                         }}
                     >
-                        {Icon && <Icon size={11} />}
+                        {iconName && <Icon name={iconName} size={11} />}
                         {label}
                     </button>
                 );
@@ -115,7 +105,7 @@ export function PeopleTab({ workspaceId, roomId }) {
         <div className="people-tab">
             {/* Header */}
             <div className="panel-header">
-                <Users size={14} className="panel-header__icon file-icon--pink" />
+                <Icon name="users" size={14} className="panel-header__icon file-icon--pink" />
                 <span className="panel-header__title">People</span>
                 <span className="panel-header__count">{onlineCount} online</span>
             </div>
@@ -130,7 +120,7 @@ export function PeopleTab({ workspaceId, roomId }) {
             {/* Search */}
             <div className="panel-search">
                 <div className="panel-search__wrapper">
-                    <Search size={12} className="search-icon" />
+                    <Icon name="search" size={12} className="search-icon" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -139,7 +129,7 @@ export function PeopleTab({ workspaceId, roomId }) {
                     />
                     {searchQuery && (
                         <button className="clear-button" onClick={clearSearch}>
-                            <X size={10} />
+                            <Icon name="close" size={10} />
                         </button>
                     )}
                 </div>
@@ -182,14 +172,14 @@ export function PeopleTab({ workspaceId, roomId }) {
             {/* Footer */}
             <div className="panel-footer">
                 <button className="panel-footer__btn panel-footer__btn--primary">
-                    <UserPlus size={11} />
+                    <Icon name="userPlus" size={11} />
                     <span>Invite</span>
                 </button>
                 <button className="panel-footer__btn panel-footer__btn--icon" title="Raise Hand">
-                    <Hand size={11} />
+                    <Icon name="hand" size={11} />
                 </button>
                 <button className="panel-footer__btn panel-footer__btn--icon" title="Settings">
-                    <Settings size={11} />
+                    <Icon name="settings" size={11} />
                 </button>
             </div>
         </div>

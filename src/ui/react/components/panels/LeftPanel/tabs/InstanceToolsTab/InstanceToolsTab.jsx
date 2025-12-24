@@ -8,14 +8,7 @@
 // - Shows both view name (primary) and dataset name (secondary)
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-    Wrench,
-    Monitor,
-    Zap,
-    Layers,
-    MapPin,
-    Settings,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 // Import subtab components
 import { ToolsList } from './subtabs/ToolsSubtab';
@@ -33,9 +26,9 @@ import './InstanceToolsTab.scss';
 // =============================================================================
 
 const SUBTABS = [
-    { id: 'tools', label: 'Tools', icon: Zap, color: 'amber' },
-    { id: 'layers', label: 'Layers', icon: Layers, color: 'purple' },
-    { id: 'annotations', label: 'Annotations', icon: MapPin, color: 'pink' },
+    { id: 'tools', label: 'Tools', icon: 'activity', color: 'amber' },
+    { id: 'layers', label: 'Layers', icon: 'layers', color: 'purple' },
+    { id: 'annotations', label: 'Annotations', icon: 'mapPin', color: 'pink' },
 ];
 
 // =============================================================================
@@ -114,7 +107,7 @@ function ToolsSubtab({ activeInstance }) {
 function NoInstancePlaceholder() {
     return (
         <div className="instance-tools-tab__no-instance">
-            <Monitor size={32} />
+            <Icon name="monitor" size={32} />
             <h3>No Instance Selected</h3>
             <p>Click on an instance viewport to select it and view its tools.</p>
             <span className="instance-tools-tab__no-instance-hint">
@@ -271,7 +264,7 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                 PANEL HEADER - Matches Files and Datasets tabs
                 ============================================================ */}
             <div className="panel-header panel-header--amber">
-                <Wrench size={14} className="panel-header__icon" />
+                <Icon name="wrench" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Instance Tools</span>
                 {activeInstance && (
                     <span className="panel-header__count">1 active</span>
@@ -291,7 +284,7 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                         className="instance-tools-tab__instance-header"
                         style={{ '--instance-color': instanceInfo?.color || 'var(--color-accent-blue)' }}
                     >
-                        <Monitor size={14} />
+                        <Icon name="monitor" size={14} />
                         <div className="instance-tools-tab__instance-info">
                             <span className="instance-tools-tab__instance-name">
                                 {instanceInfo?.name || 'Untitled View'}
@@ -311,7 +304,7 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                         ======================================================== */}
                     <div className="instance-tools-tab__tabs">
                         {SUBTABS.map((tab) => {
-                            const Icon = tab.icon;
+                            const iconName = tab.icon;
                             const isActive = activeTab === tab.id;
 
                             return (
@@ -321,7 +314,7 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                                     data-color={tab.color}
                                     onClick={() => setActiveTab(tab.id)}
                                 >
-                                    <Icon size={12} />
+                                    <Icon name={iconName} size={12} />
                                     <span>{tab.label}</span>
                                 </button>
                             );

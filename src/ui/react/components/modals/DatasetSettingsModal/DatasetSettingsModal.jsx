@@ -21,7 +21,7 @@
  */
 
 import React from 'react';
-import { Database, Plus, Eye, Trash2, FileType, Settings } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '@UI/react/components/modals/Modal';
 import './DatasetSettingsModal.scss';
 
@@ -90,11 +90,11 @@ export function DatasetSettingsModal({
     const renderFooter = () => (
         <>
             <button className="btn btn--primary" onClick={handleCreateView}>
-                <Plus size={14} />
+                <Icon name="add" size={14} />
                 Create View
             </button>
             <button className="btn btn--danger" onClick={handleUnload}>
-                <Trash2 size={14} />
+                <Icon name="delete" size={14} />
                 Unload
             </button>
             <button className="btn btn--secondary" onClick={onClose}>
@@ -108,7 +108,7 @@ export function DatasetSettingsModal({
             isOpen={isOpen}
             onClose={onClose}
             title={dataset.filename || dataset.name || 'Dataset Settings'}
-            icon={Database}
+            icon={getIconComponent('database')}
             size="sm"
             footer={renderFooter()}
         >
@@ -116,7 +116,7 @@ export function DatasetSettingsModal({
                 {/* Dataset Info Section */}
                 <div className="dataset-settings-modal__section">
                     <h4>
-                        <FileType size={14} />
+                        <Icon name="file" size={14} />
                         Dataset Info
                     </h4>
                     <div className="dataset-settings-modal__info-grid">
@@ -136,7 +136,7 @@ export function DatasetSettingsModal({
                 {/* Views Section */}
                 <div className="dataset-settings-modal__section">
                     <h4>
-                        <Eye size={14} />
+                        <Icon name="eye" size={14} />
                         Views
                     </h4>
                     {views.length === 0 ? (
@@ -163,7 +163,7 @@ export function DatasetSettingsModal({
                 {/* Placeholder for future settings */}
                 <div className="dataset-settings-modal__section">
                     <h4>
-                        <Settings size={14} />
+                        <Icon name="settings" size={14} />
                         More Settings
                     </h4>
                     <div className="dataset-settings-modal__placeholder">

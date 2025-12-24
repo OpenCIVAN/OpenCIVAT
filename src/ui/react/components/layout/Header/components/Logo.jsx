@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Hexagon } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * Logo component that navigates to dashboard on click.
@@ -24,7 +24,7 @@ export function Logo({ onNavigate }) {
             aria-label="Go to dashboard"
             type="button"
         >
-            <Hexagon size={28} />
+            <Icon name="hexagon" size={28} />
         </button>
     );
 }

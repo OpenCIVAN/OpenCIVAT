@@ -26,16 +26,7 @@ import React, {
     useCallback,
     useEffect,
 } from 'react';
-import {
-    FolderOpen, // Files
-    Database, // Datasets
-    Eye, // Views
-    Wrench, // Instance Tools
-    LayoutGrid, // Layout
-    MapPin, // Annotations
-    Bookmark, // Bookmarks & Filters
-    MousePointer2, // Cursors
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 // =============================================================================
 // TAB CONTENT COMPONENTS - Lazy imports to avoid circular dependencies
@@ -56,7 +47,7 @@ export const LEFT_PANEL_TABS = [
     // DATA SOURCES
     {
         id: 'files',
-        icon: FolderOpen,
+        icon: 'folderOpen',
         label: 'Files',
         color: 'blue',
         group: 'data',
@@ -64,7 +55,7 @@ export const LEFT_PANEL_TABS = [
     },
     {
         id: 'datasets',
-        icon: Database,
+        icon: 'database',
         label: 'Datasets',
         color: 'teal',
         group: 'data',
@@ -73,7 +64,7 @@ export const LEFT_PANEL_TABS = [
     // VISUALIZATION
     {
         id: 'views',
-        icon: Eye,
+        icon: 'eye',
         label: 'Views',
         color: 'purple',
         group: 'visualization',
@@ -81,7 +72,7 @@ export const LEFT_PANEL_TABS = [
     },
     {
         id: 'tools',
-        icon: Wrench,
+        icon: 'wrench',
         label: 'Instance Tools',
         color: 'amber',
         group: 'visualization',
@@ -89,7 +80,7 @@ export const LEFT_PANEL_TABS = [
     },
     {
         id: 'layout',
-        icon: LayoutGrid,
+        icon: 'layoutGrid',
         label: 'Layout',
         color: 'green',
         group: 'visualization',
@@ -98,7 +89,7 @@ export const LEFT_PANEL_TABS = [
     // SPATIAL & STATE
     {
         id: 'annotations',
-        icon: MapPin,
+        icon: 'mapPin',
         label: 'Annotations',
         color: 'pink',
         group: 'spatial',
@@ -106,7 +97,7 @@ export const LEFT_PANEL_TABS = [
     },
     {
         id: 'bookmarks',
-        icon: Bookmark,
+        icon: 'bookmark',
         label: 'Bookmarks & Filters',
         color: 'indigo',
         group: 'spatial',
@@ -115,7 +106,7 @@ export const LEFT_PANEL_TABS = [
     // PRESENCE (future VR expansion)
     {
         id: 'cursors',
-        icon: MousePointer2,
+        icon: 'mousePointer',
         label: 'Cursors',
         color: 'cyan',
         group: 'presence',
@@ -200,11 +191,11 @@ export function isLeftPanelTabRegistered(tabId) {
  */
 function PlaceholderContent({ tabId }) {
     const tab = LEFT_PANEL_TABS.find(t => t.id === tabId) || LEFT_PANEL_TABS[0];
-    const Icon = tab.icon;
+    const iconName = tab.icon;
 
     return (
         <div className="left-panel__placeholder">
-            <Icon size={32} className="left-panel__placeholder-icon" data-color={tab.color} />
+            <Icon name={iconName} size={32} className="left-panel__placeholder-icon" data-color={tab.color} />
             <h3 className="left-panel__placeholder-title">{tab.label}</h3>
             <p className="left-panel__placeholder-text">
                 This tab is coming soon. It will contain {tab.label.toLowerCase()} management features.

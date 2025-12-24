@@ -5,18 +5,18 @@
  */
 
 import React, { useState } from 'react';
-import { Archive, UserCog, Trash2, AlertTriangle } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Button } from '@UI/react/components/common/Button';
 import '../SettingsTab.scss';
 
 /**
  * Danger action card component
  */
-function DangerAction({ icon: Icon, title, description, buttonText, buttonVariant = 'danger', onClick }) {
+function DangerAction({ icon: iconName, title, description, buttonText, buttonVariant = 'danger', onClick }) {
     return (
         <div className="settings-tab__danger-action">
             <div className="settings-tab__danger-icon">
-                <Icon size={16} />
+                <Icon name={iconName} size={16} />
             </div>
             <div className="settings-tab__danger-info">
                 <h4 className="settings-tab__danger-title">{title}</h4>
@@ -45,7 +45,7 @@ function ConfirmDialog({ title, message, confirmText, onConfirm, onCancel }) {
         <div className="settings-tab__confirm-overlay">
             <div className="settings-tab__confirm-dialog">
                 <div className="settings-tab__confirm-header">
-                    <AlertTriangle size={20} className="settings-tab__confirm-icon" />
+                    <Icon name="alertTriangle" size={20} className="settings-tab__confirm-icon" />
                     <h3>{title}</h3>
                 </div>
                 <p className="settings-tab__confirm-message">{message}</p>
@@ -121,13 +121,13 @@ export function DangerZone({ project }) {
     return (
         <div className="settings-tab__section settings-tab__section--danger">
             <div className="settings-tab__danger-warning">
-                <AlertTriangle size={14} />
+                <Icon name="alertTriangle" size={14} />
                 <span>These actions are permanent and cannot be undone.</span>
             </div>
 
             <div className="settings-tab__danger-actions">
                 <DangerAction
-                    icon={Archive}
+                    icon="archive"
                     title="Archive Project"
                     description="Make this project read-only. All data will be preserved but no changes can be made."
                     buttonText="Archive"
@@ -136,7 +136,7 @@ export function DangerZone({ project }) {
                 />
 
                 <DangerAction
-                    icon={UserCog}
+                    icon="userCog"
                     title="Transfer Ownership"
                     description="Transfer this project to another team member. They will become the new owner."
                     buttonText="Transfer"
@@ -145,7 +145,7 @@ export function DangerZone({ project }) {
                 />
 
                 <DangerAction
-                    icon={Trash2}
+                    icon="delete"
                     title="Delete Project"
                     description="Permanently delete this project and all its data. This action cannot be undone."
                     buttonText="Delete"

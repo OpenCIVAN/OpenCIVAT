@@ -9,12 +9,12 @@ const log = createLogger("scratchpad");
 
 // Default quick tools
 const DEFAULT_QUICK_TOOLS = [
-  { id: "measure", icon: "Ruler", label: "Measure Distance" },
-  { id: "angle", icon: "Protractor", label: "Measure Angle" },
-  { id: "note", icon: "StickyNote", label: "Add Note" },
-  { id: "link", icon: "Link2", label: "Link Views" },
-  { id: "compare", icon: "GitCompare", label: "Compare" },
-  { id: "macro", icon: "Zap", label: "Run Macro" },
+  { id: "measure", icon: "ruler", label: "Measure Distance" },
+  { id: "angle", icon: "protractor", label: "Measure Angle" },
+  { id: "note", icon: "stickyNote", label: "Add Note" },
+  { id: "link", icon: "link2", label: "Link Views" },
+  { id: "compare", icon: "gitCompare", label: "Compare" },
+  { id: "macro", icon: "zap", label: "Run Macro" },
 ];
 
 /**

@@ -8,14 +8,7 @@
 // - Keyboard accessible
 
 import React, { useEffect, useRef, useCallback } from "react";
-import {
-    Terminal,
-    Cpu,
-    ScrollText,
-    ChevronDown,
-    X,
-    GripHorizontal,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import {
     useBottomPanel,
     BottomPanelTabs,
@@ -29,19 +22,19 @@ const TABS = [
     {
         id: BottomPanelTabs.LOGS,
         label: "Logs",
-        icon: ScrollText,
+        icon: "scrollText",
         component: LogsTab,
     },
     {
         id: BottomPanelTabs.COMPUTE,
         label: "Compute",
-        icon: Cpu,
+        icon: "cpu",
         component: () => <ComputePlaceholder />,  // Future implementation
     },
     {
         id: BottomPanelTabs.CONSOLE,
         label: "Console",
-        icon: Terminal,
+        icon: "terminal",
         component: () => <ConsolePlaceholder />,  // Future implementation
     },
 ];
@@ -50,7 +43,7 @@ const TABS = [
 function ComputePlaceholder() {
     return (
         <div className="bottom-panel__placeholder">
-            <Cpu size={32} />
+            <Icon name="cpu" size={32} />
             <p>Compute Jobs</p>
             <span>Background processing status will appear here</span>
         </div>
@@ -60,7 +53,7 @@ function ComputePlaceholder() {
 function ConsolePlaceholder() {
     return (
         <div className="bottom-panel__placeholder">
-            <Terminal size={32} />
+            <Icon name="terminal" size={32} />
             <p>Debug Console</p>
             <span>Interactive debugging coming soon</span>
         </div>
@@ -145,14 +138,13 @@ export function BottomPanel() {
                 onMouseDown={handleMouseDown}
                 title="Drag to resize"
             >
-                <GripHorizontal size={14} />
+                <Icon name="gripHorizontal" size={14} />
             </div>
 
             {/* Header with tabs */}
             <div className="bottom-panel__header">
                 <div className="bottom-panel__tabs" role="tablist">
                     {TABS.map(tab => {
-                        const Icon = tab.icon;
                         const isActive = panel.activeTab === tab.id;
 
                         return (
@@ -163,7 +155,7 @@ export function BottomPanel() {
                                 className={`bottom-panel__tab ${isActive ? "bottom-panel__tab--active" : ""}`}
                                 onClick={() => panel.setActiveTab(tab.id)}
                             >
-                                <Icon size={14} />
+                                <Icon name={tab.icon} size={14} />
                                 <span>{tab.label}</span>
                             </button>
                         );
@@ -177,7 +169,7 @@ export function BottomPanel() {
                         title="Close panel (Escape)"
                         aria-label="Close panel"
                     >
-                        <ChevronDown size={16} />
+                        <Icon name="chevronDown" size={16} />
                     </button>
                 </div>
             </div>

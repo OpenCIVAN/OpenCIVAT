@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Settings, User, Building2, AlertTriangle, Loader } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -81,7 +81,7 @@ export function SettingsTab({
     if (loading) {
         return (
             <div className="settings-tab settings-tab--loading">
-                <Loader size={24} className="spin" />
+                <Icon name="loader" size={24} className="spin" />
             </div>
         );
     }
@@ -95,7 +95,7 @@ export function SettingsTab({
             >
                 <ResizableSection
                     id="preferences"
-                    icon={User}
+                    icon="user"
                     iconColorClass="icon-blue"
                     label="Your Preferences"
                 >
@@ -107,7 +107,7 @@ export function SettingsTab({
 
                 <ResizableSection
                     id="project"
-                    icon={Building2}
+                    icon="building"
                     iconColorClass="icon-purple"
                     label="Project Info"
                 >
@@ -117,7 +117,7 @@ export function SettingsTab({
                 {isAdmin && (
                     <ResizableSection
                         id="admin"
-                        icon={Settings}
+                        icon="settings"
                         iconColorClass="icon-amber"
                         label="Admin Settings"
                     >
@@ -131,7 +131,7 @@ export function SettingsTab({
                 {isOwner && (
                     <ResizableSection
                         id="danger"
-                        icon={AlertTriangle}
+                        icon="alertTriangle"
                         iconColorClass="icon-red"
                         label="Danger Zone"
                     >

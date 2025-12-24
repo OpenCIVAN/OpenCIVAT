@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { Users, Shield, Video, Lock, UserPlus } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Button } from '@UI/react/components/common/Button';
 import '../SettingsTab.scss';
 
@@ -34,11 +34,11 @@ function ToggleSwitch({ checked, onChange, label, description }) {
 /**
  * Settings group with icon header
  */
-function SettingsGroup({ icon: Icon, title, children }) {
+function SettingsGroup({ icon: iconName, title, children }) {
     return (
         <div className="settings-tab__group">
             <div className="settings-tab__group-header">
-                <Icon size={12} />
+                <Icon name={iconName} size={12} />
                 <span>{title}</span>
             </div>
             <div className="settings-tab__group-content">
@@ -87,7 +87,7 @@ export function AdminSettings({ projectId }) {
     return (
         <div className="settings-tab__section">
             {/* Member Management */}
-            <SettingsGroup icon={Users} title="Member Management">
+            <SettingsGroup icon="users" title="Member Management">
                 <ToggleSwitch
                     label="Allow Self-Join"
                     description="Users can join with project link"
@@ -110,14 +110,14 @@ export function AdminSettings({ projectId }) {
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={UserPlus}
+                        icon="userPlus"
                     >
                         Invite Members
                     </Button>
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={Users}
+                        icon="users"
                     >
                         Manage Members
                     </Button>
@@ -125,7 +125,7 @@ export function AdminSettings({ projectId }) {
             </SettingsGroup>
 
             {/* Recording Policy */}
-            <SettingsGroup icon={Video} title="Recording Policy">
+            <SettingsGroup icon="video" title="Recording Policy">
                 <ToggleSwitch
                     label="Allow Member Recording"
                     description="Members can start recordings"
@@ -147,7 +147,7 @@ export function AdminSettings({ projectId }) {
             </SettingsGroup>
 
             {/* Security */}
-            <SettingsGroup icon={Lock} title="Security">
+            <SettingsGroup icon="lock" title="Security">
                 <ToggleSwitch
                     label="Require MFA"
                     description="Members must use two-factor auth"
@@ -169,13 +169,13 @@ export function AdminSettings({ projectId }) {
             </SettingsGroup>
 
             {/* Roles & Permissions */}
-            <SettingsGroup icon={Shield} title="Roles & Permissions">
+            <SettingsGroup icon="shield" title="Roles & Permissions">
                 <div className="settings-tab__roles-info">
                     <p>Configure custom roles and permissions for project members.</p>
                     <Button
                         variant="secondary"
                         size="sm"
-                        icon={Shield}
+                        icon="shield"
                     >
                         Manage Roles
                     </Button>

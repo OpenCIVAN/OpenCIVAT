@@ -9,19 +9,7 @@
  */
 
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
-import {
-    GripVertical,
-    X,
-    Folder,
-    Globe,
-    Save,
-    Users,
-    Link2,
-    Lock,
-    Filter,
-    Settings,
-    LayoutGrid,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { SlidingPanel } from './components/SlidingPanel';
 import { ViewItemContextMenu } from './components/ViewItemContextMenu';
 import { ViewSettingsModal } from '@UI/react/components/modals/ViewSettingsModal';
@@ -33,13 +21,13 @@ import './ViewItem.scss';
 // =============================================================================
 
 const STATUS_ICONS = {
-    starredWorkspace: { icon: Folder, color: 'purple', tooltip: 'Saved to Workspace' },
-    starredPersonal: { icon: Globe, color: 'amber', tooltip: 'Saved to Personal' },
-    hasSavedState: { icon: Save, color: 'amber', tooltip: 'Has saved state' },
-    isShared: { icon: Users, color: 'pink', tooltip: 'Shared' },
-    isLocked: { icon: Lock, color: 'amber', tooltip: 'Locked' },
-    hasLinks: { icon: Link2, color: 'teal', tooltip: 'Linked properties' },
-    hasFilters: { icon: Filter, color: 'purple', tooltip: 'Active filters' },
+    starredWorkspace: { icon: 'folder', color: 'purple', tooltip: 'Saved to Workspace' },
+    starredPersonal: { icon: 'globe', color: 'amber', tooltip: 'Saved to Personal' },
+    hasSavedState: { icon: 'save', color: 'amber', tooltip: 'Has saved state' },
+    isShared: { icon: 'users', color: 'pink', tooltip: 'Shared' },
+    isLocked: { icon: 'unlock', color: 'amber', tooltip: 'Locked' },
+    hasLinks: { icon: 'link', color: 'teal', tooltip: 'Linked properties' },
+    hasFilters: { icon: 'filter', color: 'purple', tooltip: 'Active filters' },
 };
 
 // =============================================================================
@@ -249,7 +237,7 @@ export const ViewItem = memo(function ViewItem({
                     onMouseDown={(e) => onDragStart?.(e, view.id)}
                     onMouseUp={onDragEnd}
                 >
-                    <GripVertical size={14} />
+                    <Icon name="gripVertical" size={14} />
                 </div>
 
                 {/* Thumbnail with Status Ring */}
@@ -291,9 +279,9 @@ export const ViewItem = memo(function ViewItem({
                 {/* Status Icons (when not hovered) */}
                 {!isHovered && statusIcons.length > 0 && (
                     <div className="view-item__status-icons">
-                        {statusIcons.slice(0, 3).map(({ icon: Icon, color, key, count }) => (
+                        {statusIcons.slice(0, 3).map(({ icon, color, key, count }) => (
                             <span key={key} className={`view-item__status-icon view-item__status-icon--${color}`}>
-                                <Icon size={12} />
+                                <Icon name={icon} size={12} />
                                 {count > 1 && <span className="view-item__status-count">{count}</span>}
                             </span>
                         ))}
@@ -321,7 +309,7 @@ export const ViewItem = memo(function ViewItem({
                             onClick={(e) => { e.stopPropagation(); handleOpenSettings(); }}
                             title="Settings"
                         >
-                            <Settings size={12} />
+                            <Icon name="settings" size={12} />
                         </button>
                         {isPlaced ? (
                             <button
@@ -329,7 +317,7 @@ export const ViewItem = memo(function ViewItem({
                                 onClick={(e) => { e.stopPropagation(); handleClose(); }}
                                 title="Remove from Canvas"
                             >
-                                <X size={12} />
+                                <Icon name="close" size={12} />
                             </button>
                         ) : (
                             <button
@@ -337,7 +325,7 @@ export const ViewItem = memo(function ViewItem({
                                 onClick={(e) => { e.stopPropagation(); handlePlaceOnCanvas(); }}
                                 title="Place on Canvas"
                             >
-                                <LayoutGrid size={12} />
+                                <Icon name="layers" size={12} />
                             </button>
                         )}
                     </div>

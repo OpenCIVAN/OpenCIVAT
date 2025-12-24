@@ -32,7 +32,6 @@
  */
 
 import React, { memo } from 'react';
-import { LayoutGrid, Maximize2, Layers } from 'lucide-react';
 
 // Shared bar components (from common bars/ folder)
 import { StackedNavBlock, ActiveViewSelector, SegmentedToggle, WorkspaceSelector, RoomPresenceIndicator } from '@UI/react/components/bars';
@@ -46,10 +45,11 @@ import './SecondaryHeader.scss';
 // CONSTANTS
 // =============================================================================
 
+// Icons are now string names for the Icon component
 const VIEW_MODE_OPTIONS = [
-    { value: 'normal', icon: LayoutGrid, label: 'Normal View', accent: 'var(--color-accent-blue)' },
-    { value: 'isolation', icon: Maximize2, label: 'Isolation Mode', accent: 'var(--color-accent-amber)' },
-    { value: 'subset', icon: Layers, label: 'Subset Mode', accent: 'var(--color-accent-purple)' },
+    { value: 'normal', icon: 'grid', label: 'Normal View', accent: 'var(--color-accent-blue)' },
+    { value: 'isolation', icon: 'maximize', label: 'Isolation Mode', accent: 'var(--color-accent-amber)' },
+    { value: 'subset', icon: 'layers', label: 'Subset Mode', accent: 'var(--color-accent-purple)' },
 ];
 
 // =============================================================================

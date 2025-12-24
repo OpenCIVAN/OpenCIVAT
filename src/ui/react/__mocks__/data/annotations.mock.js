@@ -197,25 +197,25 @@ export function filterAnnotationsByTags(tags) {
 export const ANNOTATION_TYPE_CONFIG = {
   point: {
     name: "Point",
-    icon: "MapPin",
+    icon: "mapPin",
     color: "#60a5fa",
     description: "Single point marker",
   },
   region: {
     name: "Region",
-    icon: "Box",
+    icon: "box",
     color: "#34d399",
     description: "3D bounding region",
   },
   measurement: {
     name: "Measurement",
-    icon: "Ruler",
+    icon: "ruler",
     color: "#fbbf24",
     description: "Distance measurement",
   },
   angle: {
     name: "Angle",
-    icon: "CornerUpRight",
+    icon: "cornerUpRight",
     color: "#c084fc",
     description: "Angle measurement",
   },

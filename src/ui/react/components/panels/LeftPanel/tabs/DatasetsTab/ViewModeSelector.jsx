@@ -2,7 +2,7 @@
 // Toggle between list and tree view modes
 
 import React from 'react';
-import { List, FolderTree } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * ViewModeSelector - Toggle between view modes for the datasets panel
@@ -18,14 +18,14 @@ export function ViewModeSelector({ mode, onModeChange }) {
                 onClick={() => onModeChange('list')}
                 title="List view"
             >
-                <List size={12} />
+                <Icon name="list" size={12} />
             </button>
             <button
                 className={`view-mode-selector__btn ${mode === 'tree' ? 'view-mode-selector__btn--active' : ''}`}
                 onClick={() => onModeChange('tree')}
                 title="Tree view"
             >
-                <FolderTree size={12} />
+                <Icon name="folderTree" size={12} />
             </button>
         </div>
     );

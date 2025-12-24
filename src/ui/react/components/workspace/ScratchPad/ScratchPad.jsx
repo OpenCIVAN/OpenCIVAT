@@ -3,49 +3,27 @@
 // TODO: Style this component properly later
 
 import React, { memo } from 'react';
-import {
-    Clipboard,
-    ChevronUp,
-    ChevronDown,
-    Pin,
-    PinOff,
-    ExternalLink,
-    X,
-    Plus,
-    Trash2,
-    Ruler,
-    Triangle,
-    StickyNote,
-    Link2,
-    GitCompare,
-    Zap,
-    Database,
-    Eye,
-    FileText,
-    Filter,
-    Bookmark,
-    Settings,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useScratchPad, useScratchPadListener } from './ScratchPad.logic.js';
 import './ScratchPad.scss';
 
 // Icon mapping for clipboard item types
 const ITEM_TYPE_ICONS = {
-    dataset: Database,
-    view: Eye,
-    note: StickyNote,
-    filter: Filter,
-    bookmark: Bookmark,
+    dataset: 'database',
+    view: 'eye',
+    note: 'stickyNote',
+    filter: 'filter',
+    bookmark: 'bookmark',
 };
 
 // Icon mapping for quick tools
 const TOOL_ICONS = {
-    measure: Ruler,
-    angle: Triangle,
-    note: StickyNote,
-    link: Link2,
-    compare: GitCompare,
-    macro: Zap,
+    measure: 'ruler',
+    angle: 'triangle',
+    note: 'stickyNote',
+    link: 'link',
+    compare: 'gitCompare',
+    macro: 'zap',
 };
 
 /**
@@ -57,7 +35,7 @@ const ClipboardItem = memo(function ClipboardItem({
     onDragStart,
     onDragEnd,
 }) {
-    const Icon = ITEM_TYPE_ICONS[item.type] || FileText;
+    const iconName = ITEM_TYPE_ICONS[item.type] || 'file';
 
     return (
         <div
@@ -67,7 +45,7 @@ const ClipboardItem = memo(function ClipboardItem({
             onDragEnd={onDragEnd}
             title={`Drag to canvas: ${item.label}`}
         >
-            <Icon size={14} className="scratchpad-clipboard__item-icon" />
+            <Icon name={iconName} size={14} className="scratchpad-clipboard__item-icon" />
             <span className="scratchpad-clipboard__item-label">{item.label}</span>
             <button
                 className="scratchpad-clipboard__item-remove"
@@ -77,7 +55,7 @@ const ClipboardItem = memo(function ClipboardItem({
                 }}
                 title="Remove"
             >
-                <X size={10} />
+                <Icon name="close" size={10} />
             </button>
         </div>
     );
@@ -91,7 +69,7 @@ const QuickToolButton = memo(function QuickToolButton({
     isActive,
     onClick,
 }) {
-    const Icon = TOOL_ICONS[tool.id] || Zap;
+    const iconName = TOOL_ICONS[tool.id] || 'zap';
 
     return (
         <button
@@ -99,7 +77,7 @@ const QuickToolButton = memo(function QuickToolButton({
             onClick={() => onClick(tool.id)}
             title={tool.label}
         >
-            <Icon size={14} />
+            <Icon name={iconName} size={14} />
             <span>{tool.label.split(' ')[0]}</span>
         </button>
     );
@@ -115,12 +93,12 @@ export function ScratchPadCollapsed({ onClick, itemCount = 0 }) {
             onClick={onClick}
             title="Open Scratch Pad"
         >
-            <Clipboard size={14} />
+            <Icon name="clipboard" size={14} />
             <span>Scratch</span>
             {itemCount > 0 && (
                 <span className="scratchpad-trigger__count">{itemCount}</span>
             )}
-            <ChevronUp size={12} />
+            <Icon name="chevronUp" size={12} />
         </button>
     );
 }
@@ -150,7 +128,7 @@ export function ScratchPadExpanded({
             {/* Header */}
             <div className="scratchpad-panel__header">
                 <div className="scratchpad-panel__title">
-                    <Clipboard size={14} />
+                    <Icon name="clipboard" size={14} />
                     <span>Scratch Pad</span>
                 </div>
 
@@ -170,21 +148,21 @@ export function ScratchPadExpanded({
                         onClick={onTogglePin}
                         title={isPinned ? 'Unpin' : 'Pin'}
                     >
-                        {isPinned ? <PinOff size={12} /> : <Pin size={12} />}
+                        {isPinned ? <Icon name="pinOff" size={12} /> : <Icon name="pin" size={12} />}
                     </button>
                     <button
                         className="scratchpad-panel__action"
                         onClick={onToggleDetach}
                         title={isDetached ? 'Dock' : 'Detach'}
                     >
-                        <ExternalLink size={12} />
+                        <Icon name="externalLink" size={12} />
                     </button>
                     <button
                         className="scratchpad-panel__action"
                         onClick={onClose}
                         title="Close"
                     >
-                        <X size={12} />
+                        <Icon name="close" size={12} />
                     </button>
                 </div>
             </div>
@@ -199,7 +177,7 @@ export function ScratchPadExpanded({
                             onClick={onClearClipboard}
                             title="Clear all"
                         >
-                            <Trash2 size={10} />
+                            <Icon name="delete" size={10} />
                         </button>
                     )}
                 </div>
@@ -232,7 +210,7 @@ export function ScratchPadExpanded({
                 <div className="scratchpad-tools__header">
                     <span>Quick Tools</span>
                     <button className="scratchpad-tools__customize" title="Customize">
-                        <Settings size={10} />
+                        <Icon name="settings" size={10} />
                     </button>
                 </div>
 

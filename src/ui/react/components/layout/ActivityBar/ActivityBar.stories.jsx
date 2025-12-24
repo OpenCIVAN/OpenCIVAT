@@ -2,21 +2,7 @@
 // Storybook stories for ActivityBar component
 
 import React, { useState } from 'react';
-import {
-    FolderOpen,
-    Database,
-    Wrench,
-    LayoutGrid,
-    MapPin,
-    Filter,
-    Bookmark,
-    Users,
-    MessageSquare,
-    Mic,
-    StickyNote,
-    Video,
-    Activity,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { ActivityBar } from './ActivityBar.jsx';
 
 export default {
@@ -45,22 +31,22 @@ export default {
 // =============================================================================
 
 const LEFT_PANEL_TABS = [
-    { id: 'files', icon: FolderOpen, label: 'Files' },
-    { id: 'datasets', icon: Database, label: 'Datasets' },
-    { id: 'tools', icon: Wrench, label: 'Instance Tools' },
-    { id: 'layout', icon: LayoutGrid, label: 'Layout' },
-    { id: 'annotations', icon: MapPin, label: 'Annotations', badge: 3 },
-    { id: 'filters', icon: Filter, label: 'Saved Filters' },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
+    { id: 'files', icon: 'folderOpen', label: 'Files' },
+    { id: 'datasets', icon: 'database', label: 'Datasets' },
+    { id: 'tools', icon: 'wrench', label: 'Instance Tools' },
+    { id: 'layout', icon: 'grid', label: 'Layout' },
+    { id: 'annotations', icon: 'mapPin', label: 'Annotations', badge: 3 },
+    { id: 'filters', icon: 'filter', label: 'Saved Filters' },
+    { id: 'bookmarks', icon: 'bookmark', label: 'Bookmarks' },
 ];
 
 const RIGHT_PANEL_TABS = [
-    { id: 'people', icon: Users, label: 'People', badge: 4 },
-    { id: 'chat', icon: MessageSquare, label: 'Chat', badge: 12, badgeColor: '#fb7185' },
-    { id: 'voice', icon: Mic, label: 'Voice' },
-    { id: 'notes', icon: StickyNote, label: 'Notes' },
-    { id: 'recording', icon: Video, label: 'Recording' },
-    { id: 'activity', icon: Activity, label: 'Activity' },
+    { id: 'people', icon: 'users', label: 'People', badge: 4 },
+    { id: 'chat', icon: 'messageSquare', label: 'Chat', badge: 12, badgeColor: '#fb7185' },
+    { id: 'voice', icon: 'mic', label: 'Voice' },
+    { id: 'notes', icon: 'stickyNote', label: 'Notes' },
+    { id: 'recording', icon: 'video', label: 'Recording' },
+    { id: 'activity', icon: 'activity', label: 'Activity' },
 ];
 
 // =============================================================================
@@ -196,10 +182,10 @@ export const WithBadges = {
     args: {
         side: 'right',
         tabs: [
-            { id: 'people', icon: Users, label: 'People', badge: 8 },
-            { id: 'chat', icon: MessageSquare, label: 'Chat', badge: 99, badgeColor: '#fb7185' },
-            { id: 'voice', icon: Mic, label: 'Voice' },
-            { id: 'activity', icon: Activity, label: 'Activity', badge: 3, badgeColor: '#fbbf24' },
+            { id: 'people', icon: 'users', label: 'People', badge: 8 },
+            { id: 'chat', icon: 'messageSquare', label: 'Chat', badge: 99, badgeColor: '#fb7185' },
+            { id: 'voice', icon: 'mic', label: 'Voice' },
+            { id: 'activity', icon: 'activity', label: 'Activity', badge: 3, badgeColor: '#fbbf24' },
         ],
         isPanelOpen: true,
     },
@@ -222,8 +208,8 @@ export const MinimalTabs = {
     args: {
         side: 'left',
         tabs: [
-            { id: 'files', icon: FolderOpen, label: 'Files' },
-            { id: 'datasets', icon: Database, label: 'Datasets' },
+            { id: 'files', icon: 'folderOpen', label: 'Files' },
+            { id: 'datasets', icon: 'database', label: 'Datasets' },
         ],
         isPanelOpen: true,
     },
@@ -246,10 +232,10 @@ export const CustomColors = {
     args: {
         side: 'left',
         tabs: [
-            { id: 'data', icon: Database, label: 'Data', color: '#60a5fa' },
-            { id: 'analysis', icon: Wrench, label: 'Analysis', color: '#c084fc' },
-            { id: 'viz', icon: LayoutGrid, label: 'Visualization', color: '#fb7185' },
-            { id: 'collab', icon: Users, label: 'Collaboration', color: '#34d399' },
+            { id: 'data', icon: 'database', label: 'Data', color: '#60a5fa' },
+            { id: 'analysis', icon: 'wrench', label: 'Analysis', color: '#c084fc' },
+            { id: 'viz', icon: 'grid', label: 'Visualization', color: '#fb7185' },
+            { id: 'collab', icon: 'users', label: 'Collaboration', color: '#34d399' },
         ],
         isPanelOpen: true,
     },

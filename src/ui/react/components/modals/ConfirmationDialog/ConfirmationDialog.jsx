@@ -55,7 +55,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal } from '../Modal';
-import { Info, AlertTriangle, Trash2 } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import './ConfirmationDialog.scss';
 
 /**
@@ -85,13 +85,13 @@ import './ConfirmationDialog.scss';
  */
 
 /**
- * Default icons for each severity level.
+ * Default icon names for each severity level.
  * Used when no custom icon is provided.
  */
 const DEFAULT_ICONS = {
-    info: Info,
-    warning: AlertTriangle,
-    danger: Trash2
+    info: 'info',
+    warning: 'warning',
+    danger: 'delete'
 };
 
 /**
@@ -145,8 +145,9 @@ function ConfirmationDialog({
         ? enterKeyEnabled
         : severity !== 'danger';
 
-    // Determine the icon to use
-    const IconComponent = icon || DEFAULT_ICONS[severity] || Info;
+    // Determine the icon to use - get the component from the Icon system
+    const iconName = icon || DEFAULT_ICONS[severity] || 'info';
+    const IconComponent = typeof iconName === 'string' ? getIconComponent(iconName) : iconName;
 
     /**
      * Validates the confirmation input.

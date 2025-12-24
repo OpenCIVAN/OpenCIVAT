@@ -1,6 +1,6 @@
 // src/ui/react/components/workspace/SliderMenuOption.stories.jsx
 import React, { useState } from "react";
-import { Circle, Sun, Volume2, Maximize, RotateCcw, Layers } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { SliderMenuOption } from "./SliderMenuOption";
 
 export default {
@@ -48,7 +48,7 @@ export const WithIcon = {
         const [value, setValue] = useState(0.75);
         return (
             <SliderMenuOption
-                icon={<Circle size={14} />}
+                icon={<Icon name="circle" size={14} />}
                 label="Opacity"
                 value={value}
                 onChange={setValue}
@@ -63,7 +63,7 @@ export const WithDescription = {
         const [value, setValue] = useState(0.5);
         return (
             <SliderMenuOption
-                icon={<Sun size={14} />}
+                icon={<Icon name="sun" size={14} />}
                 label="Brightness"
                 description="Adjust the brightness of the visualization"
                 value={value}
@@ -79,7 +79,7 @@ export const WithPresets = {
         const [value, setValue] = useState(0.5);
         return (
             <SliderMenuOption
-                icon={<Circle size={14} />}
+                icon={<Icon name="circle" size={14} />}
                 label="Opacity"
                 value={value}
                 onChange={setValue}
@@ -95,7 +95,7 @@ export const CustomRange = {
         const [value, setValue] = useState(50);
         return (
             <SliderMenuOption
-                icon={<Volume2 size={14} />}
+                icon={<Icon name="volume2" size={14} />}
                 label="Volume"
                 value={value}
                 min={0}
@@ -111,7 +111,7 @@ export const CustomRange = {
 export const Disabled = {
     render: () => (
         <SliderMenuOption
-            icon={<Layers size={14} />}
+            icon={<Icon name="layers" size={14} />}
             label="Layer Depth"
             value={0.5}
             onChange={() => { }}
@@ -130,7 +130,7 @@ export const PointSizeSlider = {
         const [value, setValue] = useState(5);
         return (
             <SliderMenuOption
-                icon={<Circle size={14} />}
+                icon={<Icon name="circle" size={14} />}
                 label="Point Size"
                 description="Size of points in point cloud"
                 value={value}
@@ -149,7 +149,7 @@ export const ZoomSlider = {
         const [value, setValue] = useState(1);
         return (
             <SliderMenuOption
-                icon={<Maximize size={14} />}
+                icon={<Icon name="maximize" size={14} />}
                 label="Zoom Level"
                 value={value}
                 min={0.1}
@@ -168,7 +168,7 @@ export const RotationSlider = {
         const [value, setValue] = useState(0);
         return (
             <SliderMenuOption
-                icon={<RotateCcw size={14} />}
+                icon={<Icon name="rotateCcw" size={14} />}
                 label="Rotation"
                 value={value}
                 min={0}
@@ -209,7 +209,7 @@ export const InMenuContext = {
                 </div>
 
                 <SliderMenuOption
-                    icon={<Circle size={14} />}
+                    icon={<Icon name="circle" size={14} />}
                     label="Opacity"
                     value={opacity}
                     onChange={setOpacity}
@@ -219,7 +219,7 @@ export const InMenuContext = {
                 <div style={{ height: "1px", background: "#333", margin: "4px 0" }} />
 
                 <SliderMenuOption
-                    icon={<Circle size={14} />}
+                    icon={<Icon name="circle" size={14} />}
                     label="Point Size"
                     value={pointSize}
                     min={1}
@@ -232,7 +232,7 @@ export const InMenuContext = {
                 <div style={{ height: "1px", background: "#333", margin: "4px 0" }} />
 
                 <SliderMenuOption
-                    icon={<Sun size={14} />}
+                    icon={<Icon name="sun" size={14} />}
                     label="Brightness"
                     value={brightness}
                     min={0}
@@ -273,7 +273,7 @@ export const InteractiveDemo = {
         return (
             <div>
                 <SliderMenuOption
-                    icon={<Circle size={14} />}
+                    icon={<Icon name="circle" size={14} />}
                     label="Interactive Slider"
                     description="Drag to see real-time updates"
                     value={value}

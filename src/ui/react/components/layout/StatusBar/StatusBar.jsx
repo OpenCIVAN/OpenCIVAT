@@ -3,22 +3,7 @@
 // Matches artifact design with left/center/right zones
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-    Wifi,
-    WifiOff,
-    Users,
-    AlertTriangle,
-    Eye,
-    EyeOff,
-    Circle,
-    Zap,
-    ChevronUp,
-    Shield,
-    ShieldAlert,
-    Pause,
-    Square,
-    Cpu,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
 import { getBottomPanelControls } from '@UI/react/components/panels/BottomPanel';
@@ -38,7 +23,7 @@ function SyncStatus({ isConnected, isSyncing }) {
     if (!isConnected) {
         return (
             <div className="status-bar__item status-bar__item--error">
-                <WifiOff size={10} />
+                <Icon name="wifiOff" size={10} />
                 <span>Offline</span>
             </div>
         );
@@ -47,7 +32,7 @@ function SyncStatus({ isConnected, isSyncing }) {
     if (isSyncing) {
         return (
             <div className="status-bar__item status-bar__item--warning">
-                <Wifi size={10} />
+                <Icon name="wifi" size={10} />
                 <span>Syncing...</span>
             </div>
         );
@@ -55,7 +40,7 @@ function SyncStatus({ isConnected, isSyncing }) {
 
     return (
         <div className="status-bar__item status-bar__item--success">
-            <Wifi size={10} />
+            <Icon name="wifi" size={10} />
             <span>Synced</span>
         </div>
     );
@@ -81,7 +66,7 @@ function OnlineUsersIndicator({ count }) {
             onMouseEnter={handleMouseEnter}
             onMouseLeave={() => setShowPopover(false)}
         >
-            <Users size={10} />
+            <Icon name="users" size={10} />
             <span>{count} online</span>
 
             {showPopover && users.length > 0 && (
@@ -92,7 +77,8 @@ function OnlineUsersIndicator({ count }) {
                             const statusColor = getStatusColorHex(user.status);
                             return (
                                 <div key={user.userId} className="online-popover__user">
-                                    <Circle
+                                    <Icon
+                                        name="circle"
                                         size={8}
                                         fill={statusColor}
                                         stroke={statusColor}
@@ -129,7 +115,7 @@ function WarningsIndicator({ count }) {
 
     return (
         <div className="status-bar__item status-bar__item--warning">
-            <AlertTriangle size={10} />
+            <Icon name="alertTriangle" size={10} />
             <span>{count} {count === 1 ? 'warning' : 'warnings'}</span>
         </div>
     );
@@ -145,7 +131,7 @@ function CursorsToggle({ visible, onToggle }) {
             onClick={onToggle}
             title={visible ? 'Hide cursors' : 'Show cursors'}
         >
-            {visible ? <Eye size={10} /> : <EyeOff size={10} />}
+            {visible ? <Icon name="eye" size={10} /> : <Icon name="eyeOff" size={10} />}
             <span>Cursors</span>
         </button>
     );
@@ -200,7 +186,8 @@ function RecordingControls({
                 onClick={onClick}
                 title="Open Recording panel"
             >
-                <Circle
+                <Icon
+                    name="circle"
                     size={8}
                     className={`status-bar__recording-dot ${isPaused ? 'paused' : ''}`}
                 />
@@ -212,14 +199,14 @@ function RecordingControls({
                 onClick={onPause}
                 title={isPaused ? 'Resume' : 'Pause'}
             >
-                <Pause size={10} />
+                <Icon name="pause" size={10} />
             </button>
             <button
                 className="status-bar__recording-btn status-bar__recording-btn--stop"
                 onClick={onStop}
                 title="Stop recording"
             >
-                <Square size={10} />
+                <Icon name="square" size={10} />
             </button>
         </div>
     );
@@ -241,7 +228,7 @@ function MemoryUsage({ gpuUsage, ramUsage, onClick }) {
             onClick={onClick}
             title="Click for memory breakdown"
         >
-            <Cpu size={10} />
+            <Icon name="cpu" size={10} />
             <span>{ramUsage}%</span>
         </button>
     );
@@ -259,7 +246,7 @@ function FPSCounter({ fps }) {
 
     return (
         <div className={`status-bar__item ${getFpsClass()}`}>
-            <Zap size={10} />
+            <Icon name="zap" size={10} />
             <span>{fps} FPS</span>
         </div>
     );
@@ -275,7 +262,7 @@ function AuthModeIndicator({ isDevMode, isAuthenticated, userName }) {
                 className="status-bar__item status-bar__item--dev-mode"
                 title="Development mode - authentication bypassed"
             >
-                <ShieldAlert size={10} />
+                <Icon name="shieldAlert" size={10} />
                 <span>Dev Mode</span>
             </div>
         );
@@ -287,7 +274,7 @@ function AuthModeIndicator({ isDevMode, isAuthenticated, userName }) {
                 className="status-bar__item status-bar__item--auth"
                 title={userName ? `Signed in as ${userName}` : 'Authenticated'}
             >
-                <Shield size={10} />
+                <Icon name="shield" size={10} />
                 <span>Secure</span>
             </div>
         );
@@ -545,7 +532,7 @@ export function StatusBar() {
                         onClick={handleWarningsClick}
                         title="Click to view logs"
                     >
-                        <AlertTriangle size={12} />
+                        <Icon name="alertTriangle" size={12} />
                         <span>{warningCount}</span>
                     </button>
                 )}
@@ -602,7 +589,7 @@ export function StatusBar() {
                     title="Toggle output panel"
                     aria-label="Toggle output panel"
                 >
-                    <ChevronUp size={14} />
+                    <Icon name="chevronUp" size={14} />
                 </button>
             </div>
         </div>

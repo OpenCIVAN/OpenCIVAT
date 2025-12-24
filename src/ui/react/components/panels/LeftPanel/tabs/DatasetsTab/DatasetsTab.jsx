@@ -16,26 +16,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import {
-    Database,
-    Search,
-    X,
-    Eye,
-    Archive,
-    Users,
-    ChevronDown,
-    FolderOpen,
-    RefreshCw,
-    Plus,
-    Settings,
-    MoreHorizontal,
-    HardDrive,
-    Clock,
-    Download,
-    Share2,
-    Trash2,
-} from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { Icon, getLucideIcon } from '@UI/react/components/common/Icon';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
@@ -54,9 +35,9 @@ import './DatasetsTab.scss';
 // =============================================================================
 
 const getFilterChips = (counts) => [
-    { id: 'active', label: 'Active', icon: Eye, color: 'green', count: counts.active },
-    { id: 'inactive', label: 'Inactive', icon: Archive, color: 'gray', count: counts.inactive },
-    { id: 'shared', label: 'Shared', icon: Users, color: 'pink', count: counts.shared },
+    { id: 'active', label: 'Active', icon: 'eye', color: 'green', count: counts.active },
+    { id: 'inactive', label: 'Inactive', icon: 'archive', color: 'gray', count: counts.inactive },
+    { id: 'shared', label: 'Shared', icon: 'users', color: 'pink', count: counts.shared },
 ];
 
 // =============================================================================
@@ -67,8 +48,7 @@ const getDatasetTypeConfig = (fileType) => {
     const displayInfo = getFileTypeDisplayInfo(fileType);
 
     if (displayInfo) {
-        const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
-        const IconComponent = LucideIcons[iconName] || LucideIcons.Box;
+        const IconComponent = getLucideIcon(displayInfo.icon);
 
         return {
             icon: IconComponent,
@@ -78,7 +58,7 @@ const getDatasetTypeConfig = (fileType) => {
     }
 
     return {
-        icon: LucideIcons.Database,
+        icon: getLucideIcon('Database'),
         color: '#6B7280',
         label: fileType?.toUpperCase() || 'Data',
     };
@@ -263,7 +243,7 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                     <div className="dataset-parent__header-content" onClick={onToggle} ref={dragImageRef}>
                         {/* Chevron - centered vertically, rotates on expand */}
                         <span className={`dataset-parent__chevron ${isExpanded ? 'dataset-parent__chevron--expanded' : ''}`}>
-                            <ChevronDown size={12} />
+                            <Icon name="chevronDown" size={12} />
                         </span>
 
                         {/* Type icon with colored background */}
@@ -288,13 +268,13 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                                 </span>
                                 {sizeDisplay && (
                                     <span className="dataset-parent__meta-item">
-                                        <HardDrive size={8} />
+                                        <Icon name="hardDrive" size={8} />
                                         {sizeDisplay}
                                     </span>
                                 )}
                                 {loadedDisplay && (
                                     <span className="dataset-parent__meta-item">
-                                        <Clock size={8} />
+                                        <Icon name="clock" size={8} />
                                         {loadedDisplay}
                                     </span>
                                 )}
@@ -315,21 +295,21 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                             onClick={handleCreateView}
                             title="Add view to canvas"
                         >
-                            <Plus size={11} />
+                            <Icon name="add" size={11} />
                         </button>
                         <button
                             className="dataset-parent__actions-btn"
                             onClick={handleOpenSettings}
                             title="Settings"
                         >
-                            <Settings size={11} />
+                            <Icon name="settings" size={11} />
                         </button>
                         <button
                             className="dataset-parent__actions-btn"
                             onClick={handleMoreActions}
                             title="More actions"
                         >
-                            <MoreHorizontal size={11} />
+                            <Icon name="moreHorizontal" size={11} />
                         </button>
                     </div>
                 </div>
@@ -340,20 +320,20 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                         <div className="dataset-parent__menu-backdrop" onClick={handleCloseMenu} />
                         <div className="dataset-parent__menu">
                             <button className="dataset-parent__menu-item" onClick={handleCreateView}>
-                                <Plus size={12} />
+                                <Icon name="add" size={12} />
                                 <span>Create View</span>
                             </button>
                             <button className="dataset-parent__menu-item" onClick={handleOpenSettings}>
-                                <Settings size={12} />
+                                <Icon name="settings" size={12} />
                                 <span>Dataset Settings</span>
                             </button>
                             <div className="dataset-parent__menu-divider" />
                             <button className="dataset-parent__menu-item" onClick={handleDownload}>
-                                <Download size={12} />
+                                <Icon name="download" size={12} />
                                 <span>Download</span>
                             </button>
                             <button className="dataset-parent__menu-item" onClick={handleShare}>
-                                <Share2 size={12} />
+                                <Icon name="share2" size={12} />
                                 <span>Share</span>
                             </button>
                             <div className="dataset-parent__menu-divider" />
@@ -361,7 +341,7 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                                 className="dataset-parent__menu-item dataset-parent__menu-item--danger"
                                 onClick={handleUnloadDataset}
                             >
-                                <Trash2 size={12} />
+                                <Icon name="delete" size={12} />
                                 <span>Unload Dataset</span>
                             </button>
                         </div>
@@ -379,7 +359,7 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                             </div>
                         ) : (
                             <div className="dataset-parent__empty">
-                                <Database size={20} />
+                                <Icon name="database" size={20} />
                                 <span>No views created yet</span>
                             </div>
                         )}
@@ -390,14 +370,14 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
                                 className="dataset-parent__footer-btn dataset-parent__footer-btn--primary"
                                 onClick={handleCreateView}
                             >
-                                <Plus size={11} />
+                                <Icon name="add" size={11} />
                                 Add View
                             </button>
                             <button
                                 className="dataset-parent__footer-btn dataset-parent__footer-btn--secondary"
                                 onClick={handleOpenSettings}
                             >
-                                <Settings size={11} />
+                                <Icon name="settings" size={11} />
                                 Settings
                             </button>
                         </div>
@@ -564,14 +544,14 @@ export function DatasetsPanelContent({ workspaceId }) {
         <div className="datasets-tab">
             {/* Header */}
             <div className="panel-header panel-header--teal">
-                <Database size={14} className="panel-header__icon" />
+                <Icon name="database" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Datasets</span>
             </div>
 
             {/* Search */}
             <div className="datasets-tab__search-row">
                 <div className="datasets-tab__search">
-                    <Search size={12} className="datasets-tab__search-icon" />
+                    <Icon name="search" size={12} className="datasets-tab__search-icon" />
                     <input
                         type="text"
                         className="datasets-tab__search-input"
@@ -584,7 +564,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                             className="datasets-tab__search-clear"
                             onClick={() => setSearchQuery('')}
                         >
-                            <X size={10} />
+                            <Icon name="close" size={10} />
                         </button>
                     )}
                 </div>
@@ -605,7 +585,7 @@ export function DatasetsPanelContent({ workspaceId }) {
                 <div className="datasets-tab__list">
                     {filteredDatasets.length === 0 ? (
                         <div className="datasets-tab__empty">
-                            <Database size={32} />
+                            <Icon name="database" size={32} />
                             <h3>No datasets loaded</h3>
                             <p>Load a dataset to get started</p>
                         </div>
@@ -632,11 +612,11 @@ export function DatasetsPanelContent({ workspaceId }) {
                     className="panel-footer__btn panel-footer__btn--primary"
                     onClick={handleLoadDataset}
                 >
-                    <FolderOpen size={11} />
+                    <Icon name="folderOpen" size={11} />
                     <span>Load Dataset</span>
                 </button>
                 <button className="panel-footer__btn panel-footer__btn--icon" title="Refresh">
-                    <RefreshCw size={11} />
+                    <Icon name="refresh" size={11} />
                 </button>
             </div>
         </div>

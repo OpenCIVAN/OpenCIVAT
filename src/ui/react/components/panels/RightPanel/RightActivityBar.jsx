@@ -7,7 +7,7 @@
 //      "Soon" badge when explicitly marked as not implemented
 
 import React from 'react';
-import { PanelRightClose, ChevronLeft } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 // Uses existing styles from RightPanel.scss - no separate SCSS needed
@@ -55,7 +55,7 @@ export function RightActivityBar() {
             {/* Tab buttons */}
             <div className="right-panel__activity-tabs">
                 {RIGHT_PANEL_TABS.map((tab) => {
-                    const Icon = tab.icon;
+                    const iconName = tab.icon;
                     const isActive = activeTab === tab.id;
 
                     return (
@@ -68,7 +68,7 @@ export function RightActivityBar() {
                             aria-label={tab.label}
                             aria-selected={isActive}
                         >
-                            <Icon size={18} />
+                            <Icon name={iconName} size={18} />
                             {/* FIX: Only show "Soon" if explicitly set to false */}
                             {tab.implemented === false && (
                                 <span className="right-panel__activity-badge">Soon</span>
@@ -88,7 +88,7 @@ export function RightActivityBar() {
                 title={isOpen ? 'Collapse Panel' : 'Expand Panel'}
                 aria-label={isOpen ? 'Collapse Panel' : 'Expand Panel'}
             >
-                {isOpen ? <PanelRightClose size={18} /> : <ChevronLeft size={18} />}
+                {isOpen ? <Icon name="panelRightClose" size={18} /> : <Icon name="chevronLeft" size={18} />}
             </button>
         </div>
     );

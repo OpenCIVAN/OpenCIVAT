@@ -18,16 +18,7 @@
  */
 
 import React, { memo } from 'react';
-import {
-    Search,
-    Clock,
-    Folder,
-    Database,
-    Eye,
-    Users,
-    MessageSquare,
-    FileQuestion
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { SearchResultItem, TYPE_LABELS } from './SearchResultItem';
 import { EmptyState as CommonEmptyState } from '@UI/react/components/common/EmptyState';
 
@@ -53,15 +44,15 @@ import { EmptyState as CommonEmptyState } from '@UI/react/components/common/Empt
  */
 
 /**
- * Group type icons for headers
+ * Group type icon names for headers
  */
 const GROUP_ICONS = {
-    project: Folder,
-    dataset: Database,
-    view: Eye,
-    person: Users,
-    annotation: MessageSquare,
-    room: Users,
+    project: 'folder',
+    dataset: 'database',
+    view: 'eye',
+    person: 'users',
+    annotation: 'messageSquare',
+    room: 'users',
 };
 
 /**
@@ -85,7 +76,7 @@ const EmptyState = memo(function EmptyState({ query, type = 'no-results' }) {
         return (
             <div className="global-search__empty">
                 <CommonEmptyState
-                    icon={FileQuestion}
+                    icon="help"
                     title={`No results found for "${query}"`}
                     description="Try adjusting your search or filter criteria"
                 />
@@ -96,7 +87,7 @@ const EmptyState = memo(function EmptyState({ query, type = 'no-results' }) {
     return (
         <div className="global-search__empty">
             <CommonEmptyState
-                icon={Search}
+                icon="search"
                 title="Start typing to search"
                 description="Search across projects, datasets, views, and more"
             />
@@ -136,7 +127,7 @@ const RecentSearches = memo(function RecentSearches({
                         className="global-search__recent-item"
                         onClick={() => onSelect(query)}
                     >
-                        <Clock size={14} />
+                        <Icon name="clock" size={14} />
                         <span>{query}</span>
                     </button>
                 ))}
@@ -156,13 +147,13 @@ const ResultGroup = memo(function ResultGroup({
     startIndex,
     onSelect
 }) {
-    const Icon = GROUP_ICONS[type] || Folder;
+    const iconName = GROUP_ICONS[type] || 'folder';
     const label = GROUP_LABELS[type] || type;
 
     return (
         <div className="global-search__group">
             <div className="global-search__group-header">
-                <Icon size={14} />
+                <Icon name={iconName} size={14} />
                 <span>{label}</span>
                 <span className="global-search__group-count">({items.length})</span>
             </div>

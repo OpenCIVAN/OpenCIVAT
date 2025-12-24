@@ -8,22 +8,7 @@
 // - Grid size display
 
 import React, { useState, useCallback } from 'react';
-import {
-    Plus,
-    Minus,
-    Grid3X3,
-    Combine,
-    SplitSquareHorizontal,
-    Settings,
-    ChevronLeft,
-    ChevronRight,
-    ChevronUp,
-    ChevronDown,
-    X,
-    Check,
-    Rows,
-    Columns,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useCanvas } from '@UI/react/hooks/useCanvas.js';
 import './GridEditOverlay.scss';
 
@@ -72,7 +57,7 @@ export function GridEditOverlay({
                 onClick={onToggleEditMode}
                 title={editMode ? 'Exit edit mode' : 'Edit grid layout'}
             >
-                <Grid3X3 size={16} />
+                <Icon name="grid3x3" size={16} />
             </button>
 
             {/* Edit Mode Controls */}
@@ -86,7 +71,7 @@ export function GridEditOverlay({
                             disabled={!canAddRow}
                             title="Add row"
                         >
-                            <Plus size={14} />
+                            <Icon name="add" size={14} />
                             <span>Row</span>
                         </button>
                     </div>
@@ -99,7 +84,7 @@ export function GridEditOverlay({
                             disabled={!canAddRow}
                             title="Add row"
                         >
-                            <Plus size={14} />
+                            <Icon name="add" size={14} />
                             <span>Row</span>
                         </button>
                     </div>
@@ -112,7 +97,7 @@ export function GridEditOverlay({
                             disabled={!canAddCol}
                             title="Add column"
                         >
-                            <Plus size={14} />
+                            <Icon name="add" size={14} />
                             <span>Col</span>
                         </button>
                     </div>
@@ -125,7 +110,7 @@ export function GridEditOverlay({
                             disabled={!canAddCol}
                             title="Add column"
                         >
-                            <Plus size={14} />
+                            <Icon name="add" size={14} />
                             <span>Col</span>
                         </button>
                     </div>
@@ -142,7 +127,7 @@ export function GridEditOverlay({
                                     onClick={() => onMergeCells?.(selectedCells)}
                                     title="Merge selected cells"
                                 >
-                                    <Combine size={14} />
+                                    <Icon name="combine" size={14} />
                                     <span>Merge</span>
                                 </button>
                             )}
@@ -151,7 +136,7 @@ export function GridEditOverlay({
                                 onClick={onClearSelection}
                                 title="Clear selection"
                             >
-                                <X size={14} />
+                                <Icon name="close" size={14} />
                             </button>
                         </div>
                     )}
@@ -159,7 +144,7 @@ export function GridEditOverlay({
                     {/* Grid Info Panel */}
                     <div className="grid-edit-overlay__info-panel">
                         <div className="grid-edit-overlay__grid-size">
-                            <Grid3X3 size={12} />
+                            <Icon name="grid3x3" size={12} />
                             <span>{cols} × {rows}</span>
                         </div>
                         <div className="grid-edit-overlay__viewport-info">

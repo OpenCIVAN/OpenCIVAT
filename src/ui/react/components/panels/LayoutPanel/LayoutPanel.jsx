@@ -5,7 +5,7 @@
 // LayoutPanel.logic.js to ensure consistent comparisons with FloatingCanvasNavigator.
 
 import React, { memo, useContext } from 'react';
-import { LayoutGrid, Map, Layers, Loader2, WifiOff, AlertCircle } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useLayoutPanel } from './LayoutPanel.logic';
 import LayoutPanelContext, { DOCK_POSITIONS } from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';
@@ -15,8 +15,8 @@ import './LayoutPanel.scss';
 
 // Subtab configuration
 const SUBTABS = [
-    { id: 'canvas', label: 'Canvas', icon: Map, color: 'amber' },
-    { id: 'views', label: 'Views', icon: Layers, color: 'purple' },
+    { id: 'canvas', label: 'Canvas', icon: 'map', color: 'amber' },
+    { id: 'views', label: 'Views', icon: 'layers', color: 'purple' },
 ];
 
 /**
@@ -81,7 +81,7 @@ export const LayoutPanel = memo(function LayoutPanel({
         return (
             <div className={`layout-panel layout-panel--loading ${className}`}>
                 <div className="panel-header panel-header--indigo">
-                    <LayoutGrid size={14} className="panel-header__icon" />
+                    <Icon name="layoutGrid" size={14} className="panel-header__icon" />
                     <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-panel__loading">
@@ -100,7 +100,7 @@ export const LayoutPanel = memo(function LayoutPanel({
         return (
             <div className={`layout-panel layout-panel--error ${className}`}>
                 <div className="panel-header panel-header--indigo">
-                    <LayoutGrid size={14} className="panel-header__icon" />
+                    <Icon name="layoutGrid" size={14} className="panel-header__icon" />
                     <span className="panel-header__title">Layout</span>
                 </div>
                 <div className="layout-panel__error">
@@ -120,7 +120,7 @@ export const LayoutPanel = memo(function LayoutPanel({
         <div className={`layout-panel ${className}`}>
             {/* Header */}
             <div className="panel-header panel-header--indigo">
-                <LayoutGrid size={14} className="panel-header__icon" />
+                <Icon name="layoutGrid" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Layout</span>
 
                 {/* Connection indicator */}

@@ -19,7 +19,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Users } from 'lucide-react';
+import { getIconComponent } from '@UI/react/components/common/Icon';
 import { FormModal } from '@UI/react/components/modals/FormModal';
 import './CreateSubsetDialog.scss';
 
@@ -67,7 +67,7 @@ export function CreateSubsetDialog({
             isOpen={isOpen}
             onClose={onCancel}
             title="Create Focus Group"
-            icon={Users}
+            icon={getIconComponent('users')}
             submitLabel="Create Group"
             onSubmit={handleSubmit}
         >

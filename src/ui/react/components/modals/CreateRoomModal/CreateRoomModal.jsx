@@ -20,19 +20,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react";
-import {
-    MessageSquare,
-    Mic,
-    Layout,
-    Lock,
-    Unlock,
-    EyeOff,
-    Clock,
-    Save,
-    Users,
-    Check,
-    AlertCircle
-} from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 
 import { FormModal } from "@UI/react/components/modals/FormModal";
 import { FormField } from "@UI/react/components/modals/FormModal";
@@ -47,19 +35,19 @@ import "./CreateRoomModal.scss";
 const ACCESS_OPTIONS = [
     {
         id: "open",
-        icon: Unlock,
+        icon: 'unlock',
         label: "Open",
         description: "Anyone can join"
     },
     {
         id: "invite",
-        icon: Lock,
+        icon: 'lock',
         label: "Invite Only",
         description: "Only invited users can join"
     },
     {
         id: "invisible",
-        icon: EyeOff,
+        icon: 'eyeOff',
         label: "Invisible",
         description: "Hidden from non-members"
     },
@@ -68,13 +56,13 @@ const ACCESS_OPTIONS = [
 const PERSISTENCE_OPTIONS = [
     {
         id: "session",
-        icon: Clock,
+        icon: 'clock',
         label: "Session",
         description: "Temporary - closes when empty"
     },
     {
         id: "persistent",
-        icon: Save,
+        icon: 'save',
         label: "Persistent",
         description: "Stays open for future use"
     },
@@ -221,7 +209,7 @@ export function CreateRoomModal({
             isOpen={isOpen}
             onClose={onClose}
             title="Create Breakout Room"
-            icon={Users}
+            icon="users"
             submitLabel="Create Room"
             onSubmit={handleSubmit}
             isSubmitting={isCreating}
@@ -273,7 +261,7 @@ export function CreateRoomModal({
                             className={`create-room-modal__toggle ${hasText ? "active" : ""}`}
                             onClick={() => setHasText(!hasText)}
                         >
-                            <MessageSquare size={16} />
+                            <Icon name="messageSquare" size={16} />
                             <span>Text Chat</span>
                         </button>
                         <button
@@ -281,7 +269,7 @@ export function CreateRoomModal({
                             className={`create-room-modal__toggle ${hasVoice ? "active" : ""}`}
                             onClick={() => setHasVoice(!hasVoice)}
                         >
-                            <Mic size={16} />
+                            <Icon name="mic" size={16} />
                             <span>Voice</span>
                         </button>
                         <button
@@ -289,13 +277,13 @@ export function CreateRoomModal({
                             className={`create-room-modal__toggle ${hasWorkspace ? "active" : ""}`}
                             onClick={() => setHasWorkspace(!hasWorkspace)}
                         >
-                            <Layout size={16} />
+                            <Icon name="layout" size={16} />
                             <span>Workspace</span>
                         </button>
                     </div>
                     {errors.features && (
                         <span className="create-room-modal__error">
-                            <AlertCircle size={12} /> {errors.features}
+                            <Icon name="alertCircle" size={12} /> {errors.features}
                         </span>
                     )}
                 </div>
@@ -318,7 +306,7 @@ export function CreateRoomModal({
                                         <span className="create-room-modal__option-label">{option.label}</span>
                                         <span className="create-room-modal__option-desc">{option.description}</span>
                                     </div>
-                                    {access === option.id && <Check size={16} className="create-room-modal__check" />}
+                                    {access === option.id && <Icon name="check" size={16} className="create-room-modal__check" />}
                                 </button>
                             );
                         })}
@@ -343,7 +331,7 @@ export function CreateRoomModal({
                                         <span className="create-room-modal__option-label">{option.label}</span>
                                         <span className="create-room-modal__option-desc">{option.description}</span>
                                     </div>
-                                    {persistence === option.id && <Check size={16} className="create-room-modal__check" />}
+                                    {persistence === option.id && <Icon name="check" size={16} className="create-room-modal__check" />}
                                 </button>
                             );
                         })}
@@ -354,7 +342,7 @@ export function CreateRoomModal({
                 {access !== "open" && (
                     <div className="create-room-modal__section">
                         <label className="create-room-modal__section-label">
-                            <Users size={14} />
+                            <Icon name="users" size={14} />
                             Invite Users
                         </label>
                         <input
@@ -399,7 +387,7 @@ export function CreateRoomModal({
                                     >
                                         <UserAvatar userName={user.userName} color={user.userColor} size="sm" />
                                         <span>{user.userName}</span>
-                                        {isUserSelected(user) && <Check size={14} className="create-room-modal__user-check" />}
+                                        {isUserSelected(user) && <Icon name="check" size={14} className="create-room-modal__user-check" />}
                                     </button>
                                 ))
                             )}

@@ -2,12 +2,7 @@
 // Tools list subtab for InstanceToolsTab
 
 import React from 'react';
-import {
-    Wrench,
-    ChevronDown,
-    ChevronRight,
-    Box,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { getIcon, ICON_MAP } from '../iconMap.js';
 
 // =============================================================================
@@ -28,7 +23,7 @@ function ToolButton({ tool, onClick }) {
         >
             <Icon size={16} />
             {tool.hasDropdown && (
-                <ChevronDown size={8} className="tool-button__dropdown-indicator" />
+                <Icon name="chevronDown" size={8} className="tool-button__dropdown-indicator" />
             )}
         </button>
     );
@@ -222,7 +217,7 @@ function ToolMenu({ tool, expanded, onToggle }) {
                         <span className="tool-menu__hint">{tool.description}</span>
                     )}
                 </div>
-                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                {expanded ? <Icon name="chevronDown" size={12} /> : <Icon name="chevronRight" size={12} />}
             </button>
             {expanded && tool.options && (
                 <div className="tool-menu__options">

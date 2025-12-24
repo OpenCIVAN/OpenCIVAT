@@ -4,15 +4,7 @@
  */
 
 import React from 'react';
-import {
-    Mic,
-    MicOff,
-    Headphones,
-    HeadphoneOff,
-    PhoneOff,
-    Radio,
-    Settings,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { VoiceConnectionState } from '@Services/voice/voiceRoomService.js';
 
 /**
@@ -54,7 +46,7 @@ export function VoiceControls({
                     onClick={onJoin}
                     disabled={isConnecting}
                 >
-                    <Radio size={16} />
+                    <Icon name="radio" size={16} />
                     <span>{isConnecting ? 'Connecting...' : 'Join Voice'}</span>
                 </button>
             </div>
@@ -71,7 +63,7 @@ export function VoiceControls({
                 onClick={onToggleMute}
                 title={muted ? 'Unmute (M)' : 'Mute (M)'}
             >
-                {muted ? <MicOff size={18} /> : <Mic size={18} />}
+                {muted ? <Icon name="micOff" size={18} /> : <Icon name="mic" size={18} />}
             </button>
 
             <button
@@ -79,7 +71,7 @@ export function VoiceControls({
                 onClick={onToggleDeafen}
                 title={deafened ? 'Undeafen' : 'Deafen'}
             >
-                {deafened ? <HeadphoneOff size={18} /> : <Headphones size={18} />}
+                {deafened ? <Icon name="headphoneOff" size={18} /> : <Icon name="headphones" size={18} />}
             </button>
 
             <button
@@ -87,11 +79,11 @@ export function VoiceControls({
                 onClick={onLeave}
                 title="Leave Voice"
             >
-                <PhoneOff size={18} />
+                <Icon name="phoneOff" size={18} />
             </button>
 
             <button className="voice-controls__btn" title="Voice Settings">
-                <Settings size={18} />
+                <Icon name="settings" size={18} />
             </button>
         </div>
     );

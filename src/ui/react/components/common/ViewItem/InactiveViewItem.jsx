@@ -9,15 +9,7 @@
  */
 
 import React, { memo, useState, useCallback, useRef } from 'react';
-import {
-    GripVertical,
-    LayoutGrid,
-    Trash2,
-    Folder,
-    Globe,
-    Users,
-    Link2,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Thumbnail } from '@UI/react/components/common/Thumbnail';
 import './ViewItem.scss';
 
@@ -100,7 +92,7 @@ export const InactiveViewItem = memo(function InactiveViewItem({
             <div className="view-item__row">
                 {/* Drag Handle */}
                 <div className="view-item__drag-handle">
-                    <GripVertical size={14} />
+                    <Icon name="gripVertical" size={14} />
                 </div>
 
                 {/* Thumbnail (dimmed for inactive) */}
@@ -124,10 +116,10 @@ export const InactiveViewItem = memo(function InactiveViewItem({
                 {/* Minimal status indicators */}
                 {!isHovered && (hasStars || hasSharing) && (
                     <div className="view-item__status-icons view-item__status-icons--minimal">
-                        {view.starredWorkspace && <Folder size={10} className="icon-purple" />}
-                        {view.starredPersonal && <Globe size={10} className="icon-amber" />}
-                        {view.isShared && <Users size={10} className="icon-pink" />}
-                        {view.linkedCount > 0 && <Link2 size={10} className="icon-teal" />}
+                        {view.starredWorkspace && <Icon name="folder" size={10} className="icon-purple" />}
+                        {view.starredPersonal && <Icon name="globe" size={10} className="icon-amber" />}
+                        {view.isShared && <Icon name="users" size={10} className="icon-pink" />}
+                        {view.linkedCount > 0 && <Icon name="link" size={10} className="icon-teal" />}
                     </div>
                 )}
 
@@ -139,14 +131,14 @@ export const InactiveViewItem = memo(function InactiveViewItem({
                             onClick={(e) => { e.stopPropagation(); handleClick(); }}
                             title="Place on Canvas"
                         >
-                            <LayoutGrid size={12} />
+                            <Icon name="layers" size={12} />
                         </button>
                         <button
                             className="view-item__action-btn view-item__action-btn--danger"
                             onClick={handleTrash}
                             title="Move to Trash"
                         >
-                            <Trash2 size={12} />
+                            <Icon name="delete" size={12} />
                         </button>
                     </div>
                 )}

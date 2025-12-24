@@ -3,7 +3,7 @@
 // Designed for use in SecondaryBottomBar left zone
 
 import React from 'react';
-import { Grid3X3, Maximize2, Layers } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useLayoutModeToggle, LAYOUT_MODES, LAYOUT_MODE_INFO } from './LayoutModeToggle.logic.js';
 import './LayoutModeToggle.scss';
 
@@ -12,17 +12,17 @@ import './LayoutModeToggle.scss';
  */
 const MODE_CONFIG = {
     [LAYOUT_MODES.NORMAL]: {
-        icon: Grid3X3,
+        icon: 'grid3x3',
         label: 'Normal',
         title: 'Normal View - Standard grid layout',
     },
     [LAYOUT_MODES.ISOLATION]: {
-        icon: Maximize2,
+        icon: 'maximize2',
         label: 'Isolation',
         title: 'Isolation Mode - Focus on single cell',
     },
     [LAYOUT_MODES.SUBSET]: {
-        icon: Layers,
+        icon: 'layers',
         label: 'Subset',
         title: 'Subset Mode - Filtered cell view',
     },
@@ -79,7 +79,6 @@ export function LayoutModeToggle({
     return (
         <div className={classNames} role="radiogroup" aria-label="Layout mode">
             {Object.entries(MODE_CONFIG).map(([modeKey, config]) => {
-                const Icon = config.icon;
                 const isActive = isModeActive(modeKey);
                 const isDisabled = disabled || isModeDisabled(modeKey);
 
@@ -102,6 +101,7 @@ export function LayoutModeToggle({
                         title={config.title}
                     >
                         <Icon
+                            name={config.icon}
                             size={compact ? 14 : 12}
                             className="layout-mode-toggle__icon"
                         />
@@ -123,13 +123,12 @@ export function LayoutModeToggle({
  */
 export function LayoutModeIndicator({ mode, compact = false }) {
     const config = MODE_CONFIG[mode] || MODE_CONFIG[LAYOUT_MODES.NORMAL];
-    const Icon = config.icon;
 
     return (
         <div
             className={`layout-mode-indicator layout-mode-indicator--${mode} ${compact ? 'layout-mode-indicator--compact' : ''}`}
         >
-            <Icon size={12} className="layout-mode-indicator__icon" />
+            <Icon name={config.icon} size={12} className="layout-mode-indicator__icon" />
             {!compact && (
                 <span className="layout-mode-indicator__label">{config.label}</span>
             )}

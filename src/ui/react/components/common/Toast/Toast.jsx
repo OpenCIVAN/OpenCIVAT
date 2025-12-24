@@ -31,18 +31,17 @@
  */
 
 import React, { useState, useCallback, useEffect, memo } from "react";
-import { X, Info, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import "./Toast.scss";
 
 /**
- * Icon mapping for each toast type.
- * Uses lucide-react icons.
+ * Icon name mapping for each toast type.
  */
 const TOAST_ICONS = {
-    info: Info,
-    success: CheckCircle,
-    warning: AlertTriangle,
-    error: XCircle
+    info: 'info',
+    success: 'check',
+    warning: 'warning',
+    error: 'error'
 };
 
 /**
@@ -82,7 +81,7 @@ function Toast({
     const [isExiting, setIsExiting] = useState(false);
 
     // Get the appropriate icon for this toast type
-    const Icon = TOAST_ICONS[type] || Info;
+    const iconName = TOAST_ICONS[type] || 'info';
 
     /**
      * Initiates the exit animation and then calls onDismiss.
@@ -128,7 +127,7 @@ function Toast({
         >
             {/* Icon */}
             <div className="toast__icon" aria-hidden="true">
-                <Icon size={18} />
+                <Icon name={iconName} size={18} />
             </div>
 
             {/* Content */}
@@ -155,7 +154,7 @@ function Toast({
                     onClick={handleDismiss}
                     aria-label="Dismiss notification"
                 >
-                    <X size={14} aria-hidden="true" />
+                    <Icon name="close" size={14} aria-hidden="true" />
                 </button>
             )}
         </div>

@@ -5,7 +5,7 @@
 // Uses the FloatingPanel system for position/size management.
 
 import React, { memo, useCallback } from "react";
-import { StickyNote } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { FloatingPanel } from "./FloatingPanel";
 import { useFloatingPanels } from "./FloatingPanelContext";
 import { ScratchPad, useScratchPad } from "@UI/react/components/workspace/ScratchPad";
@@ -18,7 +18,7 @@ export const SCRATCHPAD_PANEL_ID = "scratchpad";
 
 export const SCRATCHPAD_CONFIG = {
     title: "Scratch Pad",
-    icon: StickyNote,
+    icon: 'stickyNote',
     color: "amber",
     defaultWidth: 320,
     defaultHeight: 400,

@@ -2,87 +2,12 @@
 
 import { ui as log } from "@Utils/logger.js";
 import { createSlashedIcon } from "@UI/react/components/common/IconOverlay";
+import { getIconComponent } from '@UI/react/components/common/Icon';
 
-import {
-  // Geometry & 3D
-  Box,
-  Circle,
-  Square,
-  Triangle,
-  Layers,
-
-  // Measurement & Analysis
-  Ruler,
-  Move,
-  BarChart3,
-  TrendingUp,
-  Network,
-
-  // Camera & View
-  Camera,
-  Eye,
-  EyeOff,
-  Focus,
-  ZoomIn,
-  ZoomOut,
-
-  // Tools & Editing
-  Scissors,
-  Wand2,
-  RotateCw,
-  RotateCcw,
-  Move3d,
-
-  // Visual Properties
-  Sun,
-  Palette,
-  Contrast,
-  Rainbow,
-  ThermometerSnowflake,
-  ThermometerSun,
-  Eclipse,
-  Grid,
-  Grid3x3,
-  CircleDot,
-  Droplet,
-
-  // Navigation
-  Compass,
-  Maximize2,
-  Minimize2,
-
-  // UI Actions
-  Plus,
-  Edit3,
-  Trash2,
-  Check,
-  X,
-  RefreshCw,
-  Download,
-  Upload,
-  Settings,
-  Sliders,
-  Info,
-
-  // Communication
-  MessageSquare,
-  PencilRuler,
-
-  // Data
-  Database,
-  FileText,
-  Wallpaper,
-
-  // Corner positioning
-  CornerDownRight,
-  CornerDownLeft,
-  CornerUpRight,
-  CornerUpLeft,
-} from 'lucide-react';
-
-const SlashedCompass = createSlashedIcon(Compass);
-const SlashedGrid = createSlashedIcon(Grid);
-const SlashedRuler = createSlashedIcon(Ruler);
+// Create slashed icon variants using getIconComponent
+const SlashedCompass = createSlashedIcon(getIconComponent('compass'));
+const SlashedGrid = createSlashedIcon(getIconComponent('grid'));
+const SlashedRuler = createSlashedIcon(getIconComponent('ruler'));
 
 /**
  * ICON REGISTRY
@@ -108,153 +33,153 @@ const TOOL_ICON_MAP = {
   // GEOMETRY & 3D
   // Used by: general shapes, bounds, primitives
   // ==========================================================================
-  box: Box,
-  cube: Box,
-  square: Square,
-  circle: Circle,
-  triangle: Triangle,
-  layers: Layers,
+  box: getIconComponent('box'),
+  cube: getIconComponent('box'),
+  square: getIconComponent('square'),
+  circle: getIconComponent('circle'),
+  triangle: getIconComponent('triangle'),
+  layers: getIconComponent('layers'),
 
   // ==========================================================================
   // MEASUREMENT & ANALYSIS
   // Used by: measurement tools, statistics, data analysis
   // ==========================================================================
-  ruler: Ruler,
-  measure: Ruler, // Alias
+  ruler: getIconComponent('ruler'),
+  measure: getIconComponent('ruler'), // Alias
   "ruler-off": SlashedRuler,
   "measure-off": SlashedRuler,
-  "bar-chart": BarChart3,
-  trend: TrendingUp,
-  network: Network,
-  graph: Network, // Alias
+  "bar-chart": getIconComponent('barChart3'),
+  trend: getIconComponent('trendingUp'),
+  network: getIconComponent('network'),
+  graph: getIconComponent('network'), // Alias
 
   // ==========================================================================
   // CAMERA & VIEWING
   // Used by: camera controls, view presets, zoom
   // ==========================================================================
-  camera: Camera,
-  eye: Eye,
-  "eye-off": EyeOff,
-  focus: Focus,
-  "zoom-in": ZoomIn,
-  "zoom-out": ZoomOut,
+  camera: getIconComponent('camera'),
+  eye: getIconComponent('eye'),
+  "eye-off": getIconComponent('eyeOff'),
+  focus: getIconComponent('focus'),
+  "zoom-in": getIconComponent('zoomIn'),
+  "zoom-out": getIconComponent('zoomOut'),
 
   // ==========================================================================
   // TOOLS & MANIPULATION
   // Used by: transform, clipping, editing tools
   // ==========================================================================
-  scissors: Scissors,
-  clip: Scissors, // Alias
-  wand: Wand2,
-  transform: Wand2, // Alias
-  move: Move,
-  translate: Move, // Alias
-  "rotate-cw": RotateCw,
-  "rotate-ccw": RotateCcw,
-  rotate: RotateCw, // Alias
-  "move-3d": Move3d,
-  axes: Move3d, // Alias
+  scissors: getIconComponent('scissors'),
+  clip: getIconComponent('scissors'), // Alias
+  wand: getIconComponent('wand2'),
+  transform: getIconComponent('wand2'), // Alias
+  move: getIconComponent('move'),
+  translate: getIconComponent('move'), // Alias
+  "rotate-cw": getIconComponent('rotateCw'),
+  "rotate-ccw": getIconComponent('rotateCcw'),
+  rotate: getIconComponent('rotateCw'), // Alias
+  "move-3d": getIconComponent('move3d'),
+  axes: getIconComponent('move3d'), // Alias
 
   // ==========================================================================
   // VISUAL PROPERTIES
   // Used by: colormaps, lighting, rendering options
   // ==========================================================================
-  palette: Palette,
-  colormap: Palette, // Alias
-  sun: Sun,
-  lighting: Sun, // Alias
-  contrast: Contrast,
-  rainbow: Rainbow,
-  "temp-cold": ThermometerSnowflake,
-  "temp-hot": ThermometerSun,
-  eclipse: Eclipse,
-  grayscale: Eclipse, // Alias
-  wallpaper: Wallpaper,
-  texture: Wallpaper, // Alias
-  grid: Grid,
+  palette: getIconComponent('palette'),
+  colormap: getIconComponent('palette'), // Alias
+  sun: getIconComponent('sun'),
+  lighting: getIconComponent('sun'), // Alias
+  contrast: getIconComponent('contrast'),
+  rainbow: getIconComponent('rainbow'),
+  "temp-cold": getIconComponent('thermometerSnowflake'),
+  "temp-hot": getIconComponent('thermometerSun'),
+  eclipse: getIconComponent('eclipse'),
+  grayscale: getIconComponent('eclipse'), // Alias
+  wallpaper: getIconComponent('wallpaper'),
+  texture: getIconComponent('wallpaper'), // Alias
+  grid: getIconComponent('grid'),
   "grid-off": SlashedGrid,
-  "grid-3x3": Grid3x3,
-  points: CircleDot,
-  droplet: Droplet,
+  "grid-3x3": getIconComponent('grid3x3'),
+  points: getIconComponent('circleDot'),
+  droplet: getIconComponent('droplet'),
 
   // ==========================================================================
   // NAVIGATION & ORIENTATION
   // Used by: orientation cube, navigation aids
   // ==========================================================================
-  compass: Compass,
+  compass: getIconComponent('compass'),
   "compass-off": SlashedCompass,
 
   // ==========================================================================
   // CORNER POSITIONING
   // Used by: widget positioning controls
   // ==========================================================================
-  "corner-down-right": CornerDownRight,
-  "corner-down-left": CornerDownLeft,
-  "corner-up-right": CornerUpRight,
-  "corner-up-left": CornerUpLeft,
-  "corner-br": CornerDownRight, // Alias
-  "corner-bl": CornerDownLeft, // Alias
-  "corner-tr": CornerUpRight, // Alias
-  "corner-tl": CornerUpLeft, // Alias
+  "corner-down-right": getIconComponent('cornerDownRight'),
+  "corner-down-left": getIconComponent('cornerDownLeft'),
+  "corner-up-right": getIconComponent('cornerUpRight'),
+  "corner-up-left": getIconComponent('cornerUpLeft'),
+  "corner-br": getIconComponent('cornerDownRight'), // Alias
+  "corner-bl": getIconComponent('cornerDownLeft'), // Alias
+  "corner-tr": getIconComponent('cornerUpRight'), // Alias
+  "corner-tl": getIconComponent('cornerUpLeft'), // Alias
 
   // ==========================================================================
   // ANNOTATIONS & COMMUNICATION
   // Used by: annotations, notes, measurements display
   // ==========================================================================
-  message: MessageSquare,
-  annotation: MessageSquare, // Alias
-  note: MessageSquare, // Alias
-  "pencil-ruler": PencilRuler,
+  message: getIconComponent('messageSquare'),
+  annotation: getIconComponent('messageSquare'), // Alias
+  note: getIconComponent('messageSquare'), // Alias
+  "pencil-ruler": getIconComponent('pencilRuler'),
 
   // ==========================================================================
   // UI ACTIONS
   // Used by: buttons, confirmations, common actions
   // ==========================================================================
-  plus: Plus,
-  add: Plus, // Alias
-  edit: Edit3,
-  delete: Trash2,
-  trash: Trash2, // Alias
-  check: Check,
-  confirm: Check, // Alias
-  x: X,
-  cancel: X, // Alias
-  close: X, // Alias
-  refresh: RefreshCw,
-  reload: RefreshCw, // Alias
-  fullscreen: Maximize2,
-  maximize: Maximize2, // Alias
-  minimize: Minimize2,
+  plus: getIconComponent('add'),
+  add: getIconComponent('add'), // Alias
+  edit: getIconComponent('edit3'),
+  delete: getIconComponent('delete'),
+  trash: getIconComponent('delete'), // Alias
+  check: getIconComponent('check'),
+  confirm: getIconComponent('check'), // Alias
+  x: getIconComponent('close'),
+  cancel: getIconComponent('close'), // Alias
+  close: getIconComponent('close'), // Alias
+  refresh: getIconComponent('refresh'),
+  reload: getIconComponent('refresh'), // Alias
+  fullscreen: getIconComponent('maximize2'),
+  maximize: getIconComponent('maximize2'), // Alias
+  minimize: getIconComponent('minimize2'),
 
   // ==========================================================================
   // DATA & FILES
   // Used by: data info, import/export
   // ==========================================================================
-  database: Database,
-  data: Database, // Alias
-  file: FileText,
-  document: FileText, // Alias
-  download: Download,
-  export: Download, // Alias
-  upload: Upload,
-  import: Upload, // Alias
+  database: getIconComponent('database'),
+  data: getIconComponent('database'), // Alias
+  file: getIconComponent('fileText'),
+  document: getIconComponent('fileText'), // Alias
+  download: getIconComponent('download'),
+  export: getIconComponent('download'), // Alias
+  upload: getIconComponent('upload'),
+  import: getIconComponent('upload'), // Alias
 
   // ==========================================================================
   // SETTINGS & INFO
   // Used by: configuration, properties, information
   // ==========================================================================
-  settings: Settings,
-  config: Settings, // Alias
-  sliders: Sliders,
-  properties: Sliders, // Alias
-  controls: Sliders, // Alias
-  info: Info,
-  help: Info, // Alias
+  settings: getIconComponent('settings'),
+  config: getIconComponent('settings'), // Alias
+  sliders: getIconComponent('sliders'),
+  properties: getIconComponent('sliders'), // Alias
+  controls: getIconComponent('sliders'), // Alias
+  info: getIconComponent('info'),
+  help: getIconComponent('info'), // Alias
 
   // ==========================================================================
   // FALLBACK
   // ==========================================================================
-  default: Box,
+  default: getIconComponent('box'),
 };
 
 /**

@@ -10,10 +10,10 @@
  * @example
  * // Import components
  * import { Button, IconButton, ButtonGroup } from '@UI/react/components/common/Button';
- * import { Save, Trash2, Settings } from 'lucide-react';
+ * import { Icon } from '@UI/react/components/common/Icon';
  *
  * // Primary button with icon
- * <Button variant="primary" icon={Save} onClick={handleSave}>
+ * <Button variant="primary" icon="save" onClick={handleSave}>
  *   Save Changes
  * </Button>
  *
@@ -23,13 +23,13 @@
  * </Button>
  *
  * // Danger button
- * <Button variant="danger" icon={Trash2}>
+ * <Button variant="danger" icon="delete">
  *   Delete
  * </Button>
  *
  * // Icon button with tooltip
  * <IconButton
- *   icon={Settings}
+ *   icon="settings"
  *   label="Settings"
  *   tooltip="Open settings"
  *   onClick={openSettings}

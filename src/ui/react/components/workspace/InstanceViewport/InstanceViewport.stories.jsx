@@ -2,18 +2,7 @@
 // Mock stories for InstanceViewport - demonstrates visual layout without core dependencies
 
 import React from "react";
-import {
-    Maximize2,
-    Trash2,
-    Eye,
-    Palette,
-    SlidersHorizontal,
-    Camera,
-    RotateCcw,
-    ChevronDown,
-    Box,
-    Layers,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import "./InstanceViewport.scss";
 
 /**
@@ -33,11 +22,11 @@ function MockInstanceViewport({
     const [openMenuId, setOpenMenuId] = React.useState(null);
 
     const defaultTools = [
-        { id: "visibility", icon: Eye, label: "Visibility", type: "button" },
+        { id: "visibility", icon: 'eye', label: "Visibility", type: "button" },
         { id: "separator-1", type: "separator" },
         {
             id: "colormap",
-            icon: Palette,
+            icon: 'palette',
             label: "Colormap",
             type: "menu",
             options: [
@@ -48,7 +37,7 @@ function MockInstanceViewport({
         },
         {
             id: "sliders",
-            icon: SlidersHorizontal,
+            icon: 'sliders',
             label: "Adjustments",
             type: "menu",
             options: [
@@ -59,7 +48,7 @@ function MockInstanceViewport({
         { id: "separator-2", type: "separator" },
         {
             id: "camera",
-            icon: Camera,
+            icon: 'camera',
             label: "Camera Views",
             type: "menu",
             options: [
@@ -71,7 +60,7 @@ function MockInstanceViewport({
                 { id: "isometric", label: "Isometric" },
             ],
         },
-        { id: "reset", icon: RotateCcw, label: "Reset View", type: "button" },
+        { id: "reset", icon: 'rotateCcw', label: "Reset View", type: "button" },
     ];
 
     const toolsToRender = tools.length > 0 ? tools : defaultTools;
@@ -81,7 +70,7 @@ function MockInstanceViewport({
             return <div key={`sep-${index}`} className="toolbar-separator" />;
         }
 
-        const IconComponent = tool.icon;
+        const iconName = tool.icon;
         const isOpen = openMenuId === tool.id;
 
         if (tool.type === "menu") {
@@ -97,8 +86,8 @@ function MockInstanceViewport({
                         disabled={tool.disabled}
                         aria-label={tool.label}
                     >
-                        {IconComponent && <IconComponent size={18} strokeWidth={2} />}
-                        <ChevronDown size={8} className="menu-indicator" />
+                        {iconName && <Icon name={iconName} size={18} strokeWidth={2} />}
+                        <Icon name="chevronDown" size={8} className="menu-indicator" />
                         <div className="toolbar-tooltip">
                             <div className="tooltip-title">{tool.label}</div>
                         </div>
@@ -128,7 +117,7 @@ function MockInstanceViewport({
                 disabled={tool.disabled}
                 aria-label={tool.label}
             >
-                {IconComponent && <IconComponent size={18} strokeWidth={2} />}
+                {iconName && <Icon name={iconName} size={18} strokeWidth={2} />}
                 <div className="toolbar-tooltip">
                     <div className="tooltip-title">{tool.label}</div>
                 </div>
@@ -145,13 +134,13 @@ function MockInstanceViewport({
                         className="instance-viewport__header-button"
                         title="Fullscreen"
                     >
-                        <Maximize2 size={14} />
+                        <Icon name="maximize2" size={14} />
                     </button>
                     <button
                         className="instance-viewport__header-button"
                         title="Delete"
                     >
-                        <Trash2 size={14} />
+                        <Icon name="delete" size={14} />
                     </button>
                 </div>
             </div>
@@ -182,7 +171,7 @@ function MockInstanceViewport({
                             background: "linear-gradient(135deg, rgba(110,182,255,0.1) 0%, rgba(192,132,252,0.1) 100%)",
                         }}
                     >
-                        <Box size={64} style={{ color: "rgba(255,255,255,0.2)" }} />
+                        <Icon name="box" size={64} style={{ color: "rgba(255,255,255,0.2)" }} />
                     </div>
                 )}
                 {!hasData && !loading && !error && (
@@ -198,7 +187,7 @@ function MockInstanceViewport({
                             gap: "12px",
                         }}
                     >
-                        <Layers size={48} />
+                        <Icon name="layers" size={48} />
                         <span>No data loaded</span>
                     </div>
                 )}
@@ -265,13 +254,13 @@ export const WithActiveTools = {
         title: "patient_ct_scan.dcm",
         hasData: true,
         tools: [
-            { id: "visibility", icon: Eye, label: "Visibility", type: "button", active: true },
+            { id: "visibility", icon: 'eye', label: "Visibility", type: "button", active: true },
             { id: "separator-1", type: "separator" },
-            { id: "colormap", icon: Palette, label: "Colormap", type: "button", active: true },
-            { id: "sliders", icon: SlidersHorizontal, label: "Adjustments", type: "button" },
+            { id: "colormap", icon: 'palette', label: "Colormap", type: "button", active: true },
+            { id: "sliders", icon: 'sliders', label: "Adjustments", type: "button" },
             { id: "separator-2", type: "separator" },
-            { id: "camera", icon: Camera, label: "Camera", type: "button" },
-            { id: "reset", icon: RotateCcw, label: "Reset", type: "button" },
+            { id: "camera", icon: 'camera', label: "Camera", type: "button" },
+            { id: "reset", icon: 'rotateCcw', label: "Reset", type: "button" },
         ],
     },
 };

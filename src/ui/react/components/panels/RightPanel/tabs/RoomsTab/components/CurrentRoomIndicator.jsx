@@ -4,17 +4,17 @@
  */
 
 import React from 'react';
-import { Globe, Layout, LogOut, User as UserIcon } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * Get icon for room type
  */
 function getTypeIcon(type) {
     switch (type) {
-        case 'project': return Globe;
-        case 'breakout': return Layout;
-        case 'personal': return UserIcon;
-        default: return Layout;
+        case 'project': return 'globe';
+        case 'breakout': return 'layout';
+        case 'personal': return 'user';
+        default: return 'layout';
     }
 }
 
@@ -34,14 +34,14 @@ function getTypeIcon(type) {
 export function CurrentRoomIndicator({ room, onLeave }) {
     if (!room) return null;
 
-    const TypeIcon = getTypeIcon(room.type);
+    const typeIconName = getTypeIcon(room.type);
 
     return (
         <div className="current-room-indicator">
             <div className="current-room-indicator__info">
                 <div className="current-room-indicator__label">Currently in</div>
                 <div className="current-room-indicator__name">
-                    <TypeIcon size={14} />
+                    <Icon name={typeIconName} size={14} />
                     <span>{room.name}</span>
                 </div>
             </div>
@@ -51,7 +51,7 @@ export function CurrentRoomIndicator({ room, onLeave }) {
                     onClick={onLeave}
                     title="Leave room"
                 >
-                    <LogOut size={14} />
+                    <Icon name="logout" size={14} />
                     Leave
                 </button>
             )}

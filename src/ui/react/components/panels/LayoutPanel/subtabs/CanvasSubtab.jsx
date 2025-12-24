@@ -2,10 +2,7 @@
  * CanvasSubtab Component - Canvas configuration for Layout Panel
  */
 import React, { memo, useCallback } from 'react';
-import {
-    Grid3X3, Rows, ArrowRight, ArrowDown, PlusCircle, MousePointer2,
-    Hand, Combine, Pencil, Undo, Redo, Replace, LayoutGrid,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { SpawnSizePicker } from '../components/SpawnSizePicker';
 import { LAYOUT_MODES, FLOW_DIRECTIONS, TOOLS, DROP_MODES } from '../LayoutPanel.logic';
 import './CanvasSubtab.scss';
@@ -84,7 +81,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                                 className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${flowDirection === FLOW_DIRECTIONS.ROW ? 'etched-toggle__btn--active' : ''}`}
                                 onClick={() => setFlowDirection?.(FLOW_DIRECTIONS.ROW)}
                             >
-                                <ArrowRight size={12} /> Row
+                                <Icon name="arrowRight" size={12} /> Row
                             </button>
                             <button
                                 className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${flowDirection === FLOW_DIRECTIONS.COLUMN ? 'etched-toggle__btn--active' : ''}`}
@@ -116,7 +113,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* Quick Layouts */}
             <div className="canvas-subtab__card" data-color="amber">
                 <div className="canvas-subtab__card-header">
-                    <LayoutGrid size={10} />
+                    <Icon name="layoutGrid" size={10} />
                     <span>Quick Layouts</span>
                 </div>
                 <div className="canvas-subtab__quick-layouts">

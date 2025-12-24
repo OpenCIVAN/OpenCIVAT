@@ -5,16 +5,16 @@
  */
 
 import React from 'react';
-import { Calendar, Users, DoorOpen, HardDrive, Crown } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import '../SettingsTab.scss';
 
 /**
  * Info row component
  */
-function InfoRow({ icon: Icon, label, value }) {
+function InfoRow({ icon: iconName, label, value }) {
     return (
         <div className="settings-tab__info-row">
-            <Icon size={12} className="settings-tab__info-icon" />
+            <Icon name={iconName} size={12} className="settings-tab__info-icon" />
             <span className="settings-tab__info-label">{label}</span>
             <span className="settings-tab__info-value">{value}</span>
         </div>
@@ -72,22 +72,22 @@ export function ProjectInfo({ project }) {
             {/* Project stats */}
             <div className="settings-tab__info-grid">
                 <InfoRow
-                    icon={Calendar}
+                    icon="calendar"
                     label="Created"
                     value={createdDate}
                 />
                 <InfoRow
-                    icon={Users}
+                    icon="users"
                     label="Members"
                     value={project.memberCount}
                 />
                 <InfoRow
-                    icon={DoorOpen}
+                    icon="doorOpen"
                     label="Rooms"
                     value={project.roomCount}
                 />
                 <InfoRow
-                    icon={HardDrive}
+                    icon="hardDrive"
                     label="Storage"
                     value={project.storageUsed}
                 />
@@ -96,7 +96,7 @@ export function ProjectInfo({ project }) {
             {/* Owner info */}
             {project.owner && (
                 <div className="settings-tab__owner-info">
-                    <Crown size={12} />
+                    <Icon name="crown" size={12} />
                     <span>Owned by</span>
                     <span className="settings-tab__owner-name">{project.owner.name}</span>
                 </div>

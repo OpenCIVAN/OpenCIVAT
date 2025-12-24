@@ -14,20 +14,7 @@
 // - Fixed double border on empty cells
 
 import React, { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import {
-    Plus,
-    X,
-    LayoutGrid,
-    FileImage,
-    FileText,
-    Box,
-    ZoomIn,
-    ArrowUp,
-    ArrowDown,
-    ArrowLeft,
-    ArrowRight,
-    ArrowLeftRight,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 // =============================================================================
 // DROP ZONE CONSTANTS
@@ -85,10 +72,10 @@ import './CanvasCell.scss';
 
 // Content type options for the radial menu - positioned in cross pattern
 const CONTENT_OPTIONS = [
-    { type: 'view', icon: Box, label: 'Add View', color: 'blue' },
-    { type: 'notes', icon: FileText, label: 'Add Notes', color: 'amber' },
-    { type: 'image', icon: FileImage, label: 'Add Image', color: 'teal' },
-    { type: 'grid', icon: LayoutGrid, label: 'Add Grid', color: 'purple' },
+    { type: 'view', icon: 'box', label: 'Add View', color: 'blue' },
+    { type: 'notes', icon: 'fileText', label: 'Add Notes', color: 'amber' },
+    { type: 'image', icon: 'fileImage', label: 'Add Image', color: 'teal' },
+    { type: 'grid', icon: 'layoutGrid', label: 'Add Grid', color: 'purple' },
 ];
 
 // =============================================================================
@@ -599,37 +586,37 @@ function DropZoneOverlay({ zone, isEmpty }) {
             case DROP_ZONES.PLACE:
                 return {
                     className: 'drop-zone--place',
-                    icon: Plus,
+                    icon: 'add',
                     label: 'Place Here',
                 };
             case DROP_ZONES.SWAP:
                 return {
                     className: 'drop-zone--swap',
-                    icon: ArrowLeftRight,
+                    icon: 'arrowLeftRight',
                     label: 'Swap',
                 };
             case DROP_ZONES.PUSH_UP:
                 return {
                     className: 'drop-zone--push drop-zone--push-up',
-                    icon: ArrowUp,
+                    icon: 'arrowUp',
                     label: 'Push Up',
                 };
             case DROP_ZONES.PUSH_DOWN:
                 return {
                     className: 'drop-zone--push drop-zone--push-down',
-                    icon: ArrowDown,
+                    icon: 'arrowDown',
                     label: 'Push Down',
                 };
             case DROP_ZONES.PUSH_LEFT:
                 return {
                     className: 'drop-zone--push drop-zone--push-left',
-                    icon: ArrowLeft,
+                    icon: 'arrowLeft',
                     label: 'Push Left',
                 };
             case DROP_ZONES.PUSH_RIGHT:
                 return {
                     className: 'drop-zone--push drop-zone--push-right',
-                    icon: ArrowRight,
+                    icon: 'arrowRight',
                     label: 'Push Right',
                 };
             default:
@@ -640,12 +627,10 @@ function DropZoneOverlay({ zone, isEmpty }) {
     const config = getZoneConfig();
     if (!config) return null;
 
-    const Icon = config.icon;
-
     return (
         <div className={`canvas-cell__drop-zone ${config.className}`}>
             <div className="drop-zone__content">
-                <Icon size={20} />
+                <Icon name={config.icon} size={20} />
                 <span className="drop-zone__label">{config.label}</span>
             </div>
         </div>
@@ -708,7 +693,7 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
     if (renderMode === RENDER_MODES.THUMBNAIL) {
         return (
             <div className="canvas-cell__empty-thumbnail">
-                <Plus size={12} />
+                <Icon name="add" size={12} />
             </div>
         );
     }
@@ -731,14 +716,14 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
                 onClick={handleCenterClick}
                 title={showRadial ? 'Close menu' : 'Add content'}
             >
-                {showRadial ? <X size={20} /> : <Plus size={20} />}
+                {showRadial ? <Icon name="close" size={20} /> : <Icon name="add" size={20} />}
             </button>
 
             {/* Radial options - positioned around center button */}
             {showRadial && (
                 <div className="canvas-cell__radial-options">
                     {CONTENT_OPTIONS.map((option, index) => {
-                        const { type, icon: Icon, label, color } = option;
+                        const { type, icon, label, color } = option;
                         // Position in a cross pattern: right, bottom, left, top
                         const angles = [0, 90, 180, 270];
                         const angle = angles[index];
@@ -761,7 +746,7 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
                                 }}
                                 title={label}
                             >
-                                <Icon size={18} />
+                                <Icon name={icon} size={18} />
                             </button>
                         );
                     })}

@@ -14,6 +14,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import './LabeledIconButton.scss';
 
@@ -34,7 +35,7 @@ import './LabeledIconButton.scss';
  * @param {string} [props.className] - Additional CSS class
  */
 export function LabeledIconButton({
-    icon: Icon,
+    icon,
     label,
     active = false,
     accent,
@@ -62,7 +63,7 @@ export function LabeledIconButton({
             title={label}
             data-hovered={hovered}
         >
-            <Icon size={14} className="labeled-icon-button__icon" />
+            <Icon name={icon} size={14} className="labeled-icon-button__icon" />
             <span className="labeled-icon-button__label">{label}</span>
         </button>
     );

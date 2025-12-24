@@ -18,16 +18,7 @@
  */
 
 import React from 'react';
-import {
-    Video,
-    Search,
-    X,
-    Circle,
-    Calendar,
-    Settings,
-    Loader,
-    AlertCircle,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -92,7 +83,7 @@ export function RecordingsTab({ workspaceId }) {
         <div className="recordings-tab">
             {/* Header */}
             <div className="panel-header">
-                <Video size={14} className="panel-header__icon file-icon--red" />
+                <Icon name="video" size={14} className="panel-header__icon file-icon--red" />
                 <span className="panel-header__title">Recording</span>
                 {isRecording && (
                     <div className="panel-header__live-badge">
@@ -105,7 +96,7 @@ export function RecordingsTab({ workspaceId }) {
             {/* Error display */}
             {error && (
                 <div className="recordings-tab__error">
-                    <AlertCircle size={14} />
+                    <Icon name="alertCircle" size={14} />
                     <span>{error}</span>
                 </div>
             )}
@@ -118,7 +109,7 @@ export function RecordingsTab({ workspaceId }) {
                 {/* Recording Controls */}
                 <ResizableSection
                     id="controls"
-                    icon={isRecording ? Circle : Video}
+                    icon={isRecording ? 'circle' : 'video'}
                     iconColorClass="icon-red"
                     label={isRecording ? 'Current Recording' : 'New Recording'}
                 >
@@ -142,14 +133,14 @@ export function RecordingsTab({ workspaceId }) {
                 {/* Past Recordings */}
                 <ResizableSection
                     id="recordings"
-                    icon={Calendar}
+                    icon="calendar"
                     iconColorClass="icon-purple"
                     label="Past Recordings"
                     count={recordings.length}
                 >
                     {/* Search */}
                     <div className="recordings-tab__search">
-                        <Search size={14} className="recordings-tab__search-icon" />
+                        <Icon name="search" size={14} className="recordings-tab__search-icon" />
                         <input
                             type="text"
                             value={searchQuery}
@@ -162,7 +153,7 @@ export function RecordingsTab({ workspaceId }) {
                                 className="recordings-tab__search-clear"
                                 onClick={() => setSearchQuery('')}
                             >
-                                <X size={10} />
+                                <Icon name="close" size={10} />
                             </button>
                         )}
                     </div>
@@ -170,7 +161,7 @@ export function RecordingsTab({ workspaceId }) {
                     {/* Loading state */}
                     {loading && (
                         <div className="recordings-tab__loading">
-                            <Loader size={20} className="spin" />
+                            <Icon name="loader" size={20} className="spin" />
                             <span>Loading recordings...</span>
                         </div>
                     )}
@@ -178,7 +169,7 @@ export function RecordingsTab({ workspaceId }) {
                     {/* Empty state */}
                     {!loading && filteredRecordings.length === 0 && (
                         <div className="recordings-tab__empty">
-                            <Video size={32} />
+                            <Icon name="video" size={32} />
                             <span>
                                 {searchQuery
                                     ? 'No recordings match your search'
@@ -211,7 +202,7 @@ export function RecordingsTab({ workspaceId }) {
                     Storage: {totalSize}
                 </span>
                 <button className="panel-footer__settings-btn" onClick={refresh}>
-                    <Settings size={10} />
+                    <Icon name="settings" size={10} />
                     Refresh
                 </button>
             </div>

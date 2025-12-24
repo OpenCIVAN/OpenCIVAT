@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { PillBar } from './index';
-import { Users, LayoutGrid, Home, Database, Eye, Filter, Bookmark } from 'lucide-react';
 
 export default {
     title: 'Common/PillBar',
@@ -42,9 +41,9 @@ export const WithIcons = () => {
     const [activeTab, setActiveTab] = useState('presence');
 
     const tabs = [
-        { id: 'presence', label: 'Presence', icon: Users },
-        { id: 'layout', label: 'Layout', icon: LayoutGrid },
-        { id: 'homepoints', label: 'Homepoints', icon: Home },
+        { id: 'presence', label: 'Presence', icon: 'users' },
+        { id: 'layout', label: 'Layout', icon: 'layers' },
+        { id: 'homepoints', label: 'Homepoints', icon: 'home' },
     ];
 
     return (
@@ -61,8 +60,8 @@ export const DatasetsTab = () => {
     const [activeTab, setActiveTab] = useState('datasets');
 
     const tabs = [
-        { id: 'datasets', label: 'Datasets', icon: Database, color: 'teal' },
-        { id: 'views', label: 'Views', icon: Eye, badge: 4, color: 'blue' },
+        { id: 'datasets', label: 'Datasets', icon: 'folder', color: 'teal' },
+        { id: 'views', label: 'Views', icon: 'eye', badge: 4, color: 'blue' },
     ];
 
     return (
@@ -79,9 +78,9 @@ export const WorkspaceTab = () => {
     const [activeTab, setActiveTab] = useState('layout');
 
     const tabs = [
-        { id: 'presence', label: 'Presence', icon: Users, color: 'pink', badge: 3 },
-        { id: 'layout', label: 'Layout', icon: LayoutGrid, color: 'green' },
-        { id: 'homepoints', label: 'Homepoints', icon: Home, color: 'amber' },
+        { id: 'presence', label: 'Presence', icon: 'users', color: 'pink', badge: 3 },
+        { id: 'layout', label: 'Layout', icon: 'layers', color: 'green' },
+        { id: 'homepoints', label: 'Homepoints', icon: 'home', color: 'amber' },
     ];
 
     return (
@@ -98,9 +97,9 @@ export const WithBadges = () => {
     const [activeTab, setActiveTab] = useState('filters');
 
     const tabs = [
-        { id: 'filters', label: 'Filters', icon: Filter, badge: 12 },
-        { id: 'bookmarks', label: 'Bookmarks', icon: Bookmark, badge: 5 },
-        { id: 'views', label: 'Views', icon: Eye, badge: 8 },
+        { id: 'filters', label: 'Filters', icon: 'filter', badge: 12 },
+        { id: 'bookmarks', label: 'Bookmarks', icon: 'bookmark', badge: 5 },
+        { id: 'views', label: 'Views', icon: 'eye', badge: 8 },
     ];
 
     return (
@@ -117,9 +116,9 @@ export const SmallSize = () => {
     const [activeTab, setActiveTab] = useState('layout');
 
     const tabs = [
-        { id: 'presence', label: 'Presence', icon: Users },
-        { id: 'layout', label: 'Layout', icon: LayoutGrid },
-        { id: 'homepoints', label: 'Homepoints', icon: Home },
+        { id: 'presence', label: 'Presence', icon: 'users' },
+        { id: 'layout', label: 'Layout', icon: 'layers' },
+        { id: 'homepoints', label: 'Homepoints', icon: 'home' },
     ];
 
     return (
@@ -137,9 +136,9 @@ export const WithDisabledTab = () => {
     const [activeTab, setActiveTab] = useState('layout');
 
     const tabs = [
-        { id: 'presence', label: 'Presence', icon: Users, disabled: true },
-        { id: 'layout', label: 'Layout', icon: LayoutGrid },
-        { id: 'homepoints', label: 'Homepoints', icon: Home },
+        { id: 'presence', label: 'Presence', icon: 'users', disabled: true },
+        { id: 'layout', label: 'Layout', icon: 'layers' },
+        { id: 'homepoints', label: 'Homepoints', icon: 'home' },
     ];
 
     return (
@@ -178,8 +177,8 @@ export const InPanelHeader = () => {
     const [activeTab, setActiveTab] = useState('datasets');
 
     const tabs = [
-        { id: 'datasets', label: 'Datasets', icon: Database, color: 'teal' },
-        { id: 'views', label: 'Views', icon: Eye, badge: 4, color: 'blue' },
+        { id: 'datasets', label: 'Datasets', icon: 'folder', color: 'teal' },
+        { id: 'views', label: 'Views', icon: 'eye', badge: 4, color: 'blue' },
     ];
 
     return (

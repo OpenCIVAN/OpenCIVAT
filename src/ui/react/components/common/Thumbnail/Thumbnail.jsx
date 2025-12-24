@@ -5,22 +5,22 @@
 // This component can only DISPLAY thumbnails - generation is handled server-side.
 
 import React, { memo } from 'react';
-import { Loader2, ImageOff, Box, BarChart3, Image } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useThumbnail, THUMBNAIL_STATUS } from '@UI/react/hooks/useThumbnail.js';
 import './Thumbnail.scss';
 
 /**
- * Get icon component for instance type
+ * Get icon name for instance type
  */
 const TYPE_ICONS = {
-    vtk: Box,
-    '3d': Box,
-    mesh: Box,
-    volume: Box,
-    chart: BarChart3,
-    plot: BarChart3,
-    image: Image,
-    default: Image,
+    vtk: 'box',
+    '3d': 'box',
+    mesh: 'box',
+    volume: 'box',
+    chart: 'barChart',
+    plot: 'barChart',
+    image: 'image',
+    default: 'image',
 };
 
 function getTypeIcon(instanceType) {
@@ -56,7 +56,7 @@ export const Thumbnail = memo(function Thumbnail({
     });
 
     const sizeClass = `thumbnail--${size}`;
-    const TypeIcon = getTypeIcon(instanceType);
+    const typeIconName = getTypeIcon(instanceType);
     const isClickable = !!onClick;
 
     // Common wrapper props
@@ -72,7 +72,7 @@ export const Thumbnail = memo(function Thumbnail({
         return (
             <div {...wrapperProps} className={`${wrapperProps.className} thumbnail--loading`}>
                 <div className="thumbnail__loader">
-                    <Loader2 className="thumbnail__spinner" />
+                    <Icon name="loader" className="thumbnail__spinner" />
                 </div>
             </div>
         );
@@ -89,7 +89,7 @@ export const Thumbnail = memo(function Thumbnail({
             >
                 {fallback || (
                     <div className="thumbnail__fallback">
-                        <TypeIcon className="thumbnail__icon" />
+                        <Icon name={typeIconName} className="thumbnail__icon" />
                     </div>
                 )}
             </div>
@@ -106,7 +106,7 @@ export const Thumbnail = memo(function Thumbnail({
             >
                 {fallback || (
                     <div className="thumbnail__fallback thumbnail__fallback--error">
-                        <ImageOff className="thumbnail__icon" />
+                        <Icon name="imageOff" className="thumbnail__icon" />
                     </div>
                 )}
             </div>
@@ -132,7 +132,7 @@ export const Thumbnail = memo(function Thumbnail({
         <div {...wrapperProps} className={`${wrapperProps.className} thumbnail--idle`}>
             {fallback || (
                 <div className="thumbnail__fallback">
-                    <TypeIcon className="thumbnail__icon" />
+                    <Icon name={typeIconName} className="thumbnail__icon" />
                 </div>
             )}
         </div>

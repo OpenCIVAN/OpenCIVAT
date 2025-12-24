@@ -20,7 +20,7 @@
  */
 
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { Merge, Archive, LayoutGrid, Check } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '../Modal';
 import { Button } from '../../common/Button';
 import ViewCard from './ViewCard';
@@ -310,7 +310,7 @@ function MergeConflictPicker({
                         tabIndex={0}
                         aria-label="Remember my choice for this session"
                     >
-                        {rememberChoice && <Check size={12} />}
+                        {rememberChoice && <Icon name="check" size={12} />}
                     </span>
                     <span
                         className="merge-conflict-picker__remember__label"

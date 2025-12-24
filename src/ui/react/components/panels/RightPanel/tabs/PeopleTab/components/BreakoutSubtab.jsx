@@ -13,7 +13,6 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Layout } from 'lucide-react';
 import { MemberRow } from '@UI/react/components/common/MemberRow';
 import { EmptyState } from '@UI/react/components/common/EmptyState';
 import { useWorkspacePresence } from '@UI/react/hooks/useRoomPresence.js';
@@ -62,7 +61,7 @@ export function BreakoutSubtab({
 
                 {filteredUsers.length === 0 ? (
                     <EmptyState
-                        icon={Layout}
+                        icon="layout"
                         title="No one else viewing"
                         description="You're the only one here"
                         size="sm"

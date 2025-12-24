@@ -9,27 +9,18 @@
 // - Timestamp display
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import {
-    Trash2,
-    Filter,
-    Info,
-    CheckCircle,
-    AlertTriangle,
-    XCircle,
-    Clock,
-    ChevronDown,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useLogging } from "@UI/react/hooks/useLogging.js";
 import { LogType } from "@Utils/logger.js";
 import "./LogsTab.scss";
 
 // Icon mapping for log types
 const LOG_ICONS = {
-    [LogType.INFO]: Info,
-    [LogType.SUCCESS]: CheckCircle,
-    [LogType.WARNING]: AlertTriangle,
-    [LogType.ERROR]: XCircle,
-    [LogType.PROGRESS]: Clock,
+    [LogType.INFO]: "info",
+    [LogType.SUCCESS]: "checkCircle",
+    [LogType.WARNING]: "alertTriangle",
+    [LogType.ERROR]: "xCircle",
+    [LogType.PROGRESS]: "clock",
 };
 
 // Color classes for log types
@@ -110,13 +101,13 @@ export function LogsTab() {
                             className="logs-tab__filter-btn"
                             onClick={() => setShowFilterMenu(!showFilterMenu)}
                         >
-                            <Filter size={14} />
+                            <Icon name="filter" size={14} />
                             <span>
                                 {filter === "all" && "All"}
                                 {filter === "errors" && `Errors (${counts.errors})`}
                                 {filter === "warnings" && `Warnings+ (${counts.warnings})`}
                             </span>
-                            <ChevronDown size={12} />
+                            <Icon name="chevronDown" size={12} />
                         </button>
 
                         {showFilterMenu && (
@@ -168,7 +159,7 @@ export function LogsTab() {
                         onClick={clearLogs}
                         title="Clear all logs"
                     >
-                        <Trash2 size={14} />
+                        <Icon name="delete" size={14} />
                         Clear
                     </button>
                 </div>
@@ -189,7 +180,7 @@ export function LogsTab() {
                     </div>
                 ) : (
                     filteredLogs.map((log, index) => {
-                        const Icon = LOG_ICONS[log.type] || Info;
+                        const iconName = LOG_ICONS[log.type] || "info";
                         const colorClass = LOG_CLASSES[log.type] || "";
 
                         return (
@@ -200,7 +191,7 @@ export function LogsTab() {
                                 <span className="logs-tab__entry-time">
                                     {formatTime(log.timestamp)}
                                 </span>
-                                <Icon size={14} className="logs-tab__entry-icon" />
+                                <Icon name={iconName} size={14} className="logs-tab__entry-icon" />
                                 <span className="logs-tab__entry-message">
                                     {log.message}
                                 </span>

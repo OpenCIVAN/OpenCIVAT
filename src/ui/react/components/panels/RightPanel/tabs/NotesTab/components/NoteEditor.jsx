@@ -5,19 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-    X,
-    Save,
-    Check,
-    Bold,
-    Italic,
-    List,
-    ListOrdered,
-    Code,
-    Quote,
-    Image,
-    Link2,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} NoteEditorProps
@@ -47,7 +35,7 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
         }
     };
 
-    const toolbarIcons = [Bold, Italic, List, ListOrdered, Code, Quote, Image, Link2];
+    const toolbarIcons = ['bold', 'italic', 'list', 'listOrdered', 'code', 'quote', 'image', 'link'];
 
     return (
         <div className="note-edit-view">
@@ -56,7 +44,7 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
                     {isNew ? 'New Note' : note?.title || 'Edit Note'}
                 </span>
                 <button className="note-edit-view__close" onClick={onCancel}>
-                    <X size={16} />
+                    <Icon name="close" size={16} />
                 </button>
             </div>
 
@@ -73,9 +61,9 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
 
             {/* Formatting toolbar */}
             <div className="note-edit-view__toolbar">
-                {toolbarIcons.map((Icon, i) => (
+                {toolbarIcons.map((iconName, i) => (
                     <button key={i} className="note-edit-view__toolbar-btn">
-                        <Icon size={14} />
+                        <Icon name={iconName} size={14} />
                     </button>
                 ))}
             </div>
@@ -97,7 +85,7 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
                     onClick={handleSave}
                     disabled={isNew && !title.trim()}
                 >
-                    {isNew ? <Check size={12} /> : <Save size={12} />}
+                    {isNew ? <Icon name="check" size={12} /> : <Icon name="save" size={12} />}
                     {isNew ? 'Create' : 'Save'}
                 </button>
             </div>

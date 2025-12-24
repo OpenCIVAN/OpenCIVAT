@@ -3,7 +3,7 @@
 // Can be placed left or right, handles tab selection and collapse toggle
 
 import React from 'react';
-import { ChevronLeft, ChevronRight, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import './ActivityBar.scss';
 
 /**
@@ -73,9 +73,9 @@ export function ActivityBar({
                 title={isPanelOpen ? 'Collapse panel' : 'Expand panel'}
             >
                 {isLeft ? (
-                    isPanelOpen ? <PanelLeftClose size={18} /> : <ChevronRight size={18} />
+                    isPanelOpen ? <Icon name="panelLeftClose" size={18} /> : <Icon name="chevronRight" size={18} />
                 ) : (
-                    isPanelOpen ? <PanelRightClose size={18} /> : <ChevronLeft size={18} />
+                    isPanelOpen ? <Icon name="panelRightClose" size={18} /> : <Icon name="chevronLeft" size={18} />
                 )}
             </button>
         </div>

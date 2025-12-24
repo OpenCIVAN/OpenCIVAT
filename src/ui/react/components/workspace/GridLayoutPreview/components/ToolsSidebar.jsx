@@ -13,18 +13,7 @@
  */
 
 import { memo } from 'react';
-import {
-    Plus,
-    Minus,
-    Rows,
-    Columns,
-    Merge,
-    Split,
-    ArrowUpFromLine,
-    ArrowDownFromLine,
-    ArrowLeftFromLine,
-    ArrowRightFromLine,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import './ToolsSidebar.scss';
 
 export const ToolsSidebar = memo(function ToolsSidebar({
@@ -57,7 +46,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         onClick={onAddRow}
                         title="Add row"
                     >
-                        <Plus size={12} />
+                        <Icon name="add" size={12} />
                     </button>
                     <button
                         className="tools-sidebar__btn"
@@ -65,7 +54,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         disabled={gridSize.rows <= 1}
                         title="Remove row"
                     >
-                        <Minus size={12} />
+                        <Icon name="remove" size={12} />
                     </button>
                 </div>
             </div>
@@ -79,7 +68,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         onClick={onAddColumn}
                         title="Add column"
                     >
-                        <Plus size={12} />
+                        <Icon name="add" size={12} />
                     </button>
                     <button
                         className="tools-sidebar__btn"
@@ -87,7 +76,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         disabled={gridSize.cols <= 1}
                         title="Remove column"
                     >
-                        <Minus size={12} />
+                        <Icon name="remove" size={12} />
                     </button>
                 </div>
             </div>
@@ -102,7 +91,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         disabled={!canMerge}
                         title="Merge selected cells"
                     >
-                        <Merge size={12} />
+                        <Icon name="merge" size={12} />
                     </button>
                     <button
                         className="tools-sidebar__btn"
@@ -110,7 +99,7 @@ export const ToolsSidebar = memo(function ToolsSidebar({
                         disabled={!canSplit}
                         title="Split merged cell"
                     >
-                        <Split size={12} />
+                        <Icon name="split" size={12} />
                     </button>
                 </div>
             </div>

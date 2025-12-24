@@ -2,7 +2,7 @@
 // Button to pop out a panel from the docked position
 
 import React from 'react';
-import { ExternalLink, Pin } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { usePanelPopOut } from './FloatingPanelContext';
 import './FloatingPanel.scss';
 
@@ -49,7 +49,7 @@ export function PopOutButton({
             title={poppedOut ? 'Dock panel' : 'Pop out panel'}
             aria-label={poppedOut ? 'Dock panel' : 'Pop out panel'}
         >
-            {poppedOut ? <Pin size={14} /> : <ExternalLink size={14} />}
+            {poppedOut ? <Icon name="pin" size={14} /> : <Icon name="externalLink" size={14} />}
         </button>
     );
 }

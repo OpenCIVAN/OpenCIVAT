@@ -43,14 +43,6 @@
  */
 
 import React, { memo, useCallback, useEffect } from 'react';
-import {
-    Search,
-    Folder,
-    Database,
-    Eye,
-    Users,
-    MessageSquare
-} from 'lucide-react';
 import { Modal } from '../Modal';
 import { SearchInput } from './SearchInput';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
@@ -62,12 +54,12 @@ import './GlobalSearchModal.scss';
  * Available search filters configuration
  */
 const SEARCH_FILTERS = [
-    { id: 'all', label: 'All', icon: Search },
-    { id: 'projects', label: 'Projects', icon: Folder },
-    { id: 'datasets', label: 'Datasets', icon: Database },
-    { id: 'views', label: 'Views', icon: Eye },
-    { id: 'people', label: 'People', icon: Users },
-    { id: 'annotations', label: 'Annotations', icon: MessageSquare },
+    { id: 'all', label: 'All', icon: 'search' },
+    { id: 'projects', label: 'Projects', icon: 'folder' },
+    { id: 'datasets', label: 'Datasets', icon: 'database' },
+    { id: 'views', label: 'Views', icon: 'eye' },
+    { id: 'people', label: 'People', icon: 'users' },
+    { id: 'annotations', label: 'Annotations', icon: 'messageSquare' },
 ];
 
 /**

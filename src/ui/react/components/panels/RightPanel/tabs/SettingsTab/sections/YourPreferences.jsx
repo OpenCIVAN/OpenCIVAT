@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Bell, MousePointer, Eye, Headphones } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import '../SettingsTab.scss';
 
 /**
@@ -33,11 +33,11 @@ function ToggleSwitch({ checked, onChange, label, description }) {
 /**
  * Settings group with icon header
  */
-function SettingsGroup({ icon: Icon, title, children }) {
+function SettingsGroup({ icon: iconName, title, children }) {
     return (
         <div className="settings-tab__group">
             <div className="settings-tab__group-header">
-                <Icon size={12} />
+                <Icon name={iconName} size={12} />
                 <span>{title}</span>
             </div>
             <div className="settings-tab__group-content">
@@ -65,7 +65,7 @@ export function YourPreferences({ preferences, onChange }) {
     return (
         <div className="settings-tab__section">
             {/* Notifications */}
-            <SettingsGroup icon={Bell} title="Notifications">
+            <SettingsGroup icon="bell" title="Notifications">
                 <ToggleSwitch
                     label="Mentions"
                     description="Notify when someone mentions you"
@@ -93,7 +93,7 @@ export function YourPreferences({ preferences, onChange }) {
             </SettingsGroup>
 
             {/* Cursors */}
-            <SettingsGroup icon={MousePointer} title="Cursors">
+            <SettingsGroup icon="mousePointer" title="Cursors">
                 <ToggleSwitch
                     label="Show My Cursor"
                     description="Let others see your cursor position"
@@ -115,7 +115,7 @@ export function YourPreferences({ preferences, onChange }) {
             </SettingsGroup>
 
             {/* Display */}
-            <SettingsGroup icon={Eye} title="Display">
+            <SettingsGroup icon="eye" title="Display">
                 <ToggleSwitch
                     label="Compact Mode"
                     description="Use smaller UI elements"
@@ -137,7 +137,7 @@ export function YourPreferences({ preferences, onChange }) {
             </SettingsGroup>
 
             {/* Audio */}
-            <SettingsGroup icon={Headphones} title="Audio">
+            <SettingsGroup icon="headphones" title="Audio">
                 <ToggleSwitch
                     label="Mute on Join"
                     description="Start muted when joining voice"

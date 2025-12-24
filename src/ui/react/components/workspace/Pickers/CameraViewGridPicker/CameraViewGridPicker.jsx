@@ -1,13 +1,7 @@
 // src/ui/react/components/workspace/CameraViewGridPicker.jsx
 
 import React, { useState } from 'react';
-import {
-  Box,
-  Camera,
-  Square,
-  Triangle,
-  Maximize2
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * CameraViewGridPicker
@@ -22,13 +16,13 @@ export function CameraViewGridPicker({
 }) {
   const [hoveredCell, setHoveredCell] = useState(null);
 
-  // Map icon strings to Lucide components
+  // Map icon strings to Icon system names
   const iconMap = {
-    'camera': Camera,
-    'box': Box,
-    'square': Square,
-    'triangle': Triangle,
-    'maximize-2': Maximize2,
+    'camera': 'camera',
+    'box': 'box',
+    'square': 'box',
+    'triangle': 'triangle',
+    'maximize-2': 'maximize',
   };
 
   // Build map for easy lookup
@@ -70,8 +64,8 @@ export function CameraViewGridPicker({
                 );
               }
 
-              // Get the icon component
-              const IconComponent = iconMap[view.icon] || Camera;
+              // Get the icon name
+              const iconName = iconMap[view.icon] || 'camera';
               const isHovered = hoveredCell === view.id;
 
               return (
@@ -83,7 +77,7 @@ export function CameraViewGridPicker({
                   onMouseLeave={() => setHoveredCell(null)}
                   title={view.label}
                 >
-                  <IconComponent size={16} className="camera-view-icon" />
+                  <Icon name={iconName} size={16} className="camera-view-icon" />
                   <span className="camera-view-label">{view.label}</span>
                 </div>
               );

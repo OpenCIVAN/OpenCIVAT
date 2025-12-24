@@ -24,17 +24,7 @@
  */
 
 import React, { memo, useState, useCallback } from 'react';
-import {
-    ChevronDown,
-    ChevronRight,
-    MoreHorizontal,
-    Settings,
-    Plus,
-    Trash2,
-    Download,
-    Share2,
-} from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { Icon, getLucideIcon } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { formatFileSize, formatRelativeTime } from '@Utils/formatters.js';
@@ -71,10 +61,9 @@ import './DatasetNode.scss';
 function getDatasetIcon(fileType) {
     const displayInfo = getFileTypeDisplayInfo(fileType);
     if (displayInfo?.icon) {
-        const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
-        return LucideIcons[iconName] || LucideIcons.Database;
+        return getLucideIcon(displayInfo.icon);
     }
-    return LucideIcons.Database;
+    return getLucideIcon('Database');
 }
 
 /**
@@ -96,7 +85,7 @@ export const DatasetNode = memo(function DatasetNode({
     const [menuOpen, setMenuOpen] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-    const Icon = getDatasetIcon(dataset.fileType);
+    const TypeIcon = getDatasetIcon(dataset.fileType);
     const displayInfo = getFileTypeDisplayInfo(dataset.fileType);
     const viewCount = views.length;
     const activeViewCount = views.filter((v) => v.status === 'active').length;
@@ -164,7 +153,7 @@ export const DatasetNode = memo(function DatasetNode({
             >
                 {/* Expand/collapse chevron */}
                 <span className="dataset-node__chevron">
-                    {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                    {isExpanded ? <Icon name="chevronDown" size={10} /> : <Icon name="chevronRight" size={10} />}
                 </span>
 
                 {/* Type icon */}
@@ -173,7 +162,7 @@ export const DatasetNode = memo(function DatasetNode({
                         className="dataset-node__icon"
                         style={{ color: displayInfo?.color }}
                     >
-                        <Icon size={14} />
+                        <TypeIcon size={14} />
                     </span>
                 </Tooltip>
 
@@ -210,7 +199,7 @@ export const DatasetNode = memo(function DatasetNode({
                                 className="dataset-node__action"
                                 onClick={handleCreateView}
                             >
-                                <Plus size={12} />
+                                <Icon name="add" size={12} />
                             </button>
                         </Tooltip>
                         <Tooltip content="Settings">
@@ -218,14 +207,14 @@ export const DatasetNode = memo(function DatasetNode({
                                 className="dataset-node__action"
                                 onClick={handleOpenSettings}
                             >
-                                <Settings size={12} />
+                                <Icon name="settings" size={12} />
                             </button>
                         </Tooltip>
                         <button
                             className="dataset-node__action"
                             onClick={handleContextMenu}
                         >
-                            <MoreHorizontal size={12} />
+                            <Icon name="moreHorizontal" size={12} />
                         </button>
                     </div>
                 )}
@@ -236,20 +225,20 @@ export const DatasetNode = memo(function DatasetNode({
                         <div className="dataset-node__menu-backdrop" onClick={handleCloseMenu} />
                         <div className="dataset-node__menu">
                             <button className="dataset-node__menu-item" onClick={handleCreateView}>
-                                <Plus size={12} />
+                                <Icon name="add" size={12} />
                                 <span>Create View</span>
                             </button>
                             <button className="dataset-node__menu-item" onClick={handleOpenSettings}>
-                                <Settings size={12} />
+                                <Icon name="settings" size={12} />
                                 <span>Dataset Settings</span>
                             </button>
                             <div className="dataset-node__menu-divider" />
                             <button className="dataset-node__menu-item" onClick={(e) => e.stopPropagation()}>
-                                <Download size={12} />
+                                <Icon name="download" size={12} />
                                 <span>Download</span>
                             </button>
                             <button className="dataset-node__menu-item" onClick={(e) => e.stopPropagation()}>
-                                <Share2 size={12} />
+                                <Icon name="share2" size={12} />
                                 <span>Share</span>
                             </button>
                             <div className="dataset-node__menu-divider" />
@@ -257,7 +246,7 @@ export const DatasetNode = memo(function DatasetNode({
                                 className="dataset-node__menu-item dataset-node__menu-item--danger"
                                 onClick={handleUnload}
                             >
-                                <Trash2 size={12} />
+                                <Icon name="delete" size={12} />
                                 <span>Unload Dataset</span>
                             </button>
                         </div>

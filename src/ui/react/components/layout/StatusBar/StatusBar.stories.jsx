@@ -12,22 +12,7 @@ import React, { useState, useEffect } from 'react';
 // we create isolated mock versions of the helper components for Storybook.
 // =============================================================================
 
-import {
-    Wifi,
-    WifiOff,
-    Users,
-    AlertTriangle,
-    Eye,
-    EyeOff,
-    Circle,
-    Zap,
-    ChevronUp,
-    Shield,
-    ShieldAlert,
-    Pause,
-    Square,
-    Cpu,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import './StatusBar.scss';
 
@@ -91,12 +76,12 @@ function MockStatusBar({
                 {/* Auth Mode */}
                 {isDevMode ? (
                     <div className="status-bar__item status-bar__item--dev-mode" title="Development mode">
-                        <ShieldAlert size={10} />
+                        <Icon name="shieldAlert" size={10} />
                         <span>Dev Mode</span>
                     </div>
                 ) : isAuthenticated ? (
                     <div className="status-bar__item status-bar__item--auth" title={`Signed in as ${userName}`}>
-                        <Shield size={10} />
+                        <Icon name="shield" size={10} />
                         <span>Secure</span>
                     </div>
                 ) : null}
@@ -106,17 +91,17 @@ function MockStatusBar({
                 {/* Sync Status */}
                 {!isConnected ? (
                     <div className="status-bar__item status-bar__item--error">
-                        <WifiOff size={10} />
+                        <Icon name="wifiOff" size={10} />
                         <span>Offline</span>
                     </div>
                 ) : isSyncing ? (
                     <div className="status-bar__item status-bar__item--warning">
-                        <Wifi size={10} />
+                        <Icon name="wifi" size={10} />
                         <span>Syncing...</span>
                     </div>
                 ) : (
                     <div className="status-bar__item status-bar__item--success">
-                        <Wifi size={10} />
+                        <Icon name="wifi" size={10} />
                         <span>Synced</span>
                     </div>
                 )}
@@ -125,14 +110,14 @@ function MockStatusBar({
 
                 {/* Online Users */}
                 <div className="status-bar__item status-bar__item--interactive">
-                    <Users size={10} />
+                    <Icon name="users" size={10} />
                     <span>{onlineCount} online</span>
                 </div>
 
                 {/* Warnings */}
                 {warningCount > 0 && (
                     <button className="status-bar__item status-bar__item--warnings" title="Click to view logs">
-                        <AlertTriangle size={12} />
+                        <Icon name="alertTriangle" size={12} />
                         <span>{warningCount}</span>
                     </button>
                 )}
@@ -145,7 +130,7 @@ function MockStatusBar({
                     onClick={() => setLocalCursorsVisible(!localCursorsVisible)}
                     title={localCursorsVisible ? 'Hide cursors' : 'Show cursors'}
                 >
-                    {localCursorsVisible ? <Eye size={10} /> : <EyeOff size={10} />}
+                    {localCursorsVisible ? <Icon name="eye" size={10} /> : <Icon name="eyeOff" size={10} />}
                     <span>Cursors</span>
                 </button>
 
@@ -167,22 +152,22 @@ function MockStatusBar({
                 {isRecording && (
                     <div className="status-bar__recording-controls">
                         <button className="status-bar__recording-indicator" title="Open Recording panel">
-                            <Circle size={8} className={`status-bar__recording-dot ${isPaused ? 'paused' : ''}`} />
+                            <Icon name="circle" size={8} className={`status-bar__recording-dot ${isPaused ? 'paused' : ''}`} />
                             <span>{formatDuration(recordingDuration)}</span>
                             {recordingMode && <span className="status-bar__recording-mode">{recordingMode}</span>}
                         </button>
                         <button className="status-bar__recording-btn" title={isPaused ? 'Resume' : 'Pause'}>
-                            <Pause size={10} />
+                            <Icon name="pause" size={10} />
                         </button>
                         <button className="status-bar__recording-btn status-bar__recording-btn--stop" title="Stop recording">
-                            <Square size={10} />
+                            <Icon name="square" size={10} />
                         </button>
                     </div>
                 )}
 
                 {/* Memory Usage */}
                 <button className={`status-bar__item status-bar__memory ${getMemoryClass()}`} title="Click for memory breakdown">
-                    <Cpu size={10} />
+                    <Icon name="cpu" size={10} />
                     <span>{ramUsage}%</span>
                 </button>
 
@@ -190,7 +175,7 @@ function MockStatusBar({
 
                 {/* FPS Counter */}
                 <div className={`status-bar__item ${getFpsClass()}`}>
-                    <Zap size={10} />
+                    <Icon name="zap" size={10} />
                     <span>{fps} FPS</span>
                 </div>
 
@@ -198,7 +183,7 @@ function MockStatusBar({
 
                 {/* Panel Toggle */}
                 <button className="status-bar__item status-bar__item--toggle" title="Toggle output panel">
-                    <ChevronUp size={14} />
+                    <Icon name="chevronUp" size={14} />
                 </button>
             </div>
         </div>

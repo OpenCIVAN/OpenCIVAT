@@ -129,19 +129,19 @@ export function getDefaultWorkspace() {
 export const WORKSPACE_TYPE_CONFIG = {
   personal: {
     name: "Personal",
-    icon: "User",
+    icon: "user",
     color: "#60a5fa",
     description: "Private workspace, only visible to you",
   },
   shared: {
     name: "Shared",
-    icon: "Users",
+    icon: "users",
     color: "#34d399",
     description: "Shared with selected team members",
   },
   project: {
     name: "Project",
-    icon: "FolderKanban",
+    icon: "folderKanban",
     color: "#c084fc",
     description: "Organization-wide project workspace",
   },

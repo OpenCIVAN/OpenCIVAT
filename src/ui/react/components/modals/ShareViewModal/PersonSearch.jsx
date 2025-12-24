@@ -20,7 +20,7 @@
  */
 
 import React, { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Search, UserPlus } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} User

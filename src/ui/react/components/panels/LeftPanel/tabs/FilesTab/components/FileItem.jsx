@@ -8,17 +8,7 @@
  */
 
 import React, { useState, memo } from 'react';
-import {
-    ChevronDown,
-    ChevronRight,
-    GripVertical,
-    Star,
-    MoreHorizontal,
-    Circle,
-    Folder,
-    FileText,
-} from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { Icon, getLucideIcon } from '@UI/react/components/common/Icon';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { FileThumbnail } from './FileThumbnail';
 
@@ -29,14 +19,13 @@ import { FileThumbnail } from './FileThumbnail';
  */
 export const getFileTypeConfig = (file) => {
     if (file.isFolder) {
-        return { icon: Folder, colorClass: 'file-icon--folder', color: null };
+        return { icon: getLucideIcon('Folder'), colorClass: 'file-icon--folder', color: null };
     }
 
     const displayInfo = getFileTypeDisplayInfo(file.fileType);
 
     if (displayInfo) {
-        const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
-        const IconComponent = LucideIcons[iconName] || LucideIcons.Box;
+        const IconComponent = getLucideIcon(displayInfo.icon);
 
         return {
             icon: IconComponent,
@@ -45,7 +34,7 @@ export const getFileTypeConfig = (file) => {
         };
     }
 
-    return { icon: FileText, colorClass: 'file-icon--default', color: null };
+    return { icon: getLucideIcon('FileText'), colorClass: 'file-icon--default', color: null };
 };
 
 /**
@@ -105,10 +94,11 @@ export const FileItemList = memo(function FileItemList({
             >
                 {isFolder ? (
                     <span className="chevron">
-                        {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        {isExpanded ? <Icon name="chevronDown" size={12} /> : <Icon name="chevronRight" size={12} />}
                     </span>
                 ) : (
-                    <GripVertical
+                    <Icon
+                        name="gripVertical"
                         size={10}
                         className="drag-handle"
                         style={{ opacity: isHovered ? 0.6 : 0 }}
@@ -128,7 +118,7 @@ export const FileItemList = memo(function FileItemList({
                             onStar(file.id);
                         }}
                     >
-                        <Star size={10} fill={file.starred ? 'currentColor' : 'none'} />
+                        <Icon name="star" size={10} fill={file.starred ? 'currentColor' : 'none'} />
                     </button>
                 )}
                 {!isFolder && isHovered && (
@@ -137,11 +127,11 @@ export const FileItemList = memo(function FileItemList({
                         onClick={(e) => onMenuClick?.(e, file)}
                         title="More actions"
                     >
-                        <MoreHorizontal size={12} />
+                        <Icon name="moreHorizontal" size={12} />
                     </button>
                 )}
                 {file.loaded && (
-                    <Circle size={6} fill="currentColor" className="status-indicator__dot--active" />
+                    <Icon name="circle" size={6} fill="currentColor" className="status-indicator__dot--active" />
                 )}
                 <span className="item-meta">
                     {isFolder ? `${file.children?.length || 0}` : file.size}
@@ -218,14 +208,14 @@ export const FileItemGrid = memo(function FileItemGrid({
                             onStar(file.id);
                         }}
                     >
-                        <Star size={10} fill={file.starred ? 'currentColor' : 'none'} />
+                        <Icon name="star" size={10} fill={file.starred ? 'currentColor' : 'none'} />
                     </button>
                     <button
                         className="thumbnail-action"
                         onClick={(e) => onMenuClick?.(e, file)}
                         title="More actions"
                     >
-                        <MoreHorizontal size={10} />
+                        <Icon name="moreHorizontal" size={10} />
                     </button>
                 </div>
             </div>

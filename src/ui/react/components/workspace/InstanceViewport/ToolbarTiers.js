@@ -1,39 +1,6 @@
 // src/ui/react/components/workspace/InstanceViewport/ToolbarTiers.js
 // Tool group definitions and tier configurations for the overlay toolbar system
 
-import {
-  Pencil,
-  Type,
-  Ruler,
-  Crosshair,
-  Square,
-  Circle,
-  ArrowRight,
-  Eye,
-  Palette,
-  Layers,
-  Grid3x3,
-  Box,
-  Maximize2,
-  Focus,
-  Users,
-  Share2,
-  MessageSquare,
-  Video,
-  Undo2,
-  Redo2,
-  Wrench,
-  MoreHorizontal,
-  Settings,
-  Glasses,
-  Move,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Scan,
-  MousePointer2,
-} from 'lucide-react';
-
 // ============================================================================
 // TOOL GROUPS - Organized by functionality
 // ============================================================================
@@ -42,54 +9,54 @@ export const TOOL_GROUPS = {
   annotate: {
     id: "annotate",
     label: "Annotate",
-    icon: Pencil,
+    icon: 'pencil',
     description: "Drawing and annotation tools",
     tools: [
-      { id: "pencil", label: "Pencil", icon: Pencil, shortcut: "P" },
-      { id: "text", label: "Text", icon: Type, shortcut: "T" },
-      { id: "measure", label: "Measure", icon: Ruler, shortcut: "M" },
-      { id: "crosshair", label: "Crosshair", icon: Crosshair },
-      { id: "rectangle", label: "Rectangle", icon: Square },
-      { id: "circle", label: "Circle", icon: Circle },
-      { id: "arrow", label: "Arrow", icon: ArrowRight },
+      { id: "pencil", label: "Pencil", icon: 'pencil', shortcut: "P" },
+      { id: "text", label: "Text", icon: 'type', shortcut: "T" },
+      { id: "measure", label: "Measure", icon: 'ruler', shortcut: "M" },
+      { id: "crosshair", label: "Crosshair", icon: 'crosshair' },
+      { id: "rectangle", label: "Rectangle", icon: 'square' },
+      { id: "circle", label: "Circle", icon: 'circle' },
+      { id: "arrow", label: "Arrow", icon: 'arrowRight' },
     ],
   },
   view: {
     id: "view",
     label: "View",
-    icon: Eye,
+    icon: 'eye',
     description: "Camera and view controls",
     tools: [
-      { id: "orbit", label: "Orbit", icon: Eye },
-      { id: "pan", label: "Pan", icon: Move },
-      { id: "zoom", label: "Zoom", icon: ZoomIn },
-      { id: "reset-view", label: "Reset View", icon: RotateCcw, shortcut: "R" },
-      { id: "focus", label: "Focus Selection", icon: Focus },
-      { id: "fullscreen", label: "Fullscreen", icon: Maximize2, shortcut: "F" },
+      { id: "orbit", label: "Orbit", icon: 'eye' },
+      { id: "pan", label: "Pan", icon: 'move' },
+      { id: "zoom", label: "Zoom", icon: 'zoomIn' },
+      { id: "reset-view", label: "Reset View", icon: 'rotateCcw', shortcut: "R" },
+      { id: "focus", label: "Focus Selection", icon: 'focus' },
+      { id: "fullscreen", label: "Fullscreen", icon: 'maximize2', shortcut: "F" },
     ],
   },
   visual: {
     id: "visual",
     label: "Visual",
-    icon: Palette,
+    icon: 'palette',
     description: "Visual styling and appearance",
     tools: [
-      { id: "colormap", label: "Colormap", icon: Palette },
-      { id: "layers", label: "Layers", icon: Layers },
-      { id: "grid", label: "Grid", icon: Grid3x3 },
-      { id: "bounds", label: "Bounds", icon: Box },
+      { id: "colormap", label: "Colormap", icon: 'palette' },
+      { id: "layers", label: "Layers", icon: 'layers' },
+      { id: "grid", label: "Grid", icon: 'grid3x3' },
+      { id: "bounds", label: "Bounds", icon: 'box' },
     ],
   },
   collab: {
     id: "collab",
     label: "Collaborate",
-    icon: Users,
+    icon: 'users',
     description: "Collaboration tools",
     tools: [
-      { id: "cursors", label: "Show Cursors", icon: Users },
-      { id: "share", label: "Share View", icon: Share2 },
-      { id: "comment", label: "Comment", icon: MessageSquare },
-      { id: "record", label: "Record", icon: Video },
+      { id: "cursors", label: "Show Cursors", icon: 'users' },
+      { id: "share", label: "Share View", icon: 'share2' },
+      { id: "comment", label: "Comment", icon: 'messageSquare' },
+      { id: "record", label: "Record", icon: 'video' },
     ],
   },
 };
@@ -102,14 +69,14 @@ export const GLOBAL_TOOLS = {
   instanceTools: {
     id: "instance-tools",
     label: "Instance Tools",
-    icon: Wrench,
+    icon: 'wrench',
     description: "Open instance tools panel",
     shortcut: "I",
   },
   more: {
     id: "more",
     label: "More",
-    icon: MoreHorizontal,
+    icon: 'moreHorizontal',
     description: "Additional options",
   },
 };
@@ -122,13 +89,13 @@ export const HISTORY_TOOLS = {
   undo: {
     id: "undo",
     label: "Undo",
-    icon: Undo2,
+    icon: 'undo2',
     shortcut: "Ctrl+Z",
   },
   redo: {
     id: "redo",
     label: "Redo",
-    icon: Redo2,
+    icon: 'redo2',
     shortcut: "Ctrl+Shift+Z",
   },
 };
@@ -138,10 +105,10 @@ export const HISTORY_TOOLS = {
 // ============================================================================
 
 export const NAV_TOOLS = {
-  pan: { id: "nav-pan", label: "Pan", icon: Move },
-  zoom: { id: "nav-zoom", label: "Zoom", icon: ZoomIn },
-  rotate: { id: "nav-rotate", label: "Rotate", icon: RotateCcw },
-  fit: { id: "nav-fit", label: "Fit", icon: Scan },
+  pan: { id: "nav-pan", label: "Pan", icon: 'move' },
+  zoom: { id: "nav-zoom", label: "Zoom", icon: 'zoomIn' },
+  rotate: { id: "nav-rotate", label: "Rotate", icon: 'rotateCcw' },
+  fit: { id: "nav-fit", label: "Fit", icon: 'scan' },
   oneToOne: { id: "nav-1to1", label: "1:1", icon: null },
 };
 
@@ -153,17 +120,17 @@ export const CORNER_TOOLS = {
   instanceTools: {
     id: "corner-instance-tools",
     label: "Instance Tools",
-    icon: Wrench,
+    icon: 'wrench',
   },
   vrMode: {
     id: "corner-vr",
     label: "VR Mode",
-    icon: Glasses,
+    icon: 'glasses',
   },
   settings: {
     id: "corner-settings",
     label: "Settings",
-    icon: Settings,
+    icon: 'settings',
   },
 };
 
@@ -175,11 +142,11 @@ export const GEAR_DROPDOWN_ITEMS = [
   {
     id: "gear-instance-tools",
     label: "Instance Tools",
-    icon: Wrench,
+    icon: 'wrench',
     primary: true,
   },
-  { id: "gear-vr", label: "VR Mode", icon: Glasses },
-  { id: "gear-maximize", label: "Maximize", icon: Maximize2 },
+  { id: "gear-vr", label: "VR Mode", icon: 'glasses' },
+  { id: "gear-maximize", label: "Maximize", icon: 'maximize2' },
   { id: "gear-duplicate", label: "Duplicate", icon: null },
   { id: "gear-close", label: "Close", icon: null },
 ];

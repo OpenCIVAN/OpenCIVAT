@@ -22,15 +22,7 @@
  */
 
 import React, { memo, useRef, useEffect, useCallback } from 'react';
-import {
-    Video,
-    Monitor,
-    Mic,
-    Camera,
-    MessageSquare,
-    Check,
-    X
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { Modal } from '../Modal';
 import './RecordingConsentModal.scss';
 
@@ -40,28 +32,28 @@ import './RecordingConsentModal.scss';
 const RECORDING_ITEMS = [
     {
         key: 'screen',
-        icon: Monitor,
+        icon: 'monitor',
         label: 'Screen / Canvas activity',
         activeLabel: 'Recording',
         inactiveLabel: 'Not recording',
     },
     {
         key: 'audio',
-        icon: Mic,
+        icon: 'mic',
         label: 'Voice audio',
         activeLabel: 'Recording',
         inactiveLabel: 'Not recording',
     },
     {
         key: 'webcam',
-        icon: Camera,
+        icon: 'camera',
         label: 'Webcam video',
         activeLabel: 'Recording',
         inactiveLabel: 'Not recording',
     },
     {
         key: 'chat',
-        icon: MessageSquare,
+        icon: 'messageSquare',
         label: 'Chat messages',
         activeLabel: 'Recording',
         inactiveLabel: 'Not recording',
@@ -91,7 +83,7 @@ const RECORDING_ITEMS = [
  * Recording item component showing what's being recorded.
  */
 const RecordingItem = memo(function RecordingItem({
-    icon: Icon,
+    icon,
     label,
     isActive,
     activeLabel,
@@ -105,10 +97,10 @@ const RecordingItem = memo(function RecordingItem({
     return (
         <div className={itemClassNames} role="listitem">
             <span className="recording-item__icon" aria-hidden="true">
-                {isActive ? <Check size={14} /> : <X size={14} />}
+                <Icon name={isActive ? "check" : "close"} size={14} />
             </span>
             <span className="recording-item__type-icon" aria-hidden="true">
-                <Icon size={16} />
+                <Icon name={icon} size={16} />
             </span>
             <span className="recording-item__label">{label}</span>
             <span className="recording-item__status">
@@ -125,7 +117,7 @@ const RecordingIcon = memo(function RecordingIcon() {
     return (
         <span className="recording-consent-modal__icon-wrapper">
             <span className="recording-dot" aria-hidden="true" />
-            <Video size={20} className="recording-consent-modal__icon" />
+            <Icon name="video" size={20} className="recording-consent-modal__icon" />
         </span>
     );
 });

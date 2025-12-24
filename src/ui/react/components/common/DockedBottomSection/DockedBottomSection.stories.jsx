@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DockedBottomSection, DockedHeightProvider } from './index';
-import { Settings, Grid3x3, Users } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 export default {
     title: 'Common/DockedBottomSection',
@@ -83,7 +83,7 @@ export const WithHeaderControls = {
                     borderRadius: '4px',
                     cursor: 'pointer'
                 }}>
-                    <Grid3x3 size={14} />
+                    <Icon name="grid3x3" size={14} />
                 </button>
                 <button style={{
                     display: 'flex',
@@ -98,7 +98,7 @@ export const WithHeaderControls = {
                     borderRadius: '4px',
                     cursor: 'pointer'
                 }}>
-                    <Settings size={14} />
+                    <Icon name="settings" size={14} />
                 </button>
             </>
         ),
@@ -178,7 +178,7 @@ export const PresenceContext = {
                 fontSize: '12px',
                 cursor: 'pointer'
             }}>
-                <Users size={12} />
+                <Icon name="users" size={12} />
                 Save Place
             </button>
         ),

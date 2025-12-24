@@ -4,20 +4,7 @@
  */
 
 import React from 'react';
-import {
-    Clock,
-    User,
-    Database,
-    Eye,
-    MessageSquare,
-    Share2,
-    Upload,
-    Download,
-    Trash2,
-    Edit3,
-    RefreshCw,
-    Circle,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { formatTimestamp } from '@Utils/formatters.js';
 
 /**
@@ -25,17 +12,17 @@ import { formatTimestamp } from '@Utils/formatters.js';
  */
 function getActivityIcon(type) {
     switch (type) {
-        case 'view': return Eye;
-        case 'dataset': return Database;
-        case 'annotation': return MessageSquare;
-        case 'share': return Share2;
-        case 'upload': return Upload;
-        case 'download': return Download;
-        case 'delete': return Trash2;
-        case 'edit': return Edit3;
-        case 'join': return User;
-        case 'system': return RefreshCw;
-        default: return Circle;
+        case 'view': return 'eye';
+        case 'dataset': return 'database';
+        case 'annotation': return 'messageSquare';
+        case 'share': return 'share';
+        case 'upload': return 'upload';
+        case 'download': return 'download';
+        case 'delete': return 'delete';
+        case 'edit': return 'edit';
+        case 'join': return 'user';
+        case 'system': return 'refresh';
+        default: return 'circle';
     }
 }
 
@@ -62,13 +49,13 @@ function getActivityIcon(type) {
  * @returns {React.ReactElement} The rendered card
  */
 export function ActivityCard({ activity }) {
-    const Icon = getActivityIcon(activity.type);
+    const iconName = getActivityIcon(activity.type);
     const isSystem = activity.type === 'system';
 
     return (
         <div className={`activity-card ${isSystem ? 'activity-card--system' : ''}`}>
             <div className="activity-card__icon" data-type={activity.type}>
-                <Icon size={14} />
+                <Icon name={iconName} size={14} />
             </div>
 
             <div className="activity-card__content">
@@ -87,7 +74,7 @@ export function ActivityCard({ activity }) {
                     )}
                 </div>
                 <div className="activity-card__time">
-                    <Clock size={10} />
+                    <Icon name="clock" size={10} />
                     <span>{formatTimestamp(activity.timestamp)}</span>
                 </div>
             </div>

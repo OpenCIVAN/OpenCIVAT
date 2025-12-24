@@ -8,26 +8,7 @@
 // - Footer uses panel-footer class fixed to bottom
 
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-    MapPin,
-    Search,
-    X,
-    Filter,
-    Database,
-    LayoutGrid,
-    Circle,
-    Box,
-    Ruler,
-    CornerUpRight,
-    Eye,
-    EyeOff,
-    MoreHorizontal,
-    ChevronRight,
-    ChevronDown,
-    ExternalLink,
-    Plus,
-    Loader,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -49,11 +30,11 @@ const ANNOTATION_SCOPES = [
 ];
 
 const ANNOTATION_TYPES = {
-    point: { icon: MapPin, label: 'Point', color: 'blue' },
-    region: { icon: Box, label: 'Region', color: 'green' },
-    measurement: { icon: Ruler, label: 'Measure', color: 'amber' },
-    angle: { icon: CornerUpRight, label: 'Angle', color: 'purple' },
-    text: { icon: MapPin, label: 'Text', color: 'pink' },
+    point: { icon: 'mapPin', label: 'Point', color: 'blue' },
+    region: { icon: 'box', label: 'Region', color: 'green' },
+    measurement: { icon: 'ruler', label: 'Measure', color: 'amber' },
+    angle: { icon: 'cornerUpRight', label: 'Angle', color: 'purple' },
+    text: { icon: 'mapPin', label: 'Text', color: 'pink' },
 };
 
 const DEFAULT_SECTION_STATES = {
@@ -107,10 +88,10 @@ function AnnotationItem({ annotation, onToggleVisibility }) {
                 onClick={() => onToggleVisibility?.(annotation)}
                 title={isVisible ? 'Hide' : 'Show'}
             >
-                {isVisible ? <Eye size={12} /> : <EyeOff size={12} />}
+                {isVisible ? <Icon name="eye" size={12} /> : <Icon name="eyeOff" size={12} />}
             </button>
             <button className="annotation-item__more" title="More options">
-                <MoreHorizontal size={12} />
+                <Icon name="moreHorizontal" size={12} />
             </button>
         </div>
     );
@@ -127,8 +108,8 @@ function DatasetGroup({ dataset, annotations, onToggleVisibility }) {
                 className="dataset-group__header"
                 onClick={() => setExpanded(!expanded)}
             >
-                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                <Database size={12} className="dataset-group__icon" />
+                {expanded ? <Icon name="chevronDown" size={12} /> : <Icon name="chevronRight" size={12} />}
+                <Icon name="database" size={12} className="dataset-group__icon" />
                 <span className="dataset-group__name">{dataset?.name || 'Unknown Dataset'}</span>
                 <span className="dataset-group__count">{annotations.length}</span>
             </button>
@@ -234,7 +215,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
         <div className="annotations-tab">
             {/* Header - ALL CAPS like other tabs */}
             <div className="panel-header panel-header--pink">
-                <MapPin size={16} className="panel-header__icon" />
+                <Icon name="mapPin" size={16} className="panel-header__icon" />
                 <span className="panel-header__title">Annotations</span>
                 <span className="panel-header__count">{stats.total}</span>
             </div>
@@ -256,7 +237,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
             {/* Search */}
             <div className="annotations-tab__search">
                 <div className="search-input">
-                    <Search size={12} className="search-input__icon" />
+                    <Icon name="search" size={12} className="search-input__icon" />
                     <input
                         type="text"
                         value={searchQuery}
@@ -268,7 +249,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
                             className="search-input__clear"
                             onClick={() => setSearchQuery('')}
                         >
-                            <X size={10} />
+                            <Icon name="close" size={10} />
                         </button>
                     )}
                 </div>
@@ -292,7 +273,7 @@ export function AnnotationsPanelContent({ workspaceId }) {
             {/* Loading state */}
             {isLoading && (
                 <div className="annotations-tab__loading">
-                    <Loader size={16} className="spin" />
+                    <Icon name="loader" size={16} className="spin" />
                     <span>Loading annotations...</span>
                 </div>
             )}
@@ -353,11 +334,11 @@ export function AnnotationsPanelContent({ workspaceId }) {
             {/* Footer - fixed at bottom */}
             <div className="panel-footer">
                 <button className="panel-footer__btn panel-footer__btn--primary">
-                    <Plus size={11} />
+                    <Icon name="add" size={11} />
                     <span>New Annotation</span>
                 </button>
                 <button className="panel-footer__btn" title="Open full annotations panel">
-                    <ExternalLink size={11} />
+                    <Icon name="externalLink" size={11} />
                     <span>Open Panel</span>
                 </button>
             </div>

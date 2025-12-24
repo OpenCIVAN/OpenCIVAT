@@ -3,7 +3,7 @@
 // Designed for use in SecondaryBottomBar left zone
 
 import React from 'react';
-import { Monitor, Glasses } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useViewModeToggle, VIEW_MODES } from './ViewModeToggle.logic.js';
 import './ViewModeToggle.scss';
 
@@ -71,7 +71,7 @@ export function ViewModeToggle({
                 disabled={disabled}
                 title="Desktop Mode - Standard 2D interface"
             >
-                <Monitor size={compact ? 14 : 12} className="view-mode-toggle__icon" />
+                <Icon name="monitor" size={compact ? 14 : 12} className="view-mode-toggle__icon" />
                 {!compact && <span className="view-mode-toggle__label">Desktop</span>}
             </button>
 
@@ -85,7 +85,7 @@ export function ViewModeToggle({
                 disabled={disabled || !canEnterVR}
                 title={canEnterVR ? "VR Mode - Immersive 3D experience" : vrUnavailableReason}
             >
-                <Glasses size={compact ? 14 : 12} className="view-mode-toggle__icon" />
+                <Icon name="glasses" size={compact ? 14 : 12} className="view-mode-toggle__icon" />
                 {!compact && <span className="view-mode-toggle__label">VR</span>}
                 {!canEnterVR && !compact && (
                     <span className="view-mode-toggle__unavailable-indicator" title={vrUnavailableReason}>
@@ -103,12 +103,12 @@ export function ViewModeToggle({
  */
 export function ViewModeIndicator({ mode, compact = false }) {
     const isVR = mode === VIEW_MODES.VR;
-    const Icon = isVR ? Glasses : Monitor;
+    const iconName = isVR ? 'glasses' : 'monitor';
     const label = isVR ? 'VR Mode' : 'Desktop';
 
     return (
         <div className={`view-mode-indicator ${compact ? 'view-mode-indicator--compact' : ''}`}>
-            <Icon size={12} className="view-mode-indicator__icon" />
+            <Icon name={iconName} size={12} className="view-mode-indicator__icon" />
             {!compact && <span className="view-mode-indicator__label">{label}</span>}
         </div>
     );

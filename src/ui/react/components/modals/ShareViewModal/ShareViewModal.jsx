@@ -25,7 +25,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import { Share2, Link, UserX, Check, AlertTriangle } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '../Modal';
 import { Button } from '../../common/Button';
 import PersonSearch from './PersonSearch';
@@ -324,7 +324,7 @@ function ShareViewModal({
             isOpen={isOpen}
             onClose={handleClose}
             title={modalTitle}
-            icon={Share2}
+            icon={getIconComponent('share')}
             severity="info"
             size="md"
             testId={testId}
@@ -333,7 +333,7 @@ function ShareViewModal({
                     {/* Copy Link button */}
                     <Button
                         variant="secondary"
-                        icon={linkCopied ? Check : Link}
+                        icon={getIconComponent(linkCopied ? 'check' : 'link')}
                         onClick={handleCopyLink}
                         loading={isCopying}
                         disabled={isStopping}
@@ -347,7 +347,7 @@ function ShareViewModal({
                     {!showStopConfirm ? (
                         <Button
                             variant="ghost"
-                            icon={UserX}
+                            icon={getIconComponent('userX')}
                             onClick={handleStopSharingClick}
                             disabled={sharees.length === 0 || isSaving || isStopping}
                         >
@@ -356,7 +356,7 @@ function ShareViewModal({
                     ) : (
                         <div className="share-view-modal__confirm">
                             <span className="share-view-modal__confirm-text">
-                                <AlertTriangle size={14} /> Remove all access?
+                                <Icon name="warning" size={14} /> Remove all access?
                             </span>
                             <Button
                                 variant="ghost"

@@ -4,7 +4,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Minus, Maximize2, Minimize2, PinOff, GripVertical } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useFloatingPanels, FLOATING_PANEL_DEFAULTS } from './FloatingPanelContext';
 import './FloatingPanel.scss';
 
@@ -160,7 +160,7 @@ export function FloatingPanel({
                 onMouseDown={handleDragStart}
             >
                 <div className="floating-panel__drag-handle">
-                    <GripVertical size={14} />
+                    <Icon name="gripVertical" size={14} />
                 </div>
                 {Icon && (
                     <div className="floating-panel__icon">
@@ -175,21 +175,21 @@ export function FloatingPanel({
                         onClick={() => setMinimized(!minimized)}
                         title={minimized ? 'Expand' : 'Minimize'}
                     >
-                        {minimized ? <Maximize2 size={14} /> : <Minus size={14} />}
+                        {minimized ? <Icon name="maximize2" size={14} /> : <Icon name="remove" size={14} />}
                     </button>
                     <button
                         className="floating-panel__control-btn"
                         onClick={handleDock}
                         title="Dock panel"
                     >
-                        <PinOff size={14} />
+                        <Icon name="pinOff" size={14} />
                     </button>
                     <button
                         className="floating-panel__control-btn floating-panel__control-btn--close"
                         onClick={handleDock}
                         title="Close"
                     >
-                        <X size={14} />
+                        <Icon name="close" size={14} />
                     </button>
                 </div>
             </div>

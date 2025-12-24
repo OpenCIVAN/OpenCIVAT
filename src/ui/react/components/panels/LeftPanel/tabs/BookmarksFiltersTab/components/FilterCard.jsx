@@ -13,20 +13,7 @@
  */
 
 import React, { useState, memo } from 'react';
-import {
-    Filter,
-    Pin,
-    PinOff,
-    Trash2,
-    Play,
-    Edit3,
-    Copy,
-    Download,
-    MoreHorizontal,
-    Eye,
-    Database,
-    Layout,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { getScopeConfig } from '../constants';
 
 /**
@@ -38,13 +25,13 @@ import { getScopeConfig } from '../constants';
 function getFilterScopeIcon(scope) {
     switch (scope) {
         case 'view':
-            return { icon: Eye, color: 'blue' };
+            return { icon: 'eye', color: 'blue' };
         case 'dataset':
-            return { icon: Database, color: 'teal' };
+            return { icon: 'database', color: 'teal' };
         case 'workspace':
-            return { icon: Layout, color: 'purple' };
+            return { icon: 'layout', color: 'purple' };
         default:
-            return { icon: Filter, color: 'gray' };
+            return { icon: 'filter', color: 'gray' };
     }
 }
 
@@ -108,7 +95,6 @@ export const FilterCard = memo(function FilterCard({
 
     const scopeConfig = getScopeConfig(filter.scope);
     const scopeIcon = getFilterScopeIcon(filter.scope);
-    const ScopeIcon = scopeIcon.icon;
 
     const handleApply = (e) => {
         e.stopPropagation();
@@ -151,17 +137,17 @@ export const FilterCard = memo(function FilterCard({
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={handleApply}
             >
-                <Filter size={14} className={`icon-${scopeIcon.color}`} />
+                <Icon name="filter" size={14} className={`icon-${scopeIcon.color}`} />
                 <span className="filter-card__name">{filter.name}</span>
                 {filter.isPinned && (
-                    <Pin size={10} className="filter-card__pin-indicator" fill="currentColor" />
+                    <Icon name="pin" size={10} className="filter-card__pin-indicator" fill="currentColor" />
                 )}
                 <button
                     className="filter-card__apply-btn"
                     onClick={handleApply}
                     style={{ opacity: isHovered ? 1 : 0 }}
                 >
-                    <Play size={10} />
+                    <Icon name="play" size={10} />
                 </button>
             </div>
         );
@@ -175,7 +161,7 @@ export const FilterCard = memo(function FilterCard({
         >
             {/* Type icon */}
             <div className="filter-card__icon">
-                <Filter size={16} />
+                <Icon name="filter" size={16} />
             </div>
 
             {/* Content */}
@@ -189,7 +175,7 @@ export const FilterCard = memo(function FilterCard({
                         data-color={scopeConfig.color}
                         title={scopeConfig.label}
                     >
-                        <ScopeIcon size={8} />
+                        <Icon name={scopeIcon.icon} size={8} />
                         {scopeConfig.label}
                     </span>
                 </div>
@@ -231,9 +217,9 @@ export const FilterCard = memo(function FilterCard({
                     title={filter.isPinned ? 'Unpin' : 'Pin'}
                 >
                     {filter.isPinned ? (
-                        <Pin size={10} fill="currentColor" />
+                        <Icon name="pin" size={10} fill="currentColor" />
                     ) : (
-                        <PinOff size={10} />
+                        <Icon name="pinOff" size={10} />
                     )}
                 </button>
 
@@ -244,26 +230,26 @@ export const FilterCard = memo(function FilterCard({
                             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                             title="More actions"
                         >
-                            <MoreHorizontal size={10} />
+                            <Icon name="moreHorizontal" size={10} />
                         </button>
 
                         {/* Context menu */}
                         {showMenu && (
                             <div className="filter-card__menu">
                                 <button onClick={handleEdit}>
-                                    <Edit3 size={10} />
+                                    <Icon name="edit" size={10} />
                                     Edit
                                 </button>
                                 <button onClick={handleDuplicate}>
-                                    <Copy size={10} />
+                                    <Icon name="copy" size={10} />
                                     Duplicate
                                 </button>
                                 <button onClick={handleExport}>
-                                    <Download size={10} />
+                                    <Icon name="download" size={10} />
                                     Export
                                 </button>
                                 <button onClick={handleDelete} className="danger">
-                                    <Trash2 size={10} />
+                                    <Icon name="delete" size={10} />
                                     Delete
                                 </button>
                             </div>
@@ -278,7 +264,7 @@ export const FilterCard = memo(function FilterCard({
                 onClick={handleApply}
                 title="Apply filter"
             >
-                <Play size={10} /> Apply
+                <Icon name="play" size={10} /> Apply
             </button>
         </div>
     );

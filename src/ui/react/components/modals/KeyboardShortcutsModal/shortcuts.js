@@ -4,7 +4,7 @@
  * Contains all shortcut categories and their respective key bindings.
  */
 
-import { Settings, Navigation, Layout, Wrench, Users } from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 
 /**
  * Detect if running on Mac platform

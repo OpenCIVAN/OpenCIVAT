@@ -2,7 +2,7 @@
 // Individual filter item component
 
 import React, { useState } from 'react';
-import { Filter, Pin, PinOff, Trash2, Play } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { getScopeConfig } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/constants';
 
 export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
@@ -17,7 +17,7 @@ export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
         >
             {/* Type icon */}
             <div className="filter-item__icon">
-                <Filter size={14} />
+                <Icon name="filter" size={14} />
             </div>
 
             {/* Content */}
@@ -43,7 +43,7 @@ export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
                     onClick={(e) => { e.stopPropagation(); onTogglePin(filter.id); }}
                     title={filter.isPinned ? 'Unpin' : 'Pin'}
                 >
-                    {filter.isPinned ? <Pin size={10} fill="currentColor" /> : <PinOff size={10} />}
+                    {filter.isPinned ? <Icon name="pin" size={10} fill="currentColor" /> : <Icon name="pinOff" size={10} />}
                 </button>
                 {filter.isOwn && (
                     <button
@@ -51,7 +51,7 @@ export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
                         onClick={(e) => { e.stopPropagation(); onDelete(filter.id); }}
                         title="Delete"
                     >
-                        <Trash2 size={10} />
+                        <Icon name="delete" size={10} />
                     </button>
                 )}
             </div>
@@ -61,7 +61,7 @@ export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {
                 className="filter-item__apply-btn"
                 onClick={() => onApply(filter.id)}
             >
-                <Play size={10} /> Apply
+                <Icon name="play" size={10} /> Apply
             </button>
         </div>
     );

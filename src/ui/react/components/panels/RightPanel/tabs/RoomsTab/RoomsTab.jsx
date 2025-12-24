@@ -17,7 +17,7 @@
  */
 
 import React from 'react';
-import { Plus, Globe, Layout, Search, X } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { ResizableSections } from '@UI/react/components/common/ResizableSections';
 
 import { useRoomsTab } from './hooks/useRoomsTab';
@@ -32,9 +32,9 @@ import './RoomsTab.scss';
 // =============================================================================
 
 const GROUP_ICONS = {
-    project: Globe,
-    breakout: Layout,
-    personal: Layout,
+    project: 'globe',
+    breakout: 'layout',
+    personal: 'layout',
 };
 
 // =============================================================================
@@ -93,14 +93,14 @@ export function RoomsTab({ workspaceId }) {
                     onClick={() => setShowCreateForm(true)}
                     title="Create breakout room"
                 >
-                    <Plus size={14} />
+                    <Icon name="add" size={14} />
                 </button>
             ),
             content: (
                 <div className="rooms-list">
                     {/* Search */}
                     <div className="rooms-list__search">
-                        <Search size={12} />
+                        <Icon name="search" size={12} />
                         <input
                             type="text"
                             value={searchQuery}
@@ -109,7 +109,7 @@ export function RoomsTab({ workspaceId }) {
                         />
                         {searchQuery && (
                             <button onClick={() => setSearchQuery('')}>
-                                <X size={10} />
+                                <Icon name="close" size={10} />
                             </button>
                         )}
                     </div>
@@ -127,7 +127,7 @@ export function RoomsTab({ workspaceId }) {
                         const roomsOfType = groupedRooms[type];
                         if (roomsOfType.length === 0) return null;
 
-                        const GroupIcon = GROUP_ICONS[type];
+                        const groupIconName = GROUP_ICONS[type];
                         const labels = {
                             project: 'Project Rooms',
                             breakout: 'Breakout Rooms',
@@ -137,7 +137,7 @@ export function RoomsTab({ workspaceId }) {
                         return (
                             <div key={type} className="rooms-list__group">
                                 <div className="rooms-list__group-header">
-                                    <GroupIcon size={12} />
+                                    <Icon name={groupIconName} size={12} />
                                     {labels[type]}
                                 </div>
                                 {roomsOfType.map(room => (
@@ -157,10 +157,10 @@ export function RoomsTab({ workspaceId }) {
                     {/* Empty state */}
                     {rooms.length === 0 && (
                         <div className="rooms-list__empty">
-                            <Layout size={24} />
+                            <Icon name="layout" size={24} />
                             <span>No rooms available</span>
                             <button onClick={() => setShowCreateForm(true)}>
-                                <Plus size={12} />
+                                <Icon name="add" size={12} />
                                 Create Room
                             </button>
                         </div>

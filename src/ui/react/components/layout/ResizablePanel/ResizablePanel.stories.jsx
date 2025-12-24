@@ -1,6 +1,6 @@
 // src/ui/react/components/layout/ResizablePanel.stories.jsx
 import React, { useState } from "react";
-import { Files, Users, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { ResizablePanel } from "./ResizablePanel";
 import '@UI/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.scss';
 
@@ -45,10 +45,10 @@ const SamplePanelContent = ({ isCollapsed, onToggle, side, title = "Panel" }) =>
                     }}
                     title="Expand panel"
                 >
-                    {side === "left" ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                    {side === "left" ? <Icon name="chevronRight" size={18} /> : <Icon name="chevronLeft" size={18} />}
                 </button>
-                <Files size={18} style={{ color: "#808080" }} />
-                <Settings size={18} style={{ color: "#808080" }} />
+                <Icon name="files" size={18} style={{ color: "#808080" }} />
+                <Icon name="settings" size={18} style={{ color: "#808080" }} />
             </div>
         ) : (
             <>
@@ -74,7 +74,7 @@ const SamplePanelContent = ({ isCollapsed, onToggle, side, title = "Panel" }) =>
                         }}
                         title="Collapse panel"
                     >
-                        {side === "left" ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                        {side === "left" ? <Icon name="chevronLeft" size={16} /> : <Icon name="chevronRight" size={16} />}
                     </button>
                 </div>
                 <div style={{ padding: "16px", color: "#808080", fontSize: "13px", flex: 1 }}>

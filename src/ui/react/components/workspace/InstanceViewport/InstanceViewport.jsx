@@ -1,13 +1,7 @@
 // src/ui/react/components/workspace/InstanceViewport/InstanceViewport.jsx
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { createPortal } from 'react-dom';
-import {
-    ChevronDown, Maximize2, Minimize2, AlertCircle,
-    LayoutGrid, Wrench, MoreHorizontal, Settings,
-    Glasses, Box, BarChart3, Layers, Scan, Minus, Plus,
-    Undo2, Redo2, Copy, X, Trash2, RotateCcw, Crosshair,
-    Camera, Bookmark, Link, Circle, Grid3X3
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import { instance as log } from "@Utils/logger.js";
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
@@ -36,11 +30,11 @@ import "./InstanceViewport.scss";
 // ============================================================================
 
 const INSTANCE_TYPE_ICONS = {
-    vtk: Box,
-    chart: BarChart3,
-    plot: BarChart3,
-    image: Layers,
-    default: Box,
+    vtk: 'box',
+    chart: 'barChart3',
+    plot: 'barChart3',
+    image: 'layers',
+    default: 'box',
 };
 
 const getInstanceTypeIcon = (type) => {
@@ -94,13 +88,13 @@ function TopToolbar({
                             className="instance-toolbar__tool-button"
                             title="Undo (Ctrl+Z)"
                         >
-                            <Undo2 size={16} />
+                            <Icon name="undo2" size={16} />
                         </button>
                         <button
                             className="instance-toolbar__tool-button"
                             title="Redo (Ctrl+Shift+Z)"
                         >
-                            <Redo2 size={16} />
+                            <Icon name="redo2" size={16} />
                         </button>
                     </div>
                 )}
@@ -113,14 +107,14 @@ function TopToolbar({
                         onClick={onOpenInstanceTools}
                         title="Instance Tools (I)"
                     >
-                        <Wrench size={16} />
+                        <Icon name="wrench" size={16} />
                     </button>
                     <VRButton instanceId={instanceId} size="sm" />
                     <button
                         className="instance-toolbar__tool-button"
                         title="More options"
                     >
-                        <MoreHorizontal size={16} />
+                        <Icon name="moreHorizontal" size={16} />
                     </button>
                 </div>
 
@@ -166,7 +160,7 @@ function BottomNavBar({
                         onClick={() => onZoomChange(zoomLevel * 0.9)}
                         title="Zoom out 10%"
                     >
-                        <Minus size={12} />
+                        <Icon name="remove" size={12} />
                     </button>
                     <span className="instance-navbar__zoom-value">{Math.round(zoomLevel)}%</span>
                     <button
@@ -174,7 +168,7 @@ function BottomNavBar({
                         onClick={() => onZoomChange(zoomLevel * 1.1)}
                         title="Zoom in 10%"
                     >
-                        <Plus size={12} />
+                        <Icon name="add" size={12} />
                     </button>
                 </div>
 
@@ -185,7 +179,7 @@ function BottomNavBar({
                         onClick={onFit}
                         title="Fit to view (reset to 100%)"
                     >
-                        <Scan size={14} />
+                        <Icon name="scan" size={14} />
                         Fit
                     </button>
                 </div>
@@ -216,7 +210,7 @@ function GearOnlyDropdown({
                 onClick={onToggle}
                 title="Options"
             >
-                <Settings size={16} />
+                <Icon name="settings" size={16} />
             </button>
             {open && (
                 <div className="instance-viewport__gear-menu">
@@ -224,28 +218,28 @@ function GearOnlyDropdown({
                         className="instance-viewport__gear-item instance-viewport__gear-item--primary"
                         onClick={onOpenInstanceTools}
                     >
-                        <Wrench size={14} />
+                        <Icon name="wrench" size={14} />
                         Instance Tools
                     </button>
                     <div className="instance-viewport__gear-item">
                         <VRButton instanceId={instanceId} size="sm" showLabel />
                     </div>
                     <button className="instance-viewport__gear-item" onClick={onMaximize}>
-                        <Maximize2 size={14} />
+                        <Icon name="maximize2" size={14} />
                         Maximize
                     </button>
                     <button className="instance-viewport__gear-item" onClick={onDuplicate}>
-                        <Copy size={14} />
+                        <Icon name="copy" size={14} />
                         Duplicate
                     </button>
                     <div className="instance-viewport__gear-separator" />
                     <button className="instance-viewport__gear-item" onClick={onClose}>
-                        <X size={14} />
+                        <Icon name="close" size={14} />
                         Close
                     </button>
                     {onTrash && (
                         <button className="instance-viewport__gear-item instance-viewport__gear-item--danger" onClick={onTrash}>
-                            <Trash2 size={14} />
+                            <Icon name="delete" size={14} />
                             Delete View
                         </button>
                     )}
@@ -262,7 +256,7 @@ function VRModeIndicator({ onExit }) {
     return (
         <div className="vr-mode-indicator">
             <span className="vr-mode-indicator__icon">
-                <Glasses size={12} />
+                <Icon name="glasses" size={12} />
             </span>
             <span className="vr-mode-indicator__text">VR Mode</span>
             <button
@@ -392,7 +386,7 @@ function MoreMenu({
                 className="instance-viewport__more-menu__item"
                 onClick={() => handleItemClick(onOpenInstanceTools)}
             >
-                <Wrench size={14} />
+                <Icon name="wrench" size={14} />
                 <span>Instance Tools Panel</span>
                 <span className="instance-viewport__more-menu__shortcut">T</span>
             </button>
@@ -401,7 +395,7 @@ function MoreMenu({
                     className="instance-viewport__more-menu__item"
                     onClick={() => handleItemClick(onFullscreen)}
                 >
-                    <Maximize2 size={14} />
+                    <Icon name="maximize2" size={14} />
                     <span>Expand</span>
                 </button>
             )}
@@ -410,7 +404,7 @@ function MoreMenu({
                     className="instance-viewport__more-menu__item"
                     onClick={() => handleItemClick(onVRMode)}
                 >
-                    <Glasses size={14} />
+                    <Icon name="glasses" size={14} />
                     <span>Enter VR Mode</span>
                 </button>
             )}
@@ -423,21 +417,21 @@ function MoreMenu({
                 className="instance-viewport__more-menu__item"
                 onClick={() => handleItemClick(onResetCamera)}
             >
-                <RotateCcw size={14} />
+                <Icon name="rotateCcw" size={14} />
                 <span>Reset Camera</span>
             </button>
             <button
                 className="instance-viewport__more-menu__item"
                 onClick={() => handleItemClick(onFitView)}
             >
-                <Scan size={14} />
+                <Icon name="scan" size={14} />
                 <span>Fit to View</span>
             </button>
             <button
                 className="instance-viewport__more-menu__item"
                 onClick={() => handleItemClick(onCenterSelection)}
             >
-                <Crosshair size={14} />
+                <Icon name="crosshair" size={14} />
                 <span>Center on Selection</span>
             </button>
 
@@ -449,21 +443,21 @@ function MoreMenu({
                 className={`instance-viewport__more-menu__item ${currentRepresentation === 'surface' ? 'instance-viewport__more-menu__item--active' : ''}`}
                 onClick={() => handleItemClick(() => onRepresentationChange?.('surface'))}
             >
-                <Box size={14} />
+                <Icon name="box" size={14} />
                 <span>Surface</span>
             </button>
             <button
                 className={`instance-viewport__more-menu__item ${currentRepresentation === 'wireframe' ? 'instance-viewport__more-menu__item--active' : ''}`}
                 onClick={() => handleItemClick(() => onRepresentationChange?.('wireframe'))}
             >
-                <Grid3X3 size={14} />
+                <Icon name="grid3x3" size={14} />
                 <span>Wireframe</span>
             </button>
             <button
                 className={`instance-viewport__more-menu__item ${currentRepresentation === 'points' ? 'instance-viewport__more-menu__item--active' : ''}`}
                 onClick={() => handleItemClick(() => onRepresentationChange?.('points'))}
             >
-                <Circle size={14} />
+                <Icon name="circle" size={14} />
                 <span>Points</span>
             </button>
 
@@ -475,28 +469,28 @@ function MoreMenu({
                 className="instance-viewport__more-menu__item"
                 onClick={() => handleItemClick(onCaptureThumbnail)}
             >
-                <Camera size={14} />
+                <Icon name="camera" size={14} />
                 <span>Capture Thumbnail</span>
             </button>
             <button
                 className="instance-viewport__more-menu__item"
                 onClick={() => handleItemClick(onSaveBookmark)}
             >
-                <Bookmark size={14} />
+                <Icon name="bookmark" size={14} />
                 <span>Save as Bookmark</span>
             </button>
             <button
                 className="instance-viewport__more-menu__item"
                 onClick={() => handleItemClick(onDuplicate)}
             >
-                <Copy size={14} />
+                <Icon name="copy" size={14} />
                 <span>Duplicate View</span>
             </button>
             <button
                 className="instance-viewport__more-menu__item"
                 onClick={() => handleItemClick(onLinkSettings)}
             >
-                <Link size={14} />
+                <Icon name="link" size={14} />
                 <span>Link Settings...</span>
             </button>
 
@@ -507,14 +501,14 @@ function MoreMenu({
                 className="instance-viewport__more-menu__item instance-viewport__more-menu__item--danger"
                 onClick={() => handleItemClick(onCloseView)}
             >
-                <X size={14} />
+                <Icon name="close" size={14} />
                 <span>Close View</span>
             </button>
             <button
                 className="instance-viewport__more-menu__item instance-viewport__more-menu__item--danger"
                 onClick={() => handleItemClick(onDeleteView)}
             >
-                <Trash2 size={14} />
+                <Icon name="delete" size={14} />
                 <span>Delete View</span>
             </button>
         </div>,
@@ -576,7 +570,7 @@ function HeaderBar({
                         className="instance-viewport__header-button instance-viewport__header-wrench"
                         title="Instance Tools (T)"
                     >
-                        <Wrench size={12} />
+                        <Icon name="wrench" size={12} />
                     </button>
                 )}
 
@@ -604,7 +598,7 @@ function HeaderBar({
                         className={`instance-viewport__header-button ${showMoreMenu ? 'active' : ''}`}
                         title="More options"
                     >
-                        <MoreHorizontal size={12} />
+                        <Icon name="moreHorizontal" size={12} />
                     </button>
                     <MoreMenu
                         isOpen={showMoreMenu}
@@ -636,7 +630,7 @@ function HeaderBar({
                         className="instance-viewport__header-button instance-viewport__header-expand"
                         title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                     >
-                        {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                        {isFullscreen ? <Icon name="minimize2" size={12} /> : <Icon name="maximize2" size={12} />}
                     </button>
                 )}
 
@@ -647,7 +641,7 @@ function HeaderBar({
                         className="instance-viewport__header-button instance-viewport__header-vr"
                         title="Enter VR Mode"
                     >
-                        <Glasses size={12} />
+                        <Icon name="glasses" size={12} />
                     </button>
                 )}
 
@@ -658,7 +652,7 @@ function HeaderBar({
                         className="instance-viewport__header-button"
                         title="Close (view stays in Datasets list)"
                     >
-                        <X size={12} />
+                        <Icon name="close" size={12} />
                     </button>
                 )}
             </div>
@@ -1607,7 +1601,7 @@ export function InstanceViewport({
                         aria-expanded={isOpen}
                     >
                         {IconComponent && <IconComponent size={16} strokeWidth={2} />}
-                        <ChevronDown size={8} className="instance-toolbar__menu-indicator" />
+                        <Icon name="chevronDown" size={8} className="instance-toolbar__menu-indicator" />
 
                         <div className="instance-toolbar__tooltip">
                             <div className="tooltip-title">{tool.label}</div>
@@ -1843,7 +1837,7 @@ export function InstanceViewport({
                 )}
                 {error && (
                     <div className="instance-viewport__error">
-                        <AlertCircle size={24} />
+                        <Icon name="alertCircle" size={24} />
                         <div className="error-message">{error}</div>
                     </div>
                 )}

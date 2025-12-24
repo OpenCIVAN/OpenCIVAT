@@ -13,18 +13,7 @@
  */
 
 import React, { useState, useCallback, useEffect, memo } from 'react';
-import {
-    X,
-    Filter,
-    Save,
-    Eye,
-    Database,
-    Layout,
-    Tag,
-    Plus,
-    Download,
-    Upload,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { FILTER_SCOPES } from '../hooks/useFiltersTab';
 
 /**
@@ -164,9 +153,9 @@ export const FilterEditor = memo(function FilterEditor({
     if (!isOpen) return null;
 
     const scopeIcons = {
-        view: Eye,
-        dataset: Database,
-        workspace: Layout,
+        view: 'eye',
+        dataset: 'database',
+        workspace: 'layout',
     };
 
     return (
@@ -174,10 +163,10 @@ export const FilterEditor = memo(function FilterEditor({
             <div className="filter-editor" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="filter-editor__header">
-                    <Filter size={16} className="icon-amber" />
+                    <Icon name="filter" size={16} className="icon-amber" />
                     <span>{filter ? 'Edit Filter' : 'Save Filter'}</span>
                     <button className="filter-editor__close" onClick={onClose}>
-                        <X size={14} />
+                        <Icon name="close" size={14} />
                     </button>
                 </div>
 
@@ -216,7 +205,7 @@ export const FilterEditor = memo(function FilterEditor({
                         <label>Scope</label>
                         <div className="filter-editor__button-group">
                             {Object.entries(FILTER_SCOPES).map(([key, config]) => {
-                                const Icon = scopeIcons[key] || Filter;
+                                const iconName = scopeIcons[key] || 'filter';
                                 return (
                                     <button
                                         key={key}
@@ -225,7 +214,7 @@ export const FilterEditor = memo(function FilterEditor({
                                         onClick={() => setScope(key)}
                                         title={config.description}
                                     >
-                                        <Icon size={12} />
+                                        <Icon name={iconName} size={12} />
                                         {config.label}
                                     </button>
                                 );
@@ -246,7 +235,7 @@ export const FilterEditor = memo(function FilterEditor({
                                 onClick={handleCaptureFilter}
                                 disabled={!currentFilterConfig}
                             >
-                                <Download size={12} />
+                                <Icon name="download" size={12} />
                                 Capture Current
                             </button>
                         </div>
@@ -259,7 +248,7 @@ export const FilterEditor = memo(function FilterEditor({
                     <div className="filter-editor__field">
                         <label>Tags</label>
                         <div className="filter-editor__tags-input">
-                            <Tag size={12} />
+                            <Icon name="tag" size={12} />
                             <input
                                 type="text"
                                 value={tagInput}
@@ -272,7 +261,7 @@ export const FilterEditor = memo(function FilterEditor({
                                 onClick={handleAddTag}
                                 disabled={!tagInput.trim()}
                             >
-                                <Plus size={12} />
+                                <Icon name="add" size={12} />
                             </button>
                         </div>
                         {tags.length > 0 && (
@@ -284,7 +273,7 @@ export const FilterEditor = memo(function FilterEditor({
                                             type="button"
                                             onClick={() => handleRemoveTag(tag)}
                                         >
-                                            <X size={8} />
+                                            <Icon name="close" size={8} />
                                         </button>
                                     </span>
                                 ))}
@@ -315,7 +304,7 @@ export const FilterEditor = memo(function FilterEditor({
                         onClick={handleSave}
                         disabled={isSaving}
                     >
-                        <Save size={12} />
+                        <Icon name="save" size={12} />
                         {isSaving ? 'Saving...' : (filter ? 'Update' : 'Save')}
                     </button>
                 </div>

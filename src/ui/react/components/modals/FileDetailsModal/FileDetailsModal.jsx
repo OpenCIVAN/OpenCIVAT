@@ -21,17 +21,7 @@
  */
 
 import React from 'react';
-import {
-    FileText,
-    Calendar,
-    HardDrive,
-    Tag,
-    Eye,
-    Download,
-    Trash2,
-    Folder
-} from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '@UI/react/components/modals/Modal';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import './FileDetailsModal.scss';
@@ -103,11 +93,10 @@ export function FileDetailsModal({
 
     // Get file type display info for icon
     const displayInfo = getFileTypeDisplayInfo(file.fileType);
-    let Icon = FileText;
+    let IconComponent = getIconComponent('file');
 
     if (displayInfo) {
-        const iconName = displayInfo.icon.charAt(0).toUpperCase() + displayInfo.icon.slice(1);
-        Icon = LucideIcons[iconName] || FileText;
+        IconComponent = getIconComponent(displayInfo.icon) || getIconComponent('file');
     }
 
     /**
@@ -139,15 +128,15 @@ export function FileDetailsModal({
     const renderFooter = () => (
         <>
             <button className="btn btn--primary" onClick={handleOpen}>
-                <Eye size={14} />
+                <Icon name="eye" size={14} />
                 Open
             </button>
             <button className="btn btn--secondary" onClick={handleDownload}>
-                <Download size={14} />
+                <Icon name="download" size={14} />
                 Download
             </button>
             <button className="btn btn--danger" onClick={handleDelete}>
-                <Trash2 size={14} />
+                <Icon name="delete" size={14} />
                 Delete
             </button>
         </>
@@ -158,7 +147,7 @@ export function FileDetailsModal({
             isOpen={isOpen}
             onClose={onClose}
             title={file.filename || file.name || 'File Details'}
-            icon={Icon}
+            icon={IconComponent}
             size="sm"
             footer={renderFooter()}
         >
@@ -169,33 +158,33 @@ export function FileDetailsModal({
                         className="icon-wrapper"
                         style={displayInfo?.color ? { color: displayInfo.color } : undefined}
                     >
-                        <Icon />
+                        <IconComponent />
                     </div>
                 </div>
 
                 {/* File Info */}
                 <div className="file-details-modal__info">
                     <div className="file-details-modal__row">
-                        <Tag size={14} />
+                        <Icon name="tag" size={14} />
                         <span className="label">Type</span>
                         <span className="value">{file.fileType || 'Unknown'}</span>
                     </div>
 
                     <div className="file-details-modal__row">
-                        <HardDrive size={14} />
+                        <Icon name="hardDrive" size={14} />
                         <span className="label">Size</span>
                         <span className="value">{formatFileSize(file.size)}</span>
                     </div>
 
                     <div className="file-details-modal__row">
-                        <Calendar size={14} />
+                        <Icon name="calendar" size={14} />
                         <span className="label">Modified</span>
                         <span className="value">{formatDate(file.modifiedAt || file.uploadedAt)}</span>
                     </div>
 
                     {file.path && (
                         <div className="file-details-modal__row">
-                            <Folder size={14} />
+                            <Icon name="folder" size={14} />
                             <span className="label">Path</span>
                             <span className="value">{file.path}</span>
                         </div>

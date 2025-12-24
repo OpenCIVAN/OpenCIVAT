@@ -4,29 +4,15 @@
  */
 
 import React, { useCallback } from 'react';
-import {
-    Play,
-    Clock,
-    Download,
-    Trash2,
-    Upload,
-    Loader,
-    Circle,
-    Monitor,
-    Maximize,
-    Layers,
-    CheckCircle,
-    SkipBack,
-    SkipForward,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * Recording modes for icon lookup
  */
 const RECORDING_MODES = {
-    full: Monitor,
-    isolation: Maximize,
-    subset: Layers,
+    full: 'monitor',
+    isolation: 'maximize',
+    subset: 'layers',
 };
 
 /**
@@ -92,7 +78,7 @@ export function RecordingCard({
     isExporting,
 }) {
     const mode = recording.metadata?.mode || 'full';
-    const ModeIcon = RECORDING_MODES[mode] || Monitor;
+    const modeIconName = RECORDING_MODES[mode] || 'monitor';
     const name = recording.metadata?.name || 'Untitled Recording';
     const isExported = !!recording.storage_key;
 
@@ -123,10 +109,10 @@ export function RecordingCard({
                 <div className="recording-card__thumbnail">
                     {recording.status === 'recording' ? (
                         <span className="recording-card__live-indicator">
-                            <Circle size={16} className="recording-card__live-dot" />
+                            <Icon name="circle" size={16} className="recording-card__live-dot" />
                         </span>
                     ) : (
-                        <Play size={20} />
+                        <Icon name="play" size={20} />
                     )}
                 </div>
 
@@ -135,18 +121,18 @@ export function RecordingCard({
                     <div className="recording-card__title">{name}</div>
                     <div className="recording-card__meta">
                         <span className="recording-card__duration">
-                            <Clock size={10} />
+                            <Icon name="clock" size={10} />
                             {formatDurationMs(recording.duration_ms)}
                         </span>
                         <span className="recording-card__events">
                             {recording.event_count || 0} events
                         </span>
                         <span className="recording-card__mode">
-                            <ModeIcon size={10} />
+                            <Icon name={modeIconName} size={10} />
                         </span>
                         {isExported && (
                             <span className="recording-card__exported" title="Exported to storage">
-                                <CheckCircle size={10} />
+                                <Icon name="checkCircle" size={10} />
                             </span>
                         )}
                     </div>
@@ -172,13 +158,13 @@ export function RecordingCard({
                     {recording.status !== 'recording' && (
                         <div className="recording-card__playback">
                             <button className="recording-card__playback-btn" disabled>
-                                <SkipBack size={14} />
+                                <Icon name="skipBack" size={14} />
                             </button>
                             <button className="recording-card__playback-btn recording-card__playback-btn--play" disabled title="Playback coming soon">
-                                <Play size={16} />
+                                <Icon name="play" size={16} />
                             </button>
                             <button className="recording-card__playback-btn" disabled>
-                                <SkipForward size={14} />
+                                <Icon name="skipForward" size={14} />
                             </button>
 
                             <div className="recording-card__progress">
@@ -201,7 +187,7 @@ export function RecordingCard({
                                 disabled={isExporting}
                                 title="Export to storage"
                             >
-                                {isExporting ? <Loader size={10} className="spin" /> : <Upload size={10} />}
+                                {isExporting ? <Icon name="loader" size={10} className="spin" /> : <Icon name="upload" size={10} />}
                                 Export
                             </button>
                         )}
@@ -212,7 +198,7 @@ export function RecordingCard({
                                 onClick={handleDownload}
                                 title="Download recording"
                             >
-                                <Download size={10} />
+                                <Icon name="download" size={10} />
                                 Download
                             </button>
                         )}
@@ -221,7 +207,7 @@ export function RecordingCard({
                             onClick={handleDelete}
                             title="Delete recording"
                         >
-                            <Trash2 size={10} />
+                            <Icon name="delete" size={10} />
                         </button>
                     </div>
                 </div>

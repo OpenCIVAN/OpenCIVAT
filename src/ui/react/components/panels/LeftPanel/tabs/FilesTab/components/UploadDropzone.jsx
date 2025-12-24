@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useCallback, memo } from 'react';
-import { Upload, RefreshCw } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 /**
  * @typedef {Object} UploadDropzoneProps
@@ -84,7 +84,7 @@ export const UploadDropzone = memo(function UploadDropzone({
         >
             {isDragOver ? (
                 <div className="panel-footer__dropzone">
-                    <Upload size={16} />
+                    <Icon name="upload" size={16} />
                     <span>Drop to upload</span>
                 </div>
             ) : (
@@ -93,7 +93,7 @@ export const UploadDropzone = memo(function UploadDropzone({
                         className="panel-footer__btn panel-footer__btn--primary"
                         onClick={handleClick}
                     >
-                        <Upload size={11} />
+                        <Icon name="upload" size={11} />
                         <span>Upload</span>
                     </button>
 
@@ -103,7 +103,7 @@ export const UploadDropzone = memo(function UploadDropzone({
                             title="Refresh"
                             onClick={onRefresh}
                         >
-                            <RefreshCw size={11} />
+                            <Icon name="refresh" size={11} />
                         </button>
                     )}
                 </>

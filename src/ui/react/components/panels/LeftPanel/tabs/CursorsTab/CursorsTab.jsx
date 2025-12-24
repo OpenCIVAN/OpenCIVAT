@@ -12,13 +12,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-    MousePointer2,
-    Eye,
-    EyeOff,
-    Users,
-    Settings,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import {
     ResizableSectionsContainer,
     ResizableSection,
@@ -77,7 +71,7 @@ function UserCursorRow({ user, color, colorName, onToggleVisibility, onChangeCol
                 onClick={() => onToggleVisibility(user.id)}
                 title={user.isVisible ? 'Hide cursor' : 'Show cursor'}
             >
-                {user.isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+                {user.isVisible ? <Icon name="eye" size={14} /> : <Icon name="eyeOff" size={14} />}
             </button>
 
             {/* Color picker dropdown */}
@@ -159,7 +153,7 @@ export function CursorsPanelContent({ workspaceId }) {
         <div className="cursors-tab">
             {/* Header - ALL CAPS like other tabs */}
             <div className="panel-header panel-header--cyan">
-                <MousePointer2 size={16} className="panel-header__icon" />
+                <Icon name="mousePointer" size={16} className="panel-header__icon" />
                 <span className="panel-header__title">Cursors</span>
                 <span className="panel-header__count">{visibleCount}/{users.length}</span>
             </div>
@@ -170,7 +164,7 @@ export function CursorsPanelContent({ workspaceId }) {
                     className={`quick-toggle-btn ${showAllCursors ? 'quick-toggle-btn--active' : ''}`}
                     onClick={toggleAllCursors}
                 >
-                    {showAllCursors ? <Eye size={14} /> : <EyeOff size={14} />}
+                    {showAllCursors ? <Icon name="eye" size={14} /> : <Icon name="eyeOff" size={14} />}
                     {showAllCursors ? 'Hide All' : 'Show All'}
                 </button>
             </div>
@@ -184,7 +178,7 @@ export function CursorsPanelContent({ workspaceId }) {
                 {/* Settings Section */}
                 <ResizableSection
                     id="settings"
-                    icon={Settings}
+                    icon="settings"
                     iconColorClass="icon-amber"
                     label="Display Settings"
                 >
@@ -241,7 +235,7 @@ export function CursorsPanelContent({ workspaceId }) {
                 {/* Online Users Section - Collapsible at bottom */}
                 <ResizableSection
                     id="online"
-                    icon={Users}
+                    icon="users"
                     iconColorClass="icon-cyan"
                     label="Online Users"
                     count={users.length}

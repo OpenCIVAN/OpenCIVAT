@@ -22,16 +22,7 @@
  */
 
 import React, { memo, useMemo, useCallback, useState, useEffect } from 'react';
-import {
-    User,
-    Briefcase,
-    Globe,
-    Users,
-    ChevronRight,
-    Plus,
-    ArrowRight,
-    Layout,
-} from 'lucide-react';
+import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 
 import { Modal } from '@UI/react/components/modals/Modal';
 import { useWorkspacePresence } from '@UI/react/hooks/useRoomPresence.js';
@@ -93,11 +84,11 @@ const WorkspaceItemWithPresence = memo(function WorkspaceItemWithPresence({
             <span className="workspace-picker__item-name">{workspace.name}</span>
             {onlineCount > 0 && (
                 <span className="workspace-picker__item-members">
-                    <Users size={10} />
+                    <Icon name="users" size={10} />
                     {onlineCount}
                 </span>
             )}
-            <ChevronRight size={14} className="workspace-picker__item-arrow" />
+            <Icon name="chevronRight" size={14} className="workspace-picker__item-arrow" />
         </button>
     );
 });
@@ -107,18 +98,20 @@ const WorkspaceItemWithPresence = memo(function WorkspaceItemWithPresence({
  */
 const WorkspaceGroup = memo(function WorkspaceGroup({
     title,
-    icon: Icon,
+    icon,
     workspaces,
     selectedId,
     onSelect,
     onDoubleClick,
     emptyMessage,
 }) {
+    const IconComponent = getIconComponent(icon);
+
     if (workspaces.length === 0) {
         return (
             <div className="workspace-picker__group workspace-picker__group--empty">
                 <div className="workspace-picker__group-header">
-                    <Icon size={14} />
+                    <IconComponent size={14} />
                     <span>{title}</span>
                 </div>
                 <p className="workspace-picker__empty">{emptyMessage}</p>
@@ -129,7 +122,7 @@ const WorkspaceGroup = memo(function WorkspaceGroup({
     return (
         <div className="workspace-picker__group">
             <div className="workspace-picker__group-header">
-                <Icon size={14} />
+                <IconComponent size={14} />
                 <span>{title}</span>
                 <span className="workspace-picker__count">{workspaces.length}</span>
             </div>
@@ -336,7 +329,7 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
                 disabled={!selectedWorkspace}
             >
                 <span>Open Workspace</span>
-                <ArrowRight size={14} />
+                <Icon name="arrowRight" size={14} />
             </button>
         </>
     );
@@ -350,7 +343,7 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
             isOpen={isOpen}
             onClose={onCancel}
             title="Choose Workspace"
-            icon={Layout}
+            icon={getIconComponent('layout')}
             size="md"
             footer={renderFooter()}
         >
@@ -364,7 +357,7 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
                 <div className="workspace-picker__body">
                     <WorkspaceGroup
                         title="My Workspaces"
-                        icon={User}
+                        icon="user"
                         workspaces={filtered.personal}
                         selectedId={selectedWorkspace?.id}
                         onSelect={handleSelect}
@@ -374,7 +367,7 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
 
                     <WorkspaceGroup
                         title="Room Workspaces"
-                        icon={Briefcase}
+                        icon="briefcase"
                         workspaces={filtered.room}
                         selectedId={selectedWorkspace?.id}
                         onSelect={handleSelect}
@@ -384,7 +377,7 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
 
                     <WorkspaceGroup
                         title="Project Workspaces"
-                        icon={Globe}
+                        icon="globe"
                         workspaces={filtered.project}
                         selectedId={selectedWorkspace?.id}
                         onSelect={handleSelect}
@@ -395,7 +388,7 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
                     {/* Create new workspace option */}
                     {onCreateWorkspace && (
                         <button className="workspace-picker__create" onClick={handleCreate}>
-                            <Plus size={14} />
+                            <Icon name="add" size={14} />
                             <span>Create New Workspace</span>
                         </button>
                     )}

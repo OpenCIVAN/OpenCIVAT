@@ -42,7 +42,7 @@ export interface FileTypeCapability {
   /** Human-readable name for UI display */
   displayName: string;
 
-  /** Lucide icon name for file type indicator */
+  /** Icon name for file type indicator */
   icon: string;
 
   /** Hex color for visual differentiation (e.g., '#c084fc') */

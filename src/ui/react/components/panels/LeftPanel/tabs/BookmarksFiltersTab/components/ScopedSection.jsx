@@ -6,7 +6,7 @@
  */
 
 import React, { memo } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { getScopeConfig } from '../constants';
 
 /**
@@ -35,7 +35,6 @@ export const ScopedSection = memo(function ScopedSection({
     children,
 }) {
     const config = getScopeConfig(scope);
-    const Icon = config.icon;
 
     // Determine count: explicit count prop, items length, or 0
     const itemCount = count ?? items?.length ?? 0;
@@ -50,9 +49,9 @@ export const ScopedSection = memo(function ScopedSection({
                 onClick={onToggle}
             >
                 <span className="scoped-section__chevron">
-                    {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    {expanded ? <Icon name="chevronDown" size={12} /> : <Icon name="chevronRight" size={12} />}
                 </span>
-                <Icon size={12} className={`icon-${config.color}`} />
+                <Icon name={config.icon} size={12} className={`icon-${config.color}`} />
                 <span className="scoped-section__label">{config.label}</span>
                 <span className="scoped-section__count">{itemCount}</span>
             </button>

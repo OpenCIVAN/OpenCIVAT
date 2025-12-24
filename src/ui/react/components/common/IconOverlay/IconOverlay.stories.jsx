@@ -1,6 +1,6 @@
 // src/ui/react/components/common/IconOverlay.stories.jsx
 import React from "react";
-import { Mic, Video, Compass, Eye, Wifi, Volume2, Bell } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { IconOverlay, SlashedIcon, createSlashedIcon } from "./IconOverlay";
 import "./IconOverlay.scss";
 
@@ -26,7 +26,7 @@ export default {
 export const Default = {
     render: () => (
         <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-            <SlashedIcon icon={Mic} size={24} />
+            <SlashedIcon icon="mic" size={24} />
             <span style={{ fontSize: "12px", color: "#808080" }}>Mic Off</span>
         </div>
     ),
@@ -37,31 +37,31 @@ export const SlashedIcons = {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", gap: "32px", alignItems: "center" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <Mic size={24} />
+                    <Icon name="mic" size={24} />
                     <span style={{ fontSize: "11px", color: "#808080" }}>Mic On</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <SlashedIcon icon={Mic} size={24} />
+                    <SlashedIcon icon="mic" size={24} />
                     <span style={{ fontSize: "11px", color: "#808080" }}>Mic Off</span>
                 </div>
             </div>
             <div style={{ display: "flex", gap: "32px", alignItems: "center" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <Video size={24} />
+                    <Icon name="video" size={24} />
                     <span style={{ fontSize: "11px", color: "#808080" }}>Video On</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <SlashedIcon icon={Video} size={24} />
+                    <SlashedIcon icon="video" size={24} />
                     <span style={{ fontSize: "11px", color: "#808080" }}>Video Off</span>
                 </div>
             </div>
             <div style={{ display: "flex", gap: "32px", alignItems: "center" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <Eye size={24} />
+                    <Icon name="eye" size={24} />
                     <span style={{ fontSize: "11px", color: "#808080" }}>Visible</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <SlashedIcon icon={Eye} size={24} />
+                    <SlashedIcon icon="eye" size={24} />
                     <span style={{ fontSize: "11px", color: "#808080" }}>Hidden</span>
                 </div>
             </div>
@@ -72,10 +72,10 @@ export const SlashedIcons = {
 export const Sizes = {
     render: () => (
         <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-            <SlashedIcon icon={Mic} size={14} />
-            <SlashedIcon icon={Mic} size={18} />
-            <SlashedIcon icon={Mic} size={24} />
-            <SlashedIcon icon={Mic} size={32} />
+            <SlashedIcon icon="mic" size={14} />
+            <SlashedIcon icon="mic" size={18} />
+            <SlashedIcon icon="mic" size={24} />
+            <SlashedIcon icon="mic" size={32} />
         </div>
     ),
 };
@@ -84,20 +84,20 @@ export const StrokeWidths = {
     render: () => (
         <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                <SlashedIcon icon={Compass} size={24} strokeWidth={1} />
-                <span style={{ fontSize: "10px", color: "#666" }}>1px</span>
+                <SlashedIcon icon="compass" size={24} />
+                <span style={{ fontSize: "10px", color: "#666" }}>Default</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                <SlashedIcon icon={Compass} size={24} strokeWidth={1.5} />
-                <span style={{ fontSize: "10px", color: "#666" }}>1.5px</span>
+                <SlashedIcon icon="compass" size={24} />
+                <span style={{ fontSize: "10px", color: "#666" }}>Default</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                <SlashedIcon icon={Compass} size={24} strokeWidth={2} />
-                <span style={{ fontSize: "10px", color: "#666" }}>2px</span>
+                <SlashedIcon icon="compass" size={24} />
+                <span style={{ fontSize: "10px", color: "#666" }}>Default</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                <SlashedIcon icon={Compass} size={24} strokeWidth={2.5} />
-                <span style={{ fontSize: "10px", color: "#666" }}>2.5px</span>
+                <SlashedIcon icon="compass" size={24} />
+                <span style={{ fontSize: "10px", color: "#666" }}>Default</span>
             </div>
         </div>
     ),
@@ -106,10 +106,10 @@ export const StrokeWidths = {
 export const AllCommonIcons = {
     render: () => (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "24px" }}>
-            {[Mic, Video, Compass, Eye, Wifi, Volume2, Bell].map((Icon, index) => (
+            {['mic', 'video', 'compass', 'eye', 'wifi', 'volume', 'bell'].map((iconName, index) => (
                 <div key={index} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <SlashedIcon icon={Icon} size={24} />
-                    <span style={{ fontSize: "10px", color: "#666" }}>{Icon.displayName || Icon.name}</span>
+                    <SlashedIcon icon={iconName} size={24} />
+                    <span style={{ fontSize: "10px", color: "#666" }}>{iconName}</span>
                 </div>
             ))}
         </div>
@@ -136,7 +136,7 @@ export const InButtonContext = {
                     cursor: "pointer",
                 }}
             >
-                <Mic size={16} />
+                <Icon name="mic" size={16} />
                 <span>Unmuted</span>
             </button>
             <button
@@ -152,7 +152,7 @@ export const InButtonContext = {
                     cursor: "pointer",
                 }}
             >
-                <SlashedIcon icon={Mic} size={16} />
+                <SlashedIcon icon="mic" size={16} />
                 <span>Muted</span>
             </button>
         </div>
@@ -165,8 +165,8 @@ export const InButtonContext = {
 
 export const CreateSlashedIconFactory = {
     render: () => {
-        const SlashedCompass = createSlashedIcon(Compass);
-        const SlashedWifi = createSlashedIcon(Wifi);
+        const SlashedCompass = createSlashedIcon('compass');
+        const SlashedWifi = createSlashedIcon('wifi');
 
         return (
             <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>

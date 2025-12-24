@@ -14,7 +14,6 @@
  */
 
 import React from 'react';
-import { Video } from 'lucide-react';
 import { ConfirmationDialog } from '../ConfirmationDialog';
 
 /**
@@ -89,7 +88,7 @@ export function DeleteRecordingDialog({
             onClose={onClose}
             title="Delete Recording?"
             description={description}
-            icon={Video}
+            icon="video"
             severity="danger"
             confirmLabel="Delete Recording"
             onConfirm={onConfirm}

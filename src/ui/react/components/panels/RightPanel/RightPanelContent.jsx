@@ -9,7 +9,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import {
     useRightPanelContext,
@@ -51,7 +51,7 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
 
     // Get current tab config from the single source of truth
     const currentTab = RIGHT_PANEL_TABS.find(t => t.id === activeTab);
-    const Icon = currentTab?.icon;
+    const iconName = currentTab?.icon;
 
     // Check if current tab is already popped out
     const panelId = `right-${activeTab}`;
@@ -61,7 +61,7 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
     const handlePopOut = useCallback(() => {
         popOutPanel(panelId, {
             title: currentTab?.label,
-            icon: Icon,
+            icon: iconName,
             color: currentTab?.color,
             // Position on the right side of screen
             x: window.innerWidth - 500,
@@ -71,7 +71,7 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
         });
         // Collapse the docked panel to reclaim workspace space
         setRightOpen(false);
-    }, [panelId, currentTab, Icon, popOutPanel, setRightOpen]);
+    }, [panelId, currentTab, iconName, popOutPanel, setRightOpen]);
 
     // If the current tab is floating, show a message to select another tab
     if (isCurrentTabFloating) {
@@ -81,7 +81,7 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
                 data-color={currentTab?.color}
             >
                 <div className="right-panel__floating-notice">
-                    {Icon && <Icon size={20} />}
+                    {iconName && <Icon name={iconName} size={20} />}
                     <span>{currentTab?.label} is floating</span>
                 </div>
             </div>
@@ -100,7 +100,7 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
                     onClick={handlePopOut}
                     title="Pop out to floating window"
                 >
-                    <ExternalLink size={12} />
+                    <Icon name="externalLink" size={12} />
                 </button>
             </div>
 

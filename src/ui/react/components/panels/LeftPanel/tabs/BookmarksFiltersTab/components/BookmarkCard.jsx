@@ -13,20 +13,7 @@
  */
 
 import React, { useState, memo } from 'react';
-import {
-    Camera,
-    Share2,
-    Pin,
-    PinOff,
-    Trash2,
-    Play,
-    Edit3,
-    Copy,
-    MoreHorizontal,
-    Navigation,
-    Layers,
-    GitCompare,
-} from 'lucide-react';
+import { Icon } from '@UI/react/components/common/Icon';
 import { formatTimestamp } from '@Utils/formatters.js';
 import { BOOKMARK_TYPES } from '../hooks/useBookmarksTab';
 import { getScopeConfig } from '../constants';
@@ -40,13 +27,13 @@ import { getScopeConfig } from '../constants';
 function getBookmarkTypeConfig(type) {
     switch (type) {
         case 'position':
-            return { icon: Navigation, color: 'blue', label: 'Position' };
+            return { icon: 'navigation', color: 'blue', label: 'Position' };
         case 'state':
-            return { icon: Layers, color: 'purple', label: 'State' };
+            return { icon: 'layers', color: 'purple', label: 'State' };
         case 'comparison':
-            return { icon: GitCompare, color: 'amber', label: 'Comparison' };
+            return { icon: 'gitCompare', color: 'amber', label: 'Comparison' };
         default:
-            return { icon: Camera, color: 'gray', label: 'Bookmark' };
+            return { icon: 'camera', color: 'gray', label: 'Bookmark' };
     }
 }
 
@@ -83,7 +70,6 @@ export const BookmarkCard = memo(function BookmarkCard({
 
     const typeConfig = getBookmarkTypeConfig(bookmark.type);
     const scopeConfig = getScopeConfig(bookmark.scope);
-    const TypeIcon = typeConfig.icon;
 
     const handleNavigate = (e) => {
         e.stopPropagation();
@@ -120,17 +106,17 @@ export const BookmarkCard = memo(function BookmarkCard({
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={handleNavigate}
             >
-                <TypeIcon size={14} className={`icon-${typeConfig.color}`} />
+                <Icon name={typeConfig.icon} size={14} className={`icon-${typeConfig.color}`} />
                 <span className="bookmark-card__name">{bookmark.name}</span>
                 {bookmark.isPinned && (
-                    <Pin size={10} className="bookmark-card__pin-indicator" fill="currentColor" />
+                    <Icon name="pin" size={10} className="bookmark-card__pin-indicator" fill="currentColor" />
                 )}
                 <button
                     className="bookmark-card__go-btn"
                     onClick={handleNavigate}
                     style={{ opacity: isHovered ? 1 : 0 }}
                 >
-                    <Play size={10} />
+                    <Icon name="play" size={10} />
                 </button>
             </div>
         );
@@ -151,7 +137,7 @@ export const BookmarkCard = memo(function BookmarkCard({
                         onError={() => setThumbnailError(true)}
                     />
                 ) : (
-                    <TypeIcon size={20} className={`icon-${typeConfig.color}`} />
+                    <Icon name={typeConfig.icon} size={20} className={`icon-${typeConfig.color}`} />
                 )}
                 {/* Type badge overlay */}
                 <span
@@ -159,7 +145,7 @@ export const BookmarkCard = memo(function BookmarkCard({
                     data-color={typeConfig.color}
                     title={typeConfig.label}
                 >
-                    <TypeIcon size={8} />
+                    <Icon name={typeConfig.icon} size={8} />
                 </span>
             </div>
 
@@ -170,7 +156,7 @@ export const BookmarkCard = memo(function BookmarkCard({
                         {bookmark.name}
                     </span>
                     {bookmark.scope !== 'personal' && (
-                        <Share2 size={9} className="icon-pink" title="Shared" />
+                        <Icon name="share2" size={9} className="icon-pink" title="Shared" />
                     )}
                 </div>
                 <div className="bookmark-card__meta">
@@ -214,9 +200,9 @@ export const BookmarkCard = memo(function BookmarkCard({
                     title={bookmark.isPinned ? 'Unpin' : 'Pin'}
                 >
                     {bookmark.isPinned ? (
-                        <Pin size={10} fill="currentColor" />
+                        <Icon name="pin" size={10} fill="currentColor" />
                     ) : (
-                        <PinOff size={10} />
+                        <Icon name="pinOff" size={10} />
                     )}
                 </button>
 
@@ -227,22 +213,22 @@ export const BookmarkCard = memo(function BookmarkCard({
                             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                             title="More actions"
                         >
-                            <MoreHorizontal size={10} />
+                            <Icon name="moreHorizontal" size={10} />
                         </button>
 
                         {/* Context menu */}
                         {showMenu && (
                             <div className="bookmark-card__menu">
                                 <button onClick={handleEdit}>
-                                    <Edit3 size={10} />
+                                    <Icon name="edit" size={10} />
                                     Edit
                                 </button>
                                 <button onClick={handleDuplicate}>
-                                    <Copy size={10} />
+                                    <Icon name="copy" size={10} />
                                     Duplicate
                                 </button>
                                 <button onClick={handleDelete} className="danger">
-                                    <Trash2 size={10} />
+                                    <Icon name="delete" size={10} />
                                     Delete
                                 </button>
                             </div>
@@ -257,7 +243,7 @@ export const BookmarkCard = memo(function BookmarkCard({
                 onClick={handleNavigate}
                 title="Navigate to bookmark"
             >
-                <Play size={10} /> Go
+                <Icon name="play" size={10} /> Go
             </button>
         </div>
     );
