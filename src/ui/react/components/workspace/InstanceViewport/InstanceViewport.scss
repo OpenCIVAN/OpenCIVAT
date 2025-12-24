@@ -151,6 +151,13 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
+.instance-viewport__label-icon {
+    display: flex;
+    align-items: center;
+    color: var(--instance-color);
+    margin-right: 4px;
+}
+
 // Header buttons - subtle backlit style
 .instance-viewport__header-button {
   width: 24px;

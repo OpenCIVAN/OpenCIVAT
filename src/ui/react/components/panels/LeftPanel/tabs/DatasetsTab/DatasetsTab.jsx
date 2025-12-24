@@ -3,6 +3,7 @@
  * @description Datasets tab for the Left Panel
  * 
  * CLEAN MIGRATION: Removed getLucideIcon - uses <Icon name={...} /> directly
+ * Structure matches DatasetsTab.scss styling
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
@@ -99,7 +100,7 @@ function DatasetViewItemWrapper({ view }) {
 }
 
 // =============================================================================
-// DATASET PARENT COMPONENT
+// DATASET PARENT COMPONENT - Matches SCSS structure
 // =============================================================================
 
 function DatasetParent({ dataset, views, isExpanded, onToggle }) {
@@ -108,9 +109,8 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const cardRef = useRef(null);
-    const dragImageRef = useRef(null);
 
-    // Get icon config - now returns string names!
+    // Get icon config - returns string names!
     const typeConfig = getDatasetTypeConfig(dataset.fileType || dataset.type);
 
     const activeCount = views.filter(v => v.status === 'active').length;
@@ -152,7 +152,7 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
         setMenuOpen(false);
     }, []);
 
-    // Drag handlers...
+    // Drag handlers
     const handleDragStart = useCallback((e) => {
         setIsDragging(true);
         e.dataTransfer.setData('application/cia-dataset', JSON.stringify({
@@ -169,92 +169,98 @@ function DatasetParent({ dataset, views, isExpanded, onToggle }) {
 
     return (
         <div
-            className={`dataset-parent ${isDragging ? 'dataset-parent--dragging' : ''}`}
+            className={`dataset-parent ${isDragging ? 'dataset-parent--dragging' : ''} ${isHovered ? 'dataset-parent--hovered' : ''}`}
             ref={cardRef}
         >
-            <div
-                className={`dataset-parent__header ${isExpanded ? 'dataset-parent__header--expanded' : ''}`}
-                onClick={onToggle}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => { setIsHovered(false); if (!menuOpen) setMenuOpen(false); }}
-                draggable
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-            >
-                {/* Chevron */}
-                <span className={`dataset-parent__chevron ${isExpanded ? 'dataset-parent__chevron--expanded' : ''}`}>
-                    <Icon name="chevronDown" size={12} />
-                </span>
+            <div className="dataset-parent__card">
+                <div className="dataset-parent__header">
+                    {/* Main clickable content area */}
+                    <div
+                        className="dataset-parent__header-content"
+                        onClick={onToggle}
+                        onMouseEnter={() => setIsHovered(true)}
+                        onMouseLeave={() => { setIsHovered(false); if (!menuOpen) setMenuOpen(false); }}
+                        draggable
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                    >
+                        {/* Chevron */}
+                        <span className={`dataset-parent__chevron ${isExpanded ? 'dataset-parent__chevron--expanded' : ''}`}>
+                            <Icon name="chevronDown" size={12} />
+                        </span>
 
-                {/* Type icon - uses semantic name directly! */}
-                <div
-                    className="dataset-parent__type-icon"
-                    style={{ '--type-color': typeConfig.color || '#6B7280' }}
-                >
-                    <Icon name={typeConfig.icon} size={14} />
-                </div>
-
-                {/* Name and metadata */}
-                <div className="dataset-parent__info">
-                    <span className="dataset-parent__info-name">
-                        {dataset.name || dataset.filename || 'Untitled'}
-                    </span>
-                    <div className="dataset-parent__info-meta">
-                        <span
-                            className="dataset-parent__handler-badge"
+                        {/* Type icon with colored background */}
+                        <div
+                            className="dataset-parent__type-icon"
                             style={{ '--type-color': typeConfig.color || '#6B7280' }}
                         >
-                            {handlerLabel}
-                        </span>
-                        {sizeDisplay && (
-                            <span className="dataset-parent__meta-item">
-                                <Icon name="hardDrive" size={8} />
-                                {sizeDisplay}
+                            <Icon name={typeConfig.icon} size={14} />
+                        </div>
+
+                        {/* Name and metadata */}
+                        <div className="dataset-parent__info">
+                            <span className="dataset-parent__info-name">
+                                {dataset.name || dataset.filename || 'Untitled'}
                             </span>
-                        )}
-                        {loadedDisplay && (
-                            <span className="dataset-parent__meta-item">
-                                <Icon name="clock" size={8} />
-                                {loadedDisplay}
-                            </span>
-                        )}
+                            <div className="dataset-parent__info-meta">
+                                <span
+                                    className="dataset-parent__handler-badge"
+                                    style={{ '--type-color': typeConfig.color || '#6B7280' }}
+                                >
+                                    {handlerLabel}
+                                </span>
+                                {sizeDisplay && (
+                                    <span className="dataset-parent__meta-item">
+                                        <Icon name="hardDrive" size={8} />
+                                        {sizeDisplay}
+                                    </span>
+                                )}
+                                {loadedDisplay && (
+                                    <span className="dataset-parent__meta-item">
+                                        <Icon name="clock" size={8} />
+                                        {loadedDisplay}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* View count badge */}
+                        <div className={`dataset-parent__view-count ${activeCount > 0 ? 'dataset-parent__view-count--has-active' : ''}`}>
+                            <span className="dataset-parent__view-count-number">{activeCount}</span>
+                            {totalCount > 0 && totalCount !== activeCount && (
+                                <span className="dataset-parent__view-count-total">/{totalCount}</span>
+                            )}
+                        </div>
                     </div>
-                </div>
 
-                {/* View count badge */}
-                <div className={`dataset-parent__view-count ${activeCount > 0 ? 'dataset-parent__view-count--active' : ''}`}>
-                    {totalCount}
-                </div>
-
-                {/* Hover actions */}
-                {isHovered && (
+                    {/* Vertical action buttons (right edge) */}
                     <div className="dataset-parent__actions">
                         <button
-                            className="dataset-parent__action"
+                            className="dataset-parent__actions-btn"
                             onClick={handleCreateView}
                             title="Create view"
                         >
-                            <Icon name="add" size={12} />
+                            <Icon name="add" size={10} />
                         </button>
                         <button
-                            className="dataset-parent__action"
+                            className="dataset-parent__actions-btn"
                             onClick={handleOpenSettings}
                             title="Settings"
                         >
-                            <Icon name="settings" size={12} />
+                            <Icon name="settings" size={10} />
                         </button>
                         <button
-                            className="dataset-parent__action"
+                            className="dataset-parent__actions-btn"
                             onClick={handleMoreActions}
-                            title="More"
+                            title="More actions"
                         >
-                            <Icon name="moreHorizontal" size={12} />
+                            <Icon name="moreHorizontal" size={10} />
                         </button>
                     </div>
-                )}
+                </div>
             </div>
 
-            {/* Children */}
+            {/* Children (views) */}
             {isExpanded && (
                 <div className="dataset-parent__children">
                     {views.length > 0 ? (

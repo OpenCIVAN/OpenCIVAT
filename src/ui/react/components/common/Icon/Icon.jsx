@@ -101,6 +101,7 @@ import {
     FullscreenOutlined,
 
     // G
+    GppMaybeOutlined,
     GpsFixedOutlined,
     GridOnOutlined,
     GridViewOutlined,
@@ -108,6 +109,9 @@ import {
     // H
     HandymanOutlined,
     HeadphonesOutlined,
+    HeadsetMicOutlined,
+    HeadsetOffOutlined,
+    HeadsetOutlined,
     HelpOutlineOutlined,
     HexagonOutlined,
     HomeOutlined,
@@ -139,9 +143,11 @@ import {
     MeetingRoomOutlined,
     MemoryOutlined,
     MergeOutlined,
+    MergeTypeOutlined,
     MicOffOutlined,
     MicOutlined,
     MonitorOutlined,
+    MonitorHeartOutlined,
     MoreHorizOutlined,
     MoreVertOutlined,
     MyLocationOutlined,
@@ -244,6 +250,7 @@ import { CircularProgress } from '@mui/material';
 
 const ICON_MAP = {
     // A
+    activity: MonitorHeartOutlined,
     add: AddOutlined,
     archive: ArchiveOutlined,
     arrowDown: ArrowDownwardOutlined,
@@ -268,6 +275,7 @@ const ICON_MAP = {
     calendar: CalendarTodayOutlined,
     camera: CameraAltOutlined,
     cancel: CancelOutlined,
+    combine: MergeTypeOutlined,
     cube: Inventory2Outlined,  // Alias for box (used in manifests)
     canvasSize: PhotoSizeSelectSmallOutlined,
     chat: ChatOutlined,
@@ -331,6 +339,7 @@ const ICON_MAP = {
     // G
     gesture: PanToolOutlined,
     gitBranch: AccountTreeOutlined,
+    glasses: ViewInArOutlined, // Need to make custom from Material Symbols
     globe: PublicOutlined,
     grid: GridOnOutlined,
     grid3x3: GridViewOutlined,
@@ -341,6 +350,7 @@ const ICON_MAP = {
     hand: PanToolOutlined,
     hardDrive: StorageOutlined,
     headphones: HeadphonesOutlined,
+    headset: HeadsetOutlined,
     help: HelpOutlineOutlined,
     helpCircle: HelpOutlineOutlined,
     hexagon: HexagonOutlined,
@@ -351,6 +361,9 @@ const ICON_MAP = {
     imageOff: BrokenImageOutlined,
     info: InfoOutlined,
 
+    // J
+    joinVoice: HeadsetMicOutlined,
+
     // K
     keyboard: KeyboardOutlined,
 
@@ -358,6 +371,7 @@ const ICON_MAP = {
     layers: LayersOutlined,
     layout: DashboardOutlined,
     layoutGrid: GridViewOutlined,
+    leaveVoice: HeadsetOffOutlined,
     link: LinkOutlined,
     link2: LinkOutlined,
     linkOff: LinkOffOutlined,
@@ -430,6 +444,7 @@ const ICON_MAP = {
     share: ShareOutlined,
     share2: ShareOutlined,  // Alias for manifest compatibility
     shield: ShieldOutlined,
+    shieldAlert: GppMaybeOutlined,
     slash: DoDisturbOutlined,
     sliders: TuneOutlined,
     smile: SentimentSatisfiedOutlined,

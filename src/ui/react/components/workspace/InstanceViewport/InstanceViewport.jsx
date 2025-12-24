@@ -17,6 +17,7 @@ import { vrManager } from '@Core/vr/VRManager.js';
 import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel/FloatingPanelContext';
 
 import { getViewConfigurationManager, getDatasetManager } from "@Init/appInitializer.js";
+import { getFileTypeDisplayInfo } from "@Core/instances/types/instanceTypesInit.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
 
@@ -24,22 +25,6 @@ import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
 
 import "./InstanceViewport.scss";
-
-// ============================================================================
-// INSTANCE TYPE ICONS
-// ============================================================================
-
-const INSTANCE_TYPE_ICONS = {
-    vtk: 'box',
-    chart: 'barChart3',
-    plot: 'barChart3',
-    image: 'layers',
-    default: 'box',
-};
-
-const getInstanceTypeIcon = (type) => {
-    return INSTANCE_TYPE_ICONS[type] || INSTANCE_TYPE_ICONS.default;
-};
 
 // ============================================================================
 // SUB-COMPONENTS
@@ -526,7 +511,7 @@ function MoreMenu({
  */
 function HeaderBar({
     displayName,
-    instanceType,
+    fileTypeDisplayInfo,  // { icon, color, displayName, handlerType } from manifest
     instanceColor,
     isFullscreen,
     onFullscreen,
@@ -551,7 +536,10 @@ function HeaderBar({
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const moreButtonRef = useRef(null);
 
-    const TypeIcon = getInstanceTypeIcon(instanceType);
+    // Get icon from file type display info (from manifest), fallback to 'box'
+    const typeIconName = fileTypeDisplayInfo?.icon || 'box';
+    const typeDisplayName = fileTypeDisplayInfo?.displayName || 'View';
+
     const colorHex = instanceColor?.hex || '#60a5fa';
     const colorRgb = hexToRgb(colorHex);
     const headerMode = getHeaderMode(viewportWidth);
@@ -574,7 +562,7 @@ function HeaderBar({
                     </button>
                 )}
 
-                {/* Instance Label Badge - now in left section */}
+                {/* Instance Label Badge with Type Icon */}
                 <div
                     className="instance-viewport__label"
                     style={{
@@ -582,7 +570,13 @@ function HeaderBar({
                         '--instance-color-rgb': colorRgb,
                     }}
                 >
-                    <div className="instance-viewport__label-dot" />
+                    {/* File type icon from manifest */}
+                    <span
+                        className="instance-viewport__label-icon"
+                        title={typeDisplayName}
+                    >
+                        <Icon name={typeIconName} size={12} />
+                    </span>
                     <span className="instance-viewport__label-text">
                         {displayName}
                     </span>
@@ -1759,6 +1753,29 @@ export function InstanceViewport({
         return `View ${viewConfigId?.slice(0, 8) || 'Unknown'}`;
     }, [viewConfigId, hasData, isRemote, ownerUserName, propDisplayName]);
 
+    // =========================================================================
+    // DERIVED STATE: File Type Display Info (from manifest)
+    // =========================================================================
+
+    const fileTypeDisplayInfo = useMemo(() => {
+        if (!viewConfigId) return null;
+
+        try {
+            const view = getViewConfigurationManager()?.getView(viewConfigId);
+            if (view?.datasetId) {
+                const dataset = getDatasetManager()?.getDataset(view.datasetId);
+                if (dataset?.fileType) {
+                    // Get display info from manifest via instanceTypesInit
+                    return getFileTypeDisplayInfo(dataset.fileType);
+                }
+            }
+        } catch (e) {
+            // Fall through
+        }
+
+        return null;
+    }, [viewConfigId, hasData]); // Include hasData to re-derive after data loads
+
     const colorHex = instanceColor?.hex || '#60a5fa';
     const colorRgb = hexToRgb(colorHex);
 
@@ -1778,7 +1795,7 @@ export function InstanceViewport({
             {/* Header - ALWAYS visible so users can always close the instance */}
             <HeaderBar
                 displayName={displayName}
-                instanceType={instanceType}
+                fileTypeDisplayInfo={fileTypeDisplayInfo}
                 instanceColor={instanceColor}
                 isFullscreen={isFullscreen}
                 onFullscreen={handleFullscreen}

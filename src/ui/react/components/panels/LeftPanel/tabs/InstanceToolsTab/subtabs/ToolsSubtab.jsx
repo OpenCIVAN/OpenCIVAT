@@ -242,7 +242,7 @@ export function ToolsList({ tools, expandedMenus, onToggleMenu }) {
     if (!tools || tools.length === 0) {
         return (
             <div className="tools-list__empty">
-                <Wrench size={14} />
+                <Icon name="wrench" size={14} />
                 <span>No tools available - load data to see tools</span>
             </div>
         );
