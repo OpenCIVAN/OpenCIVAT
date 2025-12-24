@@ -19,14 +19,15 @@ export function LoggingPanel() {
   }, [logs, isExpanded]);
 
   const getLogStyle = (type) => {
+    // Uses CSS custom properties from VR Optimized theme
     const styles = {
-      [LogType.INFO]: { color: "#2196F3", emoji: "ℹ️" },
-      [LogType.SUCCESS]: { color: "#4CAF50", emoji: "✅" },
-      [LogType.WARNING]: { color: "#FFA726", emoji: "⚠️" },
-      [LogType.ERROR]: { color: "#f44336", emoji: "❌" },
-      [LogType.PROGRESS]: { color: "#9C27B0", emoji: "⏳" }
+      [LogType.INFO]: { color: "var(--color-info)", emoji: "ℹ️" },
+      [LogType.SUCCESS]: { color: "var(--color-success)", emoji: "✅" },
+      [LogType.WARNING]: { color: "var(--color-warning)", emoji: "⚠️" },
+      [LogType.ERROR]: { color: "var(--color-error)", emoji: "❌" },
+      [LogType.PROGRESS]: { color: "var(--color-accent-purple)", emoji: "⏳" }
     };
-    return styles[type] || { color: "#999", emoji: "📋" };
+    return styles[type] || { color: "var(--color-text-muted)", emoji: "📋" };
   };
 
   return (
@@ -36,8 +37,8 @@ export function LoggingPanel() {
       left: "10px",
       width: isExpanded ? "400px" : "200px",
       maxHeight: isExpanded ? "300px" : "40px",
-      backgroundColor: "#1a1a1a",
-      border: "1px solid #333",
+      backgroundColor: "var(--color-bg-secondary)",
+      border: "1px solid var(--color-border-default)",
       borderRadius: "6px",
       overflow: "hidden",
       transition: "all 0.3s ease",
@@ -50,14 +51,14 @@ export function LoggingPanel() {
         justifyContent: "space-between",
         alignItems: "center",
         padding: "8px 12px",
-        backgroundColor: "#0a0a0a",
-        borderBottom: isExpanded ? "1px solid #333" : "none",
+        backgroundColor: "var(--color-bg-base)",
+        borderBottom: isExpanded ? "1px solid var(--color-border-default)" : "none",
         cursor: "pointer"
       }} onClick={() => setIsExpanded(!isExpanded)}>
         <div style={{
           fontSize: "12px",
           fontWeight: "600",
-          color: "#aaa",
+          color: "var(--color-text-secondary)",
           display: "flex",
           alignItems: "center",
           gap: "8px"
@@ -65,7 +66,7 @@ export function LoggingPanel() {
           <span>📋 SYSTEM LOGS</span>
           <span style={{
             fontSize: "10px",
-            backgroundColor: "#333",
+            backgroundColor: "var(--color-bg-tertiary)",
             padding: "2px 6px",
             borderRadius: "3px"
           }}>
@@ -83,21 +84,21 @@ export function LoggingPanel() {
               title="Clear logs"
               style={{
                 background: "none",
-                border: "1px solid #666",
+                border: "1px solid var(--color-border-medium)",
                 borderRadius: "3px",
                 padding: "4px 8px",
-                color: "#999",
+                color: "var(--color-text-muted)",
                 fontSize: "10px",
                 cursor: "pointer",
                 transition: "all 0.2s"
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#ff6666";
-                e.currentTarget.style.color = "#ff6666";
+                e.currentTarget.style.borderColor = "var(--color-error)";
+                e.currentTarget.style.color = "var(--color-error)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#666";
-                e.currentTarget.style.color = "#999";
+                e.currentTarget.style.borderColor = "var(--color-border-medium)";
+                e.currentTarget.style.color = "var(--color-text-muted)";
               }}
             >
               Clear
@@ -110,21 +111,21 @@ export function LoggingPanel() {
             }}
             style={{
               background: "none",
-              border: "1px solid #666",
+              border: "1px solid var(--color-border-medium)",
               borderRadius: "3px",
               padding: "4px 8px",
-              color: "#999",
+              color: "var(--color-text-muted)",
               fontSize: "10px",
               cursor: "pointer",
               transition: "all 0.2s"
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#4CAF50";
-              e.currentTarget.style.color = "#4CAF50";
+              e.currentTarget.style.borderColor = "var(--color-success)";
+              e.currentTarget.style.color = "var(--color-success)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#666";
-              e.currentTarget.style.color = "#999";
+              e.currentTarget.style.borderColor = "var(--color-border-medium)";
+              e.currentTarget.style.color = "var(--color-text-muted)";
             }}
           >
             {isExpanded ? "▼" : "▲"}
@@ -143,7 +144,7 @@ export function LoggingPanel() {
           lineHeight: "1.6"
         }}>
           {logs.length === 0 ? (
-            <div style={{ color: "#666", textAlign: "center", padding: "20px 0" }}>
+            <div style={{ color: "var(--color-text-muted)", textAlign: "center", padding: "20px 0" }}>
               No logs yet
             </div>
           ) : (
@@ -155,7 +156,7 @@ export function LoggingPanel() {
                   style={{
                     marginBottom: "6px",
                     paddingBottom: "6px",
-                    borderBottom: "1px solid #222"
+                    borderBottom: "1px solid var(--color-border-subtle)"
                   }}
                 >
                   <div style={{
@@ -168,7 +169,7 @@ export function LoggingPanel() {
                       <div style={{ color: style.color, marginBottom: "2px" }}>
                         {log.message}
                       </div>
-                      <div style={{ color: "#555", fontSize: "10px" }}>
+                      <div style={{ color: "var(--color-text-tertiary)", fontSize: "10px" }}>
                         {log.timestamp.toLocaleTimeString()}
                       </div>
                     </div>

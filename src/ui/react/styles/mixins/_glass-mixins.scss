@@ -293,12 +293,12 @@
 // SPECIAL EFFECTS
 // ============================================================================
 
-// Frosted glass
+// Frosted glass - uses blue-tinted UI chrome colors
 @mixin frosted-glass {
-  background: rgba(30, 30, 30, 0.5);
+  background: $color-glass-panel;
   backdrop-filter: $blur-extreme saturate(220%);
   -webkit-backdrop-filter: $blur-extreme saturate(220%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid $color-border-default;
 }
 
 // Panel with colored glow around edges

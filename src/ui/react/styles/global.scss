@@ -1,6 +1,9 @@
 // global.scss - Base styles and resets with dark glassmorphism theme
 @use "theme" as *;
 
+// Export CSS custom properties for inline styles and JavaScript access
+@include export-css-variables;
+
 // ============================================================================
 // GLOBAL RESET
 // ============================================================================

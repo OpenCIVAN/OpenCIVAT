@@ -31,8 +31,8 @@
   // ==========================================================================
 
   &--view {
-    background: #0a0a0f;
-    border: 1px solid $color-border-default;
+    background: $color-bg-canvas;
+    border: 1px solid $color-border-canvas-default;
     border-radius: $radius-lg;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 
@@ -475,7 +475,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+  background: linear-gradient(
+    180deg,
+    $color-bg-canvas 0%,
+    $color-bg-canvas-cell 100%
+  );
 
   // Crossfade transition - fades out when viewport becomes ready
   opacity: 1;
@@ -524,7 +528,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+  background: linear-gradient(
+    180deg,
+    $color-bg-canvas 0%,
+    $color-bg-canvas-cell 100%
+  );
   overflow: hidden;
   position: relative;
 
@@ -557,8 +565,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #0a0a0f;
-  border: 1px solid $color-border-default;
+  background: $color-bg-canvas;
+  border: 1px solid $color-border-canvas-default;
   border-radius: $radius-lg;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -618,7 +626,11 @@
   flex: 1;
   overflow: hidden;
   padding: $spacing-sm;
-  background: linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+  background: linear-gradient(
+    180deg,
+    $color-bg-canvas 0%,
+    $color-bg-canvas-cell 100%
+  );
 }
 
 .canvas-cell__notes-preview {

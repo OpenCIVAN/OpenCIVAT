@@ -152,10 +152,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .instance-viewport__label-icon {
-    display: flex;
-    align-items: center;
-    color: var(--instance-color);
-    margin-right: 4px;
+  display: flex;
+  align-items: center;
+  color: var(--instance-color);
+  margin-right: 4px;
 }
 
 // Header buttons - subtle backlit style
@@ -1024,10 +1024,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   flex: 1;
   min-height: 0;
   position: relative;
-  background-color: #0a0a0a;
+  background-color: $color-bg-canvas-cell;
   box-shadow: inset 4px 4px 12px rgba(0, 0, 0, 0.8),
     inset -2px -2px 8px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.6);
+  border: 1px solid $color-border-canvas;
   border-radius: $radius-sm;
 }
 

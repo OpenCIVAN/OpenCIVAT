@@ -10,37 +10,37 @@ import { Icon } from '@UI/react/components/common/Icon';
 import { useLayoutPanelContext, DOCK_POSITIONS } from "../../LayoutPanelContext";
 
 // =============================================================================
-// DESIGN TOKENS - Neutral frosted glass aesthetic
+// DESIGN TOKENS - Uses CSS custom properties from VR Optimized theme
 // =============================================================================
 
 const tokens = {
-    // Neutral backgrounds (no blue tint)
-    bgPrimary: '#0d0d0d',
-    bgSecondary: '#151515',
-    bgTertiary: '#1c1c1c',
+    // Backgrounds - Use CSS custom properties for theme consistency
+    bgPrimary: 'var(--color-bg-base)',
+    bgSecondary: 'var(--color-bg-primary)',
+    bgTertiary: 'var(--color-bg-secondary)',
 
     // Borders
-    borderSubtle: 'rgba(255,255,255,0.06)',
-    borderDefault: 'rgba(255,255,255,0.1)',
+    borderSubtle: 'var(--color-border-subtle)',
+    borderDefault: 'var(--color-border-default)',
 
     // Text
-    textPrimary: '#f0f0f0',
-    textSecondary: '#a0a0a0',
-    textMuted: '#666666',
-    textTertiary: '#505050',
+    textPrimary: 'var(--color-text-primary)',
+    textSecondary: 'var(--color-text-secondary)',
+    textMuted: 'var(--color-text-muted)',
+    textTertiary: 'var(--color-text-tertiary)',
 
-    // Accents
-    accentBlue: '#60a5fa',
-    accentGreen: '#4ade80',
-    accentAmber: '#fbbf24',
-    accentPurple: '#a78bfa',
-    accentTeal: '#2dd4bf',
-    accentPink: '#f472b6',
-    accentRed: '#f87171',
+    // Accents - Moonlight pastels from theme
+    accentBlue: 'var(--color-accent-blue)',
+    accentGreen: 'var(--color-accent-green)',
+    accentAmber: 'var(--color-accent-amber)',
+    accentPurple: 'var(--color-accent-purple)',
+    accentTeal: 'var(--color-accent-teal)',
+    accentPink: 'var(--color-accent-pink)',
+    accentRed: 'var(--color-accent-red)',
 
     // Glass effects
-    glassLight: 'rgba(255,255,255,0.03)',
-    glassMedium: 'rgba(255,255,255,0.06)',
+    glassLight: 'rgba(96, 165, 250, 0.03)',
+    glassMedium: 'rgba(96, 165, 250, 0.06)',
 };
 
 // Vibrant instance colors for cells
@@ -343,7 +343,7 @@ const SmartTooltip = memo(({ cell, position, visible }) => {
             position: 'fixed',
             left: position.x + 12,
             top: position.y - 8,
-            background: '#141414',
+            background: 'var(--color-bg-elevated)',
             border: `2px solid ${color}`,
             borderRadius: 6,
             padding: '8px 12px',
@@ -356,17 +356,17 @@ const SmartTooltip = memo(({ cell, position, visible }) => {
             <div style={{
                 fontSize: 12,
                 fontWeight: 500,
-                color: '#e0e0e5',
+                color: 'var(--color-text-primary)',
                 marginBottom: 4,
             }}>
                 {cell.name || `View ${cell.id || '?'}`}
             </div>
             {cell.datasetName && (
-                <div style={{ fontSize: 11, color: '#808090', marginBottom: 2 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
                     Dataset: {cell.datasetName}
                 </div>
             )}
-            <div style={{ fontSize: 11, color: '#808090' }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
                 Position: <span style={{ color }}>
                     ({cell.col}, {cell.row})
                 </span>
@@ -866,9 +866,9 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                                                 ? `${tokens.accentPink}25`
                                                 : tokens.bgSecondary,
                                         border: `2px solid ${isSelected ? tokens.accentPurple :
-                                                cell ? color :
-                                                    isHome ? tokens.accentPink :
-                                                        tokens.borderSubtle
+                                            cell ? color :
+                                                isHome ? tokens.accentPink :
+                                                    tokens.borderSubtle
                                             }`,
                                         borderRadius: 4,
                                         opacity: inVP || !cell ? 1 : 0.6,

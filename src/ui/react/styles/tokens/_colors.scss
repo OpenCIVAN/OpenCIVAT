@@ -1,55 +1,75 @@
-// Design Tokens: Colors - CIA Web Moonlight Theme
+// Design Tokens: Colors - CIA Web VR Optimized Theme
 // =============================================================================
 //
-// This is the primary color palette for CIA Web.
+// HYBRID APPROACH:
+// - Canvas/data areas: Neutral blacks for color accuracy
+// - UI Chrome (panels, headers, bars): Blue-tinted for immersion
 //
 // Design principles:
-// - True black backgrounds for OLED optimization and visual depth
-// - Vibrant moonlight pastel accents - saturated but easy on eyes
+// - True neutral canvas backgrounds preserve scientific data color accuracy
+// - Blue-tinted UI creates "scientific instrument" aesthetic
+// - Vibrant moonlight pastel accents
 // - Apple-inspired status colors optimized for dark mode
-// - Semantic tool colors for consistent feature identification
-// - Collaboration features highlighted with pink accent
-// - Starred/bookmarked items use warm amber
-//
-// To use: @use "theme" as *; then reference variables like $color-accent-blue
+// - Pink accent for collaboration/sharing features
+// - Amber for starred/bookmarked items
 
 // ============================================================================
-// BASE COLORS - True Black Foundation
+// BASE COLORS - Blue-Tinted UI Chrome
 // ============================================================================
 
-// Background layers (darkest to lightest)
-$color-bg-base: #000000; // True black - deepest layer
-$color-bg-primary: #0f0f0f; // Primary surfaces
-$color-bg-secondary: #1a1a1a; // Elevated surfaces
-$color-bg-tertiary: #222222; // More elevated
-$color-bg-elevated: #2a2a2a; // Highest elevation (modals, dropdowns)
-
-// Glassmorphism surfaces (translucent layers)
-$color-glass-subtle: rgba(255, 255, 255, 0.02);
-$color-glass-light: rgba(255, 255, 255, 0.04);
-$color-glass-medium: rgba(255, 255, 255, 0.06);
-$color-glass-strong: rgba(255, 255, 255, 0.1);
-$color-glass-panel: rgba(30, 30, 30, 0.85); // Panel backgrounds with blur
+// UI Chrome layers (blue-tinted for immersive feel)
+$color-bg-base: #020406; // Deepest layer - subtle blue tint
+$color-bg-primary: #060a12; // Primary surfaces
+$color-bg-secondary: #0c1220; // Elevated surfaces (panels)
+$color-bg-tertiary: #121a2e; // More elevated
+$color-bg-elevated: #18223c; // Highest elevation (modals, dropdowns)
 
 // ============================================================================
-// BORDERS - Subtle White Overlays
+// CANVAS COLORS - Neutral for Data Accuracy
 // ============================================================================
 
-$color-border-subtle: rgba(255, 255, 255, 0.04);
-$color-border-default: rgba(255, 255, 255, 0.08);
-$color-border-medium: rgba(255, 255, 255, 0.12);
-$color-border-strong: rgba(255, 255, 255, 0.2);
-$color-border-accent: rgba(96, 165, 250, 0.4); // For focused/selected elements
+$color-bg-canvas: #030303; // Canvas background - TRUE NEUTRAL
+$color-bg-canvas-cell: #080808; // Cell interiors - neutral
+$color-bg-canvas-empty: #050505; // Empty cell state
 
 // ============================================================================
-// TEXT - High Contrast Hierarchy
+// GLASSMORPHISM SURFACES
 // ============================================================================
 
-$color-text-primary: rgba(255, 255, 255, 0.95); // Headings, important text
-$color-text-secondary: rgba(255, 255, 255, 0.7); // Body text
-$color-text-tertiary: rgba(255, 255, 255, 0.5); // Labels, hints
-$color-text-muted: rgba(255, 255, 255, 0.3); // Disabled, metadata
-$color-text-disabled: rgba(255, 255, 255, 0.2); // Disabled controls
+// Blue-tinted glass for UI chrome
+$color-glass-subtle: rgba(96, 165, 250, 0.03);
+$color-glass-light: rgba(96, 165, 250, 0.05);
+$color-glass-medium: rgba(96, 165, 250, 0.08);
+$color-glass-strong: rgba(96, 165, 250, 0.12);
+$color-glass-panel: rgba(8, 14, 24, 0.88); // Panel backgrounds with blur
+
+// Neutral glass for canvas elements
+$color-glass-canvas: rgba(255, 255, 255, 0.04);
+
+// ============================================================================
+// BORDERS
+// ============================================================================
+
+// Blue-tinted borders for UI chrome
+$color-border-subtle: rgba(96, 165, 250, 0.08);
+$color-border-default: rgba(96, 165, 250, 0.12);
+$color-border-medium: rgba(96, 165, 250, 0.18);
+$color-border-strong: rgba(96, 165, 250, 0.25);
+$color-border-accent: rgba(96, 165, 250, 0.4);
+
+// Neutral borders for canvas/data areas
+$color-border-canvas: rgba(255, 255, 255, 0.06);
+$color-border-canvas-default: rgba(255, 255, 255, 0.08);
+
+// ============================================================================
+// TEXT - High Contrast with Blue Tint
+// ============================================================================
+
+$color-text-primary: rgba(255, 255, 255, 0.95);
+$color-text-secondary: rgba(180, 200, 240, 0.8); // Slight blue tint
+$color-text-tertiary: rgba(140, 160, 200, 0.6); // More blue tint
+$color-text-muted: rgba(120, 150, 210, 0.5);
+$color-text-disabled: rgba(100, 130, 180, 0.3);
 
 // ============================================================================
 // ACCENT COLORS - Moonlight Pastels
@@ -121,27 +141,30 @@ $color-info-border: rgba(10, 132, 255, 0.25);
 // INTERACTIVE STATES
 // ============================================================================
 
-$color-hover-bg: rgba(255, 255, 255, 0.04);
-$color-hover-border: rgba(255, 255, 255, 0.15);
+$color-hover-bg: rgba(96, 165, 250, 0.06);
+$color-hover-border: rgba(96, 165, 250, 0.2);
 
-$color-active-bg: rgba(255, 255, 255, 0.08);
-$color-active-border: rgba(255, 255, 255, 0.2);
+$color-active-bg: rgba(96, 165, 250, 0.1);
+$color-active-border: rgba(96, 165, 250, 0.25);
 
 $color-focus-ring: rgba(96, 165, 250, 0.4);
 $color-focus-glow: rgba(96, 165, 250, 0.2);
 
-$color-disabled-bg: rgba(255, 255, 255, 0.02);
-$color-disabled-text: rgba(255, 255, 255, 0.15);
-$color-disabled-border: rgba(255, 255, 255, 0.04);
+$color-disabled-bg: rgba(96, 165, 250, 0.02);
+$color-disabled-text: rgba(140, 160, 200, 0.2);
+$color-disabled-border: rgba(96, 165, 250, 0.04);
 
 // ============================================================================
 // OVERLAY & BACKDROP
 // ============================================================================
 
-$color-overlay-light: rgba(0, 0, 0, 0.5);
-$color-overlay-medium: rgba(0, 0, 0, 0.7);
-$color-overlay-heavy: rgba(0, 0, 0, 0.85);
-$color-backdrop-blur: rgba(15, 15, 15, 0.85);
+$color-overlay-light: rgba(2, 4, 6, 0.5);
+$color-overlay-medium: rgba(2, 4, 6, 0.7);
+$color-overlay-heavy: rgba(2, 4, 6, 0.85);
+$color-backdrop-blur: rgba(8, 14, 24, 0.85);
+
+// VR-specific
+$color-vr-safe-zone: rgba(96, 165, 250, 0.03); // Subtle ambient glow for VR
 
 // ============================================================================
 // SEMANTIC: WORKSPACE TYPES
@@ -179,7 +202,6 @@ $color-filetype-default: $color-text-muted;
 // SEMANTIC: INSTANCE/VIEW COLORS
 // ============================================================================
 
-// Colors for differentiating multiple open views
 $color-instance-1: $color-accent-blue;
 $color-instance-2: $color-accent-green;
 $color-instance-3: $color-accent-teal;
@@ -187,7 +209,6 @@ $color-instance-4: $color-accent-pink;
 $color-instance-5: $color-accent-purple;
 $color-instance-6: $color-accent-amber;
 
-// Named aliases for clarity
 $color-instance-blue: $color-accent-blue;
 $color-instance-green: $color-accent-green;
 $color-instance-teal: $color-accent-teal;
@@ -199,17 +220,19 @@ $color-instance-amber: $color-accent-amber;
 // CSS CUSTOM PROPERTIES EXPORT
 // ============================================================================
 
-// Use this mixin in global.scss to export CSS variables for JS interop
-// Example: background: rgba(var(--color-accent-blue-rgb), 0.5);
-
 @mixin export-css-variables {
   :root {
-    // Backgrounds
+    // Backgrounds - UI Chrome (blue-tinted)
     --color-bg-base: #{$color-bg-base};
     --color-bg-primary: #{$color-bg-primary};
     --color-bg-secondary: #{$color-bg-secondary};
     --color-bg-tertiary: #{$color-bg-tertiary};
     --color-bg-elevated: #{$color-bg-elevated};
+
+    // Backgrounds - Canvas (neutral)
+    --color-bg-canvas: #{$color-bg-canvas};
+    --color-bg-canvas-cell: #{$color-bg-canvas-cell};
+    --color-bg-canvas-empty: #{$color-bg-canvas-empty};
 
     // Text
     --color-text-primary: #{$color-text-primary};
@@ -217,11 +240,14 @@ $color-instance-amber: $color-accent-amber;
     --color-text-tertiary: #{$color-text-tertiary};
     --color-text-muted: #{$color-text-muted};
 
-    // Borders
+    // Borders - UI Chrome (blue-tinted)
     --color-border-subtle: #{$color-border-subtle};
     --color-border-default: #{$color-border-default};
     --color-border-medium: #{$color-border-medium};
     --color-border-strong: #{$color-border-strong};
+
+    // Borders - Canvas (neutral)
+    --color-border-canvas: #{$color-border-canvas};
 
     // Accents (hex values)
     --color-accent-primary: #{$color-accent-primary};
@@ -234,7 +260,7 @@ $color-instance-amber: $color-accent-amber;
     --color-accent-indigo: #{$color-accent-indigo};
     --color-accent-red: #{$color-accent-red};
 
-    // Accents (RGB for rgba() usage with CSS variables)
+    // Accents (RGB for rgba() usage)
     --color-accent-blue-rgb: 96, 165, 250;
     --color-accent-purple-rgb: 192, 132, 252;
     --color-accent-pink-rgb: 251, 113, 133;
@@ -252,5 +278,8 @@ $color-instance-amber: $color-accent-amber;
 
     // Glass
     --color-glass-panel: #{$color-glass-panel};
+
+    // VR
+    --color-vr-safe-zone: #{$color-vr-safe-zone};
   }
 }
