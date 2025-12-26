@@ -43,14 +43,14 @@ import './SecondaryFooter.scss';
 
 // Icons are now string names for the Icon component
 const FLOW_OPTIONS = [
-    { value: 'row', icon: 'arrowRight', label: 'Row Flow', accent: 'var(--color-accent-blue)' },
-    { value: 'column', icon: 'arrowDown', label: 'Column Flow', accent: 'var(--color-accent-blue)' },
+    { value: 'row', icon: 'arrow_forward', label: 'Row Flow', accent: 'var(--color-accent-blue)' },
+    { value: 'column', icon: 'arrow_downward', label: 'Column Flow', accent: 'var(--color-accent-blue)' },
 ];
 
 const EDIT_TOOLS = [
-    { id: 'select', icon: 'mousePointer', label: 'Select', accent: 'var(--color-accent-blue)' },
-    { id: 'pan', icon: 'hand', label: 'Pan', accent: 'var(--color-accent-teal)' },
-    { id: 'merge', icon: 'combine', label: 'Merge Cells', accent: 'var(--color-accent-purple)' },
+    { id: 'select', icon: 'pan_tool_alt', label: 'Select', accent: 'var(--color-accent-blue)' },
+    { id: 'pan', icon: 'pan_tool', label: 'Pan', accent: 'var(--color-accent-teal)' },
+    { id: 'merge', icon: 'merge', label: 'Merge Cells', accent: 'var(--color-accent-purple)' },
 ];
 
 // =============================================================================

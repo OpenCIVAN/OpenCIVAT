@@ -54,13 +54,13 @@ const MyIcon = getIconComponent('settings');
 
 When using named exports (`IconClose`, etc.), you can use string presets:
 
-| Preset | Size |
-|--------|------|
-| `xs` | 12px |
-| `sm` | 16px (default) |
-| `md` | 20px |
-| `lg` | 24px |
-| `xl` | 32px |
+| Preset | Size           |
+| ------ | -------------- |
+| `xs`   | 12px           |
+| `sm`   | 16px (default) |
+| `md`   | 20px           |
+| `lg`   | 24px           |
+| `xl`   | 32px           |
 
 ```jsx
 <IconSettings size="lg" />  // 24px
@@ -123,10 +123,11 @@ Open `iconPaths.js` and add your path **alphabetically** or in the appropriate s
 ```javascript
 export const ICON_PATHS = {
   // ... existing icons ...
-  
+
   // Add your new icon
-  account_balance: 'M200-280v-280h80v280h-80Zm200 0v-280h80v280h-80Zm220 80H120v-60h60v-300h-60v-60l360-200 360 200v60h-60v300h60v60Zm-500-60h400v-300H180v300Zm200-160Z',
-  
+  account_balance:
+    "M200-280v-280h80v280h-80Zm200 0v-280h80v280h-80Zm220 80H120v-60h60v-300h-60v-60l360-200 360 200v60h-60v300h60v60Zm-500-60h400v-300H180v300Zm200-160Z",
+
   // ... more icons ...
 };
 ```
@@ -138,16 +139,17 @@ If you want a friendlier name, add it to `iconRegistry.js`:
 ```javascript
 export const ICON_REGISTRY = {
   // ... existing mappings ...
-  
+
   // Add semantic alias
-  bank: 'account_balance',
-  institution: 'account_balance',
-  
+  bank: "account_balance",
+  institution: "account_balance",
+
   // ... more mappings ...
 };
 ```
 
 Now you can use either:
+
 ```jsx
 <Icon name="account_balance" />  // Material Symbol name
 <Icon name="bank" />              // Semantic alias
@@ -159,8 +161,8 @@ If you need a legacy-style named export, add to `iconComponents.js`:
 
 ```javascript
 // At the bottom with other exports
-export const IconBank = createIconComponent('bank');
-export const IconAccountBalance = createIconComponent('account_balance');
+export const IconBank = createIconComponent("bank");
+export const IconAccountBalance = createIconComponent("account_balance");
 ```
 
 And export from `index.js`:
@@ -170,7 +172,7 @@ export {
   // ... existing exports ...
   IconBank,
   IconAccountBalance,
-} from './iconComponents';
+} from "./iconComponents";
 ```
 
 ---
@@ -178,36 +180,47 @@ export {
 ## Quick Reference: Icon Categories
 
 ### Navigation
+
 `chevronDown`, `chevronUp`, `chevronLeft`, `chevronRight`, `arrowUp`, `arrowDown`, `arrowLeft`, `arrowRight`, `expand`, `collapse`
 
 ### Actions
+
 `add`, `remove`, `close`, `check`, `edit`, `delete`, `save`, `copy`, `paste`, `cut`, `undo`, `redo`, `refresh`, `search`, `filter`, `sort`
 
 ### View & Display
+
 `eye`, `eyeOff`, `zoomIn`, `zoomOut`, `fullscreen`, `fullscreenExit`, `maximize`, `minimize`, `fitScreen`
 
 ### 3D & Spatial
+
 `box`, `cube`, `layers`, `rotate3d`, `move`, `pan`
 
 ### VR & Immersive
+
 `vr`, `vrHeadset`, `glasses`, `spatialAudio`, `gesture`, `controller`
 
 ### Tools
+
 `pen`, `brush`, `eraser`, `scissors`, `ruler`, `palette`, `sliders`, `settings`, `tools`, `target`, `crosshair`, `wand`
 
 ### Data & Files
+
 `file`, `folder`, `folderOpen`, `database`, `dataset`, `upload`, `download`, `archive`
 
 ### Media
+
 `mic`, `micOff`, `video`, `videoOff`, `camera`, `volume`, `volumeOff`, `play`, `pause`, `stop`, `record`, `image`
 
 ### Users & Collaboration
+
 `user`, `users`, `userPlus`, `share`, `chat`, `comment`, `send`, `bell`
 
 ### Status
+
 `info`, `warning`, `error`, `success`, `help`, `loader`, `dot`
 
 ### UI & Layout
+
 `menu`, `moreHorizontal`, `moreVertical`, `grid`, `list`, `dashboard`, `gripHorizontal`, `gripVertical`
 
 ---
@@ -239,6 +252,7 @@ This is a 960×960 canvas with an inverted Y-axis (negative values go up).
 ### Path Format
 
 Paths use standard SVG path commands:
+
 - `M` = Move to
 - `L` = Line to
 - `Q` = Quadratic curve
@@ -259,22 +273,22 @@ Paths use standard SVG path commands:
 
 If migrating from `@mui/icons-material`:
 
-| MUI Import | New Import |
-|------------|------------|
-| `<CloseIcon />` | `<Icon name="close" />` or `<IconClose />` |
-| `<Settings />` | `<Icon name="settings" />` |
-| `<Visibility />` | `<Icon name="eye" />` |
-| `<VisibilityOff />` | `<Icon name="eyeOff" />` |
+| MUI Import          | New Import                                 |
+| ------------------- | ------------------------------------------ |
+| `<CloseIcon />`     | `<Icon name="close" />` or `<IconClose />` |
+| `<Settings />`      | `<Icon name="settings" />`                 |
+| `<Visibility />`    | `<Icon name="eye" />`                      |
+| `<VisibilityOff />` | `<Icon name="eyeOff" />`                   |
 
 The `getIconComponent()` function provides drop-in compatibility:
 
 ```jsx
 // Old
-import { Close } from '@mui/icons-material';
+import { Close } from "@mui/icons-material";
 
 // New
-import { getIconComponent } from '@UI/react/components/common/Icon';
-const Close = getIconComponent('close');
+import { getIconComponent } from "@UI/react/components/common/Icon";
+const Close = getIconComponent("close");
 ```
 
 ---
@@ -282,22 +296,27 @@ const Close = getIconComponent('close');
 ## Troubleshooting
 
 ### Icon appears as "?" or help icon
+
 The icon name doesn't exist. Check spelling and use `hasIcon()` to verify:
 
 ```jsx
-import { hasIcon } from '@UI/react/components/common/Icon';
-console.log(hasIcon('myIcon')); // false - icon doesn't exist
+import { hasIcon } from "@UI/react/components/common/Icon";
+console.log(hasIcon("myIcon")); // false - icon doesn't exist
 ```
 
 ### Icon is wrong size or cut off
+
 Make sure you're not overriding the viewBox. The component handles this automatically.
 
 ### Icon color won't change
+
 Icons use `currentColor` by default. Either:
+
 - Set color on parent element: `<span style={{color: 'red'}}><Icon name="check" /></span>`
 - Use the color prop: `<Icon name="check" color="red" />`
 
 ### Adding icon but it doesn't appear
+
 1. Check the path was added to `iconPaths.js`
 2. If using semantic name, check `iconRegistry.js` has the mapping
 3. Clear your build cache and rebuild

@@ -12,8 +12,8 @@
  * @example
  * <SegmentedToggle
  *   options={[
- *     { value: 'row', icon: ArrowRight, label: 'Row Flow', accent: 'var(--color-accent-blue)' },
- *     { value: 'column', icon: ArrowDown, label: 'Column Flow', accent: 'var(--color-accent-blue)' },
+ *     { value: 'row', icon: arrow_forward, label: 'Row Flow', accent: 'var(--color-accent-blue)' },
+ *     { value: 'column', icon: arrow_downward, label: 'Column Flow', accent: 'var(--color-accent-blue)' },
  *   ]}
  *   value="row"
  *   onChange={(value) => setFlowDirection(value)}
@@ -21,6 +21,7 @@
  */
 
 import React, { useState, useCallback, memo } from 'react';
+import { Icon } from '@UI/react/components/common/Icon';
 
 import './SegmentedToggle.scss';
 
@@ -73,7 +74,6 @@ function SegmentedToggle({
             {options.map((option, index) => {
                 const isActive = value === option.value;
                 const isHovered = hoveredIndex === index;
-                const Icon = option.icon;
 
                 return (
                     <button
@@ -91,7 +91,7 @@ function SegmentedToggle({
                         title={option.label}
                         data-hovered={isHovered}
                     >
-                        <Icon size={12} strokeWidth={1.5} />
+                        <Icon name={option.icon} size={12} />
                     </button>
                 );
             })}
