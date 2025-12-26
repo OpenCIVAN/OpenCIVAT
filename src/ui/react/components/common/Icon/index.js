@@ -2,83 +2,230 @@
 // ICON SYSTEM - PUBLIC EXPORTS
 // =============================================================================
 //
+// Material Symbols icon system for CIA Web
+// Source: https://fonts.google.com/icons
+//
 // Usage:
 //   import { Icon } from '@UI/react/components/common/Icon';
-//   <Icon name="close" size="sm" />
+//   <Icon name="close" size={20} />
 //
-// Or for direct component access:
-//   import { IconClose, IconVR } from '@UI/react/components/common/Icon';
-//
-// For utility functions:
-//   import { getIconComponent, hasIcon, getAvailableIcons } from '@UI/react/components/common/Icon';
+// Legacy/Backwards compatible:
+//   import { IconClose, getIconComponent } from '@UI/react/components/common/Icon';
+//   const MyIcon = getIconComponent('settings');
 //
 // =============================================================================
 
-export {
-  // Main component
-  Icon,
-  Icon as default,
+// Main component
+export { default } from "./Icon";
+export { default as Icon } from "./Icon";
 
-  // Utilities
+// Utility functions from Icon.jsx
+export { hasIcon, getAvailableIcons, getUsedSymbols } from "./Icon";
+
+// Registry (for advanced usage)
+export { ICON_REGISTRY, getSymbolName } from "./iconRegistry";
+
+// Paths (for custom implementations)
+export { ICON_PATHS, ICON_VIEWBOX } from "./iconPaths";
+
+// =============================================================================
+// BACKWARDS COMPATIBILITY EXPORTS
+// =============================================================================
+// Re-export everything from iconComponents for legacy code support
+
+export {
+  // Size presets
   ICON_SIZES,
-  getAvailableIcons,
-  hasIcon,
+
+  // Function to get icon component by name
   getIconComponent,
 
-  // Direct icon exports (for tree-shaking / backwards compatibility)
-  IconClose,
+  // Named icon exports - Navigation
+  IconChevronDown,
+  IconChevronUp,
+  IconChevronLeft,
+  IconChevronRight,
+  IconArrowUp,
+  IconArrowDown,
+  IconArrowLeft,
+  IconArrowRight,
+
+  // Actions
   IconAdd,
   IconRemove,
-  IconDelete,
-  IconEdit,
+  IconClose,
   IconCheck,
+  IconEdit,
+  IconDelete,
   IconSave,
   IconCopy,
   IconUndo,
   IconRedo,
   IconRefresh,
+  IconRotateCw,
+  IconRotateCcw,
   IconSearch,
-  IconSettings,
-  IconMoreHorizontal,
-  IconMoreVertical,
-  IconChevronDown,
-  IconChevronUp,
-  IconChevronLeft,
-  IconChevronRight,
-  IconHome,
+  IconFilter,
+  IconCancel,
+
+  // View & Display
   IconEye,
   IconEyeOff,
-  IconMaximize,
-  IconMinimize,
   IconZoomIn,
   IconZoomOut,
-  IconVR,
+  IconFullscreen,
+  IconFullscreenExit,
+  IconMaximize,
+  IconMinimize,
+  IconExpand,
+  IconCollapse,
+
+  // 3D & Spatial
   IconBox,
-  IconLayers,
+  IconCube,
+  IconRotate3d,
   IconMove,
+  IconLayers,
+
+  // VR & Immersive
+  IconVR,
+  IconVRHeadset,
+  IconGlasses,
+  IconSpatialAudio,
+  IconGesture,
+  IconController,
+
+  // Tools & Editing
+  IconPen,
+  IconBrush,
+  IconEraser,
   IconScissors,
   IconRuler,
   IconPalette,
-  IconFilter,
   IconSliders,
+  IconSettings,
   IconTools,
-  IconFolder,
+  IconTarget,
+  IconCrosshair,
+  IconWand,
+
+  // Data & Files
   IconFile,
-  IconImage,
+  IconFolder,
+  IconFolderOpen,
   IconDatabase,
-  IconDownload,
+  IconDataset,
   IconUpload,
-  IconUser,
-  IconUsers,
+  IconDownload,
+  IconArchive,
+
+  // Media & Communication
   IconMic,
   IconMicOff,
   IconVideo,
+  IconVideoOff,
+  IconCamera,
+  IconVolume,
+  IconVolumeOff,
   IconPlay,
   IconPause,
+  IconStop,
+  IconRecord,
+  IconImage,
+
+  // Users & Collaboration
+  IconUser,
+  IconUsers,
+  IconUserPlus,
+  IconShare,
+  IconChat,
+  IconComment,
+  IconSend,
+  IconBell,
+
+  // UI & Layout
+  IconMenu,
+  IconMoreHorizontal,
+  IconMoreVertical,
+  IconGrid,
+  IconList,
+  IconLayout,
+  IconDashboard,
+  IconGripHorizontal,
+  IconGripVertical,
+  IconDragHandle,
+
+  // Status & Feedback
   IconInfo,
-  IconHelp,
   IconWarning,
   IconError,
+  IconSuccess,
+  IconHelp,
   IconLoader,
-  IconGripHorizontal,
-} from "./Icon.jsx";
+  IconDot,
+
+  // Science & Domain
+  IconBiotech,
+  IconScience,
+  IconAtom,
+  IconBrain,
+  IconDna,
+  IconHeart,
+  IconChart,
+  IconGraph,
+  IconScatterChart,
+
+  // Navigation & Location
+  IconCompass,
+  IconHome,
+  IconMap,
+  IconLocation,
+  IconGlobe,
+  IconNavigation,
+
+  // Time & Scheduling
+  IconClock,
+  IconCalendar,
+
+  // Security & Access
+  IconLock,
+  IconUnlock,
+  IconShield,
+  IconKey,
+
+  // Bookmarks & Favorites
+  IconBookmark,
+  IconStar,
+  IconStarOutline,
+  IconPin,
+
+  // Links & External
+  IconLink,
+  IconLinkOff,
+  IconExternalLink,
+  IconLogout,
+  IconLogin,
+
+  // Devices & Hardware
+  IconKeyboard,
+  IconMonitor,
+  IconDesktop,
+  IconHeadphones,
+  IconHeadset,
+  IconHeadsetMic,
+  IconTerminal,
+  IconCode,
+  IconCpu,
+  IconMemory,
+
+  // Toggles & Modes
+  IconSun,
+  IconMoon,
+
+  // Misc
+  IconZap,
+  IconRocket,
+  IconCompare,
+  IconMerge,
+  IconGitBranch,
+} from "./iconComponents";
