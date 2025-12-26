@@ -1,0 +1,28 @@
+/**
+ * StatusDot Styles
+ */
+@use "theme" as *;
+
+.status-dot {
+  width: var(--dot-size, 8px);
+  height: var(--dot-size, 8px);
+  border-radius: 50%;
+  background-color: var(--dot-color);
+  display: inline-block;
+  flex-shrink: 0;
+
+  &--pulse {
+    box-shadow: 0 0 8px var(--dot-color);
+    animation: status-dot-pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes status-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
