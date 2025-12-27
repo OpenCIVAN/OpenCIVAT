@@ -58,9 +58,7 @@ function getDatasetTypeConfig(fileType) {
 // =============================================================================
 
 function DatasetViewItemWrapper({ view }) {
-    const isActive = view.status === 'active';
-
-    const handleSelect = useCallback((viewId) => {
+    const handleFocus = useCallback((viewId) => {
         viewLifecycleService.focusView(viewId);
     }, []);
 
@@ -80,21 +78,24 @@ function DatasetViewItemWrapper({ view }) {
         viewLifecycleService.focusView(viewId);
     }, []);
 
-    const handlePlaceOnCanvas = useCallback(async (viewId) => {
+    const handlePlace = useCallback(async (viewId) => {
         await viewLifecycleService.placeView(viewId);
+    }, []);
+
+    const handleVisibilityToggle = useCallback((viewId) => {
+        viewLifecycleService.toggleViewVisibility?.(viewId);
     }, []);
 
     return (
         <ViewItem
             view={view}
-            isActive={isActive}
-            showPosition={true}
-            onSelect={handleSelect}
+            onFocus={handleFocus}
             onClose={handleClose}
             onTrash={handleTrash}
             onRename={handleRename}
             onNavigate={handleNavigate}
-            onPlaceOnCanvas={handlePlaceOnCanvas}
+            onPlace={handlePlace}
+            onVisibilityToggle={handleVisibilityToggle}
         />
     );
 }
@@ -333,7 +334,8 @@ export function DatasetsPanelContent() {
             return views
                 .filter(v => v.status !== 'trashed' && v.status !== 'archived')
                 .map(v => {
-                    const instanceColor = workspaceManager?.getViewColor?.(v.id);
+                    const instanceColorObj = workspaceManager?.getViewColor?.(v.id);
+                    const instanceColor = instanceColorObj?.hex || instanceColorObj;
                     const placement = canvasManager?.getPlacementForView?.(v.id);
                     return {
                         ...v,

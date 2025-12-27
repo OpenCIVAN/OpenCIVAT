@@ -2,33 +2,76 @@
  * ViewItem Component
  * Location: src/ui/react/components/common/ViewItem/ViewItem.jsx
  *
- * Full-featured view item component for active/placed views.
- * Includes: thumbnail, status icons, sliding panel on hover, context menu, drag support.
+ * Adaptive view item component supporting desktop and VR modes.
+ * Handles three view states: active (on canvas), inactive (not on canvas), trashed.
+ *
+ * Desktop Mode: Slide-over actions on hover, expandable toolbar on click
+ * VR Mode: Horizontal action bar below content, always visible
  *
  * @module ViewItem
  */
 
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
-import { SlidingPanel } from './components/SlidingPanel';
 import { ViewItemContextMenu } from './components/ViewItemContextMenu';
 import { ViewSettingsModal } from '@UI/react/components/modals/ViewSettingsModal';
 import { Thumbnail } from '@UI/react/components/common/Thumbnail';
 import './ViewItem.scss';
 
 // =============================================================================
-// STATUS ICON CONFIGURATION
+// STATUS CONFIGURATION
 // =============================================================================
 
-const STATUS_ICONS = {
-    starredWorkspace: { icon: 'folder', color: 'purple', tooltip: 'Saved to Workspace' },
-    starredPersonal: { icon: 'globe', color: 'amber', tooltip: 'Saved to Personal' },
-    hasSavedState: { icon: 'save', color: 'amber', tooltip: 'Has saved state' },
-    isShared: { icon: 'users', color: 'pink', tooltip: 'Shared' },
-    isLocked: { icon: 'unlock', color: 'amber', tooltip: 'Locked' },
-    hasLinks: { icon: 'link', color: 'teal', tooltip: 'Linked properties' },
-    hasFilters: { icon: 'filter', color: 'purple', tooltip: 'Active filters' },
+const STATUS_CONFIG = {
+    active: { bg: 'rgba(74,222,128,0.15)', color: '#4ade80', label: 'Active', glow: true },
+    inactive: { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', label: 'Inactive', glow: false },
+    trashed: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', label: 'Trashed', glow: false },
 };
+
+// =============================================================================
+// TOOL BUTTON COMPONENT
+// =============================================================================
+
+const ToolButton = memo(function ToolButton({
+    icon,
+    label,
+    color,
+    onClick,
+    isVR = false,
+    showLabel = false,
+    className = '',
+}) {
+    const handleClick = (e) => {
+        e.stopPropagation();
+        onClick?.();
+    };
+
+    if (isVR) {
+        return (
+            <button
+                className={`view-item__vr-action-btn ${className}`}
+                onClick={handleClick}
+                title={label}
+                style={{ '--tool-color': color }}
+            >
+                <Icon name={icon} size={20} />
+                <span>{label}</span>
+            </button>
+        );
+    }
+
+    return (
+        <button
+            className={`view-item__tool-btn ${className}`}
+            onClick={handleClick}
+            title={label}
+            style={{ '--tool-color': color }}
+        >
+            <Icon name={icon} size={12} />
+            {showLabel && <span className="view-item__tool-label">{label}</span>}
+        </button>
+    );
+});
 
 // =============================================================================
 // MAIN COMPONENT
@@ -36,34 +79,42 @@ const STATUS_ICONS = {
 
 export const ViewItem = memo(function ViewItem({
     view,
-    isActive = false,
+    mode = 'desktop',
     isSelected = false,
-    isDragging = false,
-    showPosition = false,
-    availableViews = [],
+    showDatasetBadge = false,
     dataset = null,
     sharedUsers = [],
-    // Event handlers
-    onSelect,
+
+    // Index for drag/drop
+    index,
+    totalItems,
+    isDragging = null,
+    dragOverIndex = null,
+
+    // State-specific callbacks
+    onFocus,
     onClose,
+    onPlace,
     onTrash,
-    onRename,
-    onDragStart,
-    onDragEnd,
-    onNavigate,
-    onPlaceOnCanvas,
-    onStarWorkspace,
-    onStarPersonal,
-    onSaveState,
-    onLoadState,
-    onShare,
-    onUpdateSharing,
+    onRestore,
+    onDeletePermanently,
+    onVisibilityToggle,
+
+    // Common callbacks
+    onLink,
     onDuplicate,
-    onLock,
-    onSizeChange,
-    onLinkPropertyChange,
-    onAnnotationFilterChange,
-    onDisplayOptionChange,
+    onSnapshot,
+    onSettings,
+    onRename,
+    onSelect,
+    onNavigate,
+
+    // Drag callbacks
+    onDragStart,
+    onDragOver,
+    onDragEnd,
+    onDrop,
+
     className = '',
 }) {
     // =========================================================================
@@ -71,6 +122,8 @@ export const ViewItem = memo(function ViewItem({
     // =========================================================================
 
     const [isHovered, setIsHovered] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isDragHandle, setIsDragHandle] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(view?.name || '');
     const [contextMenu, setContextMenu] = useState(null);
@@ -84,23 +137,76 @@ export const ViewItem = memo(function ViewItem({
     // DERIVED STATE
     // =========================================================================
 
-    const isPlaced = view?.status === 'active' || view?.position != null;
+    const isVR = mode === 'vr';
+    const isBeingDragged = isDragging === index;
+    const isDropTarget = dragOverIndex === index;
+    const isDropAfterTarget = dragOverIndex === index + 0.5;
 
-    // Build status icons array
-    const statusIcons = [];
-    if (view?.starredWorkspace) statusIcons.push({ ...STATUS_ICONS.starredWorkspace, key: 'workspace' });
-    if (view?.starredPersonal) statusIcons.push({ ...STATUS_ICONS.starredPersonal, key: 'personal' });
-    if (view?.hasSavedState) statusIcons.push({ ...STATUS_ICONS.hasSavedState, key: 'saved' });
-    if (view?.isShared) statusIcons.push({ ...STATUS_ICONS.isShared, key: 'shared' });
-    if (view?.isLocked) statusIcons.push({ ...STATUS_ICONS.isLocked, key: 'locked' });
-    if (view?.linkedCount > 0) statusIcons.push({ ...STATUS_ICONS.hasLinks, key: 'links', count: view.linkedCount });
-    if (view?.filterCount > 0) statusIcons.push({ ...STATUS_ICONS.hasFilters, key: 'filters', count: view.filterCount });
+    // Determine view state from status and position
+    const viewState = view?.status === 'trashed'
+        ? 'trashed'
+        : view?.position
+            ? 'active'
+            : 'inactive';
+
+    const statusConfig = STATUS_CONFIG[viewState];
 
     // Get dataset info
     const datasetInfo = dataset || view?.dataset || {
         name: view?.datasetName || view?.name?.replace('View of ', '') || 'Unknown',
         type: view?.instanceType || 'vtk',
     };
+
+    // =========================================================================
+    // TOOL DEFINITIONS
+    // =========================================================================
+
+    const getTools = useCallback(() => {
+        const commonTools = [
+            { id: 'link', icon: 'link', label: 'Link', color: '#a78bfa', onClick: () => onLink?.(view.id) },
+            { id: 'duplicate', icon: 'copy', label: 'Duplicate', color: '#f472b6', onClick: () => onDuplicate?.(view.id) },
+            { id: 'snapshot', icon: 'camera', label: 'Snapshot', color: '#fbbf24', onClick: () => onSnapshot?.(view.id) },
+            { id: 'settings', icon: 'settings', label: 'Settings', color: '#6b7280', onClick: () => setShowSettingsModal(true) },
+        ];
+
+        switch (viewState) {
+            case 'active':
+                return {
+                    quick: [
+                        { id: 'focus', icon: 'target', label: 'Focus', color: '#60a5fa', onClick: () => onFocus?.(view.id) },
+                        {
+                            id: 'visibility',
+                            icon: view.visible !== false ? 'eye' : 'eyeOff',
+                            label: view.visible !== false ? 'Hide' : 'Show',
+                            color: view.visible !== false ? '#4ade80' : '#6b7280',
+                            onClick: () => onVisibilityToggle?.(view.id),
+                        },
+                        { id: 'close', icon: 'close', label: 'Close', color: '#ef4444', onClick: () => onClose?.(view.id) },
+                    ],
+                    more: commonTools,
+                };
+            case 'inactive':
+                return {
+                    quick: [
+                        { id: 'place', icon: 'place', label: 'Place', color: '#60a5fa', onClick: () => onPlace?.(view.id) },
+                        { id: 'trash', icon: 'trash', label: 'Trash', color: '#ef4444', onClick: () => onTrash?.(view.id) },
+                    ],
+                    more: commonTools,
+                };
+            case 'trashed':
+                return {
+                    quick: [
+                        { id: 'restore', icon: 'restore', label: 'Restore', color: '#4ade80', onClick: () => onRestore?.(view.id) },
+                        { id: 'deletePermanently', icon: 'deletePermanent', label: 'Delete', color: '#ef4444', onClick: () => onDeletePermanently?.(view.id) },
+                    ],
+                    more: [],
+                };
+            default:
+                return { quick: [], more: [] };
+        }
+    }, [view, viewState, onFocus, onClose, onPlace, onTrash, onRestore, onDeletePermanently, onVisibilityToggle, onLink, onDuplicate, onSnapshot]);
+
+    const { quick: quickTools, more: moreTools } = getTools();
 
     // =========================================================================
     // HOVER HANDLING
@@ -117,7 +223,6 @@ export const ViewItem = memo(function ViewItem({
         }, 150);
     }, []);
 
-    // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
             if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -127,6 +232,19 @@ export const ViewItem = memo(function ViewItem({
     // =========================================================================
     // EVENT HANDLERS
     // =========================================================================
+
+    const handleRowClick = useCallback(() => {
+        if (isVR) {
+            onFocus?.(view.id);
+        } else {
+            setIsExpanded(!isExpanded);
+        }
+    }, [isVR, view?.id, isExpanded, onFocus]);
+
+    const handleExpandClick = useCallback((e) => {
+        e.stopPropagation();
+        setIsExpanded(!isExpanded);
+    }, [isExpanded]);
 
     const handleContextMenu = useCallback((e) => {
         e.preventDefault();
@@ -159,24 +277,6 @@ export const ViewItem = memo(function ViewItem({
         }
     }, [handleFinishEditing, view?.name]);
 
-    const handleClose = useCallback(() => {
-        onClose?.(view.id);
-    }, [view?.id, onClose]);
-
-    const handleTrash = useCallback(() => {
-        onTrash?.(view.id);
-    }, [view?.id, onTrash]);
-
-    const handleOpenSettings = useCallback(() => {
-        setShowSettingsModal(true);
-        setContextMenu(null);
-    }, []);
-
-    const handlePlaceOnCanvas = useCallback(() => {
-        onPlaceOnCanvas?.(view.id);
-    }, [view?.id, onPlaceOnCanvas]);
-
-    // Focus input when editing starts
     useEffect(() => {
         if (isEditing && inputRef.current) {
             inputRef.current.focus();
@@ -189,17 +289,53 @@ export const ViewItem = memo(function ViewItem({
     // =========================================================================
 
     const handleDragStart = useCallback((e) => {
-        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', index?.toString() || '0');
         e.dataTransfer.setData('application/x-viewitem', JSON.stringify({
+            type: 'view-item',
             id: view.id,
+            viewConfigId: view.id,
+            viewId: view.id,
             name: view.name,
             color: view.color,
             datasetId: view.datasetId,
             rowSpan: view.rowSpan || 1,
             colSpan: view.colSpan || 1,
         }));
-        onDragStart?.(e, view.id);
-    }, [view, onDragStart]);
+        onDragStart?.(index);
+    }, [view, index, onDragStart]);
+
+    const handleDragOver = useCallback((e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+
+        if (e.clientY < midpoint) {
+            onDragOver?.(index);
+        } else {
+            onDragOver?.(index + 0.5);
+        }
+    }, [index, onDragOver]);
+
+    const handleDragLeave = useCallback((e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            onDragOver?.(null);
+        }
+    }, [onDragOver]);
+
+    const handleDrop = useCallback((e) => {
+        e.preventDefault();
+        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+        let toIndex = dragOverIndex;
+
+        if (toIndex % 1 !== 0) {
+            toIndex = Math.ceil(toIndex);
+        }
+
+        onDrop?.(fromIndex, toIndex);
+    }, [dragOverIndex, onDrop]);
 
     // =========================================================================
     // RENDER
@@ -207,11 +343,12 @@ export const ViewItem = memo(function ViewItem({
 
     const itemClasses = [
         'view-item',
-        isActive && 'view-item--active',
+        `view-item--${viewState}`,
+        isVR && 'view-item--vr',
         isSelected && 'view-item--selected',
-        isDragging && 'view-item--dragging',
-        !isPlaced && 'view-item--not-placed',
-        isHovered && 'view-item--panel-open',
+        isExpanded && 'view-item--expanded',
+        isBeingDragged && 'view-item--dragging',
+        (isHovered || isExpanded) && 'view-item--hovered',
         className,
     ].filter(Boolean).join(' ');
 
@@ -219,150 +356,180 @@ export const ViewItem = memo(function ViewItem({
         <div
             className={itemClasses}
             ref={itemRef}
+            style={{ '--view-color': view?.color }}
             draggable
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             onDragEnd={onDragEnd}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
+            onMouseEnter={!isVR ? handleMouseEnter : undefined}
+            onMouseLeave={!isVR ? handleMouseLeave : undefined}
         >
+            {/* Drop indicators */}
+            <div className={`view-item__drop-before ${isDropTarget ? 'view-item__drop-before--visible' : ''}`} />
+            {index === totalItems - 1 && (
+                <div className={`view-item__drop-after ${isDropAfterTarget ? 'view-item__drop-after--visible' : ''}`} />
+            )}
+
             {/* Main Row */}
             <div
                 className="view-item__row"
+                onClick={handleRowClick}
                 onContextMenu={handleContextMenu}
-                onClick={() => onSelect?.(view.id)}
             >
-                {/* Drag Handle */}
-                <div
-                    className="view-item__drag-handle"
-                    onMouseDown={(e) => onDragStart?.(e, view.id)}
-                    onMouseUp={onDragEnd}
-                >
-                    <Icon name="gripVertical" size={14} />
-                </div>
+                {/* VR: Color strip */}
+                {isVR && <div className="view-item__color-strip" />}
 
-                {/* Thumbnail with Status Ring */}
-                <div className="view-item__thumbnail-wrapper">
-                    <Thumbnail
-                        viewId={view.id}
-                        size="xs"
-                        instanceType={view.instanceType || datasetInfo?.type || 'vtk'}
-                    />
+                {/* Content area */}
+                <div className="view-item__content">
+                    {/* Drag Handle */}
                     <div
-                        className={`view-item__status-ring ${isPlaced ? 'view-item__status-ring--active' : ''}`}
-                        style={isPlaced ? { borderColor: view.color } : undefined}
-                    />
-                </div>
+                        className="view-item__drag-handle"
+                        onMouseEnter={() => setIsDragHandle(true)}
+                        onMouseLeave={() => setIsDragHandle(false)}
+                    >
+                        <Icon name="gripVertical" size={isVR ? 16 : 12} />
+                    </div>
 
-                {/* Name */}
-                <div className="view-item__name-container">
-                    {isEditing ? (
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            className="view-item__name-input"
-                            value={editedName}
-                            onChange={(e) => setEditedName(e.target.value)}
-                            onBlur={handleFinishEditing}
-                            onKeyDown={handleKeyDown}
-                            onClick={(e) => e.stopPropagation()}
+                    {/* Thumbnail - shows for both desktop and VR */}
+                    <div className="view-item__thumbnail">
+                        <Thumbnail
+                            viewId={view.id}
+                            size={isVR ? 'sm' : 'xs'}
+                            instanceType={view.instanceType || datasetInfo?.type || 'vtk'}
                         />
-                    ) : (
-                        <span
-                            className="view-item__name"
-                            onDoubleClick={handleStartEditing}
-                        >
-                            {view.name}
-                        </span>
+                    </div>
+
+                    {/* View info */}
+                    <div className="view-item__info">
+                        {isEditing ? (
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                className="view-item__name-input"
+                                value={editedName}
+                                onChange={(e) => setEditedName(e.target.value)}
+                                onBlur={handleFinishEditing}
+                                onKeyDown={handleKeyDown}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        ) : (
+                            <span
+                                className="view-item__name"
+                                onDoubleClick={handleStartEditing}
+                            >
+                                {view.name}
+                            </span>
+                        )}
+
+                        <div className="view-item__meta">
+                            {isVR && (
+                                <>
+                                    <span className="view-item__handler-badge">
+                                        {view.handlerType || datasetInfo?.type}
+                                    </span>
+                                    <span className="view-item__meta-dot">•</span>
+                                </>
+                            )}
+                            <span className="view-item__dataset-name">
+                                {view.datasetName || datasetInfo?.name}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Right content wrapper (fades on desktop hover) */}
+                    <div className="view-item__right-content">
+                        {/* Position badge */}
+                        {view.position && (
+                            <div className="view-item__position-badge">
+                                <Icon name="grid" size={isVR ? 12 : 8} />
+                                <span>{view.position.row},{view.position.col}</span>
+                            </div>
+                        )}
+
+                        {/* Status indicator */}
+                        <div className="view-item__status" style={{ background: statusConfig.bg }}>
+                            <div
+                                className="view-item__status-dot"
+                                style={{
+                                    background: statusConfig.color,
+                                    boxShadow: statusConfig.glow ? `0 0 8px ${statusConfig.color}` : 'none',
+                                }}
+                            />
+                            {isVR && <span style={{ color: statusConfig.color }}>{statusConfig.label}</span>}
+                        </div>
+                    </div>
+
+                    {/* Desktop: Slide-in quick actions */}
+                    {!isVR && (
+                        <div className="view-item__quick-actions">
+                            {quickTools.map(tool => (
+                                <ToolButton key={tool.id} {...tool} />
+                            ))}
+                            <button
+                                className="view-item__expand-btn"
+                                onClick={handleExpandClick}
+                                title={isExpanded ? 'Collapse tools' : 'Expand tools'}
+                            >
+                                <Icon name="chevronDown" size={12} />
+                            </button>
+                        </div>
                     )}
                 </div>
-
-                {/* Status Icons (when not hovered) */}
-                {!isHovered && statusIcons.length > 0 && (
-                    <div className="view-item__status-icons">
-                        {statusIcons.slice(0, 3).map(({ icon, color, key, count }) => (
-                            <span key={key} className={`view-item__status-icon view-item__status-icon--${color}`}>
-                                <Icon name={icon} size={12} />
-                                {count > 1 && <span className="view-item__status-count">{count}</span>}
-                            </span>
-                        ))}
-                        {statusIcons.length > 3 && (
-                            <span className="view-item__status-more">+{statusIcons.length - 3}</span>
-                        )}
-                    </div>
-                )}
-
-                {/* Position Badge */}
-                {showPosition && view.position && (
-                    <div
-                        className="view-item__position"
-                        style={{ '--view-color': view.color }}
-                    >
-                        [{view.position.row + 1},{view.position.col + 1}]
-                    </div>
-                )}
-
-                {/* Hover Actions */}
-                {isHovered && (
-                    <div className="view-item__hover-actions">
-                        <button
-                            className="view-item__action-btn"
-                            onClick={(e) => { e.stopPropagation(); handleOpenSettings(); }}
-                            title="Settings"
-                        >
-                            <Icon name="settings" size={12} />
-                        </button>
-                        {isPlaced ? (
-                            <button
-                                className="view-item__action-btn view-item__action-btn--warning"
-                                onClick={(e) => { e.stopPropagation(); handleClose(); }}
-                                title="Remove from Canvas"
-                            >
-                                <Icon name="close" size={12} />
-                            </button>
-                        ) : (
-                            <button
-                                className="view-item__action-btn view-item__action-btn--success"
-                                onClick={(e) => { e.stopPropagation(); handlePlaceOnCanvas(); }}
-                                title="Place on Canvas"
-                            >
-                                <Icon name="layers" size={12} />
-                            </button>
-                        )}
-                    </div>
-                )}
             </div>
 
-            {/* Sliding Panel (on hover) */}
-            <SlidingPanel
-                view={view}
-                isOpen={isHovered}
-                availableViews={availableViews}
-                onStarWorkspace={() => onStarWorkspace?.(view.id)}
-                onStarPersonal={() => onStarPersonal?.(view.id)}
-                onSaveState={() => onSaveState?.(view.id)}
-                onLoadState={() => onLoadState?.(view.id)}
-                onShare={() => onShare?.(view.id)}
-                onDuplicate={() => onDuplicate?.(view.id)}
-                onLock={() => onLock?.(view.id)}
-                onSizeChange={(size) => onSizeChange?.(view.id, size)}
-                onLinkPropertyChange={(props) => onLinkPropertyChange?.(view.id, props)}
-            />
+            {/* VR: Horizontal action bar */}
+            {isVR && (
+                <div className="view-item__vr-actions">
+                    {quickTools.map(tool => (
+                        <ToolButton key={tool.id} {...tool} isVR />
+                    ))}
+                    {moreTools.length > 0 && (
+                        <button
+                            className={`view-item__vr-more-btn ${isExpanded ? 'view-item__vr-more-btn--active' : ''}`}
+                            onClick={handleExpandClick}
+                        >
+                            <Icon name="moreHorizontal" size={18} />
+                            <span>{isExpanded ? 'Less' : 'More'}</span>
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Desktop: Expanded toolbar */}
+            {isExpanded && !isVR && moreTools.length > 0 && (
+                <div className="view-item__toolbar">
+                    <span className="view-item__toolbar-label">Tools</span>
+                    {moreTools.map(tool => (
+                        <ToolButton key={tool.id} {...tool} />
+                    ))}
+                </div>
+            )}
+
+            {/* VR: Expanded toolbar */}
+            {isExpanded && isVR && moreTools.length > 0 && (
+                <div className="view-item__vr-toolbar">
+                    {moreTools.map(tool => (
+                        <ToolButton key={tool.id} {...tool} isVR />
+                    ))}
+                </div>
+            )}
 
             {/* Context Menu */}
             {contextMenu && (
                 <ViewItemContextMenu
                     view={view}
                     position={contextMenu}
-                    isPlaced={isPlaced}
+                    isPlaced={viewState === 'active'}
                     onClose={handleCloseContextMenu}
                     onSelect={() => { onSelect?.(view.id); handleCloseContextMenu(); }}
                     onRename={() => { handleStartEditing(); handleCloseContextMenu(); }}
                     onDuplicate={() => { onDuplicate?.(view.id); handleCloseContextMenu(); }}
-                    onShare={() => { onShare?.(view.id); handleCloseContextMenu(); }}
-                    onTrash={() => { handleTrash(); handleCloseContextMenu(); }}
-                    onSettings={handleOpenSettings}
-                    onPlaceOnCanvas={() => { handlePlaceOnCanvas(); handleCloseContextMenu(); }}
-                    onRemoveFromCanvas={() => { handleClose(); handleCloseContextMenu(); }}
+                    onTrash={() => { onTrash?.(view.id); handleCloseContextMenu(); }}
+                    onSettings={() => { setShowSettingsModal(true); handleCloseContextMenu(); }}
+                    onPlaceOnCanvas={() => { onPlace?.(view.id); handleCloseContextMenu(); }}
+                    onRemoveFromCanvas={() => { onClose?.(view.id); handleCloseContextMenu(); }}
                     onNavigate={() => { onNavigate?.(view.id); handleCloseContextMenu(); }}
                 />
             )}
@@ -375,12 +542,6 @@ export const ViewItem = memo(function ViewItem({
                 sharedUsers={sharedUsers}
                 onClose={() => setShowSettingsModal(false)}
                 onRename={(newName) => onRename?.(view.id, newName)}
-                onShare={onShare}
-                onUpdateSharing={onUpdateSharing}
-                onSizeChange={(size) => onSizeChange?.(view.id, size)}
-                onLinkPropertyChange={(props) => onLinkPropertyChange?.(view.id, props)}
-                onAnnotationFilterChange={(filters) => onAnnotationFilterChange?.(view.id, filters)}
-                onDisplayOptionChange={(opts) => onDisplayOptionChange?.(view.id, opts)}
             />
         </div>
     );

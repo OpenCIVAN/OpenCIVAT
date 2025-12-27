@@ -44,6 +44,7 @@ export const ICON_REGISTRY = {
   delete: "delete",
   trash: "delete",
   trash2: "delete",
+  deletePermanent: "delete_forever",
   save: "save",
   copy: "content_copy",
   paste: "content_paste",
@@ -55,6 +56,7 @@ export const ICON_REGISTRY = {
   refresh: "refresh",
   rotateCcw: "rotate_left",
   rotateCw: "rotate_right",
+  restore: "history",
   search: "search",
   filter: "filter_alt",
   filterAlt: "filter_alt",
@@ -92,6 +94,7 @@ export const ICON_REGISTRY = {
   move: "open_with",
   hand: "pan_tool_alt",
   layers: "layers",
+  place: "playlist_add",
   combine: "merge_type",
 
   // ═══════════════════════════════════════════════════════════════════════════

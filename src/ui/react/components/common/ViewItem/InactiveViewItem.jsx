@@ -2,16 +2,15 @@
  * InactiveViewItem Component
  * Location: src/ui/react/components/common/ViewItem/InactiveViewItem.jsx
  *
- * Simplified view item for views that are NOT currently placed on canvas.
- * Clicking places the view on canvas. No sliding panel - just essential info.
+ * Wrapper component for views that are NOT currently placed on canvas.
+ * Uses the unified ViewItem component with appropriate defaults.
  *
+ * @deprecated Use ViewItem directly with a view that has `position: null`
  * @module InactiveViewItem
  */
 
-import React, { memo, useState, useCallback, useRef } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
-import { Thumbnail } from '@UI/react/components/common/Thumbnail';
-import './ViewItem.scss';
+import React, { memo } from 'react';
+import { ViewItem } from './ViewItem';
 
 // =============================================================================
 // MAIN COMPONENT
@@ -19,131 +18,57 @@ import './ViewItem.scss';
 
 export const InactiveViewItem = memo(function InactiveViewItem({
     view,
+    mode = 'desktop',
     isSelected = false,
-    isDragging = false,
+    isDragging = null,
+    dragOverIndex = null,
+    index,
+    totalItems,
     // Event handlers
     onPlace,
     onTrash,
     onSelect,
+    onDuplicate,
+    onLink,
+    onSnapshot,
+    onSettings,
+    onRename,
     onDragStart,
+    onDragOver,
     onDragEnd,
+    onDrop,
     className = '',
 }) {
-    const [isHovered, setIsHovered] = useState(false);
-
-    // =========================================================================
-    // EVENT HANDLERS
-    // =========================================================================
-
-    const handleClick = useCallback(() => {
-        // Primary action: place on canvas
-        onPlace?.(view.id);
-    }, [view?.id, onPlace]);
-
-    const handleTrash = useCallback((e) => {
-        e.stopPropagation();
-        onTrash?.(view.id);
-    }, [view?.id, onTrash]);
-
-    const handleDragStart = useCallback((e) => {
-        e.dataTransfer.effectAllowed = 'copy';
-        e.dataTransfer.setData('application/x-viewitem', JSON.stringify({
-            id: view.id,
-            name: view.name,
-            color: view.color,
-            datasetId: view.datasetId,
-            rowSpan: view.rowSpan || 1,
-            colSpan: view.colSpan || 1,
-            isInactive: true,
-        }));
-        onDragStart?.(e, view.id);
-    }, [view, onDragStart]);
-
-    // =========================================================================
-    // DERIVED STATE
-    // =========================================================================
-
-    // Build minimal status indicators
-    const hasStars = view?.starredWorkspace || view?.starredPersonal;
-    const hasSharing = view?.isShared || view?.linkedCount > 0;
-
-    // =========================================================================
-    // RENDER
-    // =========================================================================
-
-    const itemClasses = [
-        'view-item',
-        'view-item--inactive',
-        isSelected && 'view-item--selected',
-        isDragging && 'view-item--dragging',
-        className,
-    ].filter(Boolean).join(' ');
+    // Ensure view is treated as inactive (no position)
+    const inactiveView = {
+        ...view,
+        position: null,
+        status: view?.status !== 'trashed' ? 'inactive' : view.status,
+    };
 
     return (
-        <div
-            className={itemClasses}
-            draggable
-            onDragStart={handleDragStart}
+        <ViewItem
+            view={inactiveView}
+            mode={mode}
+            isSelected={isSelected}
+            isDragging={isDragging}
+            dragOverIndex={dragOverIndex}
+            index={index}
+            totalItems={totalItems}
+            onPlace={onPlace}
+            onTrash={onTrash}
+            onSelect={onSelect}
+            onDuplicate={onDuplicate}
+            onLink={onLink}
+            onSnapshot={onSnapshot}
+            onSettings={onSettings}
+            onRename={onRename}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
             onDragEnd={onDragEnd}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleClick}
-        >
-            <div className="view-item__row">
-                {/* Drag Handle */}
-                <div className="view-item__drag-handle">
-                    <Icon name="gripVertical" size={14} />
-                </div>
-
-                {/* Thumbnail (dimmed for inactive) */}
-                <div className="view-item__thumbnail-wrapper">
-                    <Thumbnail
-                        viewId={view.id}
-                        size="xs"
-                        instanceType={view.instanceType || 'vtk'}
-                    />
-                    {/* Dashed ring indicates not placed */}
-                    <div className="view-item__status-ring view-item__status-ring--inactive" />
-                </div>
-
-                {/* Name */}
-                <div className="view-item__name-container">
-                    <span className="view-item__name view-item__name--muted">
-                        {view.name}
-                    </span>
-                </div>
-
-                {/* Minimal status indicators */}
-                {!isHovered && (hasStars || hasSharing) && (
-                    <div className="view-item__status-icons view-item__status-icons--minimal">
-                        {view.starredWorkspace && <Icon name="folder" size={10} className="icon-purple" />}
-                        {view.starredPersonal && <Icon name="globe" size={10} className="icon-amber" />}
-                        {view.isShared && <Icon name="users" size={10} className="icon-pink" />}
-                        {view.linkedCount > 0 && <Icon name="link" size={10} className="icon-teal" />}
-                    </div>
-                )}
-
-                {/* Hover Actions */}
-                {isHovered && (
-                    <div className="view-item__hover-actions">
-                        <button
-                            className="view-item__action-btn view-item__action-btn--success"
-                            onClick={(e) => { e.stopPropagation(); handleClick(); }}
-                            title="Place on Canvas"
-                        >
-                            <Icon name="layers" size={12} />
-                        </button>
-                        <button
-                            className="view-item__action-btn view-item__action-btn--danger"
-                            onClick={handleTrash}
-                            title="Move to Trash"
-                        >
-                            <Icon name="delete" size={12} />
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
+            onDrop={onDrop}
+            className={className}
+        />
     );
 });
 

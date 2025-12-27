@@ -112,7 +112,8 @@ function enrichView(view) {
 
   // Get placement info from canvas
   const placement = findPlacementForView(view.id);
-  const instanceColor = workspaceManager?.getViewColor?.(view.id);
+  const instanceColorObj = workspaceManager?.getViewColor?.(view.id);
+  const instanceColor = instanceColorObj?.hex || instanceColorObj;
 
   // Determine if view has any links
   const hasLinks =

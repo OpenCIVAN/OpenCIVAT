@@ -112,7 +112,7 @@ export const TrashedViewItem = memo(function TrashedViewItem({
                     onClick={handleRestore}
                     title="Restore view"
                 >
-                    <Icon name="rotateCcw" size={12} />
+                    <Icon name="restore" size={12} />
                     {isHovered && <span>Restore</span>}
                 </button>
                 <button
@@ -120,7 +120,7 @@ export const TrashedViewItem = memo(function TrashedViewItem({
                     onClick={handleDeleteClick}
                     title={confirmDelete ? 'Click again to confirm' : 'Delete permanently'}
                 >
-                    <Icon name="close" size={12} />
+                    <Icon name="deletePermanent" size={12} />
                     {confirmDelete && <span>Confirm?</span>}
                 </button>
             </div>
