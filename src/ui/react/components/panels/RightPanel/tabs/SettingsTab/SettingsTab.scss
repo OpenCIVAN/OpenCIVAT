@@ -66,6 +66,35 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
+    padding: $spacing-sm;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__group-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: 11px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: $spacing-sm;
+    margin-bottom: $spacing-xs;
+    border-bottom: 1px solid $color-border-subtle;
+
+    svg {
+      color: $color-text-muted;
+    }
+  }
+
+  &__group-content {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
   }
 
   &__group-title {
@@ -86,6 +115,194 @@
 
     svg {
       color: var(--color-text-tertiary, #737373);
+    }
+  }
+
+  // Info row styles (for ProjectInfo)
+  &__info-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: $radius-sm;
+  }
+
+  &__info-icon {
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__info-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__info-value {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    margin-left: auto;
+    text-align: right;
+  }
+
+  &__info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  // Owner info styles
+  &__owner-info {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: $spacing-sm;
+
+    svg {
+      color: $color-accent-amber;
+    }
+  }
+
+  &__owner-name {
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  // Project ID styles
+  &__project-id {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: $radius-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__id-label {
+    font-size: 10px;
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__id-value {
+    font-family: "SF Mono", "Monaco", "Consolas", monospace;
+    font-size: 10px;
+    color: $color-text-secondary;
+    word-break: break-all;
+  }
+
+  // Action row styles (for AdminSettings)
+  &__action-row {
+    display: flex;
+    gap: $spacing-sm;
+    padding-top: $spacing-sm;
+    margin-top: $spacing-sm;
+    border-top: 1px solid $color-border-subtle;
+  }
+
+  // Roles info styles
+  &__roles-info {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: $radius-sm;
+
+    p {
+      margin: 0;
+      font-size: $font-size-xs;
+      color: $color-text-muted;
+      line-height: 1.4;
+    }
+  }
+
+  // Empty section state
+  &__section--empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-2xl;
+    text-align: center;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+  }
+
+  // Toggle switch styles
+  &__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    input[type="checkbox"] {
+      display: none;
+    }
+  }
+
+  &__toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__toggle-label {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  &__toggle-desc {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: background $transition-fast;
+    flex-shrink: 0;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: $color-text-muted;
+      border-radius: 50%;
+      transition: all $transition-fast;
+    }
+
+    input:checked + & {
+      background: $color-accent-blue;
+
+      &::after {
+        left: 18px;
+        background: white;
+      }
     }
   }
 

@@ -114,6 +114,7 @@ $toast-z-index: 600;
 
   &--info {
     border-left: 3px solid $color-info;
+    background: linear-gradient(90deg, color-mix(in srgb, $color-info 12%, transparent) 0%, transparent 50%), $color-glass-panel;
 
     .toast__icon {
       color: $color-info;
@@ -126,6 +127,7 @@ $toast-z-index: 600;
 
   &--success {
     border-left: 3px solid $color-success;
+    background: linear-gradient(90deg, color-mix(in srgb, $color-success 12%, transparent) 0%, transparent 50%), $color-glass-panel;
 
     .toast__icon {
       color: $color-success;
@@ -138,6 +140,7 @@ $toast-z-index: 600;
 
   &--warning {
     border-left: 3px solid $color-warning;
+    background: linear-gradient(90deg, color-mix(in srgb, $color-warning 12%, transparent) 0%, transparent 50%), $color-glass-panel;
 
     .toast__icon {
       color: $color-warning;
@@ -150,6 +153,7 @@ $toast-z-index: 600;
 
   &--error {
     border-left: 3px solid $color-error;
+    background: linear-gradient(90deg, color-mix(in srgb, $color-error 12%, transparent) 0%, transparent 50%), $color-glass-panel;
 
     .toast__icon {
       color: $color-error;

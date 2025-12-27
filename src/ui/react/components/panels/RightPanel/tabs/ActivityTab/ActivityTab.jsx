@@ -65,6 +65,8 @@ export function ActivityTab({
 
     // Catch-up state
     const [catchUpDismissed, setCatchUpDismissed] = useState(false);
+    // All caught up dismissal state
+    const [caughtUpDismissed, setCaughtUpDismissed] = useState(false);
 
     // Generate catch-up items from activities (simulated - would come from real data)
     const catchUpItems = useMemo(() => {
@@ -130,12 +132,18 @@ export function ActivityTab({
                             </button>
                         </div>
                     </DismissibleCard>
-                ) : (
-                    <div className="activity-panel__caught-up">
-                        <Icon name="check" size={14} />
-                        All caught up!
-                    </div>
-                )}
+                ) : !caughtUpDismissed ? (
+                    <DismissibleCard
+                        icon="check"
+                        title="All caught up!"
+                        color="green"
+                        onDismiss={() => setCaughtUpDismissed(true)}
+                    >
+                        <span className="activity-panel__caught-up-text">
+                            You've seen all recent activity
+                        </span>
+                    </DismissibleCard>
+                ) : null}
             </div>
 
             {/* Activity List Section */}

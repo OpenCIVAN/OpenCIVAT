@@ -470,8 +470,7 @@
     }
   }
 
-  &__loading,
-  &__empty {
+  &__loading {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -483,6 +482,32 @@
 
     svg {
       opacity: 0.4;
+    }
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+    padding: $spacing-2xl $spacing-lg;
+    margin: $spacing-sm;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed $color-border-subtle;
+    border-radius: $radius-lg;
+    text-align: center;
+
+    svg {
+      color: $color-accent-red;
+      opacity: 0.3;
+    }
+
+    span {
+      font-size: $font-size-sm;
+      color: $color-text-muted;
+      line-height: 1.4;
+      max-width: 200px;
     }
   }
 }

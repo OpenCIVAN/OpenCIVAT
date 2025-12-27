@@ -36,6 +36,11 @@
     color: $color-accent-green;
     font-size: 12px;
   }
+
+  &__caught-up-text {
+    font-size: 12px;
+    color: $color-text-secondary;
+  }
 }
 
 // =============================================================================
