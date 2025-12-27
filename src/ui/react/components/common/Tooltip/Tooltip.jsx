@@ -58,6 +58,7 @@ import React, {
 import { createPortal } from 'react-dom';
 import { useTooltip } from './useTooltip';
 import { useTooltipContext } from './TooltipProvider';
+import { useAdaptive } from '@UI/react/context';
 import './Tooltip.scss';
 
 /**
@@ -73,6 +74,7 @@ import './Tooltip.scss';
  * @property {'hover'|'click'|'focus'} [trigger='hover'] - How to trigger tooltip
  * @property {boolean} [interactive=false] - Allow hovering over tooltip content
  * @property {number} [maxWidth=250] - Max width before wrapping
+ * @property {string} [mode] - Display mode: 'desktop' | 'vr' (default: from context)
  * @property {string} [className] - Additional CSS class
  * @property {string} [testId] - Data-testid for testing
  */
@@ -214,7 +216,7 @@ function RichTooltip({ title, description, shortcut, icon }) {
 }
 
 /**
- * Tooltip component for displaying contextual information.
+ * Adaptive tooltip component for displaying contextual information.
  *
  * @param {TooltipProps} props - Component props
  * @returns {React.ReactElement} The rendered tooltip
@@ -231,14 +233,24 @@ function Tooltip({
     trigger = 'hover',
     interactive = false,
     maxWidth = 250,
+    mode: modeProp,
     className = '',
     testId
 }) {
     // Get global settings from provider
     const { delayDuration, disableHoverableContent, onTooltipOpen, onTooltipClose } = useTooltipContext();
 
+    // Get adaptive context
+    const adaptive = useAdaptive();
+    const mode = modeProp || adaptive.mode || 'desktop';
+    const isVR = mode === 'vr';
+
     // Use prop delay or fall back to provider default
     const delay = propDelay ?? delayDuration;
+
+    // In VR mode, use larger max width and offset
+    const effectiveMaxWidth = isVR ? Math.max(maxWidth, 320) : maxWidth;
+    const effectiveOffset = isVR ? Math.max(offset, 12) : offset;
 
     // Animation state
     const [isExiting, setIsExiting] = useState(false);
@@ -267,7 +279,7 @@ function Tooltip({
         placement,
         delay,
         hideDelay: isInteractive ? Math.max(hideDelay, 100) : hideDelay,
-        offset,
+        offset: effectiveOffset,
         interactive: isInteractive,
         disabled
     });
@@ -380,6 +392,7 @@ function Tooltip({
     const tooltipClassNames = [
         'tooltip',
         `tooltip--${actualPlacement}`,
+        isVR && 'tooltip--vr',
         isExiting && 'tooltip--exiting',
         isInteractive && 'tooltip--interactive',
         className
@@ -407,7 +420,7 @@ function Tooltip({
                     className={tooltipClassNames}
                     style={{
                         ...hookTooltipProps.style,
-                        maxWidth: `${maxWidth}px`
+                        maxWidth: `${effectiveMaxWidth}px`
                     }}
                     data-testid={testId}
                     data-placement={actualPlacement}

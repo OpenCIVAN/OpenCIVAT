@@ -106,16 +106,25 @@ export function UserMenu({ user, onNavigate, onSignOut }) {
 
                 {/* Status Selector */}
                 <div className="user-menu__status">
-                    <select
-                        defaultValue={user?.status || 'online'}
-                        onChange={handleStatusChange}
-                        aria-label="Set status"
-                    >
-                        <option value="online">🟢 Online</option>
-                        <option value="away">🟡 Away</option>
-                        <option value="busy">🔴 Do Not Disturb</option>
-                        <option value="offline">⚫ Appear Offline</option>
-                    </select>
+                    <div className="user-menu__status-options">
+                        {[
+                            { value: 'online', label: 'Online', color: 'green' },
+                            { value: 'away', label: 'Away', color: 'amber' },
+                            { value: 'busy', label: 'Do Not Disturb', color: 'red' },
+                            { value: 'offline', label: 'Appear Offline', color: 'gray' },
+                        ].map((status) => (
+                            <button
+                                key={status.value}
+                                type="button"
+                                className={`user-menu__status-option ${(user?.status || 'online') === status.value ? 'user-menu__status-option--active' : ''}`}
+                                onClick={() => handleStatusChange({ target: { value: status.value } })}
+                                data-color={status.color}
+                            >
+                                <span className="user-menu__status-dot" />
+                                {status.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="user-menu__divider" />

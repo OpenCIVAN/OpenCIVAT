@@ -1,6 +1,6 @@
 /**
  * @file Toast.jsx
- * @description Individual toast notification component for CIA Web.
+ * @description Adaptive toast notification component for CIA Web.
  * Displays a single toast with icon, message, optional action button, and dismiss button.
  *
  * Features:
@@ -8,6 +8,7 @@
  * - Optional action button for undo/retry operations
  * - Animated enter and exit transitions
  * - Accessible with proper ARIA attributes
+ * - VR mode: larger touch targets, bigger text
  * - Memoized handlers for performance
  *
  * @example
@@ -30,8 +31,9 @@
  * />
  */
 
-import React, { useState, useCallback, useEffect, memo } from "react";
+import React, { useState, useCallback, memo } from "react";
 import { Icon } from '@UI/react/components/common/Icon';
+import { useAdaptive } from '@UI/react/context';
 import "./Toast.scss";
 
 /**
@@ -42,6 +44,14 @@ const TOAST_ICONS = {
     success: 'check',
     warning: 'warning',
     error: 'error'
+};
+
+/**
+ * Icon sizes for different modes
+ */
+const ICON_SIZES = {
+    desktop: { icon: 18, close: 14 },
+    vr: { icon: 24, close: 20 },
 };
 
 /**
@@ -58,11 +68,12 @@ const EXIT_ANIMATION_DURATION = 150;
  * @property {string} [actionLabel] - Text for action button
  * @property {() => void} [onAction] - Callback when action button is clicked
  * @property {boolean} [dismissible=true] - Whether to show dismiss button
+ * @property {string} [mode] - Display mode: 'desktop' | 'vr' (default: from context)
  * @property {(id: string) => void} onDismiss - Callback to dismiss the toast
  */
 
 /**
- * Individual toast notification component.
+ * Adaptive toast notification component.
  * Handles its own exit animation state before calling onDismiss.
  *
  * @param {ToastProps} props - Component props
@@ -75,13 +86,20 @@ function Toast({
     actionLabel,
     onAction,
     dismissible = true,
+    mode: modeProp,
     onDismiss
 }) {
     // Track whether the toast is in exit animation
     const [isExiting, setIsExiting] = useState(false);
 
+    // Get adaptive context
+    const adaptive = useAdaptive();
+    const mode = modeProp || adaptive.mode || 'desktop';
+    const isVR = mode === 'vr';
+
     // Get the appropriate icon for this toast type
     const iconName = TOAST_ICONS[type] || 'info';
+    const iconSizes = ICON_SIZES[mode] || ICON_SIZES.desktop;
 
     /**
      * Initiates the exit animation and then calls onDismiss.
@@ -111,6 +129,7 @@ function Toast({
     const classNames = [
         "toast",
         `toast--${type}`,
+        isVR && "toast--vr",
         isExiting && "toast--exiting"
     ].filter(Boolean).join(" ");
 
@@ -127,7 +146,7 @@ function Toast({
         >
             {/* Icon */}
             <div className="toast__icon" aria-hidden="true">
-                <Icon name={iconName} size={18} />
+                <Icon name={iconName} size={iconSizes.icon} />
             </div>
 
             {/* Content */}
@@ -154,7 +173,7 @@ function Toast({
                     onClick={handleDismiss}
                     aria-label="Dismiss notification"
                 >
-                    <Icon name="close" size={14} aria-hidden={true} />
+                    <Icon name="close" size={iconSizes.close} aria-hidden={true} />
                 </button>
             )}
         </div>

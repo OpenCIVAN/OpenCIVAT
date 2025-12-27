@@ -233,6 +233,58 @@
 }
 
 // ============================================================================
+// VR MODE - Larger text and spacing
+// ============================================================================
+
+.tooltip--vr {
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-lg;
+  font-size: $font-size-base;
+  line-height: $line-height-normal;
+
+  .tooltip__arrow {
+    width: 10px;
+    height: 10px;
+  }
+
+  .tooltip__rich {
+    gap: $spacing-sm;
+  }
+
+  .tooltip__rich-header {
+    gap: $spacing-sm;
+  }
+
+  .tooltip__title {
+    font-size: 16px;
+  }
+
+  .tooltip__description {
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+  }
+
+  .tooltip__shortcut {
+    margin-top: $spacing-sm;
+    padding-top: $spacing-sm;
+    gap: $spacing-xs;
+  }
+
+  .kbd {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 $spacing-sm;
+    font-size: $font-size-sm;
+    border-radius: $radius-md;
+  }
+
+  // Interactive tooltips in VR need larger touch targets
+  &.tooltip--interactive {
+    padding: $spacing-md;
+  }
+}
+
+// ============================================================================
 // RESPONSIVE ADJUSTMENTS
 // ============================================================================
 

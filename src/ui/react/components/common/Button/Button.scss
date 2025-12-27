@@ -193,6 +193,50 @@
   }
 
   // ============================================================================
+  // VR MODE - Larger touch targets, always visible labels
+  // ============================================================================
+
+  &--vr {
+    // VR sizes are larger for touch interaction (minimum 44px touch target)
+    &.btn--sm {
+      height: 44px;
+      padding: 0 16px;
+      font-size: $font-size-base;
+      border-radius: $radius-lg;
+      gap: 10px;
+    }
+
+    &.btn--md {
+      height: 52px;
+      padding: 0 20px;
+      font-size: 16px;
+      border-radius: $radius-xl;
+      gap: 12px;
+    }
+
+    &.btn--lg {
+      height: 60px;
+      padding: 0 24px;
+      font-size: 18px;
+      border-radius: 14px;
+      gap: 14px;
+    }
+
+    // Icon-only in VR still needs minimum touch target
+    &.btn--icon-only {
+      &.btn--sm { width: 44px; }
+      &.btn--md { width: 52px; }
+      &.btn--lg { width: 60px; }
+    }
+
+    // Disable hover state transforms in VR (touch-only)
+    // Use active state for tactile feedback
+    &:active:not(:disabled):not(.btn--disabled) {
+      transform: scale(0.98);
+    }
+  }
+
+  // ============================================================================
   // FOCUS RING
   // ============================================================================
 

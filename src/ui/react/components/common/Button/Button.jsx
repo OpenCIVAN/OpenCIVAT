@@ -1,84 +1,56 @@
 /**
  * @file Button.jsx
- * @description Comprehensive button component for CIA Web.
+ * @description Adaptive button component for CIA Web.
  * Provides consistent button styling across the entire application,
- * used in modals, toolbars, panels, and forms.
+ * supporting both desktop and VR modes.
  *
  * Features:
+ * - Adaptive sizing for desktop/VR modes
  * - Multiple variants: primary, secondary, danger, ghost, link
- * - Three sizes: sm, md, lg
+ * - Three sizes: sm, md, lg (scaled for VR)
  * - Loading state with spinner
  * - Icon support (left and right positions)
- * - Full width option
- * - Built-in tooltip support
+ * - VR mode: larger touch targets, always-visible labels
  * - Full accessibility support
- * - Ref forwarding for focus management
  *
  * @example
- * // Primary button with icon (string name)
+ * // Primary button with icon
  * <Button variant="primary" icon="save" onClick={handleSave}>
  *   Save Changes
  * </Button>
  *
  * @example
- * // Loading state
- * <Button variant="primary" loading>
- *   Saving...
- * </Button>
- *
- * @example
- * // Danger button
- * <Button variant="danger" icon="delete">
- *   Delete
+ * // VR mode button
+ * <Button mode="vr" variant="primary" icon="save">
+ *   Save
  * </Button>
  */
 
 import React, { forwardRef, memo, useCallback } from 'react';
 import { Icon, IconLoader } from '@UI/react/components/common/Icon';
+import { useAdaptive } from '@UI/react/context';
 import './Button.scss';
 
 /**
- * @typedef {Object} ButtonProps
- * @property {'primary'|'secondary'|'danger'|'ghost'|'link'} [variant='primary'] - Button style variant
- * @property {'sm'|'md'|'lg'} [size='md'] - Button size
- * @property {string} [icon] - Icon name string to show before label (e.g., "save", "delete")
- * @property {string} [iconRight] - Icon name string to show after label
- * @property {boolean} [iconOnly=false] - If true, renders as icon button (requires icon prop)
- * @property {boolean} [loading=false] - Show loading spinner, disable button
- * @property {boolean} [disabled=false] - Disable button
- * @property {boolean} [fullWidth=false] - Expand to full container width
- * @property {'button'|'submit'|'reset'} [type='button'] - HTML button type
- * @property {string} [className] - Additional CSS classes
- * @property {React.ReactNode} children - Button label
- * @property {() => void} [onClick] - Click handler
- * @property {string} [tooltip] - Tooltip text on hover
- * @property {string} [testId] - Data-testid for testing
- */
-
-/**
- * Icon sizes mapped to button sizes.
+ * Icon sizes mapped to button sizes and modes
  */
 const BUTTON_ICON_SIZES = {
-    sm: 14,
-    md: 16,
-    lg: 18
+    desktop: { sm: 14, md: 16, lg: 18 },
+    vr: { sm: 20, md: 24, lg: 28 },
 };
 
 /**
- * Button component with multiple variants and features.
+ * Adaptive Button component with VR support.
  * Uses forwardRef for focus management integration.
- *
- * @param {ButtonProps} props - Component props
- * @param {React.Ref} ref - Forwarded ref
- * @returns {React.ReactElement} The rendered button
  */
 const Button = forwardRef(function Button(
     {
         children,
         variant = 'primary',
         size = 'md',
-        icon,           // Now a string like "save", not a component
-        iconRight,      // Now a string like "chevronRight"
+        mode: modeProp,  // Optional override for context
+        icon,
+        iconRight,
         iconOnly = false,
         loading = false,
         disabled = false,
@@ -92,21 +64,27 @@ const Button = forwardRef(function Button(
     },
     ref
 ) {
+    // Get adaptive context (with fallback)
+    const adaptive = useAdaptive();
+    const mode = modeProp || adaptive.mode || 'desktop';
+    const isVR = mode === 'vr';
+
     // Determine if button should be disabled
     const isDisabled = disabled || loading;
 
-    // Get icon size based on button size
-    const iconSize = BUTTON_ICON_SIZES[size] || BUTTON_ICON_SIZES.md;
+    // Get icon size based on button size and mode
+    const iconSize = BUTTON_ICON_SIZES[mode]?.[size] || BUTTON_ICON_SIZES.desktop[size];
 
     // Build class names
     const classNames = [
         'btn',
         `btn--${variant}`,
         `btn--${size}`,
+        isVR && 'btn--vr',
         fullWidth && 'btn--full-width',
         loading && 'btn--loading',
         isDisabled && 'btn--disabled',
-        iconOnly && 'btn--icon-only',
+        iconOnly && !isVR && 'btn--icon-only',  // VR always shows labels
         className
     ].filter(Boolean).join(' ');
 
@@ -130,7 +108,6 @@ const Button = forwardRef(function Button(
     const handleKeyDown = useCallback((event) => {
         if (isDisabled) return;
 
-        // Trigger click on Enter or Space
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             if (onClick) {
@@ -138,6 +115,9 @@ const Button = forwardRef(function Button(
             }
         }
     }, [isDisabled, onClick]);
+
+    // In VR mode, always show label if we have an icon and children
+    const showLabel = !iconOnly || isVR;
 
     return (
         <button
@@ -164,7 +144,7 @@ const Button = forwardRef(function Button(
             )}
 
             {/* Button label */}
-            {children && (
+            {children && showLabel && (
                 <span className="btn__label">{children}</span>
             )}
 

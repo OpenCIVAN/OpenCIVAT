@@ -270,6 +270,58 @@ $toast-z-index: 600;
 }
 
 // ============================================================================
+// VR MODE - Larger touch targets
+// ============================================================================
+
+.toast--vr {
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  min-width: 320px;
+  max-width: 420px;
+  border-radius: $radius-xl;
+
+  .toast__icon {
+    margin-top: 0;
+  }
+
+  .toast__message {
+    font-size: $font-size-base;
+    line-height: $line-height-relaxed;
+  }
+
+  .toast__action {
+    min-height: 44px;
+    padding: $spacing-sm $spacing-md;
+    margin-top: $spacing-sm;
+    margin-left: calc($spacing-md * -1);
+    font-size: $font-size-base;
+    border-radius: $radius-md;
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  .toast__close {
+    min-width: 44px;
+    min-height: 44px;
+    padding: $spacing-sm;
+    border-radius: $radius-md;
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+}
+
+// VR Container adjustments
+.toast-container--vr {
+  bottom: 80px;
+  right: 24px;
+  gap: $spacing-md;
+}
+
+// ============================================================================
 // RESPONSIVE ADJUSTMENTS
 // ============================================================================
 

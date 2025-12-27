@@ -222,3 +222,64 @@
         justify-content: center;
     }
 }
+
+// =============================================================================
+// VR MODE - Larger touch targets for VR interaction
+// =============================================================================
+
+.chip-group--vr {
+    gap: $spacing-sm;
+
+    .chip-group__chip {
+        min-height: 44px;
+        padding: $spacing-sm $spacing-md;
+        font-size: $font-size-base;
+        border-radius: $radius-lg;
+        gap: $spacing-sm;
+
+        // Touch feedback instead of hover
+        &:active:not(&--disabled) {
+            transform: scale(0.98);
+        }
+    }
+
+    .chip-group__chip-count {
+        min-width: 24px;
+        height: 24px;
+        font-size: $font-size-sm;
+        padding: 0 $spacing-sm;
+    }
+
+    // VR size variants
+    &.chip-group--sm {
+        gap: $spacing-xs;
+
+        .chip-group__chip {
+            min-height: 40px;
+            padding: $spacing-xs $spacing-sm;
+            font-size: $font-size-sm;
+        }
+
+        .chip-group__chip-count {
+            min-width: 20px;
+            height: 20px;
+            font-size: $font-size-xs;
+        }
+    }
+
+    &.chip-group--lg {
+        gap: $spacing-md;
+
+        .chip-group__chip {
+            min-height: 52px;
+            padding: $spacing-md $spacing-lg;
+            font-size: 16px;
+        }
+
+        .chip-group__chip-count {
+            min-width: 28px;
+            height: 28px;
+            font-size: $font-size-base;
+        }
+    }
+}

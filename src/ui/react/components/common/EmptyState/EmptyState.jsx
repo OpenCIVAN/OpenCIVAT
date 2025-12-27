@@ -1,6 +1,6 @@
 /**
  * @file EmptyState.jsx
- * @description Reusable empty state component for displaying placeholder content
+ * @description Adaptive empty state component for displaying placeholder content
  * when lists, searches, or data are empty.
  *
  * Features:
@@ -8,6 +8,7 @@
  * - Title and description text
  * - Optional action button
  * - Multiple size variants
+ * - VR mode: larger text and touch targets
  * - Muted, subtle styling that doesn't distract
  *
  * @example
@@ -38,6 +39,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
+import { useAdaptive } from '@UI/react/context';
 import { Button } from '../Button';
 import './EmptyState.scss';
 
@@ -55,41 +57,53 @@ import './EmptyState.scss';
  * @property {string} [description] - Secondary description text
  * @property {EmptyStateAction} [action] - Optional action button
  * @property {'sm'|'md'|'lg'} [size='md'] - Size variant
+ * @property {string} [mode] - Display mode: 'desktop' | 'vr' (default: from context)
  * @property {string} [className] - Additional CSS classes
  * @property {string} [testId] - Data-testid for testing
  */
 
 /**
- * Icon sizes mapped to component sizes
+ * Icon sizes mapped to component sizes and modes
  */
 const EMPTY_STATE_ICON_SIZES = {
-    sm: 24,
-    md: 48,
-    lg: 64,
+    desktop: { sm: 24, md: 48, lg: 64 },
+    vr: { sm: 36, md: 64, lg: 80 },
 };
 
 /**
- * Empty state placeholder component.
+ * Adaptive empty state placeholder component.
  *
  * @param {EmptyStateProps} props - Component props
  * @returns {React.ReactElement} The rendered empty state
  */
 function EmptyState({
-    icon,           // Now a string like "search", not a component
+    icon,
     title,
     description,
     action,
     size = 'md',
+    mode: modeProp,
     className = '',
     testId,
 }) {
-    const iconSize = EMPTY_STATE_ICON_SIZES[size] || EMPTY_STATE_ICON_SIZES.md;
+    // Get adaptive context
+    const adaptive = useAdaptive();
+    const mode = modeProp || adaptive.mode || 'desktop';
+    const isVR = mode === 'vr';
+
+    const iconSize = EMPTY_STATE_ICON_SIZES[mode]?.[size] || EMPTY_STATE_ICON_SIZES.desktop[size];
 
     const classNames = [
         'empty-state',
         `empty-state--${size}`,
+        isVR && 'empty-state--vr',
         className,
     ].filter(Boolean).join(' ');
+
+    // Determine button size based on component size and mode
+    const buttonSize = isVR
+        ? (size === 'sm' ? 'md' : 'lg')
+        : (size === 'sm' ? 'sm' : 'md');
 
     return (
         <div className={classNames} data-testid={testId}>
@@ -111,7 +125,8 @@ function EmptyState({
                 <div className="empty-state__action">
                     <Button
                         variant={action.variant || 'primary'}
-                        size={size === 'sm' ? 'sm' : 'md'}
+                        size={buttonSize}
+                        mode={mode}
                         onClick={action.onClick}
                     >
                         {action.label}

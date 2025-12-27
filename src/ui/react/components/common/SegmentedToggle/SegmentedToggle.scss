@@ -1,7 +1,7 @@
 /**
  * @file SegmentedToggle.scss
- * @description Styles for the SegmentedToggle component.
- * Compact icon-based toggle for toolbar use.
+ * @description Adaptive styles for the SegmentedToggle component.
+ * Supports both desktop (compact) and VR (larger touch targets) modes.
  */
 
 @use "theme" as *;
@@ -26,6 +26,34 @@
 }
 
 // =============================================================================
+// SIZE VARIANTS (Desktop)
+// =============================================================================
+
+.segmented-toggle--sm {
+  gap: 1px;
+  padding: 2px;
+
+  .segmented-toggle__option {
+    width: 20px;
+    height: 18px;
+  }
+}
+
+.segmented-toggle--md {
+  // Default sizing
+}
+
+.segmented-toggle--lg {
+  gap: 3px;
+  padding: 4px;
+
+  .segmented-toggle__option {
+    width: 28px;
+    height: 26px;
+  }
+}
+
+// =============================================================================
 // OPTION BUTTON
 // =============================================================================
 
@@ -33,6 +61,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: $spacing-xs;
   width: 24px;
   height: 22px;
   padding: 0;
@@ -76,6 +105,75 @@
   // Disabled
   &:disabled {
     cursor: not-allowed;
+  }
+}
+
+// =============================================================================
+// LABEL (for VR mode with showLabels)
+// =============================================================================
+
+.segmented-toggle__label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+}
+
+// =============================================================================
+// VR MODE - Larger touch targets
+// =============================================================================
+
+.segmented-toggle--vr {
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+  border-radius: $radius-lg;
+
+  .segmented-toggle__option {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 $spacing-sm;
+    border-radius: $radius-md;
+
+    // Touch feedback instead of hover
+    &:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+  }
+
+  // VR size variants
+  &.segmented-toggle--sm {
+    gap: 2px;
+    padding: 3px;
+
+    .segmented-toggle__option {
+      min-width: 40px;
+      min-height: 40px;
+    }
+  }
+
+  &.segmented-toggle--lg {
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+
+    .segmented-toggle__option {
+      min-width: 52px;
+      min-height: 52px;
+      padding: 0 $spacing-md;
+    }
+
+    .segmented-toggle__label {
+      font-size: $font-size-base;
+    }
+  }
+
+  // With labels - wider buttons
+  &.segmented-toggle--with-labels {
+    .segmented-toggle__option {
+      padding: 0 $spacing-md;
+    }
+
+    .segmented-toggle__label {
+      font-size: $font-size-base;
+    }
   }
 }
 
