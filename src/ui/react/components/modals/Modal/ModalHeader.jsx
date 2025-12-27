@@ -52,7 +52,7 @@ function ModalHeader({
             <div className="modal__header-content">
                 {icon && (
                     <div className={`modal__icon modal__icon--${severity}`}>
-                        <Icon name={icon} size={20} aria-hidden="true" />
+                        <Icon name={icon} size={20} aria-hidden={true} />
                     </div>
                 )}
                 <h2

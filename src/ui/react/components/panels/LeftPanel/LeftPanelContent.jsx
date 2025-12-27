@@ -49,7 +49,7 @@ export function LeftPanelContent({ workspaceId = 'default' }) {
 
     // Get current tab config from the single source of truth
     const currentTab = LEFT_PANEL_TABS.find(t => t.id === activeTab) || LEFT_PANEL_TABS[0];
-    const Icon = currentTab.icon;
+    const iconName = currentTab.icon;
 
     // Check if current tab is already popped out
     const panelId = `left-${activeTab}`;
@@ -59,7 +59,7 @@ export function LeftPanelContent({ workspaceId = 'default' }) {
     const handlePopOut = useCallback(() => {
         popOutPanel(panelId, {
             title: currentTab.label,
-            icon: Icon,
+            icon: iconName,
             color: currentTab.color,
             x: 100,
             y: 100,
@@ -68,7 +68,7 @@ export function LeftPanelContent({ workspaceId = 'default' }) {
         });
         // Collapse the docked panel to reclaim workspace space
         setLeftOpen(false);
-    }, [panelId, currentTab, Icon, popOutPanel, setLeftOpen]);
+    }, [panelId, currentTab, iconName, popOutPanel, setLeftOpen]);
 
     // If the current tab is floating, show a message to select another tab
     if (isCurrentTabFloating) {
@@ -78,7 +78,7 @@ export function LeftPanelContent({ workspaceId = 'default' }) {
                 data-active-tab={activeTab}
             >
                 <div className="left-panel__floating-notice">
-                    <Icon size={20} />
+                    <Icon name={iconName} size={20} />
                     <span>{currentTab.label} is floating</span>
                 </div>
             </div>

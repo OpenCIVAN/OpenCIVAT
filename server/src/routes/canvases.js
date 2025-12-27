@@ -5,6 +5,19 @@ const express = require("express");
 const router = express.Router();
 const { getUserId } = require("../middleware/auth");
 
+// UUID validation regex
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Validate if a string is a valid UUID
+ * @param {string} str - String to validate
+ * @returns {boolean}
+ */
+function isValidUUID(str) {
+  return typeof str === "string" && UUID_REGEX.test(str);
+}
+
 // ============================================================================
 // CANVAS ENDPOINTS
 // ============================================================================
@@ -65,6 +78,11 @@ router.get("/:id", async (req, res, next) => {
     const { id } = req.params;
     const userId = getUserId(req);
     const { pool } = req.app.locals;
+
+    // Validate UUID format to prevent database errors
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: "Invalid canvas ID format" });
+    }
 
     // Get canvas
     const canvasResult = await pool.query(

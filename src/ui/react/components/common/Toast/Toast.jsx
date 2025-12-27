@@ -154,7 +154,7 @@ function Toast({
                     onClick={handleDismiss}
                     aria-label="Dismiss notification"
                 >
-                    <Icon name="close" size={14} aria-hidden="true" />
+                    <Icon name="close" size={14} aria-hidden={true} />
                 </button>
             )}
         </div>

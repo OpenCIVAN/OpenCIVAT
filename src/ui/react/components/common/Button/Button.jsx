@@ -155,12 +155,12 @@ const Button = forwardRef(function Button(
         >
             {/* Loading spinner */}
             {loading && (
-                <IconLoader className="btn__spinner" size={iconSize} aria-hidden="true" />
+                <IconLoader className="btn__spinner" size={iconSize} aria-hidden={true} />
             )}
 
             {/* Left icon */}
             {!loading && icon && (
-                <Icon name={icon} size={iconSize} className="btn__icon btn__icon--left" aria-hidden="true" />
+                <Icon name={icon} size={iconSize} className="btn__icon btn__icon--left" aria-hidden={true} />
             )}
 
             {/* Button label */}
@@ -170,7 +170,7 @@ const Button = forwardRef(function Button(
 
             {/* Right icon */}
             {!loading && iconRight && (
-                <Icon name={iconRight} size={iconSize} className="btn__icon btn__icon--right" aria-hidden="true" />
+                <Icon name={iconRight} size={iconSize} className="btn__icon btn__icon--right" aria-hidden={true} />
             )}
         </button>
     );

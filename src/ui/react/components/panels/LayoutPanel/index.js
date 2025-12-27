@@ -51,13 +51,16 @@ export {
 // CANVAS NAVIGATOR EXPORTS
 // =============================================================================
 
-// Export CanvasNavigator and its constants
+// Export CanvasNavigator component
+export { CanvasNavigator } from "./components/CanvasNavigator/CanvasNavigator";
+
+// Export constants from logic file (single source of truth)
 export {
-  CanvasNavigator,
   DISPLAY_MODES,
   NAV_MODES,
+  CONTEXT_MODES,
   INSTANCE_COLORS,
-} from "./components/CanvasNavigator/CanvasNavigator";
+} from "./components/CanvasNavigator/CanvasNavigator.logic";
 
 // =============================================================================
 // SUB-COMPONENTS

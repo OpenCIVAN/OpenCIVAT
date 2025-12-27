@@ -64,7 +64,7 @@ function ActivityBar({
         <div className="left-panel__activity-bar">
             <div className="left-panel__activity-tabs">
                 {tabs.map((tab, index) => {
-                    const Icon = tab.icon;
+                    const iconName = tab.icon;
                     const isActive = activeTab === tab.id;
                     const showDivider = dividersAfter.includes(tab.id);
 
@@ -78,7 +78,7 @@ function ActivityBar({
                                 aria-label={tab.label}
                                 aria-selected={isActive}
                             >
-                                <Icon size={18} />
+                                <Icon name={iconName} size={18} />
                             </button>
                             {showDivider && (
                                 <div className="left-panel__activity-divider" />

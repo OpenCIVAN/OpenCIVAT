@@ -1,34 +1,33 @@
 // src/ui/react/components/panels/LayoutPanel/components/CanvasNavigator/CanvasNavigator.scss
-// Complete Canvas Navigator Styles
+// Redesigned Canvas Navigator Styles
 //
-// FEATURES:
-// - Responsive layout (compact vs full)
-// - Context modes (edit vs views)
-// - Cell states (selected, drag-over, viewport, home)
-// - Collaborator avatars
-// - External drop zones
-// - Undo/redo and apply/cancel
+// Features:
+// - D-pad with home center
+// - Two-column navigation layout
+// - Collapsible size controls footer
+// - Mode-aware sizing (desktop/VR)
+// - Set Home mode with visual feedback
 
 @use "theme" as *;
 
 // =============================================================================
-// VARIABLES (using correct token names from theme)
+// VARIABLES
 // =============================================================================
 
-$nav-bg: var(--color-bg-tertiary, #{$color-bg-tertiary});
-$nav-border: var(--color-border-subtle, #{$color-border-subtle});
+$nav-bg: $color-bg-secondary;
+$nav-border: $color-border-subtle;
 $nav-radius: 8px;
 $cell-radius: 4px;
 $button-radius: 4px;
 
-// Context mode colors
-$color-views: var(--color-accent-blue, #{$color-accent-blue});
-$color-edit: var(--color-accent-purple, #{$color-accent-purple});
-$color-home: var(--color-accent-pink, #{$color-accent-pink});
-$color-viewport: var(--color-accent-blue, #{$color-accent-blue});
-$color-selected: var(--color-accent-purple, #{$color-accent-purple});
-$color-drag-over: var(--color-accent-green, #{$color-accent-green});
-$color-external: var(--color-accent-teal, #{$color-accent-teal});
+// Context/accent colors
+$color-blue: $color-accent-blue;
+$color-purple: $color-accent-purple;
+$color-amber: $color-accent-amber;
+$color-green: $color-accent-green;
+$color-teal: $color-accent-teal;
+$color-pink: $color-accent-pink;
+$color-red: $color-accent-red;
 
 // =============================================================================
 // MAIN CONTAINER
@@ -37,54 +36,41 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
 .canvas-navigator {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   background: $nav-bg;
   border: 1px solid $nav-border;
   border-radius: $nav-radius;
-  padding: 8px;
   font-size: 11px;
-  color: var(--color-text-secondary, #{$color-text-secondary});
-  min-width: 200px;
+  color: $color-text-secondary;
+  min-width: 240px;
+  overflow: hidden;
 
-  // Compact mode (docked in panel)
-  &--compact {
-    padding: 6px;
-    gap: 6px;
-
-    .canvas-navigator__header {
-      padding-bottom: 4px;
-    }
-
-    .canvas-navigator__size-controls {
-      flex-direction: column;
-      gap: 6px;
-    }
+  // Desktop mode
+  &--desktop {
+    --btn-size-xs: 18px;
+    --btn-size-sm: 24px;
+    --btn-size-md: 28px;
+    --dpad-gap: 2px;
+    --font-size-xs: 9px;
+    --font-size-sm: 10px;
+    --font-size-md: 11px;
   }
 
-  // Full mode (floating)
-  &--full {
-    min-width: 320px;
-
-    .canvas-navigator__size-controls {
-      flex-direction: row;
-      gap: 16px;
-    }
+  // VR mode - larger touch targets
+  &--vr {
+    --btn-size-xs: 32px;
+    --btn-size-sm: 44px;
+    --btn-size-md: 52px;
+    --dpad-gap: 4px;
+    --font-size-xs: 12px;
+    --font-size-sm: 14px;
+    --font-size-md: 16px;
   }
 
-  // Floating mode
-  &--floating {
-    position: fixed;
-    z-index: 200;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  }
-
-  // Context mode indicators
-  &[data-context="edit"] {
-    border-color: color-mix(in srgb, $color-edit 30%, transparent);
-  }
-
-  &[data-context="views"] {
-    border-color: color-mix(in srgb, $color-views 20%, transparent);
+  // Docked state
+  &[data-docked="true"] {
+    border: none;
+    border-radius: 0;
+    min-width: 100%;
   }
 }
 
@@ -96,164 +82,82 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 6px;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid $nav-border;
+}
 
-  &-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+.canvas-navigator__tab-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: var(--font-size-sm, 10px);
+  font-weight: 600;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 
-  &-icon {
-    color: var(--color-text-muted, #{$color-text-muted});
-  }
-
-  &-title {
-    font-weight: 600;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--color-text-muted, #{$color-text-muted});
-  }
-
-  &-right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+  svg {
+    color: $color-amber;
   }
 }
 
-// =============================================================================
-// MODE TOGGLE
-// =============================================================================
-
-.canvas-navigator__mode-toggle {
+.canvas-navigator__header-actions {
   display: flex;
+  align-items: center;
   gap: 2px;
-  padding: 2px;
-  background: var(--color-bg-secondary, #{$color-bg-secondary});
-  border-radius: $button-radius;
 }
 
 // =============================================================================
-// DOCK PICKER
+// MODE TOGGLES
 // =============================================================================
 
-.canvas-navigator__dock-wrapper {
-  position: relative;
-}
-
-.canvas-navigator__dock-picker {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  padding: 6px;
-  background: var(--color-bg-secondary, #{$color-bg-secondary});
-  border: 1px solid $nav-border;
-  border-radius: $button-radius;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  z-index: 10;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.canvas-navigator__dock-option {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid $nav-border;
-  border-radius: 3px;
-  color: var(--color-text-muted, #{$color-text-muted});
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: var(--color-glass-light, #{$color-glass-light});
-    border-color: var(--color-border-default, #{$color-border-default});
-  }
-
-  &--active {
-    background: color-mix(in srgb, $color-views 20%, transparent);
-    border-color: $color-views;
-    color: $color-views;
-  }
-}
-
-// =============================================================================
-// EDIT MODE TOOLBAR
-// =============================================================================
-
-.canvas-navigator__edit-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: color-mix(in srgb, $color-edit 8%, transparent);
-  border: 1px solid color-mix(in srgb, $color-edit 20%, transparent);
-  border-radius: $button-radius;
-  flex-wrap: wrap;
-}
-
-.canvas-navigator__edit-icon {
-  color: $color-edit;
-  flex-shrink: 0;
-}
-
-.canvas-navigator__edit-hint {
-  font-size: 10px;
-  color: $color-edit;
-  flex: 1;
-  min-width: 100px;
-}
-
-.canvas-navigator__edit-actions,
-.canvas-navigator__history-actions,
-.canvas-navigator__apply-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.canvas-navigator__apply-actions {
-  margin-left: auto;
-}
-
-// =============================================================================
-// DISPLAY CONTROLS
-// =============================================================================
-
-.canvas-navigator__display-controls {
+.canvas-navigator__mode-toggles {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  padding: $spacing-sm $spacing-md;
+  gap: $spacing-sm;
+  border-bottom: 1px solid $nav-border;
 }
 
-.canvas-navigator__display-toggle {
+.canvas-navigator__segmented-control {
   display: flex;
-  gap: 2px;
+  gap: 1px;
   padding: 2px;
-  background: var(--color-bg-secondary, #{$color-bg-secondary});
+  background: $color-bg-tertiary;
   border-radius: $button-radius;
 }
 
-.canvas-navigator__zoom-controls {
+.canvas-navigator__segment {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
+  justify-content: center;
+  padding: 4px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: $color-text-muted;
+  font-size: var(--font-size-xs, 9px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 24px;
 
-.canvas-navigator__zoom-label {
-  font-size: 9px;
-  font-family: monospace;
-  color: var(--color-text-muted, #{$color-text-muted});
-  min-width: 32px;
-  text-align: center;
+  &:hover:not(.canvas-navigator__segment--active) {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: color-mix(in srgb, $color-blue 20%, transparent);
+    color: $color-blue;
+
+    &[data-color="purple"] {
+      background: color-mix(in srgb, $color-purple 20%, transparent);
+      color: $color-purple;
+    }
+  }
 }
 
 // =============================================================================
@@ -262,48 +166,43 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
 
 .canvas-navigator__minimap {
   position: relative;
-  padding: 8px;
-  background: var(--color-bg-primary, #{$color-bg-primary});
-  border: 1px solid $nav-border;
-  border-radius: $button-radius;
+  flex: 1;
+  padding: $spacing-sm;
+  background: $color-bg-primary;
+  border-bottom: 1px solid $nav-border;
   overflow: auto;
+  min-height: 100px;
   max-height: 300px;
 
   &--setting-home {
-    background: color-mix(
-      in srgb,
-      $color-home 5%,
-      var(--color-bg-primary, #{$color-bg-primary})
-    );
-    border-color: $color-home;
-  }
+    background: color-mix(in srgb, $color-amber 8%, $color-bg-primary);
+    border-color: color-mix(in srgb, $color-amber 40%, transparent);
 
-  &--edit-mode {
-    border-color: color-mix(in srgb, $color-edit 30%, transparent);
+    .canvas-navigator__cell {
+      outline: 2px dashed color-mix(in srgb, $color-amber 30%, transparent);
+      outline-offset: -2px;
+      cursor: crosshair;
+    }
   }
 }
 
-.canvas-navigator__homepoint-indicator {
+.canvas-navigator__setting-home-hint {
   position: absolute;
   top: 4px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 10px;
-  color: $color-home;
-  background: color-mix(in srgb, $color-home 15%, transparent);
-  padding: 4px 12px;
+  font-size: var(--font-size-xs, 9px);
+  font-weight: 600;
+  color: $color-amber;
+  background: $color-bg-secondary;
+  padding: 2px 8px;
   border-radius: 4px;
   z-index: 10;
   white-space: nowrap;
 }
 
-// =============================================================================
-// GRID
-// =============================================================================
-
 .canvas-navigator__grid {
   display: grid;
-  gap: var(--cell-gap, 2px);
   user-select: none;
 }
 
@@ -320,29 +219,32 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
   cursor: pointer;
   transition: all 0.15s ease;
   overflow: hidden;
-
-  // Base cell (empty)
-  background: var(--color-bg-secondary, #{$color-bg-secondary});
+  background: $color-bg-secondary;
   border: 1px solid $nav-border;
 
   &:hover {
-    border-color: var(--color-border-default, #{$color-border-default});
+    border-color: $color-border-default;
   }
 
   // Occupied cell
   &--occupied {
     background: color-mix(
       in srgb,
-      var(--cell-color, #{$color-accent-blue}) 15%,
+      var(--cell-color, $color-blue) 20%,
       transparent
     );
-    border-color: var(--cell-color, #{$color-accent-blue});
+    border-color: var(--cell-color, $color-blue);
   }
 
   // In viewport
   &--in-viewport {
     opacity: 1;
-    box-shadow: 0 0 0 1px color-mix(in srgb, $color-viewport 30%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, $color-blue 30%, transparent);
+
+    &.canvas-navigator__cell--occupied {
+      box-shadow: 0 0 8px
+        color-mix(in srgb, var(--cell-color, $color-blue) 40%, transparent);
+    }
   }
 
   // Not in viewport
@@ -351,76 +253,16 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
   }
 
   // Home cell
-  &--home {
-    &::after {
-      content: "";
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 6px;
-      height: 6px;
-      background: $color-home;
-      border-radius: 50%;
-    }
-  }
-
-  // Selected (edit mode)
-  &--selected {
-    border-width: 2px;
-    border-color: $color-selected !important;
-    background: color-mix(in srgb, $color-selected 25%, transparent) !important;
-  }
-
-  // Drag over (internal)
-  &--drag-over {
-    background: color-mix(
-      in srgb,
-      $color-drag-over 30%,
-      transparent
-    ) !important;
-    border-color: $color-drag-over !important;
-
-    &::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border: 2px dashed $color-drag-over;
-      border-radius: $cell-radius;
-      pointer-events: none;
-    }
-  }
-
-  // External drag over (from ViewItem)
-  &--ext-drag-over {
-    background: color-mix(in srgb, $color-external 30%, transparent) !important;
-    border-color: $color-external !important;
-
-    &::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border: 2px dashed $color-external;
-      border-radius: $cell-radius;
-      animation: pulse-border 0.5s ease infinite alternate;
-      pointer-events: none;
-    }
+  &--home:not(.canvas-navigator__cell--occupied) {
+    background: color-mix(in srgb, $color-amber 15%, transparent);
+    border-color: color-mix(in srgb, $color-amber 50%, transparent);
   }
 }
 
-@keyframes pulse-border {
-  from {
-    opacity: 0.5;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-// Cell text
 .canvas-navigator__cell-text {
   font-size: 8px;
   font-weight: 500;
-  color: var(--color-text-primary, #{$color-text-primary});
+  color: var(--cell-color, $color-text-primary);
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
@@ -428,29 +270,19 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
   max-width: 100%;
 }
 
-// Cell homepoint marker
-.canvas-navigator__cell-home {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  color: $color-home;
+.canvas-navigator__cell-home-icon {
+  color: $color-amber;
 }
 
-// Cell collaborators
-.canvas-navigator__cell-collabs {
+.canvas-navigator__cell-home-dot {
   position: absolute;
   bottom: 2px;
   right: 2px;
-  display: flex;
-  flex-direction: row-reverse;
-}
-
-.canvas-navigator__cell-collabs-more {
-  font-size: 7px;
-  color: var(--color-text-muted, #{$color-text-muted});
-  background: var(--color-bg-secondary, #{$color-bg-secondary});
-  padding: 1px 3px;
-  border-radius: 2px;
+  width: 6px;
+  height: 6px;
+  background: $color-amber;
+  border-radius: 50%;
+  box-shadow: 0 0 4px $color-amber;
 }
 
 // =============================================================================
@@ -459,101 +291,254 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
 
 .canvas-navigator__viewport-indicator {
   position: absolute;
-  border: 2px solid $color-viewport;
-  border-radius: $cell-radius;
+  border: 2px solid $color-amber;
+  border-radius: 6px;
   pointer-events: none;
-  box-shadow: 0 0 0 1px color-mix(in srgb, $color-viewport 30%, transparent);
-  background: color-mix(in srgb, $color-viewport 5%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, $color-amber 50%, transparent),
+    inset 0 0 30px color-mix(in srgb, $color-amber 10%, transparent);
+  transition: all 0.2s ease;
 }
 
 // =============================================================================
-// NAVIGATION CONTROLS
+// NAVIGATION BLOCK
 // =============================================================================
 
-.canvas-navigator__nav-controls {
+.canvas-navigator__nav-block {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $nav-border;
 }
 
-// D-Pad
+.canvas-navigator__nav-columns {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.canvas-navigator__nav-col {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  &--info {
+    flex-direction: column;
+    gap: $spacing-xs;
+    align-items: stretch;
+  }
+}
+
+// =============================================================================
+// D-PAD
+// =============================================================================
+
 .canvas-navigator__dpad {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--dpad-gap, 2px);
 }
 
 .canvas-navigator__dpad-row {
   display: flex;
-  gap: 2px;
+  gap: var(--dpad-gap, 2px);
 }
 
-// Position display
-.canvas-navigator__position {
+.canvas-navigator__dpad-home {
+  width: var(--btn-size-sm, 24px);
+  height: var(--btn-size-sm, 24px);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  background: $color-bg-tertiary;
+  border: 1px solid $nav-border;
+  border-radius: $button-radius;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: color-mix(in srgb, $color-amber 15%, transparent);
+    border-color: color-mix(in srgb, $color-amber 40%, transparent);
+    color: $color-amber;
+  }
+
+  &--at-home {
+    background: color-mix(in srgb, $color-amber 20%, transparent);
+    border-color: color-mix(in srgb, $color-amber 50%, transparent);
+    color: $color-amber;
+    box-shadow: 0 0 8px color-mix(in srgb, $color-amber 30%, transparent);
+  }
 }
 
-.canvas-navigator__position-label {
-  font-size: 8px;
-  text-transform: uppercase;
-  color: var(--color-text-muted, #{$color-text-muted});
+// =============================================================================
+// INFO COLUMN
+// =============================================================================
+
+.canvas-navigator__info-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  height: var(--btn-size-sm, 24px);
+}
+
+.canvas-navigator__info-icon {
+  flex-shrink: 0;
+
+  &--teal {
+    color: $color-teal;
+  }
+
+  &--amber {
+    color: $color-amber;
+  }
 }
 
 .canvas-navigator__position-value {
   font-family: monospace;
-  font-size: 11px;
-  color: $color-views;
+  font-size: var(--font-size-md, 11px);
+  font-weight: 600;
+  color: $color-teal;
 }
 
-// Homepoint controls
-.canvas-navigator__homepoint-controls {
+.canvas-navigator__home-value {
+  font-family: monospace;
+  font-size: var(--font-size-sm, 10px);
+  color: $color-text-muted;
+
+  &--at-home {
+    color: $color-amber;
+  }
+}
+
+.canvas-navigator__set-home-btn {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 4px;
+  height: var(--btn-size-sm, 24px);
+  padding: 0 $spacing-sm;
+  background: transparent;
+  border: 1px solid $nav-border;
+  border-radius: $button-radius;
+  color: $color-text-muted;
+  font-size: var(--font-size-xs, 9px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: $color-glass-light;
+    border-color: $color-border-default;
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: color-mix(in srgb, $color-amber 20%, transparent);
+    border-color: color-mix(in srgb, $color-amber 50%, transparent);
+    color: $color-amber;
+  }
 }
 
 // =============================================================================
-// SIZE CONTROLS
+// ZOOM ROW
 // =============================================================================
+
+.canvas-navigator__zoom-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1px solid $nav-border;
+}
+
+.canvas-navigator__zoom-label {
+  font-size: var(--font-size-xs, 9px);
+  color: $color-text-muted;
+}
+
+.canvas-navigator__zoom-value {
+  font-family: monospace;
+  font-size: var(--font-size-sm, 10px);
+  color: $color-text-secondary;
+  min-width: 36px;
+  text-align: center;
+}
+
+// =============================================================================
+// SIZE CONTROLS FOOTER
+// =============================================================================
+
+.canvas-navigator__size-footer {
+  border-top: 1px solid $nav-border;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.canvas-navigator__size-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $color-text-muted;
+  font-size: var(--font-size-xs, 9px);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+}
+
+.canvas-navigator__size-summary {
+  font-family: monospace;
+  color: $color-text-secondary;
+  margin-left: $spacing-xs;
+}
 
 .canvas-navigator__size-controls {
-  display: flex;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+  padding: 0 $spacing-md $spacing-md;
 }
 
-.canvas-navigator__size-section {
+.canvas-navigator__size-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  border-radius: $button-radius;
+
+  &--viewport {
+    background: color-mix(in srgb, $color-green 5%, transparent);
+    border: 1px solid color-mix(in srgb, $color-green 15%, transparent);
+  }
+
+  &--canvas {
+    background: color-mix(in srgb, $color-purple 5%, transparent);
+    border: 1px solid color-mix(in srgb, $color-purple 15%, transparent);
+  }
 }
 
-.canvas-navigator__size-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-// =============================================================================
-// SECTION LABEL
-// =============================================================================
-
-.canvas-navigator__section-label {
-  font-size: 8px;
+.canvas-navigator__size-label {
+  font-size: var(--font-size-xs, 9px);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--color-text-tertiary, #{$color-text-tertiary});
+  text-align: center;
 
-  &[data-color="blue"] {
-    color: $color-views;
+  .canvas-navigator__size-col--viewport & {
+    color: $color-green;
   }
 
-  &[data-color="purple"] {
-    color: $color-edit;
+  .canvas-navigator__size-col--canvas & {
+    color: $color-purple;
   }
 }
 
@@ -569,14 +554,15 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
   background: transparent;
   border: 1px solid $nav-border;
   border-radius: $button-radius;
-  color: var(--color-text-muted, #{$color-text-muted});
+  color: $color-text-muted;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: var(--color-glass-light, #{$color-glass-light});
-    border-color: var(--color-border-default, #{$color-border-default});
+    background: $color-glass-light;
+    border-color: $color-border-default;
+    color: $color-text-secondary;
   }
 
   &:disabled {
@@ -585,96 +571,71 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
   }
 
   &--active {
-    background: color-mix(in srgb, $color-views 20%, transparent);
-    border-color: $color-views;
-    color: $color-views;
+    background: color-mix(in srgb, $color-blue 20%, transparent);
+    border-color: $color-blue;
+    color: $color-blue;
   }
 
   // Sizes
   &--xs {
-    width: 18px;
-    height: 18px;
+    width: var(--btn-size-xs, 18px);
+    height: var(--btn-size-xs, 18px);
     font-size: 8px;
   }
 
   &--sm {
-    width: 22px;
-    height: 22px;
+    width: var(--btn-size-sm, 24px);
+    height: var(--btn-size-sm, 24px);
     font-size: 9px;
-    padding: 0 6px;
-    width: auto;
-    min-width: 22px;
   }
 
   &--md {
-    width: 26px;
-    height: 26px;
+    width: var(--btn-size-md, 28px);
+    height: var(--btn-size-md, 28px);
     font-size: 10px;
   }
 
-  &--lg {
-    width: 30px;
-    height: 30px;
-    font-size: 11px;
-  }
-
   // Color variants
-  &[data-color="blue"] {
-    &.canvas-navigator__btn--active {
-      background: color-mix(in srgb, $color-views 20%, transparent);
-      border-color: $color-views;
-      color: $color-views;
-    }
+  &[data-color="blue"]:hover:not(:disabled),
+  &[data-color="blue"].canvas-navigator__btn--active {
+    background: color-mix(in srgb, $color-blue 20%, transparent);
+    border-color: $color-blue;
+    color: $color-blue;
   }
 
-  &[data-color="purple"] {
-    &.canvas-navigator__btn--active,
-    &:hover:not(:disabled) {
-      background: color-mix(in srgb, $color-edit 20%, transparent);
-      border-color: $color-edit;
-      color: $color-edit;
-    }
+  &[data-color="purple"]:hover:not(:disabled),
+  &[data-color="purple"].canvas-navigator__btn--active {
+    background: color-mix(in srgb, $color-purple 20%, transparent);
+    border-color: $color-purple;
+    color: $color-purple;
   }
 
-  &[data-color="pink"] {
-    &.canvas-navigator__btn--active,
-    &:hover:not(:disabled) {
-      background: color-mix(in srgb, $color-home 20%, transparent);
-      border-color: $color-home;
-      color: $color-home;
-    }
+  &[data-color="green"]:hover:not(:disabled),
+  &[data-color="green"].canvas-navigator__btn--active {
+    background: color-mix(in srgb, $color-green 20%, transparent);
+    border-color: $color-green;
+    color: $color-green;
   }
 
-  &[data-color="green"] {
-    &:hover:not(:disabled) {
-      background: color-mix(in srgb, #{$color-accent-green} 20%, transparent);
-      border-color: $color-accent-green;
-      color: $color-accent-green;
-    }
+  &[data-color="amber"]:hover:not(:disabled),
+  &[data-color="amber"].canvas-navigator__btn--active {
+    background: color-mix(in srgb, $color-amber 20%, transparent);
+    border-color: $color-amber;
+    color: $color-amber;
   }
 
-  &[data-color="red"] {
-    &:hover:not(:disabled) {
-      background: color-mix(in srgb, #{$color-accent-red} 20%, transparent);
-      border-color: $color-accent-red;
-      color: $color-accent-red;
-    }
+  &[data-color="red"]:hover:not(:disabled),
+  &[data-color="red"].canvas-navigator__btn--active {
+    background: color-mix(in srgb, $color-red 20%, transparent);
+    border-color: $color-red;
+    color: $color-red;
   }
 
-  &[data-color="teal"] {
-    &:hover:not(:disabled) {
-      background: color-mix(in srgb, #{$color-accent-teal} 20%, transparent);
-      border-color: $color-accent-teal;
-      color: $color-accent-teal;
-    }
-  }
-
-  &[data-color="amber"] {
-    &:hover:not(:disabled) {
-      background: color-mix(in srgb, #{$color-accent-amber} 20%, transparent);
-      border-color: $color-accent-amber;
-      color: $color-accent-amber;
-    }
+  &[data-color="teal"]:hover:not(:disabled),
+  &[data-color="teal"].canvas-navigator__btn--active {
+    background: color-mix(in srgb, $color-teal 20%, transparent);
+    border-color: $color-teal;
+    color: $color-teal;
   }
 }
 
@@ -685,95 +646,51 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
 .canvas-navigator__spinner {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: $spacing-xs;
 
-  &--compact {
+  &--vertical {
+    flex-direction: column;
+    align-items: stretch;
     gap: 2px;
 
-    .canvas-navigator__spinner-label {
-      min-width: 12px;
+    .canvas-navigator__spinner-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
     }
   }
 }
 
 .canvas-navigator__spinner-label {
-  font-size: 9px;
-  color: var(--color-text-muted, #{$color-text-muted});
-  min-width: 16px;
+  font-size: var(--font-size-xs, 9px);
+  color: $color-text-muted;
+  min-width: 28px;
+  text-align: center;
 }
 
-.canvas-navigator__spinner-input {
-  width: 28px;
+.canvas-navigator__spinner-value {
+  min-width: 22px;
   padding: 2px 4px;
-  background: var(--color-bg-secondary, #{$color-bg-secondary});
+  background: $color-bg-tertiary;
   border: 1px solid $nav-border;
   border-radius: 3px;
-  color: var(--color-text-secondary, #{$color-text-secondary});
-  font-size: 10px;
+  color: $color-text-secondary;
+  font-size: var(--font-size-sm, 10px);
   text-align: center;
   font-family: monospace;
-
-  &:focus {
-    outline: none;
-    border-color: $color-views;
-  }
-
-  // Hide arrows
-  -moz-appearance: textfield;
-  &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-}
-
-// =============================================================================
-// AVATAR
-// =============================================================================
-
-.canvas-navigator__avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--avatar-color, #{$color-accent-blue});
-  color: white;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  cursor: pointer;
-  transition: transform 0.15s ease;
 
-  &:hover {
-    transform: scale(1.1);
-    z-index: 10;
+  &[data-color="green"] {
+    background: color-mix(in srgb, $color-green 10%, transparent);
+    border-color: color-mix(in srgb, $color-green 25%, transparent);
+    color: $color-green;
   }
 
-  &--xs {
-    width: 12px;
-    height: 12px;
-    font-size: 6px;
-    margin-left: -4px;
-
-    &:first-child {
-      margin-left: 0;
-    }
-  }
-
-  &--sm {
-    width: 16px;
-    height: 16px;
-    font-size: 7px;
-    margin-left: -6px;
-
-    &:first-child {
-      margin-left: 0;
-    }
-  }
-
-  &--md {
-    width: 20px;
-    height: 20px;
-    font-size: 8px;
+  &[data-color="purple"] {
+    background: color-mix(in srgb, $color-purple 10%, transparent);
+    border-color: color-mix(in srgb, $color-purple 25%, transparent);
+    color: $color-purple;
   }
 }
 
@@ -783,38 +700,35 @@ $color-external: var(--color-accent-teal, #{$color-accent-teal});
 
 .canvas-navigator__tooltip {
   position: fixed;
-  z-index: 1000;
-  padding: 6px 10px;
-  background: var(--color-bg-secondary, #{$color-bg-secondary});
-  border: 1px solid $nav-border;
-  border-radius: $button-radius;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-elevated;
+  border: 2px solid;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  min-width: 140px;
+  max-width: 280px;
   pointer-events: none;
-  max-width: 200px;
 }
 
 .canvas-navigator__tooltip-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-primary, #{$color-text-primary});
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 500;
+  color: $color-text-primary;
+  margin-bottom: 4px;
 }
 
 .canvas-navigator__tooltip-dataset {
-  font-size: 9px;
-  color: var(--color-text-muted, #{$color-text-muted});
-  margin-top: 2px;
+  font-size: 11px;
+  color: $color-text-secondary;
+  margin-bottom: 2px;
 }
 
 .canvas-navigator__tooltip-position {
-  font-size: 9px;
+  font-size: 11px;
   font-family: monospace;
-  color: $color-views;
-  margin-top: 4px;
 }
 
 .canvas-navigator__tooltip-span {
-  color: var(--color-text-muted, #{$color-text-muted});
+  color: $color-text-muted;
 }

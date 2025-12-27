@@ -167,9 +167,9 @@ const IconButton = forwardRef(function IconButton(
             {...props}
         >
             {loading ? (
-                <IconLoader className="icon-btn__spinner" size={iconSize} aria-hidden="true" />
+                <IconLoader className="icon-btn__spinner" size={iconSize} aria-hidden={true} />
             ) : (
-                icon && <Icon name={icon} size={iconSize} aria-hidden="true" />
+                icon && <Icon name={icon} size={iconSize} aria-hidden={true} />
             )}
             {tooltipText && <span className="icon-btn__tooltip">{tooltipText}</span>}
         </button>
