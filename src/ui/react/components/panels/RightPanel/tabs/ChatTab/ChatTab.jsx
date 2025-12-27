@@ -18,6 +18,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
+import { SubtabBar } from '@UI/react/components/common/SubtabBar';
 
 import { useChatTab } from './hooks/useChatTab';
 import { MessageBubble } from './components/MessageBubble';
@@ -49,6 +50,9 @@ export function ChatTab({ workspaceId }) {
         isLoading,
         isSynced,
         currentUserId,
+        activeSubtab,
+        setActiveSubtab,
+        subtabs,
         handleSend,
         handleDelete,
     } = useChatTab({ workspaceId });
@@ -57,6 +61,9 @@ export function ChatTab({ workspaceId }) {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    // Get subtab label for display
+    const currentSubtabLabel = subtabs.find(t => t.id === activeSubtab)?.label || 'Room';
 
     return (
         <div className="chat-tab">
@@ -83,10 +90,17 @@ export function ChatTab({ workspaceId }) {
                 </div>
             </div>
 
-            {/* Room indicator */}
-            <div className="chat-tab__room-indicator">
-                <Icon name="globe" size={12} />
-                <span>Room Chat</span>
+            {/* Subtab Bar */}
+            <SubtabBar
+                tabs={subtabs}
+                activeTab={activeSubtab}
+                onTabChange={setActiveSubtab}
+            />
+
+            {/* Chat scope indicator */}
+            <div className="chat-tab__scope-indicator">
+                <Icon name={activeSubtab === 'room' ? 'home' : activeSubtab === 'project' ? 'globe' : 'messageSquare'} size={12} />
+                <span>{currentSubtabLabel} Chat</span>
                 <span className="chat-tab__message-count">{messages.length} messages</span>
             </div>
 
@@ -97,9 +111,15 @@ export function ChatTab({ workspaceId }) {
                         <Icon name="loader" size={24} className="spin" />
                         <span>Loading messages...</span>
                     </div>
+                ) : activeSubtab === 'dm' ? (
+                    <div className="chat-tab__empty">
+                        <Icon name="messageSquare" size={32} />
+                        <span>Direct Messages</span>
+                        <span className="chat-tab__empty-hint">Select a person to start a conversation</span>
+                    </div>
                 ) : messages.length === 0 ? (
                     <div className="chat-tab__empty">
-                        <Icon name="messageSquare" size={32} strokeWidth={1} />
+                        <Icon name="messageSquare" size={32} />
                         <span>No messages yet</span>
                         <span className="chat-tab__empty-hint">Start the conversation!</span>
                     </div>
@@ -117,7 +137,7 @@ export function ChatTab({ workspaceId }) {
             </div>
 
             {/* Message Input */}
-            <MessageInput onSend={handleSend} disabled={isLoading} />
+            <MessageInput onSend={handleSend} disabled={isLoading || activeSubtab === 'dm'} />
         </div>
     );
 }

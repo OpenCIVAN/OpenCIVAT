@@ -22,11 +22,12 @@ import { usePresence } from "@UI/react/hooks/usePresence.js";
 
 /**
  * Sub-tab configuration
+ * Uses color names that match SubtabBar component theming
  */
 export const SUBTABS = [
-  { id: "room", label: "Room", color: "#60a5fa" },
-  { id: "breakout", label: "Breakout", color: "#2dd4bf" },
-  { id: "project", label: "Project", color: "#f472b6" },
+  { id: "room", label: "Room", icon: "home", color: "blue" },
+  { id: "breakout", label: "Breakout", icon: "layout", color: "teal" },
+  { id: "project", label: "Project", icon: "globe", color: "pink" },
 ];
 
 /**

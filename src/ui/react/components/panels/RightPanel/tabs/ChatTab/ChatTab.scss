@@ -65,10 +65,10 @@
 }
 
 // =============================================================================
-// ROOM INDICATOR
+// SCOPE INDICATOR (shows current chat scope: room/project/DM)
 // =============================================================================
 
-.chat-tab__room-indicator {
+.chat-tab__scope-indicator {
   display: flex;
   align-items: center;
   gap: $spacing-xs;

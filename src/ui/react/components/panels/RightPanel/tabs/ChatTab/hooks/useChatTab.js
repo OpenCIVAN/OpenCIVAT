@@ -22,6 +22,15 @@ import { getUserId } from "@Collaboration/presence/userManagement.js";
 import { provider } from "@Collaboration/yjs/yjsSetup.js";
 
 /**
+ * Chat subtab configuration
+ */
+export const CHAT_SUBTABS = [
+  { id: "room", label: "Room", icon: "home", color: "blue" },
+  { id: "project", label: "Project", icon: "globe", color: "green" },
+  { id: "dm", label: "DMs", icon: "messageSquare", color: "purple" },
+];
+
+/**
  * Hook for ChatTab logic and state management.
  *
  * @param {Object} options - Hook options
@@ -29,12 +38,13 @@ import { provider } from "@Collaboration/yjs/yjsSetup.js";
  * @returns {Object} Chat state and handlers
  */
 export function useChatTab(options = {}) {
-  const { workspaceId } = options;
+  const { workspaceId, defaultSubtab = "room" } = options;
 
   // State
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSynced, setIsSynced] = useState(false);
+  const [activeSubtab, setActiveSubtab] = useState(defaultSubtab);
 
   // Current user
   const currentUserId = getUserId();
@@ -138,6 +148,11 @@ export function useChatTab(options = {}) {
     isLoading,
     isSynced,
     currentUserId,
+
+    // Subtab state
+    activeSubtab,
+    setActiveSubtab,
+    subtabs: CHAT_SUBTABS,
 
     // Handlers
     handleSend,

@@ -18,56 +18,14 @@
 
 import React from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
+import { SubtabBar } from '@UI/react/components/common/SubtabBar';
 
-import { usePeopleTab, SUBTABS } from './hooks/usePeopleTab';
+import { usePeopleTab } from './hooks/usePeopleTab';
 import { RoomSubtab } from './components/RoomSubtab';
 import { BreakoutSubtab } from './components/BreakoutSubtab';
 import { ProjectSubtab } from './components/ProjectSubtab';
 
 import './PeopleTab.scss';
-
-// =============================================================================
-// SUBTAB ICONS
-// =============================================================================
-
-const SUBTAB_ICONS = {
-    room: 'home',
-    breakout: 'layout',
-    project: 'globe',
-};
-
-// =============================================================================
-// SUBTAB TOGGLE
-// =============================================================================
-
-/**
- * SubtabToggle - Toggle buttons for switching between subtabs
- */
-function SubtabToggle({ activeTab, subtabs, onChange }) {
-    return (
-        <div className="people-tab__subtab-toggle">
-            {subtabs.map(({ id, label, color }) => {
-                const iconName = SUBTAB_ICONS[id];
-                const isActive = activeTab === id;
-
-                return (
-                    <button
-                        key={id}
-                        className={`people-tab__subtab-btn ${isActive ? 'people-tab__subtab-btn--active' : ''}`}
-                        onClick={() => onChange(id)}
-                        style={{
-                            color: isActive ? color : undefined,
-                            background: isActive ? `${color}22` : undefined,
-                        }}
-                    >
-                        {iconName && <Icon name={iconName} size={11} />}
-                        {label}
-                    </button>
-                );
-            })}
-        </div>
-    );
-}
 
 // =============================================================================
 // MAIN COMPONENT
@@ -110,11 +68,11 @@ export function PeopleTab({ workspaceId, roomId }) {
                 <span className="panel-header__count">{onlineCount} online</span>
             </div>
 
-            {/* Subtab Toggle */}
-            <SubtabToggle
+            {/* Subtab Bar */}
+            <SubtabBar
+                tabs={subtabs}
                 activeTab={activeSubtab}
-                subtabs={subtabs}
-                onChange={setActiveSubtab}
+                onTabChange={setActiveSubtab}
             />
 
             {/* Search */}
