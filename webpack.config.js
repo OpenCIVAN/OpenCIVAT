@@ -3,6 +3,35 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const fs = require("fs");
 const webpack = require("webpack");
 
+// Allow HTTP mode for local voice chat testing (LiveKit without TLS)
+const useHttps = process.env.USE_HTTP !== "true";
+
+// Build server config based on protocol preference
+const getServerConfig = () => {
+  if (!useHttps) {
+    console.log("🔓 Running in HTTP mode (USE_HTTP=true)");
+    return undefined; // HTTP mode
+  }
+
+  // HTTPS mode - check for certificates
+  const keyPath = "./certs/key.pem";
+  const certPath = "./certs/cert.pem";
+
+  if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+    console.log("🔒 Running in HTTPS mode with certificates");
+    return {
+      type: "https",
+      options: {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath),
+      },
+    };
+  }
+
+  console.log("⚠️  Certificates not found, falling back to HTTP");
+  return undefined;
+};
+
 module.exports = {
   entry: {
     main: "./src/index.js",
@@ -28,14 +57,8 @@ module.exports = {
     port: 8081,
     host: "0.0.0.0",
     hot: true,
-    // HTTPS for secure contexts (WebRTC, service workers, etc.)
-    server: {
-      type: "https",
-      options: {
-        key: fs.readFileSync("./certs/key.pem"),
-        cert: fs.readFileSync("./certs/cert.pem"),
-      },
-    },
+    // Server config (HTTPS or HTTP based on USE_HTTP env var)
+    server: getServerConfig(),
     allowedHosts: "all",
     // Proxy API requests to the backend - eliminates CORS issues
     proxy: [

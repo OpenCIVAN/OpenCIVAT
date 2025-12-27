@@ -51,7 +51,7 @@ export const config = Object.freeze({
   liveKitTokenUrl: resolveValue(
     "liveKitTokenUrl",
     "__LIVEKIT_TOKEN_URL__",
-    "http://localhost:3001"
+    "http://localhost:3002"
   ),
 
   // ---------------------------------------------------------------------------

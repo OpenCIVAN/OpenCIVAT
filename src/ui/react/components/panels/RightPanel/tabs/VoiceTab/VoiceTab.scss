@@ -120,3 +120,132 @@
   gap: $spacing-xs;
   padding: $spacing-sm;
 }
+
+// =============================================================================
+// PARTICIPANT CARD
+// =============================================================================
+
+.participant-card {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: $color-border-default;
+  }
+
+  &--speaking {
+    border-color: rgba($color-accent-green, 0.4);
+    background: rgba($color-accent-green, 0.08);
+  }
+
+  &__avatar {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--user-color, $color-accent-blue);
+    color: white;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    flex-shrink: 0;
+  }
+
+  &__speaking-indicator {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $color-bg-secondary;
+    border-radius: 50%;
+
+    svg {
+      color: $color-accent-green;
+      animation: pulse-speaking 1s infinite;
+    }
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__you {
+    font-weight: $font-weight-normal;
+    color: $color-text-muted;
+    margin-left: $spacing-xs;
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-top: 2px;
+
+    svg {
+      color: $color-accent-red;
+    }
+  }
+
+  &__status-text {
+    color: $color-text-tertiary;
+  }
+
+  &__actions {
+    flex-shrink: 0;
+  }
+
+  &__volume-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: $color-text-secondary;
+    }
+  }
+}
+
+@keyframes pulse-speaking {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}

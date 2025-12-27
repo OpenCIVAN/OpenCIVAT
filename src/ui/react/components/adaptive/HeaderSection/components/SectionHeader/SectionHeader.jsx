@@ -29,11 +29,20 @@ export const SectionHeader = ({
         onToggle?.(newExpanded);
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleToggle();
+        }
+    };
+
     return (
-        <button
-            type="button"
+        <div
+            role="button"
+            tabIndex={0}
             className={`section-header section-header--${mode}`}
             onClick={handleToggle}
+            onKeyDown={handleKeyDown}
             aria-expanded={isExpanded}
         >
             <span
@@ -63,7 +72,7 @@ export const SectionHeader = ({
                     {actions}
                 </div>
             )}
-        </button>
+        </div>
     );
 };
 

@@ -1,22 +1,8 @@
 /**
  * @file VoiceControlsPanel.jsx
- * @description Tinted panel containing voice controls.
- * Features a subtle blue tint and left accent border.
- * Lives in shared bars/ folder for flexibility.
- * 
- * @example
- * <VoiceControlsPanel
- *   isMuted={false}
- *   isDeafened={false}
- *   isInChannel={true}
- *   currentChannel={channel}
- *   channels={allChannels}
- *   onToggleMute={handleMute}
- *   onToggleDeafen={handleDeafen}
- *   onJoinLeave={handleJoinLeave}
- *   onChangeChannel={handleChangeChannel}
- *   onOpenSettings={handleOpenSettings}
- * />
+ * @description Discord-style voice controls panel.
+ * Shows compact join button when not in voice (with room selection),
+ * full controls when connected with device selection and room switching.
  */
 
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
@@ -24,99 +10,402 @@ import { Icon } from '@UI/react/components/common/Icon';
 import './VoiceControlsPanel.scss';
 
 // =============================================================================
-// SUB-COMPONENTS
+// ROOM POPUP COMPONENT
 // =============================================================================
 
-const VoiceButton = memo(function VoiceButton({ icon, label, active, accent, onClick, grouped }) {
-    const [hovered, setHovered] = useState(false);
+const RoomPopup = memo(function RoomPopup({
+    isOpen,
+    onClose,
+    anchorRef,
+    rooms = [],
+    currentRoom,
+    onSelectRoom,
+    title = 'Voice Channels',
+}) {
+    const popupRef = useRef(null);
+    const [position, setPosition] = useState({ top: 0, left: 0 });
 
+    // Calculate position based on anchor element
+    useEffect(() => {
+        if (!isOpen || !anchorRef?.current) return;
+
+        const updatePosition = () => {
+            const rect = anchorRef.current.getBoundingClientRect();
+            setPosition({
+                top: rect.top - 8,
+                left: rect.left + rect.width / 2,
+            });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [isOpen, anchorRef]);
+
+    // Close on click outside
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (e) => {
+            if (popupRef.current && !popupRef.current.contains(e.target) &&
+                anchorRef?.current && !anchorRef.current.contains(e.target)) {
+                onClose();
+            }
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [isOpen, onClose, anchorRef]);
+
+    if (!isOpen) return null;
+
+    // Default rooms if none provided
+    const displayRooms = rooms.length > 0 ? rooms : [
+        { id: 'main', name: 'General' },
+        { id: 'team-a', name: 'Team A' },
+        { id: 'team-b', name: 'Team B' },
+    ];
+
+    return (
+        <div
+            className="voice-room-popup"
+            ref={popupRef}
+            style={{
+                position: 'fixed',
+                top: position.top,
+                left: position.left,
+                transform: 'translate(-50%, -100%)',
+            }}
+        >
+            <div className="voice-room-popup__header">
+                <Icon name="headset" size={14} />
+                <span>{title}</span>
+            </div>
+            <div className="voice-room-popup__list">
+                {displayRooms.map((room) => (
+                    <button
+                        key={room.id}
+                        type="button"
+                        className={`voice-room-popup__item ${currentRoom?.id === room.id ? 'voice-room-popup__item--selected' : ''}`}
+                        onClick={() => {
+                            onSelectRoom(room);
+                            onClose();
+                        }}
+                    >
+                        <Icon name="volume" size={14} className="voice-room-popup__item-icon" />
+                        <span className="voice-room-popup__item-name">{room.name}</span>
+                        {currentRoom?.id === room.id && (
+                            <Icon name="check" size={12} className="voice-room-popup__item-check" />
+                        )}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+});
+
+// =============================================================================
+// DEVICE POPUP COMPONENT
+// =============================================================================
+
+const DevicePopup = memo(function DevicePopup({
+    type, // 'input' or 'output'
+    isOpen,
+    onClose,
+    anchorRef,
+}) {
+    const [devices, setDevices] = useState([]);
+    const [selectedDevice, setSelectedDevice] = useState(null);
+    const [position, setPosition] = useState({ top: 0, left: 0 });
+    const popupRef = useRef(null);
+
+    // Calculate position based on anchor element
+    useEffect(() => {
+        if (!isOpen || !anchorRef?.current) return;
+
+        const updatePosition = () => {
+            const rect = anchorRef.current.getBoundingClientRect();
+            setPosition({
+                top: rect.top - 8, // 8px gap above anchor
+                left: rect.left + rect.width / 2, // Center on anchor
+            });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [isOpen, anchorRef]);
+
+    // Load available devices
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const loadDevices = async () => {
+            try {
+                const allDevices = await navigator.mediaDevices.enumerateDevices();
+                const filtered = allDevices.filter(d =>
+                    type === 'input' ? d.kind === 'audioinput' : d.kind === 'audiooutput'
+                );
+                setDevices(filtered);
+                setSelectedDevice('default');
+            } catch (e) {
+                console.error('Failed to enumerate devices:', e);
+            }
+        };
+
+        loadDevices();
+    }, [isOpen, type]);
+
+    // Close on click outside
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (e) => {
+            if (popupRef.current && !popupRef.current.contains(e.target) &&
+                anchorRef?.current && !anchorRef.current.contains(e.target)) {
+                onClose();
+            }
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [isOpen, onClose, anchorRef]);
+
+    if (!isOpen) return null;
+
+    const handleSelectDevice = (deviceId) => {
+        setSelectedDevice(deviceId);
+        // TODO: Actually switch the device in voiceRoomService
+        onClose();
+    };
+
+    return (
+        <div
+            className="voice-device-popup"
+            ref={popupRef}
+            style={{
+                position: 'fixed',
+                top: position.top,
+                left: position.left,
+                transform: 'translate(-50%, -100%)',
+            }}
+        >
+            <div className="voice-device-popup__header">
+                <Icon name={type === 'input' ? 'mic' : 'headphones'} size={14} />
+                <span>{type === 'input' ? 'Input Device' : 'Output Device'}</span>
+            </div>
+            <div className="voice-device-popup__list">
+                {devices.length === 0 ? (
+                    <div className="voice-device-popup__empty">
+                        No devices found
+                    </div>
+                ) : (
+                    devices.map((device) => (
+                        <button
+                            key={device.deviceId}
+                            type="button"
+                            className={`voice-device-popup__item ${selectedDevice === device.deviceId ? 'voice-device-popup__item--selected' : ''}`}
+                            onClick={() => handleSelectDevice(device.deviceId)}
+                        >
+                            <span className="voice-device-popup__item-name">
+                                {device.label || `${type === 'input' ? 'Microphone' : 'Speaker'} ${devices.indexOf(device) + 1}`}
+                            </span>
+                            {selectedDevice === device.deviceId && (
+                                <Icon name="check" size={12} className="voice-device-popup__item-check" />
+                            )}
+                        </button>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+});
+
+// =============================================================================
+// JOIN BUTTON WITH ROOM SELECTION
+// =============================================================================
+
+const JoinVoiceButton = memo(function JoinVoiceButton({
+    onJoin,
+    rooms = [],
+    defaultRoom,
+}) {
+    const [showRoomPopup, setShowRoomPopup] = useState(false);
+    const [selectedRoom, setSelectedRoom] = useState(defaultRoom);
+    const buttonRef = useRef(null);
+
+    const handleJoinClick = () => {
+        if (rooms.length > 1) {
+            setShowRoomPopup(true);
+        } else {
+            // Join default room directly
+            onJoin(selectedRoom || rooms[0] || { id: 'main', name: 'General' });
+        }
+    };
+
+    const handleSelectRoom = (room) => {
+        setSelectedRoom(room);
+        onJoin(room);
+    };
+
+    return (
+        <div className="voice-join-container">
+            <button
+                ref={buttonRef}
+                type="button"
+                className="voice-controls-panel__join-btn"
+                onClick={handleJoinClick}
+                title="Join Voice Channel"
+            >
+                <Icon name="headsetMic" size={16} />
+                <span>Join Voice</span>
+                {rooms.length > 1 && (
+                    <Icon name="chevronUp" size={12} className="voice-controls-panel__join-chevron" />
+                )}
+            </button>
+            <RoomPopup
+                isOpen={showRoomPopup}
+                onClose={() => setShowRoomPopup(false)}
+                anchorRef={buttonRef}
+                rooms={rooms}
+                currentRoom={selectedRoom}
+                onSelectRoom={handleSelectRoom}
+                title="Select Channel"
+            />
+        </div>
+    );
+});
+
+// =============================================================================
+// CONTROL BUTTON COMPONENT
+// =============================================================================
+
+const ControlButton = memo(function ControlButton({
+    icon,
+    label,
+    active,
+    muted,
+    onClick,
+    className = '',
+    size = 'normal',
+}) {
     return (
         <button
             type="button"
-            className={`voice-controls-panel__btn ${active ? 'voice-controls-panel__btn--active' : ''} ${grouped ? 'voice-controls-panel__btn--grouped' : ''}`}
-            style={{ '--btn-accent': accent }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
+            className={`voice-controls-panel__ctrl-btn ${active ? 'voice-controls-panel__ctrl-btn--active' : ''} ${muted ? 'voice-controls-panel__ctrl-btn--muted' : ''} ${className}`}
             onClick={onClick}
             title={label}
             aria-label={label}
-            data-hovered={hovered}
+            data-size={size}
         >
-            <Icon name={icon} size={14} />
+            <Icon name={icon} size={size === 'small' ? 12 : 14} />
         </button>
     );
 });
 
-const ChannelSelector = memo(function ChannelSelector({ currentChannel, channels = [], onSelect }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const containerRef = useRef(null);
+// =============================================================================
+// DEVICE BUTTON WITH POPUP
+// =============================================================================
 
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleClickOutside = (e) => {
-            if (containerRef.current && !containerRef.current.contains(e.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e) => { if (e.key === 'Escape') setIsOpen(false); };
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen]);
-
-    const handleSelect = useCallback((channel) => {
-        onSelect?.(channel.id);
-        setIsOpen(false);
-    }, [onSelect]);
+const DeviceButton = memo(function DeviceButton({
+    type, // 'input' or 'output'
+    groupRef, // Reference to the parent control group for popup positioning
+}) {
+    const [popupOpen, setPopupOpen] = useState(false);
+    const buttonRef = useRef(null);
 
     return (
-        <div className="voice-controls-panel__channel-selector" ref={containerRef}>
+        <>
             <button
+                ref={buttonRef}
                 type="button"
-                className="voice-controls-panel__channel-trigger"
-                onClick={() => setIsOpen(!isOpen)}
-                aria-expanded={isOpen}
+                className="voice-controls-panel__device-btn"
+                onClick={() => setPopupOpen(!popupOpen)}
+                title={`${type === 'input' ? 'Input' : 'Output'} Options`}
+            >
+                <Icon name="chevronUp" size={10} />
+            </button>
+            <DevicePopup
+                type={type}
+                isOpen={popupOpen}
+                onClose={() => setPopupOpen(false)}
+                anchorRef={groupRef || buttonRef}
+            />
+        </>
+    );
+});
+
+// =============================================================================
+// CHANNEL DISPLAY WITH ROOM SWITCHING
+// =============================================================================
+
+const ChannelDisplay = memo(function ChannelDisplay({
+    currentChannel,
+    rooms = [],
+    onChangeChannel,
+}) {
+    const [showRoomPopup, setShowRoomPopup] = useState(false);
+    const displayRef = useRef(null);
+
+    const handleClick = () => {
+        if (rooms.length > 0 || onChangeChannel) {
+            setShowRoomPopup(true);
+        }
+    };
+
+    return (
+        <div className="voice-channel-display-wrapper">
+            <button
+                ref={displayRef}
+                type="button"
+                className="voice-controls-panel__channel-display"
+                onClick={handleClick}
+                title="Switch Channel"
             >
                 <Icon name="headset" size={12} className="voice-controls-panel__channel-icon" />
-                <div className="voice-controls-panel__channel-info">
-                    <span className="voice-controls-panel__channel-label">Voice Channel</span>
-                    <span className="voice-controls-panel__channel-name">
-                        {currentChannel?.name || 'Not connected'}
-                    </span>
-                </div>
-                <Icon name="chevronDown" size={10} className="voice-controls-panel__channel-chevron" />
+                <span className="voice-controls-panel__channel-name">
+                    {currentChannel?.name || 'Voice Connected'}
+                </span>
+                <Icon name="chevronUp" size={10} className="voice-controls-panel__channel-chevron" />
             </button>
-
-            {isOpen && channels.length > 0 && (
-                <div className="voice-controls-panel__channel-dropdown">
-                    {channels.map((channel) => {
-                        const isActive = currentChannel?.id === channel.id;
-                        return (
-                            <button
-                                key={channel.id}
-                                type="button"
-                                className={`voice-controls-panel__channel-item ${isActive ? 'voice-controls-panel__channel-item--active' : ''}`}
-                                onClick={() => handleSelect(channel)}
-                            >
-                                <Icon name="headset" size={12} className="voice-controls-panel__channel-item-icon" />
-                                <span className="voice-controls-panel__channel-item-name">{channel.name}</span>
-                                {channel.participantCount !== undefined && (
-                                    <span className="voice-controls-panel__channel-item-count">
-                                        <Icon name="users" size={10} />
-                                        {channel.participantCount}
-                                    </span>
-                                )}
-                                {isActive && <Icon name="check" size={12} className="voice-controls-panel__channel-item-check" />}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
+            <RoomPopup
+                isOpen={showRoomPopup}
+                onClose={() => setShowRoomPopup(false)}
+                anchorRef={displayRef}
+                rooms={rooms}
+                currentRoom={currentChannel}
+                onSelectRoom={(room) => {
+                    onChangeChannel?.(room);
+                    setShowRoomPopup(false);
+                }}
+                title="Switch Channel"
+            />
         </div>
     );
 });
@@ -138,42 +427,78 @@ function VoiceControlsPanel({
     onOpenSettings,
     className = '',
 }) {
-    return (
-        <div className={`voice-controls-panel ${className}`}>
-            <div className="voice-controls-panel__buttons">
-                <VoiceButton
-                    icon={isMuted ? 'micOff' : 'mic'}
-                    label={isMuted ? 'Unmute' : 'Mute'}
-                    active={!isMuted && isInChannel}
-                    accent={isMuted ? 'var(--color-accent-red)' : 'var(--color-accent-green)'}
-                    onClick={onToggleMute}
-                    grouped
-                />
-                <VoiceButton
-                    icon={isDeafened ? 'headsetOff' : 'headset'}
-                    label={isDeafened ? 'Undeafen' : 'Deafen'}
-                    active={!isDeafened && isInChannel}
-                    accent={isDeafened ? 'var(--color-accent-red)' : 'var(--color-text-tertiary)'}
-                    onClick={onToggleDeafen}
-                    grouped
-                />
-                <div className="voice-controls-panel__divider" />
-                <VoiceButton
-                    icon={isInChannel ? 'leaveVoice' : 'joinVoice'}
-                    label={isInChannel ? 'Leave Channel' : 'Join Channel'}
-                    accent={isInChannel ? 'var(--color-accent-red)' : 'var(--color-accent-green)'}
-                    onClick={onJoinLeave}
-                    grouped
+    const inputGroupRef = useRef(null);
+    const outputGroupRef = useRef(null);
+
+    // If not in voice channel, show compact join button
+    if (!isInChannel) {
+        return (
+            <div className={`voice-controls-panel voice-controls-panel--compact ${className}`}>
+                <JoinVoiceButton
+                    onJoin={(room) => onJoinLeave?.(room)}
+                    rooms={channels}
+                    defaultRoom={currentChannel}
                 />
             </div>
+        );
+    }
 
-            <ChannelSelector
+    // In voice channel - show full controls
+    return (
+        <div className={`voice-controls-panel ${className}`}>
+            {/* Channel info - clickable to switch rooms */}
+            <ChannelDisplay
                 currentChannel={currentChannel}
-                channels={channels}
-                onSelect={onChangeChannel}
+                rooms={channels}
+                onChangeChannel={onChangeChannel}
             />
 
-            <VoiceButton icon='settings' label="Voice Settings" onClick={onOpenSettings} />
+            <div className="voice-controls-panel__divider" />
+
+            {/* Mute with input device selector */}
+            <div ref={inputGroupRef} className="voice-controls-panel__control-group">
+                <ControlButton
+                    icon={isMuted ? 'micOff' : 'mic'}
+                    label={isMuted ? 'Unmute (M)' : 'Mute (M)'}
+                    active={!isMuted}
+                    muted={isMuted}
+                    onClick={onToggleMute}
+                />
+                <DeviceButton type="input" groupRef={inputGroupRef} />
+            </div>
+
+            {/* Deafen with output device selector */}
+            <div ref={outputGroupRef} className="voice-controls-panel__control-group">
+                <ControlButton
+                    icon={isDeafened ? 'headsetOff' : 'headset'}
+                    label={isDeafened ? 'Undeafen (D)' : 'Deafen (D)'}
+                    active={!isDeafened}
+                    muted={isDeafened}
+                    onClick={onToggleDeafen}
+                />
+                <DeviceButton type="output" groupRef={outputGroupRef} />
+            </div>
+
+            <div className="voice-controls-panel__divider" />
+
+            {/* Settings */}
+            <ControlButton
+                icon="settings"
+                label="Voice Settings"
+                onClick={onOpenSettings}
+                size="small"
+            />
+
+            {/* Leave button - prominent red with text for clarity */}
+            <button
+                type="button"
+                className="voice-controls-panel__leave-btn"
+                onClick={onJoinLeave}
+                title="Leave Voice"
+            >
+                <Icon name="close" size={12} />
+                <span>Leave</span>
+            </button>
         </div>
     );
 }

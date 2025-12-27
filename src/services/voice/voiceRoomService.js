@@ -58,10 +58,15 @@ class VoiceRoomService {
       error: new Set(),
     };
 
-    // Configuration
+    // Configuration - use correct property names from clientConfig
+    // Auto-detect protocol based on page protocol to avoid mixed content issues
+    const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    const defaultLiveKitUrl = isSecure ? "wss://localhost:7880" : "ws://localhost:7880";
+    const defaultTokenUrl = isSecure ? "https://localhost:3002" : "http://localhost:3002";
+
     this.config = {
-      tokenServerUrl: config.tokenServerUrl || "http://localhost:3002",
-      livekitUrl: config.livekitUrl || "ws://localhost:7880",
+      tokenServerUrl: config.liveKitTokenUrl || defaultTokenUrl,
+      livekitUrl: config.liveKitUrl || defaultLiveKitUrl,
       autoMuteOnJoin: true,
       reconnectAttempts: 3,
     };

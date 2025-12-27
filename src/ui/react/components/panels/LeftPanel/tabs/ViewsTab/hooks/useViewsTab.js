@@ -15,7 +15,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { getViewConfigurationManager } from "@Init/appInitializer.js";
+import { getViewConfigurationManager, getDatasetManager } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
@@ -130,12 +130,20 @@ function enrichView(view) {
   // isOnCanvas is determined by placement existence
   const isOnCanvas = placement !== null;
 
+  // Look up actual dataset name from DatasetManager if not set on view
+  let datasetName = view.datasetName;
+  if (!datasetName && view.datasetId) {
+    const datasetManager = getDatasetManager();
+    const dataset = datasetManager?.getDataset(view.datasetId);
+    datasetName = dataset?.name || dataset?.fileName || view.datasetId;
+  }
+
   return {
     ...view,
     id: view.id,
     name: view.name || "Untitled View",
     datasetId: view.datasetId,
-    datasetName: view.datasetName || view.datasetId,
+    datasetName: datasetName || "Unknown Dataset",
     color: instanceColor || view.color || "#60a5fa",
 
     // Position & size

@@ -2,7 +2,7 @@
 # stop-livekit.sh - Stop LiveKit voice chat services
 #
 # This script stops:
-# 1. LiveKit server (Docker container)
+# 1. LiveKit server (native or Docker)
 # 2. Token server (Node.js process)
 
 # Colors
@@ -41,18 +41,54 @@ else
     fi
 fi
 
-# Stop LiveKit container
-if docker ps --format '{{.Names}}' | grep -q '^cia-livekit$'; then
+# Stop LiveKit server (check native first, then Docker)
+LIVEKIT_STOPPED=false
+
+# Check for native livekit-server process
+if [ -f /tmp/cia-livekit.pid ]; then
+    LIVEKIT_PID=$(cat /tmp/cia-livekit.pid)
+    if kill -0 $LIVEKIT_PID 2>/dev/null; then
+        echo "Stopping native LiveKit server (PID: $LIVEKIT_PID)..."
+        kill $LIVEKIT_PID
+        rm /tmp/cia-livekit.pid
+        print_status "Native LiveKit server stopped"
+        LIVEKIT_STOPPED=true
+    else
+        print_warning "Native LiveKit not running (stale PID file)"
+        rm /tmp/cia-livekit.pid
+    fi
+fi
+
+# If native wasn't stopped, try finding by port
+if [ "$LIVEKIT_STOPPED" = false ]; then
+    LIVEKIT_PID=$(lsof -t -i :7880 2>/dev/null)
+    if [ -n "$LIVEKIT_PID" ]; then
+        echo "Stopping LiveKit server (PID: $LIVEKIT_PID)..."
+        kill $LIVEKIT_PID
+        print_status "LiveKit server stopped"
+        LIVEKIT_STOPPED=true
+    fi
+fi
+
+# Check for Docker container
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^cia-livekit$'; then
     echo "Stopping LiveKit container..."
     docker stop cia-livekit
     print_status "LiveKit container stopped"
-else
-    print_warning "LiveKit container not running"
+    LIVEKIT_STOPPED=true
+fi
+
+if [ "$LIVEKIT_STOPPED" = false ]; then
+    print_warning "LiveKit server not running"
 fi
 
 echo ""
 print_status "Voice services stopped"
 echo ""
-echo "💡 To remove the LiveKit container entirely, run:"
-echo "   docker rm cia-livekit"
-echo ""
+
+# Only show Docker cleanup tip if container exists
+if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^cia-livekit$'; then
+    echo "💡 To remove the LiveKit container entirely, run:"
+    echo "   docker rm cia-livekit"
+    echo ""
+fi

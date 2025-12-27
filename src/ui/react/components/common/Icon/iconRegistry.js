@@ -334,6 +334,8 @@ export const ICON_REGISTRY = {
   joinVoice: "headset_mic",
   leaveVoice: "headset_off",
   phone: "phone",
+  phoneOff: "phone_disabled",
+  phoneMissed: "phone_missed",
   wifi: "wifi",
   wifiOff: "wifi_off",
   cpu: "developer_board",

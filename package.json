@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "webpack serve --mode development --open",
+    "start:http": "USE_HTTP=true webpack serve --mode development --open",
     "build": "npm run build:manifests && webpack --mode production",
     "build:manifests": "ts-node scripts/buildManifestRegistry.ts",
     "prebuild": "npm run build:manifests",
@@ -17,7 +18,9 @@
     "livekit:start": "./scripts/start-livekit.sh",
     "livekit:stop": "./scripts/stop-livekit.sh",
     "dev": "concurrently \"npm:start\" \"npm:server:dev\" \"npm:websocket\"",
+    "dev:http": "concurrently \"npm:start:http\" \"npm:server:dev\" \"npm:websocket\"",
     "dev:full": "concurrently \"npm:start\" \"npm:server:dev\" \"npm:websocket\" \"npm:token-server\" \"npm:livekit\"",
+    "dev:full:http": "concurrently \"npm:start:http\" \"npm:server:dev\" \"npm:websocket\" \"npm:token-server\" \"npm:livekit\"",
     "dev:voice": "concurrently \"npm:token-server\" \"npm:livekit\"",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up",
     "docker:dev:build": "docker-compose -f docker-compose.dev.yml up --build",
