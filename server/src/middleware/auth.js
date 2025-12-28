@@ -127,13 +127,29 @@ function getKey(header, callback) {
 /**
  * Authentication middleware
  * Validates JWT token from Authorization header
- * In dev bypass mode, uses mock user
+ * In dev bypass mode, uses mock user (from headers if provided)
  */
 async function authenticate(req, res, next) {
   // Development bypass
   if (DEV_BYPASS_AUTH) {
-    log.debug("Dev bypass mode - using mock user");
-    req.user = DEV_USER;
+    // Check for custom user headers (from DevUserSwitcher)
+    const userId = req.get("x-user-id");
+    const userName = req.get("x-user-name");
+    const userEmail = req.get("x-user-email");
+
+    if (userId && userName) {
+      log.debug(`Dev bypass mode - using custom user: ${userName}`);
+      req.user = {
+        id: userId,
+        externalId: userId,
+        email: userEmail || DEV_USER.email,
+        name: userName,
+        roles: DEV_USER.roles, // Keep admin roles for dev
+      };
+    } else {
+      log.debug("Dev bypass mode - using default mock user");
+      req.user = DEV_USER;
+    }
     return next();
   }
 
@@ -189,9 +205,23 @@ async function authenticate(req, res, next) {
  * Useful for endpoints that work both authenticated and anonymously
  */
 function optionalAuth(req, res, next) {
-  // In dev bypass, always set user
+  // In dev bypass, always set user (from headers if provided)
   if (DEV_BYPASS_AUTH) {
-    req.user = DEV_USER;
+    const userId = req.get("x-user-id");
+    const userName = req.get("x-user-name");
+    const userEmail = req.get("x-user-email");
+
+    if (userId && userName) {
+      req.user = {
+        id: userId,
+        externalId: userId,
+        email: userEmail || DEV_USER.email,
+        name: userName,
+        roles: DEV_USER.roles,
+      };
+    } else {
+      req.user = DEV_USER;
+    }
     return next();
   }
 

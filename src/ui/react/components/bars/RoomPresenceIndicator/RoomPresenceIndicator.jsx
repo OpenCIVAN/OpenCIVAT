@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/common/Icon';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 
@@ -53,7 +54,10 @@ export function RoomPresenceIndicator({
     onCreateRoom,
 }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
     const containerRef = useRef(null);
+    const triggerRef = useRef(null);
+    const dropdownRef = useRef(null);
 
     // Get room type config
     const roomType = room?.type || 'main';
@@ -64,12 +68,37 @@ export function RoomPresenceIndicator({
     const visibleMembers = members.slice(0, MAX_AVATARS);
     const overflowCount = members.length - MAX_AVATARS;
 
+    // Calculate dropdown position when opening
+    useEffect(() => {
+        if (!isOpen || !triggerRef.current) return;
+
+        const updatePosition = () => {
+            const rect = triggerRef.current.getBoundingClientRect();
+            // Position above the trigger button
+            setDropdownPosition({
+                top: rect.top - 8,
+                left: rect.left + rect.width / 2,
+            });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [isOpen]);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         if (!isOpen) return;
 
         const handleClickOutside = (e) => {
-            if (containerRef.current && !containerRef.current.contains(e.target)) {
+            const isOutsideTrigger = triggerRef.current && !triggerRef.current.contains(e.target);
+            const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(e.target);
+            if (isOutsideTrigger && isOutsideDropdown) {
                 setIsOpen(false);
             }
         };
@@ -118,10 +147,153 @@ export function RoomPresenceIndicator({
         return acc;
     }, {});
 
+    // Render dropdown in portal
+    const dropdownContent = isOpen && createPortal(
+        <div
+            className="room-presence__dropdown"
+            ref={dropdownRef}
+            role="listbox"
+            style={{
+                position: 'fixed',
+                top: dropdownPosition.top,
+                left: dropdownPosition.left,
+                transform: 'translate(-50%, -100%)',
+                zIndex: 10000,
+            }}
+        >
+            {/* Main Rooms */}
+            {groupedRooms.main?.length > 0 && (
+                <div className="room-presence__section">
+                    <div className="room-presence__section-header" data-color="blue">
+                        <Icon name="globe" size={10} />
+                        <span>Project Rooms</span>
+                    </div>
+                    {groupedRooms.main.map((r) => {
+                        const isActive = room?.id === r.id;
+                        return (
+                            <button
+                                key={r.id}
+                                className={`room-presence__item ${isActive ? 'room-presence__item--active' : ''}`}
+                                onClick={() => handleRoomSelect(r)}
+                                type="button"
+                                role="option"
+                                aria-selected={isActive}
+                            >
+                                <Icon name="globe" size={12} className="room-presence__item-icon" />
+                                <span className="room-presence__item-name">{r.name}</span>
+                                {r.memberCount !== undefined && (
+                                    <span className="room-presence__item-count">
+                                        <Icon name="users" size={10} />
+                                        {r.memberCount}
+                                    </span>
+                                )}
+                                {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Breakout Rooms */}
+            {groupedRooms.breakout?.length > 0 && (
+                <div className="room-presence__section">
+                    <div className="room-presence__section-header" data-color="purple">
+                        <Icon name="gitBranch" size={10} />
+                        <span>Breakout Rooms</span>
+                    </div>
+                    {groupedRooms.breakout.map((r) => {
+                        const isActive = room?.id === r.id;
+                        return (
+                            <button
+                                key={r.id}
+                                className={`room-presence__item ${isActive ? 'room-presence__item--active' : ''}`}
+                                onClick={() => handleRoomSelect(r)}
+                                type="button"
+                                role="option"
+                                aria-selected={isActive}
+                            >
+                                <Icon name="gitBranch" size={12} className="room-presence__item-icon" />
+                                <span className="room-presence__item-name">{r.name}</span>
+                                {r.isLocked && <Icon name="lock" size={10} className="room-presence__item-lock" />}
+                                {r.memberCount !== undefined && (
+                                    <span className="room-presence__item-count">
+                                        <Icon name="users" size={10} />
+                                        {r.memberCount}
+                                    </span>
+                                )}
+                                {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Personal Spaces */}
+            {groupedRooms.personal?.length > 0 && (
+                <div className="room-presence__section">
+                    <div className="room-presence__section-header" data-color="green">
+                        <Icon name="user" size={10} />
+                        <span>Personal Spaces</span>
+                    </div>
+                    {groupedRooms.personal.map((r) => {
+                        const isActive = room?.id === r.id;
+                        return (
+                            <button
+                                key={r.id}
+                                className={`room-presence__item ${isActive ? 'room-presence__item--active' : ''}`}
+                                onClick={() => handleRoomSelect(r)}
+                                type="button"
+                                role="option"
+                                aria-selected={isActive}
+                            >
+                                <Icon name="user" size={12} className="room-presence__item-icon" />
+                                <span className="room-presence__item-name">{r.name}</span>
+                                {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Empty State */}
+            {availableRooms.length === 0 && !onCreateRoom && (
+                <div className="room-presence__empty">
+                    No other rooms available
+                </div>
+            )}
+
+            {/* View All / Create Actions */}
+            <div className="room-presence__actions">
+                {onClick && (
+                    <button
+                        className="room-presence__action-btn"
+                        onClick={() => { onClick(); setIsOpen(false); }}
+                        type="button"
+                    >
+                        <Icon name="users" size={12} />
+                        <span>View All Rooms</span>
+                    </button>
+                )}
+                {onCreateRoom && (
+                    <button
+                        className="room-presence__action-btn room-presence__action-btn--primary"
+                        onClick={handleCreateRoom}
+                        type="button"
+                    >
+                        <Icon name="add" size={12} />
+                        <span>Create Room</span>
+                    </button>
+                )}
+            </div>
+        </div>,
+        document.body
+    );
+
     return (
         <div className="room-presence" ref={containerRef}>
             {/* Trigger Button */}
             <button
+                ref={triggerRef}
                 className="room-presence__trigger"
                 onClick={handleTriggerClick}
                 type="button"
@@ -180,135 +352,8 @@ export function RoomPresenceIndicator({
                 />
             </button>
 
-            {/* Dropdown Menu */}
-            {isOpen && (
-                <div className="room-presence__dropdown" role="listbox">
-                    {/* Main Rooms */}
-                    {groupedRooms.main?.length > 0 && (
-                        <div className="room-presence__section">
-                            <div className="room-presence__section-header" data-color="blue">
-                                <Icon name="globe" size={10} />
-                                <span>Project Rooms</span>
-                            </div>
-                            {groupedRooms.main.map((r) => {
-                                const isActive = room?.id === r.id;
-                                return (
-                                    <button
-                                        key={r.id}
-                                        className={`room-presence__item ${isActive ? 'room-presence__item--active' : ''}`}
-                                        onClick={() => handleRoomSelect(r)}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={isActive}
-                                    >
-                                        <Icon name="globe" size={12} className="room-presence__item-icon" />
-                                        <span className="room-presence__item-name">{r.name}</span>
-                                        {r.memberCount !== undefined && (
-                                            <span className="room-presence__item-count">
-                                                <Icon name="users" size={10} />
-                                                {r.memberCount}
-                                            </span>
-                                        )}
-                                        {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Breakout Rooms */}
-                    {groupedRooms.breakout?.length > 0 && (
-                        <div className="room-presence__section">
-                            <div className="room-presence__section-header" data-color="purple">
-                                <Icon name="gitBranch" size={10} />
-                                <span>Breakout Rooms</span>
-                            </div>
-                            {groupedRooms.breakout.map((r) => {
-                                const isActive = room?.id === r.id;
-                                return (
-                                    <button
-                                        key={r.id}
-                                        className={`room-presence__item ${isActive ? 'room-presence__item--active' : ''}`}
-                                        onClick={() => handleRoomSelect(r)}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={isActive}
-                                    >
-                                        <Icon name="gitBranch" size={12} className="room-presence__item-icon" />
-                                        <span className="room-presence__item-name">{r.name}</span>
-                                        {r.isLocked && <Icon name="lock" size={10} className="room-presence__item-lock" />}
-                                        {r.memberCount !== undefined && (
-                                            <span className="room-presence__item-count">
-                                                <Icon name="users" size={10} />
-                                                {r.memberCount}
-                                            </span>
-                                        )}
-                                        {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Personal Spaces */}
-                    {groupedRooms.personal?.length > 0 && (
-                        <div className="room-presence__section">
-                            <div className="room-presence__section-header" data-color="green">
-                                <Icon name="user" size={10} />
-                                <span>Personal Spaces</span>
-                            </div>
-                            {groupedRooms.personal.map((r) => {
-                                const isActive = room?.id === r.id;
-                                return (
-                                    <button
-                                        key={r.id}
-                                        className={`room-presence__item ${isActive ? 'room-presence__item--active' : ''}`}
-                                        onClick={() => handleRoomSelect(r)}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={isActive}
-                                    >
-                                        <Icon name="user" size={12} className="room-presence__item-icon" />
-                                        <span className="room-presence__item-name">{r.name}</span>
-                                        {isActive && <Icon name="check" size={12} className="room-presence__item-check" />}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Empty State */}
-                    {availableRooms.length === 0 && !onCreateRoom && (
-                        <div className="room-presence__empty">
-                            No other rooms available
-                        </div>
-                    )}
-
-                    {/* View All / Create Actions */}
-                    <div className="room-presence__actions">
-                        {onClick && (
-                            <button
-                                className="room-presence__action-btn"
-                                onClick={() => { onClick(); setIsOpen(false); }}
-                                type="button"
-                            >
-                                <Icon name="users" size={12} />
-                                <span>View All Rooms</span>
-                            </button>
-                        )}
-                        {onCreateRoom && (
-                            <button
-                                className="room-presence__action-btn room-presence__action-btn--primary"
-                                onClick={handleCreateRoom}
-                                type="button"
-                            >
-                                <Icon name="add" size={12} />
-                                <span>Create Room</span>
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
+            {/* Dropdown Menu (rendered via portal) */}
+            {dropdownContent}
         </div>
     );
 }

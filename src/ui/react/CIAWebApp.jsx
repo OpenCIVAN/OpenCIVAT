@@ -151,8 +151,19 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // CANVAS STATE
   // ===========================================================================
-  const { canvasId } = useCanvas(workspaceId);
-  const [canvasSize, setCanvasSize] = useState(getInitialCanvasSize);
+  const {
+    canvas,
+    canvasId,
+    viewport,
+    setFlowDirection: setCanvasFlowDirection,
+    setCanvasSize,
+    setViewportSize,
+  } = useCanvas(workspaceId);
+
+  // Derive canvas size from actual canvas dimensions
+  const canvasSize = canvas?.dimensions || { rows: 3, cols: 3 };
+  // Viewport size from useCanvas hook
+  const viewportSize = { rows: viewport?.rows || 3, cols: viewport?.cols || 3 };
 
   // Persist canvas size
   useEffect(() => {
@@ -174,7 +185,9 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // EDIT STATE (Secondary Footer)
   // ===========================================================================
-  const [flowDirection, setFlowDirection] = useState("row");
+  // Flow direction is derived from canvas, with local state for immediate UI feedback
+  const [localFlowDirection, setLocalFlowDirection] = useState("row");
+  const flowDirection = canvas?.flowDirection || localFlowDirection;
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeTool, setActiveTool] = useState("select");
   const [openPopouts, setOpenPopouts] = useState([]);
@@ -275,18 +288,46 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   const handleToolChange = useCallback((tool) => {
     setActiveTool(tool);
+    // Dispatch event for canvas to listen to
+    window.dispatchEvent(new CustomEvent('canvas:toolChange', { detail: { tool } }));
   }, []);
 
   const handleToggleEditMode = useCallback(() => {
-    setIsEditMode((prev) => !prev);
+    setIsEditMode((prev) => {
+      const newMode = !prev;
+      // Dispatch event for canvas to listen to
+      window.dispatchEvent(new CustomEvent('canvas:editModeChange', { detail: { editMode: newMode } }));
+      return newMode;
+    });
   }, []);
 
+  const handleFlowDirectionChange = useCallback((direction) => {
+    // Update local state for immediate UI feedback
+    setLocalFlowDirection(direction);
+    // Update canvas (persists to server)
+    setCanvasFlowDirection?.(direction);
+  }, [setCanvasFlowDirection]);
+
+  const handleCanvasSizeChange = useCallback((newSize) => {
+    // Update canvas dimensions (persists to server)
+    setCanvasSize?.(newSize);
+    // Save to local storage for persistence
+    saveCanvasSize(newSize);
+  }, [setCanvasSize]);
+
+  const handleViewportSizeChange = useCallback((newSize) => {
+    // Update viewport size (how many cells are visible)
+    setViewportSize?.(newSize.rows, newSize.cols);
+  }, [setViewportSize]);
+
   const handleUndo = useCallback(() => {
-    log.debug("Undo");
+    log.debug("Undo - not yet implemented");
+    // TODO: Implement undo with canvas history
   }, []);
 
   const handleRedo = useCallback(() => {
-    log.debug("Redo");
+    log.debug("Redo - not yet implemented");
+    // TODO: Implement redo with canvas history
   }, []);
 
   const handleTogglePopout = useCallback((popoutId) => {
@@ -417,9 +458,9 @@ export function CIAWebApp({ username, userId, projectId }) {
                   scratchpadOpen={openPopouts.includes("scratchpad")}
                   onToggleNavigator={() => handleTogglePopout("navigator")}
                   onToggleScratchpad={() => handleTogglePopout("scratchpad")}
-                  // Flow direction
+                  // Flow direction (connected to canvas)
                   flowDirection={flowDirection}
-                  onFlowDirectionChange={setFlowDirection}
+                  onFlowDirectionChange={handleFlowDirectionChange}
                   // Edit tools
                   isEditMode={isEditMode}
                   activeTool={activeTool}
@@ -429,13 +470,17 @@ export function CIAWebApp({ username, userId, projectId }) {
                   canRedo={false}
                   onUndo={handleUndo}
                   onRedo={handleRedo}
-                  // Canvas size
+                  // Canvas size (connected to canvas)
                   canvasSize={canvasSize}
-                  onCanvasSizeChange={setCanvasSize}
+                  onCanvasSizeChange={handleCanvasSizeChange}
+                  // Viewport size (how many cells visible)
+                  viewportSize={viewportSize}
+                  onViewportSizeChange={handleViewportSizeChange}
                   // Voice controls
                   isMuted={voice.muted}
                   isDeafened={voice.deafened}
                   isInChannel={voice.inVoice}
+                  isJoiningVoice={voice.isJoining}
                   currentChannel={
                     voice.currentRoom
                       ? { id: currentRoomId, name: voice.currentRoom }

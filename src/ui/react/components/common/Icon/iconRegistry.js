@@ -204,6 +204,7 @@ export const ICON_REGISTRY = {
   grid: "grid_view",
   grid3x3: "grid_3x3",
   layoutGrid: "view_module",
+  aspectRatio: "aspect_ratio",
   list: "list",
   layout: "dashboard",
   dashboard: "dashboard",

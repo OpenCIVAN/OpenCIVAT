@@ -28,11 +28,15 @@ app.post("/token", async (req, res) => {
   try {
     const { roomName, userName } = req.body;
 
-    log.info("Generating token for user:", userName, "in room:", roomName);
+    // Ensure we have a valid user name (fallback to "User" with timestamp if empty)
+    const effectiveName = userName || `User-${Date.now().toString(36).slice(-4)}`;
+
+    log.info("Generating token for user:", effectiveName, "in room:", roomName);
     log.debug("Using API Key:", LIVEKIT_API_KEY);
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: userName,
+      identity: effectiveName,
+      name: effectiveName, // Also set display name
     });
 
     at.addGrant({

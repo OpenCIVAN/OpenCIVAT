@@ -104,6 +104,28 @@ export function CanvasGrid({
     const [activeTool, setActiveTool] = useState('select');
     const [selectionModifierHeld, setSelectionModifierHeld] = useState(false);
 
+    // Listen for edit mode and tool changes from secondary footer
+    useEffect(() => {
+        const handleEditModeChange = (e) => {
+            setEditMode(e.detail.editMode);
+        };
+        const handleToolChange = (e) => {
+            setActiveTool(e.detail.tool);
+            // Entering a tool also enables edit mode
+            if (e.detail.tool !== 'select') {
+                setEditMode(true);
+            }
+        };
+
+        window.addEventListener('canvas:editModeChange', handleEditModeChange);
+        window.addEventListener('canvas:toolChange', handleToolChange);
+
+        return () => {
+            window.removeEventListener('canvas:editModeChange', handleEditModeChange);
+            window.removeEventListener('canvas:toolChange', handleToolChange);
+        };
+    }, []);
+
     // Active view tracking - for performance optimization
     // Only the active view mounts InstanceViewport in THUMBNAIL/SNAPSHOT modes
     const [activeViewId, setActiveViewId] = useState(null);

@@ -251,7 +251,11 @@ $color-instance-amber: $color-accent-amber;
 
     // Accents (hex values)
     --color-accent-primary: #{$color-accent-primary};
+    --color-accent-primary-hover: #{$color-accent-primary-hover};
+    --color-accent-primary-active: #{$color-accent-primary-active};
     --color-accent-blue: #{$color-accent-blue};
+    --color-accent-blue-hover: #{$color-accent-primary-hover};
+    --color-accent-blue-active: #{$color-accent-primary-active};
     --color-accent-purple: #{$color-accent-purple};
     --color-accent-pink: #{$color-accent-pink};
     --color-accent-amber: #{$color-accent-amber};

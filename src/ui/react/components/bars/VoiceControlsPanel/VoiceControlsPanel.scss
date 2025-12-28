@@ -61,7 +61,7 @@
   cursor: pointer;
   transition: all $transition-fast;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: rgba($color-accent-green, 0.25);
     border-color: rgba($color-accent-green, 0.5);
   }
@@ -73,6 +73,37 @@
 
   svg {
     color: $color-accent-green;
+  }
+
+  // Joining/connecting state
+  &--joining {
+    background: rgba($color-accent-blue, 0.15);
+    border-color: rgba($color-accent-blue, 0.3);
+    color: $color-accent-blue;
+    cursor: wait;
+
+    svg {
+      color: $color-accent-blue;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.85;
+    cursor: wait;
+  }
+}
+
+// Spinner animation for the loader icon
+.voice-controls-panel__join-spinner {
+  animation: voice-spinner 1s linear infinite;
+}
+
+@keyframes voice-spinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

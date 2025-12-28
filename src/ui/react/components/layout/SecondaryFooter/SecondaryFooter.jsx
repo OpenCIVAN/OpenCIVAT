@@ -27,6 +27,7 @@ import React, { useCallback, memo } from 'react';
 // Shared bar components (from common bars/ folder)
 import {
     CanvasSizeDisplay,
+    ViewportSizeDisplay,
     LabeledIconButton,
     SegmentedToggle,
     VoiceControlsPanel
@@ -84,10 +85,15 @@ function SecondaryFooter({
     canvasSize = { cols: 3, rows: 3 },
     onCanvasSizeChange,
 
+    // Viewport props
+    viewportSize = { cols: 3, rows: 3 },
+    onViewportSizeChange,
+
     // Voice props
     isMuted = false,
     isDeafened = false,
     isInChannel = false,
+    isJoiningVoice = false,
     currentChannel,
     voiceChannels = [],
     onToggleMute,
@@ -187,9 +193,14 @@ function SecondaryFooter({
 
                 {/* Canvas Size */}
                 <CanvasSizeDisplay
-                    cols={canvasSize.cols}
-                    rows={canvasSize.rows}
-                    onClick={onCanvasSizeChange}
+                    size={canvasSize}
+                    onChange={onCanvasSizeChange}
+                />
+
+                {/* Viewport Size */}
+                <ViewportSizeDisplay
+                    size={viewportSize}
+                    onChange={onViewportSizeChange}
                 />
             </div>
 
@@ -200,6 +211,7 @@ function SecondaryFooter({
                 isMuted={isMuted}
                 isDeafened={isDeafened}
                 isInChannel={isInChannel}
+                isJoining={isJoiningVoice}
                 currentChannel={currentChannel}
                 channels={voiceChannels}
                 onToggleMute={onToggleMute}

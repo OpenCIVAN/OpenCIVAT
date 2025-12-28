@@ -123,7 +123,7 @@ export function useVoiceTab(options = {}) {
   // Handlers
   const handleJoin = useCallback(async () => {
     try {
-      const userName = getUserName();
+      const userName = getUserName() || "Anonymous User";
       const roomId = currentChannel || channels[0]?.id || "main";
       await voiceRoomService.joinRoom(roomId, userName);
       setMuted(voiceRoomService.isMuted);
@@ -157,7 +157,7 @@ export function useVoiceTab(options = {}) {
       // If already connected, switch rooms
       if (connectionState === VoiceConnectionState.CONNECTED) {
         try {
-          const userName = getUserName();
+          const userName = getUserName() || "Anonymous User";
           await voiceRoomService.joinRoom(channelId, userName);
           toast.success(
             `Switched to ${

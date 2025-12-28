@@ -45,7 +45,7 @@
 
 .tooltip {
   position: fixed;
-  z-index: 400;
+  z-index: 10001; // Above dropdowns and modals
   max-width: 250px;
   padding: 6px 10px;
   background: $color-bg-elevated;

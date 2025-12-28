@@ -255,12 +255,15 @@ const JoinVoiceButton = memo(function JoinVoiceButton({
     onJoin,
     rooms = [],
     defaultRoom,
+    isJoining = false,
 }) {
     const [showRoomPopup, setShowRoomPopup] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState(defaultRoom);
     const buttonRef = useRef(null);
 
     const handleJoinClick = () => {
+        if (isJoining) return; // Prevent double-click while joining
+
         if (rooms.length > 1) {
             setShowRoomPopup(true);
         } else {
@@ -279,14 +282,24 @@ const JoinVoiceButton = memo(function JoinVoiceButton({
             <button
                 ref={buttonRef}
                 type="button"
-                className="voice-controls-panel__join-btn"
+                className={`voice-controls-panel__join-btn ${isJoining ? 'voice-controls-panel__join-btn--joining' : ''}`}
                 onClick={handleJoinClick}
-                title="Join Voice Channel"
+                title={isJoining ? 'Connecting...' : 'Join Voice Channel'}
+                disabled={isJoining}
             >
-                <Icon name="headsetMic" size={16} />
-                <span>Join Voice</span>
-                {rooms.length > 1 && (
-                    <Icon name="chevronUp" size={12} className="voice-controls-panel__join-chevron" />
+                {isJoining ? (
+                    <>
+                        <Icon name="loader" size={16} className="voice-controls-panel__join-spinner" />
+                        <span>Connecting...</span>
+                    </>
+                ) : (
+                    <>
+                        <Icon name="headsetMic" size={16} />
+                        <span>Join Voice</span>
+                        {rooms.length > 1 && (
+                            <Icon name="chevronUp" size={12} className="voice-controls-panel__join-chevron" />
+                        )}
+                    </>
                 )}
             </button>
             <RoomPopup
@@ -418,6 +431,7 @@ function VoiceControlsPanel({
     isMuted = false,
     isDeafened = false,
     isInChannel = false,
+    isJoining = false,
     currentChannel,
     channels = [],
     onToggleMute,
@@ -438,6 +452,7 @@ function VoiceControlsPanel({
                     onJoin={(room) => onJoinLeave?.(room)}
                     rooms={channels}
                     defaultRoom={currentChannel}
+                    isJoining={isJoining}
                 />
             </div>
         );

@@ -16,6 +16,7 @@ import {
 import {
   VIEWPORT_SIZE_EVENT,
   getInitialViewportState,
+  dispatchViewportSizeChanged,
 } from "./viewportState.js";
 
 // UUID validation regex
@@ -208,11 +209,26 @@ export function useCanvas(canvasId = null) {
   );
 
   const setViewportSize = useCallback((rows, cols) => {
-    setViewport((prev) => ({
-      ...prev,
-      rows: Math.max(1, Math.min(10, rows)),
-      cols: Math.max(1, Math.min(10, cols)),
-    }));
+    setViewport((prev) => {
+      const newRows = Math.max(1, Math.min(10, rows));
+      const newCols = Math.max(1, Math.min(10, cols));
+
+      // Only update and dispatch if actually changed
+      if (prev.rows !== newRows || prev.cols !== newCols) {
+        const newSize = { rows: newRows, cols: newCols };
+        const prevSize = { rows: prev.rows, cols: prev.cols };
+
+        // Dispatch event so useViewportSize hook syncs
+        dispatchViewportSizeChanged(newSize, prevSize);
+
+        return {
+          ...prev,
+          rows: newRows,
+          cols: newCols,
+        };
+      }
+      return prev;
+    });
   }, []);
 
   // Listen for viewport size changes from useViewportSize hook (shared state)
@@ -277,6 +293,29 @@ export function useCanvas(canvasId = null) {
       dimensions: { ...canvas.dimensions, cols: newCols },
     });
   }, [canvas]);
+
+  const setCanvasSize = useCallback(
+    async (newSize) => {
+      if (!canvas) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[useCanvas] setCanvasSize called but canvas is null");
+        }
+        return;
+      }
+      // Canvas can be larger than viewport - only enforce minimum of 1
+      const rows = Math.max(1, newSize.rows);
+      const cols = Math.max(1, newSize.cols);
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[useCanvas] Setting canvas size to ${rows}×${cols}`);
+      }
+
+      return canvasManager.updateCanvas(canvas.id, {
+        dimensions: { rows, cols },
+      });
+    },
+    [canvas]
+  );
 
   // Layout mode operations
   const setLayoutMode = useCallback(
@@ -371,6 +410,7 @@ export function useCanvas(canvasId = null) {
     // Canvas operations
     addRow,
     addColumn,
+    setCanvasSize,
 
     // Layout mode operations
     setLayoutMode,

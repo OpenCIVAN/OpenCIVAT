@@ -40,3 +40,4 @@ export { WorkspaceSelector } from './WorkspaceSelector';
 // Controls
 export { EditToolbar } from './EditToolbar';
 export { CanvasSizeDisplay } from './CanvasSizeDisplay';
+export { ViewportSizeDisplay } from './ViewportSizeDisplay';

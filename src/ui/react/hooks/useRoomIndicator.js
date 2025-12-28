@@ -133,9 +133,9 @@ export function useRoomIndicator({
   // Transform presence users to member format expected by RoomPresenceIndicator
   const roomMembers = useMemo(() => {
     return presenceUsers.map((user) => ({
-      id: user.id || user.clientId,
-      name: user.username || user.name || "Anonymous",
-      color: user.color || "#60a5fa",
+      id: user.userId || user.id || user.clientId,
+      name: user.userName || user.username || user.name || "Anonymous",
+      color: user.userColor || user.color || "#60a5fa",
       avatar: user.avatarUrl || null,
       status: user.status || "active",
       isYou: user.isYou || false,
