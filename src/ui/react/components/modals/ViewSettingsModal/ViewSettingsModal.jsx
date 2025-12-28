@@ -9,7 +9,7 @@
  * - Multiple collapsible sections
  * - Sharing management
  * - Canvas size selection
- * - Link properties configuration
+ * - Link properties configuration (integrated with ViewLinkingService)
  * - Annotation display filters
  * - Display options
  * - Danger zone with delete
@@ -25,21 +25,31 @@
  * />
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
 
 import { Modal } from '@UI/react/components/modals/Modal';
+import { viewLinkingService, LINKING_EVENTS, eventBus } from '@Services';
 
 import './ViewSettingsModal.scss';
 
-// Link property configuration
+// Link property configuration - matches LINKABLE_PROPERTIES in ViewLinkingService
 const LINK_PROPERTIES = [
-    { id: 'camera', icon: 'camera', label: 'Link Camera', color: 'teal' },
-    { id: 'filters', icon: 'filter', label: 'Link Filters', color: 'purple' },
-    { id: 'colorMap', icon: 'palette', label: 'Link Color Map', color: 'pink' },
-    { id: 'widgets', icon: 'layers', label: 'Link Widgets', color: 'amber' },
-    { id: 'cursor', icon: 'target', label: 'Link Cursor', color: 'blue' },
+    { id: 'camera', icon: 'camera', label: 'Camera', desc: 'Sync view angle & zoom', color: 'teal' },
+    { id: 'filters', icon: 'sliders', label: 'Filters', desc: 'Sync active filters', color: 'purple' },
+    { id: 'colorMaps', icon: 'palette', label: 'Colors', desc: 'Sync color mapping', color: 'pink' },
+    { id: 'widgets', icon: 'layout', label: 'Widgets', desc: 'Sync widget states', color: 'amber' },
+    { id: 'cursors', icon: 'crosshair', label: 'Cursors', desc: 'Show collaborator cursors', color: 'blue' },
+    { id: 'annotationDisplay', icon: 'eye', label: 'Annotations', desc: 'Sync annotation visibility', color: 'green' },
 ];
+
+// Link mode labels
+const LINK_MODE_LABELS = {
+    none: 'Not Linked',
+    follow: 'Follow',
+    bidirectional: 'Bidirectional',
+    broadcast: 'Broadcast',
+};
 
 export function ViewSettingsModal({
     isOpen,
@@ -64,10 +74,65 @@ export function ViewSettingsModal({
 }) {
     // Local state for editing
     const [isEditingName, setIsEditingName] = useState(false);
-    const [editName, setEditName] = useState(view.name);
+    const [editName, setEditName] = useState(view?.name || '');
     const [localSharedUsers, setLocalSharedUsers] = useState(sharedUsers);
     const [newShareEmail, setNewShareEmail] = useState('');
     const nameInputRef = useRef(null);
+
+    // Link state - fetched from ViewLinkingService
+    const [linkedProperties, setLinkedProperties] = useState({});
+    const [isViewLinked, setIsViewLinked] = useState(false);
+
+    // Fetch link state from ViewLinkingService
+    useEffect(() => {
+        if (!view?.id || !isOpen) return;
+
+        const updateLinkState = () => {
+            const linked = viewLinkingService.getLinkedProperties(view.id);
+            setLinkedProperties(linked);
+            setIsViewLinked(viewLinkingService.isViewLinked(view.id));
+        };
+
+        // Initial fetch
+        updateLinkState();
+
+        // Subscribe to link events
+        const handlers = [
+            eventBus.on(LINKING_EVENTS.PROPERTY_LINKED, updateLinkState),
+            eventBus.on(LINKING_EVENTS.PROPERTY_UNLINKED, updateLinkState),
+            eventBus.on(LINKING_EVENTS.VIEWS_LINKED, updateLinkState),
+            eventBus.on(LINKING_EVENTS.VIEWS_UNLINKED, updateLinkState),
+        ];
+
+        return () => handlers.forEach(off => off());
+    }, [view?.id, isOpen]);
+
+    // Handler to unlink a single property
+    const handleUnlinkProperty = useCallback((propertyId) => {
+        if (!view?.id) return;
+        viewLinkingService.unlinkProperty(view.id, propertyId);
+    }, [view?.id]);
+
+    // Handler to unlink all properties
+    const handleUnlinkAll = useCallback(() => {
+        if (!view?.id) return;
+        viewLinkingService.unlinkViewFully(view.id);
+    }, [view?.id]);
+
+    // Handler to change link mode for a property
+    const handleChangeLinkMode = useCallback((propertyId, newMode) => {
+        if (!view?.id) return;
+        const currentLink = linkedProperties[propertyId];
+        if (!currentLink) return;
+
+        // Re-link with new mode
+        viewLinkingService.linkProperty(view.id, propertyId, currentLink.sourceViewId, newMode);
+    }, [view?.id, linkedProperties]);
+
+    // Count linked properties
+    const linkedCount = useMemo(() => {
+        return Object.keys(linkedProperties).filter(key => linkedProperties[key]).length;
+    }, [linkedProperties]);
 
     // Extract dataset info from view or dataset prop
     const datasetInfo = useMemo(() => {
@@ -372,36 +437,143 @@ export function ViewSettingsModal({
                     <ModalSection
                         icon="link2"
                         title="Link Properties"
-                        badge={view.linkedCount > 0 ? `${view.linkedCount} linked` : null}
+                        badge={linkedCount > 0 ? `${linkedCount} linked` : null}
                     >
-                        <div className="view-settings-modal__links">
-                            {LINK_PROPERTIES.map(prop => {
-                                const Icon = prop.icon;
-                                const linkConfig = view.linkConfig?.[prop.id] || {};
-                                return (
-                                    <div key={prop.id} className="view-settings-modal__link-row">
-                                        <Icon size={12} data-color={prop.color} />
-                                        <span className="view-settings-modal__link-label">{prop.label}</span>
-                                        <select
-                                            className="view-settings-modal__link-select"
-                                            value={linkConfig.parentId || ''}
-                                            onChange={(e) => onLinkPropertyChange?.(prop.id, {
-                                                enabled: !!e.target.value,
-                                                parentId: e.target.value || null,
-                                            })}
-                                        >
-                                            <option value="">Not linked</option>
-                                            {availableViews
-                                                .filter(v => v.id !== view.id)
-                                                .map(v => (
-                                                    <option key={v.id} value={v.id}>{v.name}</option>
-                                                ))
-                                            }
-                                        </select>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        {linkedCount > 0 ? (
+                            <>
+                                <div className="view-settings-modal__link-info">
+                                    <Icon name="info" size={12} />
+                                    <span>
+                                        This view has {linkedCount} linked {linkedCount === 1 ? 'property' : 'properties'}.
+                                        Changes to linked properties will sync with the source view.
+                                    </span>
+                                </div>
+                                <div className="view-settings-modal__links">
+                                    {LINK_PROPERTIES.map(prop => {
+                                        const linkData = linkedProperties[prop.id];
+                                        const isLinked = !!linkData;
+                                        const sourceViewName = linkData?.sourceViewId
+                                            ? availableViews.find(v => v.id === linkData.sourceViewId)?.name || 'Unknown View'
+                                            : null;
+
+                                        return (
+                                            <div
+                                                key={prop.id}
+                                                className={`view-settings-modal__link-row ${isLinked ? 'view-settings-modal__link-row--linked' : ''}`}
+                                            >
+                                                <div className="view-settings-modal__link-icon" data-color={prop.color}>
+                                                    <Icon name={prop.icon} size={12} />
+                                                </div>
+                                                <div className="view-settings-modal__link-content">
+                                                    <span className="view-settings-modal__link-label">{prop.label}</span>
+                                                    {isLinked ? (
+                                                        <span className="view-settings-modal__link-source">
+                                                            Linked to: {sourceViewName}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="view-settings-modal__link-desc">{prop.desc}</span>
+                                                    )}
+                                                </div>
+                                                {isLinked ? (
+                                                    <div className="view-settings-modal__link-actions">
+                                                        <select
+                                                            className="view-settings-modal__link-mode"
+                                                            value={linkData.mode || 'bidirectional'}
+                                                            onChange={(e) => handleChangeLinkMode(prop.id, e.target.value)}
+                                                            title="Link mode"
+                                                        >
+                                                            <option value="follow">Follow</option>
+                                                            <option value="bidirectional">Bidirectional</option>
+                                                            <option value="broadcast">Broadcast</option>
+                                                        </select>
+                                                        <button
+                                                            className="view-settings-modal__link-unlink"
+                                                            onClick={() => handleUnlinkProperty(prop.id)}
+                                                            title="Unlink this property"
+                                                        >
+                                                            <Icon name="unlink" size={12} />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <select
+                                                        className="view-settings-modal__link-select"
+                                                        value=""
+                                                        onChange={(e) => {
+                                                            if (e.target.value) {
+                                                                viewLinkingService.linkProperty(
+                                                                    view.id,
+                                                                    prop.id,
+                                                                    e.target.value,
+                                                                    'bidirectional'
+                                                                );
+                                                            }
+                                                        }}
+                                                    >
+                                                        <option value="">Not linked</option>
+                                                        {availableViews
+                                                            .filter(v => v.id !== view.id)
+                                                            .map(v => (
+                                                                <option key={v.id} value={v.id}>{v.name}</option>
+                                                            ))
+                                                        }
+                                                    </select>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    className="view-settings-modal__unlink-all"
+                                    onClick={handleUnlinkAll}
+                                >
+                                    <Icon name="unlink" size={12} />
+                                    Unlink All Properties
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="view-settings-modal__link-empty">
+                                    <Icon name="link2" size={24} />
+                                    <p>No linked properties</p>
+                                    <span>Link properties to sync camera, filters, and more with another view.</span>
+                                </div>
+                                <div className="view-settings-modal__links">
+                                    {LINK_PROPERTIES.map(prop => (
+                                        <div key={prop.id} className="view-settings-modal__link-row">
+                                            <div className="view-settings-modal__link-icon" data-color={prop.color}>
+                                                <Icon name={prop.icon} size={12} />
+                                            </div>
+                                            <div className="view-settings-modal__link-content">
+                                                <span className="view-settings-modal__link-label">{prop.label}</span>
+                                                <span className="view-settings-modal__link-desc">{prop.desc}</span>
+                                            </div>
+                                            <select
+                                                className="view-settings-modal__link-select"
+                                                value=""
+                                                onChange={(e) => {
+                                                    if (e.target.value) {
+                                                        viewLinkingService.linkProperty(
+                                                            view.id,
+                                                            prop.id,
+                                                            e.target.value,
+                                                            'bidirectional'
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                <option value="">Link to...</option>
+                                                {availableViews
+                                                    .filter(v => v.id !== view.id)
+                                                    .map(v => (
+                                                        <option key={v.id} value={v.id}>{v.name}</option>
+                                                    ))
+                                                }
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </ModalSection>
 
                     {/* Annotation Display */}

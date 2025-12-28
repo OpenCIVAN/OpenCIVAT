@@ -793,7 +793,21 @@ export function CanvasGrid({
         return set;
     }, [selectedCells]);
 
+    // Debug: Log when grid receives drops
+    const debugGridRef = useRef(null);
+    useEffect(() => {
+        const el = debugGridRef.current;
+        if (!el) return;
+
+        const onDrop = (e) => {
+            console.log('[CanvasGrid] Native drop on grid, target:', e.target.className);
+        };
+        el.addEventListener('drop', onDrop, true);
+        return () => el.removeEventListener('drop', onDrop, true);
+    }, []);
+
     const handleCellDrop = useCallback(async (row, col, dropData) => {
+        console.log('[CanvasGrid] handleCellDrop called:', { row, col, dropData });
         log.debug('handleCellDrop', { row, col, dropData });
 
         try {
@@ -839,11 +853,12 @@ export function CanvasGrid({
                 // Fall through to standard drop handling to place the new view
             }
 
-            // Handle swap actions - swap dragged view with existing view at target
+            // Handle swap actions - when dropping ON an existing view
+            // This replaces the existing view with the dropped one
             if (dropData.action === 'swap' && dropData.existingPlacement) {
-                log.debug('Swap action:', dropData);
+                console.log('[CanvasGrid] Swap action:', dropData);
 
-                // Get source placement ID from dropData
+                // Legacy swap behavior: if dragging within canvas, swap positions
                 const sourcePlacementId = dropData.sourcePlacementId;
                 const targetPlacementId = dropData.existingPlacement.id;
 
@@ -852,8 +867,13 @@ export function CanvasGrid({
                     return; // Swap complete, don't place a new view
                 }
 
-                // If no source placement (dragging from outside canvas),
-                // just replace the existing view - fall through to normal handling
+                // If dropping from panel, remove existing and place new
+                // First remove existing placement
+                const existingPlacementId = dropData.existingPlacement.id;
+                if (existingPlacementId) {
+                    await canvasManager.removePlacement(canvasId, existingPlacementId);
+                }
+                // Fall through to normal handling to place the new view
             }
 
             // IMPORTANT: Check type field FIRST before checking for id
@@ -877,11 +897,14 @@ export function CanvasGrid({
 
             // Case 2: Dataset dropped (create new view)
             if (dropData.type === 'dataset' || (dropData.datasetId && !dropData.viewConfigId)) {
+                console.log('[CanvasGrid] Case 2: Dataset dropped', dropData);
                 log.debug(`Creating new view for dataset ${dropData.datasetId} at [${row}, ${col}]`);
 
                 window.dispatchEvent(new CustomEvent('cia:request-instance', {
                     detail: {
                         datasetId: dropData.datasetId,
+                        fileName: dropData.name, // Pass the dataset name for the view
+                        fileType: dropData.fileType,
                         spawnNew: true,
                         targetRow: row,
                         targetCol: col,
@@ -894,26 +917,27 @@ export function CanvasGrid({
             // Case 3: ViewItem dropped (existing view from Views/Datasets tab)
             // ARCHITECTURE: Each cell gets its OWN ViewConfiguration
             // We DUPLICATE the dropped view to create an independent copy
-            // The new view starts linked to the original (synced by default)
+            // Regular drop = unlinked duplicate (snapshot)
+            // Alt+drop = fully linked view
             if (dropData.viewConfigId || dropData.type === 'view' || dropData.type === 'view-item') {
                 const sourceViewId = dropData.viewConfigId || dropData.viewId || dropData.id;
                 const datasetId = dropData.datasetId;
+                const createLinked = dropData.modifiers?.alt; // Alt key = create linked view
 
+                console.log('[CanvasGrid] Case 3: ViewItem dropped', { sourceViewId, datasetId, createLinked });
                 log.debug(`ViewItem dropped - creating duplicate of ${sourceViewId} at [${row}, ${col}]`);
 
                 // Dispatch request to create a duplicate view and place it
-                // CanvasWorkspace.handleInstanceRequest will:
-                // 1. Duplicate the source view (creating new ViewConfiguration)
-                // 2. Set up default linking to source view
-                // 3. Place the new view at target position
+                console.log('[CanvasGrid] Dispatching cia:request-instance');
                 window.dispatchEvent(new CustomEvent('cia:request-instance', {
                     detail: {
                         datasetId: datasetId,
-                        duplicateViewId: sourceViewId,  // Creates linked duplicate
-                        spawnNew: true,                 // Force new view creation
+                        duplicateViewId: sourceViewId,
+                        spawnNew: true,
                         targetRow: row,
                         targetCol: col,
                         canvasId,
+                        createLinked, // Pass through to ViewLifecycleService
                     },
                 }));
                 return;
@@ -1088,6 +1112,7 @@ export function CanvasGrid({
 
     return (
         <div
+            ref={debugGridRef}
             className={`canvas-grid canvas-grid--${layoutMode} ${inFocusMode ? 'canvas-grid--focus-mode' : ''}`}
             data-render-mode={renderMode}
         >

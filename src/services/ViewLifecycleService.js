@@ -95,6 +95,7 @@ class ViewLifecycleService {
   _setupDOMEventListeners() {
     // Handle cia:request-instance - the main entry point for view creation
     const handleRequestInstance = async (event) => {
+      console.log('[ViewLifecycleService] cia:request-instance received:', event.detail);
       await this._handleInstanceRequest(event.detail);
     };
 
@@ -174,6 +175,7 @@ class ViewLifecycleService {
       targetRow,
       targetCol,
       canvasId,
+      createLinked, // If true, create fully linked view
     } = detail || {};
 
     log.debug("Processing instance request:", {
@@ -186,16 +188,6 @@ class ViewLifecycleService {
     try {
       this._processingRequest = true;
 
-      // Resolve dataset ID
-      const resolvedDatasetId = datasetId || detail?.fileId;
-      if (!resolvedDatasetId) {
-        log.error("No dataset ID provided");
-        eventBus.emit(BUS_EVENTS.VIEW_ERROR, {
-          error: "No dataset ID provided",
-        });
-        return;
-      }
-
       // Build placement options
       const placementOptions = {
         row: targetRow,
@@ -203,9 +195,33 @@ class ViewLifecycleService {
         canvasId,
       };
 
-      // Case 1: Duplicate existing view
+      // Case 1: Duplicate existing view (doesn't need datasetId - gets it from source)
       if (duplicateViewId) {
-        await this.duplicateAndPlaceView(duplicateViewId, placementOptions);
+        log.debug(`Duplicating view ${duplicateViewId} to [${targetRow}, ${targetCol}], linked=${createLinked}`);
+        const result = await this.duplicateAndPlaceView(duplicateViewId, placementOptions);
+
+        // If createLinked is true, set up linking between source and new view
+        if (createLinked && result?.view) {
+          try {
+            const { viewLinkingService } = await import("@Services");
+            viewLinkingService.linkViewsFully(duplicateViewId, result.view.id, {
+              mode: "bidirectional",
+            });
+            log.info(`Created linked view: ${result.view.id} linked to ${duplicateViewId}`);
+          } catch (linkError) {
+            log.warn("Failed to link views:", linkError);
+          }
+        }
+        return;
+      }
+
+      // Resolve dataset ID - only required for non-duplicate operations
+      const resolvedDatasetId = datasetId || detail?.fileId;
+      if (!resolvedDatasetId) {
+        log.error("No dataset ID provided");
+        eventBus.emit(BUS_EVENTS.VIEW_ERROR, {
+          error: "No dataset ID provided",
+        });
         return;
       }
 

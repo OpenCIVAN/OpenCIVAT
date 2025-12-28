@@ -59,12 +59,13 @@ export const Thumbnail = memo(function Thumbnail({
     const typeIconName = getTypeIcon(instanceType);
     const isClickable = !!onClick;
 
-    // Common wrapper props
+    // Common wrapper props - never draggable to not interfere with parent drag
     const wrapperProps = {
         className: `thumbnail ${sizeClass} ${className}`.trim(),
         onClick,
         role: isClickable ? 'button' : undefined,
         tabIndex: isClickable ? 0 : undefined,
+        draggable: false,
     };
 
     // Loading state
@@ -116,12 +117,13 @@ export const Thumbnail = memo(function Thumbnail({
     // Loaded - display the thumbnail
     if (status === THUMBNAIL_STATUS.LOADED && url) {
         return (
-            <div {...wrapperProps} className={`${wrapperProps.className} thumbnail--loaded`}>
+            <div {...wrapperProps} className={`${wrapperProps.className} thumbnail--loaded`} draggable={false}>
                 <img
                     src={url}
                     alt={alt}
                     className="thumbnail__image"
                     loading="lazy"
+                    draggable={false}
                 />
             </div>
         );

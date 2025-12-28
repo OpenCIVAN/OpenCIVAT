@@ -672,10 +672,29 @@ export function useCanvasNavigator({
 
   const handleDragStart = useCallback((cell, e) => {
     if (!cell) return;
+    console.log('[CanvasNavigator] Drag started for cell:', cell);
     setDraggedCell(cell);
     if (e?.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", cell.id);
+
+      // Also set view data if this cell contains a view
+      // Cell can have viewId or viewConfigurationId depending on source
+      const viewId = cell.viewId || cell.viewConfigurationId;
+      if (viewId) {
+        const viewData = {
+          type: 'view-item',
+          id: viewId,
+          viewConfigId: viewId,
+          viewId: viewId,
+          name: cell.name || cell.label,
+          color: cell.color,
+          datasetId: cell.datasetId,
+          sourcePlacementId: cell.id, // Placement ID for swap operations
+        };
+        console.log('[CanvasNavigator] Setting view drag data:', viewData);
+        e.dataTransfer.setData('application/x-viewitem', JSON.stringify(viewData));
+      }
     }
   }, []);
 

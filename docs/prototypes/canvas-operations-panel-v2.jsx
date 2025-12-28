@@ -431,7 +431,7 @@ const OperationRow = ({ operation, userColor, onRevert, isReverted, showUser = t
             flexShrink: 0,
           }}
         >
-          <Icon name="x" size={11} />
+          <Icon name="close" size={11} />
         </button>
       )}
     </div>
@@ -1503,7 +1503,7 @@ const CanvasOperationsPanel = ({ onClose, onMinimize }) => {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          <Icon name="x" size={14} />
+          <Icon name="close" size={14} />
         </button>
       </div>
       

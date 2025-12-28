@@ -479,6 +479,50 @@
 // LINK PROPERTIES
 // =============================================================================
 
+.view-settings-modal__link-info {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba($color-accent-teal, 0.1);
+  border-radius: $radius-sm;
+  margin-bottom: $spacing-md;
+
+  svg {
+    color: $color-accent-teal;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  span {
+    font-size: 10px;
+    color: $color-accent-teal;
+    line-height: 1.4;
+  }
+}
+
+.view-settings-modal__link-empty {
+  text-align: center;
+  padding: $spacing-md 0;
+  color: $color-text-muted;
+
+  svg {
+    opacity: 0.4;
+    margin-bottom: $spacing-sm;
+  }
+
+  p {
+    font-size: 12px;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    margin-bottom: 4px;
+  }
+
+  span {
+    font-size: 10px;
+  }
+}
+
 .view-settings-modal__links {
   display: flex;
   flex-direction: column;
@@ -489,32 +533,128 @@
   display: flex;
   align-items: center;
   gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
 
-  svg {
-    flex-shrink: 0;
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: $color-border-default;
+  }
 
-    &[data-color="teal"] {
-      color: $color-accent-teal;
-    }
-    &[data-color="purple"] {
-      color: $color-accent-purple;
-    }
-    &[data-color="pink"] {
-      color: $color-accent-pink;
-    }
-    &[data-color="amber"] {
-      color: $color-accent-amber;
-    }
-    &[data-color="blue"] {
-      color: $color-accent-blue;
+  &--linked {
+    background: rgba($color-accent-teal, 0.08);
+    border-color: rgba($color-accent-teal, 0.25);
+
+    &:hover {
+      background: rgba($color-accent-teal, 0.12);
+      border-color: rgba($color-accent-teal, 0.35);
     }
   }
 }
 
-.view-settings-modal__link-label {
+.view-settings-modal__link-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  background: rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+
+  &[data-color="teal"] {
+    color: $color-accent-teal;
+    background: rgba($color-accent-teal, 0.15);
+  }
+  &[data-color="purple"] {
+    color: $color-accent-purple;
+    background: rgba($color-accent-purple, 0.15);
+  }
+  &[data-color="pink"] {
+    color: $color-accent-pink;
+    background: rgba($color-accent-pink, 0.15);
+  }
+  &[data-color="amber"] {
+    color: $color-accent-amber;
+    background: rgba($color-accent-amber, 0.15);
+  }
+  &[data-color="blue"] {
+    color: $color-accent-blue;
+    background: rgba($color-accent-blue, 0.15);
+  }
+  &[data-color="green"] {
+    color: $color-accent-green;
+    background: rgba($color-accent-green, 0.15);
+  }
+}
+
+.view-settings-modal__link-content {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.view-settings-modal__link-label {
   font-size: 11px;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.view-settings-modal__link-desc {
+  font-size: 9px;
+  color: $color-text-muted;
+}
+
+.view-settings-modal__link-source {
+  font-size: 9px;
+  color: $color-accent-teal;
+}
+
+.view-settings-modal__link-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-settings-modal__link-mode {
+  padding: 4px $spacing-sm;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
   color: $color-text-secondary;
+  font-size: 9px;
+  cursor: pointer;
+  min-width: 90px;
+
+  &:focus {
+    border-color: $color-accent-teal;
+    outline: none;
+  }
+}
+
+.view-settings-modal__link-unlink {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba($color-error, 0.15);
+    border-color: rgba($color-error, 0.3);
+    color: $color-error;
+  }
 }
 
 .view-settings-modal__link-select {
@@ -525,11 +665,33 @@
   color: $color-text-secondary;
   font-size: 10px;
   cursor: pointer;
-  min-width: 120px;
+  min-width: 100px;
 
   &:focus {
-    border-color: $color-accent-blue;
+    border-color: $color-accent-teal;
     outline: none;
+  }
+}
+
+.view-settings-modal__unlink-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: 1px solid rgba($color-error, 0.25);
+  border-radius: $radius-sm;
+  color: $color-error;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba($color-error, 0.1);
+    border-color: rgba($color-error, 0.4);
   }
 }
 

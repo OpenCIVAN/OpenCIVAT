@@ -22,5 +22,8 @@
 // View lifecycle operations
 export { viewLifecycleService } from "./ViewLifecycleService.js";
 
+// View linking operations
+export { viewLinkingService, LINKING_EVENTS } from "./ViewLinkingService.js";
+
 // Re-export commonly used event bus items for convenience
 export { eventBus, BUS_EVENTS } from "@Core/events/EventBus.js";

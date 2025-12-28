@@ -289,9 +289,12 @@ export const ViewItem = memo(function ViewItem({
     // =========================================================================
 
     const handleDragStart = useCallback((e) => {
+        console.log('[ViewItem] Drag started for view:', view?.id, view?.name);
+
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', index?.toString() || '0');
-        e.dataTransfer.setData('application/x-viewitem', JSON.stringify({
+
+        const dragData = {
             type: 'view-item',
             id: view.id,
             viewConfigId: view.id,
@@ -301,7 +304,11 @@ export const ViewItem = memo(function ViewItem({
             datasetId: view.datasetId,
             rowSpan: view.rowSpan || 1,
             colSpan: view.colSpan || 1,
-        }));
+        };
+
+        console.log('[ViewItem] Setting drag data:', dragData);
+        e.dataTransfer.setData('application/x-viewitem', JSON.stringify(dragData));
+
         onDragStart?.(index);
     }, [view, index, onDragStart]);
 

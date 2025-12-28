@@ -407,7 +407,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
                         </>
                     )}
                     <NavBtn size="xs" onClick={handleMinimize} title="Close">
-                        <Icon name="x" size={isVR ? 10 : 8} />
+                        <Icon name="close" size={isVR ? 10 : 8} />
                     </NavBtn>
                 </div>
             </div>
