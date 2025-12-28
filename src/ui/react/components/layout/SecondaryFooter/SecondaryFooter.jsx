@@ -83,6 +83,7 @@ function SecondaryFooter({
 
     // Canvas props
     canvasSize = { cols: 3, rows: 3 },
+    canvasPlacements = [],
     onCanvasSizeChange,
 
     // Viewport props
@@ -194,12 +195,14 @@ function SecondaryFooter({
                 {/* Canvas Size */}
                 <CanvasSizeDisplay
                     size={canvasSize}
+                    placements={canvasPlacements}
                     onChange={onCanvasSizeChange}
                 />
 
-                {/* Viewport Size */}
+                {/* Viewport Size - constrained to canvas dimensions */}
                 <ViewportSizeDisplay
                     size={viewportSize}
+                    maxSize={canvasSize}
                     onChange={onViewportSizeChange}
                 />
             </div>

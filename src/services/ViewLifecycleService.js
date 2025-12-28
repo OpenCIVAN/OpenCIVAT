@@ -95,7 +95,6 @@ class ViewLifecycleService {
   _setupDOMEventListeners() {
     // Handle cia:request-instance - the main entry point for view creation
     const handleRequestInstance = async (event) => {
-      console.log('[ViewLifecycleService] cia:request-instance received:', event.detail);
       await this._handleInstanceRequest(event.detail);
     };
 

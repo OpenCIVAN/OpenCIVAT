@@ -332,6 +332,10 @@ export function DatasetsPanelContent() {
     const getViewsForDataset = useCallback((datasetId) => {
         try {
             const views = getViewConfigurationManager()?.getViewsForDataset?.(datasetId) || [];
+            // Get dataset info to properly set datasetName on views
+            const dataset = loadedDatasets?.find(d => d.id === datasetId);
+            const datasetName = dataset?.name || dataset?.filename;
+
             return views
                 .filter(v => v.status !== 'trashed' && v.status !== 'archived')
                 .map(v => {
@@ -340,6 +344,8 @@ export function DatasetsPanelContent() {
                     const placement = canvasManager?.getPlacementForView?.(v.id);
                     return {
                         ...v,
+                        // Ensure datasetName is set from the parent dataset, not derived from view name
+                        datasetName: v.datasetName || datasetName,
                         color: instanceColor || v.color || '#60a5fa',
                         position: placement ? { row: placement.row, col: placement.col } : null,
                         status: v.status === 'active' || placement ? 'active' : 'inactive',
@@ -349,7 +355,7 @@ export function DatasetsPanelContent() {
             log.warn('Error getting views for dataset:', err);
             return [];
         }
-    }, []);
+    }, [loadedDatasets]);
 
     // Filter views based on active filters
     const getFilteredViews = useCallback((dataset) => {

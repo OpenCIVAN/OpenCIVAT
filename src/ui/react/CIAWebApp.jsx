@@ -316,8 +316,14 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, [setCanvasSize]);
 
   const handleViewportSizeChange = useCallback((newSize) => {
-    // Update viewport size (how many cells are visible)
-    setViewportSize?.(newSize.rows, newSize.cols);
+    // Validate input to prevent NaN propagation
+    const rows = typeof newSize?.rows === 'number' && !isNaN(newSize.rows) ? newSize.rows : null;
+    const cols = typeof newSize?.cols === 'number' && !isNaN(newSize.cols) ? newSize.cols : null;
+
+    if (rows !== null && cols !== null) {
+      // Update viewport size (how many cells are visible)
+      setViewportSize?.(rows, cols);
+    }
   }, [setViewportSize]);
 
   const handleUndo = useCallback(() => {
@@ -472,6 +478,7 @@ export function CIAWebApp({ username, userId, projectId }) {
                   onRedo={handleRedo}
                   // Canvas size (connected to canvas)
                   canvasSize={canvasSize}
+                  canvasPlacements={canvas?.placements || []}
                   onCanvasSizeChange={handleCanvasSizeChange}
                   // Viewport size (how many cells visible)
                   viewportSize={viewportSize}

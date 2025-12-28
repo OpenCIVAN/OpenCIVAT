@@ -209,17 +209,25 @@ export function useCanvas(canvasId = null) {
   );
 
   const setViewportSize = useCallback((rows, cols) => {
-    setViewport((prev) => {
-      const newRows = Math.max(1, Math.min(10, rows));
-      const newCols = Math.max(1, Math.min(10, cols));
+    // Protect against NaN - use defaults as fallback
+    const safeInputRows = typeof rows === 'number' && !isNaN(rows) ? rows : 3;
+    const safeInputCols = typeof cols === 'number' && !isNaN(cols) ? cols : 3;
 
-      // Only update and dispatch if actually changed
+    // Constrain viewport to canvas dimensions (or max 10 if no canvas)
+    const maxRows = canvas?.dimensions?.rows || 10;
+    const maxCols = canvas?.dimensions?.cols || 10;
+    const newRows = Math.max(1, Math.min(maxRows, safeInputRows));
+    const newCols = Math.max(1, Math.min(maxCols, safeInputCols));
+
+    setViewport((prev) => {
+      // Only update if actually changed
       if (prev.rows !== newRows || prev.cols !== newCols) {
+        // Defer event dispatch to avoid updating other components during render
         const newSize = { rows: newRows, cols: newCols };
         const prevSize = { rows: prev.rows, cols: prev.cols };
-
-        // Dispatch event so useViewportSize hook syncs
-        dispatchViewportSizeChanged(newSize, prevSize);
+        queueMicrotask(() => {
+          dispatchViewportSizeChanged(newSize, prevSize);
+        });
 
         return {
           ...prev,
@@ -229,17 +237,28 @@ export function useCanvas(canvasId = null) {
       }
       return prev;
     });
-  }, []);
+  }, [canvas?.dimensions?.rows, canvas?.dimensions?.cols]);
 
   // Listen for viewport size changes from useViewportSize hook (shared state)
+  // Canvas dimensions used to constrain viewport size
+  const canvasRows = canvas?.dimensions?.rows || 10;
+  const canvasCols = canvas?.dimensions?.cols || 10;
+
   useEffect(() => {
     const handleViewportSizeChanged = (e) => {
       const { size } = e.detail;
-      if (size?.rows && size?.cols) {
+      // Validate that we have valid numbers before updating
+      const inputRows = size?.rows;
+      const inputCols = size?.cols;
+      const validRows = typeof inputRows === 'number' && !isNaN(inputRows) && inputRows > 0;
+      const validCols = typeof inputCols === 'number' && !isNaN(inputCols) && inputCols > 0;
+
+      if (validRows && validCols) {
         setViewport((prev) => ({
           ...prev,
-          rows: Math.max(1, Math.min(10, size.rows)),
-          cols: Math.max(1, Math.min(10, size.cols)),
+          // Constrain viewport to canvas dimensions
+          rows: Math.max(1, Math.min(canvasRows, inputRows)),
+          cols: Math.max(1, Math.min(canvasCols, inputCols)),
         }));
       }
     };
@@ -250,7 +269,7 @@ export function useCanvas(canvasId = null) {
         VIEWPORT_SIZE_EVENT,
         handleViewportSizeChanged
       );
-  }, []);
+  }, [canvasRows, canvasCols]);
 
   // Placement operations
   const addPlacement = useCallback(

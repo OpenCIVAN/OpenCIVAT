@@ -793,21 +793,7 @@ export function CanvasGrid({
         return set;
     }, [selectedCells]);
 
-    // Debug: Log when grid receives drops
-    const debugGridRef = useRef(null);
-    useEffect(() => {
-        const el = debugGridRef.current;
-        if (!el) return;
-
-        const onDrop = (e) => {
-            console.log('[CanvasGrid] Native drop on grid, target:', e.target.className);
-        };
-        el.addEventListener('drop', onDrop, true);
-        return () => el.removeEventListener('drop', onDrop, true);
-    }, []);
-
     const handleCellDrop = useCallback(async (row, col, dropData) => {
-        console.log('[CanvasGrid] handleCellDrop called:', { row, col, dropData });
         log.debug('handleCellDrop', { row, col, dropData });
 
         try {
@@ -856,7 +842,6 @@ export function CanvasGrid({
             // Handle swap actions - when dropping ON an existing view
             // This replaces the existing view with the dropped one
             if (dropData.action === 'swap' && dropData.existingPlacement) {
-                console.log('[CanvasGrid] Swap action:', dropData);
 
                 // Legacy swap behavior: if dragging within canvas, swap positions
                 const sourcePlacementId = dropData.sourcePlacementId;
@@ -897,7 +882,6 @@ export function CanvasGrid({
 
             // Case 2: Dataset dropped (create new view)
             if (dropData.type === 'dataset' || (dropData.datasetId && !dropData.viewConfigId)) {
-                console.log('[CanvasGrid] Case 2: Dataset dropped', dropData);
                 log.debug(`Creating new view for dataset ${dropData.datasetId} at [${row}, ${col}]`);
 
                 window.dispatchEvent(new CustomEvent('cia:request-instance', {
@@ -924,11 +908,7 @@ export function CanvasGrid({
                 const datasetId = dropData.datasetId;
                 const createLinked = dropData.modifiers?.alt; // Alt key = create linked view
 
-                console.log('[CanvasGrid] Case 3: ViewItem dropped', { sourceViewId, datasetId, createLinked });
                 log.debug(`ViewItem dropped - creating duplicate of ${sourceViewId} at [${row}, ${col}]`);
-
-                // Dispatch request to create a duplicate view and place it
-                console.log('[CanvasGrid] Dispatching cia:request-instance');
                 window.dispatchEvent(new CustomEvent('cia:request-instance', {
                     detail: {
                         datasetId: datasetId,
@@ -1112,7 +1092,6 @@ export function CanvasGrid({
 
     return (
         <div
-            ref={debugGridRef}
             className={`canvas-grid canvas-grid--${layoutMode} ${inFocusMode ? 'canvas-grid--focus-mode' : ''}`}
             data-render-mode={renderMode}
         >

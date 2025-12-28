@@ -125,6 +125,7 @@ const DEFAULT_CONFIG = {
  */
 export function useCanvasDimensions(config = {}) {
   // Merge config with defaults
+  // CRITICAL: Validate numeric values to prevent NaN propagation
   const {
     viewportCols,
     viewportRows,
@@ -134,11 +135,31 @@ export function useCanvasDimensions(config = {}) {
     retryInterval,
     resizeDebounce,
   } = useMemo(
-    () => ({
-      ...DEFAULT_CONFIG,
-      ...config,
-      padding: { ...DEFAULT_CONFIG.padding, ...config.padding },
-    }),
+    () => {
+      const merged = {
+        ...DEFAULT_CONFIG,
+        ...config,
+        padding: { ...DEFAULT_CONFIG.padding, ...config.padding },
+      };
+
+      // Ensure viewportCols and viewportRows are valid positive numbers
+      // This prevents NaN from propagating through calculations
+      const safeViewportCols = typeof merged.viewportCols === 'number' &&
+        !isNaN(merged.viewportCols) && merged.viewportCols > 0
+        ? merged.viewportCols
+        : DEFAULT_CONFIG.viewportCols;
+
+      const safeViewportRows = typeof merged.viewportRows === 'number' &&
+        !isNaN(merged.viewportRows) && merged.viewportRows > 0
+        ? merged.viewportRows
+        : DEFAULT_CONFIG.viewportRows;
+
+      return {
+        ...merged,
+        viewportCols: safeViewportCols,
+        viewportRows: safeViewportRows,
+      };
+    },
     [
       config.viewportCols,
       config.viewportRows,
@@ -192,6 +213,12 @@ export function useCanvasDimensions(config = {}) {
    */
   const calculateSizes = useCallback(
     (containerWidth, containerHeight) => {
+      // Validate inputs - prevent NaN propagation
+      if (typeof containerWidth !== 'number' || isNaN(containerWidth) ||
+          typeof containerHeight !== 'number' || isNaN(containerHeight)) {
+        return null;
+      }
+
       // Available space after padding
       const availableWidth = containerWidth - padding.left - padding.right;
       const availableHeight = containerHeight - padding.top - padding.bottom;
@@ -200,13 +227,25 @@ export function useCanvasDimensions(config = {}) {
         return null;
       }
 
+      // Ensure we have valid divisors (already validated in useMemo, but double-check)
+      const safeCols = viewportCols > 0 ? viewportCols : 3;
+      const safeRows = viewportRows > 0 ? viewportRows : 2;
+
       // Calculate cell size to fit exactly viewport cells
       // Formula: availableSpace = (cellSize * numCells) + (gap * (numCells - 1))
       // Solving: cellSize = (availableSpace - gap * (numCells - 1)) / numCells
       const cellWidth =
-        (availableWidth - gap * (viewportCols - 1)) / viewportCols;
+        (availableWidth - gap * (safeCols - 1)) / safeCols;
       const cellHeight =
-        (availableHeight - gap * (viewportRows - 1)) / viewportRows;
+        (availableHeight - gap * (safeRows - 1)) / safeRows;
+
+      // Final NaN check - should never happen but prevents CSS errors
+      if (isNaN(cellWidth) || isNaN(cellHeight) || cellWidth <= 0 || cellHeight <= 0) {
+        log.warn('[useCanvasDimensions] Invalid cell dimensions calculated:', {
+          cellWidth, cellHeight, containerWidth, containerHeight, safeCols, safeRows
+        });
+        return null;
+      }
 
       // No minimums - true zoom behavior
       // UI adapts via render mode
@@ -522,18 +561,30 @@ export function useCanvasDimensions(config = {}) {
     });
   }, [attemptMeasurement]);
 
-  // Computed values
+  // Computed values with NaN protection
+  // Use safe values to prevent CSS errors if somehow invalid values leak through
+  const safeCellWidth = typeof cellSize.width === 'number' && !isNaN(cellSize.width) && cellSize.width > 0
+    ? cellSize.width : 300;
+  const safeCellHeight = typeof cellSize.height === 'number' && !isNaN(cellSize.height) && cellSize.height > 0
+    ? cellSize.height : 200;
+
   const totalGapWidth = gap * (viewportCols - 1);
   const totalGapHeight = gap * (viewportRows - 1);
-  const gridWidth = cellSize.width * viewportCols + totalGapWidth;
-  const gridHeight = cellSize.height * viewportRows + totalGapHeight;
+  const gridWidth = safeCellWidth * viewportCols + totalGapWidth;
+  const gridHeight = safeCellHeight * viewportRows + totalGapHeight;
+
+  // Return safe cellSize to prevent NaN from leaking to consumers
+  const safeCellSize = {
+    width: safeCellWidth,
+    height: safeCellHeight,
+  };
 
   return {
     // State
     isReady,
     measurementError,
     containerSize,
-    cellSize,
+    cellSize: safeCellSize,
     renderMode,
 
     // Computed

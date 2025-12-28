@@ -30,6 +30,7 @@ export { useCanvas, useViewport, useSubsets } from "./useCanvas.js";
 export { useCanvasSelection } from "./useCanvasSelection.js";
 export { useCanvasDimensions } from "./useCanvasDimensions.js";
 export { useViewportSize } from "./useViewportSize.js";
+export { useViewportConstraints } from "./useViewportConstraints.js";
 export {
   VIEWPORT_STORAGE_KEY,
   VIEWPORT_SIZE_EVENT,
@@ -41,6 +42,43 @@ export {
   loadCanvasSize,
   saveCanvasSize,
 } from "./canvasState.js";
+
+// =============================================================================
+// DRAG AND DROP (CENTRALIZED)
+// =============================================================================
+
+export {
+  DRAG_TYPES,
+  DROP_ZONES,
+  parseDragData,
+  serializeDragData,
+  setDragData,
+  getDropZone,
+  hasDragType,
+  hasAnyCIADragType,
+} from "./dragDropTypes.js";
+
+export {
+  useDragSource,
+  useViewItemDragSource,
+  useDatasetDragSource,
+} from "./useDragSource.js";
+
+export {
+  useDropTarget,
+  useSimpleDropTarget,
+  useCanvasCellDropTarget,
+} from "./useDropTarget.js";
+
+// =============================================================================
+// MANAGER SUBSCRIPTIONS (CENTRALIZED)
+// =============================================================================
+
+export {
+  useManagerSubscription,
+  useManagerEvent,
+  useManagerSubscriptionWithInit,
+} from "./useManagerSubscription.js";
 
 // =============================================================================
 // DATA MANAGEMENT (REFACTORED)

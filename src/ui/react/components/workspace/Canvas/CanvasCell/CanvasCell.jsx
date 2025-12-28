@@ -210,17 +210,11 @@ export const CanvasCell = memo(function CanvasCell({
     const handleDragOver = useCallback((e) => {
         e.preventDefault();
         // Accept both 'copy' (from DatasetParent) and 'move' (from ViewItem)
-        // Use 'move' as default since that's more common for drag operations
         const allowedEffect = e.dataTransfer.effectAllowed;
         if (allowedEffect === 'copy' || allowedEffect === 'copyMove') {
             e.dataTransfer.dropEffect = 'copy';
         } else {
             e.dataTransfer.dropEffect = 'move';
-        }
-
-        // Log occasionally (not every frame)
-        if (Math.random() < 0.01) {
-            console.log('[CanvasCell] DragOver at', { row, col, isEmpty, allowedEffect });
         }
 
         // Calculate which drop zone we're in
@@ -256,16 +250,12 @@ export const CanvasCell = memo(function CanvasCell({
     // Parse drop data from drag event
     const parseDropData = useCallback((e) => {
         try {
-            // Debug: Log all available MIME types
             const types = Array.from(e.dataTransfer.types);
-            console.log('[CanvasCell] Available MIME types:', types);
-
             let data;
 
             // Try CIA dataset format (from DatasetsTab)
             data = e.dataTransfer.getData('application/cia-dataset');
             if (data) {
-                console.log('[CanvasCell] cia-dataset data:', data);
                 const parsed = JSON.parse(data);
                 return { type: 'dataset', datasetId: parsed.id || parsed.datasetId, ...parsed };
             }
@@ -273,7 +263,6 @@ export const CanvasCell = memo(function CanvasCell({
             // Try x-dataset format (legacy)
             data = e.dataTransfer.getData('application/x-dataset');
             if (data) {
-                console.log('[CanvasCell] x-dataset data:', data);
                 const parsed = JSON.parse(data);
                 return { type: 'dataset', datasetId: parsed.id || parsed.datasetId, ...parsed };
             }
@@ -281,7 +270,6 @@ export const CanvasCell = memo(function CanvasCell({
             // Try ViewItem format (from Views tab - x-viewitem MIME type)
             data = e.dataTransfer.getData('application/x-viewitem');
             if (data) {
-                console.log('[CanvasCell] x-viewitem data:', data);
                 const parsed = JSON.parse(data);
                 return { type: 'view', viewConfigId: parsed.id || parsed.viewConfigId, ...parsed };
             }
@@ -289,7 +277,6 @@ export const CanvasCell = memo(function CanvasCell({
             // Fall back to generic JSON (from files tab or other sources)
             data = e.dataTransfer.getData('application/json');
             if (data) {
-                console.log('[CanvasCell] application/json data:', data);
                 const parsed = JSON.parse(data);
 
                 if (parsed.type === 'dataset') {
@@ -306,7 +293,6 @@ export const CanvasCell = memo(function CanvasCell({
             // Try text/plain as last resort (might contain JSON)
             data = e.dataTransfer.getData('text/plain');
             if (data) {
-                console.log('[CanvasCell] text/plain data:', data);
                 try {
                     const parsed = JSON.parse(data);
                     if (parsed.viewConfigId || parsed.viewId || parsed.id) {
@@ -320,15 +306,13 @@ export const CanvasCell = memo(function CanvasCell({
                 }
             }
 
-            // Last resort: check if any type contains parseable data
+            // Last resort: check if any application/* type contains parseable data
             for (const mimeType of types) {
                 if (mimeType.startsWith('application/')) {
                     data = e.dataTransfer.getData(mimeType);
                     if (data) {
-                        console.log(`[CanvasCell] Found data in ${mimeType}:`, data);
                         try {
                             const parsed = JSON.parse(data);
-                            // Try to determine type from content
                             if (parsed.datasetId || parsed.type === 'dataset') {
                                 return { type: 'dataset', datasetId: parsed.datasetId || parsed.id, ...parsed };
                             }
@@ -343,10 +327,8 @@ export const CanvasCell = memo(function CanvasCell({
                 }
             }
 
-            console.warn('[CanvasCell] No valid drop data found in any MIME type');
             return null;
-        } catch (err) {
-            console.error('[CanvasCell] Error parsing drop data:', err);
+        } catch {
             return null;
         }
     }, []);
@@ -356,15 +338,8 @@ export const CanvasCell = memo(function CanvasCell({
         const dropZone = activeDropZone;
         setActiveDropZone(DROP_ZONES.NONE);
 
-        console.log('[CanvasCell] Drop received at', { row, col, dropZone, isEmpty });
-
         const dropData = parseDropData(e);
-        console.log('[CanvasCell] Parsed drop data:', dropData);
-
-        if (!dropData) {
-            console.warn('[CanvasCell] No drop data parsed');
-            return;
-        }
+        if (!dropData) return;
 
         // Get modifier keys for push behavior
         const modifiers = {
@@ -374,12 +349,9 @@ export const CanvasCell = memo(function CanvasCell({
         };
 
         // Handle based on drop zone
-        console.log('[CanvasCell] Processing drop zone:', dropZone, 'isEmpty:', isEmpty, 'onDrop exists:', !!onDrop);
-
         switch (dropZone) {
             case DROP_ZONES.PLACE:
                 // Place in empty cell
-                console.log('[CanvasCell] PLACE zone - calling onDrop');
                 if (onDrop && isEmpty) {
                     if (dropData.type === 'dataset') {
                         onDrop(row, col, { datasetId: dropData.datasetId, ...dropData, modifiers });
@@ -388,8 +360,6 @@ export const CanvasCell = memo(function CanvasCell({
                     } else {
                         onDrop(row, col, { ...dropData, modifiers });
                     }
-                } else {
-                    console.warn('[CanvasCell] PLACE zone but onDrop missing or cell not empty:', { onDrop: !!onDrop, isEmpty });
                 }
                 break;
 

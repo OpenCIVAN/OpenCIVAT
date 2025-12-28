@@ -131,15 +131,26 @@ export function isValidViewportSize(size) {
  * @returns {{ rows: number, cols: number }} Clamped size
  */
 export function clampViewportSize(rows, cols, maxSize = MAX_VIEWPORT_SIZE) {
+  // CRITICAL: Handle NaN values - Math.floor(NaN) = NaN which propagates
+  // Fall back to default values if input is invalid
+  const safeRows = typeof rows === 'number' && !isNaN(rows) && rows > 0
+    ? Math.floor(rows)
+    : DEFAULT_VIEWPORT_SIZE.rows;
+  const safeCols = typeof cols === 'number' && !isNaN(cols) && cols > 0
+    ? Math.floor(cols)
+    : DEFAULT_VIEWPORT_SIZE.cols;
+
+  // Also validate maxSize to prevent NaN propagation from there
+  const safeMaxRows = typeof maxSize?.rows === 'number' && !isNaN(maxSize.rows) && maxSize.rows > 0
+    ? maxSize.rows
+    : MAX_VIEWPORT_SIZE.rows;
+  const safeMaxCols = typeof maxSize?.cols === 'number' && !isNaN(maxSize.cols) && maxSize.cols > 0
+    ? maxSize.cols
+    : MAX_VIEWPORT_SIZE.cols;
+
   return {
-    rows: Math.max(
-      MIN_VIEWPORT_SIZE.rows,
-      Math.min(maxSize.rows, Math.floor(rows))
-    ),
-    cols: Math.max(
-      MIN_VIEWPORT_SIZE.cols,
-      Math.min(maxSize.cols, Math.floor(cols))
-    ),
+    rows: Math.max(MIN_VIEWPORT_SIZE.rows, Math.min(safeMaxRows, safeRows)),
+    cols: Math.max(MIN_VIEWPORT_SIZE.cols, Math.min(safeMaxCols, safeCols)),
   };
 }
 

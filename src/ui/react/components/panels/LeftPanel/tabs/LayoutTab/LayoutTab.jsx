@@ -324,7 +324,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                 {/* New View Size Card */}
                 <div className="layout-tab__card" data-color="green">
                     <div className="layout-tab__card-header">
-                        <Icon name="plusCircle" size={10} />
+                        <Icon name="add_circle" size={10} />
                         <span>New View Size</span>
                     </div>
                     <SpawnSizePicker value={spawnSize} onChange={setSpawnSize} />
@@ -341,7 +341,6 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                     </div>
                     <div className="layout-tab__quick-layouts">
                         {QUICK_LAYOUTS.map(layout => {
-                            const Icon = layout.icon;
                             return (
                                 <button
                                     key={layout.id}
@@ -349,7 +348,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                                     onClick={() => handleQuickLayout(layout)}
                                     title={layout.label}
                                 >
-                                    <Icon size={14} />
+                                    <Icon name={layout.icon} size={14} />
                                     <span>{layout.label}</span>
                                 </button>
                             );
