@@ -899,27 +899,47 @@ export function CanvasGrid({
             }
 
             // Case 3: ViewItem dropped (existing view from Views/Datasets tab)
-            // ARCHITECTURE: Each cell gets its OWN ViewConfiguration
-            // We DUPLICATE the dropped view to create an independent copy
-            // Regular drop = unlinked duplicate (snapshot)
-            // Alt+drop = fully linked view
+            // ARCHITECTURE:
+            // - If view is NOT on canvas: PLACE IT (move, not copy)
+            // - If view IS on canvas: DUPLICATE it (copy)
+            // - Alt+drop = create fully linked view (regardless of placement status)
             if (dropData.viewConfigId || dropData.type === 'view' || dropData.type === 'view-item') {
                 const sourceViewId = dropData.viewConfigId || dropData.viewId || dropData.id;
                 const datasetId = dropData.datasetId;
                 const createLinked = dropData.modifiers?.alt; // Alt key = create linked view
 
-                log.debug(`ViewItem dropped - creating duplicate of ${sourceViewId} at [${row}, ${col}]`);
-                window.dispatchEvent(new CustomEvent('cia:request-instance', {
-                    detail: {
-                        datasetId: datasetId,
-                        duplicateViewId: sourceViewId,
-                        spawnNew: true,
-                        targetRow: row,
-                        targetCol: col,
-                        canvasId,
-                        createLinked, // Pass through to ViewLifecycleService
-                    },
-                }));
+                // Check if view is already on the canvas
+                const isAlreadyOnCanvas = canvasManager.isViewOnCanvas(sourceViewId);
+
+                if (isAlreadyOnCanvas) {
+                    // View already placed - duplicate it
+                    log.debug(`ViewItem dropped - creating duplicate of ${sourceViewId} at [${row}, ${col}]`);
+                    window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                        detail: {
+                            datasetId: datasetId,
+                            duplicateViewId: sourceViewId,
+                            spawnNew: true,
+                            targetRow: row,
+                            targetCol: col,
+                            canvasId,
+                            createLinked,
+                        },
+                    }));
+                } else {
+                    // View not on canvas - place it (move, not copy)
+                    log.debug(`ViewItem dropped - placing view ${sourceViewId} at [${row}, ${col}]`);
+                    window.dispatchEvent(new CustomEvent('cia:request-instance', {
+                        detail: {
+                            datasetId: datasetId,
+                            viewConfigId: sourceViewId, // Use viewConfigId to place, not duplicate
+                            spawnNew: false, // Not spawning new, placing existing
+                            targetRow: row,
+                            targetCol: col,
+                            canvasId,
+                            createLinked,
+                        },
+                    }));
+                }
                 return;
             }
 

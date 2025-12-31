@@ -42,7 +42,13 @@ $color-red: $color-accent-red;
   font-size: 11px;
   color: $color-text-secondary;
   min-width: 240px;
+  min-height: 280px; // Base min-height for collapsed footer
   overflow: hidden;
+
+  // When size controls are expanded, increase min-height
+  &:has(.canvas-navigator__size-footer[data-expanded="true"]) {
+    min-height: 380px; // Extra space for expanded controls
+  }
 
   // Desktop mode
   &--desktop {
@@ -166,12 +172,12 @@ $color-red: $color-accent-red;
 
 .canvas-navigator__minimap {
   position: relative;
-  flex: 1;
+  flex: 1 1 auto; // Allow both grow and shrink
   padding: $spacing-sm;
   background: $color-bg-primary;
   border-bottom: 1px solid $nav-border;
   overflow: auto;
-  min-height: 100px;
+  min-height: 80px; // Reduced to allow footer expansion
   max-height: 300px;
 
   &--setting-home {
@@ -473,6 +479,12 @@ $color-red: $color-accent-red;
 .canvas-navigator__size-footer {
   border-top: 1px solid $nav-border;
   background: rgba(0, 0, 0, 0.2);
+  flex-shrink: 0; // Prevent footer from being cut off
+
+  // When expanded, ensure controls are visible
+  &[data-expanded="true"] {
+    min-height: 120px; // Space for toggle + controls
+  }
 }
 
 .canvas-navigator__size-toggle {

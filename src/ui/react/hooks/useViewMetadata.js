@@ -45,9 +45,6 @@ export function useViewMetadata(viewId) {
     isLoading: true,
   });
 
-  // Track previous values to avoid unnecessary updates
-  const prevValuesRef = useRef({ name: null, color: null });
-
   // Fetch metadata from managers
   const fetchMetadata = useCallback(() => {
     if (!viewId) {
@@ -102,52 +99,61 @@ export function useViewMetadata(viewId) {
     // Get color from view or use default
     const color = view.color || { hex: "#60a5fa", name: "blue" };
 
-    // Only update if values actually changed (prevent unnecessary re-renders)
-    const newName = displayName;
-    const newColorHex = color?.hex;
-
-    if (
-      prevValuesRef.current.name !== newName ||
-      prevValuesRef.current.color !== newColorHex
-    ) {
-      prevValuesRef.current = { name: newName, color: newColorHex };
-
-      setMetadata({
-        displayName,
-        color,
-        datasetId: view.datasetId,
-        datasetFilename,
-        isLoading: false,
-      });
-    }
+    // Always update metadata - React will skip re-render if values are the same
+    setMetadata({
+      displayName,
+      color,
+      datasetId: view.datasetId,
+      datasetFilename,
+      isLoading: false,
+    });
   }, [viewId]);
 
-  // Fetch on mount and when viewId changes
-  useEffect(() => {
-    fetchMetadata();
-  }, [fetchMetadata]);
+  // Force refresh counter - incrementing this forces fetchMetadata to re-run
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Subscribe to view updates (only for name changes)
   useEffect(() => {
     if (!viewId) return;
 
     const viewManager = getViewConfigurationManager();
-    if (!viewManager) return;
 
     const handleViewUpdate = (view) => {
       // Only re-fetch if this is our view
       if (view?.id === viewId || view === viewId) {
-        fetchMetadata();
+        // Force a refresh by incrementing the key
+        setRefreshKey((k) => k + 1);
       }
     };
 
-    // Subscribe to viewUpdated events
-    viewManager.on?.("viewUpdated", handleViewUpdate);
+    // Handle window event (from ViewConfigurationManager._dispatchViewUpdateEvent)
+    const handleWindowEvent = (e) => {
+      if (e.detail?.viewId === viewId || e.detail?.view?.id === viewId) {
+        // Force a refresh by incrementing the key
+        setRefreshKey((k) => k + 1);
+      }
+    };
+
+    // Subscribe to viewUpdated events from manager
+    if (viewManager) {
+      viewManager.on?.("viewUpdated", handleViewUpdate);
+    }
+
+    // Also listen for window events (more reliable across component boundaries)
+    window.addEventListener("cia:view-updated", handleWindowEvent);
 
     return () => {
-      viewManager.off?.("viewUpdated", handleViewUpdate);
+      if (viewManager) {
+        viewManager.off?.("viewUpdated", handleViewUpdate);
+      }
+      window.removeEventListener("cia:view-updated", handleWindowEvent);
     };
-  }, [viewId, fetchMetadata]);
+  }, [viewId]);
+
+  // Re-fetch when refreshKey changes
+  useEffect(() => {
+    fetchMetadata();
+  }, [fetchMetadata, refreshKey]);
 
   // Also listen for manager ready event (in case we loaded before manager was ready)
   useEffect(() => {

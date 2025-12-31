@@ -161,11 +161,13 @@ export function useSecondaryHeaderLogic() {
     // Also listen for DOM events
     window.addEventListener("cia:views-loaded", refresh);
     window.addEventListener("cia:view-added", refresh);
+    window.addEventListener("cia:view-updated", refresh);
 
     return () => {
       unsubs.forEach((unsub) => unsub?.());
       window.removeEventListener("cia:views-loaded", refresh);
       window.removeEventListener("cia:view-added", refresh);
+      window.removeEventListener("cia:view-updated", refresh);
     };
   }, []);
 

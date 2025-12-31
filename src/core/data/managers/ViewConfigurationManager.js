@@ -618,6 +618,24 @@ export class ViewConfigurationManager extends BaseManager {
 
     this._syncToServer(view);
     this._emit("viewUpdated", view);
+
+    // Also dispatch window event for components that listen to global events
+    this._dispatchViewUpdateEvent(view);
+  }
+
+  /**
+   * Dispatch a window event when a view is updated
+   * This allows React components to listen for updates without direct manager access
+   * @private
+   */
+  _dispatchViewUpdateEvent(view) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cia:view-updated", {
+          detail: { view, viewId: view?.id },
+        })
+      );
+    }
   }
 
   /**

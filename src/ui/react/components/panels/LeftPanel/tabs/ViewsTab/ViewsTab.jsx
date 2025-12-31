@@ -86,6 +86,8 @@ function ActiveViewItemWrapper({ view, handlers }) {
             onRename={handlers.handleRenameView}
             onNavigate={handlers.handleNavigateToView}
             onSizeChange={handlers.handleResizeView}
+            onFocus={handlers.handleFocusView}
+            onVisibilityToggle={handlers.handleToggleVisibility}
         />
     );
 }
@@ -182,6 +184,8 @@ export function ViewsPanelContent({ workspaceId }) {
         handleNavigateToView,
         handleRenameView,
         handleResizeView,
+        handleFocusView,
+        handleToggleVisibility,
     } = useViewsTab({ workspaceId });
 
     const { states: sectionStates, toggleSection, resizeSection } = useSectionStates(DEFAULT_SECTIONS);
@@ -197,6 +201,8 @@ export function ViewsPanelContent({ workspaceId }) {
         handleNavigateToView,
         handleRenameView,
         handleResizeView,
+        handleFocusView,
+        handleToggleVisibility,
     }), [
         handlePlaceView,
         handleRemoveFromCanvas,
@@ -207,6 +213,8 @@ export function ViewsPanelContent({ workspaceId }) {
         handleNavigateToView,
         handleRenameView,
         handleResizeView,
+        handleFocusView,
+        handleToggleVisibility,
     ]);
 
     // =========================================================================

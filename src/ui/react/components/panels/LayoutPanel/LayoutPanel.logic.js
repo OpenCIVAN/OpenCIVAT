@@ -197,26 +197,37 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
   // Listen for view/dataset updates to trigger re-enrichment
   useEffect(() => {
-    const handleViewsUpdated = () => {
+    const handleRefresh = () => {
       setEnrichmentRefreshKey((k) => k + 1);
     };
 
-    const handleDatasetsUpdated = () => {
-      setEnrichmentRefreshKey((k) => k + 1);
-    };
+    // Window events (for initial loading and view updates)
+    window.addEventListener("cia:views-loaded", handleRefresh);
+    window.addEventListener("cia:view-added", handleRefresh);
+    window.addEventListener("cia:view-updated", handleRefresh);
+    window.addEventListener("cia:datasets-loaded", handleRefresh);
+    window.addEventListener("cia:dataset-added", handleRefresh);
 
-    window.addEventListener("cia:views-loaded", handleViewsUpdated);
-    window.addEventListener("cia:view-added", handleViewsUpdated);
-    window.addEventListener("cia:view-updated", handleViewsUpdated);
-    window.addEventListener("cia:datasets-loaded", handleDatasetsUpdated);
-    window.addEventListener("cia:dataset-added", handleDatasetsUpdated);
+    // Subscribe to ViewConfigurationManager's internal events (for name changes, etc.)
+    const viewManager = getViewConfigurationManager();
+    if (viewManager) {
+      viewManager.on?.("viewUpdated", handleRefresh);
+      viewManager.on?.("viewAdded", handleRefresh);
+      viewManager.on?.("viewRemoved", handleRefresh);
+    }
 
     return () => {
-      window.removeEventListener("cia:views-loaded", handleViewsUpdated);
-      window.removeEventListener("cia:view-added", handleViewsUpdated);
-      window.removeEventListener("cia:view-updated", handleViewsUpdated);
-      window.removeEventListener("cia:datasets-loaded", handleDatasetsUpdated);
-      window.removeEventListener("cia:dataset-added", handleDatasetsUpdated);
+      window.removeEventListener("cia:views-loaded", handleRefresh);
+      window.removeEventListener("cia:view-added", handleRefresh);
+      window.removeEventListener("cia:view-updated", handleRefresh);
+      window.removeEventListener("cia:datasets-loaded", handleRefresh);
+      window.removeEventListener("cia:dataset-added", handleRefresh);
+
+      if (viewManager) {
+        viewManager.off?.("viewUpdated", handleRefresh);
+        viewManager.off?.("viewAdded", handleRefresh);
+        viewManager.off?.("viewRemoved", handleRefresh);
+      }
     };
   }, []);
 
@@ -588,17 +599,19 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
           ? `Dataset ${viewConfig.datasetId.slice(0, 8)}`
           : null);
 
-      // Extract filename from view name if it follows "View of X.vtp" pattern
-      const extractedFilename = viewConfig?.name?.match(/View of (.+)/)?.[1];
+      // Determine display name - MATCH useViewMetadata.js priority:
+      // If view has a custom name (not default), use it
+      // Otherwise fall back to dataset filename
+      const viewName = viewConfig?.name;
+      const isDefaultName =
+        !viewName ||
+        viewName === "Untitled View" ||
+        viewName === "Default View" ||
+        viewName === datasetFilename;
 
-      // Build display name with priority: datasetFilename > extracted > viewConfig name > fallback
-      const displayName =
-        datasetFilename ||
-        extractedFilename ||
-        viewConfig?.name ||
-        placement.content?.name ||
-        placement.name ||
-        `View ${index + 1}`;
+      const displayName = isDefaultName
+        ? datasetFilename || viewName || placement.content?.name || placement.name || `View ${index + 1}`
+        : viewName;
 
       // =====================================================================
       // Get instance color from workspaceManager (matches canvas display)

@@ -494,6 +494,15 @@ class ViewLifecycleService {
       throw new Error(`Canvas not found: ${canvasId}`);
     }
 
+    // Check if view is already on the canvas
+    // If so, duplicate it instead of placing the same view twice
+    const existingPlacement = this._findPlacementForView(viewId, canvasId);
+    if (existingPlacement) {
+      log.debug(`View ${viewId} already on canvas, duplicating instead`);
+      const result = await this.duplicateAndPlaceView(viewId, options);
+      return result.placement;
+    }
+
     // Resolve position
     let { row, col } = options;
     if (row === undefined || col === undefined) {

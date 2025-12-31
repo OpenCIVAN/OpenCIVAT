@@ -175,6 +175,9 @@ const DPad = memo(({ onMove, onHome, disabled, isAtHome }) => {
     );
 });
 
+// LocalStorage key for size controls expanded state
+const SIZE_CONTROLS_EXPANDED_KEY = 'cia-navigator-size-controls-expanded';
+
 // Collapsible Size Controls Footer
 const SizeControlsFooter = memo(({
     viewportSize,
@@ -188,37 +191,51 @@ const SizeControlsFooter = memo(({
     addColumn,
     removeColumn,
 }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
+    // Persist expanded state to localStorage
+    const [isExpanded, setIsExpanded] = useState(() => {
+        try {
+            const stored = localStorage.getItem(SIZE_CONTROLS_EXPANDED_KEY);
+            return stored === 'true';
+        } catch {
+            return false;
+        }
+    });
     const { isVR } = useMode();
+
+    // Save expanded state when it changes
+    const handleToggleExpanded = React.useCallback(() => {
+        const newValue = !isExpanded;
+        setIsExpanded(newValue);
+        try {
+            localStorage.setItem(SIZE_CONTROLS_EXPANDED_KEY, String(newValue));
+        } catch {
+            // Ignore localStorage errors
+        }
+    }, [isExpanded]);
 
     // Create wrapper onChange handlers that detect increment/decrement
     // and call the appropriate function (which reads fresh from canvas.dimensions)
     const handleCanvasColsChange = React.useCallback((newValue) => {
-        // Detect if increment or decrement based on passed value vs displayed
         if (newValue > canvasSize.cols) {
-            console.log('[SizeControlsFooter] Canvas cols increment detected, calling addColumn');
             addColumn?.();
         } else if (newValue < canvasSize.cols) {
-            console.log('[SizeControlsFooter] Canvas cols decrement detected, calling removeColumn');
             removeColumn?.();
         }
     }, [canvasSize.cols, addColumn, removeColumn]);
 
     const handleCanvasRowsChange = React.useCallback((newValue) => {
         if (newValue > canvasSize.rows) {
-            console.log('[SizeControlsFooter] Canvas rows increment detected, calling addRow');
             addRow?.();
         } else if (newValue < canvasSize.rows) {
-            console.log('[SizeControlsFooter] Canvas rows decrement detected, calling removeRow');
             removeRow?.();
         }
     }, [canvasSize.rows, addRow, removeRow]);
 
     return (
-        <div className="canvas-navigator__size-footer">
+        <div className="canvas-navigator__size-footer" data-expanded={isExpanded}>
             <button
                 className="canvas-navigator__size-toggle"
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={handleToggleExpanded}
             >
                 <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} size={isVR ? 12 : 10} />
                 <span>Size Controls</span>
