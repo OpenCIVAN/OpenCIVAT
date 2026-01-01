@@ -17,14 +17,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-    CollapsibleHeaderSection,
-    StatusDot,
-    StatBadge,
-    SectionHeader,
-    AdaptiveButton,
-    Icon,
-} from '@UI/react/components/adaptive';
+import { Icon } from '@UI/react/components/common/Icon';
+import { Button } from '@UI/react/components/common/Button';
+import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 
 import { useVoiceTab } from './hooks/useVoiceTab';
 import { ParticipantCard } from './components/ParticipantCard';
@@ -161,26 +156,26 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
                     {isConnected ? (
                         <div className="voice-status__controls">
                             <div className="voice-status__controls-left">
-                                <AdaptiveButton
+                                <Button
                                     icon={muted ? 'micOff' : 'mic'}
                                     variant={muted ? 'danger' : 'primary'}
                                     onClick={handleToggleMute}
                                     title={muted ? 'Unmute (M)' : 'Mute (M)'}
                                 />
-                                <AdaptiveButton
+                                <Button
                                     icon="headphones"
                                     variant={deafened ? 'danger' : 'secondary'}
                                     onClick={handleToggleDeafen}
                                     title={deafened ? 'Undeafen (D)' : 'Deafen (D)'}
                                 />
-                                <AdaptiveButton
+                                <Button
                                     icon="settings"
                                     variant="ghost"
                                     onClick={() => { }}
                                     title="Voice Settings"
                                 />
                             </div>
-                            <AdaptiveButton
+                            <Button
                                 icon="phoneOff"
                                 variant="danger"
                                 onClick={handleLeave}
@@ -189,13 +184,13 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
                         </div>
                     ) : (
                         <div className="voice-status__join">
-                            <AdaptiveButton
+                            <Button
                                 icon="phone"
                                 variant="primary"
                                 onClick={handleJoin}
                             >
                                 Join Voice
-                            </AdaptiveButton>
+                            </Button>
                         </div>
                     )}
                 </CollapsibleHeaderSection>

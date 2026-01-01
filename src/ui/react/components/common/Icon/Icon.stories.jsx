@@ -3,7 +3,7 @@
  * @description Storybook stories for the Icon component system
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Icon, {
     hasIcon,
     getAvailableIcons,
@@ -17,11 +17,6 @@ import Icon, {
     IconDelete,
     IconSearch,
     IconLoader,
-    IconEye,
-    IconEyeOff,
-    IconVR,
-    IconBox,
-    IconLayers,
 } from './index';
 
 export default {
@@ -81,12 +76,32 @@ export const WithColor = {
     },
 };
 
-export const WithTitle = {
-    args: {
-        name: 'warning',
-        size: 24,
-        title: 'Warning: This action cannot be undone',
-        'aria-label': 'Warning icon',
+export const WithTitle = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'flex-start' }}>
+        <p style={{ margin: 0, fontSize: '14px', color: '#ccc' }}>
+            Hover over the icon to see the title tooltip:
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Icon
+                name="warning"
+                size={32}
+                color="#f59e0b"
+                title="Warning: This action cannot be undone"
+                aria-label="Warning icon"
+            />
+            <span style={{ color: '#888' }}>← Hover me to see title</span>
+        </div>
+        <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
+            The title prop adds an SVG &lt;title&gt; element for accessibility and browser tooltips.
+        </p>
+    </div>
+);
+
+WithTitle.parameters = {
+    docs: {
+        description: {
+            story: 'Icons with a `title` prop show a tooltip on hover and are accessible to screen readers.',
+        },
     },
 };
 
@@ -301,11 +316,23 @@ NamedExports.parameters = {
 // =============================================================================
 
 export const SizePresets = () => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '24px' }}>
         {Object.entries(ICON_SIZES).map(([preset, pixels]) => (
             <div key={preset} style={{ textAlign: 'center' }}>
-                <IconSettings size={preset} />
-                <p style={{ fontSize: '10px', margin: '4px 0 0' }}>{preset} ({pixels}px)</p>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: pixels + 16,
+                    height: pixels + 16,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                }}>
+                    <IconSettings size={preset} />
+                </div>
+                <p style={{ fontSize: '11px', margin: '0', fontWeight: 600, color: '#fff' }}>{preset}</p>
+                <p style={{ fontSize: '10px', margin: '2px 0 0', color: '#888' }}>{pixels}px</p>
             </div>
         ))}
     </div>
@@ -314,7 +341,7 @@ export const SizePresets = () => (
 SizePresets.parameters = {
     docs: {
         description: {
-            story: 'Named exports accept string size presets: `xs` (12px), `sm` (16px), `md` (20px), `lg` (24px), `xl` (32px)',
+            story: 'Named exports accept string size presets: `xs` (12px), `sm` (16px), `md` (20px), `lg` (24px), `xl` (32px). Notice the progressive sizing difference.',
         },
     },
 };
@@ -444,14 +471,16 @@ export const IconGallery = () => {
                         fontSize: '14px',
                         width: '300px',
                         borderRadius: '4px',
-                        border: '1px solid #ccc',
+                        border: '1px solid #555',
+                        background: '#2a2a2a',
+                        color: '#fff',
                     }}
                 />
             </div>
 
             {Object.entries(filteredCategories).map(([category, icons]) => (
                 <div key={category} style={{ marginBottom: '32px' }}>
-                    <h3 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>{category}</h3>
+                    <h3 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600, color: '#fff' }}>{category}</h3>
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
@@ -466,7 +495,8 @@ export const IconGallery = () => {
                                     alignItems: 'center',
                                     padding: '12px 8px',
                                     borderRadius: '4px',
-                                    backgroundColor: '#f5f5f5',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                    color: '#e0e0e0',
                                 }}
                                 title={iconName}
                             >
@@ -478,6 +508,7 @@ export const IconGallery = () => {
                                     overflow: 'hidden',
                                     whiteSpace: 'nowrap',
                                     maxWidth: '100%',
+                                    color: '#999',
                                 }}>
                                     {iconName}
                                 </span>
@@ -530,10 +561,12 @@ export const AllIcons = () => {
                         fontSize: '14px',
                         width: '300px',
                         borderRadius: '4px',
-                        border: '1px solid #ccc',
+                        border: '1px solid #555',
+                        background: '#2a2a2a',
+                        color: '#fff',
                     }}
                 />
-                <span style={{ color: '#666' }}>
+                <span style={{ color: '#888' }}>
                     {filteredIcons.length} of {allIcons.length} icons
                 </span>
             </div>
@@ -553,7 +586,8 @@ export const AllIcons = () => {
                             alignItems: 'center',
                             padding: '12px 4px',
                             borderRadius: '4px',
-                            backgroundColor: copiedIcon === iconName ? '#d1fae5' : '#f5f5f5',
+                            backgroundColor: copiedIcon === iconName ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                            color: '#e0e0e0',
                             cursor: 'pointer',
                             transition: 'background-color 0.15s',
                         }}
@@ -567,7 +601,7 @@ export const AllIcons = () => {
                             overflow: 'hidden',
                             whiteSpace: 'nowrap',
                             maxWidth: '100%',
-                            color: '#666',
+                            color: copiedIcon === iconName ? '#22c55e' : '#888',
                         }}>
                             {copiedIcon === iconName ? 'Copied!' : iconName}
                         </span>

@@ -14,7 +14,8 @@
 
 import React, { memo, useState } from "react";
 import ReactDOM from "react-dom";
-import { Icon, useMode } from '@UI/react/components/adaptive';
+import { Icon } from '@UI/react/components/common/Icon';
+import { useAdaptive } from '@UI/react/context';
 import { useLayoutPanelContext, DOCK_POSITIONS } from "../../LayoutPanelContext";
 import {
     useCanvasNavigator,
@@ -38,7 +39,7 @@ const NavBtn = memo(({
     className = '',
     size = 'md',
 }) => {
-    const { isVR } = useMode();
+    const { isVR } = useAdaptive();
 
     return (
         <button
@@ -64,7 +65,7 @@ const NumberSpinner = memo(({
     color,
     vertical = false,
 }) => {
-    const { isVR } = useMode();
+    const { isVR } = useAdaptive();
     const safeValue = typeof value === 'number' && !isNaN(value) ? value : min;
 
     const handleDecrement = () => {
@@ -124,7 +125,7 @@ const NumberSpinner = memo(({
 
 // D-Pad component with home center
 const DPad = memo(({ onMove, onHome, disabled, isAtHome }) => {
-    const { isVR } = useMode();
+    const { isVR } = useAdaptive();
     const iconSize = isVR ? 14 : 10;
 
     return (
@@ -200,7 +201,7 @@ const SizeControlsFooter = memo(({
             return false;
         }
     });
-    const { isVR } = useMode();
+    const { isVR } = useAdaptive();
 
     // Save expanded state when it changes
     const handleToggleExpanded = React.useCallback(() => {
@@ -342,7 +343,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
     dpadPosition = 'left',
     className = "",
 }) {
-    const { mode, isVR } = useMode();
+    const { mode, isVR } = useAdaptive();
 
     // Get context data
     const context = useLayoutPanelContext();

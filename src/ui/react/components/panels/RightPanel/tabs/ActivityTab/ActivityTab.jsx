@@ -16,12 +16,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import {
-    DismissibleCard,
-    SectionHeader,
-    AdaptiveButton,
-    Icon,
-} from '@UI/react/components/adaptive';
+import { Icon } from '@UI/react/components/common/Icon';
+import { Button } from '@UI/react/components/common/Button';
+import { DismissibleCard, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SubtabBar } from '@UI/react/components/common/SubtabBar';
 
 import { useActivityTab } from './hooks/useActivityTab';
@@ -159,13 +156,13 @@ export function ActivityTab({
                             </ul>
                         </div>
                         <div className="catch-up__actions">
-                            <AdaptiveButton
+                            <Button
                                 icon="eye"
                                 variant="primary"
                                 onClick={() => { /* navigate to first unread */ }}
                             >
                                 Review All
-                            </AdaptiveButton>
+                            </Button>
                             <button
                                 className="catch-up__mark-read"
                                 onClick={handleDismissCatchUp}

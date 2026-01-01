@@ -6,8 +6,11 @@
 // - When multiple sections are open, they can be resized by dragging dividers
 // - Sections fill available vertical space proportionally
 // - Collapsed sections anchor appropriately (top→top, bottom→bottom, middle→below)
+// - Touch support for VR/mobile
+// - Adaptive sizing based on mode (VR vs desktop)
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useAdaptive } from '@UI/react/context';
 import { Icon } from '@UI/react/components/common/Icon';
 import './ResizableSections.scss';
 
@@ -21,19 +24,26 @@ function SectionHeader({
     label,
     count,
     badge,
+    color,
     isExpanded,
     onToggle,
     headerActions,
+    isVR,
 }) {
+    const chevronSize = isVR ? 14 : 10;
+    const iconSize = isVR ? 16 : 11;
+
     return (
         <div
             className="resizable-section__header"
+            data-color={color}
+            data-expanded={isExpanded}
             onClick={onToggle}
         >
             <span className="resizable-section__chevron">
-                <Icon name={isExpanded ? "chevronDown" : "chevronRight"} size={10} />
+                <Icon name={isExpanded ? "chevronDown" : "chevronRight"} size={chevronSize} />
             </span>
-            {icon && <Icon name={icon} size={11} className={`resizable-section__icon ${iconColorClass || ''}`} />}
+            {icon && <Icon name={icon} size={iconSize} className={`resizable-section__icon ${iconColorClass || ''}`} />}
             <span className="resizable-section__label">{label}</span>
             {badge > 0 && (
                 <span className="resizable-section__badge">{badge}</span>
@@ -52,11 +62,13 @@ function SectionHeader({
 // RESIZE DIVIDER
 // =============================================================================
 
-function ResizeDivider({ onDragStart, isActive }) {
+function ResizeDivider({ onDragStart, isActive, isVR }) {
     return (
         <div
             className={`resizable-section__divider ${isActive ? 'resizable-section__divider--active' : ''}`}
             onMouseDown={onDragStart}
+            onTouchStart={onDragStart}
+            style={{ height: isVR ? '12px' : '6px' }}
         >
             <div className="resizable-section__divider-handle" />
         </div>
@@ -74,6 +86,7 @@ export function ResizableSection({
     label,
     count,
     badge = 0,
+    color = 'default',
     isExpanded,
     onToggle,
     flexGrow = 1,
@@ -84,16 +97,20 @@ export function ResizableSection({
     isDividerActive = false,
     headerActions,
 }) {
+    const { mode, isVR } = useAdaptive();
+    const effectiveMinHeight = isVR ? Math.max(minHeight, 80) : minHeight;
+
     return (
         <div
-            className={`resizable-section ${isExpanded ? 'resizable-section--expanded' : 'resizable-section--collapsed'}`}
+            className={`resizable-section resizable-section--${mode} ${isExpanded ? 'resizable-section--expanded' : 'resizable-section--collapsed'}`}
             style={{
                 flexGrow: isExpanded ? flexGrow : 0,
                 flexShrink: isExpanded ? 1 : 0,
                 flexBasis: isExpanded ? 0 : 'auto',
-                minHeight: isExpanded ? minHeight : 'auto',
+                minHeight: isExpanded ? effectiveMinHeight : 'auto',
             }}
             data-section-id={id}
+            data-color={color}
         >
             <SectionHeader
                 icon={icon}
@@ -101,9 +118,11 @@ export function ResizableSection({
                 label={label}
                 count={count}
                 badge={badge}
+                color={color}
                 isExpanded={isExpanded}
                 onToggle={onToggle}
                 headerActions={headerActions}
+                isVR={isVR}
             />
 
             {isExpanded && (
@@ -116,6 +135,7 @@ export function ResizableSection({
                 <ResizeDivider
                     onDragStart={onDividerDrag}
                     isActive={isDividerActive}
+                    isVR={isVR}
                 />
             )}
         </div>
@@ -133,6 +153,7 @@ export function ResizableSectionsContainer({
     onSectionToggle,
     onSectionResize,
 }) {
+    const { mode } = useAdaptive();
     const containerRef = useRef(null);
     const [resizing, setResizing] = useState(null); // { index, startY, startHeights }
 
@@ -141,11 +162,14 @@ export function ResizableSectionsContainer({
         .filter(([_, state]) => state.expanded)
         .map(([id]) => id);
 
-    // Handle resize drag start
+    // Handle resize drag start (mouse or touch)
     const handleDragStart = useCallback((e, sectionIndex) => {
         e.preventDefault();
 
         if (!containerRef.current) return;
+
+        // Support both mouse and touch events
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
         // Get current heights of all expanded sections
         const sectionElements = containerRef.current.querySelectorAll('.resizable-section--expanded');
@@ -153,17 +177,19 @@ export function ResizableSectionsContainer({
 
         setResizing({
             index: sectionIndex,
-            startY: e.clientY,
+            startY: clientY,
             startHeights,
         });
     }, []);
 
-    // Handle mouse move during resize
+    // Handle mouse/touch move during resize
     useEffect(() => {
         if (!resizing) return;
 
-        const handleMouseMove = (e) => {
-            const deltaY = e.clientY - resizing.startY;
+        const handleMove = (e) => {
+            // Support both mouse and touch events
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const deltaY = clientY - resizing.startY;
             const { index, startHeights } = resizing;
 
             // Calculate new heights
@@ -188,16 +214,21 @@ export function ResizableSectionsContainer({
             });
         };
 
-        const handleMouseUp = () => {
+        const handleEnd = () => {
             setResizing(null);
         };
 
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
+        // Add both mouse and touch event listeners
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchmove', handleMove);
+        document.addEventListener('touchend', handleEnd);
 
         return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleEnd);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleEnd);
         };
     }, [resizing, expandedSections, onSectionResize]);
 
@@ -226,6 +257,7 @@ export function ResizableSectionsContainer({
 
     const containerClasses = [
         'resizable-sections-container',
+        `resizable-sections-container--${mode}`,
         resizing && 'resizable-sections-container--resizing',
         className,
     ].filter(Boolean).join(' ');

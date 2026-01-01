@@ -17,12 +17,8 @@
  */
 
 import React from 'react';
-import {
-    CollapsibleHeaderSection,
-    StatBadge,
-    SectionHeader,
-    Icon,
-} from '@UI/react/components/adaptive';
+import { Icon } from '@UI/react/components/common/Icon';
+import { CollapsibleHeaderSection, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 
 import { useRoomsTab } from './hooks/useRoomsTab';

@@ -18,14 +18,9 @@
  */
 
 import React from 'react';
-import {
-    CollapsibleHeaderSection,
-    StatusDot,
-    StatBadge,
-    SectionHeader,
-    AdaptiveButton,
-    Icon,
-} from '@UI/react/components/adaptive';
+import { Icon } from '@UI/react/components/common/Icon';
+import { Button } from '@UI/react/components/common/Button';
+import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 
 import { useRecordingsTab } from './hooks/useRecordingsTab';
@@ -167,37 +162,37 @@ export function RecordingsTab({ workspaceId }) {
                             {/* Row 3: Controls */}
                             <div className="recording-status__controls">
                                 <div className="recording-status__controls-left">
-                                    <AdaptiveButton
+                                    <Button
                                         icon={isPaused ? 'play' : 'pause'}
                                         variant="secondary"
                                         onClick={isPaused ? handleResumeRecording : handlePauseRecording}
                                         title={isPaused ? 'Resume' : 'Pause'}
                                     />
-                                    <AdaptiveButton
+                                    <Button
                                         icon="circle"
                                         variant="secondary"
                                         onClick={() => { /* handleAddMarker */ }}
                                         title="Add Marker"
                                     />
                                 </div>
-                                <AdaptiveButton
+                                <Button
                                     icon="stop"
                                     variant="danger"
                                     onClick={handleStopRecording}
                                 >
                                     Stop
-                                </AdaptiveButton>
+                                </Button>
                             </div>
                         </>
                     ) : (
-                        <AdaptiveButton
+                        <Button
                             icon="radio"
                             variant="danger"
                             fullWidth
                             onClick={handleStartRecording}
                         >
                             Start Recording
-                        </AdaptiveButton>
+                        </Button>
                     )}
                 </CollapsibleHeaderSection>
             </div>

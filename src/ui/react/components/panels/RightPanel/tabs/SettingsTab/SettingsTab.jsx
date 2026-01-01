@@ -8,12 +8,12 @@
  */
 
 import React from 'react';
+import { Icon } from '@UI/react/components/common/Icon';
 import {
     ResizableSection,
-    AdaptiveSectionsContainer,
-    useAdaptiveSectionStates,
-    Icon,
-} from '@UI/react/components/adaptive';
+    ResizableSectionsContainer,
+    useSectionStates,
+} from '@UI/react/components/common/ResizableSections';
 import { useSettingsTab } from './hooks/useSettingsTab';
 import { YourPreferences } from './sections/YourPreferences';
 import { ProjectInfo } from './sections/ProjectInfo';
@@ -70,8 +70,8 @@ export function SettingsTab({
     updatePreferences,
     loading,
 }) {
-    // Section states for adaptive resizable sections
-    const { states: sectionStates, toggleSection, resizeSection } = useAdaptiveSectionStates({
+    // Section states for resizable sections
+    const { states: sectionStates, toggleSection, resizeSection } = useSectionStates({
         preferences: { expanded: true, flexGrow: 2 },
         project: { expanded: true, flexGrow: 1 },
         admin: { expanded: true, flexGrow: 1 },
@@ -101,7 +101,7 @@ export function SettingsTab({
                 <span className="panel-header__count">{userRole}</span>
             </div>
 
-            <AdaptiveSectionsContainer
+            <ResizableSectionsContainer
                 className="settings-tab__sections"
                 sectionStates={sectionStates}
                 onSectionToggle={toggleSection}
@@ -115,7 +115,7 @@ export function SettingsTab({
                 >
                     <YourPreferences
                         preferences={preferences}
-                        onUpdate={updatePreferences}
+                        onChange={updatePreferences}
                     />
                 </ResizableSection>
 
@@ -152,7 +152,7 @@ export function SettingsTab({
                         <DangerZone project={project} />
                     </ResizableSection>
                 )}
-            </AdaptiveSectionsContainer>
+            </ResizableSectionsContainer>
         </div>
     );
 }

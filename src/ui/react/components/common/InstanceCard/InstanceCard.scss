@@ -29,16 +29,18 @@
     align-items: center;
     gap: var(--card-gap);
     padding: var(--card-padding);
-    background: rgba(0, 0, 0, 0.15);
-    border: 1px solid $color-border-subtle;
+    background: $color-glass-panel;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid $color-border-default;
     transition: all $transition-fast;
 
     &--clickable {
         cursor: pointer;
 
         &:hover {
-            background: $color-glass-subtle;
-            border-color: $color-border-default;
+            background: $color-glass-medium;
+            border-color: $color-border-strong;
         }
     }
 
@@ -62,15 +64,15 @@
         background: linear-gradient(
             90deg,
             color-mix(in srgb, var(--instance-color) 12%, transparent) 0%,
-            rgba(0, 0, 0, 0.15) 100%
-        );
+            transparent 50%
+        ), $color-glass-panel;
 
         &:hover {
             background: linear-gradient(
                 90deg,
                 color-mix(in srgb, var(--instance-color) 18%, transparent) 0%,
-                $color-glass-subtle 100%
-            );
+                transparent 50%
+            ), $color-glass-medium;
         }
     }
 }
@@ -84,15 +86,15 @@
         background: linear-gradient(
             270deg,
             color-mix(in srgb, var(--instance-color) 12%, transparent) 0%,
-            rgba(0, 0, 0, 0.15) 100%
-        );
+            transparent 50%
+        ), $color-glass-panel;
 
         &:hover {
             background: linear-gradient(
                 270deg,
                 color-mix(in srgb, var(--instance-color) 18%, transparent) 0%,
-                $color-glass-subtle 100%
-            );
+                transparent 50%
+            ), $color-glass-medium;
         }
     }
 }
@@ -138,9 +140,11 @@
     border-radius: $radius-sm;
     background: transparent;
     border-color: transparent;
+    backdrop-filter: none;
 
     &:hover {
-        background: $color-glass-subtle;
+        background: $color-glass-panel;
+        backdrop-filter: blur(12px);
     }
 
     .instance-card__info {
