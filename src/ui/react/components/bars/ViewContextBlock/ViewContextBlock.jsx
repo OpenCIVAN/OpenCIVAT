@@ -29,8 +29,8 @@ import './ViewContextBlock.scss';
 
 const VIEW_MODES = [
     { id: 'normal', icon: 'grid', color: 'var(--color-accent-blue)', label: 'Normal' },
-    { id: 'isolation', icon: 'maximize', color: 'var(--color-accent-amber)', label: 'Isolation' },
-    { id: 'subset', icon: 'layers', color: 'var(--color-accent-purple)', label: 'Subset' },
+    { id: 'isolation', icon: 'target', color: 'var(--color-accent-amber)', label: 'Isolation' },
+    { id: 'subset', icon: 'compare', color: 'var(--color-accent-purple)', label: 'Subset' },
 ];
 
 const VIEW_TYPE_ICONS = {

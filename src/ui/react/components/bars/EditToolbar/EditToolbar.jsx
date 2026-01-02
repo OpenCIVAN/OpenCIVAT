@@ -10,8 +10,8 @@ import { Tooltip } from '@UI/react/components/common/Tooltip';
 import './EditToolbar.scss';
 
 const EDIT_TOOLS = [
-    { id: 'select', icon: 'mousePointer', label: 'Select', color: 'blue' },
-    { id: 'pan', icon: 'panTool', label: 'Pan', color: 'teal' },
+    { id: 'select', icon: 'right_click', label: 'Select', color: 'blue' },
+    { id: 'pan', icon: 'pan_tool', label: 'Pan', color: 'teal' },
     { id: 'merge', icon: 'merge', label: 'Merge Cells', color: 'purple' },
 ];
 

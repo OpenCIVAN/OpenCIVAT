@@ -36,26 +36,30 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   // Inactive state - inset shadow for depth, no outer glow
   box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
 
-  // Active state with colored outer glow
-  &--active,
-  &:focus-visible {
-    // Border uses instance color
-    border-color: rgba(var(--instance-color-rgb), 0.5);
-
-    // Outer glow effect - layered box shadows
+  // Active state - SOLID instance color border + glow
+  &--active {
+    border-color: var(--instance-color);
     box-shadow:
-      // Outer glow - soft, spread out
-      0 0 25px rgba(var(--instance-color-rgb), 0.2),
-      // Secondary glow - tighter
-      0 0 10px rgba(var(--instance-color-rgb), 0.15),
-      // Keep the inset shadow for depth
+      0 0 0 1px var(--instance-color),           // Inner ring for 2px total thickness
+      0 0 20px rgba(var(--instance-color-rgb), 0.25),  // Soft outer glow
+      inset 0 0 60px rgba(0, 0, 0, 0.5);         // Keep depth shadow
+  }
+
+  // Focus-visible - 2px solid focus ring + glow (keyboard navigation)
+  &:focus-visible {
+    border-color: var(--instance-color);
+    box-shadow:
+      0 0 0 2px var(--instance-color),           // 2px focus ring
+      0 0 15px rgba(var(--instance-color-rgb), 0.3),   // Glow
       inset 0 0 60px rgba(0, 0, 0, 0.5);
   }
 
-  // Focus-within also shows glow (when clicking inside)
+  // Focus-within (clicking inside, not keyboard) - subtle indication
   &:focus-within:not(&--active) {
-    border-color: rgba(var(--instance-color-rgb), 0.3);
-    box-shadow: 0 0 15px rgba(var(--instance-color-rgb), 0.1),
+    border-color: rgba(var(--instance-color-rgb), 0.6);
+    box-shadow:
+      0 0 0 1px rgba(var(--instance-color-rgb), 0.4),
+      0 0 12px rgba(var(--instance-color-rgb), 0.15),
       inset 0 0 60px rgba(0, 0, 0, 0.5);
   }
 
@@ -81,8 +85,15 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   z-index: 100; // Higher than toolbar overlay (90)
 
-  // Active state - 2px accent underline
+  // Active state - bold name + 2px accent underline
   &--active {
+    // Name becomes bold and white (not colored)
+    .instance-viewport__label-text {
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+    }
+
+    // 2px accent underline
     &::after {
       content: '';
       position: absolute;
@@ -121,46 +132,46 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-// Instance Label Badge - colored badge with glowing dot
+// Instance Label - plain layout with color dot and neutral text (no badge)
 .instance-viewport__label {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  flex: 1; // Take available space
-  min-width: 0; // Allow shrinking below content size
-  max-width: fit-content; // Don't expand beyond content
+  flex: 1;
+  min-width: 0;
 
-  // Use instance's accent color with low opacity
-  background: rgba(var(--instance-color-rgb), 0.12);
-  border: 1px solid rgba(var(--instance-color-rgb), 0.25);
-  border-radius: $radius-sm;
+  // NO badge styling - plain appearance
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
 
-  transition: all 0.15s ease;
-
+  // No hover effect
   &:hover {
-    background: rgba(var(--instance-color-rgb), 0.18);
-    border-color: rgba(var(--instance-color-rgb), 0.35);
+    background: transparent;
+    border: none;
   }
 }
 
+// Color dot - with glow
 .instance-viewport__label-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--instance-color);
-  box-shadow: 0 0 8px var(--instance-color);
+  box-shadow: 0 0 6px var(--instance-color);
   flex-shrink: 0;
 }
 
+// Name text - NEUTRAL color, not instance color
 .instance-viewport__label-text {
-  font-size: $font-size-sm; // 11px
-  font-weight: $font-weight-medium;
-  color: var(--instance-color);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-normal;
+  color: $color-text-secondary;  // Neutral gray
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  // No max-width - let it use available space from flex parent
+  transition: font-weight 0.15s ease, color 0.15s ease;
 }
 
 // Right side controls container
@@ -170,23 +181,24 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   gap: 5px;
 }
 
-// Instance type icon in subtle container
+// Instance type icon - HIDDEN per spec
+// Type icon removed from header; orientation cube renders inside viewport instead
 .instance-viewport__type-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: none;
+}
 
-  // Very subtle background
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid $color-border-default;
-  border-radius: $radius-sm;
+// Future: Orientation cube in viewport (rendered by VTK handler)
+.instance-viewport__orientation-cube {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 60px;
+  height: 60px;
+  z-index: 10;
+  pointer-events: auto;
 
-  svg {
-    width: 12px;
-    height: 12px;
-    color: $color-text-muted;
+  &--hidden {
+    display: none;
   }
 }
 
@@ -345,9 +357,11 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   padding: 2px $spacing-xs;
   gap: 4px;
 
+  // Hide all optional elements - only dot, more, close visible
   .instance-viewport__header-vr,
   .instance-viewport__header-wrench,
-  .instance-viewport__header-expand {
+  .instance-viewport__header-expand,
+  .instance-viewport__type-icon {
     display: none;
   }
 
@@ -356,13 +370,20 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .instance-viewport__label {
-    padding: 2px 6px;
+    padding: 0;
     background: transparent;
     border: none;
   }
 
+  // Hide the name text in micro mode
   .instance-viewport__label-text {
     display: none;
+  }
+
+  // Reduce dot size for micro
+  .instance-viewport__label-dot {
+    width: 5px;
+    height: 5px;
   }
 
   .instance-viewport__header-button {
