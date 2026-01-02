@@ -69,7 +69,7 @@ export const SHORTCUT_CATEGORIES = [
   {
     id: "general",
     label: "General",
-    icon: Settings,
+    icon: 'settings',
     shortcuts: [
       {
         action: "Global Search",
@@ -108,7 +108,7 @@ export const SHORTCUT_CATEGORIES = [
   {
     id: "navigation",
     label: "Navigation",
-    icon: Navigation,
+    icon: 'navigation',
     shortcuts: [
       { action: "Toggle Left Panel", keys: ["["] },
       { action: "Toggle Right Panel", keys: ["]"] },
@@ -134,7 +134,7 @@ export const SHORTCUT_CATEGORIES = [
   {
     id: "canvas",
     label: "Canvas",
-    icon: Layout,
+    icon: 'layout',
     shortcuts: [
       { action: "Select All", keys: ["⌘", "A"] },
       { action: "Deselect All", keys: ["Esc"] },
@@ -153,7 +153,7 @@ export const SHORTCUT_CATEGORIES = [
   {
     id: "tools",
     label: "Tools",
-    icon: Wrench,
+    icon: 'wrench',
     shortcuts: [
       { action: "Pan Tool", keys: ["P"], description: "Click and drag to pan" },
       { action: "Select Tool", keys: ["S"] },
@@ -182,7 +182,7 @@ export const SHORTCUT_CATEGORIES = [
   {
     id: "collaboration",
     label: "Collaboration",
-    icon: Users,
+    icon: 'users',
     shortcuts: [
       { action: "Toggle Voice", keys: ["⌘", "⇧", "V"] },
       { action: "Mute/Unmute", keys: ["M"], description: "In voice context" },

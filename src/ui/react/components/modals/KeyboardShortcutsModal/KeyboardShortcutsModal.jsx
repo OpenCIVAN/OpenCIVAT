@@ -266,7 +266,7 @@ function KeyboardShortcutsModal({
                     {/* Search input */}
                     {searchable && (
                         <div className="shortcuts-modal__search">
-                            <Search size={16} className="shortcuts-modal__search-icon" />
+                            <Icon name="search" size={16} className="shortcuts-modal__search-icon" />
                             <input
                                 ref={searchInputRef}
                                 type="text"
