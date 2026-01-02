@@ -1,18 +1,19 @@
 /**
  * @file SecondaryFooter.scss
- * @description Styles for secondary footer bar with responsive zone behavior.
- * 
+ * @description Styles for secondary footer bar with zone label bar and responsive behavior.
+ *
  * RESPONSIVE STRATEGY:
  * - Zones use flex-basis with min-width to allow shrinking
  * - Content adapts via container queries (hide labels, show icons only)
  * - LabeledIconButtons collapse to icon-only at narrow widths
  * - Dropdowns use React Portals
- * 
- * Layout:
- * ┌─────────────────┬──────────────────────────────────────┬─────────────────────┐
- * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE        │
- * │  (adaptive)     │        (flexible, fills)             │  (adaptive,tinted)  │
- * └─────────────────┴──────────────────────────────────────┴─────────────────────┘
+ *
+ * Layout (with label bar):
+ * ┌──────────────┬──────────┬─────────┬────────────────────┬─────────────────────┐
+ * │  PANELS      │ EDITING  │ HISTORY │   VIEW CONTEXT     │      VOICE          │  ← Label Bar
+ * ├──────────────┼──────────┼─────────┼────────────────────┼─────────────────────┤
+ * │  Popouts     │ EditBlk  │ Undo/Rd │ Mode + ViewSelect  │  VoiceControls      │  ← Content
+ * └──────────────┴──────────┴─────────┴────────────────────┴─────────────────────┘
  */
 
 @use "theme" as *;
@@ -21,8 +22,9 @@
 // VARIABLES
 // =============================================================================
 
-$footer-height: 40px;
-$zone-min-width: 140px; // Minimum before content starts hiding
+$footer-height: 90px;
+$label-bar-height: 18px;
+$content-height: 72px;
 $zone-padding: $spacing-md;
 
 // =============================================================================
@@ -35,10 +37,79 @@ $zone-padding: $spacing-md;
   background: $color-bg-secondary;
   border-top: 1px solid $color-border-subtle;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   z-index: 90;
   flex-shrink: 0;
   position: relative;
+  overflow: visible; // Allow flyouts to extend above
+}
+
+// =============================================================================
+// ZONE LABEL BAR - Labels must align exactly with content zones below
+// =============================================================================
+
+.secondary-footer__label-bar {
+  display: flex;
+  align-items: center;
+  height: $label-bar-height;
+  background: $color-bg-base;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.secondary-footer__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+
+  // Match zone widths exactly - labels are centered by default
+  &--panels {
+    flex: 0 0 160px;
+    width: 160px;
+    border-right: 1px solid $color-border-subtle;
+  }
+
+  &--editing {
+    flex: 0 0 110px;
+    width: 110px;
+  }
+
+  &--history {
+    flex: 0 0 80px;
+    width: 80px;
+  }
+
+  &--view-context {
+    flex: 1 1 auto;
+    min-width: 200px;
+  }
+
+  &--voice {
+    flex: 0 0 200px;
+    width: 200px;
+    border-left: 1px solid rgba(96, 165, 250, 0.3);
+    background: rgba(96, 165, 250, 0.03);
+  }
+}
+
+.secondary-footer__label-text {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--zone-color, $color-text-muted);
+  opacity: 0.8;
+}
+
+// =============================================================================
+// CONTENT ROW
+// =============================================================================
+
+.secondary-footer__content {
+  display: flex;
+  align-items: center;
+  height: $content-height;
+  flex: 1;
 }
 
 // =============================================================================
@@ -50,51 +121,142 @@ $zone-padding: $spacing-md;
   align-items: center;
   height: 100%;
   gap: $spacing-sm;
-
-  // NOTE: Don't use container-type - it breaks absolute positioning for dropdowns
+  padding: 0 $spacing-sm;
 }
 
 // =============================================================================
-// LEFT ZONE: Popout Buttons
+// PANELS ZONE: Popout Buttons
 // =============================================================================
 
-.secondary-footer__zone--left {
-  // Size to content, don't grow, can shrink
-  flex: 0 0 auto;
-  min-width: $zone-min-width;
-  // NO max-width - let it take the space it needs
-
-  padding: 0 $zone-padding;
+.secondary-footer__zone--panels {
+  flex: 0 0 160px;
+  width: 160px;
+  padding: 0 $spacing-sm;
   border-right: 1px solid $color-border-subtle;
-  justify-content: flex-start;
-  gap: $spacing-sm;
+  justify-content: center;
+  gap: $spacing-xs;
 }
 
 // =============================================================================
-// CENTER ZONE: Edit Tools
+// EDITING ZONE: Edit Mode + Tools (v3 stacked style)
 // =============================================================================
 
-.secondary-footer__zone--center {
+.secondary-footer__zone--editing {
+  flex: 0 0 110px;
+  width: 110px;
+  justify-content: center;
+}
+
+.secondary-footer__edit-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+// Edit toggle button - styled like v3
+.secondary-footer__edit-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 14px;
+  width: 100%;
+
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: 4px;
+
+  font-size: 10px;
+  font-weight: 400;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    border-color: $color-border-default;
+  }
+
+  // Active (editing) state
+  &.icon-button--active,
+  &[data-active="true"] {
+    background: $color-accent-amber;
+    border-color: $color-accent-amber;
+    color: #000;
+    font-weight: 600;
+  }
+}
+
+// Tool buttons row - 2px gap like v3
+.secondary-footer__edit-block .button-group {
+  gap: 2px;
+
+  // Tool button styling
+  .icon-button {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+
+    &--disabled {
+      opacity: 0.4;
+    }
+
+    // Active tool with color highlight
+    &--active {
+      &[data-tool="select"] {
+        background: rgba($color-accent-blue, 0.15);
+        border-color: $color-accent-blue;
+        color: $color-accent-blue;
+      }
+
+      &[data-tool="pan"] {
+        background: rgba($color-accent-teal, 0.15);
+        border-color: $color-accent-teal;
+        color: $color-accent-teal;
+      }
+
+      &[data-tool="merge"] {
+        background: rgba($color-accent-purple, 0.15);
+        border-color: $color-accent-purple;
+        color: $color-accent-purple;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// HISTORY ZONE: Undo/Redo
+// =============================================================================
+
+.secondary-footer__zone--history {
+  flex: 0 0 80px;
+  width: 80px;
+  justify-content: center;
+}
+
+// =============================================================================
+// VIEW CONTEXT ZONE: Mode + View (FLEXIBLE)
+// =============================================================================
+
+.secondary-footer__zone--view-context {
   flex: 1 1 auto;
-  min-width: 150px;
+  min-width: 200px;
   padding: 0 $zone-padding;
   justify-content: center;
   gap: $spacing-md;
 }
 
 // =============================================================================
-// RIGHT ZONE: Voice Controls
+// VOICE ZONE: Voice Controls (tinted panel)
 // =============================================================================
 
-.secondary-footer__zone--right {
-  // Size to content, don't grow, can shrink
-  flex: 0 0 auto;
-  min-width: $zone-min-width;
-  // NO max-width - let it take the space it needs
-
-  padding: 0 $zone-padding;
+.secondary-footer__zone--voice {
+  flex: 0 0 200px;
+  width: 200px;
+  padding: 0 $spacing-sm;
   border-left: 1px solid rgba(96, 165, 250, 0.3);
-  justify-content: flex-end;
+  justify-content: center;
   gap: $spacing-sm;
 
   // Tinted background for voice section
@@ -116,62 +278,85 @@ $zone-padding: $spacing-md;
     height: 12px;
     margin: 0 2px;
   }
+
+  &--tall {
+    height: 48px;
+  }
 }
-
-// =============================================================================
-// RESPONSIVE - Use media queries (container queries break dropdown positioning)
-// =============================================================================
-
-// NOTE: We intentionally DON'T use CSS Container Queries here because
-// container-type: inline-size creates a new containing block that breaks
-// position: absolute for dropdown menus.
 
 // =============================================================================
 // RESPONSIVE BREAKPOINTS
 // =============================================================================
 
 @media (max-width: 1400px) {
-  .secondary-footer__zone--left,
-  .secondary-footer__zone--right {
+  .secondary-footer__zone--panels,
+  .secondary-footer__zone--voice {
     padding: 0 $spacing-sm;
   }
 
-  .secondary-footer__zone--center {
+  .secondary-footer__zone--view-context {
     gap: $spacing-sm;
   }
 }
 
 @media (max-width: 1200px) {
-  .secondary-footer__zone--left,
-  .secondary-footer__zone--right {
+  .secondary-footer__zone--panels {
     min-width: 120px;
   }
 
-  .secondary-footer__zone--center {
+  .secondary-footer__zone--voice {
+    min-width: 160px;
+  }
+
+  .secondary-footer__zone--view-context {
     gap: $spacing-xs;
     padding: 0 $spacing-sm;
   }
 
-  .secondary-footer__divider {
+  // Hide some dividers
+  .secondary-footer__divider:not(.secondary-footer__divider--tall) {
     display: none;
   }
 }
 
-@media (max-width: 900px) {
-  // Only collapse labels at very narrow widths
+@media (max-width: 1000px) {
+  .secondary-footer {
+    height: 80px;
+  }
+
+  $content-height: 62px;
+
+  .secondary-footer__content {
+    height: $content-height;
+  }
+
+  // Collapse labels on popout buttons
   .labeled-icon-button__label {
     display: none;
+  }
+
+  .secondary-footer__zone--editing {
+    width: 80px;
+  }
+
+  .secondary-footer__zone--history {
+    width: 60px;
   }
 }
 
 @media (max-width: 800px) {
   .secondary-footer {
-    height: 36px;
+    height: 70px;
   }
 
-  .secondary-footer__zone--left,
-  .secondary-footer__zone--right {
+  .secondary-footer__zone--panels,
+  .secondary-footer__zone--voice {
     min-width: 80px;
     padding: 0 $spacing-xs;
+  }
+
+  // Hide size displays
+  .secondary-footer__size-group {
+    display: none;
   }
 }

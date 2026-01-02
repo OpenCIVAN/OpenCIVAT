@@ -1,7 +1,7 @@
 /**
  * @file SecondaryHeader.jsx
  * @description Secondary header bar with workspace context and navigation.
- * Height: 48px | z-index: 90
+ * Height: 56px (18px label bar + 40px content) | z-index: 90
  *
  * This component manages its own internal zones rather than receiving
  * zone content from the parent. This makes it self-contained and easier
@@ -10,10 +10,11 @@
  * IMPORTANT: This component uses useSecondaryHeaderLogic internally for
  * navigation and view props. It must be rendered inside a LayoutPanelProvider.
  *
- * Layout:
+ * Layout (with label bar above):
  * ┌─────────────────┬──────────────────────────────────────┬─────────────────┐
- * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE    │
- * │  Workspace      │  NavBlock | ActiveView | ViewMode    │  Room+Presence  │
+ * │  WORKSPACE      │  NAVIGATION  │  FLOW  │  MODE        │  ROOM           │
+ * ├─────────────────┼──────────────────────────────────────┼─────────────────┤
+ * │  [Selector]     │  NavBlock | FlowDir | Edit | View    │  Room+Presence  │
  * └─────────────────┴──────────────────────────────────────┴─────────────────┘
  *
  * @example
@@ -42,7 +43,16 @@
 import React, { memo } from 'react';
 
 // Shared bar components (from common bars/ folder)
-import { StackedNavBlock, ActiveViewSelector, SegmentedToggle, WorkspaceSelector, RoomPresenceIndicator, FlowDirectionToggle, EditToolbar } from '@UI/react/components/bars';
+import {
+    WorkspaceSelector,
+    RoomPresenceIndicator,
+    CanvasSizeDisplay,
+    ViewportSizeDisplay
+} from '@UI/react/components/bars';
+
+// Common components
+import { Icon } from '@UI/react/components/common/Icon';
+import { IconButton } from '@UI/react/components/common/Button';
 
 // Hook for navigation and view logic - uses LayoutPanelContext internally
 import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic';
@@ -50,14 +60,49 @@ import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic
 import './SecondaryHeader.scss';
 
 // =============================================================================
+// ZONE LABEL BAR COMPONENT
+// =============================================================================
+
+/**
+ * Displays zone labels above the content row.
+ * Each label aligns with its corresponding zone below.
+ */
+const ZoneLabelBar = memo(function ZoneLabelBar({ labels }) {
+    return (
+        <div className="secondary-header__label-bar">
+            {labels.map((zone, i) => (
+                <div
+                    key={i}
+                    className={`secondary-header__label ${zone.className || ''}`}
+                    style={{
+                        flex: zone.flex,
+                        minWidth: zone.minWidth,
+                        width: zone.width,
+                        '--zone-color': zone.color,
+                    }}
+                >
+                    {zone.label && (
+                        <span className="secondary-header__label-text">
+                            {zone.label}
+                        </span>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+});
+
+// =============================================================================
 // CONSTANTS
 // =============================================================================
 
-// Icons are now string names for the Icon component
-const VIEW_MODE_OPTIONS = [
-    { value: 'normal', icon: 'grid', label: 'Normal View', accent: 'var(--color-accent-blue)' },
-    { value: 'isolation', icon: 'maximize', label: 'Isolation Mode', accent: 'var(--color-accent-amber)' },
-    { value: 'subset', icon: 'layers', label: 'Subset Mode', accent: 'var(--color-accent-purple)' },
+// Zone labels configuration - class names must match zone widths exactly
+const HEADER_ZONE_LABELS = [
+    { label: 'Workspace', color: 'var(--color-accent-purple)', className: 'secondary-header__label--workspace' },
+    { label: 'Navigation', color: 'var(--color-accent-blue)', className: 'secondary-header__label--navigation' },
+    { label: 'Flow', color: 'var(--color-accent-teal)', className: 'secondary-header__label--flow' },
+    { label: 'Size', color: 'var(--color-accent-green)', className: 'secondary-header__label--size' },
+    { label: 'Room', color: 'var(--color-accent-cyan)', className: 'secondary-header__label--room' },
 ];
 
 // =============================================================================
@@ -66,9 +111,9 @@ const VIEW_MODE_OPTIONS = [
 
 /**
  * Secondary Header bar component.
- * Manages its own internal zones for workspace, navigation, and room context.
+ * Manages its own internal zones for workspace, navigation, flow, size, and room context.
  *
- * Navigation and view props are obtained from useSecondaryHeaderLogic hook,
+ * Navigation props are obtained from useSecondaryHeaderLogic hook,
  * which must be called inside LayoutPanelProvider context.
  */
 function SecondaryHeader({
@@ -78,23 +123,18 @@ function SecondaryHeader({
     onWorkspaceChange,
     onCreateWorkspace,
 
-    // View mode (passed from parent)
-    viewMode = 'normal',
-    onViewModeChange,
-
     // Flow direction (passed from parent)
     flowDirection = 'row',
     onFlowDirectionChange,
 
-    // Edit mode (passed from parent)
-    isEditMode = false,
-    activeTool = 'select',
-    onToolChange,
-    onToggleEditMode,
-    canUndo = false,
-    canRedo = false,
-    onUndo,
-    onRedo,
+    // Canvas props (moved from footer)
+    canvasSize = { cols: 3, rows: 3 },
+    canvasPlacements = [],
+    onCanvasSizeChange,
+
+    // Viewport props (moved from footer)
+    viewportSize = { cols: 3, rows: 3 },
+    onViewportSizeChange,
 
     // Room props (passed from parent)
     room,
@@ -106,95 +146,156 @@ function SecondaryHeader({
 
     className = '',
 }) {
-    // Get navigation and view logic from context (MUST be inside LayoutPanelProvider)
+    // Get navigation logic from context (MUST be inside LayoutPanelProvider)
     const {
         canvasPosition,
         isAtOrigin,
         onNavigate,
         onHome,
         onBookmark,
-        activeView,
-        onCanvasViews,
-        availableViews,
-        onSelectView,
-        onPlaceView,
     } = useSecondaryHeaderLogic();
 
     return (
         <div className={`secondary-header ${className}`}>
-            {/* ================================================================= */}
-            {/* LEFT ZONE: Workspace Selector */}
-            {/* ================================================================= */}
-            <div className="secondary-header__zone secondary-header__zone--left">
-                <WorkspaceSelector
-                    workspace={workspace}
-                    workspaces={workspaces}
-                    onSelect={onWorkspaceChange}
-                    onCreate={onCreateWorkspace}
-                />
-            </div>
+            {/* Zone Label Bar - displays above content */}
+            <ZoneLabelBar labels={HEADER_ZONE_LABELS} />
 
-            {/* ================================================================= */}
-            {/* CENTER ZONE: Navigation + View Context + Edit Tools */}
-            {/* ================================================================= */}
-            <div className="secondary-header__zone secondary-header__zone--center">
-                <StackedNavBlock
-                    position={canvasPosition}
-                    isAtOrigin={isAtOrigin}
-                    onNavigate={onNavigate}
-                    onHome={onHome}
-                    onBookmark={onBookmark}
-                />
+            {/* Content Row */}
+            <div className="secondary-header__content">
+                {/* ================================================================= */}
+                {/* WORKSPACE ZONE */}
+                {/* ================================================================= */}
+                <div className="secondary-header__zone secondary-header__zone--workspace">
+                    <WorkspaceSelector
+                        workspace={workspace}
+                        workspaces={workspaces}
+                        onSelect={onWorkspaceChange}
+                        onCreate={onCreateWorkspace}
+                    />
+                </div>
 
-                <div className="secondary-header__divider" />
+                {/* ================================================================= */}
+                {/* NAVIGATION ZONE (single row like v3) */}
+                {/* ================================================================= */}
+                <div className="secondary-header__zone secondary-header__zone--navigation">
+                    {/* Bookmarks button */}
+                    <IconButton
+                        icon="bookmark"
+                        label="Bookmarks"
+                        size="sm"
+                        onClick={onBookmark}
+                        className="secondary-header__nav-btn secondary-header__nav-btn--bookmark"
+                    />
 
-                <FlowDirectionToggle
-                    direction={flowDirection}
-                    onChange={onFlowDirectionChange}
-                />
+                    {/* Home button */}
+                    <IconButton
+                        icon="home"
+                        label="Home"
+                        size="sm"
+                        active={isAtOrigin}
+                        onClick={onHome}
+                        className="secondary-header__nav-btn"
+                    />
 
-                <div className="secondary-header__divider" />
+                    {/* Arrow buttons group */}
+                    <div className="secondary-header__arrow-group">
+                        <button
+                            type="button"
+                            className="secondary-header__arrow-btn"
+                            onClick={() => onNavigate('left')}
+                            title="Left"
+                        >
+                            <Icon name="chevronLeft" size={12} />
+                        </button>
+                        <button
+                            type="button"
+                            className="secondary-header__arrow-btn"
+                            onClick={() => onNavigate('up')}
+                            title="Up"
+                        >
+                            <Icon name="chevronUp" size={12} />
+                        </button>
+                        <button
+                            type="button"
+                            className="secondary-header__arrow-btn"
+                            onClick={() => onNavigate('down')}
+                            title="Down"
+                        >
+                            <Icon name="chevronDown" size={12} />
+                        </button>
+                        <button
+                            type="button"
+                            className="secondary-header__arrow-btn"
+                            onClick={() => onNavigate('right')}
+                            title="Right"
+                        >
+                            <Icon name="chevronRight" size={12} />
+                        </button>
+                    </div>
 
-                <EditToolbar
-                    isEditMode={isEditMode}
-                    activeTool={activeTool}
-                    onToolChange={onToolChange}
-                    onToggleEditMode={onToggleEditMode}
-                    canUndo={canUndo}
-                    canRedo={canRedo}
-                    onUndo={onUndo}
-                    onRedo={onRedo}
-                />
+                    {/* Position display */}
+                    <div className="secondary-header__position">
+                        <span className="secondary-header__position-value">{canvasPosition?.col ?? 0}</span>
+                        <span className="secondary-header__position-sep">,</span>
+                        <span className="secondary-header__position-value">{canvasPosition?.row ?? 0}</span>
+                    </div>
+                </div>
 
-                <div className="secondary-header__divider" />
+                {/* ================================================================= */}
+                {/* FLOW ZONE (row/column toggle with icons) */}
+                {/* ================================================================= */}
+                <div className="secondary-header__zone secondary-header__zone--flow">
+                    <div className="secondary-header__flow-toggle">
+                        <button
+                            type="button"
+                            className={`secondary-header__flow-btn ${flowDirection === 'row' ? 'secondary-header__flow-btn--active' : ''}`}
+                            onClick={() => onFlowDirectionChange?.('row')}
+                        >
+                            <Icon name="arrowRight" size={12} />
+                            <span>Row</span>
+                        </button>
+                        <button
+                            type="button"
+                            className={`secondary-header__flow-btn ${flowDirection === 'column' ? 'secondary-header__flow-btn--active' : ''}`}
+                            onClick={() => onFlowDirectionChange?.('column')}
+                        >
+                            <Icon name="arrowDown" size={12} />
+                            <span>Col</span>
+                        </button>
+                    </div>
+                </div>
 
-                <ActiveViewSelector
-                    activeView={activeView}
-                    onCanvasViews={onCanvasViews}
-                    availableViews={availableViews}
-                    onSelect={onSelectView}
-                    onPlace={onPlaceView}
-                />
+                {/* ================================================================= */}
+                {/* SIZE ZONE (canvas + viewport) */}
+                {/* ================================================================= */}
+                <div className="secondary-header__zone secondary-header__zone--size">
+                    <CanvasSizeDisplay
+                        size={canvasSize}
+                        placements={canvasPlacements}
+                        onChange={onCanvasSizeChange}
+                        compact
+                    />
+                    <ViewportSizeDisplay
+                        size={viewportSize}
+                        maxSize={canvasSize}
+                        onChange={onViewportSizeChange}
+                        compact
+                    />
+                </div>
 
-                <SegmentedToggle
-                    options={VIEW_MODE_OPTIONS}
-                    value={viewMode}
-                    onChange={onViewModeChange}
-                />
-            </div>
-
-            {/* ================================================================= */}
-            {/* RIGHT ZONE: Room + Presence */}
-            {/* ================================================================= */}
-            <div className="secondary-header__zone secondary-header__zone--right">
-                <RoomPresenceIndicator
-                    room={room}
-                    members={members}
-                    availableRooms={availableRooms}
-                    onRoomChange={onRoomChange}
-                    onClick={onOpenRoomsPanel}
-                    onCreateRoom={onCreateRoom}
-                />
+                {/* ================================================================= */}
+                {/* ROOM ZONE */}
+                {/* ================================================================= */}
+                <div className="secondary-header__zone secondary-header__zone--room">
+                    <RoomPresenceIndicator
+                        room={room}
+                        members={members}
+                        availableRooms={availableRooms}
+                        onRoomChange={onRoomChange}
+                        onClick={onOpenRoomsPanel}
+                        onCreateRoom={onCreateRoom}
+                    />
+                </div>
             </div>
         </div>
     );

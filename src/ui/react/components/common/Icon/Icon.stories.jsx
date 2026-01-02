@@ -110,31 +110,24 @@ WithTitle.parameters = {
 // =============================================================================
 
 export const Sizes = () => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="settings" size={12} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>12px</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="settings" size={16} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>16px</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="settings" size={20} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>20px</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="settings" size={24} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>24px</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="settings" size={32} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>32px</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="settings" size={48} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>48px</p>
-        </div>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '24px' }}>
+        {[12, 16, 20, 24, 32, 48].map(size => (
+            <div key={size} style={{ textAlign: 'center' }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: size + 16,
+                    height: size + 16,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                }}>
+                    <Icon name="settings" size={size} />
+                </div>
+                <p style={{ fontSize: '10px', margin: 0, color: '#888' }}>{size}px</p>
+            </div>
+        ))}
     </div>
 );
 
@@ -190,17 +183,32 @@ InheritedColor.parameters = {
 
 export const Animations = () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{
+            textAlign: 'center',
+            padding: '16px',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: '8px',
+        }}>
             <Icon name="loader" size={32} className="cia-icon--spin" />
-            <p style={{ fontSize: '12px', margin: '8px 0 0' }}>Spin</p>
+            <p style={{ fontSize: '12px', margin: '8px 0 0', color: '#888' }}>Spin</p>
         </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="dot" size={32} className="cia-icon--pulse" />
-            <p style={{ fontSize: '12px', margin: '8px 0 0' }}>Pulse</p>
+        <div style={{
+            textAlign: 'center',
+            padding: '16px',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: '8px',
+        }}>
+            <Icon name="dot" size={32} color="#22c55e" className="cia-icon--pulse" />
+            <p style={{ fontSize: '12px', margin: '8px 0 0', color: '#888' }}>Pulse</p>
         </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="bell" size={32} className="cia-icon--bounce" />
-            <p style={{ fontSize: '12px', margin: '8px 0 0' }}>Bounce</p>
+        <div style={{
+            textAlign: 'center',
+            padding: '16px',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: '8px',
+        }}>
+            <Icon name="bell" size={32} color="#f59e0b" className="cia-icon--bounce" />
+            <p style={{ fontSize: '12px', margin: '8px 0 0', color: '#888' }}>Bounce</p>
         </div>
     </div>
 );
@@ -222,21 +230,39 @@ export const Clickable = () => {
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Icon
-                name="add"
-                size={32}
+            <div
+                style={{
+                    padding: '8px',
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                }}
                 onClick={() => setCount(c => c + 1)}
-                style={{ cursor: 'pointer' }}
-                title="Click to increment"
-            />
-            <span>Count: {count}</span>
-            <Icon
-                name="refresh"
-                size={32}
+            >
+                <Icon
+                    name="add"
+                    size={32}
+                    color="#3b82f6"
+                    title="Click to increment"
+                />
+            </div>
+            <span style={{ color: '#e0e0e0', fontSize: '18px', minWidth: '80px' }}>Count: {count}</span>
+            <div
+                style={{
+                    padding: '8px',
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                }}
                 onClick={() => setCount(0)}
-                style={{ cursor: 'pointer' }}
-                title="Reset"
-            />
+            >
+                <Icon
+                    name="refresh"
+                    size={32}
+                    color="#ef4444"
+                    title="Reset"
+                />
+            </div>
         </div>
     );
 };
@@ -248,20 +274,20 @@ export const Clickable = () => {
 export const StatusIcons = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Icon name="success" size={20} className="cia-icon--success" />
-            <span>Operation completed successfully</span>
+            <Icon name="success" size={20} color="#22c55e" />
+            <span style={{ color: '#e0e0e0' }}>Operation completed successfully</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Icon name="warning" size={20} className="cia-icon--warning" />
-            <span>Please review before continuing</span>
+            <Icon name="warning" size={20} color="#f59e0b" />
+            <span style={{ color: '#e0e0e0' }}>Please review before continuing</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Icon name="error" size={20} className="cia-icon--error" />
-            <span>An error occurred</span>
+            <Icon name="error" size={20} color="#ef4444" />
+            <span style={{ color: '#e0e0e0' }}>An error occurred</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Icon name="info" size={20} className="cia-icon--info" />
-            <span>Here's some helpful information</span>
+            <Icon name="info" size={20} color="#3b82f6" />
+            <span style={{ color: '#e0e0e0' }}>Here's some helpful information</span>
         </div>
     </div>
 );
@@ -270,38 +296,36 @@ export const StatusIcons = () => (
 // NAMED EXPORTS (Legacy Pattern)
 // =============================================================================
 
-export const NamedExports = () => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ textAlign: 'center' }}>
-            <IconClose size="md" />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>IconClose</p>
+export const NamedExports = () => {
+    const icons = [
+        { Component: IconClose, name: 'IconClose' },
+        { Component: IconSettings, name: 'IconSettings' },
+        { Component: IconCheck, name: 'IconCheck' },
+        { Component: IconEdit, name: 'IconEdit' },
+        { Component: IconDelete, name: 'IconDelete' },
+        { Component: IconSearch, name: 'IconSearch' },
+        { Component: IconLoader, name: 'IconLoader', className: 'cia-icon--spin' },
+    ];
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {icons.map(({ Component, name, className }) => (
+                <div
+                    key={name}
+                    style={{
+                        textAlign: 'center',
+                        padding: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        borderRadius: '8px',
+                    }}
+                >
+                    <Component size="md" className={className} />
+                    <p style={{ fontSize: '10px', margin: '8px 0 0', color: '#888' }}>{name}</p>
+                </div>
+            ))}
         </div>
-        <div style={{ textAlign: 'center' }}>
-            <IconSettings size="md" />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>IconSettings</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <IconCheck size="md" />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>IconCheck</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <IconEdit size="md" />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>IconEdit</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <IconDelete size="md" />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>IconDelete</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <IconSearch size="md" />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>IconSearch</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <IconLoader size="md" className="cia-icon--spin" />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>IconLoader</p>
-        </div>
-    </div>
-);
+    );
+};
 
 NamedExports.parameters = {
     docs: {
@@ -387,38 +411,29 @@ DynamicIconLookup.parameters = {
 // VR & 3D ICONS
 // =============================================================================
 
-export const VRAndSpatialIcons = () => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="vr" size={32} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>vr</p>
+export const VRAndSpatialIcons = () => {
+    const vrIcons = ['vr', 'vrHeadset', 'spatialAudio', 'gesture', 'controller', 'box', 'cube', 'layers', 'rotate3d', 'move', 'pan', 'hand'];
+
+    return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+            {vrIcons.map(iconName => (
+                <div
+                    key={iconName}
+                    style={{
+                        textAlign: 'center',
+                        padding: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        borderRadius: '8px',
+                        minWidth: '80px',
+                    }}
+                >
+                    <Icon name={iconName} size={32} />
+                    <p style={{ fontSize: '10px', margin: '8px 0 0', color: '#888' }}>{iconName}</p>
+                </div>
+            ))}
         </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="vrHeadset" size={32} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>vrHeadset</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="spatialAudio" size={32} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>spatialAudio</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="gesture" size={32} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>gesture</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="box" size={32} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>box</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="layers" size={32} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>layers</p>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-            <Icon name="rotate3d" size={32} />
-            <p style={{ fontSize: '10px', margin: '4px 0 0' }}>rotate3d</p>
-        </div>
-    </div>
-);
+    );
+};
 
 VRAndSpatialIcons.parameters = {
     docs: {
@@ -433,16 +448,19 @@ VRAndSpatialIcons.parameters = {
 // =============================================================================
 
 const ICON_CATEGORIES = {
-    'Navigation': ['chevronDown', 'chevronUp', 'chevronLeft', 'chevronRight', 'arrowUp', 'arrowDown', 'arrowLeft', 'arrowRight', 'expand', 'collapse'],
-    'Actions': ['add', 'remove', 'close', 'check', 'edit', 'delete', 'save', 'copy', 'paste', 'cut', 'undo', 'redo', 'refresh', 'search', 'filter', 'sort'],
-    'View': ['eye', 'eyeOff', 'zoomIn', 'zoomOut', 'fullscreen', 'fullscreenExit', 'maximize', 'minimize'],
-    '3D & VR': ['box', 'cube', 'layers', 'rotate3d', 'move', 'vr', 'vrHeadset', 'spatialAudio', 'gesture'],
-    'Tools': ['pen', 'brush', 'eraser', 'scissors', 'ruler', 'palette', 'sliders', 'settings', 'tools'],
-    'Files': ['file', 'folder', 'folderOpen', 'database', 'upload', 'download', 'archive'],
-    'Media': ['mic', 'micOff', 'video', 'videoOff', 'camera', 'volume', 'volumeOff', 'play', 'pause', 'stop', 'image'],
-    'Users': ['user', 'users', 'userPlus', 'share', 'chat', 'send', 'bell'],
-    'Status': ['info', 'warning', 'error', 'success', 'help', 'loader'],
-    'UI': ['menu', 'moreHorizontal', 'moreVertical', 'grid', 'list', 'dashboard'],
+    'Navigation': ['chevronDown', 'chevronUp', 'chevronLeft', 'chevronRight', 'arrowUp', 'arrowDown', 'arrowLeft', 'arrowRight', 'expand', 'collapse', 'home', 'navigation'],
+    'Actions': ['add', 'remove', 'close', 'check', 'edit', 'delete', 'save', 'copy', 'paste', 'cut', 'undo', 'redo', 'refresh', 'search', 'filter', 'sort', 'cancel'],
+    'View': ['eye', 'eyeOff', 'zoomIn', 'zoomOut', 'fullscreen', 'fullscreenExit', 'maximize', 'minimize', 'focus', 'fitView'],
+    '3D & VR': ['box', 'cube', 'layers', 'rotate3d', 'move', 'pan', 'hand', 'vr', 'vrHeadset', 'spatialAudio', 'gesture', 'controller'],
+    'Tools': ['pen', 'brush', 'eraser', 'scissors', 'ruler', 'palette', 'sliders', 'settings', 'tools', 'wand', 'target', 'crosshair', 'measure'],
+    'Files': ['file', 'folder', 'folderOpen', 'folderPlus', 'database', 'dataset', 'upload', 'download', 'archive', 'paperclip'],
+    'Media': ['mic', 'micOff', 'video', 'videoOff', 'camera', 'volume', 'volumeOff', 'play', 'pause', 'stop', 'record', 'image'],
+    'Users': ['user', 'users', 'userPlus', 'userCircle', 'share', 'chat', 'comment', 'send', 'bell'],
+    'Status': ['info', 'warning', 'error', 'success', 'help', 'loader', 'dot', 'alertTriangle', 'checkCircle'],
+    'UI': ['menu', 'moreHorizontal', 'moreVertical', 'grid', 'list', 'layout', 'dashboard', 'panelLeftClose', 'panelRightClose'],
+    'Science': ['biotech', 'science', 'atom', 'brain', 'dna', 'heart', 'chart', 'graph', 'scatterChart', 'analytics'],
+    'Security': ['lock', 'unlock', 'shield', 'key', 'verified'],
+    'Time': ['clock', 'calendar', 'event'],
 };
 
 export const IconGallery = () => {

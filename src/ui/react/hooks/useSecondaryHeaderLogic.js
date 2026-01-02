@@ -321,9 +321,14 @@ export function useSecondaryHeaderLogic() {
   /**
    * Select a view (focus it)
    * Sets the active instance via workspaceManager to stay in sync with InstanceToolsTab
+   * @param {string|object} viewOrId - View object with id property, or view ID string
    */
   const handleSelectView = useCallback(
-    (viewId) => {
+    (viewOrId) => {
+      // Support both view object and view ID
+      const viewId = typeof viewOrId === "string" ? viewOrId : viewOrId?.id;
+      if (!viewId) return;
+
       log.debug("SecondaryHeader: Select view", viewId);
 
       // Find the instance by viewConfigId and set it as active
@@ -379,6 +384,53 @@ export function useSecondaryHeaderLogic() {
     [viewport]
   );
 
+  /**
+   * Remove a view from the canvas
+   */
+  const handleRemoveView = useCallback(
+    async (viewId) => {
+      log.debug("SecondaryHeader: Remove view", viewId);
+
+      const canvas = canvasManager?.getActiveCanvas?.();
+      if (!canvas) return;
+
+      // Find the placement with this view
+      const placement = cells.find(
+        (cell) => cell.viewConfigurationId === viewId || cell.id === viewId
+      );
+
+      if (placement) {
+        await canvas.removePlacement?.(placement.row, placement.col);
+      }
+    },
+    [cells]
+  );
+
+  /**
+   * Handle view actions (remove, place, create)
+   */
+  const handleViewAction = useCallback(
+    (action, view) => {
+      log.debug("SecondaryHeader: View action", action, view);
+
+      switch (action) {
+        case "remove":
+          if (view?.id) handleRemoveView(view.id);
+          break;
+        case "place":
+          if (view?.id) handlePlaceView(view.id);
+          break;
+        case "create":
+          // Dispatch event to open create view dialog
+          window.dispatchEvent(new CustomEvent("open:create-view"));
+          break;
+        default:
+          log.warn("Unknown view action:", action);
+      }
+    },
+    [handleRemoveView, handlePlaceView]
+  );
+
   // =========================================================================
   // RETURN API
   // =========================================================================
@@ -397,6 +449,7 @@ export function useSecondaryHeaderLogic() {
     availableViews,
     onSelectView: handleSelectView,
     onPlaceView: handlePlaceView,
+    onViewAction: handleViewAction,
   };
 }
 

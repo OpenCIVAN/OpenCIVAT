@@ -20,6 +20,7 @@ export { CanvasNavigation } from './CanvasNavigation';
 
 // View Selection
 export { ActiveViewSelector } from './ActiveViewSelector';
+export { ViewContextBlock } from './ViewContextBlock';
 
 // Toggle Controls
 export { FlowDirectionToggle } from './FlowDirectionToggle';

@@ -1,18 +1,13 @@
 /**
  * @file SecondaryHeader.scss
- * @description Styles for secondary header bar with responsive zone behavior.
- * 
- * RESPONSIVE STRATEGY:
- * - Zones use flex-basis with min-width to allow shrinking
- * - Content adapts via container queries (hide labels, show icons only)
- * - NO overflow: hidden on zones - content adapts instead of clipping
- * - Dropdowns use React Portals (rendered outside this container)
- * 
- * Layout:
- * ┌─────────────────┬──────────────────────────────────────┬─────────────────┐
- * │  LEFT ZONE      │           CENTER ZONE                │   RIGHT ZONE    │
- * │  (adaptive)     │        (flexible, fills)             │  (adaptive)     │
- * └─────────────────┴──────────────────────────────────────┴─────────────────┘
+ * @description Styles for secondary header bar with zone label bar and responsive behavior.
+ *
+ * Layout (with label bar):
+ * ┌────────────┬─────────────────┬────────┬──────────┬────────────┐
+ * │  WORKSPACE │   NAVIGATION    │  FLOW  │   SIZE   │    ROOM    │  ← Label Bar
+ * ├────────────┼─────────────────┼────────┼──────────┼────────────┤
+ * │  Selector  │ Nav + Arrows    │ Toggle │ Canvas/VP│  Presence  │  ← Content
+ * └────────────┴─────────────────┴────────┴──────────┴────────────┘
  */
 
 @use "theme" as *;
@@ -21,8 +16,10 @@
 // VARIABLES
 // =============================================================================
 
-$header-height: 56px;
-$zone-min-width: 180px; // Minimum before content starts hiding
+$header-height: 58px;
+$label-bar-height: 18px;
+$content-height: 40px;
+$zone-min-width: 180px;
 $zone-padding: $spacing-md;
 
 // =============================================================================
@@ -35,12 +32,79 @@ $zone-padding: $spacing-md;
   background: $color-bg-secondary;
   border-bottom: 1px solid $color-border-default;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   z-index: 90;
   flex-shrink: 0;
-
-  // Allow dropdowns to overflow (they use portals for actual rendering)
   position: relative;
+}
+
+// =============================================================================
+// ZONE LABEL BAR - Labels must align exactly with content zones below
+// =============================================================================
+
+.secondary-header__label-bar {
+  display: flex;
+  align-items: center;
+  height: $label-bar-height;
+  background: $color-bg-base;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.secondary-header__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+
+  // Match zone widths exactly
+  &--workspace {
+    flex: 0 0 auto;
+    min-width: $zone-min-width;
+    padding: 0 $zone-padding;
+    border-right: 1px solid $color-border-subtle;
+  }
+
+  &--navigation {
+    flex: 1 1 auto;
+    min-width: 200px;
+  }
+
+  &--flow {
+    flex: 0 0 auto;
+    width: 100px;
+  }
+
+  &--size {
+    flex: 0 0 auto;
+    width: 140px;
+  }
+
+  &--room {
+    flex: 0 0 auto;
+    min-width: $zone-min-width;
+    padding: 0 $zone-padding;
+    border-left: 1px solid $color-border-subtle;
+  }
+}
+
+.secondary-header__label-text {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--zone-color, $color-text-muted);
+  opacity: 0.8;
+}
+
+// =============================================================================
+// CONTENT ROW
+// =============================================================================
+
+.secondary-header__content {
+  display: flex;
+  align-items: center;
+  height: $content-height;
+  flex: 1;
 }
 
 // =============================================================================
@@ -52,63 +116,154 @@ $zone-padding: $spacing-md;
   align-items: center;
   height: 100%;
   gap: $spacing-sm;
-
-  // NOTE: Don't use container-type here - it breaks absolute positioning
-  // for dropdowns. Container queries applied at component level instead.
 }
 
 // =============================================================================
-// LEFT ZONE: Workspace Selector
+// WORKSPACE ZONE
 // =============================================================================
 
-.secondary-header__zone--left {
-  // Size to content, don't grow, can shrink
+.secondary-header__zone--workspace {
   flex: 0 0 auto;
   min-width: $zone-min-width;
-  // NO max-width - let it take the space it needs
-
   padding: 0 $zone-padding;
   border-right: 1px solid $color-border-subtle;
   justify-content: flex-start;
-
-  // CRITICAL: Position context for dropdown menus
   position: relative;
 }
 
 // =============================================================================
-// CENTER ZONE: Navigation + View Context
+// NAVIGATION ZONE (single row with bookmark, home, arrows, position)
 // =============================================================================
 
-.secondary-header__zone--center {
+.secondary-header__zone--navigation {
   flex: 1 1 auto;
-  min-width: 200px; // Enough for nav block at minimum
+  min-width: 200px;
   padding: 0 $zone-padding;
   justify-content: center;
-  gap: $spacing-md;
+  gap: 4px;
+}
 
-  // DON'T use overflow: hidden - let content wrap/adapt
+// Nav buttons (bookmark, home)
+.secondary-header__nav-btn {
+  &--bookmark {
+    color: $color-accent-amber;
+  }
+}
+
+// Arrow buttons group
+.secondary-header__arrow-group {
+  display: flex;
+  gap: 1px;
+  background: $color-bg-tertiary;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.secondary-header__arrow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-primary;
+  }
+}
+
+// Position display
+.secondary-header__position {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 10px;
+  background: $color-bg-tertiary;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.secondary-header__position-value {
+  color: $color-text-primary;
+}
+
+.secondary-header__position-sep {
+  color: $color-text-muted;
 }
 
 // =============================================================================
-// RIGHT ZONE: Room + Presence
+// FLOW ZONE (row/column toggle with icons)
 // =============================================================================
 
-.secondary-header__zone--right {
-  // Size to content, don't grow, can shrink
+.secondary-header__zone--flow {
+  flex: 0 0 auto;
+  width: 100px;
+  justify-content: center;
+}
+
+.secondary-header__flow-toggle {
+  display: flex;
+  background: $color-bg-tertiary;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.secondary-header__flow-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: $color-text-muted;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all $transition-fast;
+
+  &:hover:not(&--active) {
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: $color-accent-teal;
+    color: #fff;
+  }
+}
+
+// =============================================================================
+// SIZE ZONE (canvas + viewport displays)
+// =============================================================================
+
+.secondary-header__zone--size {
+  flex: 0 0 auto;
+  width: 140px;
+  justify-content: center;
+  gap: $spacing-sm;
+}
+
+// =============================================================================
+// ROOM ZONE
+// =============================================================================
+
+.secondary-header__zone--room {
   flex: 0 0 auto;
   min-width: $zone-min-width;
-  // NO max-width - let it take the space it needs
-
   padding: 0 $zone-padding;
   border-left: 1px solid $color-border-subtle;
   justify-content: flex-end;
-
-  // CRITICAL: Position context for dropdown menus
   position: relative;
 }
 
 // =============================================================================
-// DIVIDER
+// DIVIDER (legacy - keep for compatibility)
 // =============================================================================
 
 .secondary-header__divider {
@@ -120,59 +275,62 @@ $zone-padding: $spacing-md;
 }
 
 // =============================================================================
-// RESPONSIVE - Use media queries (container queries break dropdown positioning)
-// =============================================================================
-
-// NOTE: We intentionally DON'T use CSS Container Queries here because
-// container-type: inline-size creates a new containing block that breaks
-// position: absolute for dropdown menus. Use media queries instead.
-
-// =============================================================================
 // RESPONSIVE BREAKPOINTS
 // =============================================================================
 
 @media (max-width: 1400px) {
-  .secondary-header__zone--left,
-  .secondary-header__zone--right {
+  .secondary-header__zone--workspace,
+  .secondary-header__zone--room {
     padding: 0 $spacing-sm;
   }
 
-  .secondary-header__zone--center {
-    gap: $spacing-sm;
+  .secondary-header__zone--navigation {
+    gap: 2px;
   }
 }
 
 @media (max-width: 1200px) {
-  .secondary-header__zone--left,
-  .secondary-header__zone--right {
+  .secondary-header__zone--workspace,
+  .secondary-header__zone--room {
     min-width: 140px;
   }
 
-  .secondary-header__zone--center {
-    gap: $spacing-xs;
-    padding: 0 $spacing-sm;
+  .secondary-header__zone--size {
+    width: 120px;
   }
 
-  .secondary-header__divider {
+  .secondary-header__zone--flow {
+    width: 90px;
+  }
+
+  .secondary-header__flow-btn span {
     display: none;
   }
 }
 
 @media (max-width: 1000px) {
   .secondary-header {
-    height: 48px;
+    height: 52px;
   }
 
-  .secondary-header__zone--left,
-  .secondary-header__zone--right {
+  .secondary-header__zone--workspace,
+  .secondary-header__zone--room {
     min-width: 120px;
     padding: 0 $spacing-xs;
+  }
+
+  // Hide size zone on narrow screens
+  .secondary-header__zone--size {
+    display: none;
+  }
+
+  .secondary-header__label--size {
+    display: none;
   }
 }
 
 // =============================================================================
 // DROPDOWN PORTAL MARKER
-// Dropdowns render via React Portal to <body> to avoid overflow issues
 // =============================================================================
 
 .secondary-header__dropdown-portal {

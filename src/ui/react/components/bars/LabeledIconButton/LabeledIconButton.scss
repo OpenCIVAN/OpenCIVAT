@@ -11,24 +11,27 @@
 // =============================================================================
 
 .labeled-icon-button {
+  // Vertical stacked layout like v3 PopoutBtn
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: $spacing-xs;
-  padding: 6px $spacing-sm;
+  gap: 2px;
+  padding: 6px 12px;
+  min-width: 48px;
 
-  background: $color-glass-subtle;
+  background: $color-bg-tertiary;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-md;
 
   cursor: pointer;
   transition: all $transition-fast;
   white-space: nowrap;
-  flex-shrink: 0; // Don't let button shrink
+  flex-shrink: 0;
 
   // Icon
   &__icon {
     flex-shrink: 0;
-    color: $color-text-tertiary;
+    color: $color-text-secondary;
     transition: color $transition-fast;
 
     svg {
@@ -36,14 +39,12 @@
     }
   }
 
-  // Label
+  // Label (below icon)
   &__label {
-    font-size: 11px;
+    font-size: 9px;
     font-weight: $font-weight-medium;
     color: $color-text-secondary;
     transition: color $transition-fast;
-
-    // Prevent text selection
     user-select: none;
   }
 

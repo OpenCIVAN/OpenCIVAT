@@ -429,9 +429,16 @@ export function CIAWebApp({ username, userId, projectId }) {
                   workspaces={workspaces}
                   onWorkspaceChange={handleWorkspaceChange}
                   onCreateWorkspace={handleCreateWorkspace}
-                  // View mode
-                  viewMode={layoutMode}
-                  onViewModeChange={handleViewModeChange}
+                  // Flow direction (connected to canvas)
+                  flowDirection={flowDirection}
+                  onFlowDirectionChange={handleFlowDirectionChange}
+                  // Canvas size (connected to canvas)
+                  canvasSize={canvasSize}
+                  canvasPlacements={canvas?.placements || []}
+                  onCanvasSizeChange={handleCanvasSizeChange}
+                  // Viewport size (how many cells visible)
+                  viewportSize={viewportSize}
+                  onViewportSizeChange={handleViewportSizeChange}
                   // Room props
                   room={currentRoom}
                   members={roomMembers}
@@ -465,9 +472,6 @@ export function CIAWebApp({ username, userId, projectId }) {
                   canvasOpsOpen={openPopouts.includes("canvasOps")}
                   onToggleScratchpad={() => handleTogglePopout("scratchpad")}
                   onToggleCanvasOps={() => handleTogglePopout("canvasOps")}
-                  // Flow direction (connected to canvas)
-                  flowDirection={flowDirection}
-                  onFlowDirectionChange={handleFlowDirectionChange}
                   // Edit tools
                   isEditMode={isEditMode}
                   activeTool={activeTool}
@@ -477,13 +481,9 @@ export function CIAWebApp({ username, userId, projectId }) {
                   canRedo={false}
                   onUndo={handleUndo}
                   onRedo={handleRedo}
-                  // Canvas size (connected to canvas)
-                  canvasSize={canvasSize}
-                  canvasPlacements={canvas?.placements || []}
-                  onCanvasSizeChange={handleCanvasSizeChange}
-                  // Viewport size (how many cells visible)
-                  viewportSize={viewportSize}
-                  onViewportSizeChange={handleViewportSizeChange}
+                  // View mode (for ViewContextBlock)
+                  viewMode={layoutMode}
+                  onViewModeChange={handleViewModeChange}
                   // Voice controls
                   isMuted={voice.muted}
                   isDeafened={voice.deafened}
