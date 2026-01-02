@@ -247,11 +247,40 @@ const LeftPanelContext = createContext({
 // PROVIDER
 // =============================================================================
 
+// LocalStorage key for left panel tab
+const LEFT_PANEL_TAB_STORAGE_KEY = 'ciaLeftPanelTab';
+
+/**
+ * Load saved left panel tab from localStorage
+ */
+function loadLeftPanelTab(defaultTab) {
+    try {
+        const saved = localStorage.getItem(LEFT_PANEL_TAB_STORAGE_KEY);
+        if (saved && LEFT_PANEL_TABS.some(t => t.id === saved)) {
+            return saved;
+        }
+    } catch (error) {
+        console.warn('Failed to load left panel tab:', error);
+    }
+    return defaultTab;
+}
+
+/**
+ * Save left panel tab to localStorage
+ */
+function saveLeftPanelTab(tabId) {
+    try {
+        localStorage.setItem(LEFT_PANEL_TAB_STORAGE_KEY, tabId);
+    } catch (error) {
+        console.warn('Failed to save left panel tab:', error);
+    }
+}
+
 /**
  * LeftPanelProvider - Provides shared state for Left Panel
  */
 export function LeftPanelProvider({ children, defaultTab = 'files' }) {
-    const [activeTab, setActiveTab] = useState(defaultTab);
+    const [activeTab, setActiveTab] = useState(() => loadLeftPanelTab(defaultTab));
 
     // Navigate to a specific panel/tab
     const navigateToPanel = useCallback((panelId) => {
@@ -261,8 +290,9 @@ export function LeftPanelProvider({ children, defaultTab = 'files' }) {
         }
     }, []);
 
-    // Dispatch tab change events for other components (e.g., InstanceViewport)
+    // Save tab to localStorage and dispatch event when it changes
     useEffect(() => {
+        saveLeftPanelTab(activeTab);
         window.dispatchEvent(
             new CustomEvent('cia:left-panel-tab-change', {
                 detail: { tabId: activeTab, isInstanceToolsActive: activeTab === 'tools' },

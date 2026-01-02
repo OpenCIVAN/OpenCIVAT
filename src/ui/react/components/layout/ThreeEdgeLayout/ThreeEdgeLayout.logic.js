@@ -2,7 +2,7 @@
 // Pure logic hooks for layout state management
 // Separates business logic from presentation (headless pattern)
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ui as log } from "@Utils/logger.js";
 
 /**
@@ -128,13 +128,56 @@ export function useResizeHandler(side, onWidthChange) {
 
 /**
  * usePanelPersistence - Saves layout state to localStorage
+ * Uses debouncing to avoid excessive writes during resize operations
+ * Also saves on page unload to ensure state is captured
  *
  * @param {Object} state - Current layout state
  */
 export function usePanelPersistence(state) {
+  const stateRef = useRef(state);
+  const timeoutRef = useRef(null);
+
+  // Keep ref updated
+  stateRef.current = state;
+
+  // Debounced save (300ms delay during resize operations)
   useEffect(() => {
-    saveLayoutState(state);
-  }, [state]);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      saveLayoutState(state);
+      log.debug("Layout state saved:", state);
+    }, 300);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [state.leftOpen, state.rightOpen, state.leftWidth, state.rightWidth]);
+
+  // Save immediately on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveLayoutState(stateRef.current);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveLayoutState(stateRef.current);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 }
 
 /**

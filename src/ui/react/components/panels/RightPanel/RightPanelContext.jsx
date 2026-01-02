@@ -19,7 +19,7 @@
  * @see Right_Panel_Design_Specification.md
  */
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
 
 // =============================================================================
@@ -224,9 +224,38 @@ const RightPanelContext = createContext({
 // PROVIDER
 // =============================================================================
 
+// LocalStorage key for right panel tab
+const RIGHT_PANEL_TAB_STORAGE_KEY = 'ciaRightPanelTab';
+
+/**
+ * Load saved right panel tab from localStorage
+ */
+function loadRightPanelTab(defaultTab) {
+    try {
+        const saved = localStorage.getItem(RIGHT_PANEL_TAB_STORAGE_KEY);
+        if (saved && RIGHT_PANEL_TABS.some(t => t.id === saved)) {
+            return saved;
+        }
+    } catch (error) {
+        console.warn('Failed to load right panel tab:', error);
+    }
+    return defaultTab;
+}
+
+/**
+ * Save right panel tab to localStorage
+ */
+function saveRightPanelTab(tabId) {
+    try {
+        localStorage.setItem(RIGHT_PANEL_TAB_STORAGE_KEY, tabId);
+    } catch (error) {
+        console.warn('Failed to save right panel tab:', error);
+    }
+}
+
 /**
  * RightPanelProvider - Wraps the app to provide shared state
- * 
+ *
  * @example
  * <RightPanelProvider>
  *   <ThreeEdgeLayout
@@ -236,7 +265,7 @@ const RightPanelContext = createContext({
  * </RightPanelProvider>
  */
 export function RightPanelProvider({ children, defaultTab = 'people' }) {
-    const [activeTab, setActiveTab] = useState(defaultTab);
+    const [activeTab, setActiveTab] = useState(() => loadRightPanelTab(defaultTab));
 
     // Navigate to a specific panel/tab
     const navigateToPanel = useCallback((panelId) => {
@@ -245,6 +274,11 @@ export function RightPanelProvider({ children, defaultTab = 'people' }) {
             setActiveTab(panelId);
         }
     }, []);
+
+    // Save tab to localStorage when it changes
+    useEffect(() => {
+        saveRightPanelTab(activeTab);
+    }, [activeTab]);
 
     // Dispatch tab change events for other components
     // (useful for tracking, analytics, or external integrations)
