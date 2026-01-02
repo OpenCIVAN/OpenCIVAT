@@ -522,11 +522,121 @@ export function CanvasGrid({
                     setContextMenu({ isOpen: false, position: null, cells: [] });
                 }
             }
+
+            // Tab / Shift+Tab - Cycle through cells with views
+            if (e.key === 'Tab' && gridRef.current?.contains(document.activeElement)) {
+                const cellsWithViews = (canvas?.placements || [])
+                    .filter(p => p.content?.type === 'view')
+                    .sort((a, b) => {
+                        // Sort by row first, then by column
+                        if (a.row !== b.row) return a.row - b.row;
+                        return a.col - b.col;
+                    });
+
+                if (cellsWithViews.length > 0) {
+                    e.preventDefault();
+
+                    // Find current index
+                    let currentIndex = -1;
+                    if (selectedCells.length > 0) {
+                        const lastSelected = selectedCells[selectedCells.length - 1];
+                        currentIndex = cellsWithViews.findIndex(
+                            p => p.row === lastSelected.row && p.col === lastSelected.col
+                        );
+                    }
+
+                    // Calculate next index (wrap around)
+                    let nextIndex;
+                    if (e.shiftKey) {
+                        // Shift+Tab - go backwards
+                        nextIndex = currentIndex <= 0 ? cellsWithViews.length - 1 : currentIndex - 1;
+                    } else {
+                        // Tab - go forwards
+                        nextIndex = currentIndex >= cellsWithViews.length - 1 ? 0 : currentIndex + 1;
+                    }
+
+                    const nextPlacement = cellsWithViews[nextIndex];
+                    setSelectedCells([{
+                        row: nextPlacement.row,
+                        col: nextPlacement.col,
+                        placement: nextPlacement,
+                    }]);
+
+                    // Emit focus event for the selected view
+                    if (nextPlacement.content?.viewConfigurationId) {
+                        window.dispatchEvent(new CustomEvent('cia:instance-focused', {
+                            detail: { viewId: nextPlacement.content.viewConfigurationId }
+                        }));
+                    }
+                }
+            }
+
+            // Enter - Activate/isolate selected cell
+            if (e.key === 'Enter' && selectedCells.length === 1) {
+                e.preventDefault();
+                const selected = selectedCells[0];
+                if (selected.placement) {
+                    // Check if should isolate (for small cells) or just focus
+                    if (shouldTriggerIsolation(renderMode)) {
+                        isolateCell({
+                            id: selected.placement.id,
+                            viewId: selected.placement.content?.viewConfigurationId,
+                            name: getPlacementName(selected.placement),
+                            row: selected.row,
+                            col: selected.col,
+                        });
+                    } else {
+                        // Emit focus event
+                        if (selected.placement.content?.viewConfigurationId) {
+                            window.dispatchEvent(new CustomEvent('cia:instance-focused', {
+                                detail: { viewId: selected.placement.content.viewConfigurationId }
+                            }));
+                        }
+                    }
+                }
+            }
+
+            // Space - Toggle selection of focused cell (without moving)
+            if (e.code === 'Space' && gridRef.current?.contains(document.activeElement)) {
+                // Only handle if we have a single selected cell and Ctrl is held
+                if ((e.ctrlKey || e.metaKey) && selectedCells.length > 0) {
+                    e.preventDefault();
+                    const lastSelected = selectedCells[selectedCells.length - 1];
+                    // Toggle this cell's selection
+                    const isInSelection = selectedCells.length > 1;
+                    if (isInSelection) {
+                        // Remove from multi-selection
+                        setSelectedCells(prev => prev.slice(0, -1));
+                    }
+                }
+            }
+
+            // Delete/Backspace - Remove selected views (with confirmation)
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCells.length > 0) {
+                // Only if not in an input
+                if (!e.target.matches('input, textarea')) {
+                    e.preventDefault();
+                    // Dispatch event to show confirmation dialog
+                    window.dispatchEvent(new CustomEvent('cia:confirm-delete-views', {
+                        detail: {
+                            cells: selectedCells.filter(c => c.placement?.content?.type === 'view'),
+                            onConfirm: () => {
+                                selectedCells.forEach(cell => {
+                                    if (cell.placement) {
+                                        onRemovePlacement?.(cell.placement.id);
+                                    }
+                                });
+                                setSelectedCells([]);
+                            }
+                        }
+                    }));
+                }
+            }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells, contextMenu.isOpen]);
+    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells, contextMenu.isOpen, renderMode, shouldTriggerIsolation, isolateCell, onRemovePlacement]);
 
     // ==========================================================================
     // SELECTION MODIFIER KEY TRACKING (for cursor feedback)

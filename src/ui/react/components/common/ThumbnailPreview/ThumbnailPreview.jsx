@@ -3,20 +3,30 @@
 //
 // Shows a cached thumbnail while the real visualization loads,
 // then crossfades to the actual content when ready.
+//
+// Uses visual hash caching (SHA-256) for instant display of previously-seen
+// view states based on: camera, filters, representation, colorMapping,
+// clipPlanes, and visibleLayers.
 
 import React, { useState, useEffect, memo } from 'react';
 import { thumbnails as log } from '@Utils/logger.js';
 import { config } from '@Core/config/clientConfig.js';
+import { thumbnailCacheService } from '@Services/thumbnails/ThumbnailCacheService.js';
 import './ThumbnailPreview.scss';
 
 /**
  * ThumbnailPreview - Shows a thumbnail placeholder for progressive loading
+ *
+ * Uses visual hash caching for instant display of previously-seen states,
+ * and handler-specific format optimization (WebP for VTK, SVG for charts, etc.)
  *
  * Usage:
  * ```jsx
  * <ThumbnailPreview
  *   viewId="abc-123"
  *   snapshotId={null}  // null for current state
+ *   viewState={{ camera, filters, representation, colorMapping }}
+ *   handlerType="vtk"  // for format optimization
  *   isContentReady={false}
  *   onLoad={() => console.log('Thumbnail loaded')}
  * />
@@ -24,6 +34,8 @@ import './ThumbnailPreview.scss';
  *
  * @param {string} viewId - The view configuration ID
  * @param {string|null} snapshotId - Optional snapshot ID (null = current state)
+ * @param {Object} viewState - Visual state for hash caching (camera, filters, etc.)
+ * @param {string|null} handlerType - Handler type for format optimization ('vtk', 'chart', 'table')
  * @param {boolean} isContentReady - Whether the real content has loaded
  * @param {string} className - Additional CSS classes
  * @param {Function} onLoad - Callback when thumbnail loads
@@ -32,6 +44,8 @@ import './ThumbnailPreview.scss';
 export const ThumbnailPreview = memo(function ThumbnailPreview({
     viewId,
     snapshotId = null,
+    viewState = null,
+    handlerType = null,
     isContentReady = false,
     className = '',
     onLoad,
@@ -40,53 +54,104 @@ export const ThumbnailPreview = memo(function ThumbnailPreview({
     const [thumbnailSrc, setThumbnailSrc] = useState(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const [cacheHit, setCacheHit] = useState(false);
 
-    // Load thumbnail from API
+    // Load thumbnail from cache or API
     useEffect(() => {
         if (!viewId) return;
 
+        let cancelled = false;
+
         const loadThumbnail = async () => {
             try {
-                // Use apiBaseUrl to ensure requests go to API server, not webpack dev server
                 const apiBase = config.apiBaseUrl || 'http://localhost:3001/api';
-                const url = snapshotId
+
+                // Get format strategy based on handler type
+                const formatStrategy = thumbnailCacheService.getEffectiveFormatStrategy(handlerType);
+
+                // Build URL with format parameters
+                let url = snapshotId
                     ? `${apiBase}/views/${viewId}/thumbnail?snapshotId=${snapshotId}`
                     : `${apiBase}/views/${viewId}/thumbnail`;
 
-                log.debug(`Fetching thumbnail from: ${url}`);
-                const response = await fetch(url);
+                // Add format and quality parameters for handler-specific optimization
+                const urlObj = new URL(url, window.location.origin);
+                urlObj.searchParams.set('format', formatStrategy.format);
+                urlObj.searchParams.set('quality', formatStrategy.quality.toString());
+                url = urlObj.toString();
 
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        // No thumbnail available - not an error, just skip
-                        log.debug(`No thumbnail for view ${viewId}`);
-                        return;
-                    }
-                    throw new Error(`HTTP ${response.status}`);
+                // Register handler type for future lookups
+                if (handlerType) {
+                    thumbnailCacheService.registerViewHandlerType(viewId, handlerType);
                 }
 
-                // Get the blob and create object URL
-                const blob = await response.blob();
-                const objectUrl = URL.createObjectURL(blob);
-                setThumbnailSrc(objectUrl);
+                // Fetch function for cache miss
+                const fetchFn = async () => {
+                    log.debug(`Fetching ${formatStrategy.format} thumbnail from: ${url}`);
+                    const response = await fetch(url);
 
-                log.debug(`Loaded thumbnail for view ${viewId}`);
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            log.debug(`No thumbnail for view ${viewId}`);
+                            return null;
+                        }
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    return response.blob();
+                };
+
+                let objectUrl;
+
+                // Use visual hash caching if viewState is provided
+                if (viewState && !snapshotId) {
+                    // Check if we have a cached version for this visual state
+                    const hash = await thumbnailCacheService.computeVisualHash(viewState);
+                    const cached = thumbnailCacheService.cache.get(hash);
+
+                    if (cached) {
+                        log.debug(`[ThumbnailPreview] Cache HIT for ${viewId} (${formatStrategy.format})`);
+                        setCacheHit(true);
+                        objectUrl = cached;
+                    } else {
+                        // Fetch and cache
+                        objectUrl = await thumbnailCacheService.getThumbnail(
+                            viewId,
+                            viewState,
+                            fetchFn
+                        );
+                    }
+                } else {
+                    // No viewState - fetch directly without caching
+                    const blob = await fetchFn();
+                    if (blob) {
+                        objectUrl = URL.createObjectURL(blob);
+                    }
+                }
+
+                if (!cancelled && objectUrl) {
+                    setThumbnailSrc(objectUrl);
+                    log.debug(`Loaded ${formatStrategy.format} thumbnail for view ${viewId}${cacheHit ? ' (cached)' : ''}`);
+                }
             } catch (err) {
-                log.warn(`Failed to load thumbnail for view ${viewId}:`, err.message);
-                setHasError(true);
-                onError?.(err);
+                if (!cancelled) {
+                    log.warn(`Failed to load thumbnail for view ${viewId}:`, err.message);
+                    setHasError(true);
+                    onError?.(err);
+                }
             }
         };
 
         loadThumbnail();
 
-        // Cleanup object URL on unmount
         return () => {
-            if (thumbnailSrc) {
+            cancelled = true;
+            // Only revoke if not from cache (cache manages its own URLs)
+            if (thumbnailSrc && !cacheHit) {
                 URL.revokeObjectURL(thumbnailSrc);
             }
         };
-    }, [viewId, snapshotId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [viewId, snapshotId, viewState, handlerType]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Handle image load
     const handleLoad = () => {
@@ -158,6 +223,8 @@ export function ThumbnailPlaceholder({
  * ```jsx
  * <ProgressiveLoader
  *   viewId="abc-123"
+ *   handlerType="vtk"
+ *   viewState={{ camera, filters }}
  *   isReady={dataLoaded}
  * >
  *   <MyVisualization />
@@ -167,6 +234,8 @@ export function ThumbnailPlaceholder({
 export function ProgressiveLoader({
     viewId,
     snapshotId = null,
+    viewState = null,
+    handlerType = null,
     isReady = false,
     children,
     className = '',
@@ -177,6 +246,8 @@ export function ProgressiveLoader({
             <ThumbnailPreview
                 viewId={viewId}
                 snapshotId={snapshotId}
+                viewState={viewState}
+                handlerType={handlerType}
                 isContentReady={isReady}
             />
 
