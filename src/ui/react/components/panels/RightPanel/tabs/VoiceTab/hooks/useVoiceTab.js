@@ -14,13 +14,21 @@
  * } = useVoiceTab({ channels });
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   voiceRoomService,
   VoiceConnectionState,
 } from "@Services/voice/voiceRoomService.js";
 import { getUserName } from "@Collaboration/presence/userManagement.js";
 import { toast } from "@UI/react/store/toastStore.js";
+
+/**
+ * Voice activation modes
+ */
+export const VOICE_MODES = {
+  VAD: "vad", // Voice Activity Detection (always listening)
+  PTT: "ptt", // Push-to-Talk (spacebar to transmit)
+};
 
 /**
  * Default voice channels
@@ -55,6 +63,14 @@ export function useVoiceTab(options = {}) {
     voiceRoomService.getCurrentRoom() || channels[0]?.id
   );
   const [participants, setParticipants] = useState([]);
+
+  // PTT and input level state
+  const [voiceMode, setVoiceMode] = useState(VOICE_MODES.VAD);
+  const [isPTTActive, setIsPTTActive] = useState(false);
+  const [inputLevel, setInputLevel] = useState(0);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const animationFrameRef = useRef(null);
 
   const isConnected = connectionState === VoiceConnectionState.CONNECTED;
 
@@ -102,16 +118,22 @@ export function useVoiceTab(options = {}) {
     };
   }, []);
 
-  // Keyboard shortcut for mute (M key)
+  // Keyboard shortcut for mute (M key) and deafen (D key)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (
-        (e.key === "m" || e.key === "M") &&
-        !e.target.matches("input, textarea")
-      ) {
+      if (e.target.matches("input, textarea")) return;
+
+      if (e.key === "m" || e.key === "M") {
         if (connectionState === VoiceConnectionState.CONNECTED) {
           e.preventDefault();
           handleToggleMute();
+        }
+      }
+
+      if (e.key === "d" || e.key === "D") {
+        if (connectionState === VoiceConnectionState.CONNECTED) {
+          e.preventDefault();
+          handleToggleDeafen();
         }
       }
     };
@@ -119,6 +141,104 @@ export function useVoiceTab(options = {}) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [connectionState]);
+
+  // Push-to-Talk spacebar handling
+  useEffect(() => {
+    if (voiceMode !== VOICE_MODES.PTT || !isConnected) return;
+
+    const handleKeyDown = (e) => {
+      if (e.target.matches("input, textarea")) return;
+      if (e.code === "Space" && !e.repeat) {
+        e.preventDefault();
+        setIsPTTActive(true);
+        // Unmute while spacebar held
+        if (muted) {
+          voiceRoomService.setMuted(false);
+        }
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        setIsPTTActive(false);
+        // Mute when spacebar released
+        voiceRoomService.setMuted(true);
+        setMuted(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [voiceMode, isConnected, muted]);
+
+  // Input level monitoring using Web Audio API
+  useEffect(() => {
+    if (!isConnected) {
+      setInputLevel(0);
+      return;
+    }
+
+    let stream = null;
+
+    const startMonitoring = async () => {
+      try {
+        // Get microphone stream
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // Create audio context and analyser
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 256;
+
+        const source = audioContextRef.current.createMediaStreamSource(stream);
+        source.connect(analyserRef.current);
+
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+
+        // Animation loop to update level
+        const updateLevel = () => {
+          if (!analyserRef.current) return;
+
+          analyserRef.current.getByteFrequencyData(dataArray);
+
+          // Calculate average level (0-100)
+          const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          const normalizedLevel = Math.min(100, Math.round((average / 128) * 100));
+
+          setInputLevel(normalizedLevel);
+          animationFrameRef.current = requestAnimationFrame(updateLevel);
+        };
+
+        updateLevel();
+      } catch (error) {
+        console.warn("Could not access microphone for level monitoring:", error);
+      }
+    };
+
+    startMonitoring();
+
+    return () => {
+      // Cleanup
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      analyserRef.current = null;
+      setInputLevel(0);
+    };
+  }, [isConnected]);
 
   // Handlers
   const handleJoin = useCallback(async () => {
@@ -177,6 +297,29 @@ export function useVoiceTab(options = {}) {
     console.log("Adjust volume for:", participantId);
   }, []);
 
+  /**
+   * Toggle between VAD and PTT voice modes
+   */
+  const handleToggleVoiceMode = useCallback(() => {
+    setVoiceMode((prev) => {
+      const newMode = prev === VOICE_MODES.VAD ? VOICE_MODES.PTT : VOICE_MODES.VAD;
+
+      // When switching to PTT, mute by default (user holds space to talk)
+      if (newMode === VOICE_MODES.PTT && isConnected) {
+        voiceRoomService.setMuted(true);
+        setMuted(true);
+        toast.info("Push-to-Talk enabled. Hold SPACE to transmit.");
+      } else if (newMode === VOICE_MODES.VAD && isConnected) {
+        // When switching to VAD, unmute
+        voiceRoomService.setMuted(false);
+        setMuted(false);
+        toast.info("Voice Activity Detection enabled.");
+      }
+
+      return newMode;
+    });
+  }, [isConnected]);
+
   return {
     // Data
     channels,
@@ -189,6 +332,11 @@ export function useVoiceTab(options = {}) {
     currentChannel,
     participants,
 
+    // PTT and input level
+    voiceMode,
+    isPTTActive,
+    inputLevel,
+
     // Handlers
     handleJoin,
     handleLeave,
@@ -196,6 +344,7 @@ export function useVoiceTab(options = {}) {
     handleToggleDeafen,
     handleChannelSelect,
     handleAdjustVolume,
+    handleToggleVoiceMode,
   };
 }
 

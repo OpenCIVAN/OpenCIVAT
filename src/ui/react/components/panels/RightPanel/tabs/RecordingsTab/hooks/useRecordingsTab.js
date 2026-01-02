@@ -38,6 +38,25 @@ export const RECORDING_MODES = [
 ];
 
 /**
+ * Marker types for recording annotations
+ */
+export const MARKER_TYPES = [
+  { id: "note", label: "Note", icon: "fileText", color: "blue" },
+  { id: "important", label: "Important", icon: "alertCircle", color: "red" },
+  { id: "question", label: "Question", icon: "helpCircle", color: "amber" },
+  { id: "bookmark", label: "Bookmark", icon: "bookmark", color: "green" },
+];
+
+/**
+ * Format timestamp in seconds to mm:ss format
+ */
+function formatTimestamp(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+/**
  * Hook for RecordingsTab logic and state management.
  *
  * @param {Object} options - Hook options
@@ -73,6 +92,12 @@ export function useRecordingsTab(options = {}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRecording, setSelectedRecording] = useState(null);
   const [exportingId, setExportingId] = useState(null);
+
+  // Markers state - timestamped annotations during recording
+  const [markers, setMarkers] = useState([]);
+  const [showMarkerInput, setShowMarkerInput] = useState(false);
+  const [markerText, setMarkerText] = useState("");
+  const [markerType, setMarkerType] = useState("note");
 
   // Sort and filter state
   const [sortBy, setSortBy] = useState("date"); // "date", "name", "duration"
@@ -182,6 +207,10 @@ export function useRecordingsTab(options = {}) {
 
   const handleStopRecording = useCallback(() => {
     stopRecording();
+    // Clear markers when recording stops (they would be saved with the recording)
+    setMarkers([]);
+    setShowMarkerInput(false);
+    setMarkerText("");
   }, [stopRecording]);
 
   const handlePauseRecording = useCallback(() => {
@@ -225,6 +254,66 @@ export function useRecordingsTab(options = {}) {
   const toggleSortOrder = useCallback(() => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   }, []);
+
+  // ==========================================================================
+  // MARKER HANDLERS
+  // ==========================================================================
+
+  /**
+   * Add a marker at the current recording timestamp
+   */
+  const handleAddMarker = useCallback(
+    (text, type = "note") => {
+      if (!isRecording) return;
+
+      const newMarker = {
+        id: `marker-${Date.now()}`,
+        timestamp: recordingDuration,
+        text: text || `Marker at ${formatTimestamp(recordingDuration)}`,
+        type,
+        createdAt: new Date().toISOString(),
+      };
+
+      setMarkers((prev) => [...prev, newMarker]);
+      setShowMarkerInput(false);
+      setMarkerText("");
+
+      // Emit event for recording system to capture
+      window.dispatchEvent(
+        new CustomEvent("recording:marker", {
+          detail: newMarker,
+        })
+      );
+    },
+    [isRecording, recordingDuration]
+  );
+
+  /**
+   * Quick add marker (no text input, just type)
+   */
+  const handleQuickMarker = useCallback(
+    (type = "bookmark") => {
+      handleAddMarker("", type);
+    },
+    [handleAddMarker]
+  );
+
+  /**
+   * Delete a marker
+   */
+  const handleDeleteMarker = useCallback((markerId) => {
+    setMarkers((prev) => prev.filter((m) => m.id !== markerId));
+  }, []);
+
+  /**
+   * Toggle marker input visibility
+   */
+  const handleToggleMarkerInput = useCallback(() => {
+    setShowMarkerInput((prev) => !prev);
+    if (!showMarkerInput) {
+      setMarkerText("");
+    }
+  }, [showMarkerInput]);
 
   return {
     // Data
@@ -282,6 +371,19 @@ export function useRecordingsTab(options = {}) {
     handleDownload,
     handleDelete,
     refresh,
+
+    // Markers
+    markers,
+    showMarkerInput,
+    setShowMarkerInput,
+    markerText,
+    setMarkerText,
+    markerType,
+    setMarkerType,
+    handleAddMarker,
+    handleQuickMarker,
+    handleDeleteMarker,
+    handleToggleMarkerInput,
   };
 }
 

@@ -23,10 +23,96 @@ import { Button } from '@UI/react/components/common/Button';
 import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 
-import { useRecordingsTab } from './hooks/useRecordingsTab';
+import { useRecordingsTab, MARKER_TYPES } from './hooks/useRecordingsTab';
 import { RecordingCard } from './components/RecordingCard';
 
 import './RecordingsTab.scss';
+
+// =============================================================================
+// MARKER COMPONENTS
+// =============================================================================
+
+/**
+ * Marker input form for adding annotated markers
+ */
+function MarkerInput({
+    markerText,
+    setMarkerText,
+    markerType,
+    setMarkerType,
+    onSubmit,
+    onCancel
+}) {
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSubmit(markerText, markerType);
+    };
+
+    return (
+        <form className="marker-input" onSubmit={handleSubmit}>
+            <div className="marker-input__type-selector">
+                {MARKER_TYPES.map(type => (
+                    <button
+                        key={type.id}
+                        type="button"
+                        className={`marker-input__type-btn marker-input__type-btn--${type.color} ${markerType === type.id ? 'marker-input__type-btn--active' : ''}`}
+                        onClick={() => setMarkerType(type.id)}
+                        title={type.label}
+                    >
+                        <Icon name={type.icon} size={12} />
+                    </button>
+                ))}
+            </div>
+            <input
+                type="text"
+                className="marker-input__text"
+                value={markerText}
+                onChange={(e) => setMarkerText(e.target.value)}
+                placeholder="Add a note for this marker..."
+                autoFocus
+            />
+            <div className="marker-input__actions">
+                <button type="button" className="marker-input__cancel" onClick={onCancel}>
+                    <Icon name="x" size={12} />
+                </button>
+                <button type="submit" className="marker-input__submit">
+                    <Icon name="check" size={12} />
+                </button>
+            </div>
+        </form>
+    );
+}
+
+/**
+ * Single marker item in the markers list
+ */
+function MarkerItem({ marker, onDelete }) {
+    const typeConfig = MARKER_TYPES.find(t => t.id === marker.type) || MARKER_TYPES[0];
+
+    return (
+        <div className={`marker-item marker-item--${typeConfig.color}`}>
+            <Icon name={typeConfig.icon} size={12} className="marker-item__icon" />
+            <span className="marker-item__time">{formatTimestamp(marker.timestamp)}</span>
+            <span className="marker-item__text">{marker.text || typeConfig.label}</span>
+            <button
+                className="marker-item__delete"
+                onClick={() => onDelete(marker.id)}
+                title="Delete marker"
+            >
+                <Icon name="x" size={10} />
+            </button>
+        </div>
+    );
+}
+
+/**
+ * Format timestamp helper for markers
+ */
+function formatTimestamp(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
 
 // =============================================================================
 // HELPERS
@@ -97,10 +183,19 @@ export function RecordingsTab({ workspaceId }) {
         handleDownload,
         handleDelete,
         refresh,
+        // Markers
+        markers,
+        showMarkerInput,
+        setShowMarkerInput,
+        markerText,
+        setMarkerText,
+        markerType,
+        setMarkerType,
+        handleAddMarker,
+        handleQuickMarker,
+        handleDeleteMarker,
+        handleToggleMarkerInput,
     } = useRecordingsTab();
-
-    // Count markers (placeholder - would come from real data)
-    const markerCount = 0;
 
     return (
         <div className="recordings-panel">
@@ -155,7 +250,7 @@ export function RecordingsTab({ workspaceId }) {
                                     </span>
                                 </StatBadge>
                                 <StatBadge icon="circle">
-                                    {markerCount} markers
+                                    {markers.length} markers
                                 </StatBadge>
                             </div>
 
@@ -170,8 +265,8 @@ export function RecordingsTab({ workspaceId }) {
                                     />
                                     <Button
                                         icon="circle"
-                                        variant="secondary"
-                                        onClick={() => { /* handleAddMarker */ }}
+                                        variant={showMarkerInput ? 'primary' : 'secondary'}
+                                        onClick={handleToggleMarkerInput}
                                         title="Add Marker"
                                     />
                                 </div>
@@ -183,6 +278,31 @@ export function RecordingsTab({ workspaceId }) {
                                     Stop
                                 </Button>
                             </div>
+
+                            {/* Marker Input */}
+                            {showMarkerInput && (
+                                <MarkerInput
+                                    markerText={markerText}
+                                    setMarkerText={setMarkerText}
+                                    markerType={markerType}
+                                    setMarkerType={setMarkerType}
+                                    onSubmit={handleAddMarker}
+                                    onCancel={() => setShowMarkerInput(false)}
+                                />
+                            )}
+
+                            {/* Markers List */}
+                            {markers.length > 0 && (
+                                <div className="recording-status__markers">
+                                    {markers.map(marker => (
+                                        <MarkerItem
+                                            key={marker.id}
+                                            marker={marker}
+                                            onDelete={handleDeleteMarker}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </>
                     ) : (
                         <Button

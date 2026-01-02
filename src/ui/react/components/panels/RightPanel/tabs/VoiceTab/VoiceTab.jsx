@@ -21,10 +21,57 @@ import { Icon } from '@UI/react/components/common/Icon';
 import { Button } from '@UI/react/components/common/Button';
 import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 
-import { useVoiceTab } from './hooks/useVoiceTab';
+import { useVoiceTab, VOICE_MODES } from './hooks/useVoiceTab';
 import { ParticipantCard } from './components/ParticipantCard';
 
 import './VoiceTab.scss';
+
+// =============================================================================
+// INPUT LEVEL METER COMPONENT
+// =============================================================================
+
+/**
+ * Visual microphone input level indicator
+ */
+function InputLevelMeter({ level, muted }) {
+    // Calculate bar segments (10 segments)
+    const segments = 10;
+    const activeSegments = Math.round((level / 100) * segments);
+
+    return (
+        <div className={`input-level-meter ${muted ? 'input-level-meter--muted' : ''}`}>
+            <Icon name="mic" size={12} className="input-level-meter__icon" />
+            <div className="input-level-meter__bars">
+                {Array.from({ length: segments }).map((_, i) => {
+                    const isActive = i < activeSegments;
+                    const isHigh = i >= 7; // Red zone
+                    const isMedium = i >= 4 && i < 7; // Yellow zone
+                    return (
+                        <div
+                            key={i}
+                            className={`input-level-meter__bar ${isActive ? 'input-level-meter__bar--active' : ''} ${isHigh ? 'input-level-meter__bar--high' : ''} ${isMedium ? 'input-level-meter__bar--medium' : ''}`}
+                        />
+                    );
+                })}
+            </div>
+            <span className="input-level-meter__value">{level}%</span>
+        </div>
+    );
+}
+
+/**
+ * PTT indicator shown when Push-to-Talk is active
+ */
+function PTTIndicator({ isActive, voiceMode }) {
+    if (voiceMode !== VOICE_MODES.PTT) return null;
+
+    return (
+        <div className={`ptt-indicator ${isActive ? 'ptt-indicator--active' : ''}`}>
+            <Icon name={isActive ? 'radio' : 'radioReceiver'} size={14} />
+            <span>{isActive ? 'Transmitting...' : 'Hold SPACE to talk'}</span>
+        </div>
+    );
+}
 
 // =============================================================================
 // HELPERS
@@ -70,12 +117,16 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
         deafened,
         currentChannel,
         participants,
+        voiceMode,
+        isPTTActive,
+        inputLevel,
         handleJoin,
         handleLeave,
         handleToggleMute,
         handleToggleDeafen,
         handleChannelSelect,
         handleAdjustVolume,
+        handleToggleVoiceMode,
     } = useVoiceTab({ channels: propChannels });
 
     // Track connection duration
@@ -152,6 +203,16 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
                         </div>
                     )}
 
+                    {/* Input Level Meter */}
+                    {isConnected && (
+                        <InputLevelMeter level={inputLevel} muted={muted} />
+                    )}
+
+                    {/* PTT Indicator */}
+                    {isConnected && (
+                        <PTTIndicator isActive={isPTTActive} voiceMode={voiceMode} />
+                    )}
+
                     {/* Controls */}
                     {isConnected ? (
                         <div className="voice-status__controls">
@@ -161,12 +222,19 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
                                     variant={muted ? 'danger' : 'primary'}
                                     onClick={handleToggleMute}
                                     title={muted ? 'Unmute (M)' : 'Mute (M)'}
+                                    disabled={voiceMode === VOICE_MODES.PTT}
                                 />
                                 <Button
                                     icon="headphones"
                                     variant={deafened ? 'danger' : 'secondary'}
                                     onClick={handleToggleDeafen}
                                     title={deafened ? 'Undeafen (D)' : 'Deafen (D)'}
+                                />
+                                <Button
+                                    icon={voiceMode === VOICE_MODES.PTT ? 'radio' : 'activity'}
+                                    variant={voiceMode === VOICE_MODES.PTT ? 'warning' : 'ghost'}
+                                    onClick={handleToggleVoiceMode}
+                                    title={voiceMode === VOICE_MODES.PTT ? 'Switch to Voice Activity' : 'Switch to Push-to-Talk'}
                                 />
                                 <Button
                                     icon="settings"

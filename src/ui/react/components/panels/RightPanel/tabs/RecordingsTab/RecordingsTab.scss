@@ -121,6 +121,227 @@
     display: flex;
     gap: $spacing-sm;
   }
+
+  &__markers {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-top: $spacing-sm;
+    padding-top: $spacing-sm;
+    border-top: 1px solid rgba($color-accent-red, 0.15);
+    max-height: 120px;
+    overflow-y: auto;
+  }
+}
+
+// =============================================================================
+// MARKER INPUT
+// =============================================================================
+
+.marker-input {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: $radius-md;
+
+  &__type-selector {
+    display: flex;
+    gap: $spacing-xs;
+  }
+
+  &__type-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &--active {
+      border-width: 2px;
+    }
+
+    &--blue {
+      color: $color-accent-blue;
+      &.marker-input__type-btn--active {
+        background: rgba($color-accent-blue, 0.15);
+        border-color: $color-accent-blue;
+      }
+    }
+
+    &--red {
+      color: $color-accent-red;
+      &.marker-input__type-btn--active {
+        background: rgba($color-accent-red, 0.15);
+        border-color: $color-accent-red;
+      }
+    }
+
+    &--amber {
+      color: $color-accent-amber;
+      &.marker-input__type-btn--active {
+        background: rgba($color-accent-amber, 0.15);
+        border-color: $color-accent-amber;
+      }
+    }
+
+    &--green {
+      color: $color-accent-green;
+      &.marker-input__type-btn--active {
+        background: rgba($color-accent-green, 0.15);
+        border-color: $color-accent-green;
+      }
+    }
+  }
+
+  &__text {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    padding: $spacing-xs $spacing-sm;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+    outline: none;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+
+    &:focus {
+      border-color: $color-border-default;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $spacing-xs;
+  }
+
+  &__cancel,
+  &__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+  }
+
+  &__cancel {
+    background: rgba(255, 255, 255, 0.05);
+    color: $color-text-muted;
+
+    &:hover {
+      background: rgba($color-accent-red, 0.15);
+      border-color: rgba($color-accent-red, 0.3);
+      color: $color-accent-red;
+    }
+  }
+
+  &__submit {
+    background: rgba($color-accent-green, 0.15);
+    border-color: rgba($color-accent-green, 0.3);
+    color: $color-accent-green;
+
+    &:hover {
+      background: rgba($color-accent-green, 0.25);
+    }
+  }
+}
+
+// =============================================================================
+// MARKER ITEM
+// =============================================================================
+
+.marker-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__time {
+    flex-shrink: 0;
+    font-family: "SF Mono", monospace;
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__text {
+    flex: 1;
+    color: $color-text-secondary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    color: $color-text-muted;
+    cursor: pointer;
+    opacity: 0;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-red, 0.15);
+      color: $color-accent-red;
+    }
+  }
+
+  &:hover &__delete {
+    opacity: 1;
+  }
+
+  // Color variants
+  &--blue {
+    border-left: 2px solid $color-accent-blue;
+    .marker-item__icon { color: $color-accent-blue; }
+  }
+
+  &--red {
+    border-left: 2px solid $color-accent-red;
+    .marker-item__icon { color: $color-accent-red; }
+  }
+
+  &--amber {
+    border-left: 2px solid $color-accent-amber;
+    .marker-item__icon { color: $color-accent-amber; }
+  }
+
+  &--green {
+    border-left: 2px solid $color-accent-green;
+    .marker-item__icon { color: $color-accent-green; }
+  }
 }
 
 // =============================================================================
