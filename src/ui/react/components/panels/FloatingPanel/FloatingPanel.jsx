@@ -5,6 +5,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/common/Icon';
+import { FloatingPanelHeader } from '@UI/react/components/common/FloatingPanelHeader';
 import { useFloatingPanels, FLOATING_PANEL_DEFAULTS } from './FloatingPanelContext';
 import './FloatingPanel.scss';
 
@@ -223,44 +224,17 @@ export function FloatingPanel({
             data-snapped={snappedEdge || undefined}
         >
             {/* Header - draggable area */}
-            <div
-                className="floating-panel__header"
+            <FloatingPanelHeader
+                title={title}
+                icon={iconName}
+                color={color}
+                showDragHandle={true}
+                isMinimized={minimized}
+                onToggleMinimize={() => setMinimized(!minimized)}
+                onDock={handleDock}
+                onClose={handleDock}
                 onMouseDown={handleDragStart}
-            >
-                <div className="floating-panel__drag-handle">
-                    <Icon name="gripVertical" size={14} />
-                </div>
-                {iconName && (
-                    <div className="floating-panel__icon">
-                        <Icon name={iconName} size={16} />
-                    </div>
-                )}
-                <div className="floating-panel__title">{title}</div>
-
-                <div className="floating-panel__controls">
-                    <button
-                        className="floating-panel__control-btn"
-                        onClick={() => setMinimized(!minimized)}
-                        title={minimized ? 'Expand' : 'Minimize'}
-                    >
-                        {minimized ? <Icon name="maximize2" size={14} /> : <Icon name="remove" size={14} />}
-                    </button>
-                    <button
-                        className="floating-panel__control-btn"
-                        onClick={handleDock}
-                        title="Dock panel"
-                    >
-                        <Icon name="pinOff" size={14} />
-                    </button>
-                    <button
-                        className="floating-panel__control-btn floating-panel__control-btn--close"
-                        onClick={handleDock}
-                        title="Close"
-                    >
-                        <Icon name="close" size={14} />
-                    </button>
-                </div>
-            </div>
+            />
 
             {/* Content */}
             {!minimized && (

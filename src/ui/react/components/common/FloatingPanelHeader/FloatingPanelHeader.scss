@@ -1,0 +1,102 @@
+// src/ui/react/components/common/FloatingPanelHeader/FloatingPanelHeader.scss
+// Consistent header styling for floating panels
+
+@use "theme" as *;
+
+.floating-panel-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border-subtle;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  // Color variants
+  &[data-color="blue"] {
+    --header-color: #{$color-accent-blue};
+  }
+  &[data-color="purple"] {
+    --header-color: #{$color-accent-purple};
+  }
+  &[data-color="teal"] {
+    --header-color: #{$color-accent-teal};
+  }
+  &[data-color="pink"] {
+    --header-color: #{$color-accent-pink};
+  }
+  &[data-color="amber"] {
+    --header-color: #{$color-accent-amber};
+  }
+  &[data-color="green"] {
+    --header-color: #{$color-accent-green};
+  }
+  &[data-color="indigo"] {
+    --header-color: #{$color-accent-indigo};
+  }
+}
+
+.floating-panel-header__drag-handle {
+  display: flex;
+  align-items: center;
+  color: $color-text-muted;
+  opacity: 0.5;
+}
+
+.floating-panel-header__icon {
+  display: flex;
+  align-items: center;
+  color: var(--header-color, $color-accent-blue);
+}
+
+.floating-panel-header__title {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.floating-panel-header__spacer {
+  flex: 1;
+}
+
+.floating-panel-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.floating-panel-header__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all 0.1s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+
+  &--close:hover {
+    background: $color-error;
+    color: white;
+  }
+}

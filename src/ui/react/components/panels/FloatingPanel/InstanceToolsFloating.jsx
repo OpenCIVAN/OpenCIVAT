@@ -184,8 +184,6 @@ export const InstanceToolsFloating = memo(function InstanceToolsFloating() {
     return (
         <FloatingPanel
             panelId={INSTANCE_TOOLS_PANEL_ID}
-            title={INSTANCE_TOOLS_CONFIG.title}
-            icon={INSTANCE_TOOLS_CONFIG.icon}
             color={INSTANCE_TOOLS_CONFIG.color}
             onDock={handleClose}
         >

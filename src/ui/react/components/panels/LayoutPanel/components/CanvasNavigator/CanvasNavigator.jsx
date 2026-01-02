@@ -15,6 +15,7 @@
 import React, { memo, useState } from "react";
 import ReactDOM from "react-dom";
 import { Icon } from '@UI/react/components/common/Icon';
+import { FloatingPanelHeader } from '@UI/react/components/common/FloatingPanelHeader';
 import { useAdaptive } from '@UI/react/context';
 import { useLayoutPanelContext, DOCK_POSITIONS } from "../../LayoutPanelContext";
 import {
@@ -474,27 +475,14 @@ export const CanvasNavigator = memo(function CanvasNavigator({
             data-docked={isDockedInPanel}
         >
             {/* Header */}
-            <div className="canvas-navigator__header">
-                <div className="canvas-navigator__tab-title">
-                    <Icon name="map" size={iconSize} />
-                    <span>Navigator</span>
-                </div>
-                <div className="canvas-navigator__header-actions">
-                    {!isDockedInPanel && (
-                        <>
-                            <NavBtn size="xs" onClick={handleMinimize} title="Minimize">
-                                <Icon name="minus" size={isVR ? 10 : 8} />
-                            </NavBtn>
-                            <NavBtn size="xs" onClick={handlePopOut} title="Pop out">
-                                <Icon name="externalLink" size={isVR ? 10 : 8} />
-                            </NavBtn>
-                        </>
-                    )}
-                    <NavBtn size="xs" onClick={handleMinimize} title="Close">
-                        <Icon name="close" size={isVR ? 10 : 8} />
-                    </NavBtn>
-                </div>
-            </div>
+            <FloatingPanelHeader
+                title="Navigator"
+                icon="map"
+                color="teal"
+                showDragHandle={!isDockedInPanel}
+                onMinimize={!isDockedInPanel ? handleMinimize : undefined}
+                onClose={handleMinimize}
+            />
 
             {/* Mode Toggles */}
             <div className="canvas-navigator__mode-toggles">

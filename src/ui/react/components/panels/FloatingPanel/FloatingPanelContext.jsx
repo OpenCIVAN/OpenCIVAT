@@ -31,6 +31,12 @@ export const VR_PANEL_POSITIONS = {
 };
 
 // =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const STORAGE_KEY = 'ciaFloatingPanelState';
+
+// =============================================================================
 // CONTEXT
 // =============================================================================
 
@@ -46,6 +52,21 @@ const FloatingPanelContext = createContext({
 });
 
 /**
+ * Load saved panel state from localStorage
+ */
+function loadSavedPanelState() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    } catch (e) {
+        console.warn('Failed to load floating panel state:', e);
+    }
+    return { positions: {}, openPanels: [] };
+}
+
+/**
  * FloatingPanelProvider - Manages state for all floating panels
  *
  * @example
@@ -59,40 +80,44 @@ export function FloatingPanelProvider({ children }) {
     const [floatingPanels, setFloatingPanels] = useState({});
     // Z-index counter for stacking
     const [topZIndex, setTopZIndex] = useState(1000);
+    // Track if we've initialized from localStorage
+    const [initialized, setInitialized] = useState(false);
+    // Store saved positions for panels that haven't been opened yet
+    const [savedPositions, setSavedPositions] = useState({});
 
-    // Load saved panel positions from localStorage
+    // Load saved panel state on mount
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem('ciaFloatingPanels');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // Only restore positions, not the fact that they were open
-                // User needs to explicitly pop out panels each session
-            }
-        } catch (e) {
-            console.warn('Failed to load floating panel state:', e);
-        }
+        const saved = loadSavedPanelState();
+        setSavedPositions(saved.positions || {});
+        setInitialized(true);
     }, []);
 
-    // Save panel positions to localStorage when they change
+    // Save panel state to localStorage when panels change (after initial load)
     useEffect(() => {
-        if (Object.keys(floatingPanels).length > 0) {
-            try {
-                const toSave = {};
-                Object.entries(floatingPanels).forEach(([id, state]) => {
-                    toSave[id] = {
-                        x: state.x,
-                        y: state.y,
-                        width: state.width,
-                        height: state.height,
-                    };
-                });
-                localStorage.setItem('ciaFloatingPanelPositions', JSON.stringify(toSave));
-            } catch (e) {
-                console.warn('Failed to save floating panel state:', e);
-            }
+        if (!initialized) return;
+
+        // Merge current open panel positions with saved positions
+        const allPositions = { ...savedPositions };
+        Object.entries(floatingPanels).forEach(([id, state]) => {
+            allPositions[id] = {
+                x: state.x,
+                y: state.y,
+                width: state.width,
+                height: state.height,
+            };
+        });
+
+        const openPanels = Object.keys(floatingPanels);
+
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                positions: allPositions,
+                openPanels
+            }));
+        } catch (e) {
+            console.warn('Failed to save floating panel state:', e);
         }
-    }, [floatingPanels]);
+    }, [floatingPanels, savedPositions, initialized]);
 
     /**
      * Pop out a panel from the docked position
@@ -101,17 +126,8 @@ export function FloatingPanelProvider({ children }) {
      * @param {Object} options - Initial position/size options
      */
     const popOutPanel = useCallback((panelId, options = {}) => {
-        // Try to restore previous position
-        let savedPosition = {};
-        try {
-            const saved = localStorage.getItem('ciaFloatingPanelPositions');
-            if (saved) {
-                const positions = JSON.parse(saved);
-                if (positions[panelId]) {
-                    savedPosition = positions[panelId];
-                }
-            }
-        } catch (e) { }
+        // Use saved position if available
+        const saved = savedPositions[panelId] || {};
 
         const newZIndex = topZIndex + 1;
         setTopZIndex(newZIndex);
@@ -120,10 +136,10 @@ export function FloatingPanelProvider({ children }) {
             ...prev,
             [panelId]: {
                 id: panelId,
-                x: savedPosition.x ?? options.x ?? 100,
-                y: savedPosition.y ?? options.y ?? 100,
-                width: savedPosition.width ?? options.width ?? FLOATING_PANEL_DEFAULTS.width,
-                height: savedPosition.height ?? options.height ?? FLOATING_PANEL_DEFAULTS.height,
+                x: saved.x ?? options.x ?? 100,
+                y: saved.y ?? options.y ?? 100,
+                width: saved.width ?? options.width ?? FLOATING_PANEL_DEFAULTS.width,
+                height: saved.height ?? options.height ?? FLOATING_PANEL_DEFAULTS.height,
                 zIndex: newZIndex,
                 minimized: false,
                 title: options.title || panelId,
@@ -134,13 +150,27 @@ export function FloatingPanelProvider({ children }) {
                 vrPosition: options.vrPosition || VR_PANEL_POSITIONS.center,
             }
         }));
-    }, [topZIndex]);
+    }, [topZIndex, savedPositions]);
 
     /**
      * Dock a panel back to its original position
+     * Preserves the panel's position/size for next time it's opened
      */
     const dockPanel = useCallback((panelId) => {
         setFloatingPanels(prev => {
+            // Save position before removing
+            const panel = prev[panelId];
+            if (panel) {
+                setSavedPositions(positions => ({
+                    ...positions,
+                    [panelId]: {
+                        x: panel.x,
+                        y: panel.y,
+                        width: panel.width,
+                        height: panel.height,
+                    }
+                }));
+            }
             const { [panelId]: removed, ...rest } = prev;
             return rest;
         });
