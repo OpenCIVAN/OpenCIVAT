@@ -2136,26 +2136,20 @@ export function InstanceViewport({
             {isFullscreen && (
                 <div className={`instance-viewport__embedded-tools instance-viewport__embedded-tools--${embeddedToolsSide} ${embeddedToolsOpen ? 'instance-viewport__embedded-tools--open' : ''}`}>
                     <div className="instance-viewport__embedded-tools-header">
-                        <div className="instance-viewport__embedded-tools-title">
-                            <Icon name="wrench" size={14} />
-                            <span>Instance Tools</span>
-                        </div>
-                        <div className="instance-viewport__embedded-tools-actions">
-                            <button
-                                className="instance-viewport__embedded-tools-toggle-side"
-                                onClick={() => setEmbeddedToolsSide(side => side === 'right' ? 'left' : 'right')}
-                                title={`Move to ${embeddedToolsSide === 'right' ? 'left' : 'right'} side`}
-                            >
-                                <Icon name={embeddedToolsSide === 'right' ? 'arrowLeft' : 'arrowRight'} size={14} />
-                            </button>
-                            <button
-                                className="instance-viewport__embedded-tools-close"
-                                onClick={() => setEmbeddedToolsOpen(false)}
-                                title="Close (T)"
-                            >
-                                <Icon name="close" size={14} />
-                            </button>
-                        </div>
+                        <button
+                            className="instance-viewport__embedded-tools-toggle-side"
+                            onClick={() => setEmbeddedToolsSide(side => side === 'right' ? 'left' : 'right')}
+                            title={`Move to ${embeddedToolsSide === 'right' ? 'left' : 'right'} side`}
+                        >
+                            <Icon name={embeddedToolsSide === 'right' ? 'arrowLeft' : 'arrowRight'} size={14} />
+                        </button>
+                        <button
+                            className="instance-viewport__embedded-tools-close"
+                            onClick={() => setEmbeddedToolsOpen(false)}
+                            title="Close (T)"
+                        >
+                            <Icon name="close" size={14} />
+                        </button>
                     </div>
                     <div className="instance-viewport__embedded-tools-content">
                         <InstanceToolsPanelContent />
