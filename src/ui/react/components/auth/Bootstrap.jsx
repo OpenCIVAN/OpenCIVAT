@@ -1,10 +1,10 @@
 // src/ui/react/components/auth/Bootstrap.jsx
 // Gate-keeping layer that handles authentication, username collection, and Phase 2 initialization
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { auth as log } from "@Utils/logger.js";
 import { hasUserName, getUserName, setUserName, getUserId } from "@Collaboration/presence/userManagement.js";
-import { initializePhase2 } from "@Init/appInitializer.js";
+import { initializePhase2, PHASE2_STEPS } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { authService } from "@Services/authService.js";
 import { config } from "@Core/config/clientConfig.js";
@@ -34,8 +34,36 @@ export function Bootstrap() {
     const [serverDevModeEnabled, setServerDevModeEnabled] = useState(false);
     const [isDevMode, setIsDevMode] = useState(false);
 
+    // Progress tracking for initialization
+    const [progress, setProgress] = useState(0);
+    const [stepStatuses, setStepStatuses] = useState(() => {
+        // Initialize all steps as pending
+        const initial = {};
+        PHASE2_STEPS.forEach(step => {
+            initial[step.id] = 'pending';
+        });
+        return initial;
+    });
+
     const initializationStarted = useRef(false);
     const phase2Complete = useRef(false);
+
+    // Listen for initialization progress events
+    useEffect(() => {
+        function handleProgress(event) {
+            const { stepId, status, progress: progressValue } = event.detail;
+
+            setStepStatuses(prev => ({
+                ...prev,
+                [stepId]: status
+            }));
+
+            setProgress(progressValue);
+        }
+
+        window.addEventListener('cia:init-progress', handleProgress);
+        return () => window.removeEventListener('cia:init-progress', handleProgress);
+    }, []);
 
     // Check if client-side dev bypass mode is enabled
     const isDevBypass = config.devBypassAuth === true || config.devBypassAuth === "true";
@@ -284,16 +312,50 @@ export function Bootstrap() {
         content = (
             <div className="bootstrap-initializing">
                 <div className="initializing-card">
-                    <h2>Setting Up Your Workspace</h2>
-                    <div className="progress-bar">
-                        <div className="progress-fill" />
+                    <div className="bootstrap-logo">
+                        <svg viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.3"/>
+                            <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5"/>
+                            <circle cx="50" cy="50" r="8" fill="currentColor"/>
+                            <line x1="50" y1="10" x2="50" y2="25" stroke="currentColor" strokeWidth="2"/>
+                            <line x1="50" y1="75" x2="50" y2="90" stroke="currentColor" strokeWidth="2"/>
+                            <line x1="10" y1="50" x2="25" y2="50" stroke="currentColor" strokeWidth="2"/>
+                            <line x1="75" y1="50" x2="90" y2="50" stroke="currentColor" strokeWidth="2"/>
+                        </svg>
                     </div>
-                    <p>Initializing collaboration services for {username}...</p>
+                    <div className="bootstrap-brand">
+                        <div className="bootstrap-title">Setting Up Workspace</div>
+                        <div className="bootstrap-subtitle">for {username}</div>
+                    </div>
+                    <div className="progress-bar">
+                        <div
+                            className="progress-fill"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
                     <ul className="initialization-steps">
-                        <li className="step-complete">Core services initialized ✓</li>
-                        <li className="step-active">Setting up user presence...</li>
-                        <li className="step-pending">Connecting to collaboration room</li>
-                        <li className="step-pending">Loading workspace</li>
+                        {PHASE2_STEPS.map(step => {
+                            const status = stepStatuses[step.id];
+                            let className = 'step-pending';
+                            let indicator = '';
+
+                            if (status === 'complete') {
+                                className = 'step-complete';
+                                indicator = ' ✓';
+                            } else if (status === 'active') {
+                                className = 'step-active';
+                                indicator = '...';
+                            } else if (status === 'error') {
+                                className = 'step-error';
+                                indicator = ' ✗';
+                            }
+
+                            return (
+                                <li key={step.id} className={className}>
+                                    {step.label}{indicator}
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
             </div>

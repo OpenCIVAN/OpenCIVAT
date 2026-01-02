@@ -835,7 +835,7 @@ function AdaptiveViewItem({
                   }}>
                     {view.handlerType}
                   </span>
-                  <span>•</span>
+                  <span>â€¢</span>
                 </>
               )}
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1116,7 +1116,7 @@ function AdaptiveDatasetParent({ dataset, views, isExpanded, onToggle, onReorder
             <div style={metaStyles}>
               <span style={badgeStyles}>{dataset.handlerType}</span>
               <span>{dataset.size}</span>
-              {mode === 'vr' && <span>• {dataset.loadedAt}</span>}
+              {mode === 'vr' && <span>â€¢ {dataset.loadedAt}</span>}
             </div>
           </div>
 
@@ -1444,7 +1444,7 @@ export default function App() {
   };
 
   const handleReorderAllViews = (fromIndex, toIndex) => {
-    console.log('Reorder all views:', fromIndex, '→', toIndex);
+    console.log('Reorder all views:', fromIndex, 'â†’', toIndex);
   };
 
   const toggleDataset = (id) => {
@@ -1538,10 +1538,10 @@ export default function App() {
             <div style={labelStyles}>Mode</div>
             <div style={buttonGroupStyles}>
               <button style={buttonStyles(mode === 'desktop')} onClick={() => setMode('desktop')}>
-                🖥️ Desktop
+                ðŸ–¥ï¸ Desktop
               </button>
               <button style={buttonStyles(mode === 'vr')} onClick={() => setMode('vr')}>
-                🥽 VR
+                ðŸ¥½ VR
               </button>
             </div>
           </div>
@@ -1562,16 +1562,16 @@ export default function App() {
             <div style={labelStyles}>Group Views By</div>
             <div style={{ ...buttonGroupStyles, flexWrap: 'wrap', gap: 4 }}>
               <button style={buttonStyles(viewMode === 'datasets')} onClick={() => setViewMode('datasets')}>
-                📁 Dataset
+                ðŸ“ Dataset
               </button>
               <button style={buttonStyles(viewMode === 'byRow')} onClick={() => setViewMode('byRow')}>
-                ⬌ Row
+                â¬Œ Row
               </button>
               <button style={buttonStyles(viewMode === 'byColumn')} onClick={() => setViewMode('byColumn')}>
-                ⬍ Column
+                â¬ Column
               </button>
               <button style={buttonStyles(viewMode === 'allViews')} onClick={() => setViewMode('allViews')}>
-                ☰ None
+                â˜° None
               </button>
             </div>
           </div>
@@ -1657,7 +1657,7 @@ export default function App() {
           color: 'rgba(255,255,255,0.7)',
           lineHeight: 1.6,
         }}>
-          <h3 style={{ color: '#fff', marginTop: 0, marginBottom: 12 }}>🎯 VR-Friendly Design Principles</h3>
+          <h3 style={{ color: '#fff', marginTop: 0, marginBottom: 12 }}>ðŸŽ¯ VR-Friendly Design Principles</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
             <div>
               <strong style={{ color: '#4ade80' }}>Touch Targets</strong>
@@ -1677,7 +1677,7 @@ export default function App() {
             </div>
           </div>
           
-          <h4 style={{ color: '#fff', marginTop: 20, marginBottom: 10 }}>📁 View Grouping Modes</h4>
+          <h4 style={{ color: '#fff', marginTop: 20, marginBottom: 10 }}>ðŸ“ View Grouping Modes</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, fontSize: 12 }}>
             <div>
               <strong style={{ color: '#c084fc' }}>By Dataset</strong>
@@ -1709,7 +1709,7 @@ export default function App() {
             </div>
           </div>
 
-          <h4 style={{ color: '#fff', marginTop: 20, marginBottom: 10 }}>🚦 View States & Actions</h4>
+          <h4 style={{ color: '#fff', marginTop: 20, marginBottom: 10 }}>ðŸš¦ View States & Actions</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, fontSize: 12 }}>
             <div>
               <strong style={{ color: '#4ade80' }}>Active (On Canvas)</strong>
@@ -1735,7 +1735,7 @@ export default function App() {
             </div>
           </div>
 
-          <h4 style={{ color: '#fff', marginTop: 20, marginBottom: 10 }}>📋 ViewItem Interaction Design</h4>
+          <h4 style={{ color: '#fff', marginTop: 20, marginBottom: 10 }}>ðŸ“‹ ViewItem Interaction Design</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, fontSize: 12 }}>
             <div>
               <strong style={{ color: '#c084fc' }}>Desktop Mode</strong>
@@ -1757,7 +1757,7 @@ export default function App() {
             </div>
           </div>
           
-          <h4 style={{ color: '#fff', marginTop: 20, marginBottom: 10 }}>🔧 Available Tools</h4>
+          <h4 style={{ color: '#fff', marginTop: 20, marginBottom: 10 }}>ðŸ”§ Available Tools</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 11 }}>
             {[
               { name: 'Focus', color: '#60a5fa', desc: 'Navigate to view', state: 'active' },

@@ -1,5 +1,5 @@
 // src/ui/react/components/workspace/InstanceViewport/InstanceViewport.jsx
-import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo, memo } from "react";
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/common/Icon';
 
@@ -23,6 +23,7 @@ import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
 
 import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
+import { NavigationNotch } from './NavigationNotch';
 
 import "./InstanceViewport.scss";
 
@@ -272,13 +273,24 @@ const hexToRgb = (hex) => {
 
 /**
  * Get header mode based on viewport width
+ * 6 responsive breakpoints per spec:
+ * - Full: 450px+ (all elements)
+ * - Large: 380px+ (VR hidden in header)
+ * - Medium: 300px+ (Expand/VR in menu)
+ * - Small: 220px+ (Expand/VR/Wrench in menu)
+ * - Tiny: 160px+ (only dot, name, more, close)
+ * - Micro: <160px (minimal icons)
+ *
  * @param {number} width - Viewport width in pixels
- * @returns {'full'|'medium'|'small'}
+ * @returns {'full'|'large'|'medium'|'small'|'tiny'|'micro'}
  */
 const getHeaderMode = (width) => {
-    if (width >= 400) return 'full';
+    if (width >= 450) return 'full';
+    if (width >= 380) return 'large';
     if (width >= 300) return 'medium';
-    return 'small';
+    if (width >= 220) return 'small';
+    if (width >= 160) return 'tiny';
+    return 'micro';
 };
 
 /**
@@ -502,18 +514,41 @@ function MoreMenu({
 }
 
 /**
- * HeaderBar - Responsive blended dark header with instance label badge
- * Layout: [Wrench][View Name] ----spacer---- [More][Expand][VR][Close]
- * Shows different icons based on viewport width:
- * - Full (≥400px): [Wrench] View Name ... [More] [Expand] [VR] [Close]
- * - Medium (300-399px): [Wrench] View Name ... [More] [Expand] [Close]
- * - Small (<300px): View Name ... [More] [Close]
+ * ColorDot - Status indicator that shows loading state or static color
+ */
+const ColorDot = memo(function ColorDot({ color, isLoading, size = 8 }) {
+    const colorHex = color?.hex || '#60a5fa';
+
+    return (
+        <span
+            className={`instance-viewport__color-dot ${isLoading ? 'instance-viewport__color-dot--loading' : ''}`}
+            style={{
+                '--dot-color': colorHex,
+                width: size,
+                height: size,
+            }}
+        />
+    );
+});
+
+/**
+ * HeaderBar - Responsive header with 6 breakpoints
+ *
+ * Breakpoints:
+ * - Full (≥450px): [Wrench] View Name ... [More] [Expand] [VR] [Close]
+ * - Large (≥380px): [Wrench] View Name ... [More] [Expand] [Close] (VR in menu)
+ * - Medium (≥300px): [Wrench] View Name ... [More] [Close] (Expand/VR in menu)
+ * - Small (≥220px): View Name ... [More] [Close] (Wrench/Expand/VR in menu)
+ * - Tiny (≥160px): [Dot] Name [More] [Close] (minimal)
+ * - Micro (<160px): [Dot] [More] [Close] (icons only)
  */
 function HeaderBar({
     displayName,
     fileTypeDisplayInfo,  // { icon, color, displayName, handlerType } from manifest
     instanceColor,
     isFullscreen,
+    isActive,
+    isLoading,
     onFullscreen,
     onClose,
     onTrash,
@@ -544,15 +579,26 @@ function HeaderBar({
     const colorRgb = hexToRgb(colorHex);
     const headerMode = getHeaderMode(viewportWidth);
 
+    // Determine which elements to show based on mode
+    const showWrench = ['full', 'large', 'medium'].includes(headerMode);
+    const showExpand = ['full', 'large'].includes(headerMode);
+    const showVR = headerMode === 'full';
+    const showTypeIcon = !['tiny', 'micro'].includes(headerMode);
+    const showName = headerMode !== 'micro';
+
     return (
         <div
-            className={`instance-viewport__header instance-viewport__header--${headerMode}`}
+            className={`instance-viewport__header instance-viewport__header--${headerMode} ${isActive ? 'instance-viewport__header--active' : ''}`}
+            style={{
+                '--instance-color': colorHex,
+                '--instance-color-rgb': colorRgb,
+            }}
             onMouseEnter={onShowToolbar}
             onMouseLeave={onHideToolbar}
         >
             {/* Left section - Wrench + Label together */}
             <div className="instance-viewport__header-left">
-                {headerMode !== 'small' && (
+                {showWrench && (
                     <button
                         onClick={onOpenInstanceTools}
                         className="instance-viewport__header-button instance-viewport__header-wrench"
@@ -562,24 +608,25 @@ function HeaderBar({
                     </button>
                 )}
 
-                {/* Instance Label Badge with Type Icon */}
-                <div
-                    className="instance-viewport__label"
-                    style={{
-                        '--instance-color': colorHex,
-                        '--instance-color-rgb': colorRgb,
-                    }}
-                >
-                    {/* File type icon from manifest */}
-                    <span
-                        className="instance-viewport__label-icon"
-                        title={typeDisplayName}
-                    >
-                        <Icon name={typeIconName} size={12} />
-                    </span>
-                    <span className="instance-viewport__label-text">
-                        {displayName}
-                    </span>
+                {/* Instance Label Badge */}
+                <div className="instance-viewport__label">
+                    {/* Color dot for tiny/micro modes, or type icon for larger modes */}
+                    {showTypeIcon ? (
+                        <span
+                            className="instance-viewport__label-icon"
+                            title={typeDisplayName}
+                        >
+                            <Icon name={typeIconName} size={12} />
+                        </span>
+                    ) : (
+                        <ColorDot color={instanceColor} isLoading={isLoading} size={8} />
+                    )}
+
+                    {showName && (
+                        <span className="instance-viewport__label-text">
+                            {displayName}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -617,8 +664,8 @@ function HeaderBar({
                     />
                 </div>
 
-                {/* Expand button - Hidden in small mode */}
-                {headerMode !== 'small' && (
+                {/* Expand button - Hidden in medium/small/tiny/micro modes */}
+                {showExpand && (
                     <button
                         onClick={onFullscreen}
                         className="instance-viewport__header-button instance-viewport__header-expand"
@@ -628,8 +675,8 @@ function HeaderBar({
                     </button>
                 )}
 
-                {/* VR button - Hidden in small and medium modes */}
-                {headerMode === 'full' && (
+                {/* VR button - Only in full mode */}
+                {showVR && (
                     <button
                         onClick={onVRMode}
                         className="instance-viewport__header-button instance-viewport__header-vr"
@@ -817,18 +864,40 @@ export function InstanceViewport({
 
             let x, y;
 
-            // Try positioning to the LEFT of the toolbar
-            x = rect.left - dropdownWidth - 12;
-            y = toolbarRect ? toolbarRect.top : rect.top;
+            // Calculate button center and toolbar center
+            const buttonCenterX = rect.left + rect.width / 2;
+            const toolbarCenterX = toolbarRect
+                ? toolbarRect.left + toolbarRect.width / 2
+                : viewportWidth / 2;
 
-            // If no room on left, try RIGHT side
-            if (x < 10) {
-                x = rect.right + 12;
+            // Menu direction logic:
+            // - If button is RIGHT of toolbar center → menu opens to LEFT
+            // - If button is LEFT of toolbar center → menu opens to RIGHT
+            // This prevents menus from obscuring other toolbar buttons
+            const isButtonOnRight = buttonCenterX > toolbarCenterX;
+
+            if (isButtonOnRight) {
+                // Button on right side → open menu to the left
+                x = rect.left - dropdownWidth - 8;
+            } else {
+                // Button on left side → open menu to the right
+                x = rect.right + 8;
             }
 
-            // If STILL no room, position BELOW toolbar
+            // Vertical alignment - align with toolbar top
+            y = toolbarRect ? toolbarRect.top : rect.top;
+
+            // Fallback: if menu goes off-screen horizontally, try the other side
+            if (x < 10) {
+                x = rect.right + 8; // Try right side
+            }
             if (x + dropdownWidth > viewportWidth - 10) {
-                x = rect.left;
+                x = rect.left - dropdownWidth - 8; // Try left side
+            }
+
+            // If STILL no room horizontally, position BELOW button
+            if (x < 10 || x + dropdownWidth > viewportWidth - 10) {
+                x = Math.max(10, Math.min(rect.left, viewportWidth - dropdownWidth - 10));
                 y = rect.bottom + 8;
             }
 
@@ -1798,6 +1867,8 @@ export function InstanceViewport({
                 fileTypeDisplayInfo={fileTypeDisplayInfo}
                 instanceColor={instanceColor}
                 isFullscreen={isFullscreen}
+                isActive={isFocused}
+                isLoading={loading || !hasData}
                 onFullscreen={handleFullscreen}
                 onClose={handleClose}
                 onTrash={handleTrash}
@@ -1860,13 +1931,18 @@ export function InstanceViewport({
                 )}
             </div>
 
-            {/* Bottom Nav Bar - Overlay that slides up on focus */}
+            {/* Navigation Notch - Carved navigation control at bottom */}
             {showFullToolbars && hasData && (
-                <BottomNavBar
-                    visible={navbarVisible || isFocused}
+                <NavigationNotch
+                    position="bottom"
                     zoomLevel={zoomLevel}
                     onZoomChange={handleZoomChange}
                     onFit={handleFit}
+                    onResetCamera={handleResetCamera}
+                    onCenterSelection={handleCenterSelection}
+                    instanceColor={instanceColor}
+                    availableSpace={width}
+                    visible={navbarVisible || isFocused}
                 />
             )}
 

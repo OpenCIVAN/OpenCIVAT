@@ -33,6 +33,34 @@ import {
 } from "@Services/syncService.js";
 import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
 
+// =============================================================================
+// INITIALIZATION PROGRESS TRACKING
+// =============================================================================
+
+/**
+ * Phase 2 initialization steps for progress tracking
+ */
+export const PHASE2_STEPS = [
+  { id: 'yjs-sync', label: 'Syncing collaboration state' },
+  { id: 'presence', label: 'Setting up user presence' },
+  { id: 'data-managers', label: 'Initializing data managers' },
+  { id: 'observers', label: 'Connecting real-time observers' },
+  { id: 'collaboration', label: 'Starting collaboration services' },
+  { id: 'workspace', label: 'Loading workspace' },
+];
+
+/**
+ * Emit initialization progress event
+ * @param {string} stepId - ID of the current step
+ * @param {'pending'|'active'|'complete'|'error'} status - Step status
+ * @param {number} progress - Progress percentage (0-100)
+ */
+function emitProgress(stepId, status, progress) {
+  window.dispatchEvent(new CustomEvent('cia:init-progress', {
+    detail: { stepId, status, progress }
+  }));
+}
+
 // ✅ NEW: Import annotation system
 // We'll initialize this in Phase 2 after DatasetManager is ready
 let annotationManager = null;
@@ -324,6 +352,7 @@ export async function initializePhase2() {
 
   try {
     // STEP 1: Wait for Y.js to sync
+    emitProgress('yjs-sync', 'active', 0);
     log.debug("Checking Y.js sync status...");
     const synced = await waitForYjsSync();
     if (synced) {
@@ -331,9 +360,11 @@ export async function initializePhase2() {
     } else {
       log.warn("Y.js sync timeout, continuing anyway");
     }
+    emitProgress('yjs-sync', 'complete', 17);
 
     // STEP 2: Presence system
     // Tracks which users are in the room and their activities
+    emitProgress('presence', 'active', 17);
     log.debug("Initializing presence system...");
     if (presenceSystem && typeof presenceSystem.initialize === "function") {
       presenceSystem.initialize();
@@ -351,9 +382,11 @@ export async function initializePhase2() {
       log.warn("Presence system not available");
       logWarning("Presence system unavailable");
     }
+    emitProgress('presence', 'complete', 33);
 
     // STEP 3: Data managers
     // DatasetManager was initialized in Phase 1, confirm it's ready
+    emitProgress('data-managers', 'active', 33);
     log.debug("Confirming data managers...");
     log.debug("Dataset manager ready (initialized in Phase 1)");
 
@@ -373,9 +406,11 @@ export async function initializePhase2() {
     log.debug("Data managers ready");
 
     useDatasetStore.getState().initialize(datasetManager);
+    emitProgress('data-managers', 'complete', 50);
 
     // STEP 4: Y.js observers
     // Set up observers for real-time data sync
+    emitProgress('observers', 'active', 50);
     log.debug("Setting up Y.js observers...");
     try {
       if (typeof initializeAllObservers === "function") {
@@ -388,8 +423,12 @@ export async function initializePhase2() {
     } catch (observerError) {
       log.warn("Y.js observers setup incomplete:", observerError.message);
     }
+    emitProgress('observers', 'complete', 67);
 
-    // STEP 6: Cursor system
+    // STEP 5: Collaboration services (cursor, chat, voice)
+    emitProgress('collaboration', 'active', 67);
+
+    // Cursor system
     log.debug("Initializing cursor system...");
     try {
       const { initializeCursorTracking } = await import(
@@ -401,8 +440,7 @@ export async function initializePhase2() {
       log.warn("Cursor system failed to initialize:", cursorError);
     }
 
-    // STEP 7: Text chat
-    // Real-time text communication between users
+    // Text chat - Real-time text communication between users
     log.debug("Initializing text chat...");
     if (textChat && typeof textChat.initialize === "function") {
       try {
@@ -415,16 +453,7 @@ export async function initializePhase2() {
       log.warn("Text chat not available");
     }
 
-    // STEP 8: Workspace manager
-    // Manages multiple visualization instances
-    log.debug("Initializing workspace manager...");
-    if (workspaceManager && typeof workspaceManager.initialize === "function") {
-      workspaceManager.initialize();
-      log.debug("Workspace manager ready");
-    }
-
-    // STEP 9: Voice command handlers
-    // Wire up handlers for voice commands dispatched by voiceCommandService
+    // Voice command handlers
     log.debug("Initializing voice command handlers...");
     try {
       const { initializeVoiceCommandHandlers } = await import(
@@ -435,9 +464,20 @@ export async function initializePhase2() {
     } catch (voiceError) {
       log.warn("Voice command handlers failed to initialize:", voiceError);
     }
+    emitProgress('collaboration', 'complete', 83);
+
+    // STEP 6: Workspace manager
+    // Manages multiple visualization instances
+    emitProgress('workspace', 'active', 83);
+    log.debug("Initializing workspace manager...");
+    if (workspaceManager && typeof workspaceManager.initialize === "function") {
+      workspaceManager.initialize();
+      log.debug("Workspace manager ready");
+    }
 
     viewLifecycleService.initialize();
     log.info("ViewLifecycleService initialized");
+    emitProgress('workspace', 'complete', 100);
 
     log.info("Phase 2 complete - User services ready");
     logSuccess("Application ready");
