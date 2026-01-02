@@ -18,6 +18,21 @@ import { Icon } from '@UI/react/components/common/Icon';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 
 // =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+/**
+ * Convert hex color to RGB string for rgba() usage in CSS
+ */
+const hexToRgb = (hex) => {
+    if (!hex) return '96, 165, 250'; // Default blue
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+        : '96, 165, 250';
+};
+
+// =============================================================================
 // DROP ZONE CONSTANTS
 // =============================================================================
 
@@ -130,10 +145,11 @@ export const CanvasCell = memo(function CanvasCell({
     const viewId = placement?.content?.viewConfigurationId;
     const instanceColor = useMemo(() => {
         if (!viewId) return null;
-        // Get color from workspaceManager (same source as header)
-        const colorObj = workspaceManager?.getViewColor?.(viewId);
-        return colorObj?.hex || placement?.content?.color?.hex || null;
-    }, [viewId, placement?.content?.color?.hex]);
+        // Try multiple sources for color
+        const colorFromManager = workspaceManager?.getViewColor?.(viewId)?.hex;
+        const colorFromContent = placement?.content?.color?.hex || placement?.content?.colorHex;
+        return colorFromManager || colorFromContent || null;
+    }, [viewId, placement?.content?.color?.hex, placement?.content?.colorHex]);
 
     // Determine which UI elements to show based on render mode
     const uiConfig = useMemo(() => {
@@ -586,8 +602,11 @@ export const CanvasCell = memo(function CanvasCell({
             style={{
                 '--cell-width': `${cellSize.width}px`,
                 '--cell-height': `${cellSize.height}px`,
-                // Apply instance color for selected border styling
-                ...(instanceColor && { '--instance-color': instanceColor }),
+                // Apply instance color for selected border/glow styling
+                ...(instanceColor && {
+                    '--instance-color': instanceColor,
+                    '--instance-color-rgb': hexToRgb(instanceColor),
+                }),
             }}
             onMouseDown={handleMouseDown}
             onClick={handleClick}

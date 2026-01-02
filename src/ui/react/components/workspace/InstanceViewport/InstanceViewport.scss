@@ -24,6 +24,11 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   outline: none; // Remove focus outline, we handle focus visually
 
+  // Inherit pointer-events from parent container
+  // When parent has pointer-events: none (during thumbnail loading), this ensures
+  // the viewport doesn't capture clicks, allowing selection of the canvas cell
+  pointer-events: inherit;
+
   background: $color-bg-secondary;
   border-radius: $radius-lg; // Increased for softer appearance (8px)
 
@@ -611,6 +616,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 
+.instance-toolbar__more-wrapper {
+  position: relative;
+}
+
 .instance-toolbar__separator {
   width: 1px;
   height: 20px;
@@ -1035,6 +1044,9 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   top: $spacing-xs;
   right: $spacing-xs;
   z-index: 150;
+  // Override inherited pointer-events: none from parent during loading
+  // The gear button must remain clickable even when viewport is loading
+  pointer-events: auto;
 }
 
 .instance-viewport__gear-button {
@@ -1637,6 +1649,151 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
   .toolbar-menu-dropdown {
     min-width: 180px;
+  }
+}
+
+// ============================================================================
+// EMBEDDED INSTANCE TOOLS PANEL - For fullscreen mode
+// ============================================================================
+
+.instance-viewport__embedded-tools {
+  position: absolute;
+  top: 40px; // Below header
+  bottom: 40px; // Above footer
+  width: 320px;
+  max-width: 40vw;
+  z-index: 100; // Above content but below modals
+
+  display: flex;
+  flex-direction: column;
+
+  background: rgba($color-bg-secondary, 0.95);
+  backdrop-filter: blur(20px);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+
+  // Right side (default)
+  &--right {
+    right: 0;
+    border-left: 1px solid $color-border-default;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+    transform: translateX(100%);
+
+    &.instance-viewport__embedded-tools--open {
+      transform: translateX(0);
+    }
+  }
+
+  // Left side
+  &--left {
+    left: 0;
+    border-right: 1px solid $color-border-default;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+    transform: translateX(-100%);
+
+    &.instance-viewport__embedded-tools--open {
+      transform: translateX(0);
+    }
+  }
+
+  &--open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.instance-viewport__embedded-tools-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border-default;
+  background: rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.instance-viewport__embedded-tools-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.instance-viewport__embedded-tools-toggle-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: $color-text-secondary;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+}
+
+.instance-viewport__embedded-tools-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: 13px;
+  font-weight: 500;
+  color: $color-text-primary;
+
+  svg {
+    color: $color-accent-amber;
+  }
+}
+
+.instance-viewport__embedded-tools-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: $color-text-secondary;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+}
+
+.instance-viewport__embedded-tools-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // Scrollbar styling
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
   }
 }
 

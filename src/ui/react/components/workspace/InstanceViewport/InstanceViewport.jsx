@@ -25,6 +25,9 @@ import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
 import { NavigationNotch } from './NavigationNotch';
 
+// Instance Tools panel content for embedded fullscreen mode
+import { InstanceToolsPanelContent } from "@UI/react/components/panels/LeftPanel/tabs/InstanceToolsTab";
+
 import "./InstanceViewport.scss";
 
 // ============================================================================
@@ -51,8 +54,18 @@ function TopToolbar({
     onOpenInstanceTools,
     instanceToolsTabActive,
     instanceId,
+    // More menu handlers
+    onFullscreen,
+    onVRMode,
+    onResetCamera,
+    onFitView,
+    onDuplicate,
+    onClose,
+    onTrash,
 }) {
     const tierConfig = getTierConfig(uiMode);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const moreButtonRef = useRef(null);
 
     return (
         <div
@@ -91,17 +104,34 @@ function TopToolbar({
                     <button
                         className={`instance-toolbar__tool-button ${instanceToolsTabActive ? 'instance-toolbar__tool-button--primary' : ''}`}
                         onClick={onOpenInstanceTools}
-                        title="Instance Tools (I)"
+                        title="Instance Tools (T)"
                     >
                         <Icon name="wrench" size={16} />
                     </button>
                     <VRButton instanceId={instanceId} size="sm" />
-                    <button
-                        className="instance-toolbar__tool-button"
-                        title="More options"
-                    >
-                        <Icon name="moreHorizontal" size={16} />
-                    </button>
+                    <div className="instance-toolbar__more-wrapper" ref={moreButtonRef}>
+                        <button
+                            className={`instance-toolbar__tool-button ${showMoreMenu ? 'instance-toolbar__tool-button--active' : ''}`}
+                            onClick={() => setShowMoreMenu(!showMoreMenu)}
+                            title="More options"
+                        >
+                            <Icon name="moreHorizontal" size={16} />
+                        </button>
+                        <MoreMenu
+                            isOpen={showMoreMenu}
+                            onClose={() => setShowMoreMenu(false)}
+                            onOpenInstanceTools={onOpenInstanceTools}
+                            onFullscreen={onFullscreen}
+                            onVRMode={onVRMode}
+                            onResetCamera={onResetCamera}
+                            onFitView={onFitView}
+                            onDuplicate={onDuplicate}
+                            onCloseView={onClose}
+                            onDeleteView={onTrash}
+                            triggerRef={moreButtonRef}
+                            instanceId={instanceId}
+                        />
+                    </div>
                 </div>
 
                 {/* Pin Button */}
@@ -280,7 +310,6 @@ function GearOnlyDropdown({
     const handleItemClick = (e, action) => {
         e.stopPropagation();
         e.preventDefault();
-        console.log('[GearMenu] Item clicked, action:', action?.name || action);
         if (typeof action === 'function') {
             action();
         }
@@ -911,6 +940,10 @@ export function InstanceViewport({
     // Fullscreen state
     const [isFullscreen, setIsFullscreen] = useState(false);
 
+    // Embedded Instance Tools panel (for fullscreen mode)
+    const [embeddedToolsOpen, setEmbeddedToolsOpen] = useState(false);
+    const [embeddedToolsSide, setEmbeddedToolsSide] = useState('right'); // 'left' or 'right'
+
     // VR mode state
     const [isInVR, setIsInVR] = useState(false);
 
@@ -1311,14 +1344,13 @@ export function InstanceViewport({
     // UI HELPERS
     // =========================================================================
 
+    // Native browser fullscreen
     const handleFullscreen = useCallback(() => {
         if (!viewportRef.current) return;
 
         if (document.fullscreenElement === viewportRef.current) {
-            // Exit fullscreen
             document.exitFullscreen?.();
         } else {
-            // Enter fullscreen
             viewportRef.current.requestFullscreen?.();
         }
     }, []);
@@ -1326,7 +1358,12 @@ export function InstanceViewport({
     // Listen for fullscreen changes (e.g., user presses Esc)
     useEffect(() => {
         const handleFullscreenChange = () => {
-            setIsFullscreen(document.fullscreenElement === viewportRef.current);
+            const nowFullscreen = document.fullscreenElement === viewportRef.current;
+            setIsFullscreen(nowFullscreen);
+            // Close embedded tools when exiting fullscreen
+            if (!nowFullscreen) {
+                setEmbeddedToolsOpen(false);
+            }
         };
 
         document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -1465,11 +1502,17 @@ export function InstanceViewport({
     // =========================================================================
 
     const handleOpenInstanceTools = useCallback(() => {
-        // Emit event to open Instance Tools panel in left sidebar
+        // In fullscreen mode, toggle the embedded Instance Tools panel
+        if (isFullscreen) {
+            setEmbeddedToolsOpen(prev => !prev);
+            return;
+        }
+
+        // Otherwise, emit event to open Instance Tools floating panel
         window.dispatchEvent(new CustomEvent('cia:open-instance-tools', {
             detail: { instanceId: actualInstanceId }
         }));
-    }, [actualInstanceId]);
+    }, [actualInstanceId, isFullscreen]);
 
     // =========================================================================
     // VR MODE
@@ -2048,6 +2091,13 @@ export function InstanceViewport({
                     onOpenInstanceTools={handleOpenInstanceTools}
                     instanceToolsTabActive={instanceToolsTabActive}
                     instanceId={actualInstanceId}
+                    onFullscreen={handleFullscreen}
+                    onVRMode={handleVRMode}
+                    onResetCamera={handleResetCamera}
+                    onFitView={handleFit}
+                    onDuplicate={handleDuplicate}
+                    onClose={handleClose}
+                    onTrash={handleTrash}
                 />
             )}
 
@@ -2068,6 +2118,37 @@ export function InstanceViewport({
                     </div>
                 )}
             </div>
+
+            {/* Embedded Instance Tools Panel - For fullscreen mode */}
+            {isFullscreen && (
+                <div className={`instance-viewport__embedded-tools instance-viewport__embedded-tools--${embeddedToolsSide} ${embeddedToolsOpen ? 'instance-viewport__embedded-tools--open' : ''}`}>
+                    <div className="instance-viewport__embedded-tools-header">
+                        <div className="instance-viewport__embedded-tools-title">
+                            <Icon name="wrench" size={14} />
+                            <span>Instance Tools</span>
+                        </div>
+                        <div className="instance-viewport__embedded-tools-actions">
+                            <button
+                                className="instance-viewport__embedded-tools-toggle-side"
+                                onClick={() => setEmbeddedToolsSide(side => side === 'right' ? 'left' : 'right')}
+                                title={`Move to ${embeddedToolsSide === 'right' ? 'left' : 'right'} side`}
+                            >
+                                <Icon name={embeddedToolsSide === 'right' ? 'panelLeft' : 'panelRight'} size={14} />
+                            </button>
+                            <button
+                                className="instance-viewport__embedded-tools-close"
+                                onClick={() => setEmbeddedToolsOpen(false)}
+                                title="Close (T)"
+                            >
+                                <Icon name="close" size={14} />
+                            </button>
+                        </div>
+                    </div>
+                    <div className="instance-viewport__embedded-tools-content">
+                        <InstanceToolsPanelContent />
+                    </div>
+                </div>
+            )}
 
             {/* Navigation Notch - Carved navigation control at bottom */}
             {showFullToolbars && hasData && (

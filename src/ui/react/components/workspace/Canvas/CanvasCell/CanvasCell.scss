@@ -31,10 +31,11 @@
   // ==========================================================================
 
   &--view {
-    background: $color-bg-canvas;
+    background: transparent; // Changed from $color-bg-canvas - let content fill entirely
     border: 1px solid $color-border-canvas-default;
     border-radius: $radius-lg;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    overflow: hidden; // Ensure content is clipped to border-radius
 
     &:hover {
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
@@ -42,8 +43,12 @@
 
     &.canvas-cell--selected {
       border-color: var(--instance-color, $color-accent-primary);
-      box-shadow: 0 0 0 1px var(--instance-color, $color-accent-primary),
-        0 4px 20px rgba(0, 0, 0, 0.4);
+      // Use filter for glow instead of rgba with RGB variable - ensures color match
+      box-shadow:
+        0 0 0 1px var(--instance-color, $color-accent-primary),
+        0 0 12px var(--instance-color, $color-accent-primary),
+        0 0 24px var(--instance-color, $color-accent-primary);
+      filter: drop-shadow(0 0 8px var(--instance-color, $color-accent-primary));
     }
   }
 
@@ -95,14 +100,20 @@
     }
   }
 
-  &--mode-thumbnail {
-    // Thumbnail mode - minimal UI
-    cursor: zoom-in;
-  }
-
+  &--mode-thumbnail,
   &--mode-snapshot {
-    // Snapshot mode - just image
-    cursor: zoom-in;
+    // Default cursor - first click selects/focuses
+    cursor: default;
+
+    // When focused/selected, show zoom-in to indicate double-click to isolate
+    &.canvas-cell--selected {
+      cursor: zoom-in;
+    }
+
+    // Gear button always shows pointer
+    .instance-viewport__gear-dropdown {
+      cursor: pointer;
+    }
   }
 
   // ==========================================================================
@@ -472,14 +483,9 @@
   position: absolute;
   inset: 0;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(
-    180deg,
-    $color-bg-canvas 0%,
-    $color-bg-canvas-cell 100%
-  );
+  overflow: hidden;
+  background: transparent; // No background - thumbnail fills completely
+  pointer-events: none; // Allow clicks to pass through to cell for selection
 
   // Crossfade transition - fades out when viewport becomes ready
   opacity: 1;
@@ -488,6 +494,48 @@
   &--hidden {
     opacity: 0;
     pointer-events: none;
+  }
+
+  // Thumbnail fills entire cell - override component defaults
+  .thumbnail {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    flex-shrink: 1 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  // All internal containers fill the thumbnail
+  .thumbnail__loader,
+  .thumbnail__fallback {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+  }
+
+  // Image fills with cover mode (crops to fit, no letterboxing)
+  .thumbnail__image,
+  img {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+  }
+}
+
+// Cell should not have internal padding that creates borders
+.canvas-cell--view {
+  .canvas-cell__view-content {
+    padding: 0 !important;
+    margin: 0 !important;
   }
 }
 
