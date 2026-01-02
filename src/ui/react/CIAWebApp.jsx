@@ -68,9 +68,10 @@ import {
 import {
   FloatingPanelProvider,
   AllFloatingPanels,
+  useInstanceToolsFloating,
 } from "@UI/react/components/panels/FloatingPanel";
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
-import { FloatingCanvasNavigator } from "@UI/react/components/panels/LayoutPanel";
+import { FloatingCanvasNavigator, useNavigatorButton } from "@UI/react/components/panels/LayoutPanel";
 import { CanvasOperationsPanel } from "@UI/react/components/workspace/FloatingPanels/CanvasOperationsPanel";
 
 // =============================================================================
@@ -496,6 +497,20 @@ export function CIAWebApp({ username, userId, projectId }) {
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault();
         setShowKeyboardShortcuts(true);
+        return;
+      }
+
+      // T = Toggle Instance Tools floating panel (not in inputs)
+      if (e.key === 't' && !isInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('cia:toggle-instance-tools-floating'));
+        return;
+      }
+
+      // ⌘/Ctrl + M = Toggle Canvas Navigator
+      if ((e.metaKey || e.ctrlKey) && e.key === 'm') {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('cia:toggle-canvas-navigator'));
         return;
       }
     };

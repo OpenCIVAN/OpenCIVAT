@@ -9,6 +9,54 @@ import { useFloatingPanels, FLOATING_PANEL_DEFAULTS } from './FloatingPanelConte
 import './FloatingPanel.scss';
 
 // =============================================================================
+// SNAP-TO-CORNER CONSTANTS
+// =============================================================================
+
+const SNAP_THRESHOLD = 20; // px from edge to trigger snap
+const EDGE_PADDING = 8;    // px from viewport edge when snapped
+
+/**
+ * Calculate snap position based on proximity to viewport edges
+ * @param {number} x - Current x position
+ * @param {number} y - Current y position
+ * @param {number} width - Panel width
+ * @param {number} height - Panel height
+ * @returns {{ x: number, y: number, snapped: string|null }}
+ */
+function calculateSnapPosition(x, y, width, height) {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let snappedX = x;
+    let snappedY = y;
+    let snapEdge = null;
+
+    // Check left edge
+    if (x < SNAP_THRESHOLD) {
+        snappedX = EDGE_PADDING;
+        snapEdge = 'left';
+    }
+    // Check right edge
+    else if (x + width > vw - SNAP_THRESHOLD) {
+        snappedX = vw - width - EDGE_PADDING;
+        snapEdge = snapEdge ? `${snapEdge}-right` : 'right';
+    }
+
+    // Check top edge
+    if (y < SNAP_THRESHOLD) {
+        snappedY = EDGE_PADDING;
+        snapEdge = snapEdge ? `${snapEdge}-top` : 'top';
+    }
+    // Check bottom edge
+    else if (y + height > vh - SNAP_THRESHOLD) {
+        snappedY = vh - height - EDGE_PADDING;
+        snapEdge = snapEdge ? `${snapEdge}-bottom` : 'bottom';
+    }
+
+    return { x: snappedX, y: snappedY, snapped: snapEdge };
+}
+
+// =============================================================================
 // FLOATING PANEL COMPONENT
 // =============================================================================
 
@@ -43,6 +91,7 @@ export function FloatingPanel({
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const [minimized, setMinimized] = useState(false);
+    const [snappedEdge, setSnappedEdge] = useState(null);
     const dragOffset = useRef({ x: 0, y: 0 });
     const resizeStart = useRef({ width: 0, height: 0, x: 0, y: 0 });
 
@@ -63,18 +112,36 @@ export function FloatingPanel({
         };
     }, [x, y, panelId, bringToFront]);
 
-    // Handle drag move
+    // Handle drag move with snap-to-corner
     useEffect(() => {
         if (!isDragging) return;
 
         const handleMouseMove = (e) => {
-            const newX = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - dragOffset.current.x));
-            const newY = Math.max(0, Math.min(window.innerHeight - 50, e.clientY - dragOffset.current.y));
-            updatePanelPosition(panelId, newX, newY);
+            // Calculate raw position
+            const rawX = e.clientX - dragOffset.current.x;
+            const rawY = e.clientY - dragOffset.current.y;
+
+            // Apply snap-to-corner logic
+            const { x: snappedX, y: snappedY, snapped } = calculateSnapPosition(
+                rawX,
+                rawY,
+                width,
+                height
+            );
+
+            // Update snap state for visual feedback
+            setSnappedEdge(snapped);
+
+            // Clamp to viewport bounds
+            const finalX = Math.max(0, Math.min(window.innerWidth - 100, snappedX));
+            const finalY = Math.max(0, Math.min(window.innerHeight - 50, snappedY));
+
+            updatePanelPosition(panelId, finalX, finalY);
         };
 
         const handleMouseUp = () => {
             setIsDragging(false);
+            // Keep snapped state after release for visual indication
         };
 
         document.addEventListener('mousemove', handleMouseMove);
@@ -84,7 +151,7 @@ export function FloatingPanel({
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, panelId, updatePanelPosition]);
+    }, [isDragging, panelId, updatePanelPosition, width, height]);
 
     // Handle resize start
     const handleResizeStart = useCallback((e) => {
@@ -149,10 +216,11 @@ export function FloatingPanel({
     return createPortal(
         <div
             ref={panelRef}
-            className={`floating-panel ${isDragging ? 'floating-panel--dragging' : ''} ${isResizing ? 'floating-panel--resizing' : ''} ${minimized ? 'floating-panel--minimized' : ''}`}
+            className={`floating-panel ${isDragging ? 'floating-panel--dragging' : ''} ${isResizing ? 'floating-panel--resizing' : ''} ${minimized ? 'floating-panel--minimized' : ''} ${snappedEdge ? 'floating-panel--snapped' : ''}`}
             style={panelStyle}
             onClick={handlePanelClick}
             data-color={color}
+            data-snapped={snappedEdge || undefined}
         >
             {/* Header - draggable area */}
             <div

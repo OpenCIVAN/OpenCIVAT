@@ -263,6 +263,24 @@ export const FloatingCanvasNavigator = memo(function FloatingCanvasNavigator({
         }
     }, [isResizing, handleResizeMove, handleResizeEnd]);
 
+    // Listen for keyboard shortcut toggle event (Ctrl+M)
+    useEffect(() => {
+        const handleToggle = () => {
+            if (dockPosition === DOCK_POSITIONS.FLOAT || Object.keys(CORNER_STYLES).includes(dockPosition)) {
+                // Currently visible, minimize it
+                setDockPosition(DOCK_POSITIONS.MINIMIZED);
+            } else {
+                // Currently hidden, show as float
+                setDockPosition(DOCK_POSITIONS.FLOAT);
+            }
+        };
+
+        window.addEventListener('cia:toggle-canvas-navigator', handleToggle);
+        return () => {
+            window.removeEventListener('cia:toggle-canvas-navigator', handleToggle);
+        };
+    }, [dockPosition, setDockPosition]);
+
     // ==========================================================================
     // RENDER CONDITIONS
     // ==========================================================================

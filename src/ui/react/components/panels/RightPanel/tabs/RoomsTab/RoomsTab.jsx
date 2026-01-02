@@ -16,10 +16,11 @@
  * <RoomsTab workspaceId="ws-1" />
  */
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Icon } from '@UI/react/components/common/Icon';
 import { CollapsibleHeaderSection, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
+import { LeaveRoomDialog } from '@UI/react/components/modals/confirmations';
 
 import { useRoomsTab } from './hooks/useRoomsTab';
 import { RoomCard } from './components/RoomCard';
@@ -67,6 +68,24 @@ export function RoomsTab({ workspaceId }) {
         handleCreateRoom,
         handleDeleteRoom,
     } = useRoomsTab();
+
+    // Leave room confirmation state
+    const [leaveRoomTarget, setLeaveRoomTarget] = useState(null);
+
+    // Wrapper to show confirmation dialog before leaving
+    const handleLeaveRoomWithConfirm = useCallback((roomId) => {
+        const room = rooms.find(r => r.id === roomId);
+        if (room) {
+            setLeaveRoomTarget(room);
+        }
+    }, [rooms]);
+
+    // Confirmed leave handler
+    const handleConfirmLeave = useCallback(() => {
+        if (leaveRoomTarget) {
+            handleLeaveRoom(leaveRoomTarget.id);
+        }
+    }, [leaveRoomTarget, handleLeaveRoom]);
 
     // Calculate stats for the header
     const onlineCount = rooms.reduce((sum, r) => sum + r.members.length, 0);
@@ -196,7 +215,7 @@ export function RoomsTab({ workspaceId }) {
                                         key={room.id}
                                         room={room}
                                         onJoin={handleJoinRoom}
-                                        onLeave={handleLeaveRoom}
+                                        onLeave={handleLeaveRoomWithConfirm}
                                         onSettings={() => { }}
                                         onDelete={handleDeleteRoom}
                                     />
@@ -218,6 +237,18 @@ export function RoomsTab({ workspaceId }) {
                     )}
                 </div>
             </div>
+
+            {/* Leave Room Confirmation Dialog */}
+            <LeaveRoomDialog
+                isOpen={leaveRoomTarget !== null}
+                onClose={() => setLeaveRoomTarget(null)}
+                room={leaveRoomTarget ? {
+                    id: leaveRoomTarget.id,
+                    name: leaveRoomTarget.name,
+                    participantCount: leaveRoomTarget.members?.length || 0
+                } : null}
+                onConfirm={handleConfirmLeave}
+            />
         </div>
     );
 }

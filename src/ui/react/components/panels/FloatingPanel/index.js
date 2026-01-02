@@ -24,3 +24,11 @@ export {
   SCRATCHPAD_PANEL_ID,
   SCRATCHPAD_CONFIG,
 } from "./ScratchPadFloating.jsx";
+
+// Instance Tools floating panel
+export {
+  InstanceToolsFloating,
+  useInstanceToolsFloating,
+  INSTANCE_TOOLS_PANEL_ID,
+  INSTANCE_TOOLS_CONFIG,
+} from "./InstanceToolsFloating.jsx";

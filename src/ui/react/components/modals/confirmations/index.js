@@ -9,6 +9,7 @@
  * import {
  *   DeleteViewDialog,
  *   CloseAllViewsDialog,
+ *   LeaveRoomDialog,
  *   DeleteRecordingDialog,
  *   DeleteNoteDialog,
  *   DeleteProjectDialog,
@@ -27,6 +28,12 @@ export {
   CloseAllViewsDialog,
   default as CloseAllViewsDialogDefault,
 } from "./CloseAllViewsDialog";
+
+// Room/Collaboration confirmations
+export {
+  LeaveRoomDialog,
+  default as LeaveRoomDialogDefault,
+} from "./LeaveRoomDialog";
 
 // Recording/Note confirmations
 export {

@@ -68,6 +68,33 @@
   &--minimized {
     height: auto !important;
   }
+
+  // Snapped to edge state
+  &--snapped {
+    // Subtle glow when snapped
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      border: 2px solid var(--panel-color, $color-accent-blue);
+      border-radius: 10px;
+      opacity: 0.3;
+      pointer-events: none;
+      animation: snap-pulse 0.3s ease-out;
+    }
+  }
+
+  // Snap indicator animation
+  @keyframes snap-pulse {
+    0% {
+      opacity: 0.6;
+      transform: scale(1.02);
+    }
+    100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+  }
 }
 
 // =============================================================================

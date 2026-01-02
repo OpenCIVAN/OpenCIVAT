@@ -29,6 +29,9 @@ import "@UI/react/components/panels/RightPanel/RightPanelTabRegistry";
 // ScratchPad floating panel
 import { ScratchPadFloating, SCRATCHPAD_PANEL_ID } from "./ScratchPadFloating";
 
+// Instance Tools floating panel
+import { InstanceToolsFloating, INSTANCE_TOOLS_PANEL_ID } from "./InstanceToolsFloating";
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -94,7 +97,7 @@ export function AllFloatingPanels() {
         <>
             {/* Render all floating panels from registry (left/right panel tabs) */}
             {Object.entries(floatingPanels)
-                .filter(([id]) => id !== SCRATCHPAD_PANEL_ID) // ScratchPad handled separately
+                .filter(([id]) => id !== SCRATCHPAD_PANEL_ID && id !== INSTANCE_TOOLS_PANEL_ID) // Handled separately
                 .map(([panelId, panelState]) => {
                     // Find tab config for icon/color
                     let tabConfig = null;
@@ -131,6 +134,9 @@ export function AllFloatingPanels() {
 
             {/* ScratchPad - Independent floating panel */}
             <ScratchPadFloating />
+
+            {/* Instance Tools - Floating panel for viewport tools */}
+            <InstanceToolsFloating />
         </>
     );
 }
