@@ -11,7 +11,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { useAnnotations } from '@UI/react/hooks/useAnnotations.js';
-import { FloatingAnnotationCreator } from '@UI/react/components/modals/FloatingAnnotationCreator';
+import { FloatingAnnotationCreator } from '@UI/react/components/panels/FloatingPanel/FloatingAnnotationCreator';
 import { AnnotationContextMenu } from '@UI/react/components/modals/AnnotationContextMenu';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { logInfo, logSuccess, logWarning } from '@Utils/logger.js';

@@ -2,18 +2,21 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo, memo } from "react";
 import { createPortal } from 'react-dom';
 import { Icon, IconButton } from '@UI/react/components/atoms';
-import { MenuItem, LabeledButton } from '@UI/react/components/molecules';
+import {
+    MenuItem,
+    LabeledButton,
+    VRButton,
+    SliderMenuOption,
+    SliderWithPresets,
+    CameraViewGridPicker,
+    ColorSwatchGrid,
+    PositionGridPicker,
+} from '@UI/react/components/molecules';
 
 import { instance as log } from "@Utils/logger.js";
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
-import { SliderMenuOption } from '@UI/react/components/workspace/Sliders/SliderMenuOption';
-import { CameraViewGridPicker } from '@UI/react/components/workspace/Pickers/CameraViewGridPicker';
-import { SliderWithPresets } from '@UI/react/components/workspace/Sliders/SliderWithPresets';
-import { ColorSwatchGrid } from '@UI/react/components/workspace/Pickers/ColorSwatchGrid';
-import { PositionGridPicker } from '@UI/react/components/workspace/Pickers/PositionGridPicker';
-import { VRButton } from '@UI/react/components/molecules/VRButton';
 import { vrManager } from '@Core/vr/VRManager.js';
 import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel/FloatingPanelContext';
 

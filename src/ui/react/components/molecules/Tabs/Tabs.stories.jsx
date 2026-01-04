@@ -1,5 +1,6 @@
 // src/ui/react/components/molecules/Tabs/Tabs.stories.jsx
 import React, { useState } from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // Mock Tabs components
 const MockTabs = ({ children, activeTab, onChange }) => (

@@ -1,5 +1,6 @@
 // src/ui/react/components/molecules/SearchBar/SearchBar.stories.jsx
 import React, { useState } from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // Mock SearchBar component
 const MockSearchBar = ({
@@ -29,7 +30,7 @@ const MockSearchBar = ({
                 borderRadius: '8px',
                 border: '1px solid #374151',
             }}>
-                <span style={{ color: '#6b7280' }}>🔍</span>
+                <Icon name="search" size={16} style={{ color: '#6b7280' }} />
                 <input
                     type="text"
                     value={inputValue}
@@ -55,9 +56,11 @@ const MockSearchBar = ({
                             color: '#6b7280',
                             cursor: 'pointer',
                             padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
                         }}
                     >
-                        ✕
+                        <Icon name="x" size={14} />
                     </button>
                 )}
             </div>

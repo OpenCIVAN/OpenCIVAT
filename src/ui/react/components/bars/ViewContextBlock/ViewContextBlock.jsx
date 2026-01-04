@@ -212,7 +212,7 @@ const ViewHubFlyout = memo(function ViewHubFlyout({
                                     }}
                                 >
                                     <span className="view-hub-flyout__sort-check">
-                                        {sortBy === option.id && '✓'}
+                                        {sortBy === option.id && <Icon name="check" size={10} />}
                                     </span>
                                     {option.label}
                                 </button>

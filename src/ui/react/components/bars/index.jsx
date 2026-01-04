@@ -28,7 +28,7 @@ export { LayoutModeToggle } from '@UI/react/components/controls/LayoutModeToggle
 export { SegmentedToggle } from '@UI/react/components/molecules/SegmentedToggle';
 
 // Buttons
-export { LabeledIconButton } from './LabeledIconButton';
+export { LabeledIconButton } from '@UI/react/components/molecules/LabeledIconButton';
 export { PopoutButtons } from './PopoutButtons';
 
 // Voice

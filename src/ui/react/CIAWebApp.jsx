@@ -72,7 +72,7 @@ import {
 } from "@UI/react/components/panels/FloatingPanel";
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 import { FloatingCanvasNavigator, useNavigatorButton } from "@UI/react/components/panels/LayoutPanel";
-import { CanvasOperationsPanel } from "@UI/react/components/workspace/FloatingPanels/CanvasOperationsPanel";
+import { CanvasOperationsPanel } from "@UI/react/components/panels/FloatingPanel/CanvasOperationsPanel";
 
 // =============================================================================
 // MODALS

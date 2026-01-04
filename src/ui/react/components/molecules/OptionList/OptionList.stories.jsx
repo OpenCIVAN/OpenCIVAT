@@ -1,5 +1,6 @@
 // src/ui/react/components/molecules/OptionList/OptionList.stories.jsx
 import React, { useState } from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // Mock OptionList for story
 const MockOptionList = ({ options, value, onChange, multiple = false }) => {
@@ -49,7 +50,7 @@ const MockOptionList = ({ options, value, onChange, multiple = false }) => {
                         }}
                     >
                         <span>{opt.label}</span>
-                        {isSelected && <span style={{ color: '#3b82f6' }}>✓</span>}
+                        {isSelected && <Icon name="check" size={14} style={{ color: '#3b82f6' }} />}
                     </button>
                 );
             })}

@@ -9,6 +9,9 @@
 // LabeledButton - Icon button with visible text label
 export { LabeledButton } from './LabeledButton';
 
+// LabeledIconButton - Standalone icon button with label (for toolbars)
+export { LabeledIconButton } from './LabeledIconButton';
+
 // TabButton - Tab/navigation button with optional badge
 export { TabButton } from './TabButton';
 
@@ -69,9 +72,6 @@ export { OptionList } from './OptionList';
 // CameraGrid - Camera view grid layout
 export { CameraGrid } from './CameraGrid';
 
-// FloatingPanelHeader - Header for floating panels
-export { FloatingPanelHeader } from './FloatingPanelHeader';
-
 // ThumbnailPreview - Thumbnail with preview overlay
 export { ThumbnailPreview } from './ThumbnailPreview';
 
@@ -86,3 +86,30 @@ export { ViewItem } from './ViewItem';
 
 // VoiceCommandToggle - Voice command activation toggle
 export { VoiceCommandToggle } from './VoiceCommandToggle';
+
+// NumberStepper - Increment/decrement number input
+export { NumberStepper } from './NumberStepper';
+
+// MiniMapCell - Canvas navigator minimap cell
+export { MiniMapCell } from './MiniMapCell';
+
+// PositionDisplay - Position coordinates display
+export { PositionDisplay } from './PositionDisplay';
+
+// AnnotationToolButton - Annotation tool selection button
+export { AnnotationToolButton, getToolTypes, getToolConfig } from './AnnotationToolButton';
+
+// SliderMenuOption - Slider for dropdown menus
+export { SliderMenuOption } from './SliderMenuOption';
+
+// SliderWithPresets - Slider with preset buttons
+export { SliderWithPresets } from './SliderWithPresets';
+
+// PositionGridPicker - 2x2 position picker grid
+export { PositionGridPicker } from './PositionGridPicker';
+
+// ColorSwatchGrid - Color/colormap swatch grid
+export { ColorSwatchGrid, DEFAULT_COLORMAPS } from './ColorSwatchGrid';
+
+// CameraViewGridPicker - 3x3 camera view preset grid
+export { CameraViewGridPicker } from './CameraViewGridPicker';

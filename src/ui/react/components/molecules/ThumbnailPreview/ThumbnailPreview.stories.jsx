@@ -1,5 +1,6 @@
 // src/ui/react/components/molecules/ThumbnailPreview/ThumbnailPreview.stories.jsx
 import React from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // Mock ThumbnailPreview component
 const MockThumbnailPreview = ({
@@ -30,7 +31,7 @@ const MockThumbnailPreview = ({
             justifyContent: 'center',
             color: '#6b7280',
         }}>
-            📷
+            <Icon name="image" size={24} />
         </div>
         <div style={{
             padding: '8px',

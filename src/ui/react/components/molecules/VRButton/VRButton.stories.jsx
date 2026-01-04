@@ -1,5 +1,6 @@
 // src/ui/react/components/molecules/VRButton/VRButton.stories.jsx
 import React from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // Mock VRButton component - optimized for VR with larger touch targets
 const MockVRButton = ({
@@ -12,9 +13,9 @@ const MockVRButton = ({
     onClick,
 }) => {
     const sizeMap = {
-        sm: { padding: '12px 16px', fontSize: '14px', iconSize: '20px' },
-        md: { padding: '16px 24px', fontSize: '16px', iconSize: '24px' },
-        lg: { padding: '20px 32px', fontSize: '18px', iconSize: '28px' },
+        sm: { padding: '12px 16px', fontSize: '14px', iconSize: 20 },
+        md: { padding: '16px 24px', fontSize: '16px', iconSize: 24 },
+        lg: { padding: '20px 32px', fontSize: '18px', iconSize: 28 },
     };
 
     const variantMap = {
@@ -49,7 +50,7 @@ const MockVRButton = ({
                 transition: 'all 0.2s',
             }}
         >
-            {icon && <span style={{ fontSize: s.iconSize }}>{icon}</span>}
+            {icon && <Icon name={icon} size={s.iconSize} />}
             {label && <span>{label}</span>}
         </button>
     );
@@ -83,14 +84,14 @@ export default {
 
 export const Default = {
     args: {
-        icon: '⚙️',
+        icon: 'settings',
         label: 'Settings',
     },
 };
 
 export const Primary = {
     args: {
-        icon: '▶️',
+        icon: 'play',
         label: 'Play',
         variant: 'primary',
     },
@@ -98,7 +99,7 @@ export const Primary = {
 
 export const Danger = {
     args: {
-        icon: '🗑️',
+        icon: 'trash2',
         label: 'Delete',
         variant: 'danger',
     },
@@ -106,14 +107,14 @@ export const Danger = {
 
 export const IconOnly = {
     args: {
-        icon: '🏠',
+        icon: 'home',
         variant: 'default',
     },
 };
 
 export const Active = {
     args: {
-        icon: '🎯',
+        icon: 'target',
         label: 'Active',
         active: true,
     },
@@ -121,7 +122,7 @@ export const Active = {
 
 export const Disabled = {
     args: {
-        icon: '🔒',
+        icon: 'lock',
         label: 'Locked',
         disabled: true,
     },
@@ -130,9 +131,9 @@ export const Disabled = {
 export const Sizes = {
     render: () => (
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <MockVRButton icon="📁" label="Small" size="sm" />
-            <MockVRButton icon="📁" label="Medium" size="md" />
-            <MockVRButton icon="📁" label="Large" size="lg" />
+            <MockVRButton icon="folder" label="Small" size="sm" />
+            <MockVRButton icon="folder" label="Medium" size="md" />
+            <MockVRButton icon="folder" label="Large" size="lg" />
         </div>
     ),
 };
@@ -140,10 +141,10 @@ export const Sizes = {
 export const Variants = {
     render: () => (
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <MockVRButton icon="⚡" label="Default" variant="default" />
-            <MockVRButton icon="⚡" label="Primary" variant="primary" />
-            <MockVRButton icon="⚡" label="Danger" variant="danger" />
-            <MockVRButton icon="⚡" label="Ghost" variant="ghost" />
+            <MockVRButton icon="zap" label="Default" variant="default" />
+            <MockVRButton icon="zap" label="Primary" variant="primary" />
+            <MockVRButton icon="zap" label="Danger" variant="danger" />
+            <MockVRButton icon="zap" label="Ghost" variant="ghost" />
         </div>
     ),
 };
@@ -157,11 +158,11 @@ export const VRToolbar = {
             background: '#1a1a2e',
             borderRadius: '16px',
         }}>
-            <MockVRButton icon="👆" size="lg" />
-            <MockVRButton icon="✋" size="lg" active />
-            <MockVRButton icon="✏️" size="lg" />
-            <MockVRButton icon="📏" size="lg" />
-            <MockVRButton icon="🔍" size="lg" />
+            <MockVRButton icon="mousePointer" size="lg" />
+            <MockVRButton icon="hand" size="lg" active />
+            <MockVRButton icon="penTool" size="lg" />
+            <MockVRButton icon="ruler" size="lg" />
+            <MockVRButton icon="search" size="lg" />
         </div>
     ),
 };
@@ -169,8 +170,8 @@ export const VRToolbar = {
 export const VRActionButtons = {
     render: () => (
         <div style={{ display: 'flex', gap: '16px' }}>
-            <MockVRButton icon="❌" label="Cancel" variant="ghost" size="lg" />
-            <MockVRButton icon="✅" label="Confirm" variant="primary" size="lg" />
+            <MockVRButton icon="x" label="Cancel" variant="ghost" size="lg" />
+            <MockVRButton icon="check" label="Confirm" variant="primary" size="lg" />
         </div>
     ),
 };

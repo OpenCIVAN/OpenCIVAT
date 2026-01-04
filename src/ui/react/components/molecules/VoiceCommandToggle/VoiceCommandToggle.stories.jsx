@@ -1,5 +1,6 @@
 // src/ui/react/components/molecules/VoiceCommandToggle/VoiceCommandToggle.stories.jsx
 import React, { useState } from 'react';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // Mock VoiceCommandToggle component
 const MockVoiceCommandToggle = ({
@@ -31,12 +32,9 @@ const MockVoiceCommandToggle = ({
             transition: 'all 0.2s',
         }}
     >
-        <span style={{
-            fontSize: '16px',
+        <Icon name="mic" size={16} style={{
             animation: listening ? 'pulse 1.5s infinite' : 'none',
-        }}>
-            🎤
-        </span>
+        }} />
         <span>{listening ? 'Listening...' : (active ? 'Voice On' : 'Voice Off')}</span>
         {listening && (
             <span style={{

@@ -2,8 +2,88 @@
 // Storybook stories for ViewModeToggle component
 
 import React, { useState } from 'react';
-import { ViewModeToggle, ViewModeIndicator, VIEW_MODES } from './ViewModeToggle.jsx';
-import './ViewModeToggle.scss';
+import { Icon } from '@UI/react/components/atoms/Icon';
+
+// Mock VIEW_MODES for story
+const VIEW_MODES = {
+    DESKTOP: 'desktop',
+    VR: 'vr',
+};
+
+// Mock ViewModeToggle component
+const ViewModeToggle = ({
+    mode = VIEW_MODES.DESKTOP,
+    onModeChange,
+    vrAvailable = true,
+    disabled = false,
+    compact = false,
+}) => (
+    <div style={{
+        display: 'flex',
+        gap: '4px',
+        padding: '2px',
+        background: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '6px',
+    }}>
+        <button
+            onClick={() => !disabled && onModeChange?.(VIEW_MODES.DESKTOP)}
+            disabled={disabled}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: compact ? '0' : '4px',
+                padding: compact ? '4px 6px' : '4px 10px',
+                background: mode === VIEW_MODES.DESKTOP ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                border: mode === VIEW_MODES.DESKTOP ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent',
+                borderRadius: '4px',
+                color: mode === VIEW_MODES.DESKTOP ? '#60a5fa' : '#9ca3af',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                fontSize: '11px',
+                opacity: disabled ? 0.5 : 1,
+            }}
+        >
+            <Icon name="monitor" size={14} />
+            {!compact && <span>Desktop</span>}
+        </button>
+        <button
+            onClick={() => !disabled && vrAvailable && onModeChange?.(VIEW_MODES.VR)}
+            disabled={disabled || !vrAvailable}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: compact ? '0' : '4px',
+                padding: compact ? '4px 6px' : '4px 10px',
+                background: mode === VIEW_MODES.VR ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+                border: mode === VIEW_MODES.VR ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid transparent',
+                borderRadius: '4px',
+                color: !vrAvailable ? '#4b5563' : mode === VIEW_MODES.VR ? '#c084fc' : '#9ca3af',
+                cursor: (disabled || !vrAvailable) ? 'not-allowed' : 'pointer',
+                fontSize: '11px',
+                opacity: (disabled || !vrAvailable) ? 0.5 : 1,
+            }}
+        >
+            <Icon name="glasses" size={14} />
+            {!compact && <span>VR</span>}
+        </button>
+    </div>
+);
+
+// Mock ViewModeIndicator component
+const ViewModeIndicator = ({ mode, compact = false }) => (
+    <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '4px 8px',
+        background: mode === VIEW_MODES.VR ? 'rgba(168, 85, 247, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+        borderRadius: '4px',
+        color: mode === VIEW_MODES.VR ? '#c084fc' : '#60a5fa',
+        fontSize: '11px',
+    }}>
+        <Icon name={mode === VIEW_MODES.VR ? 'glasses' : 'monitor'} size={12} />
+        {!compact && <span>{mode === VIEW_MODES.VR ? 'VR' : 'Desktop'}</span>}
+    </div>
+);
 
 export default {
     title: 'Molecules/ViewModeToggle',
@@ -214,7 +294,9 @@ export const InSecondaryBar = {
                         alignItems: 'center',
                         justifyContent: 'flex-end',
                     }}>
-                        <span style={{ fontSize: '10px', color: '#81c784' }}>🎤 In Voice</span>
+                        <span style={{ fontSize: '10px', color: '#81c784', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Icon name="mic" size={10} /> In Voice
+                        </span>
                     </div>
                 </div>
 

@@ -5,7 +5,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { FloatingPanelHeader } from '@UI/react/components/molecules/FloatingPanelHeader';
+import { PanelHeader } from '@UI/react/components/molecules/PanelHeader';
 import { useFloatingPanels, FLOATING_PANEL_DEFAULTS } from './FloatingPanelContext';
 import './FloatingPanel.scss';
 
@@ -224,13 +224,13 @@ export function FloatingPanel({
             data-snapped={snappedEdge || undefined}
         >
             {/* Header - draggable area */}
-            <FloatingPanelHeader
+            <PanelHeader
                 title={title}
                 icon={iconName}
                 color={color}
                 showDragHandle={true}
-                isMinimized={minimized}
-                onToggleMinimize={() => setMinimized(!minimized)}
+                minimized={minimized}
+                onMinimize={() => setMinimized(!minimized)}
                 onDock={handleDock}
                 onClose={handleDock}
                 onMouseDown={handleDragStart}

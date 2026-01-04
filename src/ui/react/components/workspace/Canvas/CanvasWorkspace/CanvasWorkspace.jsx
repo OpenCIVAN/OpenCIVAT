@@ -192,7 +192,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                 // 2. Show dataset selector modal
                 // 3. Quick-add from recent datasets
                 log.debug('[STUB] View button clicked - need to implement dataset selection', { row, col });
-                console.info('🔧 [TODO] View button needs implementation - should open dataset selector for cell', row, col);
+                console.info('[TODO] View button needs implementation - should open dataset selector for cell', row, col);
                 break;
 
             case 'notes':

@@ -6,7 +6,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { initializePhase0, initializePhase1 } from "@Init/appInitializer.js";
 import { app as log } from "@Utils/logger.js";
-import { Bootstrap } from "@UI/react/components/auth/Bootstrap.jsx";
+import { Bootstrap } from "@UI/react/components/auth/Bootstrap";
 
 // Import global styles
 import "@UI/react/styles/global.scss";

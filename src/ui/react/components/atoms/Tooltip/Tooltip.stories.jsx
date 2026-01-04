@@ -1,287 +1,345 @@
-/**
- * @file Tooltip.stories.jsx
- * @description Storybook stories for the Tooltip component.
- * Demonstrates various tooltip configurations, placements, and rich content.
- */
-
-import React from 'react';
+// src/ui/react/components/atoms/Tooltip/Tooltip.stories.jsx
+import React, { useState } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { Tooltip, TooltipProvider } from './index';
-import { Button, IconButton } from '../Button';
+
+// Mock Button component
+const MockButton = ({ children, variant = 'secondary', icon, size = 'md', onClick }) => {
+    const variants = {
+        primary: { bg: '#3b82f6', color: '#fff' },
+        secondary: { bg: 'rgba(255, 255, 255, 0.08)', color: '#e5e7eb' },
+        danger: { bg: 'rgba(239, 68, 68, 0.1)', color: '#f87171' },
+    };
+    const v = variants[variant] || variants.secondary;
+
+    return (
+        <button
+            onClick={onClick}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                background: v.bg,
+                border: 'none',
+                borderRadius: '6px',
+                color: v.color,
+                cursor: 'pointer',
+                fontSize: '13px',
+            }}
+        >
+            {icon && <Icon name={icon} size={14} />}
+            {children}
+        </button>
+    );
+};
+
+// Mock IconButton component
+const MockIconButton = ({ icon, label, variant = 'ghost', size = 'md', onClick }) => {
+    const variants = {
+        ghost: { bg: 'transparent', color: '#9ca3af' },
+        primary: { bg: '#3b82f6', color: '#fff' },
+        danger: { bg: 'rgba(239, 68, 68, 0.1)', color: '#f87171' },
+    };
+    const v = variants[variant] || variants.ghost;
+
+    return (
+        <button
+            onClick={onClick}
+            title={label}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: size === 'sm' ? '24px' : '32px',
+                height: size === 'sm' ? '24px' : '32px',
+                background: v.bg,
+                border: 'none',
+                borderRadius: '6px',
+                color: v.color,
+                cursor: 'pointer',
+            }}
+        >
+            <Icon name={icon} size={size === 'sm' ? 14 : 16} />
+        </button>
+    );
+};
+
+// Mock Tooltip component
+const MockTooltip = ({
+    children,
+    content,
+    placement = 'top',
+    interactive = false,
+    arrow = true,
+    delay = 300,
+    disabled = false,
+    maxWidth = 250,
+}) => {
+    const [visible, setVisible] = useState(false);
+    const [timeoutId, setTimeoutId] = useState(null);
+
+    const show = () => {
+        if (disabled) return;
+        if (timeoutId) clearTimeout(timeoutId);
+        const id = setTimeout(() => setVisible(true), delay);
+        setTimeoutId(id);
+    };
+
+    const hide = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        setVisible(false);
+    };
+
+    const positions = {
+        top: { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px' },
+        bottom: { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '8px' },
+        left: { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: '8px' },
+        right: { left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '8px' },
+    };
+
+    return (
+        <div
+            style={{ position: 'relative', display: 'inline-flex' }}
+            onMouseEnter={show}
+            onMouseLeave={hide}
+        >
+            {children}
+            {visible && (
+                <div style={{
+                    position: 'absolute',
+                    ...positions[placement],
+                    padding: '6px 10px',
+                    background: '#1f2937',
+                    border: '1px solid #374151',
+                    borderRadius: '6px',
+                    color: '#e5e7eb',
+                    fontSize: '12px',
+                    whiteSpace: 'nowrap',
+                    maxWidth: `${maxWidth}px`,
+                    zIndex: 1000,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                }}>
+                    {content}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Mock Rich Tooltip content component
+MockTooltip.Rich = ({ icon, title, description, shortcut }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {icon && <Icon name={icon} size={12} style={{ color: '#9ca3af' }} />}
+                {title && <span style={{ fontWeight: 500 }}>{title}</span>}
+            </div>
+            {shortcut && (
+                <span style={{
+                    padding: '1px 5px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '3px',
+                    fontSize: '10px',
+                    color: '#9ca3af',
+                }}>
+                    {shortcut}
+                </span>
+            )}
+        </div>
+        {description && (
+            <span style={{ fontSize: '11px', color: '#9ca3af' }}>{description}</span>
+        )}
+    </div>
+);
 
 export default {
     title: 'Atoms/Tooltip',
-    component: Tooltip,
+    component: MockTooltip,
     parameters: {
         layout: 'centered',
     },
     decorators: [
         (Story) => (
-            <TooltipProvider delayDuration={300}>
-                <div style={{ padding: '100px', background: '#0a0a0f' }}>
-                    <Story />
-                </div>
-            </TooltipProvider>
+            <div style={{ padding: '100px', background: '#0a0a0f' }}>
+                <Story />
+            </div>
         ),
     ],
 };
 
-// =============================================================================
-// BASIC TOOLTIPS
-// =============================================================================
-
 export const Default = {
     render: () => (
-        <Tooltip content="This is a tooltip">
+        <MockTooltip content="This is a tooltip">
             <button style={{ padding: '8px 16px', background: '#1a1a24', border: '1px solid #2a2a3a', borderRadius: '6px', color: 'white', cursor: 'pointer' }}>
                 Hover me
             </button>
-        </Tooltip>
+        </MockTooltip>
     ),
 };
 
 export const OnIconButton = {
     render: () => (
-        <Tooltip content="Open settings">
-            <IconButton icon="settings" label="Settings" />
-        </Tooltip>
+        <MockTooltip content="Open settings">
+            <MockIconButton icon="settings" label="Settings" />
+        </MockTooltip>
     ),
 };
 
 export const OnButton = {
     render: () => (
-        <Tooltip content="Save your changes to the server">
-            <Button variant="primary" icon="save">
+        <MockTooltip content="Save your changes to the server">
+            <MockButton variant="primary" icon="save">
                 Save
-            </Button>
-        </Tooltip>
+            </MockButton>
+        </MockTooltip>
     ),
 };
-
-// =============================================================================
-// PLACEMENTS
-// =============================================================================
 
 export const Placements = {
     render: () => (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px', padding: '40px' }}>
             <div />
-            <Tooltip content="Top placement" placement="top">
-                <Button variant="secondary">Top</Button>
-            </Tooltip>
+            <MockTooltip content="Top placement" placement="top">
+                <MockButton variant="secondary">Top</MockButton>
+            </MockTooltip>
             <div />
 
-            <Tooltip content="Left placement" placement="left">
-                <Button variant="secondary">Left</Button>
-            </Tooltip>
+            <MockTooltip content="Left placement" placement="left">
+                <MockButton variant="secondary">Left</MockButton>
+            </MockTooltip>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <Icon name="info" size={24} style={{ color: '#666' }} />
             </div>
-            <Tooltip content="Right placement" placement="right">
-                <Button variant="secondary">Right</Button>
-            </Tooltip>
+            <MockTooltip content="Right placement" placement="right">
+                <MockButton variant="secondary">Right</MockButton>
+            </MockTooltip>
 
             <div />
-            <Tooltip content="Bottom placement" placement="bottom">
-                <Button variant="secondary">Bottom</Button>
-            </Tooltip>
+            <MockTooltip content="Bottom placement" placement="bottom">
+                <MockButton variant="secondary">Bottom</MockButton>
+            </MockTooltip>
             <div />
         </div>
     ),
 };
 
-// =============================================================================
-// RICH TOOLTIPS
-// =============================================================================
-
 export const RichWithTitle = {
     render: () => (
-        <Tooltip
+        <MockTooltip
             content={
-                <Tooltip.Rich
+                <MockTooltip.Rich
                     title="Global Search"
                     description="Search across all your projects, datasets, and views"
                 />
             }
         >
-            <IconButton icon="search" label="Search" variant="secondary" />
-        </Tooltip>
+            <MockIconButton icon="search" label="Search" />
+        </MockTooltip>
     ),
 };
 
 export const RichWithShortcut = {
     render: () => (
-        <Tooltip
+        <MockTooltip
             content={
-                <Tooltip.Rich
+                <MockTooltip.Rich
                     title="Save Changes"
                     description="Save all pending changes to the server"
-                    shortcut="⌘S"
+                    shortcut="Cmd+S"
                 />
             }
         >
-            <Button variant="primary" icon="save">
+            <MockButton variant="primary" icon="save">
                 Save
-            </Button>
-        </Tooltip>
+            </MockButton>
+        </MockTooltip>
     ),
 };
 
 export const RichWithIcon = {
     render: () => (
-        <Tooltip
+        <MockTooltip
             content={
-                <Tooltip.Rich
+                <MockTooltip.Rich
                     icon="delete"
                     title="Delete Item"
                     description="This action cannot be undone"
                 />
             }
         >
-            <IconButton icon="delete" label="Delete" variant="danger" />
-        </Tooltip>
+            <MockIconButton icon="delete" label="Delete" variant="danger" />
+        </MockTooltip>
     ),
 };
 
 export const AllRichTooltips = {
     render: () => (
         <div style={{ display: 'flex', gap: '16px' }}>
-            <Tooltip
+            <MockTooltip
                 content={
-                    <Tooltip.Rich
+                    <MockTooltip.Rich
                         title="Edit"
                         shortcut="E"
                     />
                 }
             >
-                <IconButton icon="edit" label="Edit" />
-            </Tooltip>
+                <MockIconButton icon="edit" label="Edit" />
+            </MockTooltip>
 
-            <Tooltip
+            <MockTooltip
                 content={
-                    <Tooltip.Rich
+                    <MockTooltip.Rich
                         title="Share"
                         description="Share this item with others"
-                        shortcut="⌘⇧S"
+                        shortcut="Cmd+Shift+S"
                     />
                 }
             >
-                <IconButton icon="share" label="Share" />
-            </Tooltip>
+                <MockIconButton icon="share" label="Share" />
+            </MockTooltip>
 
-            <Tooltip
+            <MockTooltip
                 content={
-                    <Tooltip.Rich
+                    <MockTooltip.Rich
                         title="Copy Link"
-                        shortcut="⌘C"
+                        shortcut="Cmd+C"
                     />
                 }
             >
-                <IconButton icon="copy" label="Copy" />
-            </Tooltip>
+                <MockIconButton icon="copy" label="Copy" />
+            </MockTooltip>
         </div>
     ),
 };
 
-// =============================================================================
-// INTERACTIVE TOOLTIP
-// =============================================================================
-
-export const Interactive = {
-    render: () => (
-        <Tooltip
-            content={
-                <div style={{ padding: '4px' }}>
-                    <div style={{ fontWeight: 500, marginBottom: '4px' }}>John Doe</div>
-                    <div style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>
-                        Online • Viewing Dataset A
-                    </div>
-                    <button style={{
-                        padding: '4px 8px',
-                        background: '#2563eb',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: 'white',
-                        fontSize: '11px',
-                        cursor: 'pointer'
-                    }}>
-                        View Profile
-                    </button>
-                </div>
-            }
-            interactive
-            maxWidth={200}
-        >
-            <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: '#2563eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: 500,
-                cursor: 'pointer'
-            }}>
-                JD
-            </div>
-        </Tooltip>
-    ),
-};
-
-// =============================================================================
-// DELAY VARIATIONS
-// =============================================================================
-
 export const InstantTooltip = {
     render: () => (
-        <Tooltip content="Instant tooltip (no delay)" delay={0}>
-            <Button variant="secondary">No Delay</Button>
-        </Tooltip>
+        <MockTooltip content="Instant tooltip (no delay)" delay={0}>
+            <MockButton variant="secondary">No Delay</MockButton>
+        </MockTooltip>
     ),
 };
 
 export const SlowTooltip = {
     render: () => (
-        <Tooltip content="Slow tooltip (800ms delay)" delay={800}>
-            <Button variant="secondary">Long Delay (800ms)</Button>
-        </Tooltip>
+        <MockTooltip content="Slow tooltip (800ms delay)" delay={800}>
+            <MockButton variant="secondary">Long Delay (800ms)</MockButton>
+        </MockTooltip>
     ),
 };
-
-// =============================================================================
-// WITHOUT ARROW
-// =============================================================================
-
-export const WithoutArrow = {
-    render: () => (
-        <Tooltip content="Tooltip without arrow" arrow={false}>
-            <Button variant="secondary">No Arrow</Button>
-        </Tooltip>
-    ),
-};
-
-// =============================================================================
-// DISABLED TOOLTIP
-// =============================================================================
 
 export const DisabledTooltip = {
     render: () => (
         <div style={{ display: 'flex', gap: '16px' }}>
-            <Tooltip content="This tooltip is visible">
-                <Button variant="secondary">Enabled</Button>
-            </Tooltip>
-            <Tooltip content="This tooltip is hidden" disabled>
-                <Button variant="secondary">Disabled</Button>
-            </Tooltip>
+            <MockTooltip content="This tooltip is visible">
+                <MockButton variant="secondary">Enabled</MockButton>
+            </MockTooltip>
+            <MockTooltip content="This tooltip is hidden" disabled>
+                <MockButton variant="secondary">Disabled</MockButton>
+            </MockTooltip>
         </div>
     ),
 };
-
-// =============================================================================
-// TOOLBAR EXAMPLE
-// =============================================================================
 
 export const ToolbarExample = {
     render: () => (
@@ -293,47 +351,43 @@ export const ToolbarExample = {
             borderRadius: '8px',
             border: '1px solid #2a2a3a'
         }}>
-            <Tooltip content={<Tooltip.Rich title="Edit" shortcut="E" />}>
-                <IconButton icon="edit" label="Edit" size="sm" />
-            </Tooltip>
-            <Tooltip content={<Tooltip.Rich title="Copy" shortcut="⌘C" />}>
-                <IconButton icon="copy" label="Copy" size="sm" />
-            </Tooltip>
-            <Tooltip content={<Tooltip.Rich title="Share" shortcut="⌘⇧S" />}>
-                <IconButton icon="share" label="Share" size="sm" />
-            </Tooltip>
+            <MockTooltip content={<MockTooltip.Rich title="Edit" shortcut="E" />}>
+                <MockIconButton icon="edit" label="Edit" size="sm" />
+            </MockTooltip>
+            <MockTooltip content={<MockTooltip.Rich title="Copy" shortcut="Cmd+C" />}>
+                <MockIconButton icon="copy" label="Copy" size="sm" />
+            </MockTooltip>
+            <MockTooltip content={<MockTooltip.Rich title="Share" shortcut="Cmd+Shift+S" />}>
+                <MockIconButton icon="share" label="Share" size="sm" />
+            </MockTooltip>
             <div style={{ width: '1px', background: '#2a2a3a', margin: '0 4px' }} />
-            <Tooltip content={<Tooltip.Rich title="Delete" description="Cannot be undone" />}>
-                <IconButton icon="delete" label="Delete" size="sm" variant="danger" />
-            </Tooltip>
+            <MockTooltip content={<MockTooltip.Rich title="Delete" description="Cannot be undone" />}>
+                <MockIconButton icon="delete" label="Delete" size="sm" variant="danger" />
+            </MockTooltip>
         </div>
     ),
 };
 
-// =============================================================================
-// MAX WIDTH
-// =============================================================================
-
 export const MaxWidth = {
     render: () => (
         <div style={{ display: 'flex', gap: '16px' }}>
-            <Tooltip
+            <MockTooltip
                 content="This is a tooltip with the default max width of 250px. It will wrap to multiple lines when the content exceeds this width."
             >
-                <Button variant="secondary">Default (250px)</Button>
-            </Tooltip>
-            <Tooltip
+                <MockButton variant="secondary">Default (250px)</MockButton>
+            </MockTooltip>
+            <MockTooltip
                 content="This tooltip has a custom max width of 150px set explicitly."
                 maxWidth={150}
             >
-                <Button variant="secondary">Narrow (150px)</Button>
-            </Tooltip>
-            <Tooltip
+                <MockButton variant="secondary">Narrow (150px)</MockButton>
+            </MockTooltip>
+            <MockTooltip
                 content="This tooltip has a wider max width of 400px for displaying more content."
                 maxWidth={400}
             >
-                <Button variant="secondary">Wide (400px)</Button>
-            </Tooltip>
+                <MockButton variant="secondary">Wide (400px)</MockButton>
+            </MockTooltip>
         </div>
     ),
 };

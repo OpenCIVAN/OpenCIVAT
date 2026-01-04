@@ -4,6 +4,16 @@
  * This is the foundation component for all 21 modals in the application.
  * Provides accessibility, focus trapping, animations, and consistent styling.
  *
+ * VR MIGRATION NOTE:
+ * This component will be migrated to use FloatingPanel internally.
+ * See: docs/specs/FloatingPanel_Component_Specification.md
+ *
+ * Modals should be classified as either:
+ * - STANDARD: FloatingPanel with priority={false} (Help, Settings, Forms)
+ * - PRIORITY: FloatingPanel with priority={true} (Confirmations, Consent)
+ *
+ * Priority panels in VR: Follow user gaze, cannot be dismissed by backdrop.
+ *
  * Features:
  * - Full accessibility support (role="dialog", aria-modal, aria-labelledby, aria-describedby)
  * - Focus trapping with Tab/Shift+Tab cycling

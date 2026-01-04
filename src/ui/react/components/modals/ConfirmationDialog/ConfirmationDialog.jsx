@@ -4,6 +4,16 @@
  * Extends the base Modal component to handle all confirmation dialogs (10 total),
  * including dangerous actions with type-to-confirm functionality.
  *
+ * VR CLASSIFICATION: PRIORITY PANEL
+ * All confirmation dialogs use FloatingPanel with priority={true}
+ * See: docs/specs/FloatingPanel_Component_Specification.md
+ *
+ * VR Behavior:
+ * - Forces decision, follows user gaze if they look away
+ * - Cannot be dismissed by clicking backdrop
+ * - Escape key maps to Cancel action
+ * - B button on controller = Cancel
+ *
  * Features:
  * - Three severity levels: info, warning, danger
  * - Type-to-confirm input for dangerous operations

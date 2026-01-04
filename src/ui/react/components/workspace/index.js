@@ -4,15 +4,6 @@
 // Canvas components
 export { CanvasGrid } from "./Canvas";
 export { CanvasCell } from "./Canvas";
-export { ViewportNavigator } from "./Canvas";
-
-// Workspace hierarchy components
-export {
-  WorkspaceTypeIndicator,
-  WorkspaceTypeBadge,
-  BreakoutTimer,
-} from "./Workspace";
-export { BreakoutPanel } from "./Workspace";
 
 // Full canvas workspace integration
 export { CanvasWorkspace } from "./Canvas";

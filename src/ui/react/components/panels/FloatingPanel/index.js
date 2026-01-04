@@ -32,3 +32,6 @@ export {
   INSTANCE_TOOLS_PANEL_ID,
   INSTANCE_TOOLS_CONFIG,
 } from "./InstanceToolsFloating.jsx";
+
+// Annotation Creator floating panel
+export { FloatingAnnotationCreator } from "./FloatingAnnotationCreator";
