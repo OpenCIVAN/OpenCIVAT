@@ -8,7 +8,7 @@
 // - Footer uses panel-footer class fixed to bottom
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Icon } from '@UI/react/components/atoms';
+import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import {
@@ -50,51 +50,58 @@ const DEFAULT_SECTION_STATES = {
 
 function ScopeChip({ scope, active, onClick }) {
     return (
-        <button
-            className={`scope-chip ${active ? 'scope-chip--active' : ''}`}
-            data-color={scope.color}
+        <LabeledButton
+            label={scope.label}
             onClick={onClick}
-        >
-            {scope.label}
-        </button>
+            active={active}
+            size="xs"
+            variant="ghost"
+            color={scope.color}
+            className="scope-chip"
+        />
     );
 }
 
 function TypeFilterToggle({ type, config, active, onClick }) {
-    const Icon = config.icon;
     return (
-        <button
-            className={`type-filter-toggle ${active ? 'type-filter-toggle--active' : ''}`}
-            data-color={config.color}
+        <IconButton
+            icon={config.icon}
             onClick={onClick}
-            title={config.label}
-        >
-            <Icon size={14} />
-        </button>
+            active={active}
+            tooltip={config.label}
+            size="xs"
+            variant="ghost"
+            color={active ? config.color : undefined}
+            className="type-filter-toggle"
+        />
     );
 }
 
 function AnnotationItem({ annotation, onToggleVisibility }) {
     const typeConfig = ANNOTATION_TYPES[annotation.type] || ANNOTATION_TYPES.point;
-    const Icon = typeConfig.icon;
     const isVisible = annotation.visible !== false;
 
     return (
         <div className="annotation-item">
-            <Icon size={12} className={`annotation-item__icon icon-${typeConfig.color}`} />
+            <Icon name={typeConfig.icon} size={12} className={`annotation-item__icon icon-${typeConfig.color}`} />
             <span className="annotation-item__text">
                 {annotation.label || annotation.text || `${typeConfig.label} annotation`}
             </span>
-            <button
-                className="annotation-item__visibility"
+            <IconButton
+                icon={isVisible ? 'eye' : 'eyeOff'}
                 onClick={() => onToggleVisibility?.(annotation)}
-                title={isVisible ? 'Hide' : 'Show'}
-            >
-                {isVisible ? <Icon name="eye" size={12} /> : <Icon name="eyeOff" size={12} />}
-            </button>
-            <button className="annotation-item__more" title="More options">
-                <Icon name="moreHorizontal" size={12} />
-            </button>
+                tooltip={isVisible ? 'Hide' : 'Show'}
+                size="xs"
+                variant="ghost"
+                className="annotation-item__visibility"
+            />
+            <IconButton
+                icon="moreHorizontal"
+                tooltip="More options"
+                size="xs"
+                variant="ghost"
+                className="annotation-item__more"
+            />
         </div>
     );
 }
@@ -106,15 +113,22 @@ function DatasetGroup({ dataset, annotations, onToggleVisibility }) {
 
     return (
         <div className="dataset-group">
-            <button
+            <div
                 className="dataset-group__header"
                 onClick={() => setExpanded(!expanded)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && setExpanded(!expanded)}
             >
-                {expanded ? <Icon name="chevronDown" size={12} /> : <Icon name="chevronRight" size={12} />}
+                <IconButton
+                    icon={expanded ? 'chevronDown' : 'chevronRight'}
+                    size="xs"
+                    variant="ghost"
+                />
                 <Icon name="database" size={12} className="dataset-group__icon" />
                 <span className="dataset-group__name">{dataset?.name || 'Unknown Dataset'}</span>
                 <span className="dataset-group__count">{annotations.length}</span>
-            </button>
+            </div>
             {expanded && (
                 <div className="dataset-group__list">
                     {annotations.map(ann => (

@@ -2,10 +2,36 @@
  * CanvasSubtab Component - Canvas configuration for Layout Panel
  */
 import React, { memo, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton, Divider } from '@UI/react/components/atoms';
+import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
 import { SpawnSizePicker } from '../components/SpawnSizePicker';
 import { LAYOUT_MODES, FLOW_DIRECTIONS, TOOLS, DROP_MODES } from '../LayoutPanel.logic';
 import './CanvasSubtab.scss';
+
+// Layout mode options for ToggleGroup
+const LAYOUT_MODE_OPTIONS = [
+    { value: LAYOUT_MODES.GRID, icon: 'grid3X3', label: 'Grid' },
+    { value: LAYOUT_MODES.FLOW, icon: 'rows', label: 'Flow' },
+];
+
+// Flow direction options
+const FLOW_DIRECTION_OPTIONS = [
+    { value: FLOW_DIRECTIONS.ROW, icon: 'arrowRight', label: 'Row' },
+    { value: FLOW_DIRECTIONS.COLUMN, icon: 'arrowDown', label: 'Col' },
+];
+
+// Tool options
+const TOOL_OPTIONS = [
+    { value: TOOLS.SELECT, icon: 'mousePointer2', tooltip: 'Select', color: 'blue' },
+    { value: TOOLS.PAN, icon: 'hand', tooltip: 'Pan', color: 'teal' },
+    { value: TOOLS.MERGE, icon: 'combine', tooltip: 'Merge', color: 'purple' },
+];
+
+// Drop mode options
+const DROP_MODE_OPTIONS = [
+    { value: DROP_MODES.ADD, icon: 'plusCircle', label: 'Add' },
+    { value: DROP_MODES.REPLACE, icon: 'replace', label: 'Replace' },
+];
 
 // Quick layout presets
 const QUICK_LAYOUTS = [
@@ -55,41 +81,26 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <div className="etched-toggle">
-                        <button
-                            className={`etched-toggle__btn etched-toggle__btn--grid ${layoutMode === LAYOUT_MODES.GRID ? 'etched-toggle__btn--active' : ''}`}
-                            onClick={() => setLayoutMode?.(LAYOUT_MODES.GRID)}
-                        >
-                            <Icon name='grid3X3' size={12} />
-                            <span>Grid</span>
-                        </button>
-                        <button
-                            className={`etched-toggle__btn etched-toggle__btn--flow ${layoutMode === LAYOUT_MODES.FLOW ? 'etched-toggle__btn--active' : ''}`}
-                            onClick={() => setLayoutMode?.(LAYOUT_MODES.FLOW)}
-                        >
-                            <Rows size={12} />
-                            <span>Flow</span>
-                        </button>
-                    </div>
+                    <ToggleGroup
+                        options={LAYOUT_MODE_OPTIONS}
+                        value={layoutMode}
+                        onChange={setLayoutMode}
+                        variant="etched"
+                        size="sm"
+                    />
                 </div>
 
                 {layoutMode === LAYOUT_MODES.FLOW && (
                     <div className="canvas-subtab__flow-direction">
                         <span className="canvas-subtab__label">Direction:</span>
-                        <div className="etched-toggle">
-                            <button
-                                className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${flowDirection === FLOW_DIRECTIONS.ROW ? 'etched-toggle__btn--active' : ''}`}
-                                onClick={() => setFlowDirection?.(FLOW_DIRECTIONS.ROW)}
-                            >
-                                <Icon name="arrowRight" size={12} /> Row
-                            </button>
-                            <button
-                                className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${flowDirection === FLOW_DIRECTIONS.COLUMN ? 'etched-toggle__btn--active' : ''}`}
-                                onClick={() => setFlowDirection?.(FLOW_DIRECTIONS.COLUMN)}
-                            >
-                                <ArrowDown size={12} /> Col
-                            </button>
-                        </div>
+                        <ToggleGroup
+                            options={FLOW_DIRECTION_OPTIONS}
+                            value={flowDirection}
+                            onChange={setFlowDirection}
+                            variant="etched"
+                            size="sm"
+                            color="green"
+                        />
                     </div>
                 )}
 
@@ -132,65 +143,61 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
 
                 <div className="canvas-subtab__tools">
                     <div className="canvas-subtab__tool-group">
-                        <button
-                            className={`layout-tool-btn layout-tool-btn--blue ${tool === TOOLS.SELECT ? 'layout-tool-btn--active' : ''}`}
-                            onClick={() => setTool?.(TOOLS.SELECT)}
-                            title="Select"
-                        >
-                            <Icon name="mousePointer2" size={14} />
-                        </button>
-                        <button
-                            className={`layout-tool-btn layout-tool-btn--teal ${tool === TOOLS.PAN ? 'layout-tool-btn--active' : ''}`}
-                            onClick={() => setTool?.(TOOLS.PAN)}
-                            title="Pan"
-                        >
-                            <Hand size={14} />
-                        </button>
-                        <button
-                            className={`layout-tool-btn layout-tool-btn--purple ${tool === TOOLS.MERGE ? 'layout-tool-btn--active' : ''}`}
-                            onClick={() => setTool?.(TOOLS.MERGE)}
-                            title="Merge"
-                        >
-                            <Combine size={14} />
-                        </button>
+                        {TOOL_OPTIONS.map(opt => (
+                            <IconButton
+                                key={opt.value}
+                                icon={opt.icon}
+                                onClick={() => setTool?.(opt.value)}
+                                tooltip={opt.tooltip}
+                                active={tool === opt.value}
+                                color={tool === opt.value ? opt.color : undefined}
+                                size="sm"
+                                variant="ghost"
+                                className="layout-tool-btn"
+                            />
+                        ))}
 
-                        <div className="layout-divider" />
+                        <Divider orientation="vertical" />
 
-                        <button
-                            className={`canvas-subtab__edit-btn ${editMode ? 'canvas-subtab__edit-btn--active' : ''}`}
+                        <LabeledButton
+                            icon="pencil"
+                            label={editMode ? 'Done' : 'Edit'}
                             onClick={toggleEditMode}
-                        >
-                            <Icon name='pencil' size={12} />
-                            {editMode ? 'Done' : 'Edit'}
-                        </button>
+                            active={editMode}
+                            size="sm"
+                            variant={editMode ? 'primary' : 'ghost'}
+                        />
 
-                        <div className="layout-divider" />
+                        <Divider orientation="vertical" />
 
-                        <button className="layout-tool-btn" onClick={undo} disabled={!canUndo} title="Undo">
-                            <Undo size={14} />
-                        </button>
-                        <button className="layout-tool-btn" onClick={redo} disabled={!canRedo} title="Redo">
-                            <Redo size={14} />
-                        </button>
+                        <IconButton
+                            icon="undo"
+                            onClick={undo}
+                            disabled={!canUndo}
+                            tooltip="Undo"
+                            size="sm"
+                            variant="ghost"
+                        />
+                        <IconButton
+                            icon="redo"
+                            onClick={redo}
+                            disabled={!canRedo}
+                            tooltip="Redo"
+                            size="sm"
+                            variant="ghost"
+                        />
                     </div>
 
                     {editMode && (
                         <div className="canvas-subtab__drop-mode">
                             <span className="canvas-subtab__label">Drop:</span>
-                            <div className="etched-toggle">
-                                <button
-                                    className={`etched-toggle__btn etched-toggle__btn--green etched-toggle__btn--compact ${dropMode === DROP_MODES.ADD ? 'etched-toggle__btn--active' : ''}`}
-                                    onClick={() => setDropMode?.(DROP_MODES.ADD)}
-                                >
-                                    <Icon name='plusCircle' size={10} /> Add
-                                </button>
-                                <button
-                                    className={`etched-toggle__btn etched-toggle__btn--amber etched-toggle__btn--compact ${dropMode === DROP_MODES.REPLACE ? 'etched-toggle__btn--active' : ''}`}
-                                    onClick={() => setDropMode?.(DROP_MODES.REPLACE)}
-                                >
-                                    <Icon name="replace" size={10} /> Replace
-                                </button>
-                            </div>
+                            <ToggleGroup
+                                options={DROP_MODE_OPTIONS}
+                                value={dropMode}
+                                onChange={setDropMode}
+                                variant="etched"
+                                size="sm"
+                            />
                         </div>
                     )}
                 </div>

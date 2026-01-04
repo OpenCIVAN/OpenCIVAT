@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { Dropdown } from '@UI/react/components/common/Dropdown';
 
 import './ViewportSizeDisplay.scss';
@@ -40,12 +41,13 @@ export function ViewportSizeDisplay({ size = { cols: 3, rows: 3 }, maxSize = { r
     return (
         <Dropdown
             trigger={
-                <button className="viewport-size-display" type="button" title="Viewport size (visible cells)">
-                    <Icon name="aspect_ratio" size={14} />
-                    <span>
-                        {safeRows} × {safeCols}
-                    </span>
-                </button>
+                <LabeledButton
+                    icon="aspectRatio"
+                    label={`${safeRows} × ${safeCols}`}
+                    size="sm"
+                    variant="ghost"
+                    className="viewport-size-display"
+                />
             }
             placement="top"
         >
@@ -54,45 +56,45 @@ export function ViewportSizeDisplay({ size = { cols: 3, rows: 3 }, maxSize = { r
                 <div className="viewport-size-display__row">
                     <span>Rows</span>
                     <div className="viewport-size-display__controls">
-                        <button
+                        <IconButton
+                            icon="remove"
                             onClick={() => handleChange('rows', -1)}
                             disabled={safeRows <= 1}
-                            type="button"
-                            aria-label="Decrease rows"
-                        >
-                            <Icon name="remove" size={14} />
-                        </button>
+                            tooltip="Decrease rows"
+                            size="xs"
+                            variant="ghost"
+                        />
                         <span>{safeRows}</span>
-                        <button
+                        <IconButton
+                            icon="add"
                             onClick={() => handleChange('rows', 1)}
                             disabled={safeRows >= safeMaxRows}
-                            type="button"
-                            aria-label="Increase rows"
-                        >
-                            <Icon name="add" size={14} />
-                        </button>
+                            tooltip="Increase rows"
+                            size="xs"
+                            variant="ghost"
+                        />
                     </div>
                 </div>
                 <div className="viewport-size-display__row">
                     <span>Columns</span>
                     <div className="viewport-size-display__controls">
-                        <button
+                        <IconButton
+                            icon="remove"
                             onClick={() => handleChange('cols', -1)}
                             disabled={safeCols <= 1}
-                            type="button"
-                            aria-label="Decrease columns"
-                        >
-                            <Icon name="remove" size={14} />
-                        </button>
+                            tooltip="Decrease columns"
+                            size="xs"
+                            variant="ghost"
+                        />
                         <span>{safeCols}</span>
-                        <button
+                        <IconButton
+                            icon="add"
                             onClick={() => handleChange('cols', 1)}
                             disabled={safeCols >= safeMaxCols}
-                            type="button"
-                            aria-label="Increase columns"
-                        >
-                            <Icon name="add" size={14} />
-                        </button>
+                            tooltip="Increase columns"
+                            size="xs"
+                            variant="ghost"
+                        />
                     </div>
                 </div>
             </div>

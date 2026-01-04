@@ -5,7 +5,8 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { contentManager } from '@Core/data/managers/ContentManager.js';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import './ImageUploader.scss';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -186,14 +187,22 @@ export function ImageUploader({ canvasId, onUploadComplete, onCancel }) {
             {error && (
                 <div className="image-uploader__error">
                     <span>{error}</span>
-                    <button onClick={() => setError(null)}>×</button>
+                    <IconButton
+                        icon="close"
+                        onClick={() => setError(null)}
+                        size="xs"
+                        variant="ghost"
+                    />
                 </div>
             )}
 
             {onCancel && (
-                <button className="image-uploader__cancel" onClick={onCancel}>
-                    Cancel
-                </button>
+                <LabeledButton
+                    label="Cancel"
+                    onClick={onCancel}
+                    variant="ghost"
+                    className="image-uploader__cancel"
+                />
             )}
         </div>
     );

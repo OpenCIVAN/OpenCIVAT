@@ -23,7 +23,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import {
     ResizableSectionsContainer,
@@ -177,9 +178,12 @@ export function FilesPanelContent({
                 <Icon name="folderOpen" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__actions">
-                    <button className="panel-header__action-btn" title="New Folder">
-                        <Icon name="folderPlus" size={14} />
-                    </button>
+                    <IconButton
+                        icon="folderPlus"
+                        tooltip="New Folder"
+                        size="sm"
+                        variant="ghost"
+                    />
                 </div>
             </div>
 
@@ -192,36 +196,32 @@ export function FilesPanelContent({
 
             {/* Toolbar */}
             <div className="panel-toolbar">
-                <div className="panel-toolbar__group">
-                    <button
-                        className={`panel-toolbar__toggle ${viewMode === 'list' ? 'active' : ''}`}
-                        onClick={() => setViewMode('list')}
-                        title="List view"
-                    >
-                        <Icon name="list" size={11} />
-                    </button>
-                    <button
-                        className={`panel-toolbar__toggle ${viewMode === 'grid' ? 'active' : ''}`}
-                        onClick={() => setViewMode('grid')}
-                        title="Grid view"
-                    >
-                        <Icon name="grid3x3" size={11} />
-                    </button>
-                </div>
-                <button className="filter-toggle">
-                    <Icon name="arrowUpDown" size={9} />
-                    <span>Date</span>
-                </button>
+                <ToggleGroup
+                    options={[
+                        { value: 'list', icon: 'list' },
+                        { value: 'grid', icon: 'grid3x3' },
+                    ]}
+                    value={viewMode}
+                    onChange={setViewMode}
+                    size="xs"
+                />
+                <LabeledButton
+                    icon="arrowUpDown"
+                    label="Date"
+                    size="xs"
+                    variant="ghost"
+                    className="filter-toggle"
+                />
                 <div className="panel-toolbar__spacer" />
-                <button
-                    className={`filter-toggle ${showFilters || activeFilters.types.length > 0 ? 'active' : ''}`}
+                <IconButton
+                    icon="filter"
                     onClick={() => setShowFilters(!showFilters)}
-                >
-                    <Icon name="filter" size={9} />
-                    {activeFilters.types.length > 0 && (
-                        <span className="count">{activeFilters.types.length}</span>
-                    )}
-                </button>
+                    active={showFilters || activeFilters.types.length > 0}
+                    size="xs"
+                    variant="ghost"
+                    tooltip="Filter files"
+                    className="filter-toggle"
+                />
                 <span className="panel-toolbar__info">
                     <strong>{loadedCount}</strong> loaded
                 </span>
@@ -239,7 +239,12 @@ export function FilesPanelContent({
             {error && (
                 <div className="panel-error">
                     <span>Failed to load files: {error}</span>
-                    <button onClick={refetch}>Retry</button>
+                    <LabeledButton
+                        label="Retry"
+                        onClick={refetch}
+                        size="xs"
+                        variant="ghost"
+                    />
                 </div>
             )}
 
@@ -248,18 +253,24 @@ export function FilesPanelContent({
                 <div className="panel-filters">
                     <div className="panel-filters__row">
                         {supportedFileTypes.map((type) => (
-                            <button
+                            <LabeledButton
                                 key={type}
-                                className={`filter-toggle ${activeFilters.types.includes(type) ? 'active' : ''}`}
+                                label={type.toUpperCase()}
                                 onClick={() => toggleTypeFilter(type)}
-                            >
-                                {type.toUpperCase()}
-                            </button>
+                                active={activeFilters.types.includes(type)}
+                                size="xs"
+                                variant="ghost"
+                                className="filter-toggle"
+                            />
                         ))}
                         {activeFilters.types.length > 0 && (
-                            <button className="panel-filters__clear" onClick={clearFilters}>
-                                Clear
-                            </button>
+                            <LabeledButton
+                                label="Clear"
+                                onClick={clearFilters}
+                                size="xs"
+                                variant="ghost"
+                                className="panel-filters__clear"
+                            />
                         )}
                     </div>
                 </div>

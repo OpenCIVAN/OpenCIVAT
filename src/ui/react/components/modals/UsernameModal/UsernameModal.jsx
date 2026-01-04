@@ -20,7 +20,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import './UsernameModal.scss';
 
 /**
@@ -116,9 +117,12 @@ export function UsernameModal({ onSubmit }) {
             )}
           </div>
 
-          <button type="submit" className="username-modal__submit">
-            Enter Web App
-          </button>
+          <LabeledButton
+            label="Enter Web App"
+            onClick={handleSubmit}
+            variant="primary"
+            className="username-modal__submit"
+          />
         </form>
 
         {/* Hint */}

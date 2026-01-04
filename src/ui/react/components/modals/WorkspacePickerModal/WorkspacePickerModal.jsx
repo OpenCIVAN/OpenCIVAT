@@ -22,7 +22,9 @@
  */
 
 import React, { memo, useMemo, useCallback, useState, useEffect } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
+import { getIconComponent } from '@UI/react/components/common/Icon';
 
 import { Modal } from '@UI/react/components/modals/Modal';
 import { useWorkspacePresence } from '@UI/react/hooks/useRoomPresence.js';
@@ -317,20 +319,20 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
 
     const renderFooter = () => (
         <>
-            <button
-                className="workspace-picker__btn workspace-picker__btn--skip"
+            <LabeledButton
+                label="Keep Current"
                 onClick={onSkip}
-            >
-                Keep Current
-            </button>
-            <button
-                className="workspace-picker__btn workspace-picker__btn--confirm"
+                variant="ghost"
+                className="workspace-picker__btn workspace-picker__btn--skip"
+            />
+            <LabeledButton
+                label="Open Workspace"
+                icon="arrowRight"
                 onClick={handleConfirm}
                 disabled={!selectedWorkspace}
-            >
-                <span>Open Workspace</span>
-                <Icon name="arrowRight" size={14} />
-            </button>
+                variant="primary"
+                className="workspace-picker__btn workspace-picker__btn--confirm"
+            />
         </>
     );
 
@@ -387,10 +389,13 @@ export const WorkspacePickerModal = memo(function WorkspacePickerModal({
 
                     {/* Create new workspace option */}
                     {onCreateWorkspace && (
-                        <button className="workspace-picker__create" onClick={handleCreate}>
-                            <Icon name="add" size={14} />
-                            <span>Create New Workspace</span>
-                        </button>
+                        <LabeledButton
+                            icon="add"
+                            label="Create New Workspace"
+                            onClick={handleCreate}
+                            variant="ghost"
+                            className="workspace-picker__create"
+                        />
                     )}
                 </div>
             </div>

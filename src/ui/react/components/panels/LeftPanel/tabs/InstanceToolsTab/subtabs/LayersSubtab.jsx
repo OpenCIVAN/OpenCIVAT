@@ -4,24 +4,26 @@
 // FIXED: Now accepts activeInstance and manages layers state internally
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
 
 // =============================================================================
 // LAYER TOGGLE COMPONENT
 // =============================================================================
 
-function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onToggle, onOpacityChange }) {
+function LayerToggle({ icon, label, enabled, count, total, opacity, onToggle, onOpacityChange }) {
     return (
         <div className="layer-toggle">
-            <button
-                className={`layer-toggle__btn ${enabled ? 'layer-toggle__btn--active' : ''}`}
+            <IconButton
+                icon={enabled ? 'eye' : 'eyeOff'}
                 onClick={onToggle}
-            >
-                {enabled ? <Icon name="eye" size={14} /> : <Icon name="eyeOff" size={14} />}
-            </button>
+                active={enabled}
+                size="sm"
+                variant="ghost"
+                className="layer-toggle__btn"
+            />
             <div className="layer-toggle__info">
                 <div className="layer-toggle__label">
-                    <Icon size={14} />
+                    <Icon name={icon} size={14} />
                     {label}
                 </div>
                 {count !== undefined && (
@@ -42,9 +44,12 @@ function LayerToggle({ icon: Icon, label, enabled, count, total, opacity, onTogg
                     <span>{Math.round(opacity * 100)}%</span>
                 </div>
             )}
-            <button className="layer-toggle__manage">
-                <Icon name="chevronRight" size={14} />
-            </button>
+            <IconButton
+                icon="chevronRight"
+                size="sm"
+                variant="ghost"
+                className="layer-toggle__manage"
+            />
         </div>
     );
 }

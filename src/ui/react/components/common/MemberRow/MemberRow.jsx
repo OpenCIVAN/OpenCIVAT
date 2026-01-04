@@ -24,7 +24,8 @@
  */
 
 import React, { memo, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { PresenceIndicator } from '@UI/react/components/common/PresenceIndicator';
 import { UserAvatar } from '@UI/react/components/common/UserAvatar';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
@@ -215,20 +216,22 @@ export const MemberRow = memo(function MemberRow({
                         {!isYou && (
                             <div className="member-row__vr-actions">
                                 {vrSession.type === 'open' && onJoinVR && (
-                                    <button
-                                        className="member-row__vr-btn member-row__vr-btn--join"
+                                    <LabeledButton
+                                        label="Join VR"
                                         onClick={handleJoinVR}
-                                    >
-                                        Join VR
-                                    </button>
+                                        size="xs"
+                                        variant="primary"
+                                        className="member-row__vr-btn member-row__vr-btn--join"
+                                    />
                                 )}
                                 {vrSession.type === 'invite' && onRequestInvite && (
-                                    <button
-                                        className="member-row__vr-btn member-row__vr-btn--request"
+                                    <LabeledButton
+                                        label="Request Invite"
                                         onClick={handleRequestInvite}
-                                    >
-                                        Request Invite
-                                    </button>
+                                        size="xs"
+                                        variant="ghost"
+                                        className="member-row__vr-btn member-row__vr-btn--request"
+                                    />
                                 )}
                                 {vrSession.type === 'closed' && (
                                     <span className="member-row__vr-private">Private</span>
@@ -248,30 +251,44 @@ export const MemberRow = memo(function MemberRow({
             {showActions && !isYou && (
                 <div className="member-row__actions">
                     {onGoToView && (
-                        <Tooltip content="Go to View">
-                            <button className="member-row__action" onClick={handleGoToView}>
-                                <Icon name="mapPin" size={12} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon="mapPin"
+                            onClick={handleGoToView}
+                            tooltip="Go to View"
+                            size="xs"
+                            variant="ghost"
+                            className="member-row__action"
+                        />
                     )}
                     {onMessage && (
-                        <Tooltip content="Message">
-                            <button className="member-row__action" onClick={handleMessage}>
-                                <Icon name="message" size={12} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon="message"
+                            onClick={handleMessage}
+                            tooltip="Message"
+                            size="xs"
+                            variant="ghost"
+                            className="member-row__action"
+                        />
                     )}
                     {onToggleCursor && (
-                        <Tooltip content={cursorVisible ? 'Hide Cursor' : 'Show Cursor'}>
-                            <button className="member-row__action" onClick={handleToggleCursor}>
-                                {cursorVisible ? <Icon name="eye" size={12} /> : <Icon name="eyeOff" size={12} />}
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon={cursorVisible ? 'eye' : 'eyeOff'}
+                            onClick={handleToggleCursor}
+                            tooltip={cursorVisible ? 'Hide Cursor' : 'Show Cursor'}
+                            size="xs"
+                            variant="ghost"
+                            className="member-row__action"
+                        />
                     )}
                     {onMoreMenu && (
-                        <button className="member-row__action member-row__action--more" onClick={handleMoreClick}>
-                            <Icon name="moreHorizontal" size={12} />
-                        </button>
+                        <IconButton
+                            icon="moreHorizontal"
+                            onClick={handleMoreClick}
+                            tooltip="More options"
+                            size="xs"
+                            variant="ghost"
+                            className="member-row__action member-row__action--more"
+                        />
                     )}
                 </div>
             )}

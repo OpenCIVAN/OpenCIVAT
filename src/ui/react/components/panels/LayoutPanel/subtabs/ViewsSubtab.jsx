@@ -17,7 +17,8 @@
  * - Grouping by dataset
  */
 import React, { memo, useCallback, useState, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
@@ -275,19 +276,23 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                     }}
                     size="sm"
                 />
-                <button
-                    className={`views-subtab__group-btn ${groupByDataset ? 'views-subtab__group-btn--active' : ''}`}
+                <LabeledButton
+                    icon="database"
+                    label="Group"
                     onClick={() => setGroupByDataset?.(!groupByDataset)}
-                >
-                    <Icon name="database" size={10} /> Group
-                </button>
+                    active={groupByDataset}
+                    size="xs"
+                    variant="ghost"
+                    className="views-subtab__group-btn"
+                />
                 {activeFilters.length > 0 && (
-                    <button
-                        className="views-subtab__clear-btn"
+                    <LabeledButton
+                        label="Clear"
                         onClick={() => setLocalActiveFilters([])}
-                    >
-                        Clear
-                    </button>
+                        size="xs"
+                        variant="ghost"
+                        className="views-subtab__clear-btn"
+                    />
                 )}
             </div>
 
@@ -306,12 +311,12 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                                 className="views-subtab__group-header"
                                 onClick={() => toggleGroup(group.key)}
                             >
-                                <button className="views-subtab__group-toggle">
-                                    {collapsedGroups.has(group.key)
-                                        ? <Icon name="chevronRight" size={10} />
-                                        : <Icon name="chevronDown" size={10} />
-                                    }
-                                </button>
+                                <IconButton
+                                    icon={collapsedGroups.has(group.key) ? 'chevronRight' : 'chevronDown'}
+                                    size="xs"
+                                    variant="ghost"
+                                    className="views-subtab__group-toggle"
+                                />
                                 <Icon name="database" size={10} className="views-subtab__group-icon" />
                                 <span className="views-subtab__group-name">{group.name}</span>
                                 <span className="views-subtab__group-count">
@@ -376,15 +381,16 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                 {finalFilteredCells.length === 0 && cells.length > 0 && (
                     <div className="views-subtab__no-results">
                         <p>No views match your filters</p>
-                        <button
-                            className="views-subtab__clear-filters-btn"
+                        <LabeledButton
+                            label="Clear filters"
                             onClick={() => {
                                 setSearchQuery('');
                                 setLocalActiveFilters([]);
                             }}
-                        >
-                            Clear filters
-                        </button>
+                            size="sm"
+                            variant="ghost"
+                            className="views-subtab__clear-filters-btn"
+                        />
                     </div>
                 )}
             </div>

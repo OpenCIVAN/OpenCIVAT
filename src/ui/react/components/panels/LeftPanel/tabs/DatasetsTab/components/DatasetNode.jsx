@@ -6,7 +6,8 @@
  */
 
 import React, { memo, useState, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { formatFileSize, formatRelativeTime } from '@Utils/formatters.js';
@@ -118,21 +119,30 @@ export const DatasetNode = memo(function DatasetNode({
                 {/* Hover actions */}
                 {isHovered && (
                     <div className="dataset-node__actions">
-                        <Tooltip content="Create View">
-                            <button className="dataset-node__action" onClick={handleCreateView}>
-                                <Icon name="add" size={12} />
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Settings">
-                            <button className="dataset-node__action" onClick={handleOpenSettings}>
-                                <Icon name="settings" size={12} />
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="More">
-                            <button className="dataset-node__action" onClick={handleContextMenu}>
-                                <Icon name="moreHorizontal" size={12} />
-                            </button>
-                        </Tooltip>
+                        <IconButton
+                            icon="add"
+                            onClick={handleCreateView}
+                            tooltip="Create View"
+                            size="xs"
+                            variant="ghost"
+                            className="dataset-node__action"
+                        />
+                        <IconButton
+                            icon="settings"
+                            onClick={handleOpenSettings}
+                            tooltip="Settings"
+                            size="xs"
+                            variant="ghost"
+                            className="dataset-node__action"
+                        />
+                        <IconButton
+                            icon="moreHorizontal"
+                            onClick={handleContextMenu}
+                            tooltip="More"
+                            size="xs"
+                            variant="ghost"
+                            className="dataset-node__action"
+                        />
                     </div>
                 )}
             </div>
@@ -144,10 +154,14 @@ export const DatasetNode = memo(function DatasetNode({
                     {viewCount === 0 && (
                         <div className="dataset-node__empty">
                             <span>No views</span>
-                            <button className="dataset-node__empty-action" onClick={handleCreateView}>
-                                <Icon name="add" size={10} />
-                                Create view
-                            </button>
+                            <LabeledButton
+                                icon="add"
+                                label="Create view"
+                                onClick={handleCreateView}
+                                size="xs"
+                                variant="ghost"
+                                className="dataset-node__empty-action"
+                            />
                         </div>
                     )}
                 </div>

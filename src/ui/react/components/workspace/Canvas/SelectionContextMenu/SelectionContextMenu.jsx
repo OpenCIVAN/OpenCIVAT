@@ -8,7 +8,8 @@
 // - Close All, Delete All (with confirmation)
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { MenuItem } from '@UI/react/components/molecules';
 import './SelectionContextMenu.scss';
 
 /**
@@ -132,68 +133,35 @@ export function SelectionContextMenu({
                 {/* Arrangement Section */}
                 <div className="selection-context-menu__section">
                     {/* Swap - only for exactly 2 views */}
-                    <button
-                        className="selection-context-menu__item"
+                    <MenuItem
+                        icon="arrowLeftRight"
+                        label="Swap Positions"
                         disabled={viewCount !== 2}
-                        onClick={() => {
-                            onSwap?.();
-                            onClose?.();
-                        }}
-                    >
-                        <Icon name="arrowLeftRight" size={14} />
-                        <span>Swap Positions</span>
-                        {viewCount !== 2 && <span className="selection-context-menu__hint">2 views</span>}
-                    </button>
+                        onClick={() => { onSwap?.(); onClose?.(); }}
+                        shortcut={viewCount !== 2 ? '2 views' : undefined}
+                    />
 
                     {/* Merge Cells */}
-                    <button
-                        className="selection-context-menu__item"
+                    <MenuItem
+                        icon="combine"
+                        label="Merge Cells"
                         disabled={selectedCount < 2}
-                        onClick={() => {
-                            onMerge?.();
-                            onClose?.();
-                        }}
-                    >
-                        <Icon name="combine" size={14} />
-                        <span>Merge Cells</span>
-                    </button>
+                        onClick={() => { onMerge?.(); onClose?.(); }}
+                    />
 
                     {/* Align submenu */}
                     <div className="selection-context-menu__submenu-container">
-                        <button className="selection-context-menu__item" disabled={selectedCount < 2}>
-                            <Icon name="alignLeft" size={14} />
-                            <span>Align</span>
-                            <span className="selection-context-menu__arrow">▶</span>
-                        </button>
+                        <MenuItem
+                            icon="alignLeft"
+                            label="Align"
+                            disabled={selectedCount < 2}
+                            shortcut="▶"
+                        />
                         <div className="selection-context-menu__submenu">
-                            <button
-                                className="selection-context-menu__item"
-                                onClick={() => { onAlign?.('left'); onClose?.(); }}
-                            >
-                                <Icon name="alignLeft" size={14} />
-                                <span>Left</span>
-                            </button>
-                            <button
-                                className="selection-context-menu__item"
-                                onClick={() => { onAlign?.('right'); onClose?.(); }}
-                            >
-                                <Icon name="alignRight" size={14} />
-                                <span>Right</span>
-                            </button>
-                            <button
-                                className="selection-context-menu__item"
-                                onClick={() => { onAlign?.('top'); onClose?.(); }}
-                            >
-                                <Icon name="alignStartVertical" size={14} />
-                                <span>Top</span>
-                            </button>
-                            <button
-                                className="selection-context-menu__item"
-                                onClick={() => { onAlign?.('bottom'); onClose?.(); }}
-                            >
-                                <Icon name="alignEndVertical" size={14} />
-                                <span>Bottom</span>
-                            </button>
+                            <MenuItem icon="alignLeft" label="Left" onClick={() => { onAlign?.('left'); onClose?.(); }} />
+                            <MenuItem icon="alignRight" label="Right" onClick={() => { onAlign?.('right'); onClose?.(); }} />
+                            <MenuItem icon="alignStartVertical" label="Top" onClick={() => { onAlign?.('top'); onClose?.(); }} />
+                            <MenuItem icon="alignEndVertical" label="Bottom" onClick={() => { onAlign?.('bottom'); onClose?.(); }} />
                         </div>
                     </div>
                 </div>
@@ -202,66 +170,45 @@ export function SelectionContextMenu({
 
                 {/* Actions Section */}
                 <div className="selection-context-menu__section">
-                    <button
-                        className="selection-context-menu__item"
-                        onClick={() => {
-                            onCopyLayout?.();
-                            onClose?.();
-                        }}
-                    >
-                        <Icon name="copy" size={14} />
-                        <span>Copy Layout</span>
-                    </button>
+                    <MenuItem
+                        icon="copy"
+                        label="Copy Layout"
+                        onClick={() => { onCopyLayout?.(); onClose?.(); }}
+                    />
 
-                    <button
-                        className="selection-context-menu__item"
-                        onClick={() => {
-                            onSaveBookmark?.();
-                            onClose?.();
-                        }}
-                    >
-                        <Icon name="bookmark" size={14} />
-                        <span>Save as Bookmark</span>
-                    </button>
+                    <MenuItem
+                        icon="bookmark"
+                        label="Save as Bookmark"
+                        onClick={() => { onSaveBookmark?.(); onClose?.(); }}
+                    />
 
-                    <button
-                        className="selection-context-menu__item"
+                    <MenuItem
+                        icon="link"
+                        label="Link Selected"
                         disabled={viewCount < 2}
-                        onClick={() => {
-                            onLinkSelected?.();
-                            onClose?.();
-                        }}
-                    >
-                        <Icon name="link" size={14} />
-                        <span>Link Selected</span>
-                        {viewCount < 2 && <span className="selection-context-menu__hint">2+ views</span>}
-                    </button>
+                        onClick={() => { onLinkSelected?.(); onClose?.(); }}
+                        shortcut={viewCount < 2 ? '2+ views' : undefined}
+                    />
                 </div>
 
                 <div className="selection-context-menu__divider" />
 
                 {/* Danger Section */}
                 <div className="selection-context-menu__section">
-                    <button
-                        className="selection-context-menu__item"
+                    <MenuItem
+                        icon="close"
+                        label="Close All Views"
                         disabled={viewCount === 0}
-                        onClick={() => {
-                            onCloseAll?.();
-                            onClose?.();
-                        }}
-                    >
-                        <Icon name="close" size={14} />
-                        <span>Close All Views</span>
-                    </button>
+                        onClick={() => { onCloseAll?.(); onClose?.(); }}
+                    />
 
-                    <button
-                        className={`selection-context-menu__item selection-context-menu__item--danger ${showDeleteConfirm ? 'selection-context-menu__item--confirm' : ''}`}
+                    <MenuItem
+                        icon="delete"
+                        label={showDeleteConfirm ? 'Click again to confirm' : 'Delete All Views'}
                         disabled={viewCount === 0}
+                        danger
                         onClick={handleDeleteClick}
-                    >
-                        <Icon name="delete" size={14} />
-                        <span>{showDeleteConfirm ? 'Click again to confirm' : 'Delete All Views'}</span>
-                    </button>
+                    />
                 </div>
             </div>
         </>

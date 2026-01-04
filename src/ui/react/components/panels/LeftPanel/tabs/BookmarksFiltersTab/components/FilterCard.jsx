@@ -13,7 +13,8 @@
  */
 
 import React, { useState, memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton, MenuItem } from '@UI/react/components/molecules';
 import { getScopeConfig } from '../constants';
 
 /**
@@ -142,13 +143,14 @@ export const FilterCard = memo(function FilterCard({
                 {filter.isPinned && (
                     <Icon name="pin" size={10} className="filter-card__pin-indicator" fill="currentColor" />
                 )}
-                <button
-                    className="filter-card__apply-btn"
+                <IconButton
+                    icon="play"
                     onClick={handleApply}
+                    size="xs"
+                    variant="ghost"
+                    className="filter-card__apply-btn"
                     style={{ opacity: isHovered ? 1 : 0 }}
-                >
-                    <Icon name="play" size={10} />
-                </button>
+                />
             </div>
         );
     }
@@ -211,47 +213,34 @@ export const FilterCard = memo(function FilterCard({
                 className="filter-card__actions"
                 style={{ opacity: isHovered ? 1 : 0 }}
             >
-                <button
-                    className={`filter-card__action-btn ${filter.isPinned ? 'active' : ''}`}
+                <IconButton
+                    icon={filter.isPinned ? 'pin' : 'pinOff'}
                     onClick={handleTogglePin}
-                    title={filter.isPinned ? 'Unpin' : 'Pin'}
-                >
-                    {filter.isPinned ? (
-                        <Icon name="pin" size={10} fill="currentColor" />
-                    ) : (
-                        <Icon name="pinOff" size={10} />
-                    )}
-                </button>
+                    tooltip={filter.isPinned ? 'Unpin' : 'Pin'}
+                    active={filter.isPinned}
+                    size="xs"
+                    variant="ghost"
+                    className="filter-card__action-btn"
+                />
 
                 {filter.isOwn && (
                     <>
-                        <button
-                            className="filter-card__action-btn"
+                        <IconButton
+                            icon="moreHorizontal"
                             onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-                            title="More actions"
-                        >
-                            <Icon name="moreHorizontal" size={10} />
-                        </button>
+                            tooltip="More actions"
+                            size="xs"
+                            variant="ghost"
+                            className="filter-card__action-btn"
+                        />
 
                         {/* Context menu */}
                         {showMenu && (
                             <div className="filter-card__menu">
-                                <button onClick={handleEdit}>
-                                    <Icon name="edit" size={10} />
-                                    Edit
-                                </button>
-                                <button onClick={handleDuplicate}>
-                                    <Icon name="copy" size={10} />
-                                    Duplicate
-                                </button>
-                                <button onClick={handleExport}>
-                                    <Icon name="download" size={10} />
-                                    Export
-                                </button>
-                                <button onClick={handleDelete} className="danger">
-                                    <Icon name="delete" size={10} />
-                                    Delete
-                                </button>
+                                <MenuItem icon="edit" label="Edit" onClick={handleEdit} />
+                                <MenuItem icon="copy" label="Duplicate" onClick={handleDuplicate} />
+                                <MenuItem icon="download" label="Export" onClick={handleExport} />
+                                <MenuItem icon="delete" label="Delete" danger onClick={handleDelete} />
                             </div>
                         )}
                     </>
@@ -259,13 +248,14 @@ export const FilterCard = memo(function FilterCard({
             </div>
 
             {/* Apply button */}
-            <button
-                className="filter-card__apply-btn"
+            <LabeledButton
+                icon="play"
+                label="Apply"
                 onClick={handleApply}
-                title="Apply filter"
-            >
-                <Icon name="play" size={10} /> Apply
-            </button>
+                size="xs"
+                variant="ghost"
+                className="filter-card__apply-btn"
+            />
         </div>
     );
 });

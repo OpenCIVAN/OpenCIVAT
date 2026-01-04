@@ -5,7 +5,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { Dropdown } from '@UI/react/components/common/Dropdown';
 
 import './CanvasSizeDisplay.scss';
@@ -123,12 +124,13 @@ export function CanvasSizeDisplay({
     return (
         <Dropdown
             trigger={
-                <button className="canvas-size-display" type="button" title="Canvas size (total grid)">
-                    <Icon name="dashboard" size={14} />
-                    <span>
-                        {safeRows} × {safeCols}
-                    </span>
-                </button>
+                <LabeledButton
+                    icon="dashboard"
+                    label={`${safeRows} × ${safeCols}`}
+                    size="sm"
+                    variant="ghost"
+                    className="canvas-size-display"
+                />
             }
             placement="top"
         >
@@ -137,51 +139,49 @@ export function CanvasSizeDisplay({
                 <div className="canvas-size-display__row">
                     <span>Rows</span>
                     <div className="canvas-size-display__controls">
-                        <button
+                        <IconButton
+                            icon="remove"
                             onClick={() => handleChange('rows', -1)}
                             disabled={safeRows <= 1 || !canShrinkRows}
-                            type="button"
-                            aria-label="Decrease rows"
-                            title={!canShrinkRows && safeRows > 1
+                            tooltip={!canShrinkRows && safeRows > 1
                                 ? `Cannot shrink: ${rowShrinkAffected.length} view(s) in row ${safeRows}`
                                 : 'Decrease rows'
                             }
-                        >
-                            <Icon name="remove" size={14} />
-                        </button>
+                            size="xs"
+                            variant="ghost"
+                        />
                         <span>{safeRows}</span>
-                        <button
+                        <IconButton
+                            icon="add"
                             onClick={() => handleChange('rows', 1)}
-                            type="button"
-                            aria-label="Increase rows"
-                        >
-                            <Icon name="add" size={14} />
-                        </button>
+                            tooltip="Increase rows"
+                            size="xs"
+                            variant="ghost"
+                        />
                     </div>
                 </div>
                 <div className="canvas-size-display__row">
                     <span>Columns</span>
                     <div className="canvas-size-display__controls">
-                        <button
+                        <IconButton
+                            icon="remove"
                             onClick={() => handleChange('cols', -1)}
                             disabled={safeCols <= 1 || !canShrinkCols}
-                            type="button"
-                            aria-label="Decrease columns"
-                            title={!canShrinkCols && safeCols > 1
+                            tooltip={!canShrinkCols && safeCols > 1
                                 ? `Cannot shrink: ${colShrinkAffected.length} view(s) in column ${safeCols}`
                                 : 'Decrease columns'
                             }
-                        >
-                            <Icon name="remove" size={14} />
-                        </button>
+                            size="xs"
+                            variant="ghost"
+                        />
                         <span>{safeCols}</span>
-                        <button
+                        <IconButton
+                            icon="add"
                             onClick={() => handleChange('cols', 1)}
-                            type="button"
-                            aria-label="Increase columns"
-                        >
-                            <Icon name="add" size={14} />
-                        </button>
+                            tooltip="Increase columns"
+                            size="xs"
+                            variant="ghost"
+                        />
                     </div>
                 </div>
                 {/* Show hint when shrink is blocked */}

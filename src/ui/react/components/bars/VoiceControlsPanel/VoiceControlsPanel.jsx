@@ -6,7 +6,8 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import './VoiceControlsPanel.scss';
 
 // =============================================================================
@@ -329,16 +330,15 @@ const ControlButton = memo(function ControlButton({
     size = 'normal',
 }) {
     return (
-        <button
-            type="button"
-            className={`voice-controls-panel__ctrl-btn ${active ? 'voice-controls-panel__ctrl-btn--active' : ''} ${muted ? 'voice-controls-panel__ctrl-btn--muted' : ''} ${className}`}
+        <IconButton
+            icon={icon}
             onClick={onClick}
-            title={label}
-            aria-label={label}
-            data-size={size}
-        >
-            <Icon name={icon} size={size === 'small' ? 12 : 14} />
-        </button>
+            tooltip={label}
+            active={active || muted}
+            size={size === 'small' ? 'xs' : 'sm'}
+            variant="ghost"
+            className={`voice-controls-panel__ctrl-btn ${muted ? 'voice-controls-panel__ctrl-btn--muted' : ''} ${className}`}
+        />
     );
 });
 
@@ -505,15 +505,15 @@ function VoiceControlsPanel({
             />
 
             {/* Leave button - prominent red with text for clarity */}
-            <button
-                type="button"
-                className="voice-controls-panel__leave-btn"
+            <LabeledButton
+                icon="close"
+                label="Leave"
                 onClick={onJoinLeave}
-                title="Leave Voice"
-            >
-                <Icon name="close" size={12} />
-                <span>Leave</span>
-            </button>
+                size="sm"
+                variant="primary"
+                color="red"
+                className="voice-controls-panel__leave-btn"
+            />
         </div>
     );
 }

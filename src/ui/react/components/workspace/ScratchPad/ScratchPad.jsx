@@ -3,7 +3,8 @@
 // TODO: Style this component properly later
 
 import React, { memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton, Badge } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { useScratchPad, useScratchPadListener } from './ScratchPad.logic.js';
 import './ScratchPad.scss';
 
@@ -47,16 +48,17 @@ const ClipboardItem = memo(function ClipboardItem({
         >
             <Icon name={iconName} size={14} className="scratchpad-clipboard__item-icon" />
             <span className="scratchpad-clipboard__item-label">{item.label}</span>
-            <button
-                className="scratchpad-clipboard__item-remove"
+            <IconButton
+                icon="close"
                 onClick={(e) => {
                     e.stopPropagation();
                     onRemove(item.id);
                 }}
-                title="Remove"
-            >
-                <Icon name="close" size={10} />
-            </button>
+                tooltip="Remove"
+                size="xs"
+                variant="ghost"
+                className="scratchpad-clipboard__item-remove"
+            />
         </div>
     );
 });
@@ -72,14 +74,15 @@ const QuickToolButton = memo(function QuickToolButton({
     const iconName = TOOL_ICONS[tool.id] || 'zap';
 
     return (
-        <button
-            className={`scratchpad-tools__btn ${isActive ? 'scratchpad-tools__btn--active' : ''}`}
+        <LabeledButton
+            icon={iconName}
+            label={tool.label.split(' ')[0]}
             onClick={() => onClick(tool.id)}
-            title={tool.label}
-        >
-            <Icon name={iconName} size={14} />
-            <span>{tool.label.split(' ')[0]}</span>
-        </button>
+            active={isActive}
+            size="sm"
+            variant="ghost"
+            className="scratchpad-tools__btn"
+        />
     );
 });
 
@@ -88,18 +91,17 @@ const QuickToolButton = memo(function QuickToolButton({
  */
 export function ScratchPadCollapsed({ onClick, itemCount = 0 }) {
     return (
-        <button
-            className="scratchpad-trigger"
+        <LabeledButton
+            icon="clipboard"
+            label="Scratch"
             onClick={onClick}
-            title="Open Scratch Pad"
+            size="sm"
+            variant="ghost"
+            className="scratchpad-trigger"
         >
-            <Icon name="clipboard" size={14} />
-            <span>Scratch</span>
-            {itemCount > 0 && (
-                <span className="scratchpad-trigger__count">{itemCount}</span>
-            )}
+            {itemCount > 0 && <Badge count={itemCount} size="sm" />}
             <Icon name="chevronUp" size={12} />
-        </button>
+        </LabeledButton>
     );
 }
 
@@ -143,27 +145,28 @@ export function ScratchPadExpanded({
                 </select>
 
                 <div className="scratchpad-panel__actions">
-                    <button
-                        className={`scratchpad-panel__action ${isPinned ? 'scratchpad-panel__action--active' : ''}`}
+                    <IconButton
+                        icon={isPinned ? 'pinOff' : 'pin'}
                         onClick={onTogglePin}
-                        title={isPinned ? 'Unpin' : 'Pin'}
-                    >
-                        {isPinned ? <Icon name="pinOff" size={12} /> : <Icon name="pin" size={12} />}
-                    </button>
-                    <button
-                        className="scratchpad-panel__action"
+                        tooltip={isPinned ? 'Unpin' : 'Pin'}
+                        active={isPinned}
+                        size="xs"
+                        variant="ghost"
+                    />
+                    <IconButton
+                        icon="externalLink"
                         onClick={onToggleDetach}
-                        title={isDetached ? 'Dock' : 'Detach'}
-                    >
-                        <Icon name="externalLink" size={12} />
-                    </button>
-                    <button
-                        className="scratchpad-panel__action"
+                        tooltip={isDetached ? 'Dock' : 'Detach'}
+                        size="xs"
+                        variant="ghost"
+                    />
+                    <IconButton
+                        icon="close"
                         onClick={onClose}
-                        title="Close"
-                    >
-                        <Icon name="close" size={12} />
-                    </button>
+                        tooltip="Close"
+                        size="xs"
+                        variant="ghost"
+                    />
                 </div>
             </div>
 
@@ -172,13 +175,14 @@ export function ScratchPadExpanded({
                 <div className="scratchpad-clipboard__header">
                     <span>Clipboard</span>
                     {clipboardItems.length > 0 && (
-                        <button
-                            className="scratchpad-clipboard__clear"
+                        <IconButton
+                            icon="delete"
                             onClick={onClearClipboard}
-                            title="Clear all"
-                        >
-                            <Icon name="delete" size={10} />
-                        </button>
+                            tooltip="Clear all"
+                            size="xs"
+                            variant="ghost"
+                            className="scratchpad-clipboard__clear"
+                        />
                     )}
                 </div>
 
@@ -209,9 +213,13 @@ export function ScratchPadExpanded({
             <div className="scratchpad-tools">
                 <div className="scratchpad-tools__header">
                     <span>Quick Tools</span>
-                    <button className="scratchpad-tools__customize" title="Customize">
-                        <Icon name="settings" size={10} />
-                    </button>
+                    <IconButton
+                        icon="settings"
+                        tooltip="Customize"
+                        size="xs"
+                        variant="ghost"
+                        className="scratchpad-tools__customize"
+                    />
                 </div>
 
                 <div className="scratchpad-tools__grid">

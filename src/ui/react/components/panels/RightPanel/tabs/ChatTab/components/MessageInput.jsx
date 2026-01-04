@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { IconButton } from '@UI/react/components/atoms';
 
 /**
  * @typedef {Object} MessageInputProps
@@ -41,9 +41,14 @@ export function MessageInput({ onSend, disabled }) {
     return (
         <div className="chat-input">
             <div className="chat-input__wrapper">
-                <button className="chat-input__btn" disabled={disabled}>
-                    <Icon name="paperclip" size={16} />
-                </button>
+                <IconButton
+                    icon="paperclip"
+                    disabled={disabled}
+                    size="sm"
+                    variant="ghost"
+                    tooltip="Attach file"
+                    className="chat-input__btn"
+                />
 
                 <textarea
                     ref={textareaRef}
@@ -56,21 +61,33 @@ export function MessageInput({ onSend, disabled }) {
                     disabled={disabled}
                 />
 
-                <button className="chat-input__btn" disabled={disabled}>
-                    <Icon name="atSign" size={16} />
-                </button>
+                <IconButton
+                    icon="atSign"
+                    disabled={disabled}
+                    size="sm"
+                    variant="ghost"
+                    tooltip="Mention user"
+                    className="chat-input__btn"
+                />
 
-                <button className="chat-input__btn" disabled={disabled}>
-                    <Icon name="smile" size={16} />
-                </button>
+                <IconButton
+                    icon="smile"
+                    disabled={disabled}
+                    size="sm"
+                    variant="ghost"
+                    tooltip="Add emoji"
+                    className="chat-input__btn"
+                />
 
-                <button
-                    className={`chat-input__send ${message.trim() && !disabled ? 'chat-input__send--active' : ''}`}
+                <IconButton
+                    icon="send"
                     onClick={handleSend}
                     disabled={!message.trim() || disabled}
-                >
-                    <Icon name="send" size={14} />
-                </button>
+                    size="sm"
+                    variant="primary"
+                    tooltip="Send message"
+                    className={`chat-input__send ${message.trim() && !disabled ? 'chat-input__send--active' : ''}`}
+                />
             </div>
         </div>
     );

@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { Dropdown } from '@UI/react/components/common/Dropdown';
 
 /**
@@ -129,14 +130,14 @@ export function ProjectSelector({
 
                 {/* Create New */}
                 <div className="project-selector__footer">
-                    <button
-                        className="project-selector__create"
+                    <LabeledButton
+                        icon="add"
+                        label="New Project"
                         onClick={handleCreate}
-                        type="button"
-                    >
-                        <Icon name="add" size={14} />
-                        New Project
-                    </button>
+                        variant="ghost"
+                        size="sm"
+                        className="project-selector__create"
+                    />
                 </div>
             </div>
         </Dropdown>

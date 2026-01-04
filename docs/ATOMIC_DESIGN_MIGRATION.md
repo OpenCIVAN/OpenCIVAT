@@ -484,12 +484,35 @@ Created molecules with VR support and Storybook stories:
 - [x] `FiltersSubtab.jsx` - Uses `LabeledButton` for Import/Export/Retry
 - [x] `BookmarksSubtab.jsx` - Uses `LabeledButton` for Retry
 
-**Low-priority remaining (migrate as encountered):**
-- `ViewSettingsModal.jsx` - Complex multi-section modal with many buttons
-- `CanvasSubtab.jsx` - Etched toggle buttons (specialized styling)
-- `GridLayoutPreview.jsx` - Layout control buttons
-- `VoiceControls.jsx` - Voice/mute controls
-- `MessageInput.jsx` - Chat input controls
+**Full component migrations (Phase 3 Final):**
+- [x] `ViewSettingsModal.jsx` - Footer, share/unlink/delete buttons, QuickToggle → IconButton, ToggleRow → Toggle atom
+- [x] `CanvasSubtab.jsx` - Layout mode, flow direction, tools, drop mode → ToggleGroup, IconButton, LabeledButton, Divider
+- [x] `GridLayoutPreview.jsx` - Header actions, zoom controls, viewport size, mode toggle, undo/redo, apply/cancel → IconButton, LabeledButton, ToggleGroup
+- [x] `VoiceControls.jsx` - Join, mute, deafen, leave, settings → LabeledButton, IconButton
+- [x] `VoiceControlsPanel.jsx` - ControlButton → IconButton, leave button → LabeledButton
+- [x] `MessageInput.jsx` - Attach, mention, emoji, send → IconButton
+- [x] `FilesTab.jsx` - New folder, view toggles, filter, retry, type filters → IconButton, LabeledButton, ToggleGroup
+- [x] `ViewsSubtab.jsx` - Group toggle, clear buttons → LabeledButton, IconButton
+- [x] `AnnotationsTab.jsx` - ScopeChip → LabeledButton, TypeFilterToggle → IconButton, AnnotationItem visibility/more → IconButton
+- [x] `CanvasSizeDisplay.jsx` - Trigger → LabeledButton, controls → IconButton
+- [x] `ViewportSizeDisplay.jsx` - Trigger → LabeledButton, controls → IconButton
+- [x] `ScratchPad.jsx` - ClipboardItem remove → IconButton, QuickToolButton → LabeledButton, panel actions → IconButton
+- [x] `MemberRow.jsx` - VR buttons → LabeledButton, action buttons → IconButton
+- [x] `DatasetNode.jsx` - Hover actions → IconButton, create view → LabeledButton
+- [x] `LayersSubtab.jsx` - LayerToggle buttons → IconButton
+- [x] `WorkspacePickerModal.jsx` - Footer buttons → LabeledButton, create workspace → LabeledButton
+- [x] `UsernameModal.jsx` - Submit button → LabeledButton
+- [x] `ProjectSelector.jsx` - Create new → LabeledButton
+- [x] `ImageUploader.jsx` - Cancel/error close → LabeledButton/IconButton
+- [x] `SelectionContextMenu.jsx` - All menu items → MenuItem molecule
+- [x] `FilterCard.jsx` - Action buttons → IconButton, menu items → MenuItem, apply → LabeledButton
+
+**Phase 3 Status: COMPLETE**
+All major components have been migrated. Remaining files with button patterns are either:
+- Story files (*.stories.jsx) - testing/documentation only
+- Bootstrap.jsx - auth component with specialized styling
+- Modal.jsx - base modal component (container, not buttons)
+- ModalFooter.jsx - footer container only
 
 **Import pattern established:**
 ```jsx

@@ -21,7 +21,8 @@ import { ui as log } from "@Utils/logger.js";
  */
 
 import { memo, useCallback, useState, useRef, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
 import { useGridLayoutPreview } from './GridLayoutPreview.logic';
 import { useViewportSize } from '@UI/react/hooks';
 import { DPadController } from './components/DPadController';
@@ -308,30 +309,34 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                 <div className="grid-layout-preview__header-right">
                     {/* Context-specific header action */}
                     {config.headerAction && (
-                        <button
-                            className="grid-layout-preview__header-action"
+                        <LabeledButton
+                            label={config.headerAction}
                             onClick={handleHeaderAction}
-                        >
-                            {config.headerAction}
-                        </button>
+                            size="sm"
+                            variant="ghost"
+                        />
                     )}
 
                     {/* Edit mode toggle (layout context) */}
                     {config.showEditMode && (
-                        <button
-                            className={`grid-layout-preview__edit-btn ${isEditMode ? 'grid-layout-preview__edit-btn--active' : ''}`}
+                        <IconButton
+                            icon="edit"
                             onClick={() => setIsEditMode(!isEditMode)}
-                            title={isEditMode ? 'Exit edit mode' : 'Enter edit mode'}
-                        >
-                            <Icon name="edit" size={14} />
-                        </button>
+                            tooltip={isEditMode ? 'Exit edit mode' : 'Enter edit mode'}
+                            active={isEditMode}
+                            size="sm"
+                            variant="ghost"
+                        />
                     )}
 
                     {/* Presets button (layout context) */}
                     {config.showPresets && (
-                        <button className="grid-layout-preview__presets-btn" title="Layout presets">
-                            <Icon name="gitBranch" size={14} />
-                        </button>
+                        <IconButton
+                            icon="gitBranch"
+                            tooltip="Layout presets"
+                            size="sm"
+                            variant="ghost"
+                        />
                     )}
                 </div>
             </div>
@@ -437,54 +442,54 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                 <div className="grid-layout-preview__footer-left">
                     {/* Zoom controls */}
                     <div className="grid-layout-preview__zoom">
-                        <button
-                            className="grid-layout-preview__zoom-btn"
+                        <IconButton
+                            icon="zoomOut"
                             onClick={() => setZoom(viewport.zoom - 0.25)}
                             disabled={viewport.zoom <= 0.5}
-                        >
-                            <Icon name="zoomOut" size={12} />
-                        </button>
+                            size="xs"
+                            variant="ghost"
+                        />
                         <span className="grid-layout-preview__zoom-value">
                             {Math.round(viewport.zoom * 100)}%
                         </span>
-                        <button
-                            className="grid-layout-preview__zoom-btn"
+                        <IconButton
+                            icon="zoomIn"
                             onClick={() => setZoom(viewport.zoom + 0.25)}
                             disabled={viewport.zoom >= 2}
-                        >
-                            <Icon name="zoomIn" size={12} />
-                        </button>
+                            size="xs"
+                            variant="ghost"
+                        />
                     </div>
 
                     {/* Viewport size controls */}
                     <div className="grid-layout-preview__viewport-size">
-                        <button
-                            className="grid-layout-preview__viewport-size-btn"
+                        <IconButton
+                            icon="minimize2"
                             onClick={decrementViewportSize}
                             disabled={isMinSize}
-                            title="Focus (show fewer cells)"
-                        >
-                            <Icon name="minimize2" size={12} />
-                        </button>
+                            tooltip="Focus (show fewer cells)"
+                            size="xs"
+                            variant="ghost"
+                        />
                         <span className="grid-layout-preview__viewport-size-value">
                             {viewportSize.rows}×{viewportSize.cols}
                         </span>
-                        <button
-                            className="grid-layout-preview__viewport-size-btn"
+                        <IconButton
+                            icon="maximize2"
                             onClick={incrementViewportSize}
                             disabled={isMaxSize}
-                            title="Overview (show more cells)"
-                        >
-                            <Icon name="maximize2" size={12} />
-                        </button>
-                        <button
-                            className="grid-layout-preview__viewport-size-btn grid-layout-preview__viewport-size-btn--reset"
+                            tooltip="Overview (show more cells)"
+                            size="xs"
+                            variant="ghost"
+                        />
+                        <IconButton
+                            icon="rotateCcw"
                             onClick={resetViewportSize}
                             disabled={isDefaultSize}
-                            title="Reset to default size"
-                        >
-                            <Icon name="rotateCcw" size={10} />
-                        </button>
+                            tooltip="Reset to default size"
+                            size="xs"
+                            variant="ghost"
+                        />
                     </div>
 
                     {/* Coordinates display */}
@@ -496,20 +501,15 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                 <div className="grid-layout-preview__footer-center">
                     {/* Layout mode toggle (layout context) */}
                     {config.footerToggle && (
-                        <div className="grid-layout-preview__mode-toggle">
-                            <button
-                                className={`grid-layout-preview__mode-btn ${layoutMode === 'grid' ? 'grid-layout-preview__mode-btn--active' : ''}`}
-                                onClick={() => setLayoutMode('grid')}
-                            >
-                                Grid
-                            </button>
-                            <button
-                                className={`grid-layout-preview__mode-btn ${layoutMode === 'flow' ? 'grid-layout-preview__mode-btn--active' : ''}`}
-                                onClick={() => setLayoutMode('flow')}
-                            >
-                                Flow
-                            </button>
-                        </div>
+                        <ToggleGroup
+                            options={[
+                                { value: 'grid', label: 'Grid' },
+                                { value: 'flow', label: 'Flow' },
+                            ]}
+                            value={layoutMode}
+                            onChange={setLayoutMode}
+                            size="sm"
+                        />
                     )}
                 </div>
 
@@ -525,43 +525,42 @@ export const GridLayoutPreview = memo(function GridLayoutPreview({
                     {/* Undo/Redo */}
                     {isEditMode && (
                         <>
-                            <button
-                                className="grid-layout-preview__action-btn"
+                            <IconButton
+                                icon="undo2"
                                 onClick={undo}
                                 disabled={!canUndo}
-                                title="Undo"
-                            >
-                                <Icon name="undo2" size={14} />
-                            </button>
-                            <button
-                                className="grid-layout-preview__action-btn"
+                                tooltip="Undo"
+                                size="sm"
+                                variant="ghost"
+                            />
+                            <IconButton
+                                icon="redo2"
                                 onClick={redo}
                                 disabled={!canRedo}
-                                title="Redo"
-                            >
-                                <Icon name="redo2" size={14} />
-                            </button>
+                                tooltip="Redo"
+                                size="sm"
+                                variant="ghost"
+                            />
                         </>
                     )}
 
                     {/* Apply/Cancel */}
                     {isDirty && (
                         <>
-                            <button
-                                className="grid-layout-preview__cancel-btn"
+                            <IconButton
+                                icon="close"
                                 onClick={cancelChanges}
-                                title="Cancel changes"
-                            >
-                                <Icon name="close" size={14} />
-                            </button>
-                            <button
-                                className="grid-layout-preview__apply-btn"
+                                tooltip="Cancel changes"
+                                size="sm"
+                                variant="ghost"
+                            />
+                            <LabeledButton
+                                icon="save"
+                                label="Apply"
                                 onClick={applyChanges}
-                                title="Apply changes"
-                            >
-                                <Icon name="save" size={14} />
-                                Apply
-                            </button>
+                                size="sm"
+                                variant="primary"
+                            />
                         </>
                     )}
                 </div>

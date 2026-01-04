@@ -26,7 +26,9 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, IconButton, Toggle } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
+import { getIconComponent } from '@UI/react/components/common/Icon';
 
 import { Modal } from '@UI/react/components/modals/Modal';
 import { viewLinkingService, LINKING_EVENTS, eventBus } from '@Services';
@@ -216,9 +218,7 @@ export function ViewSettingsModal({
     // ---------------------------------------------------------------------------
 
     const renderFooter = () => (
-        <button className="view-settings-modal__footer-btn" onClick={onClose}>
-            Close
-        </button>
+        <LabeledButton label="Close" onClick={onClose} variant="ghost" />
     );
 
     // ---------------------------------------------------------------------------
@@ -324,10 +324,12 @@ export function ViewSettingsModal({
                                     {datasetInfo.dimensions} • {datasetInfo.size} • {datasetInfo.type}
                                 </div>
                             </div>
-                            <button className="view-settings-modal__dataset-btn">
-                                <Icon name="externalLink" size={10} />
-                                Open
-                            </button>
+                            <LabeledButton
+                                icon="externalLink"
+                                label="Open"
+                                size="sm"
+                                variant="ghost"
+                            />
                         </div>
                     </ModalSection>
 
@@ -340,13 +342,12 @@ export function ViewSettingsModal({
                         {!view.isShared ? (
                             <div className="view-settings-modal__sharing-private">
                                 <p>This view is private. Share it to collaborate.</p>
-                                <button
-                                    className="view-settings-modal__share-btn"
+                                <LabeledButton
+                                    icon="users"
+                                    label="Share View"
                                     onClick={onShare}
-                                >
-                                    <Icon name="users" size={12} />
-                                    Share View
-                                </button>
+                                    variant="secondary"
+                                />
                             </div>
                         ) : (
                             <div className="view-settings-modal__sharing">
@@ -360,12 +361,12 @@ export function ViewSettingsModal({
                                         onChange={(e) => setNewShareEmail(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleAddShare()}
                                     />
-                                    <button
-                                        className="view-settings-modal__share-add-btn"
+                                    <LabeledButton
+                                        label="Add"
                                         onClick={handleAddShare}
-                                    >
-                                        Add
-                                    </button>
+                                        size="sm"
+                                        variant="primary"
+                                    />
                                 </div>
 
                                 {/* Shared users list */}
@@ -390,25 +391,25 @@ export function ViewSettingsModal({
                                                 <option value="Viewer">Viewer</option>
                                                 <option value="Can Share">Can Share</option>
                                             </select>
-                                            <button
-                                                className="view-settings-modal__share-remove"
+                                            <IconButton
+                                                icon="close"
                                                 onClick={() => handleRemoveShare(user.id)}
-                                            >
-                                                <X size={12} />
-                                            </button>
+                                                size="sm"
+                                                variant="ghost"
+                                            />
                                         </div>
                                     ))}
                                 </div>
 
-                                <button
-                                    className="view-settings-modal__stop-sharing"
+                                <LabeledButton
+                                    label="Stop Sharing (Make Private)"
                                     onClick={() => {
                                         setLocalSharedUsers([]);
                                         onUpdateSharing?.([]);
                                     }}
-                                >
-                                    Stop Sharing (Make Private)
-                                </button>
+                                    variant="ghost"
+                                    color="red"
+                                />
                             </div>
                         )}
                     </ModalSection>
@@ -486,13 +487,13 @@ export function ViewSettingsModal({
                                                             <option value="bidirectional">Bidirectional</option>
                                                             <option value="broadcast">Broadcast</option>
                                                         </select>
-                                                        <button
-                                                            className="view-settings-modal__link-unlink"
+                                                        <IconButton
+                                                            icon="unlink"
                                                             onClick={() => handleUnlinkProperty(prop.id)}
-                                                            title="Unlink this property"
-                                                        >
-                                                            <Icon name="unlink" size={12} />
-                                                        </button>
+                                                            tooltip="Unlink this property"
+                                                            size="sm"
+                                                            variant="ghost"
+                                                        />
                                                     </div>
                                                 ) : (
                                                     <select
@@ -522,13 +523,13 @@ export function ViewSettingsModal({
                                         );
                                     })}
                                 </div>
-                                <button
-                                    className="view-settings-modal__unlink-all"
+                                <LabeledButton
+                                    icon="unlink"
+                                    label="Unlink All Properties"
                                     onClick={handleUnlinkAll}
-                                >
-                                    <Icon name="unlink" size={12} />
-                                    Unlink All Properties
-                                </button>
+                                    variant="ghost"
+                                    color="red"
+                                />
                             </>
                         ) : (
                             <>
@@ -610,10 +611,12 @@ export function ViewSettingsModal({
                                         ))
                                     }
                                 </select>
-                                <button className="view-settings-modal__annotation-copy-btn">
-                                    <Icon name="copy" size={10} />
-                                    Copy
-                                </button>
+                                <LabeledButton
+                                    icon="copy"
+                                    label="Copy"
+                                    size="sm"
+                                    variant="ghost"
+                                />
                             </div>
                         </div>
                     </ModalSection>
@@ -677,10 +680,13 @@ export function ViewSettingsModal({
 
                     {/* Danger Zone */}
                     <ModalSection icon="trash2" title="Danger Zone">
-                        <button className="view-settings-modal__delete-btn" onClick={onTrash}>
-                            <Icon name="trash2" size={14} />
-                            Delete View Permanently
-                        </button>
+                        <LabeledButton
+                            icon="trash2"
+                            label="Delete View Permanently"
+                            onClick={onTrash}
+                            variant="primary"
+                            color="red"
+                        />
                         <p className="view-settings-modal__delete-hint">
                             Moves to Recently Deleted for 30 days.
                         </p>
@@ -692,15 +698,18 @@ export function ViewSettingsModal({
 }
 
 // Quick Toggle Button
-function QuickToggle({ icon: Icon, label, active, activeColor, onClick }) {
+function QuickToggle({ icon, label, active, activeColor, onClick }) {
     return (
-        <button
-            className={`view-settings-modal__quick-toggle ${active ? `view-settings-modal__quick-toggle--active view-settings-modal__quick-toggle--${activeColor}` : ''}`}
+        <IconButton
+            icon={icon}
             onClick={onClick}
-            title={label}
-        >
-            <Icon size={14} />
-        </button>
+            tooltip={label}
+            active={active}
+            color={active ? activeColor : undefined}
+            size="sm"
+            variant="ghost"
+            className={`view-settings-modal__quick-toggle ${active ? `view-settings-modal__quick-toggle--active view-settings-modal__quick-toggle--${activeColor}` : ''}`}
+        />
     );
 }
 
@@ -727,12 +736,11 @@ function ToggleRow({ label, checked, onChange }) {
     return (
         <div className="view-settings-modal__toggle-row">
             <span>{label}</span>
-            <button
-                className={`view-settings-modal__toggle ${checked ? 'view-settings-modal__toggle--checked' : ''}`}
-                onClick={() => onChange?.(!checked)}
-            >
-                <div className="view-settings-modal__toggle-knob" />
-            </button>
+            <Toggle
+                checked={checked}
+                onChange={onChange}
+                size="sm"
+            />
         </div>
     );
 }

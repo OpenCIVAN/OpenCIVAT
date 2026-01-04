@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { VoiceConnectionState } from '@Services/voice/voiceRoomService.js';
 
 /**
@@ -41,14 +42,14 @@ export function VoiceControls({
     if (!isConnected && !isReconnecting) {
         return (
             <div className="voice-controls voice-controls--disconnected">
-                <button
-                    className="voice-controls__join-btn"
+                <LabeledButton
+                    icon="radio"
+                    label={isConnecting ? 'Connecting...' : 'Join Voice'}
                     onClick={onJoin}
                     disabled={isConnecting}
-                >
-                    <Icon name="radio" size={16} />
-                    <span>{isConnecting ? 'Connecting...' : 'Join Voice'}</span>
-                </button>
+                    variant="primary"
+                    className="voice-controls__join-btn"
+                />
             </div>
         );
     }
@@ -58,33 +59,43 @@ export function VoiceControls({
             {isReconnecting && (
                 <div className="voice-controls__status">Reconnecting...</div>
             )}
-            <button
-                className={`voice-controls__btn ${muted ? 'voice-controls__btn--active' : ''}`}
+            <IconButton
+                icon={muted ? 'micOff' : 'mic'}
                 onClick={onToggleMute}
-                title={muted ? 'Unmute (M)' : 'Mute (M)'}
-            >
-                {muted ? <Icon name="micOff" size={18} /> : <Icon name="mic" size={18} />}
-            </button>
+                tooltip={muted ? 'Unmute (M)' : 'Mute (M)'}
+                active={muted}
+                size="md"
+                variant="ghost"
+                className="voice-controls__btn"
+            />
 
-            <button
-                className={`voice-controls__btn ${deafened ? 'voice-controls__btn--active' : ''}`}
+            <IconButton
+                icon={deafened ? 'headphoneOff' : 'headphones'}
                 onClick={onToggleDeafen}
-                title={deafened ? 'Undeafen' : 'Deafen'}
-            >
-                {deafened ? <Icon name="headphoneOff" size={18} /> : <Icon name="headphones" size={18} />}
-            </button>
+                tooltip={deafened ? 'Undeafen' : 'Deafen'}
+                active={deafened}
+                size="md"
+                variant="ghost"
+                className="voice-controls__btn"
+            />
 
-            <button
-                className="voice-controls__btn voice-controls__btn--leave"
+            <IconButton
+                icon="phoneOff"
                 onClick={onLeave}
-                title="Leave Voice"
-            >
-                <Icon name="phoneOff" size={18} />
-            </button>
+                tooltip="Leave Voice"
+                size="md"
+                variant="ghost"
+                color="red"
+                className="voice-controls__btn voice-controls__btn--leave"
+            />
 
-            <button className="voice-controls__btn" title="Voice Settings">
-                <Icon name="settings" size={18} />
-            </button>
+            <IconButton
+                icon="settings"
+                tooltip="Voice Settings"
+                size="md"
+                variant="ghost"
+                className="voice-controls__btn"
+            />
         </div>
     );
 }
