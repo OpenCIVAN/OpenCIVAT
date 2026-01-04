@@ -535,3 +535,146 @@ LinkPropertiesDemo.decorators = [
         </div>
     ),
 ];
+
+// Expanded Panel Demo - Shows new ViewExpandedPanel with all spec features
+export const ExpandedPanelDemo = () => {
+    const [linkMode, setLinkMode] = useState('follow');
+    const [linkConfig, setLinkConfig] = useState({
+        camera: { enabled: true, targetViewId: null },
+        filters: { enabled: true, targetViewId: null },
+        widgets: { enabled: false, targetViewId: null },
+        cursors: { enabled: true, targetViewId: null },
+    });
+
+    const viewWithFilters = {
+        ...sampleView,
+        name: 'Expanded View Demo',
+        color: '#60a5fa',
+        datasetName: 'Patient MRI Scans',
+        instanceType: 'vtk',
+        rowSpan: 2,
+        colSpan: 1,
+        annotationCount: 5,
+        updatedAt: Date.now() - 3600000, // 1 hour ago
+        linkMode,
+        links: linkConfig,
+        filters: {
+            'threshold': { active: true, name: 'Threshold > 100', color: '#3b82f6' },
+            'slice': { active: true, name: 'Slice Z=50', color: '#22c55e' },
+            'opacity': { active: true, name: 'Opacity 0.8', color: '#f59e0b' },
+        },
+        originBookmark: { name: 'Analysis Checkpoint 1' },
+    };
+
+    const availableViews = [
+        { id: 'v1', name: 'Master View' },
+        { id: 'v2', name: 'Reference View' },
+        { id: 'v3', name: 'Comparison View' },
+    ];
+
+    const handleLinkPropertyChange = (propertyId, config) => {
+        setLinkConfig(prev => ({
+            ...prev,
+            [propertyId]: config,
+        }));
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                Click to expand and see the new ViewExpandedPanel with all spec features:
+            </p>
+            <ul style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', paddingLeft: '16px', margin: 0 }}>
+                <li>Thumbnail + metadata section</li>
+                <li>Origin tracking (spawned from bookmark)</li>
+                <li>Applied filters as removable chips</li>
+                <li>Size picker</li>
+                <li>View linking with modes (Follow/Bidirectional/Broadcast)</li>
+                <li>Link properties (Camera, Filters, Widgets, Cursors)</li>
+                <li>Action buttons</li>
+            </ul>
+            <ViewItem
+                view={viewWithFilters}
+                mode="desktop"
+                availableViews={availableViews}
+                onNavigate={(id) => console.log('Navigate to:', id)}
+                onOpenTools={(id) => console.log('Open tools:', id)}
+                onDuplicate={(id) => console.log('Duplicate:', id)}
+                onBookmark={(id) => console.log('Bookmark:', id)}
+                onShare={(id) => console.log('Share:', id)}
+                onClose={(id) => console.log('Close:', id)}
+                onTrash={(id) => console.log('Delete:', id)}
+                onSizeChange={(size) => console.log('Size changed:', size)}
+                onFilterRemove={(filterId) => console.log('Remove filter:', filterId)}
+                onLinkPropertyChange={handleLinkPropertyChange}
+                onLinkModeChange={(mode) => {
+                    console.log('Link mode:', mode);
+                    setLinkMode(mode);
+                }}
+            />
+            <div style={{
+                marginTop: '8px',
+                padding: '12px',
+                background: '#0f0f0f',
+                borderRadius: '6px',
+                fontSize: '10px',
+                color: 'rgba(255,255,255,0.4)',
+            }}>
+                <p>Current link mode: <strong>{linkMode}</strong></p>
+                <p>Link config:</p>
+                {Object.entries(linkConfig).map(([key, config]) => (
+                    <p key={key}>• {key}: {config.enabled ? 'enabled' : 'disabled'}</p>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+ExpandedPanelDemo.decorators = [
+    (Story) => (
+        <div style={{
+            width: '340px',
+            background: '#1a1a1a',
+            borderRadius: '8px',
+            padding: '16px'
+        }}>
+            <Story />
+        </div>
+    ),
+];
+
+// VR Mode Expanded Panel
+export const VRModeExpandedPanel = {
+    args: {
+        view: {
+            ...sampleView,
+            name: 'VR Expanded View',
+            color: '#60a5fa',
+            datasetName: 'Brain Scan Dataset',
+            instanceType: 'vtk',
+            rowSpan: 1,
+            colSpan: 2,
+            annotationCount: 3,
+            updatedAt: Date.now() - 7200000,
+            filters: {
+                'threshold': { active: true, name: 'Threshold', color: '#3b82f6' },
+            },
+        },
+        mode: 'vr',
+        availableViews: [
+            { id: 'v1', name: 'Master View' },
+        ],
+    },
+    decorators: [
+        (Story) => (
+            <div style={{
+                width: '400px',
+                background: '#1a1a1a',
+                borderRadius: '8px',
+                padding: '16px'
+            }}>
+                <Story />
+            </div>
+        ),
+    ],
+};

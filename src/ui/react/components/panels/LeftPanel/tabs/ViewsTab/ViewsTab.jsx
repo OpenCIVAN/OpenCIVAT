@@ -17,7 +17,7 @@
  * <ViewsPanelContent workspaceId="ws-1" />
  */
 
-import React, { useMemo, useCallback, useContext } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
@@ -81,14 +81,22 @@ function ActiveViewItemWrapper({ view, handlers }) {
             view={view}
             isActive={true}
             showPosition={true}
+            availableViews={handlers.getAvailableViewsForLinking(view.id)}
             onSelect={handlers.handleSelectView}
             onClose={handlers.handleRemoveFromCanvas}
             onTrash={handlers.handleTrashView}
             onRename={handlers.handleRenameView}
             onNavigate={handlers.handleNavigateToView}
-            onSizeChange={handlers.handleResizeView}
+            onSizeChange={(size) => handlers.handleResizeView(view.id, size)}
             onFocus={handlers.handleFocusView}
             onVisibilityToggle={handlers.handleToggleVisibility}
+            onBookmark={handlers.handleBookmarkView}
+            onShare={handlers.handleShareView}
+            onOpenTools={handlers.handleOpenTools}
+            onDuplicate={handlers.handleDuplicateView}
+            onFilterRemove={(filterId) => handlers.handleRemoveFilter(view.id, filterId)}
+            onLinkPropertyChange={(propId, config) => handlers.handleLinkPropertyChange(view.id, propId, config)}
+            onLinkModeChange={(mode) => handlers.handleLinkModeChange(view.id, mode)}
         />
     );
 }
@@ -163,6 +171,7 @@ export function ViewsPanelContent({ workspaceId }) {
 
     const {
         views,
+        allViews,
         onCanvasViews,
         notPlacedViews,
         recentlyDeletedViews,
@@ -187,7 +196,22 @@ export function ViewsPanelContent({ workspaceId }) {
         handleResizeView,
         handleFocusView,
         handleToggleVisibility,
+        // New handlers for expanded panel
+        handleBookmarkView,
+        handleShareView,
+        handleOpenTools,
+        handleDuplicateView,
+        handleRemoveFilter,
+        handleLinkPropertyChange,
+        handleLinkModeChange,
     } = useViewsTab({ workspaceId });
+
+    // Create available views list for linking (excluding current view)
+    const getAvailableViewsForLinking = useCallback((currentViewId) => {
+        return (allViews || [])
+            .filter(v => v.id !== currentViewId && v.isOnCanvas)
+            .map(v => ({ id: v.id, name: v.name }));
+    }, [allViews]);
 
     const { states: sectionStates, toggleSection, resizeSection } = useSectionStates(DEFAULT_SECTIONS);
 
@@ -204,6 +228,15 @@ export function ViewsPanelContent({ workspaceId }) {
         handleResizeView,
         handleFocusView,
         handleToggleVisibility,
+        // New handlers for expanded panel
+        handleBookmarkView,
+        handleShareView,
+        handleOpenTools,
+        handleDuplicateView,
+        handleRemoveFilter,
+        handleLinkPropertyChange,
+        handleLinkModeChange,
+        getAvailableViewsForLinking,
     }), [
         handlePlaceView,
         handleRemoveFromCanvas,
@@ -216,6 +249,14 @@ export function ViewsPanelContent({ workspaceId }) {
         handleResizeView,
         handleFocusView,
         handleToggleVisibility,
+        handleBookmarkView,
+        handleShareView,
+        handleOpenTools,
+        handleDuplicateView,
+        handleRemoveFilter,
+        handleLinkPropertyChange,
+        handleLinkModeChange,
+        getAvailableViewsForLinking,
     ]);
 
     // =========================================================================

@@ -18,6 +18,9 @@ export { InactiveViewItem } from "./InactiveViewItem";
 export { TrashedViewItem } from "./TrashedViewItem";
 export { SlidingPanel } from "./components/SlidingPanel";
 export { ViewItemContextMenu } from "./components/ViewItemContextMenu";
+export { ViewExpandedPanel, LINK_MODES } from "./components/ViewExpandedPanel";
+export { SizePicker } from "./components/SizePicker";
+export { LinkPropertyRow, LINK_PROPERTIES } from "./components/LinkPropertyRow";
 
 // Re-export default as ViewItem for convenience
 export { ViewItem as default } from "./ViewItem";

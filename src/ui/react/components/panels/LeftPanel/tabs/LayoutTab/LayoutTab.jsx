@@ -9,7 +9,8 @@
 // Canvas Navigator is permanently docked at bottom
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import { Icon } from '@UI/react/components/atoms/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { Section } from '@UI/react/components/molecules/Section';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { loadCanvasSize, saveCanvasSize } from '@UI/react/hooks/canvasState.js';
 import {
@@ -25,19 +26,32 @@ import './LayoutTab.scss';
 // CONSTANTS
 // =============================================================================
 
+// Per spec: 1×1, 2×1, 1×2, 2×2, 3×1, 3×2, Custom
 const SPAWN_SIZES = [
     { id: '1x1', label: '1×1', rows: 1, cols: 1 },
     { id: '2x1', label: '2×1', rows: 1, cols: 2 },
     { id: '1x2', label: '1×2', rows: 2, cols: 1 },
     { id: '2x2', label: '2×2', rows: 2, cols: 2 },
+    { id: '3x1', label: '3×1', rows: 1, cols: 3 },
+    { id: '3x2', label: '3×2', rows: 2, cols: 3 },
+    { id: 'custom', label: 'Custom', rows: null, cols: null, isCustom: true },
 ];
 
+// Per spec: Single, Side-by-Side, Stacked, 2×2 Grid, 3-up, 1+2, Custom
 const QUICK_LAYOUTS = [
     { id: 'single', label: 'Single', icon: 'maximize2', rows: 1, cols: 1 },
     { id: 'side-by-side', label: 'Side by Side', icon: 'columns3', rows: 1, cols: 2 },
     { id: 'stacked', label: 'Stacked', icon: 'rows3', rows: 2, cols: 1 },
     { id: '2x2', label: '2×2 Grid', icon: 'grid3X3', rows: 2, cols: 2 },
+    { id: '3-up', label: '3-up', icon: 'layout', rows: 1, cols: 3 },
+    { id: '1+2', label: '1+2', icon: 'layoutDashboard', rows: 2, cols: 2, merged: true },
 ];
+
+// Layout modes per spec
+const LAYOUT_MODES = {
+    GRID: 'grid',   // Manual placement - drop views where you want
+    FLOW: 'flow',   // Auto-arrangement - new views fill next available slot
+};
 
 // Template scopes
 const TEMPLATE_SCOPES = {
@@ -66,16 +80,60 @@ const SCOPE_LABELS = {
 // =============================================================================
 
 /**
- * Spawn Size Picker - Select default size for new views
+ * Layout Mode Toggle - Grid vs Flow per spec
  */
-function SpawnSizePicker({ value, onChange }) {
+function LayoutModeToggle({ mode, onChange }) {
+    return (
+        <div className="layout-tab__mode-toggle">
+            <button
+                className={`layout-tab__mode-btn ${mode === LAYOUT_MODES.GRID ? 'layout-tab__mode-btn--active' : ''}`}
+                onClick={() => onChange?.(LAYOUT_MODES.GRID)}
+                title="Grid - Manual placement, drop views where you want"
+            >
+                <Icon name="grid3x3" size={14} />
+                <div className="layout-tab__mode-content">
+                    <span className="layout-tab__mode-label">Grid</span>
+                    <span className="layout-tab__mode-desc">Manual placement</span>
+                </div>
+            </button>
+            <button
+                className={`layout-tab__mode-btn ${mode === LAYOUT_MODES.FLOW ? 'layout-tab__mode-btn--active' : ''}`}
+                onClick={() => onChange?.(LAYOUT_MODES.FLOW)}
+                title="Flow - Auto-arrangement, views fill next available slot"
+            >
+                <Icon name="layoutGrid" size={14} />
+                <div className="layout-tab__mode-content">
+                    <span className="layout-tab__mode-label">Flow</span>
+                    <span className="layout-tab__mode-desc">Auto-arrange</span>
+                </div>
+            </button>
+        </div>
+    );
+}
+
+/**
+ * Spawn Size Picker - Select default size for new views
+ * Per spec: 1×1, 2×1, 1×2, 2×2, 3×1, 3×2, Custom
+ */
+function SpawnSizePicker({ value, onChange, customSize, onCustomChange }) {
+    const [showCustom, setShowCustom] = useState(false);
+
+    const handleSelect = (size) => {
+        if (size.isCustom) {
+            setShowCustom(true);
+        } else {
+            setShowCustom(false);
+            onChange?.(size.id);
+        }
+    };
+
     return (
         <div className="layout-tab__spawn-sizes">
-            {SPAWN_SIZES.map(size => (
+            {SPAWN_SIZES.filter(s => !s.isCustom).map(size => (
                 <button
                     key={size.id}
-                    className={`layout-tab__spawn-btn ${value === size.id ? 'layout-tab__spawn-btn--active' : ''}`}
-                    onClick={() => onChange?.(size.id)}
+                    className={`layout-tab__spawn-btn ${value === size.id && !showCustom ? 'layout-tab__spawn-btn--active' : ''}`}
+                    onClick={() => handleSelect(size)}
                     title={size.label}
                 >
                     <div
@@ -90,52 +148,110 @@ function SpawnSizePicker({ value, onChange }) {
                     <span>{size.label}</span>
                 </button>
             ))}
+            <button
+                className={`layout-tab__spawn-btn layout-tab__spawn-btn--custom ${showCustom ? 'layout-tab__spawn-btn--active' : ''}`}
+                onClick={() => setShowCustom(!showCustom)}
+                title="Custom size"
+            >
+                <Icon name="settings2" size={16} />
+                <span>Custom</span>
+            </button>
+
+            {/* Custom size inputs */}
+            {showCustom && (
+                <div className="layout-tab__custom-size">
+                    <div className="layout-tab__custom-inputs">
+                        <input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={customSize?.cols || 1}
+                            onChange={(e) => onCustomChange?.({ ...customSize, cols: parseInt(e.target.value) || 1 })}
+                            placeholder="W"
+                        />
+                        <span>×</span>
+                        <input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={customSize?.rows || 1}
+                            onChange={(e) => onCustomChange?.({ ...customSize, rows: parseInt(e.target.value) || 1 })}
+                            placeholder="H"
+                        />
+                    </div>
+                    <button
+                        className="layout-tab__custom-apply"
+                        onClick={() => {
+                            onChange?.('custom');
+                            setShowCustom(false);
+                        }}
+                    >
+                        Apply
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
 
 /**
- * Canvas Size Control - Rows and columns steppers
+ * Canvas Size Control - Rows and columns steppers with protection warning
+ * Per spec: Protection prevents reducing size if views would be removed
  */
-function CanvasSizeControl({ rows, cols, onChangeRows, onChangeCols }) {
+function CanvasSizeControl({ rows, cols, onChangeRows, onChangeCols, viewsAtRisk, onCompactLayout }) {
+    const hasRisk = viewsAtRisk > 0;
+
     return (
         <div className="layout-tab__canvas-size">
-            <div className="layout-tab__size-control">
-                <span className="layout-tab__size-label">Rows</span>
-                <div className="layout-tab__size-stepper">
-                    <button
-                        onClick={() => onChangeRows?.(Math.max(1, rows - 1))}
-                        disabled={rows <= 1}
-                    >
-                        <Icon name="remove" size={12} />
-                    </button>
-                    <span className="layout-tab__size-value">{rows}</span>
-                    <button onClick={() => onChangeRows?.(rows + 1)}>
-                        <Icon name="add" size={12} />
-                    </button>
+            <div className="layout-tab__size-controls">
+                <div className="layout-tab__size-control">
+                    <span className="layout-tab__size-label">Rows</span>
+                    <div className="layout-tab__size-stepper">
+                        <button
+                            onClick={() => onChangeRows?.(Math.max(1, rows - 1))}
+                            disabled={rows <= 1}
+                        >
+                            <Icon name="remove" size={12} />
+                        </button>
+                        <span className="layout-tab__size-value">{rows}</span>
+                        <button onClick={() => onChangeRows?.(rows + 1)}>
+                            <Icon name="add" size={12} />
+                        </button>
+                    </div>
+                </div>
+                <div className="layout-tab__size-control">
+                    <span className="layout-tab__size-label">Cols</span>
+                    <div className="layout-tab__size-stepper">
+                        <button
+                            onClick={() => onChangeCols?.(Math.max(1, cols - 1))}
+                            disabled={cols <= 1}
+                        >
+                            <Icon name="remove" size={12} />
+                        </button>
+                        <span className="layout-tab__size-value">{cols}</span>
+                        <button onClick={() => onChangeCols?.(cols + 1)}>
+                            <Icon name="add" size={12} />
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div className="layout-tab__size-control">
-                <span className="layout-tab__size-label">Cols</span>
-                <div className="layout-tab__size-stepper">
-                    <button
-                        onClick={() => onChangeCols?.(Math.max(1, cols - 1))}
-                        disabled={cols <= 1}
-                    >
-                        <Icon name="remove" size={12} />
-                    </button>
-                    <span className="layout-tab__size-value">{cols}</span>
-                    <button onClick={() => onChangeCols?.(cols + 1)}>
-                        <Icon name="add" size={12} />
+
+            {/* Protection warning when views would be removed */}
+            {hasRisk && (
+                <div className="layout-tab__size-warning">
+                    <Icon name="alertTriangle" size={12} />
+                    <span>{viewsAtRisk} view{viewsAtRisk > 1 ? 's' : ''} would be removed</span>
+                    <button onClick={onCompactLayout} title="Auto-move views to fit">
+                        Compact
                     </button>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
 
 /**
- * Canvas Tools - Select, Pan, Merge
+ * Canvas Tools - Select, Pan, Merge, Edit (per spec)
  */
 function CanvasTools({ tool, setTool }) {
     return (
@@ -143,7 +259,7 @@ function CanvasTools({ tool, setTool }) {
             <button
                 className={`layout-tab__tool-btn ${tool === TOOLS.SELECT ? 'layout-tab__tool-btn--active' : ''}`}
                 onClick={() => setTool?.(TOOLS.SELECT)}
-                title="Select - Click to select cells"
+                title="Select - Click to select views, drag to move"
                 data-color="blue"
             >
                 <Icon name="mousePointer2" size={14} />
@@ -152,7 +268,7 @@ function CanvasTools({ tool, setTool }) {
             <button
                 className={`layout-tab__tool-btn ${tool === TOOLS.PAN ? 'layout-tab__tool-btn--active' : ''}`}
                 onClick={() => setTool?.(TOOLS.PAN)}
-                title="Pan - Drag to pan viewport"
+                title="Pan - Drag to pan canvas viewport"
                 data-color="teal"
             >
                 <Icon name="hand" size={14} />
@@ -161,11 +277,20 @@ function CanvasTools({ tool, setTool }) {
             <button
                 className={`layout-tab__tool-btn ${tool === TOOLS.MERGE ? 'layout-tab__tool-btn--active' : ''}`}
                 onClick={() => setTool?.(TOOLS.MERGE)}
-                title="Merge - Select cells to merge/unmerge"
+                title="Merge - Select multiple views to merge cells"
                 data-color="purple"
             >
                 <Icon name="merge" size={14} />
                 <span>Merge</span>
+            </button>
+            <button
+                className={`layout-tab__tool-btn ${tool === 'edit' ? 'layout-tab__tool-btn--active' : ''}`}
+                onClick={() => setTool?.('edit')}
+                title="Edit - Enable resize handles, show drop zones"
+                data-color="amber"
+            >
+                <Icon name="edit2" size={14} />
+                <span>Edit</span>
             </button>
         </div>
     );
@@ -352,9 +477,12 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
     // =========================================================================
 
     const [isLoading, setIsLoading] = useState(false);
+    const [layoutMode, setLayoutMode] = useState(LAYOUT_MODES.FLOW);
     const [flowDirection, setFlowDirection] = useState(FLOW_DIRECTIONS.ROW);
     const [spawnSize, setSpawnSize] = useState('1x1');
+    const [customSpawnSize, setCustomSpawnSize] = useState({ rows: 1, cols: 1 });
     const [tool, setTool] = useState(TOOLS.SELECT);
+    const [viewsAtRisk, setViewsAtRisk] = useState(0);
 
     // Canvas size from localStorage or default
     const [canvasSize, setCanvasSizeState] = useState(() => {
@@ -396,12 +524,24 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
     // HANDLERS - Use events, let CanvasWorkspace handle API calls
     // =========================================================================
 
+    const handleLayoutModeChange = useCallback((mode) => {
+        setLayoutMode(mode);
+        window.dispatchEvent(new CustomEvent('cia:layout-mode-changed', {
+            detail: { mode }
+        }));
+    }, []);
+
     const handleFlowDirectionChange = useCallback((direction) => {
         setFlowDirection(direction);
         // Dispatch event - CanvasWorkspace will handle the actual API call
         window.dispatchEvent(new CustomEvent('cia:flow-direction-changed', {
             detail: { direction }
         }));
+    }, []);
+
+    const handleCompactLayout = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('cia:compact-layout', {}));
+        setViewsAtRisk(0);
     }, []);
 
     const handleRowsChange = useCallback((rows) => {
@@ -561,89 +701,120 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
 
             {/* Scrollable Content */}
             <div className="layout-tab__content">
-                {/* Flow Direction Card */}
-                <div className="layout-tab__card" data-color="purple">
-                    <div className="layout-tab__card-header">
-                        <Icon name="layoutGrid" size={10} />
-                        <span>Flow Direction</span>
-                    </div>
-                    <p className="layout-tab__card-description">
-                        When auto-placing views, fill cells in this order:
-                    </p>
-                    <div className="layout-tab__direction-toggle">
-                        <button
-                            className={`layout-tab__direction-btn ${flowDirection === FLOW_DIRECTIONS.ROW ? 'layout-tab__direction-btn--active' : ''}`}
-                            onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.ROW)}
-                        >
-                            <Icon name="arrowRight" size={14} />
-                            <span>Row</span>
-                        </button>
-                        <button
-                            className={`layout-tab__direction-btn ${flowDirection === FLOW_DIRECTIONS.COLUMN ? 'layout-tab__direction-btn--active' : ''}`}
-                            onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.COLUMN)}
-                        >
-                            <Icon name="arrowDown" size={14} />
-                            <span>Col</span>
-                        </button>
-                    </div>
-                </div>
+                {/* Layout Mode Section - Grid vs Flow per spec */}
+                <Section
+                    title="Layout Mode"
+                    icon="layout"
+                    iconColorClass="icon-purple"
+                    collapsible
+                    defaultExpanded={true}
+                >
+                    <LayoutModeToggle mode={layoutMode} onChange={handleLayoutModeChange} />
 
-                {/* Canvas Size Card */}
-                <div className="layout-tab__card" data-color="blue">
-                    <div className="layout-tab__card-header">
-                        <Icon name="grid3x3" size={10} />
-                        <span>Canvas Size</span>
-                    </div>
+                    {/* Flow direction only shown in Flow mode */}
+                    {layoutMode === LAYOUT_MODES.FLOW && (
+                        <div className="layout-tab__flow-options">
+                            <span className="layout-tab__flow-label">Fill Direction:</span>
+                            <div className="layout-tab__direction-toggle">
+                                <button
+                                    className={`layout-tab__direction-btn ${flowDirection === FLOW_DIRECTIONS.ROW ? 'layout-tab__direction-btn--active' : ''}`}
+                                    onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.ROW)}
+                                >
+                                    <Icon name="arrowRight" size={14} />
+                                    <span>Row-first</span>
+                                </button>
+                                <button
+                                    className={`layout-tab__direction-btn ${flowDirection === FLOW_DIRECTIONS.COLUMN ? 'layout-tab__direction-btn--active' : ''}`}
+                                    onClick={() => handleFlowDirectionChange(FLOW_DIRECTIONS.COLUMN)}
+                                >
+                                    <Icon name="arrowDown" size={14} />
+                                    <span>Col-first</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </Section>
+
+                {/* Canvas Size Section */}
+                <Section
+                    title="Canvas Size"
+                    icon="grid3x3"
+                    iconColorClass="icon-blue"
+                    collapsible
+                    defaultExpanded={true}
+                >
                     <CanvasSizeControl
                         rows={canvasSize.rows}
                         cols={canvasSize.cols}
                         onChangeRows={handleRowsChange}
                         onChangeCols={handleColsChange}
+                        viewsAtRisk={viewsAtRisk}
+                        onCompactLayout={handleCompactLayout}
                     />
-                </div>
+                </Section>
 
-                {/* New View Size Card */}
-                <div className="layout-tab__card" data-color="green">
-                    <div className="layout-tab__card-header">
-                        <Icon name="add_circle" size={10} />
-                        <span>New View Size</span>
-                    </div>
-                    <SpawnSizePicker value={spawnSize} onChange={setSpawnSize} />
-                    <p className="layout-tab__card-description">
+                {/* New View Size Section */}
+                <Section
+                    title="New View Size"
+                    icon="plus"
+                    iconColorClass="icon-green"
+                    collapsible
+                    defaultExpanded={true}
+                >
+                    <SpawnSizePicker
+                        value={spawnSize}
+                        onChange={setSpawnSize}
+                        customSize={customSpawnSize}
+                        onCustomChange={setCustomSpawnSize}
+                    />
+                    <p className="layout-tab__hint">
                         Default size when creating new views
                     </p>
-                </div>
+                </Section>
 
-                {/* Quick Layouts Card */}
-                <div className="layout-tab__card" data-color="amber">
-                    <div className="layout-tab__card-header">
-                        <Icon name="grid3x3" size={10} />
-                        <span>Quick Layouts</span>
-                    </div>
+                {/* Quick Layouts Section */}
+                <Section
+                    title="Quick Layouts"
+                    icon="layoutDashboard"
+                    iconColorClass="icon-amber"
+                    collapsible
+                    defaultExpanded={true}
+                >
                     <div className="layout-tab__quick-layouts">
-                        {QUICK_LAYOUTS.map(layout => {
-                            return (
-                                <button
-                                    key={layout.id}
-                                    className="layout-tab__quick-btn"
-                                    onClick={() => handleQuickLayout(layout)}
-                                    title={layout.label}
-                                >
-                                    <Icon name={layout.icon} size={14} />
-                                    <span>{layout.label}</span>
-                                </button>
-                            );
-                        })}
+                        {QUICK_LAYOUTS.map(layout => (
+                            <button
+                                key={layout.id}
+                                className="layout-tab__quick-btn"
+                                onClick={() => handleQuickLayout(layout)}
+                                title={layout.label}
+                            >
+                                <Icon name={layout.icon} size={14} />
+                                <span>{layout.label}</span>
+                            </button>
+                        ))}
                     </div>
-                </div>
+                </Section>
 
-                {/* Layout Templates Card */}
-                <div className="layout-tab__card" data-color="pink">
-                    <div className="layout-tab__card-header">
-                        <Icon name="bookmark" size={10} />
-                        <span>Saved Templates</span>
-                        <span className="layout-tab__card-count">{layoutTemplates.length}</span>
-                    </div>
+                {/* Canvas Tools Section */}
+                <Section
+                    title="Canvas Tools"
+                    icon="mousePointer2"
+                    iconColorClass="icon-teal"
+                    collapsible
+                    defaultExpanded={true}
+                >
+                    <CanvasTools tool={tool} setTool={setTool} />
+                </Section>
+
+                {/* Layout Templates Section */}
+                <Section
+                    title="Saved Templates"
+                    icon="bookmark"
+                    iconColorClass="icon-pink"
+                    collapsible
+                    defaultExpanded={false}
+                    badge={layoutTemplates.length > 0 ? layoutTemplates.length : undefined}
+                >
                     <LayoutTemplates
                         templates={layoutTemplates}
                         onApply={handleApplyTemplate}
@@ -652,16 +823,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                         onExport={handleExportTemplate}
                         onImport={handleImportTemplate}
                     />
-                </div>
-
-                {/* Canvas Tools Card */}
-                <div className="layout-tab__card" data-color="teal">
-                    <div className="layout-tab__card-header">
-                        <Icon name="mousePointer2" size={10} />
-                        <span>Canvas Tools</span>
-                    </div>
-                    <CanvasTools tool={tool} setTool={setTool} />
-                </div>
+                </Section>
             </div>
 
             {/* Permanently Docked Canvas Navigator */}

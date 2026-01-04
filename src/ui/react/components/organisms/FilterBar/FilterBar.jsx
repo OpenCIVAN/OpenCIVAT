@@ -16,7 +16,7 @@ import { useAdaptive } from '@UI/react/context';
 import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { ToggleGroup } from '@UI/react/components/molecules/ToggleGroup';
 import { Chip } from '@UI/react/components/atoms/Chip';
-import { IconButton } from '@UI/react/components/atoms/IconButton';
+import { IconButton } from '@UI/react/components/atoms/Button';
 import { Divider } from '@UI/react/components/atoms/Divider';
 import './FilterBar.scss';
 

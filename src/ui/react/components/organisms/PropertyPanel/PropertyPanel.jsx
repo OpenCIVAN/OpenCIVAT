@@ -21,7 +21,7 @@ import { InfoRow } from '@UI/react/components/molecules/InfoRow';
 import { Toggle } from '@UI/react/components/atoms/Toggle';
 import { Slider } from '@UI/react/components/atoms/Slider';
 import { Chip } from '@UI/react/components/atoms/Chip';
-import { IconButton } from '@UI/react/components/atoms/IconButton';
+import { IconButton } from '@UI/react/components/atoms/Button';
 import './PropertyPanel.scss';
 
 /**

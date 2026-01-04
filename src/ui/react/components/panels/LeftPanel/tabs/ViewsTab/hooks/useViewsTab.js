@@ -580,6 +580,81 @@ export function useViewsTab({ workspaceId }) {
     viewLifecycleService.toggleViewVisibility(viewId);
   }, []);
 
+  /**
+   * Bookmark a view
+   */
+  const handleBookmarkView = useCallback((viewId) => {
+    log.debug("Bookmarking view:", viewId);
+    // TODO: Implement bookmark service integration
+    window.dispatchEvent(new CustomEvent(DOM_EVENTS.OPEN_BOOKMARK_VIEW_MODAL, { detail: { viewId } }));
+  }, []);
+
+  /**
+   * Share a view
+   */
+  const handleShareView = useCallback((viewId) => {
+    log.debug("Sharing view:", viewId);
+    window.dispatchEvent(new CustomEvent(DOM_EVENTS.OPEN_SHARE_VIEW_MODAL, { detail: { viewId } }));
+  }, []);
+
+  /**
+   * Open tools for a view
+   */
+  const handleOpenTools = useCallback((viewId) => {
+    log.debug("Opening tools for view:", viewId);
+    // Focus the view first, then switch to Instance Tools tab
+    viewLifecycleService.focusView(viewId);
+    window.dispatchEvent(new CustomEvent(DOM_EVENTS.SWITCH_TAB, { detail: { tab: 'instanceTools' } }));
+  }, []);
+
+  /**
+   * Duplicate a view
+   */
+  const handleDuplicateView = useCallback(async (viewId) => {
+    log.debug("Duplicating view:", viewId);
+    try {
+      await viewLifecycleService.duplicateView(viewId);
+    } catch (e) {
+      log.error("Failed to duplicate view:", e);
+      setError(e);
+    }
+  }, []);
+
+  /**
+   * Remove a filter from a view
+   */
+  const handleRemoveFilter = useCallback((viewId, filterId) => {
+    log.debug("Removing filter from view:", viewId, filterId);
+    const viewManager = getViewConfigurationManager();
+    const view = viewManager?.getView?.(viewId);
+    if (view?.filters?.[filterId]) {
+      view.filters[filterId].active = false;
+      viewManager?.updateView?.(viewId, { filters: view.filters });
+    }
+  }, []);
+
+  /**
+   * Update link property configuration
+   */
+  const handleLinkPropertyChange = useCallback((viewId, propertyId, config) => {
+    log.debug("Updating link property:", viewId, propertyId, config);
+    const viewManager = getViewConfigurationManager();
+    const view = viewManager?.getView?.(viewId);
+    if (view) {
+      const links = { ...view.links, [propertyId]: config };
+      viewManager?.updateView?.(viewId, { links });
+    }
+  }, []);
+
+  /**
+   * Update link mode (Follow, Bidirectional, Broadcast)
+   */
+  const handleLinkModeChange = useCallback((viewId, mode) => {
+    log.debug("Updating link mode:", viewId, mode);
+    const viewManager = getViewConfigurationManager();
+    viewManager?.updateView?.(viewId, { linkMode: mode });
+  }, []);
+
   // =========================================================================
   // MANUAL REFRESH
   // =========================================================================
@@ -630,6 +705,15 @@ export function useViewsTab({ workspaceId }) {
     handleResizeView,
     handleFocusView,
     handleToggleVisibility,
+
+    // New handlers for expanded panel
+    handleBookmarkView,
+    handleShareView,
+    handleOpenTools,
+    handleDuplicateView,
+    handleRemoveFilter,
+    handleLinkPropertyChange,
+    handleLinkModeChange,
     refetch,
   };
 }

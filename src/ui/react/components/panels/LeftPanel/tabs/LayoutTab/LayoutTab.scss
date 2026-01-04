@@ -109,6 +109,74 @@
 }
 
 // =============================================================================
+// LAYOUT MODE TOGGLE (Grid vs Flow per spec)
+// =============================================================================
+
+.layout-tab__mode-toggle {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.layout-tab__mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: $color-text-secondary;
+    border-color: $color-border-default;
+  }
+
+  &--active {
+    background: rgba($color-accent-purple, 0.15);
+    border-color: rgba($color-accent-purple, 0.4);
+    color: $color-accent-purple;
+  }
+}
+
+.layout-tab__mode-content {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.layout-tab__mode-label {
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
+}
+
+.layout-tab__mode-desc {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+// =============================================================================
+// FLOW OPTIONS
+// =============================================================================
+
+.layout-tab__flow-options {
+  margin-top: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1px solid $color-border-subtle;
+}
+
+.layout-tab__flow-label {
+  display: block;
+  font-size: 10px;
+  color: $color-text-muted;
+  margin-bottom: $spacing-xs;
+}
+
+// =============================================================================
 // FLOW DIRECTION TOGGLE
 // =============================================================================
 
@@ -153,6 +221,12 @@
 
 .layout-tab__canvas-size {
   display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.layout-tab__size-controls {
+  display: flex;
   gap: $spacing-md;
 }
 
@@ -161,6 +235,41 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.layout-tab__size-warning {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba($color-accent-amber, 0.1);
+  border: 1px solid rgba($color-accent-amber, 0.3);
+  border-radius: $radius-sm;
+  font-size: 10px;
+  color: $color-accent-amber;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  span {
+    flex: 1;
+  }
+
+  button {
+    padding: 3px 8px;
+    background: rgba($color-accent-amber, 0.2);
+    border: 1px solid rgba($color-accent-amber, 0.4);
+    border-radius: $radius-xs;
+    color: $color-accent-amber;
+    font-size: 9px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-amber, 0.3);
+    }
+  }
 }
 
 .layout-tab__size-label {
@@ -273,6 +382,75 @@
   grid-row: span 1;
 }
 
+.layout-tab__spawn-btn--custom {
+  svg {
+    opacity: 0.7;
+  }
+}
+
+.layout-tab__custom-size {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  margin-top: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+}
+
+.layout-tab__custom-inputs {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex: 1;
+
+  input {
+    width: 40px;
+    padding: 4px 6px;
+    background: $color-bg-primary;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-xs;
+    color: $color-text-primary;
+    font-size: 11px;
+    text-align: center;
+    font-family: $font-family-mono;
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-green;
+    }
+  }
+
+  span {
+    color: $color-text-muted;
+    font-size: 11px;
+  }
+}
+
+.layout-tab__custom-apply {
+  padding: 4px 10px;
+  background: $color-accent-green;
+  border: none;
+  border-radius: $radius-xs;
+  color: white;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+
+.layout-tab__hint {
+  margin-top: $spacing-sm;
+  font-size: 10px;
+  color: $color-text-tertiary;
+  line-height: 1.4;
+}
+
 // =============================================================================
 // QUICK LAYOUTS
 // =============================================================================
@@ -351,6 +529,11 @@
       background: rgba($color-accent-purple, 0.15);
       border-color: rgba($color-accent-purple, 0.4);
       color: $color-accent-purple;
+    }
+    &[data-color="amber"] {
+      background: rgba($color-accent-amber, 0.15);
+      border-color: rgba($color-accent-amber, 0.4);
+      color: $color-accent-amber;
     }
   }
 }

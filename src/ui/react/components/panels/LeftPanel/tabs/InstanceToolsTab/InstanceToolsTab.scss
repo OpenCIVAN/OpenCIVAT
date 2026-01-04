@@ -256,26 +256,38 @@
 }
 
 // =============================================================================
-// TOOL BUTTON
+// TOOL CATEGORY
+// =============================================================================
+
+.tool-category__list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+// =============================================================================
+// TOOL BUTTON (Enhanced with label)
 // =============================================================================
 
 .tool-button {
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  width: 100%;
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid $color-border-default;
+  border: 1px solid $color-border-subtle;
   border-radius: $radius-sm;
   color: $color-text-secondary;
+  font-size: 11px;
   cursor: pointer;
   transition: all $transition-fast;
-  position: relative;
+  text-align: left;
 
   &:hover:not(&--active):not(&--disabled) {
     background: rgba(0, 0, 0, 0.3);
     color: $color-text-primary;
+    border-color: $color-border-default;
   }
 
   &--active {
@@ -289,11 +301,83 @@
     cursor: not-allowed;
   }
 
-  &__dropdown-indicator {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
+  span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// =============================================================================
+// TOOL OPTION ITEM
+// =============================================================================
+
+.tool-option {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: all $transition-fast;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+
+  &:hover:not(&--disabled) {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &--active {
+    color: $color-accent-amber;
+  }
+
+  &--disabled {
     opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__label {
+    display: block;
+    font-size: 11px;
+  }
+
+  &__desc {
+    display: block;
+    font-size: 9px;
+    color: $color-text-muted;
+    margin-top: 2px;
+  }
+
+  &__active-dot {
+    width: 6px;
+    height: 6px;
+    background: $color-accent-amber;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__separator {
+    height: 1px;
+    background: $color-border-subtle;
+    margin: $spacing-xs 0;
+  }
+
+  &__header {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: $spacing-xs $spacing-sm;
   }
 }
 
@@ -524,25 +608,14 @@
 }
 
 // =============================================================================
-// CAMERA GRID MENU
+// CAMERA GRID
 // =============================================================================
 
-.camera-grid-menu {
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
   padding: $spacing-sm;
-
-  &__label {
-    font-size: 9px;
-    color: $color-text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-  }
 
   &__cell {
     display: flex;
@@ -559,10 +632,15 @@
     cursor: pointer;
     transition: all $transition-fast;
 
-    &:hover:not(&--empty) {
+    &:hover:not(&--empty):not(:disabled) {
       background: rgba($color-accent-blue, 0.15);
       border-color: rgba($color-accent-blue, 0.4);
       color: $color-accent-blue;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     &--empty {
@@ -575,7 +653,160 @@
       background: rgba($color-accent-amber, 0.1);
       border-color: rgba($color-accent-amber, 0.3);
       color: $color-accent-amber;
+
+      &:hover:not(:disabled) {
+        background: rgba($color-accent-amber, 0.2);
+        border-color: rgba($color-accent-amber, 0.5);
+      }
     }
+
+    span {
+      font-size: 8px;
+    }
+  }
+}
+
+// =============================================================================
+// SLIDER CONTROL (Enhanced slider with presets)
+// =============================================================================
+
+.slider-control {
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: $radius-sm;
+  margin: $spacing-xs 0;
+
+  &--disabled {
+    opacity: 0.5;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+    font-size: 11px;
+    color: $color-text-secondary;
+  }
+
+  &__label {
+    flex: 1;
+  }
+
+  &__value {
+    color: $color-accent-teal;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__slider {
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    cursor: pointer;
+    margin-bottom: $spacing-sm;
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      background: $color-accent-teal;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+
+  &__presets {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  &__preset {
+    padding: 3px 8px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active):not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.2);
+      border-color: rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+    }
+  }
+
+  &__disabled-reason {
+    font-size: 9px;
+    color: $color-text-muted;
+    font-style: italic;
+    margin-top: $spacing-sm;
+  }
+}
+
+// =============================================================================
+// COLORMAP GRID
+// =============================================================================
+
+.colormap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: $spacing-xs;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(&--active):not(:disabled) {
+      border-color: $color-border-default;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      border-color: $color-accent-purple;
+      background: rgba($color-accent-purple, 0.1);
+    }
+  }
+
+  &__swatch {
+    height: 16px;
+    border-radius: $radius-xs;
+  }
+
+  &__name {
+    font-size: 9px;
+    color: $color-text-muted;
+    text-align: center;
   }
 }
 
@@ -584,13 +815,24 @@
 // =============================================================================
 
 .layers-subtab {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+
   &__info {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
     font-size: 10px;
     color: $color-text-muted;
     padding: $spacing-sm;
     background: rgba(0, 0, 0, 0.15);
     border-radius: $radius-sm;
-    margin-bottom: $spacing-sm;
+
+    svg {
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
   }
 
   &__list {
@@ -600,6 +842,194 @@
   }
 }
 
+// =============================================================================
+// QUICK VISIBILITY ROW
+// =============================================================================
+
+.quick-visibility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+
+  &__label {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__actions {
+    display: flex;
+    gap: $spacing-xs;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    font-size: 9px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.4);
+      color: $color-accent-green;
+    }
+  }
+}
+
+// =============================================================================
+// LAYER ITEM (Enhanced with opacity controls)
+// =============================================================================
+
+.layer-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  transition: all $transition-fast;
+
+  &--disabled {
+    opacity: 0.6;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__label {
+    font-size: 11px;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__count {
+    font-size: 9px;
+    color: $color-text-muted;
+  }
+
+  // Opacity controls panel
+  &__opacity {
+    padding: $spacing-sm;
+    padding-top: 0;
+    border-top: 1px solid $color-border-subtle;
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  &__opacity-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+    font-size: 10px;
+    color: $color-text-muted;
+
+    svg {
+      opacity: 0.5;
+    }
+
+    span:first-of-type {
+      flex: 1;
+    }
+  }
+
+  &__opacity-value {
+    color: $color-accent-teal;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__opacity-slider {
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    cursor: pointer;
+    margin-bottom: $spacing-sm;
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      background: $color-accent-teal;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+
+  &__opacity-presets {
+    display: flex;
+    gap: 4px;
+  }
+
+  &__preset {
+    flex: 1;
+    padding: 4px;
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+    text-align: center;
+
+    &:hover:not(&--active):not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    &--active {
+      background: rgba($color-accent-teal, 0.2);
+      border-color: rgba($color-accent-teal, 0.4);
+      color: $color-accent-teal;
+    }
+  }
+}
+
+// Legacy layer-toggle support
 .layer-toggle {
   display: flex;
   align-items: center;

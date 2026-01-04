@@ -14,6 +14,7 @@
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { ViewItemContextMenu } from './components/ViewItemContextMenu';
+import { ViewExpandedPanel } from './components/ViewExpandedPanel';
 import { ViewSettingsModal } from '@UI/react/components/modals/ViewSettingsModal';
 import { Thumbnail } from '@UI/react/components/atoms/Thumbnail';
 import './ViewItem.scss';
@@ -108,6 +109,14 @@ export const ViewItem = memo(function ViewItem({
     onRename,
     onSelect,
     onNavigate,
+    onBookmark,
+    onShare,
+    onOpenTools,
+    onSizeChange,
+    onFilterRemove,
+    onLinkPropertyChange,
+    onLinkModeChange,
+    availableViews = [],
 
     // Drag callbacks
     onDragStart,
@@ -497,8 +506,28 @@ export const ViewItem = memo(function ViewItem({
                 </div>
             )}
 
-            {/* Desktop: Expanded toolbar */}
-            {isExpanded && !isVR && moreTools.length > 0 && (
+            {/* Expanded Panel with full details */}
+            {isExpanded && viewState === 'active' && (
+                <ViewExpandedPanel
+                    view={view}
+                    isVR={isVR}
+                    availableViews={availableViews}
+                    onNavigate={() => onNavigate?.(view.id)}
+                    onOpenTools={() => onOpenTools?.(view.id)}
+                    onDuplicate={() => onDuplicate?.(view.id)}
+                    onBookmark={() => onBookmark?.(view.id)}
+                    onShare={() => onShare?.(view.id)}
+                    onClose={() => onClose?.(view.id)}
+                    onDelete={() => onTrash?.(view.id)}
+                    onSizeChange={onSizeChange}
+                    onFilterRemove={onFilterRemove}
+                    onLinkPropertyChange={onLinkPropertyChange}
+                    onLinkModeChange={onLinkModeChange}
+                />
+            )}
+
+            {/* Desktop: Expanded toolbar for inactive views */}
+            {isExpanded && !isVR && viewState !== 'active' && moreTools.length > 0 && (
                 <div className="view-item__toolbar">
                     <span className="view-item__toolbar-label">Tools</span>
                     {moreTools.map(tool => (
@@ -507,8 +536,8 @@ export const ViewItem = memo(function ViewItem({
                 </div>
             )}
 
-            {/* VR: Expanded toolbar */}
-            {isExpanded && isVR && moreTools.length > 0 && (
+            {/* VR: Expanded toolbar for inactive views */}
+            {isExpanded && isVR && viewState !== 'active' && moreTools.length > 0 && (
                 <div className="view-item__vr-toolbar">
                     {moreTools.map(tool => (
                         <ToolButton key={tool.id} {...tool} isVR />
