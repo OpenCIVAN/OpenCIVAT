@@ -61,10 +61,10 @@ export { SegmentedToggle } from './SegmentedToggle';
 export { SubtabBar } from './SubtabBar';
 
 // Tabs - Tab container component
-export { Tabs, Tab, TabList, TabPanel } from './Tabs';
+export { Tabs } from './Tabs';
 
 // OptionList - Selectable option list
-export { OptionList, OptionListItem } from './OptionList';
+export { OptionList } from './OptionList';
 
 // CameraGrid - Camera view grid layout
 export { CameraGrid } from './CameraGrid';
