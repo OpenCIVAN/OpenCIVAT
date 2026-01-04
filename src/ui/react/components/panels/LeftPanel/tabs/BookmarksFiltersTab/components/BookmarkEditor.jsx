@@ -14,7 +14,8 @@
  */
 
 import React, { useState, useCallback, useEffect, memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { BOOKMARK_TYPES, BOOKMARK_SCOPES } from '../hooks/useBookmarksTab';
 
 /**
@@ -323,22 +324,20 @@ export const BookmarkEditor = memo(function BookmarkEditor({
 
                 {/* Footer */}
                 <div className="bookmark-editor__footer">
-                    <button
-                        type="button"
-                        className="bookmark-editor__cancel-btn"
+                    <LabeledButton
+                        label="Cancel"
                         onClick={onClose}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        className="bookmark-editor__save-btn"
+                        size="sm"
+                        variant="ghost"
+                    />
+                    <LabeledButton
+                        icon="save"
+                        label={isSaving ? 'Saving...' : (bookmark ? 'Update' : 'Create')}
                         onClick={handleSave}
                         disabled={isSaving}
-                    >
-                        <Icon name="save" size={12} />
-                        {isSaving ? 'Saving...' : (bookmark ? 'Update' : 'Create')}
-                    </button>
+                        size="sm"
+                        variant="primary"
+                    />
                 </div>
             </div>
         </div>

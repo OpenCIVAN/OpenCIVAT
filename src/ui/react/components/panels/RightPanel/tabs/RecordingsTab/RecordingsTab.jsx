@@ -18,7 +18,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { Button } from '@UI/react/components/common/Button';
 import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
@@ -416,14 +417,17 @@ export function RecordingsTab({ workspaceId }) {
             </div>
 
             {/* Footer */}
-            <div className="recordings-panel__footer">
-                <span className="recordings-panel__storage">
+            <div className="panel-footer">
+                <span className="panel-footer__info">
                     Storage: {totalSize}
                 </span>
-                <button className="recordings-panel__refresh-btn" onClick={refresh}>
-                    <Icon name="refreshCw" size={10} />
-                    Refresh
-                </button>
+                <LabeledButton
+                    icon="refreshCw"
+                    label="Refresh"
+                    onClick={refresh}
+                    size="sm"
+                    variant="ghost"
+                />
             </div>
         </div>
     );

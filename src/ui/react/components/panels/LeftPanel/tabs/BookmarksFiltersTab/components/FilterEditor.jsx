@@ -13,7 +13,8 @@
  */
 
 import React, { useState, useCallback, useEffect, memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { FILTER_SCOPES } from '../hooks/useFiltersTab';
 
 /**
@@ -291,22 +292,20 @@ export const FilterEditor = memo(function FilterEditor({
 
                 {/* Footer */}
                 <div className="filter-editor__footer">
-                    <button
-                        type="button"
-                        className="filter-editor__cancel-btn"
+                    <LabeledButton
+                        label="Cancel"
                         onClick={onClose}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        className="filter-editor__save-btn"
+                        size="sm"
+                        variant="ghost"
+                    />
+                    <LabeledButton
+                        icon="save"
+                        label={isSaving ? 'Saving...' : (filter ? 'Update' : 'Save')}
                         onClick={handleSave}
                         disabled={isSaving}
-                    >
-                        <Icon name="save" size={12} />
-                        {isSaving ? 'Saving...' : (filter ? 'Update' : 'Save')}
-                    </button>
+                        size="sm"
+                        variant="primary"
+                    />
                 </div>
             </div>
         </div>

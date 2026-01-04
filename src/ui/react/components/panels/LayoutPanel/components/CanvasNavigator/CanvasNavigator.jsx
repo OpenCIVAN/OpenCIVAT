@@ -16,6 +16,7 @@ import React, { memo, useState } from "react";
 import ReactDOM from "react-dom";
 import { Icon } from '@UI/react/components/common/Icon';
 import { FloatingPanelHeader } from '@UI/react/components/common/FloatingPanelHeader';
+import { DirectionalButton } from '@UI/react/components/molecules';
 import { useAdaptive } from '@UI/react/context';
 import { useLayoutPanelContext, DOCK_POSITIONS } from "../../LayoutPanelContext";
 import {
@@ -126,53 +127,50 @@ const NumberSpinner = memo(({
 
 // D-Pad component with home center
 const DPad = memo(({ onMove, onHome, disabled, isAtHome }) => {
-    const { isVR } = useAdaptive();
-    const iconSize = isVR ? 14 : 10;
-
     return (
         <div className="canvas-navigator__dpad">
-            <NavBtn
-                size="sm"
+            <DirectionalButton
+                direction="up"
                 onClick={() => onMove('up')}
                 disabled={disabled?.up}
-                title="Move Up"
-            >
-                <Icon name="chevronUp" size={iconSize} />
-            </NavBtn>
+                tooltip="Move Up"
+                size="sm"
+                className="canvas-navigator__dpad-btn"
+            />
             <div className="canvas-navigator__dpad-row">
-                <NavBtn
-                    size="sm"
+                <DirectionalButton
+                    direction="left"
                     onClick={() => onMove('left')}
                     disabled={disabled?.left}
-                    title="Move Left"
-                >
-                    <Icon name="chevronLeft" size={iconSize} />
-                </NavBtn>
-                <button
-                    className={`canvas-navigator__dpad-home ${isAtHome ? 'canvas-navigator__dpad-home--at-home' : ''}`}
-                    onClick={onHome}
-                    title="Go to home position"
-                    data-vr={isVR}
-                >
-                    <Icon name="home" size={isVR ? 14 : 10} />
-                </button>
-                <NavBtn
+                    tooltip="Move Left"
                     size="sm"
+                    className="canvas-navigator__dpad-btn"
+                />
+                <DirectionalButton
+                    direction="center"
+                    onClick={onHome}
+                    tooltip="Go to home position"
+                    size="sm"
+                    active={isAtHome}
+                    className="canvas-navigator__dpad-home"
+                />
+                <DirectionalButton
+                    direction="right"
                     onClick={() => onMove('right')}
                     disabled={disabled?.right}
-                    title="Move Right"
-                >
-                    <Icon name="chevronRight" size={iconSize} />
-                </NavBtn>
+                    tooltip="Move Right"
+                    size="sm"
+                    className="canvas-navigator__dpad-btn"
+                />
             </div>
-            <NavBtn
-                size="sm"
+            <DirectionalButton
+                direction="down"
                 onClick={() => onMove('down')}
                 disabled={disabled?.down}
-                title="Move Down"
-            >
-                <Icon name="chevronDown" size={iconSize} />
-            </NavBtn>
+                tooltip="Move Down"
+                size="sm"
+                className="canvas-navigator__dpad-btn"
+            />
         </div>
     );
 });

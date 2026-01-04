@@ -8,11 +8,11 @@ import './DirectionalButton.scss';
 
 // Direction to icon mapping
 const DIRECTION_ICONS = {
-    up: 'chevron-up',
-    down: 'chevron-down',
-    left: 'chevron-left',
-    right: 'chevron-right',
-    center: 'circle-dot',
+    up: 'chevronUp',
+    down: 'chevronDown',
+    left: 'chevronLeft',
+    right: 'chevronRight',
+    center: 'home',
 };
 
 // Long press delay in ms

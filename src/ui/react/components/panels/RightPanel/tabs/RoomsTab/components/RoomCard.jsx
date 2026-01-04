@@ -4,7 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 
 /**
  * Get access icon for room
@@ -121,28 +122,31 @@ export function RoomCard({ room, onJoin, onLeave, onSettings, onDelete }) {
 
                     <div className="room-card__footer">
                         {room.isCurrentRoom && room.type !== 'project' && (
-                            <button
-                                className="room-card__footer-btn room-card__footer-btn--leave"
+                            <LabeledButton
+                                icon="logout"
+                                label="Leave Room"
                                 onClick={() => onLeave(room.id)}
-                            >
-                                <Icon name="logout" size={12} />
-                                Leave Room
-                            </button>
+                                size="sm"
+                                variant="ghost"
+                                color="amber"
+                            />
                         )}
-                        <button
-                            className="room-card__footer-btn"
+                        <LabeledButton
+                            icon="settings"
+                            label="Settings"
                             onClick={() => onSettings(room.id)}
-                        >
-                            <Icon name="settings" size={12} />
-                            Settings
-                        </button>
+                            size="sm"
+                            variant="ghost"
+                        />
                         {room.type !== 'project' && (
-                            <button
-                                className="room-card__footer-btn room-card__footer-btn--delete"
+                            <IconButton
+                                icon="delete"
                                 onClick={() => onDelete(room.id)}
-                            >
-                                <Icon name="delete" size={12} />
-                            </button>
+                                size="sm"
+                                variant="ghost"
+                                color="red"
+                                tooltip="Delete room"
+                            />
                         )}
                     </div>
                 </div>

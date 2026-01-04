@@ -5,6 +5,8 @@
  * Transparent by default, shows outline on hover.
  * Disables direction buttons at grid boundaries.
  *
+ * Uses DirectionalButton molecule for consistent styling.
+ *
  * @param {function} onNavigate - Callback for direction navigation (up, down, left, right)
  * @param {function} onHome - Callback for home button
  * @param {Object} viewport - Current viewport { row, col }
@@ -13,7 +15,7 @@
  */
 
 import { memo, useState, useCallback, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { DirectionalButton } from '@UI/react/components/molecules';
 import './DPadController.scss';
 
 export const DPadController = memo(function DPadController({
@@ -49,54 +51,40 @@ export const DPadController = memo(function DPadController({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Up */}
-            <button
-                className={`dpad-controller__btn dpad-controller__btn--up ${boundaries.atTop ? 'dpad-controller__btn--disabled' : ''}`}
+            <DirectionalButton
+                direction="up"
                 onClick={() => handleNavigate('up')}
                 disabled={boundaries.atTop}
-                aria-label="Navigate up"
-            >
-                <Icon name="chevronUp" size={14} />
-            </button>
-
-            {/* Left */}
-            <button
-                className={`dpad-controller__btn dpad-controller__btn--left ${boundaries.atLeft ? 'dpad-controller__btn--disabled' : ''}`}
+                size="sm"
+                className="dpad-controller__btn dpad-controller__btn--up"
+            />
+            <DirectionalButton
+                direction="left"
                 onClick={() => handleNavigate('left')}
                 disabled={boundaries.atLeft}
-                aria-label="Navigate left"
-            >
-                <Icon name="chevronLeft" size={14} />
-            </button>
-
-            {/* Center/Home */}
-            <button
-                className="dpad-controller__btn dpad-controller__btn--center"
+                size="sm"
+                className="dpad-controller__btn dpad-controller__btn--left"
+            />
+            <DirectionalButton
+                direction="center"
                 onClick={onHome}
-                aria-label="Go to home"
-            >
-                <Icon name="home" size={12} />
-            </button>
-
-            {/* Right */}
-            <button
-                className={`dpad-controller__btn dpad-controller__btn--right ${boundaries.atRight ? 'dpad-controller__btn--disabled' : ''}`}
+                size="sm"
+                className="dpad-controller__btn dpad-controller__btn--center"
+            />
+            <DirectionalButton
+                direction="right"
                 onClick={() => handleNavigate('right')}
                 disabled={boundaries.atRight}
-                aria-label="Navigate right"
-            >
-                <Icon name="chevronRight" size={14} />
-            </button>
-
-            {/* Down */}
-            <button
-                className={`dpad-controller__btn dpad-controller__btn--down ${boundaries.atBottom ? 'dpad-controller__btn--disabled' : ''}`}
+                size="sm"
+                className="dpad-controller__btn dpad-controller__btn--right"
+            />
+            <DirectionalButton
+                direction="down"
                 onClick={() => handleNavigate('down')}
                 disabled={boundaries.atBottom}
-                aria-label="Navigate down"
-            >
-                <Icon name="chevronDown" size={14} />
-            </button>
+                size="sm"
+                className="dpad-controller__btn dpad-controller__btn--down"
+            />
         </div>
     );
 });

@@ -12,7 +12,8 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { getScopeChips } from './constants';
@@ -173,14 +174,13 @@ export function BookmarksFiltersPanelContent({
             )}
 
             {/* Footer - Add button */}
-            <div className="bookmarks-filters-tab__footer">
-                <button
-                    className="bookmarks-filters-tab__add-btn"
+            <div className="panel-footer">
+                <LabeledButton
+                    icon="add"
+                    label={activeSubTab === 'bookmarks' ? 'Add Bookmark' : 'Save Current Filter'}
                     onClick={handleAdd}
-                >
-                    <Icon name="add" size={12} />
-                    {activeSubTab === 'bookmarks' ? 'Add Bookmark' : 'Save Current Filter'}
-                </button>
+                    size="sm"
+                />
             </div>
         </div>
     );

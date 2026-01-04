@@ -17,7 +17,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { SubtabBar } from '@UI/react/components/common/SubtabBar';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 
@@ -119,16 +120,23 @@ export function PeopleTab({ workspaceId, roomId }) {
 
             {/* Footer */}
             <div className="panel-footer">
-                <button className="panel-footer__btn panel-footer__btn--primary">
-                    <Icon name="userPlus" size={11} />
-                    <span>Invite</span>
-                </button>
-                <button className="panel-footer__btn panel-footer__btn--icon" title="Raise Hand">
-                    <Icon name="hand" size={11} />
-                </button>
-                <button className="panel-footer__btn panel-footer__btn--icon" title="Settings">
-                    <Icon name="settings" size={11} />
-                </button>
+                <LabeledButton
+                    icon="userPlus"
+                    label="Invite"
+                    size="sm"
+                />
+                <IconButton
+                    icon="hand"
+                    size="sm"
+                    variant="ghost"
+                    tooltip="Raise Hand"
+                />
+                <IconButton
+                    icon="settings"
+                    size="sm"
+                    variant="ghost"
+                    tooltip="Settings"
+                />
             </div>
         </div>
     );

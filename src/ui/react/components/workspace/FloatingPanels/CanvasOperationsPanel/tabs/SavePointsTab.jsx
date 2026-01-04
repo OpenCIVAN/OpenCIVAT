@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { SavePointItem } from '../components/SavePointItem';
 
 /**
@@ -28,15 +29,13 @@ export function SavePointsTab({
     <div className="save-points-tab">
       {/* Create button */}
       <div className="save-points-tab__header">
-        <button
-          className="cop-button cop-button--outline-blue"
+        <LabeledButton
+          icon="save"
+          label="Create Save Point"
           onClick={onCreateSavePoint}
-          type="button"
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-        >
-          <Icon name="save" size={14} />
-          Create Save Point
-        </button>
+          variant="secondary"
+          fullWidth
+        />
       </div>
 
       {/* Save points list */}

@@ -17,7 +17,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import {
     ResizableSectionsContainer,
@@ -170,16 +171,18 @@ export function NotesTab({ workspaceId }) {
 
             {/* Footer */}
             <div className="panel-footer">
-                <button
-                    className="panel-footer__btn panel-footer__btn--primary"
+                <LabeledButton
+                    icon="add"
+                    label="New Note"
                     onClick={() => setShowNewNote(true)}
-                >
-                    <Icon name="add" size={11} />
-                    <span>New Note</span>
-                </button>
-                <button className="panel-footer__btn panel-footer__btn--icon">
-                    <Icon name="download" size={11} />
-                </button>
+                    size="sm"
+                />
+                <IconButton
+                    icon="download"
+                    size="sm"
+                    variant="ghost"
+                    tooltip="Export notes"
+                />
             </div>
         </div>
     );

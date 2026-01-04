@@ -436,14 +436,41 @@ Created molecules with VR support and Storybook stories:
 - [x] `SecondaryFooter.jsx` - Now uses `LabeledButton` from molecules
 - [x] `LeftActivityBar.jsx` - Now uses `TabButton` with `variant="etched"` and `iconOnly`
 - [x] `RightActivityBar.jsx` - Now uses `TabButton` with `variant="etched"` and `iconOnly`
+- [x] `DPadController.jsx` - Now uses `DirectionalButton` molecule
+- [x] `ViewportNavigator.jsx` - Now uses `DirectionalButton` for navigation arrows
+- [x] `CanvasNavigator.jsx` - Internal DPad now uses `DirectionalButton` molecule
+
+**Panel footer migrations:**
+- [x] `NotesTab.jsx` - Uses `LabeledButton` + `IconButton`
+- [x] `DatasetsTab.jsx` - Uses `LabeledButton` + `IconButton`
+- [x] `ViewsTab.jsx` - Uses `LabeledButton`
+- [x] `PeopleTab.jsx` - Uses `LabeledButton` + `IconButton`
+- [x] `AnnotationsTab.jsx` - Uses `LabeledButton`
+- [x] `BookmarksFiltersTab.jsx` - Uses `LabeledButton`
+- [x] `RecordingsTab.jsx` - Uses `LabeledButton`
+- [x] `RoomCard.jsx` - Uses `LabeledButton` + `IconButton`
+- [x] `AnnotationsSubtab.jsx` - Uses `LabeledButton`
+- [x] `BookmarkEditor.jsx` - Uses `LabeledButton`
+- [x] `FilterEditor.jsx` - Uses `LabeledButton`
 
 **TabButton enhancements for activity bars:**
 - Added `variant="etched"` - Recessed button style with glow effect when active
 - Added `iconOnly` prop - Square button with hidden label
 - Added color variants with glow/border CSS variables
 
+**DirectionalButton fixes:**
+- Fixed icon names to use camelCase (`chevronUp` instead of `chevron-up`)
+- Changed center icon to `home` for consistency with existing D-pads
+
+**High-traffic component migrations:**
+- [x] `InstanceViewport.jsx` - GearOnlyDropdown and MoreMenu items now use `MenuItem` molecule
+- [x] `CanvasOperationsPanel.jsx` - Control buttons use `IconButton`, imports TabButton molecule
+- [x] `TransactionTab.jsx` - Uses `LabeledButton` for toolbar and action buttons
+- [x] `AuditLogTab.jsx` - Uses `ToggleGroup` for view/sort toggles
+- [x] `SavePointsTab.jsx` - Uses `LabeledButton` for create button
+
 **Pending migrations:**
-- Other high-traffic components per priority list above
+- Modal footers (can be migrated as encountered)
 
 **Import pattern established:**
 ```jsx

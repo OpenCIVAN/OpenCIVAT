@@ -1,7 +1,8 @@
 // src/ui/react/components/workspace/InstanceViewport/InstanceViewport.jsx
 import React, { useRef, useEffect, useState, useCallback, useMemo, memo } from "react";
 import { createPortal } from 'react-dom';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { MenuItem, LabeledButton } from '@UI/react/components/molecules';
 
 import { instance as log } from "@Utils/logger.js";
 import { getToolIcon } from "@UI/react/components/workspace/ToolbarIconRegistry.js";
@@ -348,14 +349,12 @@ function GearOnlyDropdown({
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <button
-                        className="instance-viewport__gear-item instance-viewport__gear-item--primary"
+                    <MenuItem
+                        icon="wrench"
+                        label="Instance Tools"
                         onClick={(e) => handleItemClick(e, onOpenInstanceTools)}
-                    >
-                        <Icon name="wrench" size={14} />
-                        Instance Tools
-                    </button>
-                    <button
+                    />
+                    <div
                         className="instance-viewport__gear-item"
                         onClick={(e) => {
                             e.stopPropagation();
@@ -363,37 +362,30 @@ function GearOnlyDropdown({
                         }}
                     >
                         <VRButton instanceId={instanceId} size="sm" showLabel />
-                    </button>
-                    <button
-                        className="instance-viewport__gear-item"
+                    </div>
+                    <MenuItem
+                        icon="maximize2"
+                        label="Maximize"
                         onClick={(e) => handleItemClick(e, onMaximize)}
-                    >
-                        <Icon name="maximize2" size={14} />
-                        Maximize
-                    </button>
-                    <button
-                        className="instance-viewport__gear-item"
+                    />
+                    <MenuItem
+                        icon="copy"
+                        label="Duplicate"
                         onClick={(e) => handleItemClick(e, onDuplicate)}
-                    >
-                        <Icon name="copy" size={14} />
-                        Duplicate
-                    </button>
+                    />
                     <div className="instance-viewport__gear-separator" />
-                    <button
-                        className="instance-viewport__gear-item"
+                    <MenuItem
+                        icon="close"
+                        label="Close"
                         onClick={(e) => handleItemClick(e, onClose)}
-                    >
-                        <Icon name="close" size={14} />
-                        Close
-                    </button>
+                    />
                     {onTrash && (
-                        <button
-                            className="instance-viewport__gear-item instance-viewport__gear-item--danger"
+                        <MenuItem
+                            icon="delete"
+                            label="Delete View"
+                            danger
                             onClick={(e) => handleItemClick(e, onTrash)}
-                        >
-                            <Icon name="delete" size={14} />
-                            Delete View
-                        </button>
+                        />
                     )}
                 </div>,
                 document.body
@@ -548,135 +540,110 @@ function MoreMenu({
         >
             {/* Tools Section */}
             <div className="instance-viewport__more-menu__section-header">Tools</div>
-            <button
-                className="instance-viewport__more-menu__item"
+            <MenuItem
+                icon="wrench"
+                label="Instance Tools Panel"
+                shortcut="T"
                 onClick={() => handleItemClick(onOpenInstanceTools)}
-            >
-                <Icon name="wrench" size={14} />
-                <span>Instance Tools Panel</span>
-                <span className="instance-viewport__more-menu__shortcut">T</span>
-            </button>
+            />
             {headerMode === 'small' && (
-                <button
-                    className="instance-viewport__more-menu__item"
+                <MenuItem
+                    icon="maximize2"
+                    label="Expand"
                     onClick={() => handleItemClick(onFullscreen)}
-                >
-                    <Icon name="maximize2" size={14} />
-                    <span>Expand</span>
-                </button>
+                />
             )}
             {(headerMode === 'small' || headerMode === 'medium') && (
-                <button
-                    className="instance-viewport__more-menu__item"
+                <MenuItem
+                    icon="glasses"
+                    label="Enter VR Mode"
                     onClick={() => handleItemClick(onVRMode)}
-                >
-                    <Icon name="glasses" size={14} />
-                    <span>Enter VR Mode</span>
-                </button>
+                />
             )}
 
             <div className="instance-viewport__more-menu__divider" />
 
             {/* Navigation Section */}
             <div className="instance-viewport__more-menu__section-header">Navigation</div>
-            <button
-                className="instance-viewport__more-menu__item"
+            <MenuItem
+                icon="rotateCcw"
+                label="Reset Camera"
                 onClick={() => handleItemClick(onResetCamera)}
-            >
-                <Icon name="rotateCcw" size={14} />
-                <span>Reset Camera</span>
-            </button>
-            <button
-                className="instance-viewport__more-menu__item"
+            />
+            <MenuItem
+                icon="scan"
+                label="Fit to View"
                 onClick={() => handleItemClick(onFitView)}
-            >
-                <Icon name="scan" size={14} />
-                <span>Fit to View</span>
-            </button>
-            <button
-                className="instance-viewport__more-menu__item"
+            />
+            <MenuItem
+                icon="crosshair"
+                label="Center on Selection"
                 onClick={() => handleItemClick(onCenterSelection)}
-            >
-                <Icon name="crosshair" size={14} />
-                <span>Center on Selection</span>
-            </button>
+            />
 
             <div className="instance-viewport__more-menu__divider" />
 
             {/* Representation Section */}
             <div className="instance-viewport__more-menu__section-header">Representation</div>
-            <button
-                className={`instance-viewport__more-menu__item ${currentRepresentation === 'surface' ? 'instance-viewport__more-menu__item--active' : ''}`}
+            <MenuItem
+                icon="box"
+                label="Surface"
+                active={currentRepresentation === 'surface'}
                 onClick={() => handleItemClick(() => onRepresentationChange?.('surface'))}
-            >
-                <Icon name="box" size={14} />
-                <span>Surface</span>
-            </button>
-            <button
-                className={`instance-viewport__more-menu__item ${currentRepresentation === 'wireframe' ? 'instance-viewport__more-menu__item--active' : ''}`}
+            />
+            <MenuItem
+                icon="grid3x3"
+                label="Wireframe"
+                active={currentRepresentation === 'wireframe'}
                 onClick={() => handleItemClick(() => onRepresentationChange?.('wireframe'))}
-            >
-                <Icon name="grid3x3" size={14} />
-                <span>Wireframe</span>
-            </button>
-            <button
-                className={`instance-viewport__more-menu__item ${currentRepresentation === 'points' ? 'instance-viewport__more-menu__item--active' : ''}`}
+            />
+            <MenuItem
+                icon="circle"
+                label="Points"
+                active={currentRepresentation === 'points'}
                 onClick={() => handleItemClick(() => onRepresentationChange?.('points'))}
-            >
-                <Icon name="circle" size={14} />
-                <span>Points</span>
-            </button>
+            />
 
             <div className="instance-viewport__more-menu__divider" />
 
             {/* View Section */}
             <div className="instance-viewport__more-menu__section-header">View</div>
-            <button
-                className="instance-viewport__more-menu__item"
+            <MenuItem
+                icon="camera"
+                label="Capture Thumbnail"
                 onClick={() => handleItemClick(onCaptureThumbnail)}
-            >
-                <Icon name="camera" size={14} />
-                <span>Capture Thumbnail</span>
-            </button>
-            <button
-                className="instance-viewport__more-menu__item"
+            />
+            <MenuItem
+                icon="bookmark"
+                label="Save as Bookmark"
                 onClick={() => handleItemClick(onSaveBookmark)}
-            >
-                <Icon name="bookmark" size={14} />
-                <span>Save as Bookmark</span>
-            </button>
-            <button
-                className="instance-viewport__more-menu__item"
+            />
+            <MenuItem
+                icon="copy"
+                label="Duplicate View"
                 onClick={() => handleItemClick(onDuplicate)}
-            >
-                <Icon name="copy" size={14} />
-                <span>Duplicate View</span>
-            </button>
-            <button
-                className="instance-viewport__more-menu__item"
+            />
+            <MenuItem
+                icon="link"
+                label="Link Settings..."
                 onClick={() => handleItemClick(onLinkSettings)}
-            >
-                <Icon name="link" size={14} />
-                <span>Link Settings...</span>
-            </button>
+            />
 
             <div className="instance-viewport__more-menu__divider" />
 
             {/* Danger Section */}
-            <button
-                className="instance-viewport__more-menu__item instance-viewport__more-menu__item--danger"
+            <MenuItem
+                icon="close"
+                label="Close View"
+                danger
                 onClick={() => handleItemClick(onCloseView)}
-            >
-                <Icon name="close" size={14} />
-                <span>Close View</span>
-            </button>
-            <button
-                className="instance-viewport__more-menu__item instance-viewport__more-menu__item--danger"
+            />
+            <MenuItem
+                icon="delete"
+                label="Delete View"
+                danger
                 onClick={() => handleItemClick(onDeleteView)}
-            >
-                <Icon name="delete" size={14} />
-                <span>Delete View</span>
-            </button>
+            />
         </div>
     );
 

@@ -18,7 +18,8 @@
  */
 
 import React, { useMemo, useCallback, useContext } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import {
     ResizableSectionsContainer,
@@ -503,13 +504,12 @@ export function ViewsPanelContent({ workspaceId }) {
 
             {/* Footer */}
             <div className="panel-footer">
-                <button
-                    className="panel-footer__btn panel-footer__btn--primary"
+                <LabeledButton
+                    icon="add"
+                    label="New View"
                     onClick={handleCreateView}
-                >
-                    <Icon name="add" size={11} />
-                    <span>New View</span>
-                </button>
+                    size="sm"
+                />
             </div>
         </div>
     );

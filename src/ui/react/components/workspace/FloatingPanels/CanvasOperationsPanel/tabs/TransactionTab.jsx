@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { OperationItem } from '../components/OperationItem';
 
 // =============================================================================
@@ -66,20 +67,18 @@ export function TransactionTab({
           {selectedCount} of {operations.length} selected
         </span>
         <div className="cop-toolbar__spacer" />
-        <button
-          className="cop-button cop-button--secondary cop-button--small"
+        <LabeledButton
+          label="Select All"
           onClick={onSelectAll}
-          type="button"
-        >
-          Select All
-        </button>
-        <button
-          className="cop-button cop-button--secondary cop-button--small"
+          size="sm"
+          variant="ghost"
+        />
+        <LabeledButton
+          label="Clear"
           onClick={onClearSelection}
-          type="button"
-        >
-          Clear
-        </button>
+          size="sm"
+          variant="ghost"
+        />
       </div>
 
       {/* Operations list */}
@@ -99,21 +98,17 @@ export function TransactionTab({
 
       {/* Action buttons */}
       <div className="cop-actions">
-        <button
-          className="cop-button cop-button--secondary"
+        <LabeledButton
+          label="Cancel"
           onClick={onCancel}
-          type="button"
-        >
-          Cancel
-        </button>
-        <button
-          className="cop-button cop-button--primary"
+          variant="ghost"
+        />
+        <LabeledButton
+          label={`Apply ${selectedCount} Changes`}
           onClick={onApply}
           disabled={selectedCount === 0}
-          type="button"
-        >
-          Apply {selectedCount} Changes
-        </button>
+          variant="primary"
+        />
       </div>
     </div>
   );

@@ -8,7 +8,8 @@
 // - Footer uses panel-footer class fixed to bottom
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import {
     ResizableSectionsContainer,
@@ -320,14 +321,18 @@ export function AnnotationsPanelContent({ workspaceId }) {
 
             {/* Footer - fixed at bottom */}
             <div className="panel-footer">
-                <button className="panel-footer__btn panel-footer__btn--primary">
-                    <Icon name="add" size={11} />
-                    <span>New Annotation</span>
-                </button>
-                <button className="panel-footer__btn" title="Open full annotations panel">
-                    <Icon name="externalLink" size={11} />
-                    <span>Open Panel</span>
-                </button>
+                <LabeledButton
+                    icon="add"
+                    label="New Annotation"
+                    size="sm"
+                />
+                <LabeledButton
+                    icon="externalLink"
+                    label="Open Panel"
+                    size="sm"
+                    variant="ghost"
+                    tooltip="Open full annotations panel"
+                />
             </div>
         </div>
     );

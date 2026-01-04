@@ -6,8 +6,11 @@
 // - Viewport size adjustment
 // - Jump to specific position
 // - Canvas dimension controls
+//
+// Uses DirectionalButton molecule for navigation controls
 
 import React, { useCallback, useState } from 'react';
+import { DirectionalButton } from '@UI/react/components/molecules';
 import { useCanvas } from '@UI/react/hooks/useCanvas.js';
 import './ViewportNavigator.scss';
 
@@ -56,43 +59,39 @@ export function ViewportNavigator({ canvasId, compact = false }) {
         return (
             <div className="viewport-navigator viewport-navigator--compact">
                 <div className="viewport-navigator__arrows">
-                    <button
-                        className="viewport-navigator__btn viewport-navigator__btn--up"
+                    <DirectionalButton
+                        direction="up"
                         onClick={() => moveViewport(-1, 0)}
                         disabled={!canMoveUp}
-                        aria-label="Move up"
-                    >
-                        ↑
-                    </button>
+                        size="sm"
+                        className="viewport-navigator__btn viewport-navigator__btn--up"
+                    />
                     <div className="viewport-navigator__arrows-row">
-                        <button
-                            className="viewport-navigator__btn viewport-navigator__btn--left"
+                        <DirectionalButton
+                            direction="left"
                             onClick={() => moveViewport(0, -1)}
                             disabled={!canMoveLeft}
-                            aria-label="Move left"
-                        >
-                            ←
-                        </button>
+                            size="sm"
+                            className="viewport-navigator__btn viewport-navigator__btn--left"
+                        />
                         <span className="viewport-navigator__position">
                             {viewport.row},{viewport.col}
                         </span>
-                        <button
-                            className="viewport-navigator__btn viewport-navigator__btn--right"
+                        <DirectionalButton
+                            direction="right"
                             onClick={() => moveViewport(0, 1)}
                             disabled={!canMoveRight}
-                            aria-label="Move right"
-                        >
-                            →
-                        </button>
+                            size="sm"
+                            className="viewport-navigator__btn viewport-navigator__btn--right"
+                        />
                     </div>
-                    <button
-                        className="viewport-navigator__btn viewport-navigator__btn--down"
+                    <DirectionalButton
+                        direction="down"
                         onClick={() => moveViewport(1, 0)}
                         disabled={!canMoveDown}
-                        aria-label="Move down"
-                    >
-                        ↓
-                    </button>
+                        size="sm"
+                        className="viewport-navigator__btn viewport-navigator__btn--down"
+                    />
                 </div>
             </div>
         );
@@ -105,48 +104,44 @@ export function ViewportNavigator({ canvasId, compact = false }) {
                 <h4 className="viewport-navigator__title">Navigate</h4>
 
                 <div className="viewport-navigator__arrows">
-                    <button
-                        className="viewport-navigator__btn viewport-navigator__btn--up"
+                    <DirectionalButton
+                        direction="up"
                         onClick={() => moveViewport(-1, 0)}
                         disabled={!canMoveUp}
-                        aria-label="Move viewport up"
-                    >
-                        ↑
-                    </button>
+                        size="sm"
+                        className="viewport-navigator__btn viewport-navigator__btn--up"
+                    />
                     <div className="viewport-navigator__arrows-row">
-                        <button
-                            className="viewport-navigator__btn viewport-navigator__btn--left"
+                        <DirectionalButton
+                            direction="left"
                             onClick={() => moveViewport(0, -1)}
                             disabled={!canMoveLeft}
-                            aria-label="Move viewport left"
-                        >
-                            ←
-                        </button>
-                        <button
-                            className="viewport-navigator__btn viewport-navigator__btn--center"
+                            size="sm"
+                            className="viewport-navigator__btn viewport-navigator__btn--left"
+                        />
+                        <DirectionalButton
+                            direction="center"
+                            icon="crosshair"
                             onClick={() => setShowJumpDialog(true)}
-                            aria-label="Jump to position"
-                            title="Jump to position"
-                        >
-                            ⊕
-                        </button>
-                        <button
-                            className="viewport-navigator__btn viewport-navigator__btn--right"
+                            tooltip="Jump to position"
+                            size="sm"
+                            className="viewport-navigator__btn viewport-navigator__btn--center"
+                        />
+                        <DirectionalButton
+                            direction="right"
                             onClick={() => moveViewport(0, 1)}
                             disabled={!canMoveRight}
-                            aria-label="Move viewport right"
-                        >
-                            →
-                        </button>
+                            size="sm"
+                            className="viewport-navigator__btn viewport-navigator__btn--right"
+                        />
                     </div>
-                    <button
-                        className="viewport-navigator__btn viewport-navigator__btn--down"
+                    <DirectionalButton
+                        direction="down"
                         onClick={() => moveViewport(1, 0)}
                         disabled={!canMoveDown}
-                        aria-label="Move viewport down"
-                    >
-                        ↓
-                    </button>
+                        size="sm"
+                        className="viewport-navigator__btn viewport-navigator__btn--down"
+                    />
                 </div>
 
                 <div className="viewport-navigator__info">

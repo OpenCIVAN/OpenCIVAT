@@ -7,7 +7,8 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { ChipGroup } from '@UI/react/components/common/ChipGroup';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
@@ -480,16 +481,18 @@ export function DatasetsPanelContent() {
 
             {/* Footer */}
             <div className="panel-footer">
-                <button
-                    className="panel-footer__btn panel-footer__btn--primary"
+                <LabeledButton
+                    icon="folderOpen"
+                    label="Load Dataset"
                     onClick={handleLoadDataset}
-                >
-                    <Icon name="folderOpen" size={11} />
-                    <span>Load Dataset</span>
-                </button>
-                <button className="panel-footer__btn panel-footer__btn--icon" title="Refresh">
-                    <Icon name="refresh" size={11} />
-                </button>
+                    size="sm"
+                />
+                <IconButton
+                    icon="refresh"
+                    size="sm"
+                    variant="ghost"
+                    tooltip="Refresh"
+                />
             </div>
         </div>
     );

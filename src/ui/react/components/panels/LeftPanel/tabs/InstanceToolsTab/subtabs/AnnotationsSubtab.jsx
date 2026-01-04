@@ -8,7 +8,8 @@
 // ADDED: Right-click context menu for edit/move/delete
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { useAnnotations } from '@UI/react/hooks/useAnnotations.js';
 import { FloatingAnnotationCreator } from '@UI/react/components/modals/FloatingAnnotationCreator';
 import { AnnotationContextMenu } from '@UI/react/components/modals/AnnotationContextMenu';
@@ -430,23 +431,23 @@ export function AnnotationsSubtab({ activeInstance, onOpenFullPanel }) {
             )}
 
             {/* Footer - fixed to bottom of subtab */}
-            <div className="annotations-subtab__footer">
-                <button
-                    className={`annotations-subtab__footer-btn annotations-subtab__footer-btn--click ${annotationMode ? 'active' : ''}`}
-                    title="Click on the 3D model to add annotation"
+            <div className="panel-footer">
+                <LabeledButton
+                    icon="crosshair"
+                    label={annotationMode ? 'Click model...' : 'Click to Add'}
                     onClick={handleStartAnnotating}
                     disabled={!datasetId || annotationMode}
-                >
-                    <Icon name="crosshair" size={11} />
-                    <span>{annotationMode ? 'Click model...' : 'Click to Add'}</span>
-                </button>
-                <button
-                    className="annotations-subtab__footer-btn annotations-subtab__footer-btn--open"
+                    active={annotationMode}
+                    size="sm"
+                    tooltip="Click on the 3D model to add annotation"
+                />
+                <LabeledButton
+                    icon="arrowUpRight"
+                    label="Open Panel"
                     onClick={handleOpenFullPanel}
-                >
-                    <Icon name="arrowUpRight" size={11} />
-                    <span>Open Panel</span>
-                </button>
+                    size="sm"
+                    variant="ghost"
+                />
             </div>
 
             {/* Annotation mode indicator - for creating new annotations */}

@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { ToggleGroup } from '@UI/react/components/molecules';
 import { OperationRow } from '../components/OperationRow';
 import { TransactionBox } from '../components/TransactionBox';
 import { TransactionGroup } from '../components/TransactionGroup';
@@ -250,45 +251,27 @@ export function AuditLogTab({
     <div className="audit-log-tab">
       {/* Toolbar Row 1: View toggle + Sort */}
       <div className="cop-toolbar">
-        <div className="cop-toggle-group">
-          <button
-            className={`cop-toggle-group__button ${viewMode === AUDIT_VIEW.GROUPED ? 'cop-toggle-group__button--active' : ''}`}
-            onClick={() => setViewMode(AUDIT_VIEW.GROUPED)}
-            type="button"
-          >
-            <Icon name="grid_view" size={12} />
-            Grouped
-          </button>
-          <button
-            className={`cop-toggle-group__button ${viewMode === AUDIT_VIEW.TIMELINE ? 'cop-toggle-group__button--active' : ''}`}
-            onClick={() => setViewMode(AUDIT_VIEW.TIMELINE)}
-            type="button"
-          >
-            <Icon name="list" size={12} />
-            Timeline
-          </button>
-        </div>
+        <ToggleGroup
+          options={[
+            { value: AUDIT_VIEW.GROUPED, icon: 'grid3x3', label: 'Grouped' },
+            { value: AUDIT_VIEW.TIMELINE, icon: 'list', label: 'Timeline' },
+          ]}
+          value={viewMode}
+          onChange={setViewMode}
+          size="sm"
+        />
 
         <div className="cop-toolbar__spacer" />
 
-        <div className="cop-toggle-group">
-          <button
-            className={`cop-toggle-group__button ${sortOrder === 'desc' ? 'cop-toggle-group__button--active' : ''}`}
-            onClick={() => setSortOrder('desc')}
-            title="Newest first"
-            type="button"
-          >
-            <Icon name="arrow_downward" size={12} />
-          </button>
-          <button
-            className={`cop-toggle-group__button ${sortOrder === 'asc' ? 'cop-toggle-group__button--active' : ''}`}
-            onClick={() => setSortOrder('asc')}
-            title="Oldest first"
-            type="button"
-          >
-            <Icon name="arrow_upward" size={12} />
-          </button>
-        </div>
+        <ToggleGroup
+          options={[
+            { value: 'desc', icon: 'arrowDown' },
+            { value: 'asc', icon: 'arrowUp' },
+          ]}
+          value={sortOrder}
+          onChange={setSortOrder}
+          size="sm"
+        />
       </div>
 
       {/* Toolbar Row 2: Filters */}

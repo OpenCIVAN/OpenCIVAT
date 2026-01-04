@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { TabButton } from '@UI/react/components/molecules';
 import { TransactionTab } from './tabs/TransactionTab';
 import { AuditLogTab } from './tabs/AuditLogTab';
 import { UsersTab } from './tabs/UsersTab';
@@ -61,26 +62,6 @@ function loadSize() {
     }
   } catch (e) { /* ignore */ }
   return { ...DEFAULT_SIZE };
-}
-
-// =============================================================================
-// TAB BUTTON COMPONENT
-// =============================================================================
-
-function TabButton({ icon, label, active, onClick, badge }) {
-  return (
-    <button
-      className={`cop-tab-button ${active ? 'cop-tab-button--active' : ''}`}
-      onClick={onClick}
-      type="button"
-    >
-      <Icon name={icon} size={14} />
-      <span>{label}</span>
-      {badge > 0 && (
-        <span className="cop-tab-button__badge">{badge}</span>
-      )}
-    </button>
-  );
 }
 
 // =============================================================================
@@ -422,22 +403,22 @@ export function CanvasOperationsPanel({
           </div>
         )}
 
-        <button
-          className="canvas-operations-panel__control-btn"
+        <IconButton
+          icon="remove"
           onClick={onMinimize}
-          title="Minimize"
-          type="button"
-        >
-          <Icon name="remove" size={14} />
-        </button>
-        <button
-          className="canvas-operations-panel__control-btn canvas-operations-panel__control-btn--close"
+          tooltip="Minimize"
+          size="sm"
+          variant="ghost"
+          className="canvas-operations-panel__control-btn"
+        />
+        <IconButton
+          icon="close"
           onClick={onClose}
-          title="Close"
-          type="button"
-        >
-          <Icon name="close" size={14} />
-        </button>
+          tooltip="Close"
+          size="sm"
+          variant="ghost"
+          className="canvas-operations-panel__control-btn canvas-operations-panel__control-btn--close"
+        />
       </div>
 
       {/* Tab bar */}
