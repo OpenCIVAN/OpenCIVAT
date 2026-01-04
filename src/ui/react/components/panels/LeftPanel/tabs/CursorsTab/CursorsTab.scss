@@ -85,20 +85,144 @@
   }
 }
 
-// Cursor row (user item)
+// =============================================================================
+// CAMERA SYNC SECTION
+// =============================================================================
+
+.cursors-tab__camera-content {
+  padding: $spacing-xs;
+}
+
+.camera-sync-selector {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+}
+
+.camera-sync-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  color: $color-text-muted;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba($color-accent-blue, 0.15);
+    border-color: rgba($color-accent-blue, 0.3);
+    color: $color-accent-blue;
+  }
+}
+
+.following-indicator {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba($color-accent-green, 0.15);
+  border: 1px solid rgba($color-accent-green, 0.3);
+  border-radius: $radius-sm;
+  font-size: 11px;
+  color: $color-accent-green;
+
+  button {
+    margin-left: auto;
+    background: none;
+    border: none;
+    padding: 2px;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// =============================================================================
+// TRACKING MODE SELECTOR
+// =============================================================================
+
+.tracking-mode-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs 0;
+  margin-bottom: $spacing-xs;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.tracking-mode-label {
+  font-size: 11px;
+  color: $color-text-secondary;
+}
+
+.tracking-mode-options {
+  display: flex;
+  gap: 2px;
+}
+
+.tracking-mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba($color-accent-sky, 0.15);
+    border-color: rgba($color-accent-sky, 0.3);
+    color: $color-accent-sky;
+  }
+}
+
+// =============================================================================
+// CURSOR ROW (user item)
+// =============================================================================
+
 .cursor-row {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
+  gap: $spacing-xs;
   padding: $spacing-sm;
   margin-bottom: $spacing-xs;
   background: rgba(0, 0, 0, 0.15);
   border: 1px solid $color-border-subtle;
   border-radius: $radius-sm;
   position: relative;
+  transition: all $transition-fast;
 
   &:last-child {
     margin-bottom: 0;
+  }
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: $color-border-default;
   }
 
   &--self {
@@ -106,9 +230,22 @@
     border-color: rgba($color-accent-sky, 0.2);
   }
 
+  &--following {
+    background: rgba($color-accent-green, 0.08);
+    border-color: rgba($color-accent-green, 0.3);
+  }
+
+  // Presence indicator (small dot)
+  &__presence {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
   &__color {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     flex-shrink: 0;
     cursor: pointer;
@@ -120,8 +257,15 @@
     }
   }
 
-  &__name {
+  &__info {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__name {
     font-size: 12px;
     color: $color-text-primary;
     white-space: nowrap;
@@ -133,6 +277,51 @@
     margin-left: 4px;
     font-size: 10px;
     color: $color-text-muted;
+  }
+
+  &__following-badge {
+    font-size: 9px;
+    color: $color-accent-green;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  // Action buttons
+  &__actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity $transition-fast;
+
+    &--visible {
+      opacity: 1;
+    }
+  }
+
+  &__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid transparent;
+    border-radius: $radius-xs;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: $color-border-default;
+      color: $color-text-secondary;
+    }
+
+    &--active {
+      background: rgba($color-accent-green, 0.15);
+      border-color: rgba($color-accent-green, 0.3);
+      color: $color-accent-green;
+    }
   }
 
   &__visibility {

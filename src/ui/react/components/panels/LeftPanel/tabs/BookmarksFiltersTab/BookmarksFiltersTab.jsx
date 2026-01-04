@@ -6,12 +6,14 @@
  * - Sub-tabs for Bookmarks and Filters
  * - Scope filtering (Project | Room | Personal)
  * - Search across both types
+ * - Quick-save keyboard shortcut (B key)
+ * - Batch operations for multi-select
  * - Extracted subtab components for separation of concerns
  *
  * @see Left_Panel_Design_Specification.docx - Sections 9-10
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
@@ -92,9 +94,78 @@ export function BookmarksFiltersPanelContent({
     // Editor state (controlled from parent for add button)
     const [showEditor, setShowEditor] = useState(false);
 
-    // Get data for scope counts
-    const { bookmarks } = useBookmarks();
+    // Batch selection mode
+    const [batchMode, setBatchMode] = useState(false);
+    const [selectedItems, setSelectedItems] = useState([]);
+
+    // Get data and actions for scope counts
+    const { bookmarks, createBookmark } = useBookmarks();
     const { filters } = useFilters();
+
+    // ==========================================================================
+    // KEYBOARD SHORTCUTS
+    // ==========================================================================
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Skip if typing in input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // B key - Quick-save bookmark (per spec)
+            if (e.key === 'b' || e.key === 'B') {
+                if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+                    e.preventDefault();
+                    handleQuickSave();
+                }
+            }
+
+            // Escape - Exit batch mode
+            if (e.key === 'Escape' && batchMode) {
+                setBatchMode(false);
+                setSelectedItems([]);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [batchMode]);
+
+    // Quick-save creates bookmark with current state
+    const handleQuickSave = useCallback(() => {
+        if (currentCameraState) {
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            createBookmark?.({
+                name: `Quick Save ${timestamp}`,
+                type: 'position',
+                scope: 'personal',
+                cameraState: currentCameraState,
+                filterIds: activeFilterIds,
+            });
+        }
+    }, [currentCameraState, activeFilterIds, createBookmark]);
+
+    // Batch operations
+    const handleBatchDelete = useCallback(() => {
+        // TODO: Implement batch delete
+        console.log('Batch delete:', selectedItems);
+        setSelectedItems([]);
+        setBatchMode(false);
+    }, [selectedItems]);
+
+    const handleBatchExport = useCallback(() => {
+        // TODO: Implement batch export
+        console.log('Batch export:', selectedItems);
+    }, [selectedItems]);
+
+    const toggleItemSelection = useCallback((id) => {
+        setSelectedItems(prev =>
+            prev.includes(id)
+                ? prev.filter(i => i !== id)
+                : [...prev, id]
+        );
+    }, []);
 
     // Calculate scope counts
     const bookmarkCounts = useMemo(() => ({
@@ -156,6 +227,34 @@ export function BookmarksFiltersPanelContent({
                 onChange={setSearchQuery}
                 placeholder={`Search ${activeSubTab}...`}
             />
+
+            {/* Keyboard hints */}
+            {activeSubTab === 'bookmarks' && (
+                <div className="bookmarks-filters-tab__keyboard-hint">
+                    <kbd>B</kbd>
+                    <span>Quick-save current view</span>
+                </div>
+            )}
+
+            {/* Batch mode toolbar */}
+            {batchMode && selectedItems.length > 0 && (
+                <div className="bookmarks-filters-tab__batch-toolbar">
+                    <span className="batch-count">{selectedItems.length} selected</span>
+                    <div className="batch-actions">
+                        <button onClick={handleBatchExport} className="batch-action">
+                            <Icon name="download" size={12} />
+                            Export
+                        </button>
+                        <button onClick={handleBatchDelete} className="batch-action batch-action--danger">
+                            <Icon name="trash2" size={12} />
+                            Delete
+                        </button>
+                        <button onClick={() => { setBatchMode(false); setSelectedItems([]); }} className="batch-action">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Subtab Content */}
             {activeSubTab === 'bookmarks' ? (

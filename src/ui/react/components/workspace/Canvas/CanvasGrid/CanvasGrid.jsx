@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { CanvasCell } from '@UI/react/components/workspace';
 import { ConnectionOverlay } from '../ConnectionOverlay';
+import { CanvasEdgeDropZones } from './CanvasEdgeDropZone';
 import { IsolationOverlay, useIsolationMode } from '@UI/react/components/workspace/Canvas/IsolationOverlay';
 import { SelectionContextMenu } from '../SelectionContextMenu';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
@@ -105,6 +106,10 @@ export function CanvasGrid({
     const [minimapExpanded, setMinimapExpanded] = useState(false);
     const [activeTool, setActiveTool] = useState('select');
     const [selectionModifierHeld, setSelectionModifierHeld] = useState(false);
+
+    // Drag state for edge drop zones
+    const [isDragActive, setIsDragActive] = useState(false);
+    const [dragModifiers, setDragModifiers] = useState({ shift: false, ctrl: false, alt: false });
 
     // Listen for edit mode and tool changes from secondary footer
     useEffect(() => {
@@ -674,6 +679,42 @@ export function CanvasGrid({
     }, []);
 
     // ==========================================================================
+    // DRAG STATE TRACKING (for edge drop zones)
+    // ==========================================================================
+
+    useEffect(() => {
+        const handleDragStart = () => {
+            setIsDragActive(true);
+        };
+
+        const handleDragEnd = () => {
+            setIsDragActive(false);
+            setDragModifiers({ shift: false, ctrl: false, alt: false });
+        };
+
+        const handleDragOver = (e) => {
+            // Update modifier state during drag
+            setDragModifiers({
+                shift: e.shiftKey,
+                ctrl: e.ctrlKey || e.metaKey,
+                alt: e.altKey,
+            });
+        };
+
+        window.addEventListener('dragstart', handleDragStart);
+        window.addEventListener('dragend', handleDragEnd);
+        window.addEventListener('drop', handleDragEnd);
+        window.addEventListener('dragover', handleDragOver);
+
+        return () => {
+            window.removeEventListener('dragstart', handleDragStart);
+            window.removeEventListener('dragend', handleDragEnd);
+            window.removeEventListener('drop', handleDragEnd);
+            window.removeEventListener('dragover', handleDragOver);
+        };
+    }, []);
+
+    // ==========================================================================
     // CELL CLICK HANDLING
     // ==========================================================================
 
@@ -847,6 +888,57 @@ export function CanvasGrid({
         // Same as close for now - could be permanent delete in future
         handleCloseAllViews();
     }, [handleCloseAllViews]);
+
+    // ==========================================================================
+    // EDGE DROP HANDLING (expand canvas)
+    // ==========================================================================
+
+    const handleEdgeDrop = useCallback((position, e) => {
+        log.debug(`Edge drop at ${position}`);
+
+        // Determine which row/col to expand
+        let newRow, newCol;
+
+        switch (position) {
+            case 'top':
+                // Add row at top (row 0), existing rows shift down
+                newRow = 0;
+                newCol = 0;
+                onAddRow?.('top');
+                break;
+            case 'bottom':
+                // Add row at bottom
+                newRow = canvasDimensions.rows;
+                newCol = 0;
+                onAddRow?.('bottom');
+                break;
+            case 'left':
+                // Add column at left (col 0), existing cols shift right
+                newRow = 0;
+                newCol = 0;
+                onAddColumn?.('left');
+                break;
+            case 'right':
+                // Add column at right
+                newRow = 0;
+                newCol = canvasDimensions.cols;
+                onAddColumn?.('right');
+                break;
+            default:
+                return;
+        }
+
+        // Extract drop data from the event
+        try {
+            const dropData = JSON.parse(e.dataTransfer.getData('application/json') || '{}');
+            if (dropData && Object.keys(dropData).length > 0) {
+                // Place the dropped content in the new row/column
+                handleCellDrop(newRow, newCol, dropData);
+            }
+        } catch (err) {
+            log.warn('Could not parse edge drop data:', err);
+        }
+    }, [canvasDimensions, onAddRow, onAddColumn, handleCellDrop]);
 
     // ==========================================================================
     // HELPER FUNCTIONS
@@ -1283,6 +1375,21 @@ export function CanvasGrid({
                         onContextMenu={handleContextMenu}
                     >
                         {renderCells}
+
+                        {/* Edge Drop Zones - show at canvas edges during drag */}
+                        <CanvasEdgeDropZones
+                            isDragActive={isDragActive}
+                            canExpandTop={effectiveViewport.row === 0}
+                            canExpandBottom={effectiveViewport.row + effectiveViewport.rows >= canvasDimensions.rows}
+                            canExpandLeft={effectiveViewport.col === 0}
+                            canExpandRight={effectiveViewport.col + effectiveViewport.cols >= canvasDimensions.cols}
+                            maxRows={100}
+                            maxCols={100}
+                            currentRows={canvasDimensions.rows}
+                            currentCols={canvasDimensions.cols}
+                            modifiers={dragModifiers}
+                            onEdgeDrop={handleEdgeDrop}
+                        />
                     </div>
                 </div>
             </div>
