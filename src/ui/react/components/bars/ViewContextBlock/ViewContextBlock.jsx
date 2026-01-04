@@ -19,8 +19,8 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
-import { IconButton } from '@UI/react/components/common/Button';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { IconButton } from '@UI/react/components/atoms/Button';
 import './ViewContextBlock.scss';
 
 // =============================================================================

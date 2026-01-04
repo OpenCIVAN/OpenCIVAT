@@ -2,7 +2,7 @@
 // Button to pop out a panel from the docked position
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { usePanelPopOut } from './FloatingPanelContext';
 import './FloatingPanel.scss';
 

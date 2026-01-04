@@ -15,7 +15,7 @@
 // - Render Mode: UI complexity based on cell size
 
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { CanvasCell } from '@UI/react/components/workspace';
 import { ConnectionOverlay } from '../ConnectionOverlay';
 import { IsolationOverlay, useIsolationMode } from '@UI/react/components/workspace/Canvas/IsolationOverlay';

@@ -2,7 +2,7 @@
 // NEW FILE - Create this for positioning widgets
 
 import React, { useState } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 /**
  * PositionGridPicker

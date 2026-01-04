@@ -1,7 +1,7 @@
 // src/ui/react/components/workspace/CameraViewGridPicker.jsx
 
 import React, { useState } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 /**
  * CameraViewGridPicker

@@ -55,7 +55,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal } from '../Modal';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import './ConfirmationDialog.scss';
 
 /**

@@ -2,7 +2,7 @@
 // Visual color swatch grid for colormap selection
 
 import React, { useState } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 /**
  * ColorSwatchGrid

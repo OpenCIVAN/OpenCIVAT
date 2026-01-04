@@ -2,7 +2,7 @@
 // Sub-tab showing running compute processes/jobs
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useComputeJobs } from '@UI/react/hooks/useComputeJobs.js';
 
 /**

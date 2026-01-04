@@ -1,7 +1,7 @@
 import { CameraViewGridPicker } from "./CameraViewGridPicker";
 
 export default {
-    title: "Workspace/CameraViewGridPicker",
+    title: "Molecules/CameraViewGridPicker",
     component: CameraViewGridPicker,
     parameters: { layout: "centered" },
     argTypes: {

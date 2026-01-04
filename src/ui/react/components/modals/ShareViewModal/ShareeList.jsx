@@ -20,8 +20,8 @@
  */
 
 import React, { memo, useCallback } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
-import { DropdownSelect } from '../../common/Dropdown';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
+import { DropdownSelect } from '@UI/react/components/atoms/Dropdown';
 import { getInitials } from './PersonSearch';
 
 /**

@@ -17,7 +17,7 @@
 import React from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { getIconComponent } from '@UI/react/components/common/Icon';
+import { getIconComponent } from '@UI/react/components/atoms/Icon';
 import { Modal } from '../Modal';
 
 /**

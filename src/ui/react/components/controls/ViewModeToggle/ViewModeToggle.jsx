@@ -3,7 +3,7 @@
 // Designed for use in SecondaryBottomBar left zone
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useViewModeToggle, VIEW_MODES } from './ViewModeToggle.logic.js';
 import './ViewModeToggle.scss';
 

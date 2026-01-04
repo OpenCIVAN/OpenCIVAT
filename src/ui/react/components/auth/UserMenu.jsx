@@ -2,7 +2,7 @@
 // User menu dropdown with profile, settings, and sign out options
 
 import React, { useState, useRef, useEffect } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useAuth } from "@UI/react/hooks/useAuth.js";
 import "./UserMenu.scss";
 

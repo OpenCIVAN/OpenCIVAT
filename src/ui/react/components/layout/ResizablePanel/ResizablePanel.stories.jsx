@@ -1,6 +1,6 @@
 // src/ui/react/components/layout/ResizablePanel.stories.jsx
 import React, { useState } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { ResizablePanel } from "./ResizablePanel";
 import '@UI/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.scss';
 

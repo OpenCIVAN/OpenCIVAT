@@ -23,7 +23,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Modal } from '@UI/react/components/modals/Modal';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import './AnnotationModal.scss';
 
 /**

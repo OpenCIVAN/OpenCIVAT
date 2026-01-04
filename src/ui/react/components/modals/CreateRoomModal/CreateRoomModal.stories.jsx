@@ -1,7 +1,7 @@
 import { CreateRoomModal } from "./CreateRoomModal";
 
 export default {
-    title: "Collaboration/CreateRoomModal",
+    title: "Modals/CreateRoomModal",
     component: CreateRoomModal,
     parameters: { layout: "fullscreen" },
     argTypes: {

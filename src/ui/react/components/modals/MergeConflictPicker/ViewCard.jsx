@@ -20,7 +20,7 @@
  */
 
 import React, { memo, forwardRef, useCallback } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 
 /**
  * @typedef {Object} ViewOption

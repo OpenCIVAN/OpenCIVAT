@@ -18,7 +18,7 @@
  */
 
 import React, { memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { SearchResultItem, TYPE_LABELS } from './SearchResultItem';
 import { EmptyState as CommonEmptyState } from '@UI/react/components/common/EmptyState';
 

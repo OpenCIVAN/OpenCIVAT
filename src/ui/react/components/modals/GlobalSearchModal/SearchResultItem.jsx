@@ -13,7 +13,7 @@
  */
 
 import React, { memo, useRef, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 /**
  * @typedef {Object} SearchResult

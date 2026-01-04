@@ -6,8 +6,8 @@
 // UPDATED: Now uses useScratchPadFloating hook for proper floating panel integration
 
 import React, { useCallback } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
-import { Tooltip } from "@UI/react/components/common/Tooltip";
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from "@UI/react/components/atoms/Tooltip";
 import { useScratchPadFloating } from "@UI/react/components/panels/FloatingPanel/ScratchPadFloating";
 import { useLayoutPanelContext, DOCK_POSITIONS } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 

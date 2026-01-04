@@ -1,7 +1,7 @@
 import { SliderWithPresets } from "./SliderWithPresets";
 
 export default {
-    title: "Workspace/SliderWithPresets",
+    title: "Molecules/SliderWithPresets",
     component: SliderWithPresets,
     parameters: { layout: "centered" },
     argTypes: {

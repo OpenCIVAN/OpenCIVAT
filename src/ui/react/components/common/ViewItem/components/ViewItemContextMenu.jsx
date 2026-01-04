@@ -8,7 +8,7 @@
 
 import React, { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './ViewItemContextMenu.scss';
 
 // =============================================================================

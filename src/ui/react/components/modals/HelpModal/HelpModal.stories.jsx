@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { HelpModal } from './index';
-import { Button } from '../../common/Button';
+import { Button } from '@UI/react/components/atoms/Button';
 
 export default {
     title: 'Modals/HelpModal',

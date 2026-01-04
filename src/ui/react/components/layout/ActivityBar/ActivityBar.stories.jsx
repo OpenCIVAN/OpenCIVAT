@@ -2,7 +2,7 @@
 // Storybook stories for ActivityBar component
 
 import React, { useState } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { ActivityBar } from './ActivityBar.jsx';
 
 export default {

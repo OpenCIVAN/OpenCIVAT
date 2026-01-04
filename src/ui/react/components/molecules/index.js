@@ -32,3 +32,15 @@ export { SearchInput } from './SearchInput';
 
 // PanelHeader - Panel header with title, icon, and actions
 export { PanelHeader } from './PanelHeader';
+
+// ChipGroup - Group of toggleable filter chips
+export { ChipGroup, Chip, useChipGroup } from './ChipGroup';
+
+// MemberRow - User/member list item with avatar and status
+export { MemberRow } from './MemberRow';
+
+// PillBar - Tab/filter pill navigation bar
+export { PillBar } from './PillBar';
+
+// Toast - Notification toast message
+export { Toast } from './Toast';

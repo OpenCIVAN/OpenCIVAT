@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { WorkspaceType } from '@Core/data/models/Workspace.js';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './WorkspaceTypeIndicator.scss';
 
 /**

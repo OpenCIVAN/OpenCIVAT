@@ -30,7 +30,7 @@
 
 import React, { useCallback, useEffect, useRef, memo } from 'react';
 import { Modal } from '../Modal';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './FormModal.scss';
 
 /**

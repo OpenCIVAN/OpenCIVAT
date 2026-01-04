@@ -8,7 +8,7 @@
 import React, { memo, useState, useCallback } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { Tooltip } from '@UI/react/components/common/Tooltip';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { formatFileSize, formatRelativeTime } from '@Utils/formatters.js';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';

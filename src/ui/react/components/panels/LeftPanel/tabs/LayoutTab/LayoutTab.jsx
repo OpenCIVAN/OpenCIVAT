@@ -9,7 +9,7 @@
 // Canvas Navigator is permanently docked at bottom
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { loadCanvasSize, saveCanvasSize } from '@UI/react/hooks/canvasState.js';
 import {

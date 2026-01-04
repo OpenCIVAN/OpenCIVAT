@@ -26,7 +26,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import { FormModal, FormField } from '../FormModal';
 import EmailTagInput, { isValidEmail } from './EmailTagInput';
 import './InviteMemberModal.scss';

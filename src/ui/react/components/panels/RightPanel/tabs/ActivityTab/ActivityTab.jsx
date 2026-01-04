@@ -16,8 +16,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
-import { Button } from '@UI/react/components/common/Button';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { Button } from '@UI/react/components/atoms/Button';
 import { DismissibleCard, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SubtabBar } from '@UI/react/components/common/SubtabBar';
 

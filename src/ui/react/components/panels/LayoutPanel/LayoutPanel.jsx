@@ -5,7 +5,7 @@
 // LayoutPanel.logic.js to ensure consistent comparisons with FloatingCanvasNavigator.
 
 import React, { memo, useContext } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useLayoutPanel } from './LayoutPanel.logic';
 import LayoutPanelContext, { DOCK_POSITIONS } from './LayoutPanelContext';
 import { CanvasNavigator } from './components/CanvasNavigator/CanvasNavigator';

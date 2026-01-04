@@ -13,7 +13,7 @@
  */
 
 import React, { useState, memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { formatTimestamp } from '@Utils/formatters.js';
 import { BOOKMARK_TYPES } from '../hooks/useBookmarksTab';
 import { getScopeConfig } from '../constants';

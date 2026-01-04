@@ -14,7 +14,7 @@
 // - Fixed double border on empty cells
 
 import React, { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 
 // =============================================================================

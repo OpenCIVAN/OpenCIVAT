@@ -38,7 +38,7 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import Modal from '../Modal/Modal';
 import ShortcutCategory from './ShortcutCategory';
 import ShortcutItem from './ShortcutItem';

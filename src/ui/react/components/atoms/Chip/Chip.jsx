@@ -2,7 +2,7 @@
 // Chip atom - interactive tag/pill component
 
 import React, { memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useAdaptive } from '@UI/react/context';
 import './Chip.scss';
 

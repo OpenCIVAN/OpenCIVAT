@@ -2,8 +2,8 @@
 // VR mode toggle button with state feedback
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
-import { SlashedIcon } from "@UI/react/components/common/IconOverlay/IconOverlay.jsx";
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { SlashedIcon } from "@UI/react/components/atoms/IconOverlay/IconOverlay.jsx";
 import { vrManager } from "@Core/vr/VRManager.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { toast } from "@UI/react/store/toastStore.js";

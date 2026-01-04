@@ -12,7 +12,7 @@
  */
 
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { ViewItemContextMenu } from './components/ViewItemContextMenu';
 import { ViewSettingsModal } from '@UI/react/components/modals/ViewSettingsModal';
 import { Thumbnail } from '@UI/react/components/common/Thumbnail';

@@ -28,7 +28,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Icon, IconButton, Toggle } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { getIconComponent } from '@UI/react/components/common/Icon';
+import { getIconComponent } from '@UI/react/components/atoms/Icon';
 
 import { Modal } from '@UI/react/components/modals/Modal';
 import { viewLinkingService, LINKING_EVENTS, eventBus } from '@Services';

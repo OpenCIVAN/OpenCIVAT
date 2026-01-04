@@ -29,7 +29,7 @@
  */
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import { createPortal } from 'react-dom';
 import './AnnotationContextMenu.scss';
 

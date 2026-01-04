@@ -1,7 +1,7 @@
 import { ColorSwatchGrid } from "./ColorSwatchGrid";
 
 export default {
-    title: "Workspace/ColorSwatchGrid",
+    title: "Molecules/ColorSwatchGrid",
     component: ColorSwatchGrid,
     parameters: {
         layout: "centered",

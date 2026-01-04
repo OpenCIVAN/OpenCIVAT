@@ -9,7 +9,7 @@ import PersonSearch from './PersonSearch';
 import ShareeList from './ShareeList';
 
 export default {
-    title: 'Components/Modals/ShareViewModal',
+    title: 'Modals/ShareViewModal',
     component: ShareViewModal,
     parameters: {
         layout: 'centered',

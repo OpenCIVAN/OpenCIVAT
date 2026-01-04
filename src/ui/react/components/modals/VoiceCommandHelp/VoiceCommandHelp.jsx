@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import { Modal } from '@UI/react/components/modals/Modal';
 import { voiceCommandService } from '@Services/voice/voiceCommandService.js';
 import './VoiceCommandHelp.scss';

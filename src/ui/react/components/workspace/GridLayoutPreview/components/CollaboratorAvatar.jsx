@@ -11,7 +11,7 @@
  */
 
 import { memo, useState, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './CollaboratorAvatar.scss';
 
 export const CollaboratorAvatar = memo(function CollaboratorAvatar({

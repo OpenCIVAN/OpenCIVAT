@@ -1,7 +1,7 @@
 import { PositionGridPicker } from "./PositionGridPicker";
 
 export default {
-    title: "Workspace/PositionGridPicker",
+    title: "Molecules/PositionGridPicker",
     component: PositionGridPicker,
     parameters: { layout: "centered" },
     argTypes: {

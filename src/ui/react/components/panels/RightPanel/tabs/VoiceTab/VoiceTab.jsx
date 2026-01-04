@@ -17,8 +17,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
-import { Button } from '@UI/react/components/common/Button';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { Button } from '@UI/react/components/atoms/Button';
 import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 
 import { useVoiceTab, VOICE_MODES } from './hooks/useVoiceTab';

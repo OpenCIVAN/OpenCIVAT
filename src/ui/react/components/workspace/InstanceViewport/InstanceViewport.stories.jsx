@@ -2,7 +2,7 @@
 // Mock stories for InstanceViewport - demonstrates visual layout without core dependencies
 
 import React from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import "./InstanceViewport.scss";
 
 /**
@@ -67,7 +67,7 @@ function MockInstanceViewport({
 
     const renderTool = (tool, index) => {
         if (tool.type === "separator") {
-            return <div key={`sep-${index}`} className="toolbar-separator" />;
+            return <div key={`sep-${index}`} className="instance-toolbar__separator" />;
         }
 
         const iconName = tool.icon;
@@ -82,13 +82,13 @@ function MockInstanceViewport({
                     onMouseLeave={() => setOpenMenuId(null)}
                 >
                     <button
-                        className={`toolbar-icon-btn ${tool.active ? "active" : ""}`}
+                        className={`instance-toolbar__tool-button ${tool.active ? "active" : ""}`}
                         disabled={tool.disabled}
                         aria-label={tool.label}
                     >
-                        {iconName && <Icon name={iconName} size={18} strokeWidth={2} />}
-                        <Icon name="chevronDown" size={8} className="menu-indicator" />
-                        <div className="toolbar-tooltip">
+                        {iconName && <Icon name={iconName} size={16} />}
+                        <Icon name="chevronDown" size={8} className="instance-toolbar__menu-indicator" />
+                        <div className="instance-toolbar__tooltip">
                             <div className="tooltip-title">{tool.label}</div>
                         </div>
                     </button>
@@ -113,12 +113,12 @@ function MockInstanceViewport({
         return (
             <button
                 key={tool.id}
-                className={`toolbar-icon-btn ${tool.active ? "active" : ""}`}
+                className={`instance-toolbar__tool-button ${tool.active ? "active" : ""}`}
                 disabled={tool.disabled}
                 aria-label={tool.label}
             >
-                {iconName && <Icon name={iconName} size={18} strokeWidth={2} />}
-                <div className="toolbar-tooltip">
+                {iconName && <Icon name={iconName} size={16} />}
+                <div className="instance-toolbar__tooltip">
                     <div className="tooltip-title">{tool.label}</div>
                 </div>
             </button>
@@ -126,10 +126,15 @@ function MockInstanceViewport({
     };
 
     return (
-        <div className="instance-viewport">
+        <div className="instance-viewport" style={{ '--instance-color': '#60a5fa', '--instance-color-rgb': '96, 165, 250' }}>
             <div className="instance-viewport__header">
-                <div className="instance-viewport__header-title">{title}</div>
-                <div className="instance-viewport__header-actions">
+                <div className="instance-viewport__header-left">
+                    <div className="instance-viewport__label">
+                        <div className="instance-viewport__label-dot" />
+                        <span className="instance-viewport__label-text">{title}</span>
+                    </div>
+                </div>
+                <div className="instance-viewport__header-controls">
                     <button
                         className="instance-viewport__header-button"
                         title="Fullscreen"
@@ -137,17 +142,19 @@ function MockInstanceViewport({
                         <Icon name="maximize2" size={14} />
                     </button>
                     <button
-                        className="instance-viewport__header-button"
+                        className="instance-viewport__header-button instance-viewport__header-button--danger"
                         title="Delete"
                     >
-                        <Icon name="delete" size={14} />
+                        <Icon name="trash2" size={14} />
                     </button>
                 </div>
             </div>
 
             {showToolbar && (
-                <div className="instance-viewport__toolbar">
-                    {toolsToRender.map((tool, index) => renderTool(tool, index))}
+                <div className="instance-viewport__toolbar-overlay instance-viewport__toolbar-overlay--visible">
+                    <div className="instance-toolbar">
+                        {toolsToRender.map((tool, index) => renderTool(tool, index))}
+                    </div>
                 </div>
             )}
 
@@ -197,7 +204,7 @@ function MockInstanceViewport({
 }
 
 export default {
-    title: "Workspace/InstanceViewport",
+    title: "Organisms/InstanceViewport",
     component: MockInstanceViewport,
     parameters: {
         layout: "centered",

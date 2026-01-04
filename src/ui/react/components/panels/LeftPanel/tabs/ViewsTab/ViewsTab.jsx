@@ -26,7 +26,7 @@ import {
     ResizableSection,
     useSectionStates,
 } from '@UI/react/components/common/ResizableSections';
-import { ChipGroup } from '@UI/react/components/common/ChipGroup';
+import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import { EmptyState } from '@UI/react/components/common/EmptyState';
 import { ViewItem, InactiveViewItem, TrashedViewItem } from '@UI/react/components/common/ViewItem';
 import {

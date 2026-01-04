@@ -38,9 +38,9 @@
  */
 
 import React, { memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useAdaptive } from '@UI/react/context';
-import { Button } from '../Button';
+import { Button } from '@UI/react/components/atoms/Button';
 import './EmptyState.scss';
 
 /**

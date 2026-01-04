@@ -9,7 +9,7 @@
  */
 
 import { memo, useState, useCallback, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { ViewItem } from '@UI/react/components/common/ViewItem';
 import { DatasetContextHeader } from './DatasetContextHeader';
 import './ViewsSubtab.scss';

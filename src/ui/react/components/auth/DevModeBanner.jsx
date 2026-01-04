@@ -3,7 +3,7 @@
 // FIXED: Positioned as overlay (not push layout) per design spec
 
 import React, { useState, useEffect } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { DevUserSwitcher } from "@UI/react/components/dev/DevUserSwitcher.jsx";
 import "./DevModeBanner.scss";
 

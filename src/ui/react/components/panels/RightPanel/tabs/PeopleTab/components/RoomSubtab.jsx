@@ -18,7 +18,7 @@ import {
     ResizableSection,
     useSectionStates,
 } from '@UI/react/components/common/ResizableSections';
-import { MemberRow } from '@UI/react/components/common/MemberRow';
+import { MemberRow } from '@UI/react/components/molecules/MemberRow';
 import { EmptyState } from '@UI/react/components/common/EmptyState';
 import { useRoomPresence } from '@UI/react/hooks/useRoomPresence.js';
 

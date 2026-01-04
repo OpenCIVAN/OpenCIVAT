@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react';
 // we create isolated mock versions of the helper components for Storybook.
 // =============================================================================
 
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 import './StatusBar.scss';
 

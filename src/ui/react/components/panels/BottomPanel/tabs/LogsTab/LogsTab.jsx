@@ -9,7 +9,7 @@
 // - Timestamp display
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useLogging } from "@UI/react/hooks/useLogging.js";
 import { LogType } from "@Utils/logger.js";
 import "./LogsTab.scss";

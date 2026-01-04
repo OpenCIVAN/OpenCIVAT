@@ -8,7 +8,7 @@
 // - processing: Orange microphone, spinning indicator
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useVoiceCommands } from "@UI/react/hooks/useVoiceCommands.js";
 import { VoiceCommandHelp } from "@UI/react/components/modals/VoiceCommandHelp";
 import "./VoiceCommandToggle.scss";

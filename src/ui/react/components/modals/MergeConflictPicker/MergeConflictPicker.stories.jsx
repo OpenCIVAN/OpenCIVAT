@@ -8,7 +8,7 @@ import MergeConflictPicker from './MergeConflictPicker';
 import ViewCard from './ViewCard';
 
 export default {
-    title: 'Components/Modals/MergeConflictPicker',
+    title: 'Modals/MergeConflictPicker',
     component: MergeConflictPicker,
     parameters: {
         layout: 'centered',

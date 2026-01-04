@@ -20,7 +20,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // =============================================================================
 // TAB CONFIGURATION - SINGLE SOURCE OF TRUTH

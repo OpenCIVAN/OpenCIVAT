@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { ui as log } from '@Utils/logger.js';
 import { config } from '@Core/config/clientConfig.js';
 import { getHandlerForFileType } from '@Core/instances/types/instanceTypesInit.js';

@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useCallback, memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 /**
  * @typedef {Object} UploadDropzoneProps

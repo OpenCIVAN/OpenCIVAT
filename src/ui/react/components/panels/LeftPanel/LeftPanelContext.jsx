@@ -26,7 +26,7 @@ import React, {
     useCallback,
     useEffect,
 } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // =============================================================================
 // TAB CONTENT COMPONENTS - Lazy imports to avoid circular dependencies

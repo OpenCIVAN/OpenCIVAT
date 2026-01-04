@@ -2,7 +2,7 @@
 // Icon + text label atom - the most common pairing in the UI
 
 import React, { memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useAdaptive } from '@UI/react/context';
 import './IconLabel.scss';
 

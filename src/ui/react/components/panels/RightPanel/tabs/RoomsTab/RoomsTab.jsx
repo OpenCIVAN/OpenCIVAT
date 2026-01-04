@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { CollapsibleHeaderSection, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { LeaveRoomDialog } from '@UI/react/components/modals/confirmations';

@@ -25,9 +25,9 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import { Modal } from '../Modal';
-import { Button } from '../../common/Button';
+import { Button } from '@UI/react/components/atoms/Button';
 import PersonSearch from './PersonSearch';
 import ShareeList from './ShareeList';
 import './ShareViewModal.scss';

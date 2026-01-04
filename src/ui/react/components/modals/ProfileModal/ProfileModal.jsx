@@ -26,9 +26,9 @@
  */
 
 import React, { memo, useCallback, useState } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import Modal from '../Modal/Modal';
-import { Button } from '../../common/Button';
+import { Button } from '@UI/react/components/atoms/Button';
 import { STATUS_CONFIG, getStatusLabel } from '@UI/react/utils/statusConfig';
 import './ProfileModal.scss';
 

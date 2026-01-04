@@ -10,7 +10,7 @@ import { authService } from "@Services/authService.js";
 import { config } from "@Core/config/clientConfig.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 import { toast } from "@UI/react/store/toastStore.js";
-import { ToastContainer } from "@UI/react/components/common/Toast";
+import { ToastContainer } from "@UI/react/components/molecules/Toast";
 import { LoginButton } from "@UI/react/components/auth/LoginButton.jsx";
 import { DevModeBanner } from "@UI/react/components/auth/DevModeBanner.jsx";
 import { DevUserProvider } from "@UI/react/context/DevUserContext.jsx";

@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { KeyboardShortcutsModal, ShortcutItem, KeyCombo } from './index';
-import { Button } from '../../common/Button';
+import { Button } from '@UI/react/components/atoms/Button';
 
 export default {
     title: 'Modals/KeyboardShortcutsModal',

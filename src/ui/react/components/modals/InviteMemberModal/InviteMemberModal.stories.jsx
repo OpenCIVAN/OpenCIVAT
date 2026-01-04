@@ -8,7 +8,7 @@ import InviteMemberModal from './InviteMemberModal';
 import EmailTagInput from './EmailTagInput';
 
 export default {
-    title: 'Components/Modals/InviteMemberModal',
+    title: 'Modals/InviteMemberModal',
     component: InviteMemberModal,
     parameters: {
         layout: 'centered',

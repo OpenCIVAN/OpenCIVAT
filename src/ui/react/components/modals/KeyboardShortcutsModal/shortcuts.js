@@ -4,7 +4,7 @@
  * Contains all shortcut categories and their respective key bindings.
  */
 
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 
 /**
  * Detect if running on Mac platform

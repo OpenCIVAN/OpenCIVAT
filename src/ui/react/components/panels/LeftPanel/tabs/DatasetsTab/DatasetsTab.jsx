@@ -9,7 +9,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { ChipGroup } from '@UI/react/components/common/ChipGroup';
+import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';

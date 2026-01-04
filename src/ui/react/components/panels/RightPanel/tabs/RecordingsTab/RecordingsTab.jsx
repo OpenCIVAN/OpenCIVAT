@@ -20,7 +20,7 @@
 import React from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { Button } from '@UI/react/components/common/Button';
+import { Button } from '@UI/react/components/atoms/Button';
 import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 

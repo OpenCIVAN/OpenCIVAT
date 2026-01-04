@@ -17,7 +17,7 @@
  */
 
 import React, { useRef, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { SubtabBar } from '@UI/react/components/common/SubtabBar';
 
 import { useChatTab } from './hooks/useChatTab';

@@ -9,7 +9,7 @@
 // - VR-compatible (no hover dependency)
 
 import React, { useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './FloatingResizePopover.scss';
 
 /**

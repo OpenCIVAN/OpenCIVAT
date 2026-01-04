@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { subsetManager } from '@Core/data/managers/SubsetManager.js';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './SubsetCard.scss';
 
 /**

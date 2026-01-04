@@ -7,7 +7,7 @@
 import React, { useMemo } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { Dropdown } from '@UI/react/components/common/Dropdown';
+import { Dropdown } from '@UI/react/components/atoms/Dropdown';
 
 import './CanvasSizeDisplay.scss';
 

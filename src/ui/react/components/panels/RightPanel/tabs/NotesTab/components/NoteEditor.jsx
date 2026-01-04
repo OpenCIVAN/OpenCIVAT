@@ -15,7 +15,7 @@
 import React, { useState, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { Tooltip } from '@UI/react/components/common/Tooltip';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 
 // =============================================================================
 // CONSTANTS

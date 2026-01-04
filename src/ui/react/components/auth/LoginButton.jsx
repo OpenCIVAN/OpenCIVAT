@@ -2,7 +2,7 @@
 // Sign In button component for unauthenticated users
 
 import React, { useState } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useAuth } from "@UI/react/hooks/useAuth.js";
 import "./LoginButton.scss";
 

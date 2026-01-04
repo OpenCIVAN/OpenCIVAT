@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
 import { formatFileSize, formatRelativeTime } from '@Utils/formatters.js';

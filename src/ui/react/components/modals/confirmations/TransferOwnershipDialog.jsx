@@ -19,9 +19,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { getIconComponent } from '@UI/react/components/common/Icon';
+import { getIconComponent } from '@UI/react/components/atoms/Icon';
 import { Modal } from '../Modal';
-import { DropdownSelect } from '../../common/Dropdown';
+import { DropdownSelect } from '@UI/react/components/atoms/Dropdown';
 
 /**
  * @typedef {Object} Admin

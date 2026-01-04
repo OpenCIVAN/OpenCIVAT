@@ -6,7 +6,7 @@
  */
 
 import { memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './DatasetContextHeader.scss';
 
 export const DatasetContextHeader = memo(function DatasetContextHeader({

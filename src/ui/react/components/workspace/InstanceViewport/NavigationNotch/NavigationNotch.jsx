@@ -13,7 +13,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import PropTypes from 'prop-types';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './NavigationNotch.scss';
 
 // =============================================================================

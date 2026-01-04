@@ -12,7 +12,7 @@
 // This enables the "bird's eye → drill down" workflow without losing context.
 
 import React, { useCallback, useEffect, useRef } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './IsolationOverlay.scss';
 
 /**

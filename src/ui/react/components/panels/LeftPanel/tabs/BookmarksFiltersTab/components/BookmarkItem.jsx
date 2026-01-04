@@ -2,7 +2,7 @@
 // Individual bookmark item component
 
 import React, { useState } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { formatTimestamp } from '@Utils/formatters.js';
 
 export function BookmarkItem({ bookmark, onNavigate, onTogglePin, onDelete, getThumbnailUrl }) {

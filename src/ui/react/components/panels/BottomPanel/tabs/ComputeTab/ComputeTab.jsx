@@ -7,7 +7,7 @@
 // - VTK Python worker jobs
 
 import React, { useMemo } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useComputeJobs } from "@UI/react/hooks/useComputeJobs.js";
 import "./ComputeTab.scss";
 

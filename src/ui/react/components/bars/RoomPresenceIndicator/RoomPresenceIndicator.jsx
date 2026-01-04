@@ -13,8 +13,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@UI/react/components/common/Icon';
-import { Tooltip } from '@UI/react/components/common/Tooltip';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 
 import './RoomPresenceIndicator.scss';
 

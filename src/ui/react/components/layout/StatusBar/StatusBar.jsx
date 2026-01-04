@@ -3,7 +3,7 @@
 // Matches artifact design with left/center/right zones
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
 import { getBottomPanelControls } from '@UI/react/components/panels/BottomPanel';

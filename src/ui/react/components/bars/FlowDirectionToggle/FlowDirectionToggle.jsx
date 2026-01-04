@@ -7,8 +7,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
-import { Tooltip } from '@UI/react/components/common/Tooltip';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 
 import './FlowDirectionToggle.scss';
 

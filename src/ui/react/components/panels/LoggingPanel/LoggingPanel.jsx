@@ -5,7 +5,7 @@ import React, { useRef, useEffect } from "react";
 
 import { useLogging } from "@UI/react/hooks/useLogging.js";
 import { LogType } from "@Utils/logger.js";
-import { Icon } from "@UI/react/components/common/Icon";
+import { Icon } from "@UI/react/components/atoms/Icon";
 
 export function LoggingPanel() {
   const { logs, clearLogs } = useLogging();

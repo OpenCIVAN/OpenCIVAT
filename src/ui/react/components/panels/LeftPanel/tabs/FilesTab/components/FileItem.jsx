@@ -6,7 +6,7 @@
  */
 
 import React, { useState, memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { FileThumbnail } from './FileThumbnail';
 

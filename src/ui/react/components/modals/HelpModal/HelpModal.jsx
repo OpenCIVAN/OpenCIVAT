@@ -32,9 +32,9 @@
  */
 
 import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 import Modal from '../Modal/Modal';
-import { Button } from '../../common/Button';
+import { Button } from '@UI/react/components/atoms/Button';
 import HelpSection from './HelpSection';
 import './HelpModal.scss';
 

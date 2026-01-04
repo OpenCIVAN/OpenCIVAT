@@ -7,7 +7,7 @@
  */
 import React, { useState } from 'react';
 import { useAdaptive } from '@UI/react/context';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './SectionHeader.scss';
 
 export const SectionHeader = ({

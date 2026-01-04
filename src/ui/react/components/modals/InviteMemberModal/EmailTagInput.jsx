@@ -22,7 +22,7 @@
  */
 
 import React, { memo, useState, useRef, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 /**
  * Email validation regex

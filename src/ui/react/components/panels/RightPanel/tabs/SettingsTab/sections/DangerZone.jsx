@@ -5,8 +5,8 @@
  */
 
 import React, { useState } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
-import { Button } from '@UI/react/components/common/Button';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { Button } from '@UI/react/components/atoms/Button';
 import '../SettingsTab.scss';
 
 /**

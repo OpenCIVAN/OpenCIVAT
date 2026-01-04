@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { contentManager } from '@Core/data/managers/ContentManager.js';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './NoteBlock.scss';
 
 const NOTE_COLORS = {

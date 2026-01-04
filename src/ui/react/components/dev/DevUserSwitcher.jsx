@@ -7,7 +7,7 @@
 // Place this in the Header or SecondaryFooter for easy access.
 
 import React, { useState, useRef, useEffect, memo } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useDevUser } from "@UI/react/context/DevUserContext.jsx";
 import { getUserInitials } from "@Config/mockUsers.js";
 import "./DevUserSwitcher.scss";

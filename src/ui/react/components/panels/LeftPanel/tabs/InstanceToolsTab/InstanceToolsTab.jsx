@@ -8,7 +8,7 @@
 // - Shows both view name (primary) and dataset name (secondary)
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // Import subtab components
 import { ToolsList } from './subtabs/ToolsSubtab';

@@ -19,7 +19,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 // Import tab config and renderer from the SINGLE SOURCE OF TRUTH
 import {

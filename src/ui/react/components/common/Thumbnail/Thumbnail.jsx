@@ -5,7 +5,7 @@
 // This component can only DISPLAY thumbnails - generation is handled server-side.
 
 import React, { memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useThumbnail, THUMBNAIL_STATUS } from '@UI/react/hooks/useThumbnail.js';
 import './Thumbnail.scss';
 

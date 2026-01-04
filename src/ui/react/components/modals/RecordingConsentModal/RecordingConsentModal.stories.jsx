@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import RecordingConsentModal from './RecordingConsentModal';
 
 export default {
-    title: 'Components/Modals/RecordingConsentModal',
+    title: 'Modals/RecordingConsentModal',
     component: RecordingConsentModal,
     parameters: {
         layout: 'centered',

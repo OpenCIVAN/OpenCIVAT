@@ -19,8 +19,8 @@
 // =============================================================================
 
 import { ui as log } from "@Utils/logger.js";
-import { createSlashedIcon } from "@UI/react/components/common/IconOverlay";
-import { getIconComponent } from "@UI/react/components/common/Icon";
+import { createSlashedIcon } from "@UI/react/components/atoms/IconOverlay";
+import { getIconComponent } from "@UI/react/components/atoms/Icon";
 
 // =============================================================================
 // SLASHED ICON VARIANTS

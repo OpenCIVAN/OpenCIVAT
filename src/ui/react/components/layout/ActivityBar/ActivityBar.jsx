@@ -3,7 +3,7 @@
 // Can be placed left or right, handles tab selection and collapse toggle
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import './ActivityBar.scss';
 
 /**

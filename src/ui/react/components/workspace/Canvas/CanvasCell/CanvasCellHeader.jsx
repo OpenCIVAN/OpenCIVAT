@@ -19,7 +19,7 @@
 
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { useViewMetadata } from '@UI/react/hooks/useViewMetadata.js';
 
 // ============================================================================

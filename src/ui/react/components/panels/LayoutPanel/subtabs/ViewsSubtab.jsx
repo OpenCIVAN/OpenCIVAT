@@ -21,7 +21,7 @@ import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/common/SearchBar';
 import { ViewItem } from '@UI/react/components/common/ViewItem';
-import { ChipGroup } from '@UI/react/components/common/ChipGroup';
+import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import './ViewsSubtab.scss';
 
 // Filter chip configuration for Views

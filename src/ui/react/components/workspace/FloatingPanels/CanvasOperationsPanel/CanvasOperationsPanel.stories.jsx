@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { CanvasOperationsPanel } from './CanvasOperationsPanel';
 
 export default {
-  title: 'Workspace/CanvasOperationsPanel',
+  title: 'Organisms/CanvasOperationsPanel',
   component: CanvasOperationsPanel,
   parameters: {
     layout: 'centered',

@@ -45,7 +45,7 @@
 import React, { memo, useCallback, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { SearchInput } from './SearchInput';
-import { ChipGroup } from '@UI/react/components/common/ChipGroup';
+import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import { SearchResults } from './SearchResults';
 import { useGlobalSearch } from './useGlobalSearch';
 import './GlobalSearchModal.scss';

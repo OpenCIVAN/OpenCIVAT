@@ -1,10 +1,10 @@
 // src/ui/react/components/workspace/SliderMenuOption.stories.jsx
 import React, { useState } from "react";
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { SliderMenuOption } from "./SliderMenuOption";
 
 export default {
-    title: "Workspace/SliderMenuOption",
+    title: "Molecules/SliderMenuOption",
     component: SliderMenuOption,
     parameters: {
         layout: "centered",

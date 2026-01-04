@@ -2,7 +2,7 @@
 // Individual filter item component
 
 import React, { useState } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { getScopeConfig } from '@UI/react/components/panels/LeftPanel/tabs/BookmarksFiltersTab/constants';
 
 export function FilterItem({ filter, onApply, onTogglePin, onDelete }) {

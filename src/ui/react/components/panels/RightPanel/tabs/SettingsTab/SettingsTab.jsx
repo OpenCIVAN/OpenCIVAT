@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import {
     ResizableSection,
     ResizableSectionsContainer,

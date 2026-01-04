@@ -19,7 +19,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { getIconComponent } from '@UI/react/components/common/Icon';
+import { getIconComponent } from '@UI/react/components/atoms/Icon';
 import { FormModal } from '@UI/react/components/modals/FormModal';
 import './CreateSubsetDialog.scss';
 

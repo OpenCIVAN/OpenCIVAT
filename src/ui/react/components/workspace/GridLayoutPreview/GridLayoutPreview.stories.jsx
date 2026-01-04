@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { GridLayoutPreview } from './index';
 
 export default {
-    title: 'Workspace/GridLayoutPreview',
+    title: 'Molecules/GridLayoutPreview',
     component: GridLayoutPreview,
     parameters: {
         layout: 'padded',

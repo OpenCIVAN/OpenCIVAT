@@ -4,8 +4,8 @@
  */
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
-import { Dropdown } from '@UI/react/components/common/Dropdown';
+import { Icon } from '@UI/react/components/atoms/Icon';
+import { Dropdown } from '@UI/react/components/atoms/Dropdown';
 
 /**
  * User menu dropdown component.

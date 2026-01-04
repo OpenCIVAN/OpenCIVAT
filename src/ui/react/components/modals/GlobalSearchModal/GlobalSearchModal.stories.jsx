@@ -6,8 +6,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { GlobalSearchModal, SearchInput, SEARCH_FILTERS, SearchResultItem, SearchResults } from './index';
-import { ChipGroup } from '@UI/react/components/common/ChipGroup';
-import { Button } from '../../common/Button';
+import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
+import { Button } from '@UI/react/components/atoms/Button';
 
 export default {
     title: 'Modals/GlobalSearchModal',

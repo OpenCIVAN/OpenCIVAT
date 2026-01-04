@@ -20,7 +20,7 @@
  */
 
 import React, { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 
 /**
  * @typedef {Object} User

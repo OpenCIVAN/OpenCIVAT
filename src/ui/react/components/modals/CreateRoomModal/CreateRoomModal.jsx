@@ -20,11 +20,11 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react";
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
 
 import { FormModal } from "@UI/react/components/modals/FormModal";
 import { FormField } from "@UI/react/components/modals/FormModal";
-import { UserAvatar } from "@UI/react/components/common/UserAvatar";
+import { UserAvatar } from "@UI/react/components/atoms/UserAvatar";
 
 import "./CreateRoomModal.scss";
 

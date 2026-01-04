@@ -6,7 +6,7 @@ import { ViewModeToggle, ViewModeIndicator, VIEW_MODES } from './ViewModeToggle.
 import './ViewModeToggle.scss';
 
 export default {
-    title: 'Controls/ViewModeToggle',
+    title: 'Molecules/ViewModeToggle',
     component: ViewModeToggle,
     parameters: {
         layout: 'centered',

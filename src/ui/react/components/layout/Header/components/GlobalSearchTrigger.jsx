@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms/Icon';
 
 /**
  * Global search trigger button with Cmd/Ctrl + K shortcut.

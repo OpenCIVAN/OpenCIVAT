@@ -8,8 +8,14 @@
 // These existing components are already well-designed and adaptive
 // =============================================================================
 
-export { Button, IconButton, ButtonGroup } from '@UI/react/components/common/Button';
-export { Icon } from '@UI/react/components/common/Icon';
+export { Button, IconButton, ButtonGroup } from './Button';
+export { Icon, IconLoader, getIconComponent, IconChevronDown, IconClose, IconCheck, IconSearch, IconDot, IconWarning, IconLock } from './Icon';
+export { Dropdown, DropdownMenu, DropdownSelect, useDropdown } from './Dropdown';
+export { IconOverlay, SlashedIcon, createSlashedIcon } from './IconOverlay';
+export { Tooltip, TooltipProvider, useTooltip } from './Tooltip';
+export { FileStateIndicator } from './FileStateIndicator';
+export { PresenceIndicator } from './PresenceIndicator';
+export { UserAvatar, UserAvatarGroup } from './UserAvatar';
 
 // =============================================================================
 // NEW ATOMS (created for atomic design migration)
