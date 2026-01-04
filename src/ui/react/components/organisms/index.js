@@ -17,3 +17,9 @@ export { WorkspaceOverlay } from './WorkspaceOverlay';
 
 // ResizableSections - Resizable panel sections
 export { ResizableSections } from './ResizableSections';
+
+// PropertyPanel - Property inspector/editor panel
+export { PropertyPanel } from './PropertyPanel';
+
+// FilterBar - Search and filter bar
+export { FilterBar } from './FilterBar';
