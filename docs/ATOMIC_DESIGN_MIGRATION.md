@@ -430,7 +430,9 @@ Created molecules with VR support and Storybook stories:
 - [x] SearchInput
 - [x] PanelHeader
 
-### Phase 3: Migration - IN PROGRESS
+### Phase 3: Migration - COMPLETE
+
+**Status:** Core migration complete. All high-traffic components, panel footers, activity bars, navigation controls, and modal footers have been migrated to use atoms/molecules. Low-priority components can be migrated as encountered during future development.
 
 **Completed migrations:**
 - [x] `SecondaryFooter.jsx` - Now uses `LabeledButton` from molecules
@@ -469,8 +471,25 @@ Created molecules with VR support and Storybook stories:
 - [x] `AuditLogTab.jsx` - Uses `ToggleGroup` for view/sort toggles
 - [x] `SavePointsTab.jsx` - Uses `LabeledButton` for create button
 
-**Pending migrations:**
-- Modal footers (can be migrated as encountered)
+**Modal footer migrations:**
+- [x] `RecordingConsentModal.jsx` - Uses `LabeledButton` for Leave/Continue
+- [x] `DeleteNoteDialog.jsx` - Uses `LabeledButton` for Cancel/Archive/Delete
+- [x] `TransferOwnershipDialog.jsx` - Uses `LabeledButton` for Cancel/Transfer
+- [x] `DatasetSettingsModal.jsx` - Uses `LabeledButton` for Create/Unload/Close
+- [x] `FileDetailsModal.jsx` - Uses `LabeledButton` for Open/Download/Delete
+
+**Additional component migrations:**
+- [x] `NoteEditor.jsx` - Uses `LabeledButton` for Add item/Cancel/Save
+- [x] `RecordingCard.jsx` - Uses `IconButton` for playback, `LabeledButton` for actions
+- [x] `FiltersSubtab.jsx` - Uses `LabeledButton` for Import/Export/Retry
+- [x] `BookmarksSubtab.jsx` - Uses `LabeledButton` for Retry
+
+**Low-priority remaining (migrate as encountered):**
+- `ViewSettingsModal.jsx` - Complex multi-section modal with many buttons
+- `CanvasSubtab.jsx` - Etched toggle buttons (specialized styling)
+- `GridLayoutPreview.jsx` - Layout control buttons
+- `VoiceControls.jsx` - Voice/mute controls
+- `MessageInput.jsx` - Chat input controls
 
 **Import pattern established:**
 ```jsx

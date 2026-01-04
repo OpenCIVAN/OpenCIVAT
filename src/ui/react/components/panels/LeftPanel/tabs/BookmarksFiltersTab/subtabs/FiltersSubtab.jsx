@@ -12,7 +12,8 @@
  */
 
 import React, { memo, useCallback, useRef } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { FilterCard } from '../components/FilterCard';
 import { FilterEditor } from '../components/FilterEditor';
 import { ScopedSection } from '../components/ScopedSection';
@@ -121,7 +122,7 @@ export const FiltersSubtab = memo(function FiltersSubtab({
             <div className="bookmarks-filters-tab__error">
                 <Icon name="alertCircle" size={24} />
                 <span>Failed to load filters</span>
-                <button className="retry-btn" onClick={refetch}>Retry</button>
+                <LabeledButton label="Retry" onClick={refetch} size="sm" variant="ghost" />
             </div>
         );
     }
@@ -137,13 +138,13 @@ export const FiltersSubtab = memo(function FiltersSubtab({
                     </span>
                 )}
                 <div className="bookmarks-filters-tab__empty-actions">
-                    <button
-                        className="bookmarks-filters-tab__import-btn"
+                    <LabeledButton
+                        icon="upload"
+                        label="Import Filters"
                         onClick={handleImportClick}
-                    >
-                        <Icon name="upload" size={12} />
-                        Import Filters
-                    </button>
+                        size="sm"
+                        variant="ghost"
+                    />
                 </div>
             </div>
         );
@@ -167,22 +168,22 @@ export const FiltersSubtab = memo(function FiltersSubtab({
         <>
             {/* Import/Export toolbar */}
             <div className="bookmarks-filters-tab__toolbar">
-                <button
-                    className="bookmarks-filters-tab__toolbar-btn"
+                <LabeledButton
+                    icon="upload"
+                    label="Import"
                     onClick={handleImportClick}
-                    title="Import filters from file"
-                >
-                    <Icon name="upload" size={12} />
-                    Import
-                </button>
-                <button
-                    className="bookmarks-filters-tab__toolbar-btn"
+                    tooltip="Import filters from file"
+                    size="sm"
+                    variant="ghost"
+                />
+                <LabeledButton
+                    icon="download"
+                    label="Export All"
                     onClick={handleExportAll}
-                    title="Export all filters"
-                >
-                    <Icon name="download" size={12} />
-                    Export All
-                </button>
+                    tooltip="Export all filters"
+                    size="sm"
+                    variant="ghost"
+                />
                 <input
                     ref={fileInputRef}
                     type="file"

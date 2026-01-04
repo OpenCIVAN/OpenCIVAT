@@ -13,7 +13,8 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { Tooltip } from '@UI/react/components/common/Tooltip';
 
 // =============================================================================
@@ -262,10 +263,14 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
                     </div>
 
                     {/* Add item button */}
-                    <button className="note-edit-view__add-item" onClick={handleAddItem}>
-                        <Icon name="add" size={14} />
-                        Add item
-                    </button>
+                    <LabeledButton
+                        icon="add"
+                        label="Add item"
+                        onClick={handleAddItem}
+                        variant="ghost"
+                        size="sm"
+                        className="note-edit-view__add-item"
+                    />
                 </div>
             ) : (
                 <textarea
@@ -278,17 +283,18 @@ export function NoteEditor({ note, isNew, onSave, onCancel }) {
 
             {/* Actions */}
             <div className="note-edit-view__actions">
-                <button className="note-edit-view__btn" onClick={onCancel}>
-                    Cancel
-                </button>
-                <button
-                    className={`note-edit-view__btn note-edit-view__btn--save ${isNew && !title.trim() ? 'note-edit-view__btn--disabled' : ''}`}
+                <LabeledButton
+                    label="Cancel"
+                    onClick={onCancel}
+                    variant="ghost"
+                />
+                <LabeledButton
+                    icon={isNew ? 'check' : 'save'}
+                    label={isNew ? 'Create' : 'Save'}
                     onClick={handleSave}
                     disabled={isNew && !title.trim()}
-                >
-                    {isNew ? <Icon name="check" size={12} /> : <Icon name="save" size={12} />}
-                    {isNew ? 'Create' : 'Save'}
-                </button>
+                    variant="primary"
+                />
             </div>
         </div>
     );

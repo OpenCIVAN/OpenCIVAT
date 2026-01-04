@@ -4,7 +4,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon, IconButton } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 
 /**
  * Recording modes for icon lookup
@@ -157,15 +158,25 @@ export function RecordingCard({
                     {/* Playback controls */}
                     {recording.status !== 'recording' && (
                         <div className="recording-card__playback">
-                            <button className="recording-card__playback-btn" disabled>
-                                <Icon name="skipBack" size={14} />
-                            </button>
-                            <button className="recording-card__playback-btn recording-card__playback-btn--play" disabled title="Playback coming soon">
-                                <Icon name="play" size={16} />
-                            </button>
-                            <button className="recording-card__playback-btn" disabled>
-                                <Icon name="skipForward" size={14} />
-                            </button>
+                            <IconButton
+                                icon="skipBack"
+                                size="sm"
+                                disabled
+                                className="recording-card__playback-btn"
+                            />
+                            <IconButton
+                                icon="play"
+                                size="sm"
+                                disabled
+                                tooltip="Playback coming soon"
+                                className="recording-card__playback-btn recording-card__playback-btn--play"
+                            />
+                            <IconButton
+                                icon="skipForward"
+                                size="sm"
+                                disabled
+                                className="recording-card__playback-btn"
+                            />
 
                             <div className="recording-card__progress">
                                 <div className="recording-card__progress-bar" />
@@ -180,35 +191,35 @@ export function RecordingCard({
                     {/* Actions */}
                     <div className="recording-card__actions">
                         {!isExported && recording.status !== 'recording' && (
-                            <button
-                                className="recording-card__action-btn"
-                                data-color="green"
+                            <LabeledButton
+                                icon={isExporting ? 'loader' : 'upload'}
+                                label="Export"
                                 onClick={handleExport}
                                 disabled={isExporting}
-                                title="Export to storage"
-                            >
-                                {isExporting ? <Icon name="loader" size={10} className="spin" /> : <Icon name="upload" size={10} />}
-                                Export
-                            </button>
+                                tooltip="Export to storage"
+                                size="sm"
+                                variant="ghost"
+                                color="green"
+                            />
                         )}
                         {recording.status !== 'recording' && (
-                            <button
-                                className="recording-card__action-btn"
-                                data-color="blue"
+                            <LabeledButton
+                                icon="download"
+                                label="Download"
                                 onClick={handleDownload}
-                                title="Download recording"
-                            >
-                                <Icon name="download" size={10} />
-                                Download
-                            </button>
+                                tooltip="Download recording"
+                                size="sm"
+                                variant="ghost"
+                                color="blue"
+                            />
                         )}
-                        <button
-                            className="recording-card__action-btn"
+                        <IconButton
+                            icon="delete"
                             onClick={handleDelete}
-                            title="Delete recording"
-                        >
-                            <Icon name="delete" size={10} />
-                        </button>
+                            tooltip="Delete recording"
+                            size="sm"
+                            variant="ghost"
+                        />
                     </div>
                 </div>
             )}

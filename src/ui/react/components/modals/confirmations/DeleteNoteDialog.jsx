@@ -15,7 +15,9 @@
  */
 
 import React from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
+import { getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '../Modal';
 
 /**
@@ -68,18 +70,26 @@ export function DeleteNoteDialog({
      */
     const renderFooter = () => (
         <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-            <button className="btn btn--secondary" onClick={onClose}>
-                Cancel
-            </button>
+            <LabeledButton
+                label="Cancel"
+                onClick={onClose}
+                variant="ghost"
+            />
             <div style={{ flex: 1 }} /> {/* Spacer */}
-            <button className="btn btn--warning" onClick={handleArchive}>
-                <Icon name="archive" size={14} />
-                Archive
-            </button>
-            <button className="btn btn--danger" onClick={handleDelete}>
-                <Icon name="delete" size={14} />
-                Delete Permanently
-            </button>
+            <LabeledButton
+                icon="archive"
+                label="Archive"
+                onClick={handleArchive}
+                variant="secondary"
+                color="amber"
+            />
+            <LabeledButton
+                icon="delete"
+                label="Delete Permanently"
+                onClick={handleDelete}
+                variant="primary"
+                color="red"
+            />
         </div>
     );
 

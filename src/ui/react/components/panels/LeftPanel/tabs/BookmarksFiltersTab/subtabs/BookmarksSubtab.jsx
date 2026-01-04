@@ -13,7 +13,8 @@
  */
 
 import React, { memo } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { BookmarkCard } from '../components/BookmarkCard';
 import { BookmarkEditor } from '../components/BookmarkEditor';
 import { ScopedSection } from '../components/ScopedSection';
@@ -79,7 +80,7 @@ export const BookmarksSubtab = memo(function BookmarksSubtab({
             <div className="bookmarks-filters-tab__error">
                 <Icon name="alertCircle" size={24} />
                 <span>Failed to load bookmarks</span>
-                <button className="retry-btn" onClick={refetch}>Retry</button>
+                <LabeledButton label="Retry" onClick={refetch} size="sm" variant="ghost" />
             </div>
         );
     }

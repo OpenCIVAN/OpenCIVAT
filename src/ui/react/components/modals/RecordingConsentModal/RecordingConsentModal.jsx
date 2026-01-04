@@ -22,7 +22,8 @@
  */
 
 import React, { memo, useRef, useEffect, useCallback } from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { Modal } from '../Modal';
 import './RecordingConsentModal.scss';
 
@@ -219,23 +220,19 @@ function RecordingConsentModal({
                     role="group"
                     aria-label="Recording consent actions"
                 >
-                    <button
-                        type="button"
-                        className="recording-consent-modal__footer__leave"
+                    <LabeledButton
+                        label="Leave Room"
                         onClick={handleLeave}
+                        variant="ghost"
                         aria-label="Leave the room to avoid being recorded"
-                    >
-                        Leave Room
-                    </button>
-                    <button
+                    />
+                    <LabeledButton
                         ref={continueButtonRef}
-                        type="button"
-                        className="recording-consent-modal__footer__continue"
+                        label="OK, Continue"
                         onClick={handleContinue}
+                        variant="primary"
                         aria-label="Acknowledge recording and continue in session"
-                    >
-                        OK, Continue
-                    </button>
+                    />
                 </div>
             }
         >

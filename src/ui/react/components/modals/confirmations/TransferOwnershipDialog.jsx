@@ -18,6 +18,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { LabeledButton } from '@UI/react/components/molecules';
 import { getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '../Modal';
 import { DropdownSelect } from '../../common/Dropdown';
@@ -84,16 +85,18 @@ export function TransferOwnershipDialog({
      */
     const renderFooter = () => (
         <>
-            <button className="btn btn--secondary" onClick={onClose}>
-                Cancel
-            </button>
-            <button
-                className="btn btn--warning"
+            <LabeledButton
+                label="Cancel"
+                onClick={onClose}
+                variant="ghost"
+            />
+            <LabeledButton
+                label="Transfer Ownership"
                 onClick={handleConfirm}
                 disabled={!selectedAdmin}
-            >
-                Transfer Ownership
-            </button>
+                variant="primary"
+                color="amber"
+            />
         </>
     );
 

@@ -21,7 +21,9 @@
  */
 
 import React from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
+import { getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '@UI/react/components/modals/Modal';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import './FileDetailsModal.scss';
@@ -127,18 +129,25 @@ export function FileDetailsModal({
      */
     const renderFooter = () => (
         <>
-            <button className="btn btn--primary" onClick={handleOpen}>
-                <Icon name="eye" size={14} />
-                Open
-            </button>
-            <button className="btn btn--secondary" onClick={handleDownload}>
-                <Icon name="download" size={14} />
-                Download
-            </button>
-            <button className="btn btn--danger" onClick={handleDelete}>
-                <Icon name="delete" size={14} />
-                Delete
-            </button>
+            <LabeledButton
+                icon="eye"
+                label="Open"
+                onClick={handleOpen}
+                variant="primary"
+            />
+            <LabeledButton
+                icon="download"
+                label="Download"
+                onClick={handleDownload}
+                variant="ghost"
+            />
+            <LabeledButton
+                icon="delete"
+                label="Delete"
+                onClick={handleDelete}
+                variant="primary"
+                color="red"
+            />
         </>
     );
 

@@ -21,7 +21,9 @@
  */
 
 import React from 'react';
-import { Icon, getIconComponent } from '@UI/react/components/common/Icon';
+import { Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
+import { getIconComponent } from '@UI/react/components/common/Icon';
 import { Modal } from '@UI/react/components/modals/Modal';
 import './DatasetSettingsModal.scss';
 
@@ -89,17 +91,24 @@ export function DatasetSettingsModal({
      */
     const renderFooter = () => (
         <>
-            <button className="btn btn--primary" onClick={handleCreateView}>
-                <Icon name="add" size={14} />
-                Create View
-            </button>
-            <button className="btn btn--danger" onClick={handleUnload}>
-                <Icon name="delete" size={14} />
-                Unload
-            </button>
-            <button className="btn btn--secondary" onClick={onClose}>
-                Close
-            </button>
+            <LabeledButton
+                icon="add"
+                label="Create View"
+                onClick={handleCreateView}
+                variant="primary"
+            />
+            <LabeledButton
+                icon="delete"
+                label="Unload"
+                onClick={handleUnload}
+                variant="primary"
+                color="red"
+            />
+            <LabeledButton
+                label="Close"
+                onClick={onClose}
+                variant="ghost"
+            />
         </>
     );
 
