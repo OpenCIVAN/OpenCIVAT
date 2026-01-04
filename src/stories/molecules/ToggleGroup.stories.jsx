@@ -52,10 +52,10 @@ export const IconOnly = {
         return (
             <ToggleGroup
                 options={[
-                    { value: 'left', icon: 'align-left' },
-                    { value: 'center', icon: 'align-center' },
-                    { value: 'right', icon: 'align-right' },
-                    { value: 'justify', icon: 'align-justify' },
+                    { value: 'left', icon: 'alignLeft' },
+                    { value: 'center', icon: 'alignCenter' },
+                    { value: 'right', icon: 'alignRight' },
+                    { value: 'justify', icon: 'alignJustify' },
                 ]}
                 value={value}
                 onChange={setValue}

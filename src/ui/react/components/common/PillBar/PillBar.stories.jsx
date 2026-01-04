@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { PillBar } from './index';
 
 export default {
-    title: 'Common/PillBar',
+    title: 'Molecules/PillBar',
     component: PillBar,
     parameters: {
         layout: 'centered',

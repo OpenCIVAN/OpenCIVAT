@@ -127,19 +127,19 @@ export const CommandPalette = {
             border: '1px solid rgba(255,255,255,0.1)',
         }}>
             <MenuItem
-                icon="file-plus"
+                icon="filePlus"
                 label="Create New File"
                 description="Create a new empty file"
                 shortcut="⌘N"
             />
             <MenuItem
-                icon="folder-plus"
+                icon="folderPlus"
                 label="Create New Folder"
                 description="Create a new folder"
                 shortcut="⌘⇧N"
             />
             <MenuItem
-                icon="git-branch"
+                icon="gitBranch"
                 label="Create Branch"
                 description="Create a new git branch"
             />

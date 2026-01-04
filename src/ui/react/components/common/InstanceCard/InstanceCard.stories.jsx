@@ -6,7 +6,7 @@ import {
 } from './InstanceCard';
 
 export default {
-    title: 'Common/InstanceCard',
+    title: 'Organisms/InstanceCard',
     component: InstanceCard,
     parameters: {
         layout: 'padded',

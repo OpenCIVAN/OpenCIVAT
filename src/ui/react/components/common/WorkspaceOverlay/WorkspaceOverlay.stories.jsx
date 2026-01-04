@@ -3,7 +3,7 @@ import { WorkspaceOverlay } from './index';
 import { Icon } from '@UI/react/components/common/Icon';
 
 export default {
-    title: 'Common/WorkspaceOverlay',
+    title: 'Organisms/WorkspaceOverlay',
     component: WorkspaceOverlay,
     parameters: {
         layout: 'fullscreen',

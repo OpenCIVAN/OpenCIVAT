@@ -4,7 +4,7 @@ import { Icon } from '@UI/react/components/common/Icon';
 import { ToolPanel } from "./ToolPanel";
 
 export default {
-    title: "Common/ToolPanel",
+    title: "Organisms/ToolPanel",
     component: ToolPanel,
     parameters: {
         layout: "fullscreen",

@@ -56,6 +56,7 @@ import React, {
     useCallback
 } from 'react';
 import { createPortal } from 'react-dom';
+import { Icon } from '@UI/react/components/common/Icon';
 import { useTooltip } from './useTooltip';
 import { useTooltipContext } from './TooltipProvider';
 import { useAdaptive } from '@UI/react/context';

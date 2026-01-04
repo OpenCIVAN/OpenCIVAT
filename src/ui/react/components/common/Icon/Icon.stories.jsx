@@ -20,7 +20,7 @@ import Icon, {
 } from './index';
 
 export default {
-    title: 'Components/Common/Icon',
+    title: 'Atoms/Icon',
     component: Icon,
     parameters: {
         docs: {

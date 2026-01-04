@@ -44,7 +44,7 @@ export function IconOverlay({
             <Icon
                 name={baseIcon}
                 size={size}
-                sx={{ opacity: baseOpacity }}
+                style={{ opacity: baseOpacity }}
             />
             <span className="overlay-icon" style={{ color: overlayColor }}>
                 <Icon name={overlayIcon} size={size} />

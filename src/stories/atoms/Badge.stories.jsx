@@ -1,6 +1,6 @@
 // src/stories/atoms/Badge.stories.jsx
 import React from 'react';
-import { Badge } from '@UI/react/components/atoms';
+import { Badge, Icon } from '@UI/react/components/atoms';
 
 export default {
     title: 'Atoms/Badge',
@@ -167,8 +167,9 @@ export const NotificationBadge = {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    color: '#888',
                 }}>
-                    <span style={{ fontSize: '20px' }}>🔔</span>
+                    <Icon name="bell" size={20} />
                 </div>
                 <div style={{ position: 'absolute', top: '-4px', right: '-4px' }}>
                     <Badge count={3} color="danger" size="sm" />
@@ -183,8 +184,9 @@ export const NotificationBadge = {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    color: '#888',
                 }}>
-                    <span style={{ fontSize: '20px' }}>💬</span>
+                    <Icon name="messageSquare" size={20} />
                 </div>
                 <div style={{ position: 'absolute', top: '-4px', right: '-4px' }}>
                     <Badge dot color="primary" />

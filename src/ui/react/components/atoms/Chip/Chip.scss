@@ -2,12 +2,15 @@
 // Chip atom styles
 
 .chip {
-    --chip-color: var(--color-text-primary, #e0e0e0);
-    --chip-bg: rgba(255, 255, 255, 0.08);
-    --chip-border: rgba(255, 255, 255, 0.12);
-    --chip-hover-bg: rgba(255, 255, 255, 0.12);
-    --chip-selected-bg: rgba(78, 205, 196, 0.15);
-    --chip-selected-border: rgba(78, 205, 196, 0.4);
+    // Default color (can be overridden via inline style --chip-color)
+    --chip-color: var(--color-text-secondary, #a0a0a0);
+
+    // Derive backgrounds and borders from --chip-color using color-mix
+    --chip-bg: color-mix(in srgb, var(--chip-color) 10%, transparent);
+    --chip-border: color-mix(in srgb, var(--chip-color) 25%, transparent);
+    --chip-hover-bg: color-mix(in srgb, var(--chip-color) 18%, transparent);
+    --chip-selected-bg: color-mix(in srgb, var(--chip-color) 20%, transparent);
+    --chip-selected-border: color-mix(in srgb, var(--chip-color) 50%, transparent);
 
     display: inline-flex;
     align-items: center;
@@ -61,10 +64,10 @@
     &--selected {
         background: var(--chip-selected-bg);
         border-color: var(--chip-selected-border);
-        color: var(--color-accent, #4ecdc4);
+        color: var(--chip-color);
 
         &.chip--interactive:hover:not(.chip--disabled) {
-            background: rgba(78, 205, 196, 0.2);
+            background: color-mix(in srgb, var(--chip-color) 25%, transparent);
         }
     }
 

@@ -172,14 +172,32 @@ export const RemovableList = {
 
 export const CustomColors = {
     render: () => (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <Chip label="Default" />
-            <Chip label="Teal" color="#4ecdc4" selected />
-            <Chip label="Coral" color="#ff6b6b" selected />
-            <Chip label="Purple" color="#bb8fce" selected />
-            <Chip label="Yellow" color="#f7dc6f" selected />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <Chip label="Default" />
+                <Chip label="Teal" color="#4ecdc4" />
+                <Chip label="Coral" color="#ff6b6b" />
+                <Chip label="Purple" color="#bb8fce" />
+                <Chip label="Amber" color="#f59e0b" />
+                <Chip label="Blue" color="#60a5fa" />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <Chip label="Default" selected onClick={() => {}} />
+                <Chip label="Teal" color="#4ecdc4" selected onClick={() => {}} />
+                <Chip label="Coral" color="#ff6b6b" selected onClick={() => {}} />
+                <Chip label="Purple" color="#bb8fce" selected onClick={() => {}} />
+                <Chip label="Amber" color="#f59e0b" selected onClick={() => {}} />
+                <Chip label="Blue" color="#60a5fa" selected onClick={() => {}} />
+            </div>
         </div>
     ),
+    parameters: {
+        docs: {
+            description: {
+                story: 'Custom colors affect background, border, and text. Top row shows default state, bottom row shows selected state.',
+            },
+        },
+    },
 };
 
 // =============================================================================

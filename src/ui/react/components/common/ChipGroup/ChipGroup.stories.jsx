@@ -6,7 +6,7 @@ import { ChipGroup, Chip, useChipGroup } from './ChipGroup';
 import { Icon } from '@UI/react/components/common/Icon';
 
 export default {
-    title: 'Common/ChipGroup',
+    title: 'Molecules/ChipGroup',
     component: ChipGroup,
     parameters: {
         layout: 'centered',

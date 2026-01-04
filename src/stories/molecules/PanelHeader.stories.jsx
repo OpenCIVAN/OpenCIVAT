@@ -216,7 +216,7 @@ export const CardHeader = {
                 color="teal"
                 size="sm"
                 actions={[
-                    { icon: 'more-vertical', onClick: () => {}, tooltip: 'More options' },
+                    { icon: 'moreVertical', onClick: () => {}, tooltip: 'More options' },
                 ]}
             />
             <div style={{ padding: '16px', textAlign: 'center' }}>

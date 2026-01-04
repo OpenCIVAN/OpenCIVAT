@@ -7,7 +7,7 @@ import React from 'react';
 import { FileStateIndicator, FILE_STATE_CONFIG } from './FileStateIndicator';
 
 export default {
-    title: 'Common/FileStateIndicator',
+    title: 'Atoms/FileStateIndicator',
     component: FileStateIndicator,
     parameters: {
         layout: 'centered',

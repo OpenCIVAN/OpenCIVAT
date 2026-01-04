@@ -70,4 +70,12 @@
     > * {
         min-width: 0;
     }
+
+    // In stacked (non-inline) mode, allow text to wrap
+    .info-row:not(.info-row--inline) & {
+        > .text {
+            white-space: normal;
+            word-wrap: break-word;
+        }
+    }
 }

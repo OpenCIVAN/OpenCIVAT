@@ -10,7 +10,7 @@ import { ToastContainer } from "./ToastContainer";
 import { toast, useToastStore } from "@UI/react/store/toastStore";
 
 export default {
-    title: "Common/Toast",
+    title: "Molecules/Toast",
     component: Toast,
     parameters: {
         layout: "centered",

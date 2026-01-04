@@ -57,10 +57,11 @@ import React, {
     useCallback,
     useRef,
     useEffect,
-    useMemo
+    useMemo,
+    isValidElement
 } from 'react';
 import { createPortal } from 'react-dom';
-import { IconChevronDown, IconClose, IconCheck, IconSearch } from '@UI/react/components/common/Icon';
+import { Icon, IconChevronDown, IconClose, IconCheck, IconSearch } from '@UI/react/components/common/Icon';
 import { useDropdown } from './useDropdown';
 import './Dropdown.scss';
 
@@ -424,10 +425,31 @@ function DropdownSelect({
     ].filter(Boolean).join(' ');
 
     /**
+     * Render icon - handles string names and component elements
+     */
+    const renderIcon = (icon, size = 16) => {
+        if (!icon) return null;
+        // If it's a string, use the Icon component
+        if (typeof icon === 'string') {
+            return <Icon name={icon} size={size} />;
+        }
+        // If it's a React element, render it directly
+        if (isValidElement(icon)) {
+            return icon;
+        }
+        // If it's a component class/function, render it
+        if (typeof icon === 'function') {
+            const IconComponent = icon;
+            return <IconComponent sx={{ fontSize: size }} />;
+        }
+        return null;
+    };
+
+    /**
      * Render option item
      */
     const renderOption = (option, index) => {
-        const { value: optValue, label, icon: Icon, disabled: optDisabled } = option;
+        const { value: optValue, label, icon, disabled: optDisabled } = option;
         const selected = isSelected(optValue);
         const focused = focusableOptions[focusedIndex]?.value === optValue;
 
@@ -449,9 +471,9 @@ function DropdownSelect({
                 onClick={() => handleSelect(option)}
                 onMouseEnter={() => setFocusedIndex(focusableOptions.indexOf(option))}
             >
-                {Icon && (
+                {icon && (
                     <span className="dropdown-select__option-icon">
-                        <Icon sx={{ fontSize: 16 }} />
+                        {renderIcon(icon, 16)}
                     </span>
                 )}
                 <span className="dropdown-select__option-label">{label}</span>
@@ -559,34 +581,26 @@ function DropdownSelect({
                 <div className="dropdown-select__value">
                     {multiple && selectedOptions.length > 0 ? (
                         <div className="dropdown-select__tags">
-                            {selectedOptions.map(opt => {
-                                const OptIcon = opt.icon;
-                                return (
-                                    <span key={opt.value} className="dropdown-select__tag">
-                                        {OptIcon && <OptIcon sx={{ fontSize: 12 }} />}
-                                        <span>{opt.label}</span>
-                                        <button
-                                            type="button"
-                                            className="dropdown-select__tag-remove"
-                                            onClick={(e) => handleRemoveTag(opt.value, e)}
-                                            aria-label={`Remove ${opt.label}`}
-                                        >
-                                            <IconClose sx={{ fontSize: 12 }} />
-                                        </button>
-                                    </span>
-                                );
-                            })}
+                            {selectedOptions.map(opt => (
+                                <span key={opt.value} className="dropdown-select__tag">
+                                    {opt.icon && renderIcon(opt.icon, 12)}
+                                    <span>{opt.label}</span>
+                                    <button
+                                        type="button"
+                                        className="dropdown-select__tag-remove"
+                                        onClick={(e) => handleRemoveTag(opt.value, e)}
+                                        aria-label={`Remove ${opt.label}`}
+                                    >
+                                        <IconClose sx={{ fontSize: 12 }} />
+                                    </button>
+                                </span>
+                            ))}
                         </div>
                     ) : selectedOptions.length > 0 ? (
-                        (() => {
-                            const SelectedIcon = selectedOptions[0].icon;
-                            return (
-                                <span className="dropdown-select__selected">
-                                    {SelectedIcon && <SelectedIcon sx={{ fontSize: 16 }} />}
-                                    <span>{selectedOptions[0].label}</span>
-                                </span>
-                            );
-                        })()
+                        <span className="dropdown-select__selected">
+                            {selectedOptions[0].icon && renderIcon(selectedOptions[0].icon, 16)}
+                            <span>{selectedOptions[0].label}</span>
+                        </span>
                     ) : (
                         <span className="dropdown-select__placeholder">{placeholder}</span>
                     )}

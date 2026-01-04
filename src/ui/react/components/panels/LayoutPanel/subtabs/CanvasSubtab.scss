@@ -100,42 +100,7 @@
   }
 }
 
-// Etched toggle (centered)
-.etched-toggle {
-  display: inline-flex;
-  justify-content: center;
-  border-radius: $radius-sm;
-  overflow: hidden;
-  background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(255,255,255,0.02) 100%);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.05);
-
-  &__btn {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
-    background: transparent;
-    border: none;
-    color: $color-text-muted;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all $transition-fast;
-    white-space: nowrap;
-
-    &:hover:not(&--active) { color: $color-text-secondary; background: rgba(255,255,255,0.05); }
-
-    &--active {
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.3);
-    }
-
-    &--grid.etched-toggle__btn--active { background: rgba($color-accent-blue, 0.2); color: $color-accent-blue; }
-    &--flow.etched-toggle__btn--active { background: rgba($color-accent-green, 0.2); color: $color-accent-green; }
-    &--green.etched-toggle__btn--active { background: rgba($color-accent-green, 0.2); color: $color-accent-green; }
-    &--amber.etched-toggle__btn--active { background: rgba($color-accent-amber, 0.2); color: $color-accent-amber; }
-
-    &--compact { padding: 3px 8px; font-size: 10px; }
-  }
-}
+// NOTE: Etched toggle styles now handled by ToggleGroup molecule
 
 // Tool buttons
 .layout-tool-btn {

@@ -76,7 +76,7 @@ export const PanelHeader = memo(function PanelHeader({
         >
             {showDragHandle && (
                 <span className="panel-header__drag-handle">
-                    <Icon name="grip-vertical" size={iconSize} />
+                    <Icon name="gripVertical" size={iconSize} />
                 </span>
             )}
 
@@ -112,7 +112,7 @@ export const PanelHeader = memo(function PanelHeader({
                     {/* Standard controls */}
                     {onMinimize && (
                         <IconButton
-                            icon={minimized ? 'maximize-2' : 'minus'}
+                            icon={minimized ? 'maximize2' : 'minus'}
                             size="sm"
                             variant="ghost"
                             onClick={onMinimize}
@@ -132,7 +132,7 @@ export const PanelHeader = memo(function PanelHeader({
 
                     {onDock && (
                         <IconButton
-                            icon="pin-off"
+                            icon="pinOff"
                             size="sm"
                             variant="ghost"
                             onClick={onDock}

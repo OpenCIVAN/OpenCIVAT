@@ -1,6 +1,5 @@
 // src/ui/react/components/common/Button/Button.stories.jsx
 import React from "react";
-import { Icon } from '@UI/react/components/common/Icon';
 import { Button, IconButton, ButtonGroup } from "./index";
 
 export default {
@@ -70,7 +69,7 @@ export const Danger = {
         children: "Delete",
         variant: "danger",
         size: "md",
-        icon: <Icon name="trash2" size={16} />,
+        icon: "trash2",
     },
 };
 
@@ -79,7 +78,7 @@ export const Success = {
         children: "Save Changes",
         variant: "success",
         size: "md",
-        icon: <Icon name="save" size={16} />,
+        icon: "save",
     },
 };
 
@@ -88,7 +87,7 @@ export const WithIcon = {
         children: "Add Item",
         variant: "primary",
         size: "md",
-        icon: <Icon name="plus" size={16} />,
+        icon: "plus",
     },
 };
 
@@ -97,7 +96,7 @@ export const WithIconRight = {
         children: "Continue",
         variant: "primary",
         size: "md",
-        iconRight: <Icon name="chevronRight" size={16} />,
+        iconRight: "chevronRight",
     },
 };
 
@@ -157,34 +156,28 @@ export const AllVariants = {
 
 export const IconButtonDefault = {
     render: () => (
-        <IconButton variant="default" size="md" tooltip="Settings">
-            <Icon name="settings" size={18} />
-        </IconButton>
+        <IconButton icon="settings" label="Settings" variant="default" size="md" tooltip />
     ),
 };
 
 export const IconButtonPrimary = {
     render: () => (
-        <IconButton variant="primary" size="md" tooltip="Add">
-            <Icon name="plus" size={18} />
-        </IconButton>
+        <IconButton icon="plus" label="Add" variant="primary" size="md" tooltip />
     ),
 };
 
 export const IconButtonActive = {
     render: () => (
-        <IconButton variant="default" size="md" active tooltip="Playing">
-            <Icon name="play" size={18} />
-        </IconButton>
+        <IconButton icon="play" label="Playing" variant="default" size="md" active tooltip />
     ),
 };
 
 export const IconButtonSizes = {
     render: () => (
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <IconButton size="sm"><Icon name="settings" size={14} /></IconButton>
-            <IconButton size="md"><Icon name="settings" size={18} /></IconButton>
-            <IconButton size="lg"><Icon name="settings" size={22} /></IconButton>
+            <IconButton icon="settings" label="Settings" size="sm" />
+            <IconButton icon="settings" label="Settings" size="md" />
+            <IconButton icon="settings" label="Settings" size="lg" />
         </div>
     ),
 };
@@ -196,9 +189,9 @@ export const IconButtonSizes = {
 export const ButtonGroupExample = {
     render: () => (
         <ButtonGroup>
-            <IconButton><Icon name="play" size={16} /></IconButton>
-            <IconButton><Icon name="pause" size={16} /></IconButton>
-            <IconButton active><Icon name="settings" size={16} /></IconButton>
+            <IconButton icon="play" label="Play" />
+            <IconButton icon="pause" label="Pause" />
+            <IconButton icon="settings" label="Settings" active />
         </ButtonGroup>
     ),
 };
@@ -239,8 +232,8 @@ export const LoadingVariants = {
 export const IconButtonLoading = {
     render: () => (
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <IconButton loading tooltip="Uploading..."><Icon name="upload" size={18} /></IconButton>
-            <IconButton loading variant="primary"><Icon name="download" size={18} /></IconButton>
+            <IconButton icon="upload" label="Uploading" loading tooltip="Uploading..." />
+            <IconButton icon="download" label="Download" loading variant="primary" />
         </div>
     ),
 };

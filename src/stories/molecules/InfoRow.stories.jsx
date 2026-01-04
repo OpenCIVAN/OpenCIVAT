@@ -70,10 +70,21 @@ export const Truncated = {
 };
 
 export const Stacked = {
-    args: {
-        label: 'Description',
-        value: 'This is a longer description that spans multiple lines when not inline.',
-        inline: false,
+    render: () => (
+        <div style={{ width: '250px' }}>
+            <InfoRow
+                label="Description"
+                value="This is a longer description that spans multiple lines when not inline. It should wrap naturally within the container."
+                inline={false}
+            />
+        </div>
+    ),
+    parameters: {
+        docs: {
+            description: {
+                story: 'Stacked layout with label above value for longer content.',
+            },
+        },
     },
 };
 

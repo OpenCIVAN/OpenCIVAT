@@ -7,7 +7,7 @@ import React from 'react';
 import { PresenceIndicator } from './PresenceIndicator';
 
 export default {
-    title: 'Common/PresenceIndicator',
+    title: 'Atoms/PresenceIndicator',
     component: PresenceIndicator,
     parameters: {
         layout: 'centered',

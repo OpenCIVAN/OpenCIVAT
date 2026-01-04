@@ -31,14 +31,7 @@
   }
 }
 
-.scratchpad-trigger__count {
-  background: $color-accent-blue;
-  color: white;
-  font-size: 9px;
-  padding: 2px 5px;
-  border-radius: $radius-full;
-  font-weight: 600;
-}
+// NOTE: Count badge styles now handled by Badge atom
 
 // =============================================================================
 // EXPANDED PANEL

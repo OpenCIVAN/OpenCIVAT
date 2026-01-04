@@ -7,7 +7,7 @@ import React from 'react';
 import { MemberRow } from './MemberRow';
 
 export default {
-    title: 'Common/MemberRow',
+    title: 'Molecules/MemberRow',
     component: MemberRow,
     parameters: {
         layout: 'padded',

@@ -1,7 +1,7 @@
 import { UserAvatar, UserAvatarGroup } from "./UserAvatar";
 
 export default {
-    title: "Collaboration/UserAvatar",
+    title: "Atoms/UserAvatar",
     component: UserAvatar,
     parameters: {
         layout: "centered",
