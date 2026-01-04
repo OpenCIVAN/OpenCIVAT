@@ -17,7 +17,7 @@ import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
-} from '@UI/react/components/common/ResizableSections';
+} from '@UI/react/components/organisms/ResizableSections';
 import { CURSOR_PALETTE, assignColorsToUsers } from './utils';
 import './CursorsTab.scss';
 

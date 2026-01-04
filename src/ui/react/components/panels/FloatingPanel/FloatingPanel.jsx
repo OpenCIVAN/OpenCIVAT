@@ -5,7 +5,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { FloatingPanelHeader } from '@UI/react/components/common/FloatingPanelHeader';
+import { FloatingPanelHeader } from '@UI/react/components/molecules/FloatingPanelHeader';
 import { useFloatingPanels, FLOATING_PANEL_DEFAULTS } from './FloatingPanelContext';
 import './FloatingPanel.scss';
 

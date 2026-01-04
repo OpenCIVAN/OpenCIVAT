@@ -8,7 +8,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { DropdownPortal } from '@UI/react/components/common/DropdownPortal';
+import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
 
 import './ActiveViewSelector.scss';
 

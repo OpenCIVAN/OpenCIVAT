@@ -47,3 +47,9 @@ export { Text } from './Text';
 
 // Chip - Interactive tag/pill component
 export { Chip } from './Chip';
+
+// Thumbnail - Image thumbnail with loading states
+export { Thumbnail } from './Thumbnail';
+
+// DropdownPortal - Portal-based dropdown container
+export { DropdownPortal } from './DropdownPortal';

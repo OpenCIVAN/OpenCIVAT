@@ -8,7 +8,7 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 import { presenceSystem } from '@Collaboration/presence/presenceSystem.js';
 import { getBottomPanelControls } from '@UI/react/components/panels/BottomPanel';
 import { useAuth } from '@UI/react/hooks/useAuth.js';
-import { VoiceCommandToggle } from '@UI/react/components/common/VoiceCommandToggle';
+import { VoiceCommandToggle } from '@UI/react/components/molecules/VoiceCommandToggle';
 import { getStatusColorHex } from '@UI/react/utils/statusConfig';
 import './StatusBar.scss';
 

@@ -15,7 +15,7 @@
 import React, { memo, useState } from "react";
 import ReactDOM from "react-dom";
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { FloatingPanelHeader } from '@UI/react/components/common/FloatingPanelHeader';
+import { FloatingPanelHeader } from '@UI/react/components/molecules/FloatingPanelHeader';
 import { DirectionalButton } from '@UI/react/components/molecules';
 import { useAdaptive } from '@UI/react/context';
 import { useLayoutPanelContext, DOCK_POSITIONS } from "../../LayoutPanelContext";

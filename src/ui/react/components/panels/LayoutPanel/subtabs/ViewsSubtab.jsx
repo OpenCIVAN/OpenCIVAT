@@ -19,8 +19,8 @@
 import React, { memo, useCallback, useState, useMemo } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { SearchBar } from '@UI/react/components/common/SearchBar';
-import { ViewItem } from '@UI/react/components/common/ViewItem';
+import { SearchBar } from '@UI/react/components/molecules/SearchBar';
+import { ViewItem } from '@UI/react/components/molecules/ViewItem';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import './ViewsSubtab.scss';
 

@@ -19,11 +19,11 @@
 import React from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { SearchBar } from '@UI/react/components/common/SearchBar';
+import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import {
     ResizableSectionsContainer,
     ResizableSection,
-} from '@UI/react/components/common/ResizableSections';
+} from '@UI/react/components/organisms/ResizableSections';
 
 import { useNotesTab } from './hooks/useNotesTab';
 import { NoteCard } from './components/NoteCard';

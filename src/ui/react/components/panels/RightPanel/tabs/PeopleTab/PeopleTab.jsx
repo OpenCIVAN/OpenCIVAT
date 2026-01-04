@@ -19,8 +19,8 @@
 import React from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { SubtabBar } from '@UI/react/components/common/SubtabBar';
-import { SearchBar } from '@UI/react/components/common/SearchBar';
+import { SubtabBar } from '@UI/react/components/molecules/SubtabBar';
+import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 
 import { usePeopleTab } from './hooks/usePeopleTab';
 import { RoomSubtab } from './components/RoomSubtab';

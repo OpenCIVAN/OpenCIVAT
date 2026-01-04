@@ -25,7 +25,7 @@ export { ViewContextBlock } from './ViewContextBlock';
 // Toggle Controls
 export { FlowDirectionToggle } from './FlowDirectionToggle';
 export { LayoutModeToggle } from '@UI/react/components/controls/LayoutModeToggle';
-export { SegmentedToggle } from '@UI/react/components/common/SegmentedToggle';
+export { SegmentedToggle } from '@UI/react/components/molecules/SegmentedToggle';
 
 // Buttons
 export { LabeledIconButton } from './LabeledIconButton';

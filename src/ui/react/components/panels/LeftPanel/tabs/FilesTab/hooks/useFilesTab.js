@@ -12,7 +12,7 @@ import { ui as log } from "@Utils/logger.js";
 import { useProjectFiles } from "@UI/react/hooks/useProjectFiles.js";
 import { useComputeJobs } from "@UI/react/hooks/useComputeJobs.js";
 import { useDatasets } from "@UI/react/hooks/useDatasets.js";
-import { useSectionStates } from "@UI/react/components/common/ResizableSections";
+import { useSectionStates } from "@UI/react/components/organisms/ResizableSections";
 import { formatFileSize } from "@Utils/formatters.js";
 import { getHandlerForFileType } from "@Core/instances/types/instanceTypesInit.js";
 import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";

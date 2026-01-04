@@ -13,7 +13,7 @@ import {
     ResizableSection,
     ResizableSectionsContainer,
     useSectionStates,
-} from '@UI/react/components/common/ResizableSections';
+} from '@UI/react/components/organisms/ResizableSections';
 import { useSettingsTab } from './hooks/useSettingsTab';
 import { YourPreferences } from './sections/YourPreferences';
 import { ProjectInfo } from './sections/ProjectInfo';

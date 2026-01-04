@@ -76,9 +76,9 @@ function getDropZone(e, cellRef, isEmpty) {
 
 import { PlacementContentType } from '@Core/data/models/CanvasPlacement.js';
 import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewport';
-import { ProgressiveLoader } from '@UI/react/components/common/ThumbnailPreview';
+import { ProgressiveLoader } from '@UI/react/components/molecules/ThumbnailPreview';
 import { RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
-import { Thumbnail } from '@UI/react/components/common/Thumbnail';
+import { Thumbnail } from '@UI/react/components/atoms/Thumbnail';
 import './CanvasCell.scss';
 
 // =============================================================================

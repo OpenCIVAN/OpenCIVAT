@@ -15,7 +15,7 @@
  */
 
 import { useState, useCallback, useMemo } from "react";
-import { useSectionStates } from "@UI/react/components/common/ResizableSections";
+import { useSectionStates } from "@UI/react/components/organisms/ResizableSections";
 
 /**
  * Sample notes data (will be replaced with real data source)

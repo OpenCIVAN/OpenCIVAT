@@ -14,3 +14,6 @@ export { ToolPanel } from './ToolPanel';
 
 // WorkspaceOverlay - Full-screen overlay for workspace modes
 export { WorkspaceOverlay } from './WorkspaceOverlay';
+
+// ResizableSections - Resizable panel sections
+export { ResizableSections } from './ResizableSections';

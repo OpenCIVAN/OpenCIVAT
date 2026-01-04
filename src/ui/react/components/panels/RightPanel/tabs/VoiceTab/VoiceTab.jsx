@@ -19,7 +19,7 @@
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Button } from '@UI/react/components/atoms/Button';
-import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/common/HeaderSection';
+import { CollapsibleHeaderSection, StatusDot, StatBadge, SectionHeader } from '@UI/react/components/molecules/HeaderSection';
 
 import { useVoiceTab, VOICE_MODES } from './hooks/useVoiceTab';
 import { ParticipantCard } from './components/ParticipantCard';

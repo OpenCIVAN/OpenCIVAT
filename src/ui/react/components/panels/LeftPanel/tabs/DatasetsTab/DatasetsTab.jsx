@@ -10,7 +10,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
-import { SearchBar } from '@UI/react/components/common/SearchBar';
+import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { getViewConfigurationManager } from '@Init/appInitializer.js';
@@ -18,7 +18,7 @@ import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { dataset as log } from '@Utils/logger.js';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
-import { ViewItem } from '@UI/react/components/common/ViewItem';
+import { ViewItem } from '@UI/react/components/molecules/ViewItem';
 import { viewLifecycleService } from '@Services';
 import { formatFileSize, formatRelativeTime } from '@Utils/formatters.js';
 import './DatasetsTab.scss';

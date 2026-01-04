@@ -20,15 +20,15 @@
 import React, { useMemo, useCallback, useContext } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { SearchBar } from '@UI/react/components/common/SearchBar';
+import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates,
-} from '@UI/react/components/common/ResizableSections';
+} from '@UI/react/components/organisms/ResizableSections';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
-import { EmptyState } from '@UI/react/components/common/EmptyState';
-import { ViewItem, InactiveViewItem, TrashedViewItem } from '@UI/react/components/common/ViewItem';
+import { EmptyState } from '@UI/react/components/molecules/EmptyState';
+import { ViewItem, InactiveViewItem, TrashedViewItem } from '@UI/react/components/molecules/ViewItem';
 import {
     CanvasNavigator,
     useLayoutPanelContext,

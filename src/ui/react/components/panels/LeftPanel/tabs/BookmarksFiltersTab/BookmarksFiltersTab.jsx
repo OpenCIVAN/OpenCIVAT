@@ -15,7 +15,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
-import { SearchBar } from '@UI/react/components/common/SearchBar';
+import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { getScopeChips } from './constants';
 import { BookmarksSubtab } from './subtabs/BookmarksSubtab';
 import { FiltersSubtab } from './subtabs/FiltersSubtab';

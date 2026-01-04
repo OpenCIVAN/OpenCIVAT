@@ -10,13 +10,13 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { SearchBar } from '@UI/react/components/common/SearchBar';
+import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import {
     ResizableSectionsContainer,
     ResizableSection,
     useSectionStates
-} from '@UI/react/components/common/ResizableSections';
-import { EmptyState } from '@UI/react/components/common/EmptyState';
+} from '@UI/react/components/organisms/ResizableSections';
+import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { useAnnotations } from '@UI/react/hooks/useAnnotations.js';
 import { useDatasets } from '@UI/react/hooks/useDatasets.js';
 import './AnnotationsTab.scss';

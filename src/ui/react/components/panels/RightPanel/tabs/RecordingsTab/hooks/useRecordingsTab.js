@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { useSectionStates } from "@UI/react/components/common/ResizableSections";
+import { useSectionStates } from "@UI/react/components/organisms/ResizableSections";
 import { useRecordings } from "@UI/react/hooks/useRecordings.js";
 
 /**

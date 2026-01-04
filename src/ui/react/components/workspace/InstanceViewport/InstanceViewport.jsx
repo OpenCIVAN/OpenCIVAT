@@ -13,7 +13,7 @@ import { CameraViewGridPicker } from '@UI/react/components/workspace/Pickers/Cam
 import { SliderWithPresets } from '@UI/react/components/workspace/Sliders/SliderWithPresets';
 import { ColorSwatchGrid } from '@UI/react/components/workspace/Pickers/ColorSwatchGrid';
 import { PositionGridPicker } from '@UI/react/components/workspace/Pickers/PositionGridPicker';
-import { VRButton } from '@UI/react/components/common/VRButton';
+import { VRButton } from '@UI/react/components/molecules/VRButton';
 import { vrManager } from '@Core/vr/VRManager.js';
 import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel/FloatingPanelContext';
 

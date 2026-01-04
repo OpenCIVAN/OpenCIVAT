@@ -14,7 +14,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { MemberRow } from '@UI/react/components/molecules/MemberRow';
-import { EmptyState } from '@UI/react/components/common/EmptyState';
+import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { useWorkspacePresence } from '@UI/react/hooks/useRoomPresence.js';
 import '../PeopleTab.scss';
 

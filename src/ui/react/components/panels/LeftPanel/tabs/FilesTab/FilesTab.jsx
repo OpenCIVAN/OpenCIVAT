@@ -25,11 +25,11 @@
 import React, { useCallback } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
-import { SearchBar } from '@UI/react/components/common/SearchBar';
+import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import {
     ResizableSectionsContainer,
     ResizableSection,
-} from '@UI/react/components/common/ResizableSections';
+} from '@UI/react/components/organisms/ResizableSections';
 import { useFilesTab } from './hooks/useFilesTab';
 import { FileItemList, FileItemGrid } from './components/FileItem';
 import { FileContextMenu } from './components/FileContextMenu';
