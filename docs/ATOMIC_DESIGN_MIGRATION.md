@@ -1,21 +1,20 @@
-# Atomic Design Migration Plan
+# Atomic Design System
 
 ## Overview
 
-This document outlines the strategy for migrating the CIA Web UI to an atomic design system. The goal is to reduce duplication, improve consistency, and make the codebase more maintainable.
+The CIA Web UI uses an atomic design system to reduce duplication, improve consistency, and make the codebase more maintainable.
 
-**Key Principle:** Old system keeps working until new is verified. Break things in isolation, not production.
+**Status:** ✅ Migration Complete
 
 ---
 
-## Current State Analysis
+## Component Structure
 
-### Component Structure
 ```
 src/ui/react/components/
-├── atoms/          # NEW - To be created
-├── molecules/      # NEW - To be created
-├── common/         # 40+ components (mix of atoms/molecules/organisms)
+├── atoms/          # 20 foundational elements (buttons, icons, badges, etc.)
+├── molecules/      # 27 composed components (tab buttons, menu items, etc.)
+├── organisms/      # 4 complex components (left panel, right panel, etc.)
 ├── layout/         # Layout components
 ├── panels/         # Panel components
 ├── workspace/      # Workspace components
@@ -24,501 +23,140 @@ src/ui/react/components/
 └── content/        # Content components
 ```
 
-### Identified Duplication
-
-#### Button Patterns (93 distinct patterns)
-| Pattern | Occurrences | Files |
-|---------|-------------|-------|
-| `canvas-navigator__btn` | 22+ | CanvasNavigator.jsx |
-| `instance-toolbar__btn` | 26+ | InstanceViewport.jsx |
-| `cop-button` | 11+ | CanvasOperationsPanel.jsx |
-| `panel-footer__btn` | 11+ | Multiple panel files |
-| `etched-toggle__btn` | 11+ | CanvasSubtab.jsx |
-| `viewport-navigator__btn` | 11+ | ViewportNavigator.jsx |
-| `dpad-controller__btn` | 5+ | DPadController.jsx |
-
-#### Icon + Text Patterns
-| Pattern | Usage | Current Location |
-|---------|-------|-----------------|
-| Icon + Label | 15+ components | InfoRow, various |
-| Icon + Badge | Tab bars, activity | ActivityBar, tabs |
-| Icon + Status | State indicators | FileStateIndicator |
-| Icon Button | 50+ locations | Inline implementations |
-
----
-
-## Phase 1: Atoms (Foundational Elements)
-
-### Folder Structure
-```
-src/ui/react/components/atoms/
-├── index.js                    # Barrel export
-├── BaseButton/
-│   ├── BaseButton.jsx
-│   ├── BaseButton.scss
-│   └── index.js
-├── IconButton/
-│   ├── IconButton.jsx
-│   ├── IconButton.scss
-│   └── index.js
-├── IconLabel/
-│   ├── IconLabel.jsx
-│   ├── IconLabel.scss
-│   └── index.js
-├── Badge/
-│   ├── Badge.jsx
-│   ├── Badge.scss
-│   └── index.js
-├── StatusDot/
-│   ├── StatusDot.jsx
-│   ├── StatusDot.scss
-│   └── index.js
-├── Chip/
-│   ├── Chip.jsx
-│   ├── Chip.scss
-│   └── index.js
-└── Divider/
-    ├── Divider.jsx
-    ├── Divider.scss
-    └── index.js
-```
-
-### Atom Specifications
-
-#### 1. BaseButton
-The foundation for ALL buttons in the system.
-
-```jsx
-// Props
-interface BaseButtonProps {
-  variant: 'primary' | 'secondary' | 'ghost' | 'danger' | 'etched';
-  size: 'xs' | 'sm' | 'md' | 'lg';
-  active?: boolean;
-  disabled?: boolean;
-  loading?: boolean;
-  color?: string;           // Accent color override
-  fullWidth?: boolean;
-  children: ReactNode;
-  onClick?: () => void;
-  className?: string;
-  title?: string;
-  'aria-label'?: string;
-}
-```
-
-**Replaces:** 93 button patterns across codebase
-
-#### 2. IconButton
-Icon-only button, extends BaseButton.
-
-```jsx
-interface IconButtonProps extends Omit<BaseButtonProps, 'children'> {
-  icon: string;             // Icon name from registry
-  iconSize?: number;        // Override icon size
-  tooltip?: string;         // Shows on hover
-}
-```
-
-**Replaces:** All icon-only button implementations
-
-#### 3. IconLabel
-Icon with text label - the most common pairing.
-
-```jsx
-interface IconLabelProps {
-  icon: string;
-  label: string;
-  size?: 'xs' | 'sm' | 'md' | 'lg';
-  color?: string;           // Icon color
-  subtle?: boolean;         // Muted text
-  reverse?: boolean;        // Label before icon
-  gap?: number;
-}
-```
-
-**Replaces:** InfoRow icon patterns, tab labels, menu items
-
-#### 4. Badge
-Small status/count indicator.
-
-```jsx
-interface BadgeProps {
-  count?: number;
-  dot?: boolean;            // Just show a dot, no number
-  color?: 'default' | 'primary' | 'danger' | 'success' | 'warning';
-  max?: number;             // Max before showing "99+"
-  pulse?: boolean;          // Animate
-}
-```
-
-**Replaces:** Tab badges, notification counts
-
-#### 5. StatusDot
-Status indicator dot with optional pulse.
-
-```jsx
-interface StatusDotProps {
-  status: 'online' | 'offline' | 'busy' | 'away' | 'loading';
-  size?: 'sm' | 'md' | 'lg';
-  pulse?: boolean;
-}
-```
-
-**Replaces:** PresenceIndicator dots, status indicators
-
-#### 6. Chip
-Small interactive pill/tag.
-
-```jsx
-interface ChipProps {
-  label: string;
-  icon?: string;
-  color?: string;
-  selected?: boolean;
-  removable?: boolean;
-  onClick?: () => void;
-  onRemove?: () => void;
-}
-```
-
-**Replaces:** Tag chips, filter chips
-
-#### 7. Divider
-Visual separator.
-
-```jsx
-interface DividerProps {
-  orientation?: 'horizontal' | 'vertical';
-  label?: string;           // Optional centered label
-  spacing?: 'none' | 'sm' | 'md' | 'lg';
-}
-```
-
-**Replaces:** `<hr>`, separator divs, menu dividers
-
----
-
-## Phase 2: Molecules (Composed from Atoms)
-
-### Folder Structure
-```
-src/ui/react/components/molecules/
-├── index.js
-├── LabeledButton/          # IconButton + label text
-├── TabButton/              # IconButton + label + badge
-├── MenuItem/               # IconLabel + shortcut + action
-├── StatusIndicator/        # StatusDot + label
-├── InfoRow/                # IconLabel + value
-├── ToggleGroup/            # Group of toggle buttons
-├── SearchInput/            # Input + icon + clear button
-└── PanelHeader/            # Title + actions (existing FloatingPanelHeader)
-```
-
-### Molecule Specifications
-
-#### 1. LabeledButton
-Button with visible label.
-
-```jsx
-interface LabeledButtonProps {
-  icon: string;
-  label: string;
-  active?: boolean;
-  accent?: string;
-  onClick?: () => void;
-}
-// Composes: BaseButton + IconLabel
-```
-
-**Replaces:** SecondaryFooter buttons, ScratchPad controls
-
-#### 2. TabButton
-Tab/navigation button with badge support.
-
-```jsx
-interface TabButtonProps {
-  icon: string;
-  label: string;
-  active?: boolean;
-  badge?: number;
-  badgeColor?: string;
-  onClick?: () => void;
-}
-// Composes: BaseButton + IconLabel + Badge
-```
-
-**Replaces:** ActivityBar tabs, panel tabs, COP tabs
-
-#### 3. MenuItem
-Dropdown/context menu item.
-
-```jsx
-interface MenuItemProps {
-  icon?: string;
-  label: string;
-  shortcut?: string;
-  danger?: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-}
-// Composes: IconLabel + text
-```
-
-**Replaces:** DropdownMenu items, context menu items
-
-#### 4. DirectionalButton
-Navigation button for D-pads and navigators.
-
-```jsx
-interface DirectionalButtonProps {
-  direction: 'up' | 'down' | 'left' | 'right' | 'center';
-  onClick?: () => void;
-  onLongPress?: () => void;
-  disabled?: boolean;
-  active?: boolean;
-}
-// Composes: IconButton with directional logic
-```
-
-**Replaces:** DPadController buttons, ViewportNavigator buttons, CanvasNavigator buttons
-
-#### 5. ToggleGroup
-Mutually exclusive toggle buttons.
-
-```jsx
-interface ToggleGroupProps {
-  options: Array<{
-    value: string;
-    icon?: string;
-    label?: string;
-  }>;
-  value: string;
-  onChange: (value: string) => void;
-  variant?: 'default' | 'etched' | 'segmented';
-}
-// Composes: BaseButton[]
-```
-
-**Replaces:** Segmented controls, mode toggles
-
----
-
-## Phase 3: Migration Strategy
-
-### Step 1: Create `/atoms` folder with new components
-```bash
-src/ui/react/components/atoms/
-```
-
-### Step 2: Build atoms one-by-one
-Priority order:
-1. **BaseButton** - Foundation for everything
-2. **IconButton** - Most common pattern
-3. **IconLabel** - Second most common
-4. **Badge** - Needed for tabs
-5. **StatusDot** - Status indicators
-6. **Chip** - Tags and filters
-7. **Divider** - Separators
-
-### Step 3: Build molecules from atoms
-Priority order:
-1. **TabButton** - Unify all tab implementations
-2. **MenuItem** - Unify all menu items
-3. **DirectionalButton** - Unify D-pad/navigator buttons
-4. **ToggleGroup** - Unify all toggle groups
-
-### Step 4: Replace imports file-by-file
-Start with lowest-risk files:
-1. Story files (`.stories.jsx`)
-2. New components being built
-3. Low-traffic utility components
-4. High-traffic components (last)
-
-### Step 5: Verify and delete old patterns
-- Run full test suite
-- Visual regression testing
-- Delete old inline implementations
-
 ---
 
 ## Import Pattern
 
 ```jsx
-// Old (scattered imports)
-import { Button } from '@UI/react/components/common/Button';
-import { Icon } from '@UI/react/components/common/Icon';
-
-// New (centralized atoms/molecules)
-import { BaseButton, IconButton, IconLabel, Badge } from '@UI/react/components/atoms';
-import { TabButton, MenuItem, ToggleGroup } from '@UI/react/components/molecules';
-```
-
----
-
-## Files to Update (By Priority)
-
-### High Duplication (Fix First)
-1. `InstanceViewport.jsx` - 26+ button elements
-2. `CanvasNavigator.jsx` - 22+ button patterns
-3. `CanvasOperationsPanel.jsx` - 10+ cop-button variants
-4. `ActivityBar.jsx` - Tab button patterns
-5. `SecondaryFooter.jsx` - Labeled icon buttons
-
-### Medium Duplication
-6. `ViewportNavigator.jsx` - Navigator buttons
-7. `DPadController.jsx` - D-pad buttons
-8. `CanvasSubtab.jsx` - Etched toggles
-9. Panel footer buttons across all panels
-
-### Low Duplication (Fix Last)
-10. Individual panel tabs
-11. Context menus
-12. One-off button implementations
-
----
-
-## Success Metrics
-
-- [ ] Reduce button class patterns from 93 to <10
-- [ ] All buttons use BaseButton as foundation
-- [ ] All icon+label combos use IconLabel
-- [ ] Tab bars use TabButton molecule
-- [ ] Navigation controls use DirectionalButton
-- [ ] Toggle groups use ToggleGroup molecule
-- [ ] No inline button styles in component files
-- [ ] Storybook has all atoms/molecules documented
-
----
-
-## Notes
-
-- Keep `common/Icon` as-is - it's already well-structured
-- Keep `common/Button` during transition - gradually replace
-- New atoms should support VR mode via `useAdaptive` hook
-- All atoms should follow accessibility guidelines
-- Use CSS custom properties for theming, not inline styles
-
----
-
-## Migration Progress
-
-### Phase 1: Atoms - COMPLETE
-Created atoms with VR support and Storybook stories:
-- [x] IconLabel
-- [x] Badge
-- [x] StatusDot
-- [x] ColorDot
-- [x] Toggle
-- [x] Divider
-- [x] Spinner
-- [x] Text
-- [x] Chip
-
-Re-exported from common/ (already well-designed):
-- [x] Button, IconButton, ButtonGroup
-- [x] Icon
-
-### Phase 2: Molecules - COMPLETE
-Created molecules with VR support and Storybook stories:
-- [x] LabeledButton
-- [x] TabButton (with color variants)
-- [x] MenuItem
-- [x] DirectionalButton
-- [x] ToggleGroup
-- [x] StatusIndicator
-- [x] InfoRow
-- [x] SearchInput
-- [x] PanelHeader
-
-### Phase 3: Migration - COMPLETE
-
-**Status:** Core migration complete. All high-traffic components, panel footers, activity bars, navigation controls, and modal footers have been migrated to use atoms/molecules. Low-priority components can be migrated as encountered during future development.
-
-**Completed migrations:**
-- [x] `SecondaryFooter.jsx` - Now uses `LabeledButton` from molecules
-- [x] `LeftActivityBar.jsx` - Now uses `TabButton` with `variant="etched"` and `iconOnly`
-- [x] `RightActivityBar.jsx` - Now uses `TabButton` with `variant="etched"` and `iconOnly`
-- [x] `DPadController.jsx` - Now uses `DirectionalButton` molecule
-- [x] `ViewportNavigator.jsx` - Now uses `DirectionalButton` for navigation arrows
-- [x] `CanvasNavigator.jsx` - Internal DPad now uses `DirectionalButton` molecule
-
-**Panel footer migrations:**
-- [x] `NotesTab.jsx` - Uses `LabeledButton` + `IconButton`
-- [x] `DatasetsTab.jsx` - Uses `LabeledButton` + `IconButton`
-- [x] `ViewsTab.jsx` - Uses `LabeledButton`
-- [x] `PeopleTab.jsx` - Uses `LabeledButton` + `IconButton`
-- [x] `AnnotationsTab.jsx` - Uses `LabeledButton`
-- [x] `BookmarksFiltersTab.jsx` - Uses `LabeledButton`
-- [x] `RecordingsTab.jsx` - Uses `LabeledButton`
-- [x] `RoomCard.jsx` - Uses `LabeledButton` + `IconButton`
-- [x] `AnnotationsSubtab.jsx` - Uses `LabeledButton`
-- [x] `BookmarkEditor.jsx` - Uses `LabeledButton`
-- [x] `FilterEditor.jsx` - Uses `LabeledButton`
-
-**TabButton enhancements for activity bars:**
-- Added `variant="etched"` - Recessed button style with glow effect when active
-- Added `iconOnly` prop - Square button with hidden label
-- Added color variants with glow/border CSS variables
-
-**DirectionalButton fixes:**
-- Fixed icon names to use camelCase (`chevronUp` instead of `chevron-up`)
-- Changed center icon to `home` for consistency with existing D-pads
-
-**High-traffic component migrations:**
-- [x] `InstanceViewport.jsx` - GearOnlyDropdown and MoreMenu items now use `MenuItem` molecule
-- [x] `CanvasOperationsPanel.jsx` - Control buttons use `IconButton`, imports TabButton molecule
-- [x] `TransactionTab.jsx` - Uses `LabeledButton` for toolbar and action buttons
-- [x] `AuditLogTab.jsx` - Uses `ToggleGroup` for view/sort toggles
-- [x] `SavePointsTab.jsx` - Uses `LabeledButton` for create button
-
-**Modal footer migrations:**
-- [x] `RecordingConsentModal.jsx` - Uses `LabeledButton` for Leave/Continue
-- [x] `DeleteNoteDialog.jsx` - Uses `LabeledButton` for Cancel/Archive/Delete
-- [x] `TransferOwnershipDialog.jsx` - Uses `LabeledButton` for Cancel/Transfer
-- [x] `DatasetSettingsModal.jsx` - Uses `LabeledButton` for Create/Unload/Close
-- [x] `FileDetailsModal.jsx` - Uses `LabeledButton` for Open/Download/Delete
-
-**Additional component migrations:**
-- [x] `NoteEditor.jsx` - Uses `LabeledButton` for Add item/Cancel/Save
-- [x] `RecordingCard.jsx` - Uses `IconButton` for playback, `LabeledButton` for actions
-- [x] `FiltersSubtab.jsx` - Uses `LabeledButton` for Import/Export/Retry
-- [x] `BookmarksSubtab.jsx` - Uses `LabeledButton` for Retry
-
-**Full component migrations (Phase 3 Final):**
-- [x] `ViewSettingsModal.jsx` - Footer, share/unlink/delete buttons, QuickToggle → IconButton, ToggleRow → Toggle atom
-- [x] `CanvasSubtab.jsx` - Layout mode, flow direction, tools, drop mode → ToggleGroup, IconButton, LabeledButton, Divider
-- [x] `GridLayoutPreview.jsx` - Header actions, zoom controls, viewport size, mode toggle, undo/redo, apply/cancel → IconButton, LabeledButton, ToggleGroup
-- [x] `VoiceControls.jsx` - Join, mute, deafen, leave, settings → LabeledButton, IconButton
-- [x] `VoiceControlsPanel.jsx` - ControlButton → IconButton, leave button → LabeledButton
-- [x] `MessageInput.jsx` - Attach, mention, emoji, send → IconButton
-- [x] `FilesTab.jsx` - New folder, view toggles, filter, retry, type filters → IconButton, LabeledButton, ToggleGroup
-- [x] `ViewsSubtab.jsx` - Group toggle, clear buttons → LabeledButton, IconButton
-- [x] `AnnotationsTab.jsx` - ScopeChip → LabeledButton, TypeFilterToggle → IconButton, AnnotationItem visibility/more → IconButton
-- [x] `CanvasSizeDisplay.jsx` - Trigger → LabeledButton, controls → IconButton
-- [x] `ViewportSizeDisplay.jsx` - Trigger → LabeledButton, controls → IconButton
-- [x] `ScratchPad.jsx` - ClipboardItem remove → IconButton, QuickToolButton → LabeledButton, panel actions → IconButton
-- [x] `MemberRow.jsx` - VR buttons → LabeledButton, action buttons → IconButton
-- [x] `DatasetNode.jsx` - Hover actions → IconButton, create view → LabeledButton
-- [x] `LayersSubtab.jsx` - LayerToggle buttons → IconButton
-- [x] `WorkspacePickerModal.jsx` - Footer buttons → LabeledButton, create workspace → LabeledButton
-- [x] `UsernameModal.jsx` - Submit button → LabeledButton
-- [x] `ProjectSelector.jsx` - Create new → LabeledButton
-- [x] `ImageUploader.jsx` - Cancel/error close → LabeledButton/IconButton
-- [x] `SelectionContextMenu.jsx` - All menu items → MenuItem molecule
-- [x] `FilterCard.jsx` - Action buttons → IconButton, menu items → MenuItem, apply → LabeledButton
-
-**Phase 3 Status: COMPLETE**
-All major components have been migrated. Remaining files with button patterns are either:
-- Story files (*.stories.jsx) - testing/documentation only
-- Bootstrap.jsx - auth component with specialized styling
-- Modal.jsx - base modal component (container, not buttons)
-- ModalFooter.jsx - footer container only
-
-**Import pattern established:**
-```jsx
 // Atoms (foundational elements)
-import { Icon, IconButton, Badge, StatusDot, Chip } from '@UI/react/components/atoms';
+import {
+  Button, IconButton, Icon, Badge, StatusDot,
+  Chip, Toggle, Divider, Spinner, Text
+} from '@UI/react/components/atoms';
 
 // Molecules (composed from atoms)
-import { LabeledButton, TabButton, MenuItem } from '@UI/react/components/molecules';
+import {
+  LabeledButton, TabButton, MenuItem, DirectionalButton,
+  ToggleGroup, StatusIndicator, InfoRow, SearchInput, PanelHeader
+} from '@UI/react/components/molecules';
+
+// Organisms (complex composed components)
+import {
+  LeftPanel, RightPanel, ResizableSections
+} from '@UI/react/components/organisms';
 ```
+
+---
+
+## Component Inventory
+
+### Atoms (20 components)
+| Component | Description |
+|-----------|-------------|
+| Badge | Count/status indicator |
+| Button | Base button component |
+| ButtonGroup | Grouped buttons |
+| Chip | Interactive pill/tag |
+| ColorDot | Dataset color indicator |
+| Divider | Visual separator |
+| DropdownPortal | Portal-based dropdown |
+| FileStateIndicator | File sync status |
+| Icon | Icon renderer |
+| IconButton | Icon-only button |
+| IconLabel | Icon + text combo |
+| IconOverlay | Icon with overlay |
+| PresenceIndicator | User presence dot |
+| Slider | Range slider |
+| Spinner | Loading indicator |
+| StatusDot | Status indicator |
+| Text | Typography component |
+| Thumbnail | Image thumbnail |
+| Toggle | Switch control |
+| Tooltip | Hover tooltip |
+| UserAvatar | User avatar |
+
+### Molecules (27 components)
+| Component | Description |
+|-----------|-------------|
+| CameraGrid | Camera view grid |
+| ChipGroup | Group of filter chips |
+| DirectionalButton | D-pad navigation button |
+| EmptyState | Empty content placeholder |
+| FloatingPanelHeader | Floating panel header |
+| HeaderSection | Collapsible/dismissible sections |
+| InfoRow | Label + value display |
+| LabeledButton | Button with label |
+| MemberRow | User list item |
+| MenuItem | Menu/dropdown item |
+| OptionList | Selectable option list |
+| PanelHeader | Panel header with actions |
+| PillBar | Pill navigation bar |
+| SearchBar | Search with suggestions |
+| SearchInput | Search input field |
+| Section | Collapsible section |
+| SegmentedToggle | Segmented button toggle |
+| StatusIndicator | Status dot + label |
+| SubtabBar | Secondary tab navigation |
+| TabButton | Tab/navigation button |
+| Tabs | Tab container |
+| ThumbnailPreview | Thumbnail with preview |
+| Toast | Notification toast |
+| ToggleGroup | Mutually exclusive toggles |
+| ViewItem | View list item |
+| VoiceCommandToggle | Voice command toggle |
+| VRButton | VR-optimized button |
+
+### Organisms (4 components)
+| Component | Description |
+|-----------|-------------|
+| LeftPanel | Main left panel container |
+| ResizableSections | Resizable section container |
+| RightPanel | Main right panel container |
+| Toolbar | Main toolbar |
+
+---
+
+## Storybook
+
+All components have Storybook stories for documentation and testing:
+
+```bash
+npm run storybook
+# Opens at http://localhost:6006
+```
+
+Stories are organized by atomic level:
+- `Atoms/*` - Foundational components
+- `Molecules/*` - Composed components
+- `Organisms/*` - Complex components
+
+---
+
+## Migration Summary
+
+All three phases of the atomic design migration are complete:
+
+### Phase 1: Atoms ✅
+Created foundational components with VR/desktop adaptive support.
+
+### Phase 2: Molecules ✅
+Composed atoms into reusable UI patterns (buttons, menus, toggles).
+
+### Phase 3: Component Migration ✅
+Migrated all major components:
+- Activity bars (Left/Right) → `TabButton`
+- Navigation controls (D-pad, Canvas, Viewport) → `DirectionalButton`
+- Panel footers → `LabeledButton`, `IconButton`
+- Modal footers → `LabeledButton`
+- Context menus → `MenuItem`
+- Toggle groups → `ToggleGroup`
+
+### Phase 4: Organisms ✅
+Moved complex composed components to organisms folder:
+- `LeftPanel` - Main left panel container
+- `RightPanel` - Main right panel container
+- `ResizableSections` - Resizable section container
+- `Toolbar` - Main toolbar
+
+### Phase 5: Storybook Coverage ✅
+All 51 components have Storybook stories for documentation.
