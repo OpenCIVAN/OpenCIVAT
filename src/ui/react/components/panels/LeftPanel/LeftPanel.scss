@@ -173,6 +173,11 @@
   }
 }
 
+// Wrapper for tab button + badge
+.left-panel__activity-btn-wrapper {
+  position: relative;
+}
+
 // "Soon" badge for unimplemented tabs
 .left-panel__activity-badge {
   position: absolute;
@@ -186,6 +191,8 @@
   border-radius: $radius-xs;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .left-panel__activity-spacer {

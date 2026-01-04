@@ -161,6 +161,11 @@
   margin-top: $spacing-xs;
 }
 
+// Wrapper for tab button + badge
+.right-panel__activity-btn-wrapper {
+  position: relative;
+}
+
 .right-panel__activity-badge {
   position: absolute;
   top: -4px;
@@ -173,6 +178,8 @@
   border-radius: $radius-xs;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .right-panel__activity-spacer {

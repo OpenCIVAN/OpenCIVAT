@@ -28,14 +28,13 @@ import React, { useCallback, memo } from 'react';
 
 // Shared bar components (from common bars/ folder)
 import {
-    LabeledIconButton,
     VoiceControlsPanel,
     ViewContextBlock
 } from '@UI/react/components/bars';
 
-// Common UI components
-import { ButtonGroup, IconButton } from '@UI/react/components/common/Button';
-import { Icon } from '@UI/react/components/common/Icon';
+// Atomic design components
+import { ButtonGroup, IconButton, Icon } from '@UI/react/components/atoms';
+import { LabeledButton } from '@UI/react/components/molecules';
 
 // Navigator hook for toggling the floating canvas navigator
 import { useNavigatorButton } from '@UI/react/components/panels/LayoutPanel';
@@ -181,26 +180,29 @@ function SecondaryFooter({
                 {/* PANELS ZONE: Popout Buttons */}
                 {/* ================================================================= */}
                 <div className="secondary-footer__zone secondary-footer__zone--panels">
-                    <LabeledIconButton
+                    <LabeledButton
                         icon="map"
                         label="Nav"
                         active={navigatorOpen}
                         accent="var(--color-accent-teal)"
                         onClick={toggleNavigator}
+                        size="sm"
                     />
-                    <LabeledIconButton
+                    <LabeledButton
                         icon="stickyNote"
                         label="Notes"
                         active={scratchpadOpen}
                         accent="var(--color-accent-amber)"
                         onClick={onToggleScratchpad}
+                        size="sm"
                     />
-                    <LabeledIconButton
+                    <LabeledButton
                         icon="sliders"
                         label="Ops"
                         active={canvasOpsOpen}
                         accent="var(--color-accent-blue)"
                         onClick={onToggleCanvasOps}
+                        size="sm"
                     />
                 </div>
 

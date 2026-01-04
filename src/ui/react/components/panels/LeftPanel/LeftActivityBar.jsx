@@ -2,15 +2,12 @@
 // Activity bar icons for the left panel
 // Renders in ThreeEdgeLayout's left activity bar slot
 //
-// IMPORTANT: Uses existing class names from LeftPanel.scss to preserve styles
-// FIX: Changed `!tab.implemented` to `tab.implemented === false` to only show
-//      "Soon" badge when explicitly marked as not implemented
+// Uses TabButton molecule with etched variant for consistent styling
 
 import React from 'react';
-import { Icon } from '@UI/react/components/common/Icon';
+import { TabButton } from '@UI/react/components/molecules';
 import { useLeftPanelContext, LEFT_PANEL_TABS } from './LeftPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
-// Uses existing styles from LeftPanel.scss - no separate SCSS needed
 import './LeftPanel.scss';
 
 // =============================================================================
@@ -21,6 +18,7 @@ import './LeftPanel.scss';
  * LeftActivityBar - Vertical icon navigation for panel tabs
  * Fixed width (48px), always visible even when panel is collapsed.
  *
+ * Uses TabButton molecule with etched variant for the recessed button style.
  * Uses LayoutContext from ThreeEdgeLayout to control panel open/close state.
  */
 export function LeftActivityBar() {
@@ -49,31 +47,29 @@ export function LeftActivityBar() {
     const activeColor = activeTabConfig?.color || 'blue';
 
     return (
-        // Uses existing .left-panel__activity-bar class from LeftPanel.scss
         // data-color attribute controls the colored indicator line on the activity bar
         <div className="left-panel__activity-bar" data-color={activeColor}>
             {/* Tab buttons */}
             <div className="left-panel__activity-tabs">
                 {LEFT_PANEL_TABS.map((tab) => {
-                    const iconName = tab.icon;
                     const isActive = activeTab === tab.id;
 
                     return (
-                        <button
-                            key={tab.id}
-                            className={`left-panel__activity-btn ${isActive ? 'active' : ''}`}
-                            data-color={tab.color}
-                            onClick={() => handleTabClick(tab.id)}
-                            title={tab.label}
-                            aria-label={tab.label}
-                            aria-selected={isActive}
-                        >
-                            <Icon name={iconName} size={18} />
-                            {/* FIX: Only show "Soon" if explicitly set to false */}
+                        <div key={tab.id} className="left-panel__activity-btn-wrapper">
+                            <TabButton
+                                icon={tab.icon}
+                                label={tab.label}
+                                color={tab.color}
+                                variant="etched"
+                                iconOnly
+                                active={isActive}
+                                onClick={() => handleTabClick(tab.id)}
+                            />
+                            {/* "Soon" badge for unimplemented tabs */}
                             {tab.implemented === false && (
                                 <span className="left-panel__activity-badge">Soon</span>
                             )}
-                        </button>
+                        </div>
                     );
                 })}
             </div>
@@ -82,14 +78,14 @@ export function LeftActivityBar() {
             <div className="left-panel__activity-spacer" />
 
             {/* Toggle panel button at bottom */}
-            <button
-                className="left-panel__activity-btn left-panel__toggle-btn"
+            <TabButton
+                icon={isOpen ? 'panelLeftClose' : 'chevronRight'}
+                label={isOpen ? 'Collapse Panel' : 'Expand Panel'}
+                variant="etched"
+                iconOnly
                 onClick={onToggle}
-                title={isOpen ? 'Collapse Panel' : 'Expand Panel'}
-                aria-label={isOpen ? 'Collapse Panel' : 'Expand Panel'}
-            >
-                {isOpen ? <Icon name="panelLeftClose" size={18} /> : <Icon name="chevronRight" size={18} />}
-            </button>
+                className="left-panel__toggle-btn"
+            />
         </div>
     );
 }
