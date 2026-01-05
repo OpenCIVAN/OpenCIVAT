@@ -744,7 +744,7 @@ router.post("/internal/job-complete", async (req, res, next) => {
 
     await client.query("BEGIN");
 
-    // Create cache entry
+    // Create or update cache entry (UPSERT to handle re-runs)
     const cacheResult = await client.query(
       `
       INSERT INTO computation_cache (
@@ -754,6 +754,11 @@ router.post("/internal/job-complete", async (req, res, next) => {
       )
       SELECT $1, file_id, file_version_id, operation, params, $2, $3, $4, $5
       FROM computation_jobs WHERE id = $6
+      ON CONFLICT (cache_key) DO UPDATE SET
+        result_storage_key = EXCLUDED.result_storage_key,
+        result_metadata = EXCLUDED.result_metadata,
+        compute_time_ms = EXCLUDED.compute_time_ms,
+        result_size_bytes = EXCLUDED.result_size_bytes
       RETURNING id
     `,
       [

@@ -35,13 +35,12 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   // Base border - subtle when inactive
   border: 1px solid $color-border-default;
 
-  // Transition for smooth glow appearance
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
   // Inactive state - inset shadow for depth, no outer glow
   box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
 
-  // Active state - SOLID instance color border + glow
+  // Active state - controlled by React isFocused state
+  // This is the ONLY focus indicator we use - no CSS :focus/:focus-within
+  // to prevent flickering when focus moves between child elements
   &--active {
     border-color: var(--instance-color) !important;
     box-shadow:
@@ -50,34 +49,11 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
       inset 0 0 60px rgba(0, 0, 0, 0.5) !important;         // Keep depth shadow
   }
 
-  // Focus state - matches instance color (keyboard or click)
-  &:focus {
-    outline: none;
-    border-color: var(--instance-color);
-    box-shadow:
-      0 0 0 2px var(--instance-color),           // 2px focus ring in instance color
-      0 0 20px rgba(var(--instance-color-rgb), 0.3),   // Glow
-      inset 0 0 60px rgba(0, 0, 0, 0.5);
-  }
-
-  // Focus-visible - same as focus but for keyboard navigation
-  &:focus-visible {
-    outline: none;
-    border-color: var(--instance-color);
-    box-shadow:
-      0 0 0 2px var(--instance-color),           // 2px focus ring
-      0 0 20px rgba(var(--instance-color-rgb), 0.3),   // Glow
-      inset 0 0 60px rgba(0, 0, 0, 0.5);
-  }
-
-  // Focus-within (clicking inside, not keyboard) - subtle indication
-  &:focus-within:not(&--active) {
-    border-color: rgba(var(--instance-color-rgb), 0.6);
-    box-shadow:
-      0 0 0 1px rgba(var(--instance-color-rgb), 0.4),
-      0 0 12px rgba(var(--instance-color-rgb), 0.15),
-      inset 0 0 60px rgba(0, 0, 0, 0.5);
-  }
+  // Note: We intentionally don't use :focus, :focus-visible, or :focus-within
+  // pseudo-classes because they cause flickering when focus moves between
+  // child elements (header buttons, toolbar buttons, etc.)
+  // The --active class is controlled by React state which properly tracks
+  // whether ANY element within the viewport is focused.
 
   // Note: Header always renders in all UI modes so users can always close the instance
 }
@@ -555,8 +531,20 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   // Visible state - slides down from behind header
   &--visible {
     opacity: 1;
-    transform: translateY(40px); // Fully visible below header (32px + 8px gap)
+    transform: translateY(34px); // 2px below 32px header
     pointer-events: auto;
+
+    // Hover zone extending up to overlap with header
+    // Prevents flicker when mouse moves from header to toolbar
+    &::before {
+      content: "";
+      position: absolute;
+      top: -10px; // Extend 10px above toolbar (overlaps with header)
+      left: 0;
+      right: 0;
+      height: 10px;
+      pointer-events: auto;
+    }
   }
 
   // Pinned state

@@ -153,6 +153,60 @@ export function clonePolydata(polydata) {
     cloned.setLines(newLines);
   }
 
-  log.debug("Polydata cloned successfully");
+  // Clone PointData (scalars, colors, normals, etc.)
+  const originalPointData = polydata.getPointData();
+  if (originalPointData) {
+    const clonedPointData = cloned.getPointData();
+    const numArrays = originalPointData.getNumberOfArrays();
+
+    for (let i = 0; i < numArrays; i++) {
+      const originalArray = originalPointData.getArrayByIndex(i);
+      if (originalArray) {
+        const vtkDataArray = require("@kitware/vtk.js/Common/Core/DataArray").default;
+        const newArray = vtkDataArray.newInstance({
+          name: originalArray.getName(),
+          numberOfComponents: originalArray.getNumberOfComponents(),
+          values: originalArray.getData().slice(), // Deep copy the typed array
+        });
+        clonedPointData.addArray(newArray);
+      }
+    }
+
+    // Copy active scalars/vectors settings
+    const activeScalars = originalPointData.getScalars();
+    if (activeScalars) {
+      const name = activeScalars.getName();
+      clonedPointData.setActiveScalars(name);
+    }
+  }
+
+  // Clone CellData (cell-level scalars, colors, etc.)
+  const originalCellData = polydata.getCellData();
+  if (originalCellData) {
+    const clonedCellData = cloned.getCellData();
+    const numArrays = originalCellData.getNumberOfArrays();
+
+    for (let i = 0; i < numArrays; i++) {
+      const originalArray = originalCellData.getArrayByIndex(i);
+      if (originalArray) {
+        const vtkDataArray = require("@kitware/vtk.js/Common/Core/DataArray").default;
+        const newArray = vtkDataArray.newInstance({
+          name: originalArray.getName(),
+          numberOfComponents: originalArray.getNumberOfComponents(),
+          values: originalArray.getData().slice(), // Deep copy the typed array
+        });
+        clonedCellData.addArray(newArray);
+      }
+    }
+
+    // Copy active scalars settings
+    const activeScalars = originalCellData.getScalars();
+    if (activeScalars) {
+      const name = activeScalars.getName();
+      clonedCellData.setActiveScalars(name);
+    }
+  }
+
+  log.debug("Polydata cloned successfully (including PointData and CellData)");
   return cloned;
 }

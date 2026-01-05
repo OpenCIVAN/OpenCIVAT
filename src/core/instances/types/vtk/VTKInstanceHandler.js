@@ -621,6 +621,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       throw new Error("DatasetManager not available");
     }
 
+    // Update instanceData with dataset context (needed by getTools)
+    instanceData.datasetId = dataset.id;
+    instanceData.projectId = dataset.projectId || dataset.project_id || null;
+
     // Keep reduction feature in sync with dataset context
     const reductionState =
       this.reductionFeature?._ensureState?.(instanceId, {

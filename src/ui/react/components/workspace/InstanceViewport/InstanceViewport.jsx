@@ -894,7 +894,38 @@ export function InstanceViewport({
         );
     }, [actualInstanceId, viewConfigId]);
 
-    const handleBlur = useCallback(() => {
+    // Use capture phase to detect focus on ANY element inside the viewport
+    const handleFocusCapture = useCallback(() => {
+        // Any focus inside viewport = viewport is active
+        setIsFocused(true);
+        setNavbarVisible(true);
+    }, []);
+
+    const handleBlur = useCallback((e) => {
+        // Check if focus is moving to an element inside the viewport
+        // If so, don't treat this as a real blur - we're still "focused"
+        const relatedTarget = e.relatedTarget;
+        const viewportElement = viewportRef.current;
+
+        // If relatedTarget is inside viewport, stay focused
+        if (relatedTarget && viewportElement && viewportElement.contains(relatedTarget)) {
+            return;
+        }
+
+        // If relatedTarget is null, check after a microtask if we're still focused
+        // (handles cases where relatedTarget isn't set properly)
+        if (!relatedTarget) {
+            requestAnimationFrame(() => {
+                const activeElement = document.activeElement;
+                if (viewportElement && viewportElement.contains(activeElement)) {
+                    return; // Still focused inside viewport
+                }
+                setIsFocused(false);
+                setTimeout(() => setNavbarVisible(false), 300);
+            });
+            return;
+        }
+
         setIsFocused(false);
         // Delay hiding navbar to allow for interaction
         setTimeout(() => {
@@ -1473,10 +1504,11 @@ export function InstanceViewport({
             }}
             tabIndex={0}
             onFocus={handleFocus}
+            onFocusCapture={handleFocusCapture}
             onBlur={handleBlur}
             onMouseDown={handleActivateInstance}
         >
-            {/* Header - Always renders for early close access, hidden in small viewport modes */}
+            {/* Header - Always visible, controls toolbar visibility on hover */}
             {showFullToolbars && (
                 <InstanceHeader
                     displayName={displayName}
@@ -1500,16 +1532,13 @@ export function InstanceViewport({
                     onDuplicate={handleDuplicate}
                     onLinkSettings={handleLinkSettings}
                     viewportWidth={width}
+                    instanceId={actualInstanceId}
                     onShowToolbar={showToolbar}
                     onHideToolbar={hideToolbar}
-                    instanceId={actualInstanceId}
                 />
             )}
 
-            {/* VR Mode Indicator - Shows when in VR */}
-            {isInVR && <VRModeIndicator onExit={handleExitVR} />}
-
-            {/* Top Toolbar - Overlay that slides down on hover */}
+            {/* Top Toolbar - Overlay that slides down on header hover */}
             {showFullToolbars && tools.length > 0 && (
                 <InstanceToolbar
                     tools={tools}
@@ -1521,8 +1550,6 @@ export function InstanceViewport({
                     setOpenMenuId={setOpenMenuId}
                     dropdownPosition={dropdownPosition}
                     menuButtonRefs={menuButtonRefs}
-                    onShowToolbar={showToolbar}
-                    onHideToolbar={hideToolbar}
                     renderTool={renderTool}
                     onOpenInstanceTools={handleOpenInstanceTools}
                     instanceToolsTabActive={instanceToolsTabActive}
@@ -1535,8 +1562,13 @@ export function InstanceViewport({
                     onDuplicate={handleDuplicate}
                     onClose={handleClose}
                     onTrash={handleTrash}
+                    onShowToolbar={showToolbar}
+                    onHideToolbar={hideToolbar}
                 />
             )}
+
+            {/* VR Mode Indicator - Shows when in VR */}
+            {isInVR && <VRModeIndicator onExit={handleExitVR} />}
 
             {/* Content Area */}
             <div

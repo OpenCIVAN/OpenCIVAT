@@ -278,7 +278,7 @@ def run_tsne(polydata, components=2, perplexity=10, max_iter=300, learning_rate=
     tsne = TSNE(
         n_components=comp,
         perplexity=float(perplexity),
-        n_iter=int(max_iter),
+        max_iter=int(max_iter),
         learning_rate=float(learning_rate),
         init="pca",
         verbose=0,

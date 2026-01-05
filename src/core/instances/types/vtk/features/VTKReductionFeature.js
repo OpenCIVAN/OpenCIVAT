@@ -12,6 +12,7 @@ import {
 } from "@VTK/utils/VTKPointProcessing.js";
 import vtkManifestData from "@VTK/manifest";
 import { render as log } from "@Utils/logger.js";
+import { useComputeJobStore, JobStatus } from "@UI/react/store/computeJobStore.js";
 
 // Server operation IDs (shared via manifest/registry)
 const SERVER_OPERATION_IDS = {
@@ -121,7 +122,7 @@ export class VTKReductionFeature extends ReductionFeature {
       // Either no reduction active, or different method active
       // Apply this method with current components (default to 3D)
       const components = state.components || 3;
-      await this.applyReduction(instanceId, method, components);
+      await this.applyReduction(instanceId, method, components, options);
     }
   }
 
@@ -157,11 +158,14 @@ export class VTKReductionFeature extends ReductionFeature {
     // Re-apply same method with new component count
     log.debug(`Changing from ${state.components}D to ${components}D`);
 
-    // Restore original first
+    // IMPORTANT: Save method before restoreOriginal clears it
+    const methodToApply = state.method;
+
+    // Restore original first (this clears state.method!)
     await this.restoreOriginal(instanceId);
 
-    // Re-apply with new components
-    await this.applyReduction(instanceId, state.method, components);
+    // Re-apply with new components using saved method
+    await this.applyReduction(instanceId, methodToApply, components);
   }
 
   /**
@@ -218,7 +222,11 @@ export class VTKReductionFeature extends ReductionFeature {
     setCacheId,
   }) {
     const operation = SERVER_OPERATION_IDS[method];
-    if (!operation || !datasetId) return null;
+    log.debug(`_computeViaServer: method=${method}, operation=${operation}, datasetId=${datasetId}`);
+    if (!operation || !datasetId) {
+      log.warn(`_computeViaServer: early return - operation=${operation}, datasetId=${datasetId}`);
+      return null;
+    }
 
     const apiBase = clientConfig.apiBaseUrl;
 
@@ -239,6 +247,7 @@ export class VTKReductionFeature extends ReductionFeature {
 
     const response = await fetch(`${apiBase}/compute/jobs`, {
       method: "POST",
+      credentials: "include", // Include auth cookies
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -293,11 +302,117 @@ export class VTKReductionFeature extends ReductionFeature {
       return null;
     }
 
-    const cache = await this._waitForJobCache(apiBase, jobId, onStatus);
-    if (cache?.cacheId && typeof setCacheId === "function") {
-      setCacheId(cache.cacheId);
+    // Register job with the compute store so WebSocket events can update it
+    const store = useComputeJobStore.getState();
+    store.addJob({
+      id: jobId,
+      fileId: datasetId,
+      fileName: `Dataset ${datasetId.substring(0, 8)}`,
+      operation,
+      params: { ...params, components },
+    });
+
+    // Wait for job completion using WebSocket events via store subscription
+    const result = await this._waitForJobViaStore(jobId, apiBase, onStatus);
+    if (result?.cacheId && typeof setCacheId === "function") {
+      setCacheId(result.cacheId);
     }
-    return cache?.points || null;
+    return result?.points || null;
+  }
+
+  /**
+   * Wait for job completion via store subscription (WebSocket events)
+   * Falls back to HTTP polling if store doesn't update within timeout
+   */
+  async _waitForJobViaStore(jobId, apiBase, onStatus) {
+    const maxWaitMs = 120000; // 2 minutes max wait
+
+    return new Promise((resolve) => {
+      let resolved = false;
+      let unsubscribe = null;
+
+      const cleanup = () => {
+        if (unsubscribe) {
+          unsubscribe();
+          unsubscribe = null;
+        }
+      };
+
+      const handleComplete = async (job) => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+
+        log.debug(`Job ${jobId} completed via WebSocket, cacheId=${job.result?.cacheId}`);
+        onStatus?.("cache-hit", job.result?.cacheId);
+
+        // Get the actual points from the cache
+        if (job.result?.cacheId) {
+          const downloaded = await this._downloadCache(apiBase, job.result.cacheId);
+          if (downloaded) {
+            resolve({ cacheId: job.result.cacheId, points: downloaded });
+            return;
+          }
+        }
+
+        // Fallback: try to get from cache metadata
+        if (job.result?.metadata) {
+          const fromMeta = this._extractPointsFromResult(job.result.metadata);
+          if (fromMeta) {
+            resolve({ cacheId: job.result?.cacheId, points: fromMeta });
+            return;
+          }
+        }
+
+        // If we got complete but no data, fall back to polling
+        log.warn(`Job ${jobId} complete but no data from WebSocket, falling back to polling`);
+        const polled = await this._waitForJobCache(apiBase, jobId, onStatus);
+        resolve(polled);
+      };
+
+      const handleFailed = (job) => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        log.error(`Job ${jobId} failed: ${job.error}`);
+        onStatus?.("failed");
+        resolve(null);
+      };
+
+      // Subscribe to store changes
+      unsubscribe = useComputeJobStore.subscribe((state) => {
+        const job = state.jobs[jobId];
+        if (!job) return;
+
+        if (job.status === JobStatus.COMPLETE) {
+          handleComplete(job);
+        } else if (job.status === JobStatus.FAILED) {
+          handleFailed(job);
+        }
+      });
+
+      // Check if already complete (in case we missed the event)
+      const currentJob = useComputeJobStore.getState().jobs[jobId];
+      if (currentJob?.status === JobStatus.COMPLETE) {
+        handleComplete(currentJob);
+        return;
+      } else if (currentJob?.status === JobStatus.FAILED) {
+        handleFailed(currentJob);
+        return;
+      }
+
+      // Timeout fallback: switch to HTTP polling if WebSocket doesn't deliver
+      setTimeout(async () => {
+        if (resolved) return;
+
+        log.warn(`Job ${jobId} WebSocket timeout after ${maxWaitMs}ms, falling back to HTTP polling`);
+        cleanup();
+        resolved = true;
+
+        const polled = await this._waitForJobCache(apiBase, jobId, onStatus);
+        resolve(polled);
+      }, maxWaitMs);
+    });
   }
 
   _extractPointsFromResult(result) {
@@ -309,7 +424,9 @@ export class VTKReductionFeature extends ReductionFeature {
 
   async _fetchCacheMetadata(apiBase, cacheId) {
     try {
-      const res = await fetch(`${apiBase}/compute/cache/${cacheId}`);
+      const res = await fetch(`${apiBase}/compute/cache/${cacheId}`, {
+        credentials: "include",
+      });
       if (!res.ok) return null;
       const data = await res.json();
       return data.cache?.result_metadata || null;
@@ -320,7 +437,9 @@ export class VTKReductionFeature extends ReductionFeature {
 
   async _downloadCache(apiBase, cacheId) {
     try {
-      const res = await fetch(`${apiBase}/compute/cache/${cacheId}/download`);
+      const res = await fetch(`${apiBase}/compute/cache/${cacheId}/download`, {
+        credentials: "include",
+      });
       if (!res.ok) return null;
       const text = await res.text();
       try {
@@ -343,30 +462,59 @@ export class VTKReductionFeature extends ReductionFeature {
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        const res = await fetch(`${apiBase}/compute/jobs/${jobId}`);
+        const res = await fetch(`${apiBase}/compute/jobs/${jobId}`, {
+          credentials: "include",
+        });
         if (!res.ok) {
+          log.debug(`Job poll ${attempt + 1}/${maxAttempts}: HTTP ${res.status}`);
           await new Promise((r) => setTimeout(r, delayMs));
           continue;
         }
         const data = await res.json();
         const job = data.job;
 
-        if (job?.status === "complete" && job.cache_id) {
-          const meta = await this._fetchCacheMetadata(apiBase, job.cache_id);
-          const fromMeta = this._extractPointsFromResult(meta);
-          if (fromMeta) {
-            onStatus?.("cache-hit", job.cache_id);
-            return { cacheId: job.cache_id, points: fromMeta };
+        // Handle both snake_case and camelCase field names from API
+        const cacheId = job?.cache_id || job?.cacheId;
+        const resultStorageKey = job?.result_storage_key || job?.resultStorageKey;
+        const jobStatus = job?.status;
+
+        log.debug(`Job poll ${attempt + 1}/${maxAttempts}: status=${jobStatus}, cacheId=${cacheId}, resultKey=${resultStorageKey}`);
+
+        if (jobStatus === "complete" || jobStatus === "completed") {
+          // Try to get from cache first
+          if (cacheId) {
+            const meta = await this._fetchCacheMetadata(apiBase, cacheId);
+            const fromMeta = this._extractPointsFromResult(meta);
+            if (fromMeta) {
+              log.debug(`Got points from cache metadata: ${fromMeta.length} points`);
+              onStatus?.("cache-hit", cacheId);
+              return { cacheId, points: fromMeta };
+            }
+
+            const downloaded = await this._downloadCache(apiBase, cacheId);
+            if (downloaded) {
+              log.debug(`Got points from cache download: ${Array.isArray(downloaded) ? downloaded.length : 'object'}`);
+              onStatus?.("cache-hit", cacheId);
+              return { cacheId, points: downloaded };
+            }
           }
 
-          const downloaded = await this._downloadCache(apiBase, job.cache_id);
-          if (downloaded) {
-            onStatus?.("cache-hit", job.cache_id);
-            return { cacheId: job.cache_id, points: downloaded };
+          // Fallback: try to download from result_storage_key directly
+          if (resultStorageKey) {
+            log.debug(`Trying direct download from storage key: ${resultStorageKey}`);
+            const directResult = await this._downloadFromStorageKey(apiBase, resultStorageKey);
+            if (directResult) {
+              log.debug(`Got points from direct download: ${Array.isArray(directResult) ? directResult.length : 'object'}`);
+              onStatus?.("cache-hit", cacheId);
+              return { cacheId, points: directResult };
+            }
           }
-        } else if (job?.status === "failed") {
+
+          // Job complete but couldn't get results
+          log.warn(`Job ${jobId} complete but couldn't retrieve results`);
+        } else if (jobStatus === "failed") {
           onStatus?.("failed");
-          throw new Error(job.error_message || "Compute job failed");
+          throw new Error(job.error_message || job.errorMessage || "Compute job failed");
         }
       } catch (err) {
         log.warn(`Polling job ${jobId} failed: ${err?.message || err}`);
@@ -378,6 +526,31 @@ export class VTKReductionFeature extends ReductionFeature {
 
     onStatus?.("timeout");
     return null;
+  }
+
+  /**
+   * Download result directly from storage key (MinIO path)
+   */
+  async _downloadFromStorageKey(apiBase, storageKey) {
+    try {
+      const res = await fetch(`${apiBase}/files/download?key=${encodeURIComponent(storageKey)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        log.debug(`Direct download failed: ${res.status}`);
+        return null;
+      }
+      const text = await res.text();
+      try {
+        const parsed = JSON.parse(text);
+        return this._extractPointsFromResult(parsed) || parsed;
+      } catch {
+        return null;
+      }
+    } catch (err) {
+      log.debug(`Direct download error: ${err?.message || err}`);
+      return null;
+    }
   }
 
   /**
@@ -436,7 +609,7 @@ export class VTKReductionFeature extends ReductionFeature {
       state.datasetId = options.datasetId || state.datasetId || null;
       state.projectId = options.projectId || state.projectId || null;
 
-      const handleStatus = (status, cacheId) => {
+      const handleStatus = (status, _cacheId) => {
         switch (status) {
           case "cache-hit":
             emitToast("Using cached reduction", "success");
@@ -452,6 +625,7 @@ export class VTKReductionFeature extends ReductionFeature {
         }
       };
 
+      log.debug(`applyReduction: state.datasetId=${state.datasetId}, options.datasetId=${options.datasetId}`);
       if (state.datasetId) {
         try {
           reducedPoints = await this._computeViaServer({
@@ -749,9 +923,11 @@ export class VTKReductionFeature extends ReductionFeature {
     const state = this.instanceStates.get(instanceId);
 
     if (state.isApplied && state.method) {
+      // IMPORTANT: Save method before restoreOriginal clears it
+      const methodToApply = state.method;
       // Restore original first, then reapply with new dimensions
       await this.restoreOriginal(instanceId);
-      await this.applyReduction(instanceId, state.method, components);
+      await this.applyReduction(instanceId, methodToApply, components);
     }
   }
 
@@ -816,9 +992,11 @@ The key is consistency - pick icons that make sense together!
     const state = this.instanceStates.get(instanceId);
 
     if (state.isApplied && state.method) {
+      // IMPORTANT: Save method before restoreOriginal clears it
+      const methodToApply = state.method;
       // Restore original first, then reapply with new dimensions
       await this.restoreOriginal(instanceId);
-      await this.applyReduction(instanceId, state.method, components);
+      await this.applyReduction(instanceId, methodToApply, components);
     }
   }
 }
