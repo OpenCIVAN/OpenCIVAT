@@ -621,6 +621,18 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       throw new Error("DatasetManager not available");
     }
 
+    // Keep reduction feature in sync with dataset context
+    const reductionState =
+      this.reductionFeature?._ensureState?.(instanceId, {
+        ...instanceData,
+        datasetId: dataset.id,
+        projectId: dataset.projectId || dataset.project_id || null,
+      }) || this.reductionFeature?.getState?.(instanceId);
+    if (reductionState) {
+      reductionState.datasetId = dataset.id;
+      reductionState.projectId = dataset.projectId || dataset.project_id || null;
+    }
+
     // Check if we have cached parsed data
     let polydata;
     const cached = datasetManager.getCachedParsedData(dataset.id, "vtk");
@@ -1174,7 +1186,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           active: currentMethod === "pca",
           onClick: async () => {
             log.debug("PCA clicked");
-            await this.reductionFeature.toggleReduction(instanceId, "pca");
+            await this.reductionFeature.toggleReduction(instanceId, "pca", {
+              instanceData,
+              datasetId: instanceData.datasetId,
+              projectId: instanceData.projectId,
+            });
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1187,7 +1203,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.hasData, // 🆕 Individual disable
           onClick: async () => {
             log.debug("t-SNE clicked");
-            await this.reductionFeature.toggleReduction(instanceId, "tsne");
+            await this.reductionFeature.toggleReduction(instanceId, "tsne", {
+              instanceData,
+              datasetId: instanceData.datasetId,
+              projectId: instanceData.projectId,
+            });
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1200,7 +1220,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !caps.hasData, // 🆕 Individual disable
           onClick: async () => {
             log.debug("UMAP clicked");
-            await this.reductionFeature.toggleReduction(instanceId, "umap");
+            await this.reductionFeature.toggleReduction(instanceId, "umap", {
+              instanceData,
+              datasetId: instanceData.datasetId,
+              projectId: instanceData.projectId,
+            });
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1214,7 +1238,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !hasReduction,
           onClick: async () => {
             log.debug("2D projection clicked");
-            await this.reductionFeature.setComponents(instanceId, 2);
+            await this.reductionFeature.setComponents(instanceId, 2, {
+              instanceData,
+              datasetId: instanceData.datasetId,
+              projectId: instanceData.projectId,
+            });
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1227,7 +1255,11 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           disabled: !hasReduction,
           onClick: async () => {
             log.debug("3D projection clicked");
-            await this.reductionFeature.setComponents(instanceId, 3);
+            await this.reductionFeature.setComponents(instanceId, 3, {
+              instanceData,
+              datasetId: instanceData.datasetId,
+              projectId: instanceData.projectId,
+            });
             this._emitToolsUpdate(instanceId);
           },
         },
@@ -1307,7 +1339,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         // Representation mode buttons with active state
         {
           id: "rep-surface",
-          icon: "box",
+          icon: "deployed_code",
           label: "Surface",
           description: "Solid surface rendering",
           active: currentRepresentation === "surface", // ← FIX: Show active
@@ -1320,7 +1352,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         },
         {
           id: "rep-wireframe",
-          icon: "grid-3x3",
+          icon: "polyline",
           label: "Wireframe",
           description: "Wireframe rendering",
           active: currentRepresentation === "wireframe", // ← FIX: Show active
@@ -1423,7 +1455,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         // Toggle clipping
         {
           id: "clip-toggle",
-          icon: isClipping ? "toggle-right" : "toggle-left",
+          icon: isClipping ? "toggle_on" : "toggle_off",
           label: isClipping ? "Disable Clipping" : "Enable Clipping",
           description: isClipping
             ? "Remove clipping plane"
@@ -1467,7 +1499,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
               { type: "separator" },
               {
                 id: "clip-reset",
-                icon: "rotate-ccw",
+                icon: "undo",
                 label: "Reset Clipping",
                 description: "Remove clipping plane",
                 disabled: !caps.canUseClipping,
@@ -1494,7 +1526,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     tools.push({
       id: "colormap",
       type: "menu",
-      icon: "droplet",
+      icon: "water_drop",
       label: "Colormap",
       description: caps.canUseColormap
         ? "Color transfer functions"

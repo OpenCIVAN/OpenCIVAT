@@ -54,6 +54,9 @@ const OPERATION_WORKER_MAP = {
   // General operations
   "compute-bounds": WORKER_TYPES.GENERAL,
   "compute-histogram": WORKER_TYPES.GENERAL,
+  "dr-pca": WORKER_TYPES.GENERAL,
+  "dr-tsne": WORKER_TYPES.GENERAL,
+  "dr-umap": WORKER_TYPES.GENERAL,
 };
 
 // ============================================================================

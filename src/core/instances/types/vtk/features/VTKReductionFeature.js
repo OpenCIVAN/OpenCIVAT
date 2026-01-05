@@ -4,12 +4,33 @@ import { ReductionFeature } from "@Core/instances/features/ReductionFeature.js";
 import { performPCA } from "@Algorithms/dimensionality/pca.js";
 import { performTSNE } from "@Algorithms/dimensionality/tsne.js";
 import { performUMAP } from "@Algorithms/dimensionality/umap.js";
+import clientConfig from "@Core/config/clientConfig.js";
 import {
   extractPointsFromPolyData,
   applyReductionToPolyData,
   clonePolydata,
 } from "@VTK/utils/VTKPointProcessing.js";
+import vtkManifestData from "@VTK/manifest";
 import { render as log } from "@Utils/logger.js";
+
+// Server operation IDs (shared via manifest/registry)
+const SERVER_OPERATION_IDS = {
+  pca: "dr-pca",
+  tsne: "dr-tsne",
+  umap: "dr-umap",
+};
+
+// File types this handler declares as server-compute capable for DR
+const SERVER_SUPPORTED_INPUTS = new Set(["vtp", "ply", "obj", "stl"]);
+
+function emitToast(message, type = "info") {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("cia:toast", {
+      detail: { message, type },
+    })
+  );
+}
 
 /**
  * VTK Dimensionality Reduction Feature
@@ -23,6 +44,32 @@ export class VTKReductionFeature extends ReductionFeature {
   constructor() {
     super();
     this.instanceStates = new Map();
+  }
+
+  /**
+   * Ensure state exists for this instance (lazy init when called from handler)
+   */
+  _ensureState(instanceId, instanceData) {
+    if (this.instanceStates.has(instanceId)) {
+      return this.instanceStates.get(instanceId);
+    }
+
+    if (!instanceData?.sceneObjects) {
+      return null;
+    }
+
+    const state = {
+      method: null,
+      components: null,
+      isApplied: false,
+      originalPolydata: null,
+      sceneObjects: instanceData.sceneObjects,
+      datasetId: instanceData.datasetId || null,
+      projectId: instanceData.projectId || null,
+    };
+
+    this.instanceStates.set(instanceId, state);
+    return state;
   }
 
   /**
@@ -41,6 +88,8 @@ export class VTKReductionFeature extends ReductionFeature {
       isApplied: false,
       originalPolydata: null, // Will be set when data is first loaded
       sceneObjects,
+      datasetId: instanceData.datasetId || null,
+      projectId: instanceData.projectId || null,
     });
 
     log.debug(`VTK Reduction feature initialized for instance: ${instanceId}`);
@@ -55,8 +104,10 @@ export class VTKReductionFeature extends ReductionFeature {
    * @param {string} method - Method to toggle ('pca', 'tsne', 'umap')
    * @returns {Promise<void>}
    */
-  async toggleReduction(instanceId, method) {
-    const state = this.instanceStates.get(instanceId);
+  async toggleReduction(instanceId, method, options = {}) {
+    const state =
+      this.instanceStates.get(instanceId) ||
+      this._ensureState(instanceId, options.instanceData);
 
     if (!state) {
       log.warn(`Instance ${instanceId} not initialized for reduction`);
@@ -82,8 +133,10 @@ export class VTKReductionFeature extends ReductionFeature {
    * @param {number} components - Number of dimensions (2 or 3)
    * @returns {Promise<void>}
    */
-  async setComponents(instanceId, components) {
-    const state = this.instanceStates.get(instanceId);
+  async setComponents(instanceId, components, options = {}) {
+    const state =
+      this.instanceStates.get(instanceId) ||
+      this._ensureState(instanceId, options.instanceData);
 
     if (!state) {
       log.warn(`Instance ${instanceId} not initialized for reduction`);
@@ -152,14 +205,195 @@ export class VTKReductionFeature extends ReductionFeature {
   }
 
   /**
+   * Request server-side reduction (cached) if available
+   * Returns reduced points array or null if not ready/available
+   */
+  async _computeViaServer({
+    datasetId,
+    projectId,
+    method,
+    components,
+    params,
+    onStatus,
+    setCacheId,
+  }) {
+    const operation = SERVER_OPERATION_IDS[method];
+    if (!operation || !datasetId) return null;
+
+    const apiBase = clientConfig.apiBaseUrl;
+
+    // Ensure handler declares support for this operation/type
+    const declaredOps =
+      vtkManifestData.compute?.serverSide?.operations?.map((op) => op.id) || [];
+    if (!declaredOps.includes(operation)) {
+      log.warn(`Server operation ${operation} not declared for VTK handler`);
+      return null;
+    }
+    const body = {
+      fileId: datasetId,
+      projectId,
+      operation,
+      params: { ...params, components },
+      priority: 5,
+    };
+
+    const response = await fetch(`${apiBase}/compute/jobs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Compute request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Cache hit path
+    if (data.cached) {
+      if (typeof setCacheId === "function" && data.cacheId) {
+        setCacheId(data.cacheId);
+      }
+      onStatus?.("cache-hit", data.cacheId);
+      const fromResult = this._extractPointsFromResult(data.result);
+      if (fromResult) return fromResult;
+
+      const cacheId = data.cacheId || data.cache_id;
+      if (cacheId) {
+        const meta = await this._fetchCacheMetadata(apiBase, cacheId);
+        const fromMeta = this._extractPointsFromResult(meta);
+        if (fromMeta) return fromMeta;
+
+        const downloaded = await this._downloadCache(apiBase, cacheId);
+        if (downloaded) return downloaded;
+      }
+
+      log.warn(`Cache hit for ${operation} but no usable result metadata`);
+      return null;
+    }
+
+    // In-progress or newly queued: wait for completion and then fetch cache
+    const jobId = data.job?.id || data.job?.jobId || data.job?.job_id;
+    if (data.existing) {
+      log.info(
+        `Compute job already in progress for ${operation} on dataset ${datasetId}`
+      );
+      onStatus?.("existing");
+    } else if (data.success) {
+      log.info(
+        `Queued server compute job ${jobId} for ${operation} (dataset ${datasetId})`
+      );
+      onStatus?.("queued");
+    }
+
+    if (!jobId) {
+      return null;
+    }
+
+    const cache = await this._waitForJobCache(apiBase, jobId, onStatus);
+    if (cache?.cacheId && typeof setCacheId === "function") {
+      setCacheId(cache.cacheId);
+    }
+    return cache?.points || null;
+  }
+
+  _extractPointsFromResult(result) {
+    if (!result) return null;
+    if (Array.isArray(result.reducedPoints)) return result.reducedPoints;
+    if (Array.isArray(result.points)) return result.points;
+    return null;
+  }
+
+  async _fetchCacheMetadata(apiBase, cacheId) {
+    try {
+      const res = await fetch(`${apiBase}/compute/cache/${cacheId}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.cache?.result_metadata || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async _downloadCache(apiBase, cacheId) {
+    try {
+      const res = await fetch(`${apiBase}/compute/cache/${cacheId}/download`);
+      if (!res.ok) return null;
+      const text = await res.text();
+      try {
+        const parsed = JSON.parse(text);
+        return this._extractPointsFromResult(parsed) || parsed;
+      } catch {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Poll a job until it completes and return reduced points from cache
+   */
+  async _waitForJobCache(apiBase, jobId, onStatus) {
+    const maxAttempts = 30;
+    const delayMs = 2000;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const res = await fetch(`${apiBase}/compute/jobs/${jobId}`);
+        if (!res.ok) {
+          await new Promise((r) => setTimeout(r, delayMs));
+          continue;
+        }
+        const data = await res.json();
+        const job = data.job;
+
+        if (job?.status === "complete" && job.cache_id) {
+          const meta = await this._fetchCacheMetadata(apiBase, job.cache_id);
+          const fromMeta = this._extractPointsFromResult(meta);
+          if (fromMeta) {
+            onStatus?.("cache-hit", job.cache_id);
+            return { cacheId: job.cache_id, points: fromMeta };
+          }
+
+          const downloaded = await this._downloadCache(apiBase, job.cache_id);
+          if (downloaded) {
+            onStatus?.("cache-hit", job.cache_id);
+            return { cacheId: job.cache_id, points: downloaded };
+          }
+        } else if (job?.status === "failed") {
+          onStatus?.("failed");
+          throw new Error(job.error_message || "Compute job failed");
+        }
+      } catch (err) {
+        log.warn(`Polling job ${jobId} failed: ${err?.message || err}`);
+      }
+
+      // Wait before next attempt
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+
+    onStatus?.("timeout");
+    return null;
+  }
+
+  /**
    * Apply reduction to the instance's data
    *
    * CRITICAL: We save the original polydata the FIRST time this is called
    *
    * @param {boolean} options.skipSync - If true, don't call requestSync (used when applying remote state)
+   * @param {boolean} options.forceServer - If true, do not fall back to local compute when cache/job is missing
+   * @param {Object} options.params - Extra params for server compute (e.g., perplexity)
+   * @param {Object} options.instanceData - Optional instanceData to lazy-init state when called from handler
    */
   async applyReduction(instanceId, method, components, options = {}) {
-    const state = this.instanceStates.get(instanceId);
+    const state =
+      this.instanceStates.get(instanceId) ||
+      this._ensureState(instanceId, options.instanceData);
 
     if (!state) {
       throw new Error(`Instance ${instanceId} not initialized for reduction`);
@@ -197,33 +431,92 @@ export class VTKReductionFeature extends ReductionFeature {
         state.originalPolydata = clonePolydata(currentPolydata);
       }
 
-      // Extract points from current polydata
-      const pointsMatrix = await extractPointsFromPolyData(currentPolydata);
+      // Prefer server-side compute when we have a datasetId (cached results)
+      let reducedPoints = null;
+      state.datasetId = options.datasetId || state.datasetId || null;
+      state.projectId = options.projectId || state.projectId || null;
 
-      if (!pointsMatrix || pointsMatrix.length === 0) {
-        throw new Error("No points to reduce");
+      const handleStatus = (status, cacheId) => {
+        switch (status) {
+          case "cache-hit":
+            emitToast("Using cached reduction", "success");
+            break;
+          case "queued":
+            emitToast("Reduction queued on server…", "info");
+            break;
+          case "existing":
+            emitToast("Reduction already running on server…", "info");
+            break;
+          default:
+            break;
+        }
+      };
+
+      if (state.datasetId) {
+        try {
+          reducedPoints = await this._computeViaServer({
+            datasetId: state.datasetId,
+            projectId: state.projectId,
+            method,
+            components,
+            params: options.params || {},
+            onStatus: (status, cacheId) => {
+              options.onStatus?.(status, cacheId);
+              handleStatus(status, cacheId);
+            },
+            setCacheId: (cacheId) => {
+              state.cacheId = cacheId;
+            },
+          });
+        } catch (serverError) {
+          log.warn(
+            `Server-side ${method} failed, falling back to local compute:`,
+            serverError?.message || serverError
+          );
+        }
       }
 
-      log.debug(`Processing ${pointsMatrix.length.toLocaleString()} points`);
+      // Fallback to local compute only for PCA (cheapest) unless forced off
+      const allowLocalFallback =
+        method === "pca" && options.forceServer !== true;
 
-      // Apply the algorithm
-      let reducedPoints;
+      if (!reducedPoints && allowLocalFallback) {
+        const pointsMatrix = await extractPointsFromPolyData(currentPolydata);
 
-      switch (method) {
-        case "pca":
-          reducedPoints = await performPCA(pointsMatrix, components);
-          break;
+        if (!pointsMatrix || pointsMatrix.length === 0) {
+          throw new Error("No points to reduce");
+        }
 
-        case "tsne":
-          reducedPoints = await performTSNE(pointsMatrix, components, options);
-          break;
+        log.debug(`Processing ${pointsMatrix.length.toLocaleString()} points`);
 
-        case "umap":
-          reducedPoints = await performUMAP(pointsMatrix, components, options);
-          break;
+        switch (method) {
+          case "pca":
+            reducedPoints = await performPCA(pointsMatrix, components);
+            break;
 
-        default:
-          throw new Error(`Unknown reduction method: ${method}`);
+          case "tsne":
+            reducedPoints = await performTSNE(
+              pointsMatrix,
+              components,
+              options
+            );
+            break;
+
+          case "umap":
+            reducedPoints = await performUMAP(
+              pointsMatrix,
+              components,
+              options
+            );
+            break;
+
+          default:
+            throw new Error(`Unknown reduction method: ${method}`);
+        }
+      } else if (!reducedPoints) {
+        throw new Error(
+          `Server-side ${method} unavailable and local fallback disabled`
+        );
       }
 
       // Apply reduced points back to the polydata
@@ -244,13 +537,19 @@ export class VTKReductionFeature extends ReductionFeature {
       // REQUEST SYNC: Notify other users about the reduction (unless this is from remote state)
       if (!options.skipSync) {
         const workspaceManager = window.CIA?.workspaceManager;
-        if (workspaceManager) {
+        if (workspaceManager?.requestSync) {
           await workspaceManager.requestSync(instanceId);
           log.debug("Reduction synced to remote users");
+        } else {
+          log.debug("workspaceManager.requestSync not available; skipping sync");
         }
       }
     } catch (error) {
       log.error("Reduction failed:", error);
+      emitToast(
+        `Reduction failed: ${error?.message || error}`,
+        "error"
+      );
       throw error;
     }
   }
@@ -262,7 +561,9 @@ export class VTKReductionFeature extends ReductionFeature {
    * @param {boolean} options.skipSync - If true, don't call requestSync (used when applying remote state)
    */
   async restoreOriginal(instanceId, options = {}) {
-    const state = this.instanceStates.get(instanceId);
+    const state =
+      this.instanceStates.get(instanceId) ||
+      this._ensureState(instanceId, options.instanceData);
 
     if (!state || !state.isApplied) {
       return; // Nothing to restore
@@ -301,9 +602,11 @@ export class VTKReductionFeature extends ReductionFeature {
     // REQUEST SYNC: Notify other users about the restoration (unless this is from remote state)
     if (!options.skipSync) {
       const workspaceManager = window.CIA?.workspaceManager;
-      if (workspaceManager) {
+      if (workspaceManager?.requestSync) {
         await workspaceManager.requestSync(instanceId);
         log.debug("Restoration synced to remote users");
+      } else {
+        log.debug("workspaceManager.requestSync not available; skipping sync");
       }
     }
   }

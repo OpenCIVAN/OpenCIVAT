@@ -354,7 +354,13 @@ export function raycastFromScreen(
     }
 
     // Get the picked actor (if available)
-    const pickedActor = picker.getActor();
+    let pickedActor = null;
+    if (typeof picker.getActor === "function") {
+      pickedActor = picker.getActor();
+    } else if (typeof picker.getActors === "function") {
+      const actors = picker.getActors();
+      pickedActor = Array.isArray(actors) ? actors[0] : null;
+    }
     const actorId = pickedActor ? pickedActor.get?.("id") : null;
 
     return {

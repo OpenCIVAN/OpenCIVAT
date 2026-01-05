@@ -79,7 +79,78 @@ import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewpor
 import { ProgressiveLoader } from '@UI/react/components/molecules/ThumbnailPreview';
 import { RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { Thumbnail } from '@UI/react/components/atoms/Thumbnail';
+import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import './CanvasCell.scss';
+
+// =============================================================================
+// MINI HEADER - For thumbnail/snapshot modes
+// =============================================================================
+
+/**
+ * MiniHeader - Compact header overlay for thumbnail/snapshot modes
+ * Shows color dot, truncated name, and gear/close buttons on hover
+ */
+function MiniHeader({ viewId, viewColor, onClose, onActivate, isSnapshot }) {
+    const [showMenu, setShowMenu] = useState(false);
+
+    // Get view name
+    const displayName = useMemo(() => {
+        try {
+            const view = getViewConfigurationManager()?.getView(viewId);
+            if (view) {
+                const dataset = getDatasetManager()?.getDataset(view.datasetId);
+                return dataset?.filename || view.name || 'View';
+            }
+        } catch (e) {
+            // Fall through
+        }
+        return 'View';
+    }, [viewId]);
+
+    const colorHex = viewColor || '#60a5fa';
+
+    return (
+        <div className="canvas-cell__mini-header">
+            {/* Color dot */}
+            <div
+                className="canvas-cell__mini-header-dot"
+                style={{ background: colorHex, boxShadow: `0 0 4px ${colorHex}` }}
+            />
+
+            {/* Name - shown on hover */}
+            <span className="canvas-cell__mini-header-name">
+                {displayName}
+            </span>
+
+            {/* Spacer */}
+            <div style={{ flex: 1 }} />
+
+            {/* Gear button */}
+            <button
+                className="canvas-cell__mini-header-btn"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onActivate?.();
+                }}
+                title="Open"
+            >
+                <Icon name="maximize2" size={10} />
+            </button>
+
+            {/* Close button */}
+            <button
+                className="canvas-cell__mini-header-btn canvas-cell__mini-header-close"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose?.();
+                }}
+                title="Close"
+            >
+                <Icon name="close" size={10} />
+            </button>
+        </div>
+    );
+}
 
 // =============================================================================
 // CONSTANTS
@@ -884,8 +955,17 @@ function ViewContent({
 
     return (
         <div className="canvas-cell__view-content">
-            {/* No headers in THUMBNAIL/SNAPSHOT modes - small cells show only thumbnails */}
-            {/* Headers are only rendered in FULL/COMPACT modes via InstanceViewport */}
+            {/* Mini header for THUMBNAIL/SNAPSHOT modes - shows on hover */}
+            {/* MiniHeader only for inactive views - active views use InstanceViewport's controls */}
+            {uiConfig.showMiniHeader && !isActiveView && (
+                <MiniHeader
+                    viewId={viewId}
+                    viewColor={viewColor}
+                    onClose={onClose}
+                    onActivate={onActivate}
+                    isSnapshot={uiConfig.renderContent === 'snapshot'}
+                />
+            )}
 
             {/* ================================================================
                 THUMBNAIL/CONTENT AREA

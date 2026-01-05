@@ -214,25 +214,127 @@ export const vtkManifest: HandlerManifest = {
     supportsAnnotations: true,
     supportsSharedState: true,
     supportsCameraSync: true,
-  },
-
-  compute: {
-    clientSide: {
-      operations: [
-        "pca",
-        "tsne",
-        "umap",
-        "clipping",
-        "slicing",
-        "contouring",
-        "point-picking",
-        "measurement",
-      ],
-      maxDatasetSize: "100MB",
-      maxPointCount: 5_000_000,
     },
-    serverSide: {
-      operations: [
+
+    compute: {
+      clientSide: {
+        operations: [
+          "pca",
+          "tsne",
+          "umap",
+          "clipping",
+          "slicing",
+          "contouring",
+          "point-picking",
+          "measurement",
+        ],
+        maxDatasetSize: "100MB",
+        maxPointCount: 5_000_000,
+      },
+      serverSide: {
+        operations: [
+          // Dimensionality reduction (server/offloaded with cache)
+          {
+            id: "dr-pca",
+            name: "PCA (Server)",
+            description:
+              "Principal Component Analysis offloaded to server with caching",
+            inputFormats: ["vtp", "ply", "obj", "stl"],
+            outputFormat: "json",
+            requiredForVR: false,
+            cacheable: true,
+            computeCost: 3,
+            estimatedDuration: "seconds",
+            parameters: [
+              {
+                name: "components",
+                type: "number",
+                label: "Components",
+                default: 3,
+                min: 2,
+                max: 3,
+              },
+            ],
+            workerType: "general",
+          },
+          {
+            id: "dr-tsne",
+            name: "t-SNE (Server)",
+            description:
+              "t-SNE dimensionality reduction offloaded to server with caching",
+            inputFormats: ["vtp", "ply", "obj", "stl"],
+            outputFormat: "json",
+            requiredForVR: false,
+            cacheable: true,
+            computeCost: 7,
+            estimatedDuration: "minutes",
+            parameters: [
+              {
+                name: "components",
+                type: "number",
+                label: "Components",
+                default: 2,
+                min: 2,
+                max: 3,
+              },
+              {
+                name: "perplexity",
+                type: "number",
+                label: "Perplexity",
+                default: 10,
+                min: 5,
+                max: 50,
+              },
+              {
+                name: "maxIterations",
+                type: "number",
+                label: "Max Iterations",
+                default: 300,
+                min: 50,
+                max: 1000,
+              },
+            ],
+            workerType: "general",
+          },
+          {
+            id: "dr-umap",
+            name: "UMAP (Server)",
+            description:
+              "UMAP dimensionality reduction offloaded to server with caching",
+            inputFormats: ["vtp", "ply", "obj", "stl"],
+            outputFormat: "json",
+            requiredForVR: false,
+            cacheable: true,
+            computeCost: 6,
+            estimatedDuration: "seconds",
+            parameters: [
+              {
+                name: "components",
+                type: "number",
+                label: "Components",
+                default: 2,
+                min: 2,
+                max: 3,
+              },
+              {
+                name: "nNeighbors",
+                type: "number",
+                label: "Neighbors",
+                default: 8,
+                min: 2,
+                max: 100,
+              },
+              {
+                name: "minDist",
+                type: "number",
+                label: "Min Dist",
+                default: 0.1,
+                min: 0.01,
+                max: 0.99,
+              },
+            ],
+            workerType: "general",
+          },
         // =====================================================
         // MESH OPERATIONS
         // =====================================================

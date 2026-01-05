@@ -22,6 +22,9 @@ import numpy as np
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 from minio import Minio
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import umap
 
 # =============================================================================
 # CONFIGURATION
@@ -29,7 +32,7 @@ from minio import Minio
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
-QUEUE_NAME = os.environ.get("QUEUE_NAME", "vtk-python")
+QUEUE_NAME = os.environ.get("QUEUE_NAME", "general")
 WORKER_ID = os.environ.get("WORKER_ID", f"vtk-worker-{os.getpid()}")
 
 MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", "localhost:9000")
@@ -237,6 +240,84 @@ def compute_statistics(data):
     return stats
 
 
+def _get_points_array(polydata):
+    """Extract point positions as numpy array shape (n, 3)."""
+    points = polydata.GetPoints()
+    if not points:
+        raise ValueError("Dataset has no points")
+    np_points = vtk_to_numpy(points.GetData())
+    if np_points.ndim != 2 or np_points.shape[1] < 3:
+        raise ValueError("Point data is not 3D")
+    return np_points[:, :3]
+
+
+def run_pca(polydata, components=3):
+    pts = _get_points_array(polydata)
+    comp = max(2, min(int(components), 3))
+    pca = PCA(n_components=comp)
+    reduced = pca.fit_transform(pts)
+    # Pad to 3D for consistency
+    if comp == 2:
+        z = np.zeros((reduced.shape[0], 1))
+        reduced = np.hstack([reduced, z])
+    return reduced.tolist(), {
+        "components": comp,
+        "explainedVariance": (
+            pca.explained_variance_ratio_.tolist()
+            if hasattr(pca, "explained_variance_ratio_")
+            else None
+        ),
+        "pointCount": len(pts),
+        "method": "pca",
+    }
+
+
+def run_tsne(polydata, components=2, perplexity=10, max_iter=300, learning_rate=200):
+    pts = _get_points_array(polydata)
+    comp = max(2, min(int(components), 3))
+    tsne = TSNE(
+        n_components=comp,
+        perplexity=float(perplexity),
+        n_iter=int(max_iter),
+        learning_rate=float(learning_rate),
+        init="pca",
+        verbose=0,
+    )
+    reduced = tsne.fit_transform(pts)
+    if comp == 2:
+        z = np.zeros((reduced.shape[0], 1))
+        reduced = np.hstack([reduced, z])
+    return reduced.tolist(), {
+        "components": comp,
+        "perplexity": perplexity,
+        "maxIterations": max_iter,
+        "pointCount": len(pts),
+        "method": "tsne",
+    }
+
+
+def run_umap(polydata, components=2, n_neighbors=8, min_dist=0.1):
+    pts = _get_points_array(polydata)
+    comp = max(2, min(int(components), 3))
+    reducer = umap.UMAP(
+        n_components=comp,
+        n_neighbors=int(n_neighbors),
+        min_dist=float(min_dist),
+        init="spectral",
+    )
+    reduced = reducer.fit_transform(pts)
+    if comp == 2:
+        z = np.zeros((reduced.shape[0], 1))
+        reduced = np.hstack([reduced, z])
+    return reduced.tolist(), {
+        "components": comp,
+        "neighbors": n_neighbors,
+        "minDist": min_dist,
+        "pointCount": len(pts),
+        "method": "umap",
+    }
+
+
 def generate_lod(polydata, levels=3):
     """Generate multiple LOD versions."""
     results = []
@@ -403,6 +484,93 @@ def process_job(job_data: dict):
                 "levels": len(lod_results),
                 "selectedLevel": 1,
             }
+
+        elif operation == "dr-pca":
+            comps = params.get("components", 3)
+            reduced_points, meta = run_pca(data, comps)
+            metadata = meta
+            # Write reduced points to JSON
+            result_suffix = ".json"
+            with tempfile.NamedTemporaryFile(suffix=result_suffix, delete=False, mode="w") as result_tmp:
+                result_path = result_tmp.name
+                json.dump({"reducedPoints": reduced_points}, result_tmp)
+
+            report_progress(job_id, 85, "Uploading PCA result...")
+            result_key = f"computed/{job_id}/reduced{result_suffix}"
+            result_size = os.path.getsize(result_path)
+            minio_client.fput_object(MINIO_BUCKET, result_key, result_path)
+
+            # Cleanup temp files
+            os.unlink(tmp_path)
+            os.unlink(result_path)
+
+            compute_time = int((time.time() - start_time) * 1000)
+            log.info(f"Job {job_id} completed in {compute_time}ms")
+
+            report_complete(job_id, cache_key, result_key, metadata, compute_time, result_size)
+            return
+
+        elif operation == "dr-tsne":
+            comps = params.get("components", 2)
+            perplexity = params.get("perplexity", 10)
+            max_iter = params.get("maxIterations", params.get("max_iterations", 300))
+            learning_rate = params.get("learningRate", params.get("learning_rate", 200))
+            reduced_points, meta = run_tsne(
+                data,
+                comps,
+                perplexity=perplexity,
+                max_iter=max_iter,
+                learning_rate=learning_rate,
+            )
+            metadata = meta
+            result_suffix = ".json"
+            with tempfile.NamedTemporaryFile(suffix=result_suffix, delete=False, mode="w") as result_tmp:
+                result_path = result_tmp.name
+                json.dump({"reducedPoints": reduced_points}, result_tmp)
+
+            report_progress(job_id, 85, "Uploading t-SNE result...")
+            result_key = f"computed/{job_id}/reduced{result_suffix}"
+            result_size = os.path.getsize(result_path)
+            minio_client.fput_object(MINIO_BUCKET, result_key, result_path)
+
+            os.unlink(tmp_path)
+            os.unlink(result_path)
+
+            compute_time = int((time.time() - start_time) * 1000)
+            log.info(f"Job {job_id} completed in {compute_time}ms")
+
+            report_complete(job_id, cache_key, result_key, metadata, compute_time, result_size)
+            return
+
+        elif operation == "dr-umap":
+            comps = params.get("components", 2)
+            n_neighbors = params.get("nNeighbors", params.get("neighbors", 8))
+            min_dist = params.get("minDist", params.get("min_dist", 0.1))
+            reduced_points, meta = run_umap(
+                data,
+                comps,
+                n_neighbors=n_neighbors,
+                min_dist=min_dist,
+            )
+            metadata = meta
+            result_suffix = ".json"
+            with tempfile.NamedTemporaryFile(suffix=result_suffix, delete=False, mode="w") as result_tmp:
+                result_path = result_tmp.name
+                json.dump({"reducedPoints": reduced_points}, result_tmp)
+
+            report_progress(job_id, 85, "Uploading UMAP result...")
+            result_key = f"computed/{job_id}/reduced{result_suffix}"
+            result_size = os.path.getsize(result_path)
+            minio_client.fput_object(MINIO_BUCKET, result_key, result_path)
+
+            os.unlink(tmp_path)
+            os.unlink(result_path)
+
+            compute_time = int((time.time() - start_time) * 1000)
+            log.info(f"Job {job_id} completed in {compute_time}ms")
+
+            report_complete(job_id, cache_key, result_key, metadata, compute_time, result_size)
+            return
 
         else:
             raise ValueError(f"Unknown operation: {operation}")

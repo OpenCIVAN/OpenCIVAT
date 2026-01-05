@@ -476,7 +476,7 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  position: relative;
+  position: relative; // Create stacking context for z-index to work
 }
 
 .canvas-cell__thumbnail-overlay {
@@ -759,12 +759,7 @@
     transparent 100%
   );
   z-index: 10;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-
-  .canvas-cell:hover & {
-    opacity: 1;
-  }
+  // Always visible - only rendered for inactive views
 }
 
 .canvas-cell__mini-header-dot {
@@ -782,13 +777,6 @@
   text-overflow: ellipsis;
   max-width: 60px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  // CSS-only hover reveal - hidden by default, shown on mini-header hover
-  opacity: 0;
-  transition: opacity 0.15s ease;
-
-  .canvas-cell__mini-header:hover & {
-    opacity: 1;
-  }
 }
 
 .canvas-cell__mini-header-btn {
