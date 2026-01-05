@@ -66,6 +66,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
+  flex-wrap: nowrap;
   padding: $spacing-xs $spacing-sm !important;
   background: $color-bg-secondary !important;
   border-bottom: 1px solid $color-border-subtle !important;
@@ -76,6 +77,9 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+  min-width: 0; // Let children shrink before clipping
+  gap: 8px;
+  overflow: visible; // Prevent children from being clipped when space is tight
 
   // FORCE all children to be visible
   * {
@@ -138,8 +142,8 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 0%;
+  min-width: 0; // allow text to truncate instead of pushing controls
 }
 
 // Color dot - with glow
@@ -169,7 +173,9 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-shrink: 0; // Keep control buttons from collapsing on narrow widths
+  flex: 0 0 auto; // Keep control buttons from collapsing on narrow widths
+  flex-wrap: nowrap;
+  overflow: visible;
 }
 
 // Instance type icon - HIDDEN per spec
@@ -251,6 +257,8 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   gap: 5px;
   flex: 1 1 auto; // Let the label claim remaining space between controls
   min-width: 0;   // Enable text ellipsis instead of pushing controls offscreen
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 // More menu wrapper
@@ -397,6 +405,13 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   padding: $spacing-xs $spacing-sm;
   height: $toolbar-height;
   border-radius: $radius-lg;
+  flex-wrap: nowrap; // Keep a single line; rely on overflow handling below
+  min-width: 0;    // Allow inner groups to shrink/scroll instead of disappearing
+  overflow-x: auto; // Allow scroll instead of collapsing when cramped
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   // Dark etched style - sunken/carved appearance
   background: linear-gradient(
