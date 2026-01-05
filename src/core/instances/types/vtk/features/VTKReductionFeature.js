@@ -63,6 +63,7 @@ export class VTKReductionFeature extends ReductionFeature {
       method: null,
       components: null,
       isApplied: false,
+      isProcessing: false,
       originalPolydata: null,
       sceneObjects: instanceData.sceneObjects,
       datasetId: instanceData.datasetId || null,
@@ -87,6 +88,7 @@ export class VTKReductionFeature extends ReductionFeature {
       method: null,
       components: null,
       isApplied: false,
+      isProcessing: false, // Track if reduction is in progress
       originalPolydata: null, // Will be set when data is first loaded
       sceneObjects,
       datasetId: instanceData.datasetId || null,
@@ -112,17 +114,41 @@ export class VTKReductionFeature extends ReductionFeature {
 
     if (!state) {
       log.warn(`Instance ${instanceId} not initialized for reduction`);
+      emitToast("Reduction not available for this instance", "error");
       return;
     }
 
-    // If this method is currently active, turn it off
-    if (state.isApplied && state.method === method) {
-      await this.restoreOriginal(instanceId);
-    } else {
-      // Either no reduction active, or different method active
-      // Apply this method with current components (default to 3D)
-      const components = state.components || 3;
-      await this.applyReduction(instanceId, method, components, options);
+    // Prevent double-clicks while processing
+    if (state.isProcessing) {
+      log.debug(`Reduction already in progress for ${instanceId}`);
+      return;
+    }
+
+    try {
+      state.isProcessing = true;
+
+      // If this method is currently active, turn it off
+      if (state.isApplied && state.method === method) {
+        await this.restoreOriginal(instanceId);
+        emitToast("Restored original data", "success");
+      } else {
+        // Show loading indicator
+        const methodName = method.toUpperCase();
+        emitToast(`Applying ${methodName} reduction...`, "info");
+
+        // Either no reduction active, or different method active
+        // Apply this method with current components (default to 3D)
+        const components = state.components || 3;
+        await this.applyReduction(instanceId, method, components, options);
+
+        // Show success toast
+        emitToast(`${methodName} reduction applied!`, "success");
+      }
+    } catch (error) {
+      log.error(`Reduction toggle failed: ${error?.message || error}`);
+      emitToast(`Reduction failed: ${error?.message || "Unknown error"}`, "error");
+    } finally {
+      state.isProcessing = false;
     }
   }
 

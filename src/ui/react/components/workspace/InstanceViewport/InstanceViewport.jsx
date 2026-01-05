@@ -334,7 +334,6 @@ export function InstanceViewport({
     const initOnce = useRef(false);
     const instanceIdRef = useRef(null);
     const menuButtonRefs = useRef(new Map());
-    const toolbarHideTimeout = useRef(null);
     const spanPickerRef = useRef(null);
 
     // =========================================================================
@@ -355,11 +354,10 @@ export function InstanceViewport({
     const [openMenuId, setOpenMenuId] = useState(null);
     const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
 
-    // Toolbar visibility state
-    const [toolbarVisible, setToolbarVisible] = useState(false);
+    // Toolbar pinned state (toolbar shows when focused OR pinned)
     const [toolbarPinned, setToolbarPinned] = useState(false);
 
-    // Bottom nav bar state
+    // Focus state
     const [navbarVisible, setNavbarVisible] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
 
@@ -370,7 +368,7 @@ export function InstanceViewport({
     // Span picker state
     const [showSpanPicker, setShowSpanPicker] = useState(false);
 
-    // Gear dropdown state (for gear-only mode)
+    // Gear dropdown state (for small viewports - kept for compatibility)
     const [gearDropdownOpen, setGearDropdownOpen] = useState(false);
 
     // Fullscreen state
@@ -807,44 +805,16 @@ export function InstanceViewport({
     }, []);
 
     // =========================================================================
-    // TOOLBAR VISIBILITY
+    // TOOLBAR PIN TOGGLE
     // =========================================================================
-
-    const showToolbar = useCallback(() => {
-        if (toolbarHideTimeout.current) {
-            clearTimeout(toolbarHideTimeout.current);
-            toolbarHideTimeout.current = null;
-        }
-        setToolbarVisible(true);
-    }, []);
-
-    const hideToolbar = useCallback(() => {
-        if (toolbarPinned || openMenuId) return;
-
-        toolbarHideTimeout.current = setTimeout(() => {
-            setToolbarVisible(false);
-        }, 800);
-    }, [toolbarPinned, openMenuId]);
 
     const toggleToolbarPin = useCallback(() => {
         setToolbarPinned(prev => !prev);
     }, []);
 
-    // Keep toolbar visible when menu is open
-    useEffect(() => {
-        if (openMenuId) {
-            showToolbar();
-        }
-    }, [openMenuId, showToolbar]);
-
-    // Cleanup timeout on unmount
-    useEffect(() => {
-        return () => {
-            if (toolbarHideTimeout.current) {
-                clearTimeout(toolbarHideTimeout.current);
-            }
-        };
-    }, []);
+    // Stub functions for header hover (no longer used for visibility)
+    const showToolbar = useCallback(() => {}, []);
+    const hideToolbar = useCallback(() => {}, []);
 
     // =========================================================================
     // NAVBAR VISIBILITY (focus-based)
@@ -855,82 +825,45 @@ export function InstanceViewport({
         setNavbarVisible(true);
 
         if (actualInstanceId) {
-            // Update cursor tracking (existing behavior)
             setActiveInstance(actualInstanceId, viewConfigId);
-
-            // NEW: Update workspaceManager's active instance
             workspaceManager?.setActiveInstance?.(actualInstanceId);
-
-            // NEW: Dispatch event for UI components
             window.dispatchEvent(
                 new CustomEvent('cia:instance-focused', {
-                    detail: {
-                        instanceId: actualInstanceId,
-                        viewId: viewConfigId
-                    },
+                    detail: { instanceId: actualInstanceId, viewId: viewConfigId },
                 })
             );
         }
     }, [actualInstanceId, viewConfigId]);
 
-    /**
- * Handle click/mousedown on viewport container
- * Sets this instance as the active instance in workspaceManager
- */
     const handleActivateInstance = useCallback(() => {
         if (!actualInstanceId) return;
-
-        // Update workspaceManager's active instance
         workspaceManager?.setActiveInstance?.(actualInstanceId);
-
-        // Dispatch event for other components (InstanceSelector, InstanceToolsTab)
         window.dispatchEvent(
             new CustomEvent('cia:instance-focused', {
-                detail: {
-                    instanceId: actualInstanceId,
-                    viewId: viewConfigId
-                },
+                detail: { instanceId: actualInstanceId, viewId: viewConfigId },
             })
         );
     }, [actualInstanceId, viewConfigId]);
 
-    // Use capture phase to detect focus on ANY element inside the viewport
-    const handleFocusCapture = useCallback(() => {
-        // Any focus inside viewport = viewport is active
-        setIsFocused(true);
-        setNavbarVisible(true);
-    }, []);
-
     const handleBlur = useCallback((e) => {
-        // Check if focus is moving to an element inside the viewport
-        // If so, don't treat this as a real blur - we're still "focused"
+        // Only blur if focus is moving OUTSIDE the viewport entirely
         const relatedTarget = e.relatedTarget;
         const viewportElement = viewportRef.current;
 
-        // If relatedTarget is inside viewport, stay focused
-        if (relatedTarget && viewportElement && viewportElement.contains(relatedTarget)) {
+        // If focus is moving to an element inside this viewport, stay focused
+        if (relatedTarget && viewportElement?.contains(relatedTarget)) {
             return;
         }
 
-        // If relatedTarget is null, check after a microtask if we're still focused
-        // (handles cases where relatedTarget isn't set properly)
-        if (!relatedTarget) {
-            requestAnimationFrame(() => {
-                const activeElement = document.activeElement;
-                if (viewportElement && viewportElement.contains(activeElement)) {
-                    return; // Still focused inside viewport
-                }
-                setIsFocused(false);
-                setTimeout(() => setNavbarVisible(false), 300);
-            });
-            return;
-        }
-
-        setIsFocused(false);
-        // Delay hiding navbar to allow for interaction
+        // Use a small delay to handle edge cases where relatedTarget is null
         setTimeout(() => {
+            const activeElement = document.activeElement;
+            if (viewportElement?.contains(activeElement)) {
+                return; // Still focused inside viewport
+            }
+            setIsFocused(false);
             setNavbarVisible(false);
-        }, 300);
+        }, 100);
     }, []);
 
     // =========================================================================
@@ -1504,55 +1437,39 @@ export function InstanceViewport({
             }}
             tabIndex={0}
             onFocus={handleFocus}
-            onFocusCapture={handleFocusCapture}
             onBlur={handleBlur}
             onMouseDown={handleActivateInstance}
         >
-            {/* Header - Always visible, controls toolbar visibility on hover */}
-            {showFullToolbars && (
-                <InstanceHeader
-                    displayName={displayName}
-                    fileTypeDisplayInfo={fileTypeDisplayInfo}
-                    instanceColor={instanceColor}
-                    isFullscreen={isFullscreen}
-                    isActive={isFocused}
-                    isLoading={loading || !hasData}
-                    onFullscreen={handleFullscreen}
-                    onClose={handleClose}
-                    onTrash={handleTrash}
-                    onOpenInstanceTools={handleOpenInstanceTools}
-                    onVRMode={handleVRMode}
-                    onResetCamera={handleResetCamera}
-                    onFitView={handleFit}
-                    onCenterSelection={handleCenterSelection}
-                    onRepresentationChange={handleRepresentationChange}
-                    currentRepresentation={currentRepresentation}
-                    onCaptureThumbnail={handleCaptureThumbnail}
-                    onSaveBookmark={handleSaveBookmark}
-                    onDuplicate={handleDuplicate}
-                    onLinkSettings={handleLinkSettings}
-                    viewportWidth={width}
-                    instanceId={actualInstanceId}
-                    onShowToolbar={showToolbar}
-                    onHideToolbar={hideToolbar}
-                />
-            )}
+            {/* Header - ALWAYS renders, even before data loads */}
+            <InstanceHeader
+                displayName={displayName}
+                fileTypeDisplayInfo={fileTypeDisplayInfo}
+                instanceColor={instanceColor}
+                isFullscreen={isFullscreen}
+                isActive={isFocused}
+                isLoading={loading || !hasData}
+                onFullscreen={handleFullscreen}
+                onClose={handleClose}
+                onTrash={handleTrash}
+                onOpenInstanceTools={handleOpenInstanceTools}
+                onVRMode={handleVRMode}
+                onResetCamera={handleResetCamera}
+                onFitView={handleFit}
+                onDuplicate={handleDuplicate}
+                instanceId={actualInstanceId}
+                onShowToolbar={showToolbar}
+                onHideToolbar={hideToolbar}
+            />
 
-            {/* Top Toolbar - Overlay that slides down on header hover */}
-            {showFullToolbars && tools.length > 0 && (
+            {/* Top Toolbar - Shows when focused OR pinned */}
+            {tools.length > 0 && (
                 <InstanceToolbar
                     tools={tools}
-                    uiMode={uiMode}
-                    visible={toolbarVisible}
+                    isFocused={isFocused}
                     pinned={toolbarPinned}
                     onTogglePin={toggleToolbarPin}
-                    openMenuId={openMenuId}
-                    setOpenMenuId={setOpenMenuId}
-                    dropdownPosition={dropdownPosition}
-                    menuButtonRefs={menuButtonRefs}
                     renderTool={renderTool}
                     onOpenInstanceTools={handleOpenInstanceTools}
-                    instanceToolsTabActive={instanceToolsTabActive}
                     instanceId={actualInstanceId}
                     isFullscreen={isFullscreen}
                     onFullscreen={handleFullscreen}
@@ -1562,8 +1479,6 @@ export function InstanceViewport({
                     onDuplicate={handleDuplicate}
                     onClose={handleClose}
                     onTrash={handleTrash}
-                    onShowToolbar={showToolbar}
-                    onHideToolbar={hideToolbar}
                 />
             )}
 
@@ -1614,7 +1529,7 @@ export function InstanceViewport({
             )}
 
             {/* Navigation Notch - Carved navigation control at bottom */}
-            {showFullToolbars && hasData && (
+            {hasData && (
                 <NavigationNotch
                     position="bottom"
                     zoomLevel={zoomLevel}
@@ -1624,22 +1539,7 @@ export function InstanceViewport({
                     onCenterSelection={handleCenterSelection}
                     instanceColor={instanceColor}
                     availableSpace={width}
-                    visible={navbarVisible || isFocused}
-                />
-            )}
-
-            {/* Gear Only Dropdown - For small viewports (corner-controls and gear-only modes) */}
-            {!showFullToolbars && (
-                <GearOnlyDropdown
-                    open={gearDropdownOpen}
-                    onToggle={() => setGearDropdownOpen(!gearDropdownOpen)}
-                    onOpenInstanceTools={handleOpenInstanceTools}
-                    onVRMode={handleVRMode}
-                    onMaximize={handleFullscreen}
-                    onDuplicate={handleDuplicate}
-                    onClose={handleClose}
-                    onTrash={handleTrash}
-                    instanceId={actualInstanceId}
+                    visible={isFocused}
                 />
             )}
         </div>

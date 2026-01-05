@@ -59,42 +59,51 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // ============================================================================
-// HEADER - Blended dark overlay style
+// HEADER - Always visible, forced visibility
 // ============================================================================
 
 .instance-viewport__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-xs $spacing-sm; // Compact padding
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: $spacing-xs $spacing-sm !important;
+  background: $color-bg-secondary !important;
+  border-bottom: 1px solid $color-border-subtle !important;
+  flex-shrink: 0 !important;
+  min-height: 32px !important;
+  position: relative !important;
+  z-index: 100 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 
-  // Solid dark background so toolbar slides from behind
-  background: $color-bg-secondary;
-  border-bottom: 1px solid $color-border-subtle;
+  // FORCE all children to be visible
+  * {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
 
-  flex-shrink: 0;
-  min-height: 32px; // Slightly shorter
-  position: relative;
-  z-index: 100; // Higher than toolbar overlay (90)
-
-  // Active state - bold name + 2px accent underline
+  // Active state - accent border at bottom
   &--active {
-    // Name becomes bold and white (not colored)
-    .instance-viewport__label-text {
-      font-weight: $font-weight-semibold;
-      color: $color-text-primary;
+    border-bottom-color: var(--instance-color, #{$color-accent-primary}) !important;
+    border-bottom-width: 2px !important;
+
+    // FORCE visibility even in active state
+    .instance-viewport__header-left,
+    .instance-viewport__header-controls,
+    .instance-viewport__label,
+    .instance-viewport__label-text,
+    .instance-viewport__label-icon,
+    .instance-viewport__header-button,
+    .instance-viewport__more-wrapper {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
-    // 2px accent underline
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--instance-color, #{$color-accent-primary});
-      box-shadow: 0 0 8px var(--instance-color, #{$color-accent-primary});
+    .instance-viewport__label-text {
+      font-weight: $font-weight-semibold !important;
+      color: $color-text-primary !important;
     }
   }
 }
@@ -124,25 +133,13 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-// Instance Label - plain layout with color dot and neutral text (no badge)
+// Instance Label - plain layout with color dot and neutral text
 .instance-viewport__label {
   display: flex;
   align-items: center;
   gap: 6px;
   flex: 1;
   min-width: 0;
-
-  // NO badge styling - plain appearance
-  background: transparent;
-  border: none;
-  padding: 0;
-  border-radius: 0;
-
-  // No hover effect
-  &:hover {
-    background: transparent;
-    border: none;
-  }
 }
 
 // Color dot - with glow
@@ -163,6 +160,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0; // Allow text to truncate instead of collapsing siblings
   transition: font-weight 0.15s ease, color 0.15s ease;
 }
 
@@ -171,6 +169,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 5px;
+  flex-shrink: 0; // Keep control buttons from collapsing on narrow widths
 }
 
 // Instance type icon - HIDDEN per spec
@@ -199,6 +198,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   align-items: center;
   color: var(--instance-color);
   margin-right: 4px;
+  flex-shrink: 0; // Keep icon visible when space is tight
 }
 
 // Header buttons - subtle backlit style
@@ -209,14 +209,13 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: $radius-sm;
   color: $color-text-tertiary;
   cursor: pointer;
-
   transition: all 0.15s ease;
+  flex-shrink: 0; // Prevent icons from shrinking to zero when space is tight
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -245,172 +244,18 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-// Header left section (for wrench button)
+// Header left section (wrench button + label)
 .instance-viewport__header-left {
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-shrink: 0;
+  flex: 1 1 auto; // Let the label claim remaining space between controls
+  min-width: 0;   // Enable text ellipsis instead of pushing controls offscreen
 }
 
 // More menu wrapper
 .instance-viewport__more-wrapper {
   position: relative;
-}
-
-// =============================================================================
-// HEADER RESPONSIVE MODES (6 breakpoints)
-// Full (≥450px): All elements
-// Large (≥380px): VR hidden
-// Medium (≥300px): Expand/VR hidden
-// Small (≥220px): Wrench/Expand/VR hidden
-// Tiny (≥160px): Only dot, name, more, close
-// Micro (<160px): Only dot, more, close
-// =============================================================================
-
-.instance-viewport__header--full {
-  min-height: 32px;
-
-  .instance-viewport__header-vr,
-  .instance-viewport__header-wrench,
-  .instance-viewport__header-expand {
-    display: flex;
-  }
-}
-
-.instance-viewport__header--large {
-  min-height: 32px;
-
-  .instance-viewport__header-wrench,
-  .instance-viewport__header-expand {
-    display: flex;
-  }
-
-  .instance-viewport__header-vr {
-    display: none;
-  }
-}
-
-.instance-viewport__header--medium {
-  min-height: 32px;
-
-  .instance-viewport__header-wrench {
-    display: flex;
-  }
-
-  .instance-viewport__header-vr,
-  .instance-viewport__header-expand {
-    display: none;
-  }
-}
-
-.instance-viewport__header--small {
-  min-height: 28px;
-
-  .instance-viewport__header-vr,
-  .instance-viewport__header-wrench,
-  .instance-viewport__header-expand {
-    display: none;
-  }
-}
-
-.instance-viewport__header--tiny {
-  min-height: 26px;
-  padding: 2px $spacing-xs;
-
-  .instance-viewport__header-vr,
-  .instance-viewport__header-wrench,
-  .instance-viewport__header-expand {
-    display: none;
-  }
-
-  .instance-viewport__label {
-    padding: 2px 8px;
-  }
-
-  .instance-viewport__label-text {
-    font-size: 10px;
-    max-width: 80px;
-  }
-
-  .instance-viewport__header-button {
-    width: 22px;
-    height: 22px;
-
-    svg {
-      width: 10px;
-      height: 10px;
-    }
-  }
-}
-
-.instance-viewport__header--micro {
-  min-height: 24px;
-  padding: 2px $spacing-xs;
-  gap: 4px;
-
-  // Hide all optional elements - only dot, more, close visible
-  .instance-viewport__header-vr,
-  .instance-viewport__header-wrench,
-  .instance-viewport__header-expand,
-  .instance-viewport__type-icon {
-    display: none;
-  }
-
-  .instance-viewport__header-left {
-    gap: 4px;
-  }
-
-  .instance-viewport__label {
-    padding: 0;
-    background: transparent;
-    border: none;
-  }
-
-  // Hide the name text in micro mode
-  .instance-viewport__label-text {
-    display: none;
-  }
-
-  // Reduce dot size for micro
-  .instance-viewport__label-dot {
-    width: 5px;
-    height: 5px;
-  }
-
-  .instance-viewport__header-button {
-    width: 20px;
-    height: 20px;
-    border-radius: 3px;
-
-    svg {
-      width: 10px;
-      height: 10px;
-    }
-  }
-}
-
-// Cold header mode - for unmounted viewports (gives illusion of rendered view)
-.instance-viewport__header--cold {
-  // Same as full mode but with disabled styling for inactive buttons
-  .instance-viewport__header-wrench,
-  .instance-viewport__header-expand {
-    display: flex;
-  }
-  .instance-viewport__header-vr {
-    display: none; // Hide VR in cold mode to save space
-  }
-
-  // Disabled buttons get reduced opacity
-  .instance-viewport__header-button:disabled {
-    opacity: 0.4;
-    cursor: default;
-
-    &:hover {
-      background: transparent;
-      color: rgba(255, 255, 255, 0.5);
-    }
-  }
 }
 
 // ============================================================================
@@ -533,18 +378,6 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
     transform: translateY(34px); // 2px below 32px header
     pointer-events: auto;
-
-    // Hover zone extending up to overlap with header
-    // Prevents flicker when mouse moves from header to toolbar
-    &::before {
-      content: "";
-      position: absolute;
-      top: -10px; // Extend 10px above toolbar (overlaps with header)
-      left: 0;
-      right: 0;
-      height: 10px;
-      pointer-events: auto;
-    }
   }
 
   // Pinned state
