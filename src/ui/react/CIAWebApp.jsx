@@ -364,12 +364,32 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, []);
 
   const handleTogglePopout = useCallback((popoutId) => {
-    setOpenPopouts((prev) =>
-      prev.includes(popoutId)
+    setOpenPopouts((prev) => {
+      const newState = prev.includes(popoutId)
         ? prev.filter((id) => id !== popoutId)
-        : [...prev, popoutId]
-    );
+        : [...prev, popoutId];
+
+      // Dispatch state change event for activity bar buttons
+      window.dispatchEvent(new CustomEvent('cia:popout-state-change', {
+        detail: { popoutId, isOpen: newState.includes(popoutId) }
+      }));
+
+      return newState;
+    });
   }, []);
+
+  // Listen for popout toggle events from activity bar
+  useEffect(() => {
+    const handleTogglePopoutEvent = (e) => {
+      const { popoutId } = e.detail || {};
+      if (popoutId) {
+        handleTogglePopout(popoutId);
+      }
+    };
+
+    window.addEventListener('cia:toggle-popout', handleTogglePopoutEvent);
+    return () => window.removeEventListener('cia:toggle-popout', handleTogglePopoutEvent);
+  }, [handleTogglePopout]);
 
   // ===========================================================================
   // CALLBACKS - SECONDARY FOOTER (Voice)
@@ -389,6 +409,79 @@ export function CIAWebApp({ username, userId, projectId }) {
   const handleOpenVoiceSettings = useCallback(() => {
     setShowVoiceSettings(true);
   }, []);
+
+  // ===========================================================================
+  // VOICE EVENT BRIDGE (for activity bar voice controls)
+  // ===========================================================================
+  // Listen for voice action events from activity bar and call appropriate handlers
+  useEffect(() => {
+    const handleVoiceAction = (e) => {
+      const { action } = e.detail || {};
+      switch (action) {
+        case 'joinLeave':
+          handleJoinLeaveVoice();
+          break;
+        case 'toggleMute':
+          voice.toggleMute?.();
+          break;
+        case 'toggleDeafen':
+          voice.toggleDeafen?.();
+          break;
+        case 'openSettings':
+          handleOpenVoiceSettings();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('cia:voice-action', handleVoiceAction);
+    return () => window.removeEventListener('cia:voice-action', handleVoiceAction);
+  }, [handleJoinLeaveVoice, voice.toggleMute, voice.toggleDeafen, handleOpenVoiceSettings]);
+
+  // Dispatch voice state changes to activity bar
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('cia:voice-state-change', {
+      detail: {
+        inVoice: voice.inVoice,
+        isMuted: voice.muted,
+        isDeafened: voice.deafened,
+        isJoining: voice.isJoining,
+      }
+    }));
+  }, [voice.inVoice, voice.muted, voice.deafened, voice.isJoining]);
+
+  // Track previous voice state for toast notifications
+  const prevVoiceState = useRef({ inVoice: false, isJoining: false });
+
+  useEffect(() => {
+    const prev = prevVoiceState.current;
+    const roomName = voice.currentRoom || currentRoomName || 'voice channel';
+
+    // Started joining
+    if (voice.isJoining && !prev.isJoining) {
+      window.dispatchEvent(new CustomEvent('cia:toast', {
+        detail: { message: `Joining ${roomName}...`, type: 'info', duration: 3000 }
+      }));
+    }
+
+    // Successfully joined (was joining or just connected)
+    if (voice.inVoice && !prev.inVoice) {
+      window.dispatchEvent(new CustomEvent('cia:toast', {
+        detail: { message: `Joined ${roomName}`, type: 'success' }
+      }));
+    }
+
+    // Left voice (was in voice, now not)
+    if (!voice.inVoice && prev.inVoice && !voice.isJoining) {
+      window.dispatchEvent(new CustomEvent('cia:toast', {
+        detail: { message: `Left ${roomName}`, type: 'info' }
+      }));
+    }
+
+    // Update previous state
+    prevVoiceState.current = { inVoice: voice.inVoice, isJoining: voice.isJoining };
+  }, [voice.inVoice, voice.isJoining, voice.currentRoom, currentRoomName]);
 
   // ===========================================================================
   // QUICK ACTION HANDLERS (View Snapshot, Duplicate, Settings)
@@ -622,11 +715,6 @@ export function CIAWebApp({ username, userId, projectId }) {
               // ─────────────────────────────────────────────────────────────
               secondaryBottomBar={
                 <SecondaryFooter
-                  // Popout state (Navigator uses its own hook internally)
-                  scratchpadOpen={openPopouts.includes("scratchpad")}
-                  canvasOpsOpen={openPopouts.includes("canvasOps")}
-                  onToggleScratchpad={() => handleTogglePopout("scratchpad")}
-                  onToggleCanvasOps={() => handleTogglePopout("canvasOps")}
                   // Edit tools
                   isEditMode={isEditMode}
                   activeTool={activeTool}
@@ -639,23 +727,7 @@ export function CIAWebApp({ username, userId, projectId }) {
                   // View mode (for ViewContextBlock)
                   viewMode={layoutMode}
                   onViewModeChange={handleViewModeChange}
-                  // Voice controls
-                  isMuted={voice.muted}
-                  isDeafened={voice.deafened}
-                  isInChannel={voice.inVoice}
-                  isJoiningVoice={voice.isJoining}
-                  currentChannel={
-                    voice.currentRoom
-                      ? { id: currentRoomId, name: voice.currentRoom }
-                      : null
-                  }
-                  participantCount={voice.participants?.length || 0}
-                  voiceChannels={availableVoiceChannels}
-                  onToggleMute={voice.toggleMute}
-                  onToggleDeafen={voice.toggleDeafen}
-                  onJoinLeaveVoice={handleJoinLeaveVoice}
-                  onChangeVoiceChannel={handleChangeVoiceChannel}
-                  onOpenVoiceSettings={handleOpenVoiceSettings}
+                  // NOTE: Voice props removed - voice controls moved to right activity bar
                 />
               }
               // ─────────────────────────────────────────────────────────────

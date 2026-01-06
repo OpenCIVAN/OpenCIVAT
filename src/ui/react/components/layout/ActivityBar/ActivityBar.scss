@@ -84,6 +84,15 @@
     flex: 1;
   }
 
+  &__bottom-items {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    width: 100%;
+    padding-bottom: $spacing-xs;
+  }
+
   &__toggle {
     width: 36px;
     height: 36px;

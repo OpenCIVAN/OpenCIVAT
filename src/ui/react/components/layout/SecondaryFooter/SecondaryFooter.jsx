@@ -28,16 +28,11 @@ import React, { useCallback, memo } from 'react';
 
 // Shared bar components (from common bars/ folder)
 import {
-    VoiceControlsPanel,
     ViewContextBlock
 } from '@UI/react/components/bars';
 
 // Atomic design components
 import { ButtonGroup, IconButton, Icon } from '@UI/react/components/atoms';
-import { LabeledButton } from '@UI/react/components/molecules';
-
-// Navigator hook for toggling the floating canvas navigator
-import { useNavigatorButton } from '@UI/react/components/panels/LayoutPanel';
 
 // Hook for view logic
 import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic';
@@ -93,12 +88,12 @@ const EDIT_TOOLS = [
 ];
 
 // Zone labels configuration - class names must match zone widths exactly
+// NOTE: Panels zone (Nav, Notes, Ops) moved to left activity bar
+// NOTE: Voice zone moved to right activity bar
 const FOOTER_ZONE_LABELS = [
-    { label: 'Panels', color: 'var(--color-accent-teal)', className: 'secondary-footer__label--panels' },
     { label: 'Editing', color: 'var(--color-accent-amber)', className: 'secondary-footer__label--editing' },
     { label: 'History', color: 'var(--color-text-muted)', className: 'secondary-footer__label--history' },
     { label: 'View Context', color: 'var(--color-accent-purple)', className: 'secondary-footer__label--view-context' },
-    { label: 'Voice', color: 'var(--color-accent-blue)', className: 'secondary-footer__label--voice' },
 ];
 
 // =============================================================================
@@ -107,15 +102,10 @@ const FOOTER_ZONE_LABELS = [
 
 /**
  * Secondary Footer bar component.
- * Manages its own internal zones for popouts, edit tools, view context, and voice controls.
+ * Manages its own internal zones for edit tools, view context, and voice controls.
+ * NOTE: Panels zone (Nav, Notes, Ops) moved to left activity bar.
  */
 function SecondaryFooter({
-    // Popout props (scratchpad and canvasOps still use passed props)
-    scratchpadOpen = false,
-    canvasOpsOpen = false,
-    onToggleScratchpad,
-    onToggleCanvasOps,
-
     // Edit props
     isEditMode = false,
     activeTool = 'select',
@@ -130,24 +120,10 @@ function SecondaryFooter({
     viewMode = 'normal',
     onViewModeChange,
 
-    // Voice props
-    isMuted = false,
-    isDeafened = false,
-    isInChannel = false,
-    isJoiningVoice = false,
-    currentChannel,
-    voiceChannels = [],
-    onToggleMute,
-    onToggleDeafen,
-    onJoinLeaveVoice,
-    onChangeVoiceChannel,
-    onOpenVoiceSettings,
+    // NOTE: Voice props removed - voice controls moved to right activity bar
 
     className = '',
 }) {
-    // Navigator uses its own context-based hook
-    const { isFloating: navigatorOpen, toggleNavigator } = useNavigatorButton();
-
     // Get view logic from context
     const {
         activeView,
@@ -175,39 +151,8 @@ function SecondaryFooter({
             <ZoneLabelBar labels={FOOTER_ZONE_LABELS} />
 
             {/* Content Row */}
+            {/* NOTE: Panels zone (Nav, Notes, Ops) moved to left activity bar */}
             <div className="secondary-footer__content">
-                {/* ================================================================= */}
-                {/* PANELS ZONE: Popout Buttons */}
-                {/* ================================================================= */}
-                <div className="secondary-footer__zone secondary-footer__zone--panels">
-                    <LabeledButton
-                        icon="map"
-                        label="Nav"
-                        active={navigatorOpen}
-                        accent="var(--color-accent-teal)"
-                        onClick={toggleNavigator}
-                        size="sm"
-                    />
-                    <LabeledButton
-                        icon="stickyNote"
-                        label="Notes"
-                        active={scratchpadOpen}
-                        accent="var(--color-accent-amber)"
-                        onClick={onToggleScratchpad}
-                        size="sm"
-                    />
-                    <LabeledButton
-                        icon="sliders"
-                        label="Ops"
-                        active={canvasOpsOpen}
-                        accent="var(--color-accent-blue)"
-                        onClick={onToggleCanvasOps}
-                        size="sm"
-                    />
-                </div>
-
-                <div className="secondary-footer__divider secondary-footer__divider--tall" />
-
                 {/* ================================================================= */}
                 {/* EDITING ZONE: Edit Mode Toggle + Tools (v3 stacked style) */}
                 {/* ================================================================= */}
@@ -285,25 +230,7 @@ function SecondaryFooter({
                     />
                 </div>
 
-                <div className="secondary-footer__divider secondary-footer__divider--tall" />
-
-                {/* ================================================================= */}
-                {/* VOICE ZONE: Voice Controls (tinted panel) */}
-                {/* ================================================================= */}
-                <VoiceControlsPanel
-                    isMuted={isMuted}
-                    isDeafened={isDeafened}
-                    isInChannel={isInChannel}
-                    isJoining={isJoiningVoice}
-                    currentChannel={currentChannel}
-                    channels={voiceChannels}
-                    onToggleMute={onToggleMute}
-                    onToggleDeafen={onToggleDeafen}
-                    onJoinLeave={onJoinLeaveVoice}
-                    onChangeChannel={onChangeVoiceChannel}
-                    onOpenSettings={onOpenVoiceSettings}
-                    className="secondary-footer__zone secondary-footer__zone--voice"
-                />
+                {/* NOTE: Voice zone removed - voice controls moved to right activity bar */}
             </div>
         </div>
     );

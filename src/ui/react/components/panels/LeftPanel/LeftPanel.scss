@@ -199,6 +199,16 @@
   flex: 1;
 }
 
+// Bottom section for Nav, Notes, Ops buttons
+.left-panel__activity-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  width: 100%;
+  padding: $spacing-xs 0;
+}
+
 // Toggle button at bottom
 .left-panel__toggle-btn {
   margin-top: $spacing-xs;

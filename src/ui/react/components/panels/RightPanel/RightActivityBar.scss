@@ -4,16 +4,46 @@
 
 @use "theme" as *;
 
-.right-activity-bar {
+// =============================================================================
+// ACTIVITY BAR CONTAINER
+// =============================================================================
+
+.right-panel__activity-bar {
   display: flex;
   flex-direction: column;
   height: 100%;
   width: 100%;
   background: $color-bg-secondary;
   padding: $spacing-xs 0;
+
+  // Colored indicator line on the left edge (opposite of left panel)
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: $color-accent-pink;
+    opacity: 0.6;
+    transition: background-color $transition-fast;
+  }
+
+  // Color variants for indicator line
+  &[data-color="pink"]::before { background: $color-accent-pink; }
+  &[data-color="purple"]::before { background: $color-accent-purple; }
+  &[data-color="blue"]::before { background: $color-accent-blue; }
+  &[data-color="green"]::before { background: $color-accent-green; }
+  &[data-color="teal"]::before { background: $color-accent-teal; }
+  &[data-color="red"]::before { background: $color-accent-red; }
+  &[data-color="amber"]::before { background: $color-accent-amber; }
 }
 
-.right-activity-bar__tabs {
+// =============================================================================
+// TAB BUTTONS
+// =============================================================================
+
+.right-panel__activity-tabs {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -21,14 +51,71 @@
   padding: 0 $spacing-xs;
 }
 
-.right-activity-bar__tab {
+.right-panel__activity-btn-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// "Soon" badge for unimplemented tabs
+.right-panel__activity-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  font-size: 7px;
+  font-weight: $font-weight-bold;
+  padding: 1px 3px;
+  background: $color-accent-pink;
+  color: $color-bg-base;
+  border-radius: $radius-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+}
+
+// =============================================================================
+// SPACER AND DIVIDER
+// =============================================================================
+
+.right-panel__activity-spacer {
+  flex: 1;
+}
+
+.right-panel__activity-divider {
+  width: 24px;
+  height: 1px;
+  background: $color-border-subtle;
+  margin: $spacing-xs auto;
+}
+
+// =============================================================================
+// VOICE CONTROLS (Compact version for activity bar)
+// =============================================================================
+
+.right-panel__voice-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+
+  // Connected state has slightly different styling
+  &--connected {
+    background: rgba($color-accent-green, 0.05);
+    border-radius: $radius-md;
+    margin: 0 $spacing-xs;
+  }
+}
+
+.right-panel__voice-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
   padding: 0;
+  border: none;
   border-radius: $radius-md;
   cursor: pointer;
   transition: all $transition-fast;
@@ -43,7 +130,7 @@
   color: $color-text-tertiary;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 
-  &:hover:not(.active) {
+  &:hover {
     background: linear-gradient(
       180deg,
       rgba(0, 0, 0, 0.25) 0%,
@@ -52,58 +139,54 @@
     color: $color-text-secondary;
   }
 
-  // Active state with color accent and glow
-  &.active {
-    box-shadow: 0 0 10px var(--glow-color);
+  &:active {
+    transform: scale(0.95);
+  }
 
-    // Color variants
-    &[data-color="pink"] {
-      --glow-color: #{rgba($color-accent-pink, 0.2)};
-      background: rgba($color-accent-pink, 0.15);
-      border: 1px solid rgba($color-accent-pink, 0.4);
-      color: $color-accent-pink;
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // Join button - green accent
+  &--join {
+    background: rgba($color-accent-green, 0.15);
+    border: 1px solid rgba($color-accent-green, 0.4);
+    color: $color-accent-green;
+    box-shadow: 0 0 8px rgba($color-accent-green, 0.15);
+
+    &:hover {
+      background: rgba($color-accent-green, 0.25);
+      box-shadow: 0 0 12px rgba($color-accent-green, 0.25);
     }
+  }
 
-    &[data-color="purple"] {
-      --glow-color: #{rgba($color-accent-purple, 0.2)};
-      background: rgba($color-accent-purple, 0.15);
-      border: 1px solid rgba($color-accent-purple, 0.4);
-      color: $color-accent-purple;
+  // Joining state - animated
+  &--joining {
+    animation: pulse-green 1.5s ease-in-out infinite;
+  }
+
+  // Muted state - red accent
+  &--muted {
+    background: rgba($color-accent-red, 0.15);
+    border: 1px solid rgba($color-accent-red, 0.4);
+    color: $color-accent-red;
+    box-shadow: 0 0 8px rgba($color-accent-red, 0.15);
+
+    &:hover {
+      background: rgba($color-accent-red, 0.25);
     }
+  }
 
-    &[data-color="blue"] {
-      --glow-color: #{rgba($color-accent-blue, 0.2)};
-      background: rgba($color-accent-blue, 0.15);
-      border: 1px solid rgba($color-accent-blue, 0.4);
-      color: $color-accent-blue;
-    }
+  // Leave button - always red
+  &--leave {
+    background: rgba($color-accent-red, 0.1);
+    border: 1px solid rgba($color-accent-red, 0.3);
+    color: $color-accent-red;
 
-    &[data-color="green"] {
-      --glow-color: #{rgba($color-accent-green, 0.2)};
-      background: rgba($color-accent-green, 0.15);
-      border: 1px solid rgba($color-accent-green, 0.4);
-      color: $color-accent-green;
-    }
-
-    &[data-color="teal"] {
-      --glow-color: #{rgba($color-accent-teal, 0.2)};
-      background: rgba($color-accent-teal, 0.15);
-      border: 1px solid rgba($color-accent-teal, 0.4);
-      color: $color-accent-teal;
-    }
-
-    &[data-color="red"] {
-      --glow-color: #{rgba($color-accent-red, 0.2)};
-      background: rgba($color-accent-red, 0.15);
-      border: 1px solid rgba($color-accent-red, 0.4);
-      color: $color-accent-red;
-    }
-
-    &[data-color="amber"] {
-      --glow-color: #{rgba($color-accent-amber, 0.2)};
-      background: rgba($color-accent-amber, 0.15);
-      border: 1px solid rgba($color-accent-amber, 0.4);
-      color: $color-accent-amber;
+    &:hover {
+      background: rgba($color-accent-red, 0.2);
+      box-shadow: 0 0 8px rgba($color-accent-red, 0.2);
     }
   }
 
@@ -113,43 +196,48 @@
   }
 }
 
-// "Soon" badge for unimplemented tabs
-.right-activity-bar__badge {
-  position: absolute;
-  top: -4px;
-  right: -8px;
-  font-size: 7px;
-  font-weight: $font-weight-bold;
-  padding: 1px 3px;
-  background: $color-accent-pink;
-  color: $color-bg-base;
-  border-radius: $radius-xs;
-  text-transform: uppercase;
+// Pulse animation for joining state
+@keyframes pulse-green {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba($color-accent-green, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba($color-accent-green, 0.4);
+  }
+}
+
+// Spin animation for loader icon
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+// Status text (e.g., "Joining...")
+.right-panel__voice-status {
+  font-size: 9px;
+  font-weight: $font-weight-medium;
+  color: $color-accent-green;
+  text-align: center;
   letter-spacing: 0.3px;
+  animation: pulse-text 1.5s ease-in-out infinite;
 }
 
-// Divider between tab groups
-.right-activity-bar__divider {
-  width: 24px;
-  height: 1px;
-  background: $color-border-subtle;
-  margin: $spacing-xs 0;
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
-// Spacer pushes bottom section down
-.right-activity-bar__spacer {
-  flex: 1;
+// Make loader icon spin when joining
+.right-panel__voice-btn--joining {
+  svg {
+    animation: spin 1s linear infinite;
+  }
 }
 
-// Bottom section with toggle button
-.right-activity-bar__bottom {
-  padding: $spacing-xs;
-  border-top: 1px solid $color-border-subtle;
-  display: flex;
-  justify-content: center;
-}
+// =============================================================================
+// TOGGLE BUTTON
+// =============================================================================
 
-// Toggle button styling
-.right-activity-bar__toggle {
-  // Inherits from .right-activity-bar__tab
+.right-panel__toggle-btn {
+  margin: $spacing-xs auto;
 }
