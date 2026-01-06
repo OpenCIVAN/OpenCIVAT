@@ -12,11 +12,10 @@ import { SubsetPanel } from '@UI/react/components/panels/SubsetPanel';
 import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay';
 
 // New canvas chrome components
-import { CanvasHeader } from '../CanvasHeader/CanvasHeader.jsx';
+import { CanvasHeaderBar } from '../CanvasHeaderBar/CanvasHeaderBar.jsx';
 import { CanvasToolbar } from '../CanvasToolbar/CanvasToolbar.jsx';
-import { CanvasStatusBar } from '../CanvasStatusBar/CanvasStatusBar.jsx';
 import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
-import { FloatingCanvasWrapper, CanvasControlsBar, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
+import { FloatingCanvasWrapper, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
@@ -55,6 +54,15 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     const [aspectRatio, setAspectRatio] = useState('FREE');
     const [floatingPosition, setFloatingPosition] = useState({ x: 100, y: 100 });
     const [floatingSize, setFloatingSize] = useState({ width: 800, height: 600 });
+
+    // Header bar state (edit mode, tools, flow)
+    const [editMode, setEditMode] = useState(false);
+    const [activeTool, setActiveTool] = useState('select');
+    const [flowDirection, setFlowDirection] = useState('row');
+
+    // Links state
+    const [viewLinks, setViewLinks] = useState({});
+    const [recentUnlinks, setRecentUnlinks] = useState([]);
 
     // Canvas hook for the active canvas
     const {
@@ -314,6 +322,46 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         setRightPanelOpen(prev => !prev);
     }, []);
 
+    // Link management handlers
+    const handleUpdateLink = useCallback((typeId, targetId, direction) => {
+        setViewLinks(prev => {
+            const newLinks = { ...prev };
+            if (targetId === null) {
+                // Unlink - save to recent unlinks first
+                if (prev[typeId]?.targetId) {
+                    setRecentUnlinks(recent => [
+                        { typeId, targetId: prev[typeId].targetId, direction: prev[typeId].direction },
+                        ...recent.slice(0, 4)
+                    ]);
+                }
+                delete newLinks[typeId];
+            } else {
+                newLinks[typeId] = { targetId, direction };
+            }
+            return newLinks;
+        });
+    }, []);
+
+    const handleRestoreLink = useCallback((typeId, targetId, direction) => {
+        setViewLinks(prev => ({
+            ...prev,
+            [typeId]: { targetId, direction }
+        }));
+        setRecentUnlinks(recent => recent.filter(u => !(u.typeId === typeId && u.targetId === targetId)));
+    }, []);
+
+    // Get current active view for links
+    const activeViewForLinks = useMemo(() => {
+        if (!highlightedPlacementId) return null;
+        const placement = visiblePlacements.find(p => p.id === highlightedPlacementId);
+        if (!placement) return null;
+        return {
+            id: placement.id,
+            name: placement.content?.name || 'View',
+            color: placement.content?.color || '#60a5fa',
+        };
+    }, [highlightedPlacementId, visiblePlacements]);
+
     return (
         <FloatingCanvasWrapper
             canvasMode={canvasMode}
@@ -325,22 +373,29 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             onModeChange={setCanvasMode}
         >
             <div className="canvas-workspace">
-                {/* Canvas Controls Bar - Mode/Aspect/Grid */}
-                <CanvasControlsBar
+                {/* Canvas Header Bar - Room/Workspace/Edit/Flow/Size/CanvasMode */}
+                <CanvasHeaderBar
+                    room={{ id: 'main', name: 'Main Room' }}
+                    rooms={[{ id: 'main', name: 'Main Room', memberCount: 1 }]}
+                    collaborators={[]}
+                    onRoomChange={() => {}}
+                    workspace={{ id: projectId, name: 'Workspace' }}
+                    workspaces={[{ id: projectId, name: 'Workspace' }]}
+                    onWorkspaceChange={() => {}}
+                    activeTool={activeTool}
+                    onToolChange={setActiveTool}
+                    mergeMode={false}
+                    onMergeModeChange={() => {}}
+                    editMode={editMode}
+                    onEditModeChange={setEditMode}
+                    flowDirection={flowDirection}
+                    onFlowDirectionChange={setFlowDirection}
+                    canvasSize={canvasSize}
+                    viewportSize={gridSize}
+                    onCanvasSizeClick={() => {}}
+                    onViewportSizeClick={() => {}}
                     canvasMode={canvasMode}
-                    aspectRatio={aspectRatio}
-                    gridSize={gridSize}
-                    onModeChange={setCanvasMode}
-                    onAspectRatioChange={setAspectRatio}
-                    onGridSizeChange={setGridSize}
-                />
-
-                {/* Canvas Header - Navigation */}
-                <CanvasHeader
-                    viewport={viewport}
-                    gridSize={gridSize}
-                    onViewportChange={moveViewport}
-                    onGridSizeChange={setGridSize}
+                    onCanvasModeChange={setCanvasMode}
                 />
 
                 {/* Main content area */}
@@ -429,26 +484,80 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 </FloatingPanel>
             </div>
 
-            {/* Canvas Toolbar - Actions */}
+            {/* Canvas Toolbar - View Mode + Navigation + Actions */}
             <CanvasToolbar
+                // View mode
+                focusDisabled={!highlightedPlacementId}
+                subsetDisabled={false}
+                onEnterFocus={() => {
+                    if (highlightedPlacementId) {
+                        const placement = visiblePlacements.find(p => p.id === highlightedPlacementId);
+                        if (placement) {
+                            focusView({
+                                placementId: placement.id,
+                                name: placement.content?.name || 'View',
+                                row: placement.row,
+                                col: placement.col,
+                            });
+                        }
+                    }
+                }}
+                onEnterSubset={() => {
+                    // TODO: Implement subset mode entry
+                }}
+
+                // Navigation
+                viewportPosition={viewport}
+                homePosition={{ row: 0, col: 0 }}
+                onNavigate={(direction) => {
+                    const delta = {
+                        up: { row: -1, col: 0 },
+                        down: { row: 1, col: 0 },
+                        left: { row: 0, col: -1 },
+                        right: { row: 0, col: 1 },
+                    }[direction];
+                    if (delta) moveViewport(delta.row, delta.col);
+                }}
+                onGoHome={() => navigateTo(0, 0)}
+                onBookmark={() => {
+                    // TODO: Implement bookmark save
+                }}
+
+                // History
                 canUndo={false}
                 canRedo={false}
                 onUndo={() => {}}
                 onRedo={() => {}}
-                activeSubset={focusedSubset}
-                subsets={subsets}
-                onSubsetChange={enterFocusMode}
-            />
 
-            {/* Canvas Status Bar - Info */}
-            <CanvasStatusBar
-                canvasSize={canvasSize}
-                viewportSize={gridSize}
-                cellSize={cellSize}
-                renderMode={renderMode}
-                isConnected={!loadError}
-                isSyncing={isLoading}
-                collaboratorCount={0}
+                // Subset
+                subsetSelection={subsets.map(s => s.id)}
+                onSubsetToggle={(id) => {
+                    // TODO: Implement subset toggle
+                }}
+                onSubsetSelectAll={() => {}}
+                onSubsetClear={() => {}}
+
+                // Active view
+                activeView={activeViewForLinks}
+                availableViews={visiblePlacements.map(p => ({
+                    id: p.id,
+                    name: p.content?.name || 'View',
+                    color: p.content?.color || '#60a5fa',
+                    position: { row: p.row, col: p.col },
+                    onCanvas: true,
+                }))}
+                onSelectView={(id) => setHighlightedPlacementId(id)}
+
+                // Links
+                links={viewLinks}
+                recentUnlinks={recentUnlinks}
+                onUpdateLink={handleUpdateLink}
+                onRestoreLink={handleRestoreLink}
+
+                // Actions
+                onSnapshot={() => {}}
+                onDuplicate={() => {}}
+                onSettings={() => {}}
             />
 
             {/* Focus mode overlay */}

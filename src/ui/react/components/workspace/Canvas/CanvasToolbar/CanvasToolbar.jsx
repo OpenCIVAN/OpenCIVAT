@@ -1,68 +1,192 @@
 // src/ui/react/components/workspace/Canvas/CanvasToolbar/CanvasToolbar.jsx
 // Canvas toolbar footer with view mode, navigation, history, and view actions
 //
-// Replaces SecondaryFooter for canvas-centric architecture
-// Part of the new canvas chrome system
+// Based on canvas-chrome-v12.jsx spec
+// Height: 66px (18px label bar + 48px content bar)
+// Layout: View Mode | Navigation | History | [Subset] | Active View | Actions
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useState, useCallback, useMemo } from 'react';
 import { IconButton, ButtonGroup, Icon } from '@UI/react/components/atoms';
 import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
+import { LinksDropdown } from '../LinksDropdown/LinksDropdown.jsx';
+import { CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
 import './CanvasToolbar.scss';
 
 // =============================================================================
-// VIEW MODE TOGGLE
+// ZONE DEFINITIONS (per canvas-chrome-v12 spec)
 // =============================================================================
 
-const ViewModeToggle = memo(function ViewModeToggle({ disabled }) {
-    const { currentView, isGridView, isFocusView, isSubsetView, goHome } = useViewStack();
+const ZONES = {
+    viewMode: { width: 110, label: 'View Mode' },
+    navigation: { width: 160, label: 'Navigation' },
+    history: { width: 70, label: 'History' },
+    subset: { width: 100, label: 'Subset' },
+    activeView: { label: 'Active View' }, // flex
+    actions: { width: 160, label: 'View Actions' },
+};
 
-    // In focus/subset mode, show the current mode with a back option
-    // This is informational since navigation is handled via breadcrumb/back button
+// =============================================================================
+// ZONE LABEL BAR
+// =============================================================================
+
+const ZoneLabelBar = memo(function ZoneLabelBar({ showSubset }) {
     return (
-        <div className="canvas-toolbar__view-mode">
-            <span className="canvas-toolbar__zone-label">View</span>
-            <div className="canvas-toolbar__view-mode-display">
-                <ButtonGroup gap="xs">
-                    <button
-                        type="button"
-                        className={`canvas-toolbar__mode-btn ${isGridView ? 'canvas-toolbar__mode-btn--active' : ''}`}
-                        onClick={goHome}
-                        disabled={isGridView}
-                        title="Grid View"
-                    >
-                        <Icon name="grid" size={14} />
-                        <span>Grid</span>
-                    </button>
-                    {isFocusView && (
-                        <button
-                            type="button"
-                            className="canvas-toolbar__mode-btn canvas-toolbar__mode-btn--active"
-                            disabled
-                            title="Focus View"
-                        >
-                            <Icon name="focus" size={14} />
-                            <span>Focus</span>
-                        </button>
-                    )}
-                    {isSubsetView && (
-                        <button
-                            type="button"
-                            className="canvas-toolbar__mode-btn canvas-toolbar__mode-btn--active"
-                            disabled
-                            title="Subset View"
-                        >
-                            <Icon name="layers" size={14} />
-                            <span>Subset</span>
-                        </button>
-                    )}
-                </ButtonGroup>
+        <div className="canvas-toolbar__label-bar">
+            <div className="canvas-toolbar__label" style={{ width: ZONES.viewMode.width }}>
+                {ZONES.viewMode.label}
+            </div>
+            <div className="canvas-toolbar__label-separator" />
+            <div className="canvas-toolbar__label" style={{ width: ZONES.navigation.width }}>
+                {ZONES.navigation.label}
+            </div>
+            <div className="canvas-toolbar__label-separator" />
+            <div className="canvas-toolbar__label" style={{ width: ZONES.history.width }}>
+                {ZONES.history.label}
+            </div>
+
+            {/* Center - flexible zones */}
+            <div className="canvas-toolbar__label-center">
+                {showSubset && (
+                    <>
+                        <div className="canvas-toolbar__label" style={{ width: ZONES.subset.width }}>
+                            {ZONES.subset.label}
+                        </div>
+                        <div className="canvas-toolbar__label-separator" />
+                    </>
+                )}
+                <div className="canvas-toolbar__label canvas-toolbar__label--flex">
+                    {showSubset ? 'Active in Subset' : 'Active View'}
+                </div>
+            </div>
+
+            <div className="canvas-toolbar__label-separator" />
+            <div className="canvas-toolbar__label" style={{ width: ZONES.actions.width, textAlign: 'right' }}>
+                {ZONES.actions.label}
             </div>
         </div>
     );
 });
 
 // =============================================================================
-// HISTORY ZONE
+// VIEW MODE TOGGLE (Grid/Focus/Subset)
+// =============================================================================
+
+const VIEW_MODES = [
+    { id: 'grid', icon: 'grid', label: 'Grid' },
+    { id: 'focus', icon: 'focus', label: 'Focus' },
+    { id: 'subset', icon: 'layers', label: 'Subset' },
+];
+
+const ViewModeZone = memo(function ViewModeZone({
+    focusDisabled,
+    subsetDisabled,
+    onEnterFocus,
+    onEnterSubset,
+}) {
+    const { isGridView, isFocusView, isSubsetView, goHome } = useViewStack();
+
+    const currentMode = isSubsetView ? 'subset' : isFocusView ? 'focus' : 'grid';
+
+    const handleModeChange = useCallback((mode) => {
+        if (mode === 'grid') goHome();
+        else if (mode === 'focus' && onEnterFocus) onEnterFocus();
+        else if (mode === 'subset' && onEnterSubset) onEnterSubset();
+    }, [goHome, onEnterFocus, onEnterSubset]);
+
+    return (
+        <div className="canvas-toolbar__zone" style={{ width: ZONES.viewMode.width }}>
+            <div className="canvas-toolbar__mode-toggle">
+                {VIEW_MODES.map(({ id, icon, label }) => {
+                    const isActive = currentMode === id;
+                    const isDisabled = (id === 'focus' && focusDisabled) || (id === 'subset' && subsetDisabled);
+                    return (
+                        <button
+                            key={id}
+                            type="button"
+                            className={`canvas-toolbar__mode-btn ${isActive ? 'canvas-toolbar__mode-btn--active' : ''}`}
+                            onClick={() => handleModeChange(id)}
+                            disabled={isDisabled || isActive}
+                            title={isDisabled ? `${label} unavailable` : label}
+                        >
+                            <Icon name={icon} size={14} />
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+});
+
+// =============================================================================
+// NAVIGATION ZONE (Home, Bookmark, Arrows, Position)
+// =============================================================================
+
+const NavigationZone = memo(function NavigationZone({
+    viewportPosition = { row: 0, col: 0 },
+    homePosition = { row: 0, col: 0 },
+    onNavigate,
+    onGoHome,
+    onBookmark,
+}) {
+    const isAtHome = viewportPosition.row === homePosition.row &&
+                     viewportPosition.col === homePosition.col;
+
+    return (
+        <div className="canvas-toolbar__zone" style={{ width: ZONES.navigation.width }}>
+            <div className="canvas-toolbar__nav-controls">
+                <IconButton
+                    icon="home"
+                    label="Go to Home Position"
+                    size="sm"
+                    active={isAtHome}
+                    onClick={onGoHome}
+                />
+                <IconButton
+                    icon="bookmark"
+                    label="Save Position"
+                    size="sm"
+                    onClick={onBookmark}
+                />
+
+                <div className="canvas-toolbar__nav-arrows">
+                    <IconButton
+                        icon="chevronLeft"
+                        label="Pan Left"
+                        size="xs"
+                        onClick={() => onNavigate?.('left')}
+                    />
+                    <div className="canvas-toolbar__nav-arrows-vertical">
+                        <IconButton
+                            icon="chevronUp"
+                            label="Pan Up"
+                            size="xs"
+                            onClick={() => onNavigate?.('up')}
+                        />
+                        <IconButton
+                            icon="chevronDown"
+                            label="Pan Down"
+                            size="xs"
+                            onClick={() => onNavigate?.('down')}
+                        />
+                    </div>
+                    <IconButton
+                        icon="chevronRight"
+                        label="Pan Right"
+                        size="xs"
+                        onClick={() => onNavigate?.('right')}
+                    />
+                </div>
+
+                <span className="canvas-toolbar__position">
+                    {viewportPosition.col},{viewportPosition.row}
+                </span>
+            </div>
+        </div>
+    );
+});
+
+// =============================================================================
+// HISTORY ZONE (Undo/Redo)
 // =============================================================================
 
 const HistoryZone = memo(function HistoryZone({
@@ -72,56 +196,86 @@ const HistoryZone = memo(function HistoryZone({
     onRedo,
 }) {
     return (
-        <div className="canvas-toolbar__zone canvas-toolbar__zone--history">
-            <span className="canvas-toolbar__zone-label">History</span>
-            <div className="canvas-toolbar__zone-content">
-                <ButtonGroup gap="xs">
-                    <IconButton
-                        icon="undo"
-                        label="Undo"
-                        size="sm"
-                        disabled={!canUndo}
-                        onClick={onUndo}
-                    />
-                    <IconButton
-                        icon="redo"
-                        label="Redo"
-                        size="sm"
-                        disabled={!canRedo}
-                        onClick={onRedo}
-                    />
-                </ButtonGroup>
+        <div className="canvas-toolbar__zone" style={{ width: ZONES.history.width }}>
+            <div className="canvas-toolbar__history-controls">
+                <IconButton
+                    icon="undo"
+                    label="Undo (Ctrl+Z)"
+                    size="sm"
+                    disabled={!canUndo}
+                    onClick={onUndo}
+                />
+                <IconButton
+                    icon="redo"
+                    label="Redo (Ctrl+Shift+Z)"
+                    size="sm"
+                    disabled={!canRedo}
+                    onClick={onRedo}
+                />
             </div>
         </div>
     );
 });
 
 // =============================================================================
-// SUBSET ZONE (only visible in subset mode)
+// SUBSET ZONE (Subset picker - only visible in subset mode)
 // =============================================================================
 
 const SubsetZone = memo(function SubsetZone({
-    subset,
-    subsets = [],
-    onSubsetChange,
+    subsetSelection = [],
+    availableViews = [],
+    onToggleView,
+    onSelectAll,
+    onClear,
 }) {
+    const [isOpen, setIsOpen] = useState(false);
     const { isSubsetView } = useViewStack();
 
     if (!isSubsetView) return null;
 
     return (
-        <div className="canvas-toolbar__zone canvas-toolbar__zone--subset">
-            <span className="canvas-toolbar__zone-label">Subset</span>
-            <div className="canvas-toolbar__zone-content">
-                <select
-                    className="canvas-toolbar__subset-select"
-                    value={subset?.id || ''}
-                    onChange={(e) => onSubsetChange?.(e.target.value)}
+        <div className="canvas-toolbar__zone" style={{ width: ZONES.subset.width }}>
+            <div className="canvas-toolbar__subset-picker">
+                <button
+                    type="button"
+                    className={`canvas-toolbar__subset-btn ${isOpen ? 'canvas-toolbar__subset-btn--open' : ''}`}
+                    onClick={() => setIsOpen(!isOpen)}
                 >
-                    {subsets.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                </select>
+                    <Icon name="layers" size={12} />
+                    <span>Subset ({subsetSelection.length})</span>
+                    <Icon name="chevronDown" size={10} />
+                </button>
+
+                {isOpen && (
+                    <div className="canvas-toolbar__subset-dropdown">
+                        <div className="canvas-toolbar__subset-header">
+                            Select views for subset
+                        </div>
+                        <div className="canvas-toolbar__subset-list">
+                            {availableViews.map(view => (
+                                <button
+                                    key={view.id}
+                                    type="button"
+                                    className="canvas-toolbar__subset-item"
+                                    onClick={() => onToggleView?.(view.id)}
+                                >
+                                    <span className={`canvas-toolbar__subset-check ${subsetSelection.includes(view.id) ? 'canvas-toolbar__subset-check--checked' : ''}`}>
+                                        {subsetSelection.includes(view.id) && <Icon name="check" size={10} />}
+                                    </span>
+                                    <span
+                                        className="canvas-toolbar__subset-dot"
+                                        style={{ background: view.color }}
+                                    />
+                                    <span className="canvas-toolbar__subset-name">{view.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="canvas-toolbar__subset-footer">
+                            <button type="button" onClick={onSelectAll}>Select All</button>
+                            <button type="button" onClick={onClear}>Clear</button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -135,48 +289,141 @@ const ActiveViewZone = memo(function ActiveViewZone({
     activeView,
     availableViews = [],
     onSelectView,
-    onPlaceView,
+    isSubsetMode,
+    subsetIds = [],
 }) {
+    const [isOpen, setIsOpen] = useState(false);
     const { isFocusView, currentView } = useViewStack();
 
-    // In focus mode, show the focused view info
+    // In focus mode, show the focused view
     const viewInfo = isFocusView ? currentView?.data : activeView;
 
-    if (!viewInfo) {
+    // Filter views based on mode
+    const visibleViews = isSubsetMode
+        ? availableViews.filter(v => subsetIds.includes(v.id))
+        : availableViews.filter(v => v.onCanvas !== false);
+
+    // Close dropdown when clicking outside
+    const handleClickOutside = useCallback((e) => {
+        if (!e.target.closest('.canvas-toolbar__active-view')) {
+            setIsOpen(false);
+        }
+    }, []);
+
+    // Add/remove click listener
+    React.useEffect(() => {
+        if (isOpen) {
+            document.addEventListener('click', handleClickOutside);
+            return () => document.removeEventListener('click', handleClickOutside);
+        }
+    }, [isOpen, handleClickOutside]);
+
+    // No views available at all
+    if (visibleViews.length === 0) {
         return (
             <div className="canvas-toolbar__zone canvas-toolbar__zone--active-view">
-                <span className="canvas-toolbar__zone-label">Active View</span>
-                <div className="canvas-toolbar__zone-content">
-                    <span className="canvas-toolbar__no-view">No view selected</span>
+                <div className="canvas-toolbar__active-view">
+                    <span className="canvas-toolbar__no-view">No views on canvas</span>
                 </div>
             </div>
         );
     }
 
+    // No view selected - show selector button
+    if (!viewInfo) {
+        return (
+            <div className="canvas-toolbar__zone canvas-toolbar__zone--active-view">
+                <div className="canvas-toolbar__active-view">
+                    <button
+                        type="button"
+                        className={`canvas-toolbar__view-btn canvas-toolbar__view-btn--placeholder ${isOpen ? 'canvas-toolbar__view-btn--open' : ''}`}
+                        onClick={() => setIsOpen(!isOpen)}
+                    >
+                        <Icon name="eye" size={12} className="canvas-toolbar__view-icon" />
+                        <span className="canvas-toolbar__view-name">Select a view ({visibleViews.length})</span>
+                        <Icon name={isOpen ? 'chevronUp' : 'chevronDown'} size={12} />
+                    </button>
+
+                    {isOpen && (
+                        <div className="canvas-toolbar__view-dropdown">
+                            <div className="canvas-toolbar__view-header">
+                                {isSubsetMode ? `In Subset (${visibleViews.length})` : `On Canvas (${visibleViews.length})`}
+                            </div>
+                            <div className="canvas-toolbar__view-list">
+                                {visibleViews.map(v => (
+                                    <button
+                                        key={v.id}
+                                        type="button"
+                                        className="canvas-toolbar__view-item"
+                                        onClick={() => { onSelectView?.(v.id); setIsOpen(false); }}
+                                        style={{ '--view-color': v.color }}
+                                    >
+                                        <span
+                                            className="canvas-toolbar__view-dot"
+                                            style={{ background: v.color }}
+                                        />
+                                        <span className="canvas-toolbar__view-name">{v.name}</span>
+                                        {v.position && (
+                                            <span className="canvas-toolbar__view-position">
+                                                {v.position.col},{v.position.row}
+                                            </span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // View selected - show it with dropdown
     return (
         <div className="canvas-toolbar__zone canvas-toolbar__zone--active-view">
-            <span className="canvas-toolbar__zone-label">Active View</span>
-            <div className="canvas-toolbar__zone-content">
-                <div
-                    className="canvas-toolbar__view-badge"
-                    style={{ '--view-color': viewInfo.color || 'var(--color-accent-blue)' }}
+            <div className="canvas-toolbar__active-view">
+                <button
+                    type="button"
+                    className={`canvas-toolbar__view-btn ${isOpen ? 'canvas-toolbar__view-btn--open' : ''}`}
+                    onClick={() => setIsOpen(!isOpen)}
+                    style={{ '--view-color': viewInfo.color }}
                 >
                     <span
                         className="canvas-toolbar__view-dot"
                         style={{ background: viewInfo.color }}
                     />
                     <span className="canvas-toolbar__view-name">{viewInfo.name}</span>
-                </div>
-                {availableViews.length > 1 && (
-                    <select
-                        className="canvas-toolbar__view-select"
-                        value={viewInfo.id || ''}
-                        onChange={(e) => onSelectView?.(e.target.value)}
-                    >
-                        {availableViews.map(v => (
-                            <option key={v.id} value={v.id}>{v.name}</option>
-                        ))}
-                    </select>
+                    <Icon name={isOpen ? 'chevronUp' : 'chevronDown'} size={12} />
+                </button>
+
+                {isOpen && (
+                    <div className="canvas-toolbar__view-dropdown">
+                        <div className="canvas-toolbar__view-header">
+                            {isSubsetMode ? `In Subset (${visibleViews.length})` : `On Canvas (${visibleViews.length})`}
+                        </div>
+                        <div className="canvas-toolbar__view-list">
+                            {visibleViews.map(v => (
+                                <button
+                                    key={v.id}
+                                    type="button"
+                                    className={`canvas-toolbar__view-item ${v.id === viewInfo.id ? 'canvas-toolbar__view-item--active' : ''}`}
+                                    onClick={() => { onSelectView?.(v.id); setIsOpen(false); }}
+                                    style={{ '--view-color': v.color }}
+                                >
+                                    <span
+                                        className="canvas-toolbar__view-dot"
+                                        style={{ background: v.color }}
+                                    />
+                                    <span className="canvas-toolbar__view-name">{v.name}</span>
+                                    {v.position && (
+                                        <span className="canvas-toolbar__view-position">
+                                            {v.position.col},{v.position.row}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 )}
             </div>
         </div>
@@ -184,47 +431,52 @@ const ActiveViewZone = memo(function ActiveViewZone({
 });
 
 // =============================================================================
-// ACTIONS ZONE
+// ACTIONS ZONE (Links, Snapshot, Duplicate, Settings)
 // =============================================================================
 
 const ActionsZone = memo(function ActionsZone({
+    activeView,
+    allViews = [],
+    links = {},
+    recentUnlinks = [],
+    onUpdateLink,
+    onRestoreLink,
     onSnapshot,
     onDuplicate,
     onSettings,
-    onLinks,
-    hasLinks,
 }) {
     return (
-        <div className="canvas-toolbar__zone canvas-toolbar__zone--actions">
-            <span className="canvas-toolbar__zone-label">Actions</span>
-            <div className="canvas-toolbar__zone-content">
-                <ButtonGroup gap="xs">
-                    <IconButton
-                        icon="link"
-                        label="Links"
-                        size="sm"
-                        active={hasLinks}
-                        onClick={onLinks}
-                    />
-                    <IconButton
-                        icon="camera"
-                        label="Snapshot"
-                        size="sm"
-                        onClick={onSnapshot}
-                    />
-                    <IconButton
-                        icon="copy"
-                        label="Duplicate"
-                        size="sm"
-                        onClick={onDuplicate}
-                    />
-                    <IconButton
-                        icon="settings"
-                        label="Settings"
-                        size="sm"
-                        onClick={onSettings}
-                    />
-                </ButtonGroup>
+        <div className="canvas-toolbar__zone" style={{ width: ZONES.actions.width }}>
+            <div className="canvas-toolbar__actions">
+                <LinksDropdown
+                    activeView={activeView}
+                    allViews={allViews}
+                    links={links}
+                    recentUnlinks={recentUnlinks}
+                    onUpdateLink={onUpdateLink}
+                    onRestoreLink={onRestoreLink}
+                />
+
+                <div className="canvas-toolbar__actions-divider" />
+
+                <IconButton
+                    icon="camera"
+                    label="Snapshot"
+                    size="sm"
+                    onClick={onSnapshot}
+                />
+                <IconButton
+                    icon="copy"
+                    label="Duplicate View"
+                    size="sm"
+                    onClick={onDuplicate}
+                />
+                <IconButton
+                    icon="settings"
+                    label="View Settings"
+                    size="sm"
+                    onClick={onSettings}
+                />
             </div>
         </div>
     );
@@ -237,14 +489,26 @@ const ActionsZone = memo(function ActionsZone({
 /**
  * CanvasToolbar - Footer toolbar for canvas workspace
  *
- * Zones:
- * - View Mode: Grid/Focus/Subset indicator
- * - History: Undo/Redo buttons
- * - Subset: Subset selector (subset mode only)
- * - Active View: Currently focused view info
- * - Actions: Links, Snapshot, Duplicate, Settings
+ * Based on canvas-chrome-v12.jsx spec
+ * Height: 66px (18px label bar + 48px content bar)
+ *
+ * Label bar: Zone labels (View Mode | Navigation | History | ...)
+ * Content bar: View Mode | Navigation | History | Subset | Active View | Actions
  */
 export function CanvasToolbar({
+    // View mode
+    focusDisabled = false,
+    subsetDisabled = false,
+    onEnterFocus,
+    onEnterSubset,
+
+    // Navigation
+    viewportPosition = { row: 0, col: 0 },
+    homePosition = { row: 0, col: 0 },
+    onNavigate,
+    onGoHome,
+    onBookmark,
+
     // History
     canUndo = false,
     canRedo = false,
@@ -252,69 +516,113 @@ export function CanvasToolbar({
     onRedo,
 
     // Subset
-    activeSubset,
-    subsets = [],
-    onSubsetChange,
+    subsetSelection = [],
+    onSubsetToggle,
+    onSubsetSelectAll,
+    onSubsetClear,
 
     // Active view
     activeView,
     availableViews = [],
     onSelectView,
-    onPlaceView,
+
+    // Links
+    links = {},
+    recentUnlinks = [],
+    onUpdateLink,
+    onRestoreLink,
 
     // Actions
     onSnapshot,
     onDuplicate,
     onSettings,
-    onLinks,
-    hasLinks = false,
 
     className = '',
 }) {
+    const { isSubsetView } = useViewStack();
+
     return (
         <div className={`canvas-toolbar ${className}`}>
-            {/* View Mode */}
-            <ViewModeToggle />
+            {/* Zone Label Bar */}
+            <ZoneLabelBar showSubset={isSubsetView} />
 
-            <div className="canvas-toolbar__divider" />
+            {/* Content Bar */}
+            <div className="canvas-toolbar__content-bar">
+                {/* View Mode */}
+                <ViewModeZone
+                    focusDisabled={focusDisabled}
+                    subsetDisabled={subsetDisabled}
+                    onEnterFocus={onEnterFocus}
+                    onEnterSubset={onEnterSubset}
+                />
 
-            {/* History */}
-            <HistoryZone
-                canUndo={canUndo}
-                canRedo={canRedo}
-                onUndo={onUndo}
-                onRedo={onRedo}
-            />
+                <div className="canvas-toolbar__divider" />
 
-            <div className="canvas-toolbar__divider" />
+                {/* Navigation */}
+                <NavigationZone
+                    viewportPosition={viewportPosition}
+                    homePosition={homePosition}
+                    onNavigate={onNavigate}
+                    onGoHome={onGoHome}
+                    onBookmark={onBookmark}
+                />
 
-            {/* Subset (conditional) */}
-            <SubsetZone
-                subset={activeSubset}
-                subsets={subsets}
-                onSubsetChange={onSubsetChange}
-            />
+                <div className="canvas-toolbar__divider" />
 
-            {/* Active View */}
-            <ActiveViewZone
-                activeView={activeView}
-                availableViews={availableViews}
-                onSelectView={onSelectView}
-                onPlaceView={onPlaceView}
-            />
+                {/* History */}
+                <HistoryZone
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onUndo={onUndo}
+                    onRedo={onRedo}
+                />
 
-            <div className="canvas-toolbar__spacer" />
+                {/* Center - Subset + Active View */}
+                <div className="canvas-toolbar__center">
+                    {/* Subset (conditional) */}
+                    {isSubsetView && (
+                        <>
+                            <SubsetZone
+                                subsetSelection={subsetSelection}
+                                availableViews={availableViews}
+                                onToggleView={onSubsetToggle}
+                                onSelectAll={onSubsetSelectAll}
+                                onClear={onSubsetClear}
+                            />
+                            <div className="canvas-toolbar__divider" />
+                        </>
+                    )}
 
-            {/* Actions */}
-            <ActionsZone
-                onSnapshot={onSnapshot}
-                onDuplicate={onDuplicate}
-                onSettings={onSettings}
-                onLinks={onLinks}
-                hasLinks={hasLinks}
-            />
+                    {/* Active View */}
+                    <ActiveViewZone
+                        activeView={activeView}
+                        availableViews={availableViews}
+                        onSelectView={onSelectView}
+                        isSubsetMode={isSubsetView}
+                        subsetIds={subsetSelection}
+                    />
+                </div>
+
+                <div className="canvas-toolbar__divider" />
+
+                {/* Actions */}
+                <ActionsZone
+                    activeView={activeView}
+                    allViews={availableViews}
+                    links={links}
+                    recentUnlinks={recentUnlinks}
+                    onUpdateLink={onUpdateLink}
+                    onRestoreLink={onRestoreLink}
+                    onSnapshot={onSnapshot}
+                    onDuplicate={onDuplicate}
+                    onSettings={onSettings}
+                />
+            </div>
         </div>
     );
 }
 
 export default memo(CanvasToolbar);
+
+// Re-export for convenience
+export { CANVAS_MODES, ASPECT_RATIOS };

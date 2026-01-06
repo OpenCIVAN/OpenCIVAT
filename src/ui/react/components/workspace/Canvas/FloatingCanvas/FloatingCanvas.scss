@@ -8,22 +8,33 @@
 // =============================================================================
 // CANVAS CONTROLS BAR
 // =============================================================================
+// Responsive design: labels collapse at medium, icons-only at small
 
 .canvas-controls-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: $spacing-xs $spacing-md;
   background: $color-bg-tertiary;
   border-bottom: 1px solid $color-border-default;
-  min-height: 36px;
+  min-height: 28px;
   flex-shrink: 0;
+  gap: $spacing-md;
+}
+
+// Compact mode for embedding in toolbar info bar
+.canvas-controls-bar--compact {
+  min-height: 18px;
+  padding: 0 $spacing-md;
+  background: $color-bg-canvas;
+  border-bottom: 1px solid $color-border-subtle;
 }
 
 .canvas-controls-bar__section {
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
+  gap: $spacing-xs;
+  flex-shrink: 0;
 }
 
 .canvas-controls-bar__section--center {
@@ -31,34 +42,40 @@
 }
 
 .canvas-controls-bar__label {
-  font-size: $font-size-xs;
+  font-size: 9px;
   color: $color-text-muted;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .canvas-controls-bar__modes {
   display: flex;
   align-items: center;
-  gap: $spacing-xs;
+  gap: 2px;
+  background: $color-bg-canvas;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  padding: 2px;
 }
 
 .canvas-controls-bar__mode-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: $spacing-xs;
-  padding: $spacing-xs $spacing-sm;
-  font-size: $font-size-xs;
+  padding: 3px $spacing-sm;
+  font-size: 10px;
   background: transparent;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-sm;
-  color: $color-text-secondary;
+  border: 1px solid transparent;
+  border-radius: $radius-xs;
+  color: $color-text-muted;
   cursor: pointer;
   transition: all $transition-fast;
 
   &:hover:not(:disabled) {
     background: rgba($color-accent-blue, 0.08);
-    border-color: $color-border-medium;
+    color: $color-text-secondary;
   }
 
   &--active {
@@ -68,18 +85,23 @@
   }
 }
 
+.canvas-controls-bar__mode-label {
+  // Visible by default, hidden on smaller screens
+}
+
 .canvas-controls-bar__select {
-  padding: $spacing-xs $spacing-sm;
-  font-size: $font-size-xs;
+  padding: 2px $spacing-sm;
+  font-size: 10px;
   background: $color-bg-elevated;
-  border: 1px solid $color-border-default;
-  border-radius: $radius-sm;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-xs;
   color: $color-text-primary;
   cursor: pointer;
   transition: border-color $transition-fast;
+  min-width: 50px;
 
   &:hover:not(:disabled) {
-    border-color: $color-border-medium;
+    border-color: $color-border-default;
   }
 
   &:focus {
@@ -90,7 +112,65 @@
 
 .canvas-controls-bar__lock-icon {
   color: $color-accent-amber;
-  margin-left: $spacing-xs;
+}
+
+.canvas-controls-bar__grid-icon {
+  color: $color-text-muted;
+}
+
+.canvas-controls-bar__spacer {
+  flex: 1;
+}
+
+.canvas-controls-bar__status {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: 10px;
+  color: $color-text-muted;
+}
+
+// =============================================================================
+// RESPONSIVE - MEDIUM (hide labels, keep button text)
+// =============================================================================
+
+@media (max-width: 900px) {
+  .canvas-controls-bar__label {
+    display: none;
+  }
+}
+
+// =============================================================================
+// RESPONSIVE - SMALL (icon-only mode buttons)
+// =============================================================================
+
+@media (max-width: 700px) {
+  .canvas-controls-bar__mode-label {
+    display: none;
+  }
+
+  .canvas-controls-bar__mode-btn {
+    padding: 3px 6px;
+  }
+
+  .canvas-controls-bar__section--center {
+    display: none;
+  }
+}
+
+// =============================================================================
+// RESPONSIVE - EXTRA SMALL (minimal controls)
+// =============================================================================
+
+@media (max-width: 500px) {
+  .canvas-controls-bar {
+    padding: $spacing-xs $spacing-sm;
+    gap: $spacing-sm;
+  }
+
+  .canvas-controls-bar__status {
+    display: none;
+  }
 }
 
 // =============================================================================

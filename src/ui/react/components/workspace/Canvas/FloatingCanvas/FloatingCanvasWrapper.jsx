@@ -33,6 +33,8 @@ export const ASPECT_RATIOS = {
 // =============================================================================
 // CANVAS CONTROLS BAR
 // =============================================================================
+// Responsive: collapses to icon-only at smaller widths
+// Can be used standalone or embedded in CanvasToolbar's info bar
 
 export const CanvasControlsBar = memo(function CanvasControlsBar({
     canvasMode = CANVAS_MODES.DOCKED,
@@ -41,6 +43,10 @@ export const CanvasControlsBar = memo(function CanvasControlsBar({
     onModeChange,
     onAspectRatioChange,
     onGridSizeChange,
+    // Compact mode for embedding in toolbar info bar
+    compact = false,
+    // Status info (when embedded)
+    statusInfo,
 }) {
     // Grid presets per memory log: 1×2 through 10×10
     const gridOptions = [
@@ -59,36 +65,30 @@ export const CanvasControlsBar = memo(function CanvasControlsBar({
         onGridSizeChange?.({ rows, cols });
     }, [onGridSizeChange]);
 
+    const modeButtons = [
+        { mode: CANVAS_MODES.DOCKED, icon: 'dock', label: 'Docked', title: 'Dock canvas in layout' },
+        { mode: CANVAS_MODES.FLOATING, icon: 'move', label: 'Float', title: 'Float canvas (draggable)' },
+        { mode: CANVAS_MODES.FULLSCREEN, icon: 'maximize', label: 'Full', title: 'Fullscreen mode (Esc to exit)' },
+    ];
+
     return (
-        <div className="canvas-controls-bar">
+        <div className={`canvas-controls-bar ${compact ? 'canvas-controls-bar--compact' : ''}`}>
             {/* Left - Canvas Mode */}
             <div className="canvas-controls-bar__section">
                 <span className="canvas-controls-bar__label">Canvas:</span>
                 <div className="canvas-controls-bar__modes">
-                    <button
-                        type="button"
-                        className={`canvas-controls-bar__mode-btn ${canvasMode === CANVAS_MODES.DOCKED ? 'canvas-controls-bar__mode-btn--active' : ''}`}
-                        onClick={() => onModeChange?.(CANVAS_MODES.DOCKED)}
-                    >
-                        <Icon name="dock" size={12} />
-                        Docked
-                    </button>
-                    <button
-                        type="button"
-                        className={`canvas-controls-bar__mode-btn ${canvasMode === CANVAS_MODES.FLOATING ? 'canvas-controls-bar__mode-btn--active' : ''}`}
-                        onClick={() => onModeChange?.(CANVAS_MODES.FLOATING)}
-                    >
-                        <Icon name="move" size={12} />
-                        Floating
-                    </button>
-                    <button
-                        type="button"
-                        className={`canvas-controls-bar__mode-btn ${canvasMode === CANVAS_MODES.FULLSCREEN ? 'canvas-controls-bar__mode-btn--active' : ''}`}
-                        onClick={() => onModeChange?.(CANVAS_MODES.FULLSCREEN)}
-                    >
-                        <Icon name="maximize" size={12} />
-                        Fullscreen
-                    </button>
+                    {modeButtons.map(({ mode, icon, label, title }) => (
+                        <button
+                            key={mode}
+                            type="button"
+                            className={`canvas-controls-bar__mode-btn ${canvasMode === mode ? 'canvas-controls-bar__mode-btn--active' : ''}`}
+                            onClick={() => onModeChange?.(mode)}
+                            title={title}
+                        >
+                            <Icon name={icon} size={12} />
+                            <span className="canvas-controls-bar__mode-label">{label}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -99,29 +99,41 @@ export const CanvasControlsBar = memo(function CanvasControlsBar({
                     className="canvas-controls-bar__select"
                     value={aspectRatio}
                     onChange={(e) => onAspectRatioChange?.(e.target.value)}
+                    title="Lock aspect ratio"
                 >
                     {Object.entries(ASPECT_RATIOS).map(([key, { label }]) => (
                         <option key={key} value={key}>{label}</option>
                     ))}
                 </select>
                 {aspectRatio !== 'FREE' && (
-                    <Icon name="lock" size={12} className="canvas-controls-bar__lock-icon" />
+                    <Icon name="lock" size={10} className="canvas-controls-bar__lock-icon" />
                 )}
             </div>
 
             {/* Right - Grid Size */}
             <div className="canvas-controls-bar__section">
-                <span className="canvas-controls-bar__label">Grid:</span>
+                <Icon name="grid" size={10} className="canvas-controls-bar__grid-icon" />
                 <select
                     className="canvas-controls-bar__select"
                     value={`${gridSize.rows}x${gridSize.cols}`}
                     onChange={handleGridChange}
+                    title="Viewport grid size"
                 >
                     {gridOptions.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                 </select>
             </div>
+
+            {/* Status info (when embedded in toolbar) */}
+            {statusInfo && (
+                <>
+                    <div className="canvas-controls-bar__spacer" />
+                    <div className="canvas-controls-bar__status">
+                        {statusInfo}
+                    </div>
+                </>
+            )}
         </div>
     );
 });
