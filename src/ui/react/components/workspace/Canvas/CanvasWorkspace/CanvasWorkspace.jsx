@@ -1,14 +1,25 @@
 // src/ui/react/components/workspace/Canvas/CanvasWorkspace/CanvasWorkspace.jsx
 // Integration component for the new canvas system
 //
-// This wraps CanvasGrid with workspace selection and subset management
+// This wraps CanvasGrid with:
+// - ViewStackProvider for navigation (Grid → Focus → Subset)
+// - Canvas chrome (Header, Toolbar, StatusBar)
+// - Edge triggers and floating panels
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { CanvasGrid } from '@UI/react/components/workspace';
 import { SubsetPanel } from '@UI/react/components/panels/SubsetPanel';
 import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay';
 
+// New canvas chrome components
+import { CanvasHeader } from '../CanvasHeader/CanvasHeader.jsx';
+import { CanvasToolbar } from '../CanvasToolbar/CanvasToolbar.jsx';
+import { CanvasStatusBar } from '../CanvasStatusBar/CanvasStatusBar.jsx';
+import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
+import { FloatingCanvasWrapper, CanvasControlsBar, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
+
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
+import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
@@ -18,11 +29,9 @@ import { useViewportEventListener } from '@UI/react/hooks/useViewportSync.js';
 import './CanvasWorkspace.scss';
 
 /**
- * CanvasWorkspace - Full canvas system with workspace selection
- *
- * Server-authoritative: No local fallback. Shows connection overlay when disconnected.
+ * CanvasWorkspaceInner - Internal component with ViewStack context
  */
-export function CanvasWorkspace({ userId, projectId: propProjectId }) {
+function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelContent, rightPanelContent }) {
     // Use sessionManager room ID as fallback project ID
     const projectId = useMemo(() => {
         return propProjectId || sessionManager.getRoomId?.() || 'default-project';
@@ -33,6 +42,19 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
     const [highlightedPlacementId, setHighlightedPlacementId] = useState(null);
     const [loadError, setLoadError] = useState(null);
     const instanceCreationInProgress = useRef(false);
+
+    // Floating panel state
+    const [leftPanelOpen, setLeftPanelOpen] = useState(false);
+    const [rightPanelOpen, setRightPanelOpen] = useState(false);
+
+    // Grid size state
+    const [gridSize, setGridSize] = useState({ rows: 3, cols: 3 });
+
+    // Canvas mode state (dock/float/fullscreen)
+    const [canvasMode, setCanvasMode] = useState(CANVAS_MODES.DOCKED);
+    const [aspectRatio, setAspectRatio] = useState('FREE');
+    const [floatingPosition, setFloatingPosition] = useState({ x: 100, y: 100 });
+    const [floatingSize, setFloatingSize] = useState({ width: 800, height: 600 });
 
     // Canvas hook for the active canvas
     const {
@@ -163,16 +185,44 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
         return { row: maxRows, col: 0 };
     }, [canvas]);
 
-    // Handle placement click
+    // Access view stack for navigation
+    const { focusView, openSubset, isGridView } = useViewStack();
+
+    // Handle placement click (single click - select)
     const handlePlacementClick = useCallback((placement) => {
         log.debug('Placement clicked:', placement);
-        // TODO: Open content or navigate
+        // Single click selects the view
+        setHighlightedPlacementId(placement.id);
     }, []);
 
-    // Handle cell double-click (add content)
+    // Handle placement double-click (focus view - per memory log)
+    const handlePlacementDoubleClick = useCallback((placement) => {
+        log.debug('Placement double-clicked:', placement);
+
+        // Check if it's a subset
+        if (placement.content?.type === 'subset') {
+            // Double-click subset → open subset view
+            openSubset({
+                subsetId: placement.content.subsetId,
+                name: placement.content.name || 'Subset',
+                views: placement.content.views || [],
+            });
+        } else {
+            // Double-click view → focus mode
+            focusView({
+                placementId: placement.id,
+                name: placement.content?.name || 'View',
+                row: placement.row,
+                col: placement.col,
+            });
+        }
+    }, [focusView, openSubset]);
+
+    // Handle cell double-click (empty cell - add content)
     const handleCellDoubleClick = useCallback((row, col) => {
-        log.debug('Add content at:', row, col);
-        // TODO: Show add content dialog
+        log.debug('Empty cell double-clicked at:', row, col);
+        // Empty cells trigger add content dialog
+        // This is handled by the CanvasGrid component
     }, []);
 
     // Handle adding content to a cell from placeholder buttons
@@ -233,10 +283,75 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
     // Show error if canvas loading failed
     const showError = (canvasError || loadError) && !canvas;
 
+    // Compute cell size and render mode
+    const cellSize = useMemo(() => {
+        // Estimate based on viewport size (will be more accurate with actual measurements)
+        const avgWidth = 300;
+        const avgHeight = 250;
+        return { width: avgWidth, height: avgHeight };
+    }, []);
+
+    const renderMode = useMemo(() => {
+        const minDimension = Math.min(cellSize.width, cellSize.height);
+        if (minDimension >= 200) return 'full';
+        if (minDimension >= 150) return 'compact';
+        if (minDimension >= 80) return 'thumbnail';
+        return 'snapshot';
+    }, [cellSize]);
+
+    // Canvas dimensions
+    const canvasSize = useMemo(() => ({
+        cols: canvas?.dimensions?.cols || 10,
+        rows: canvas?.dimensions?.rows || 10,
+    }), [canvas]);
+
+    // Panel toggle handlers
+    const toggleLeftPanel = useCallback(() => {
+        setLeftPanelOpen(prev => !prev);
+    }, []);
+
+    const toggleRightPanel = useCallback(() => {
+        setRightPanelOpen(prev => !prev);
+    }, []);
+
     return (
-        <div className="canvas-workspace">
-            {/* Main content area */}
-            <div className="canvas-workspace__content">
+        <FloatingCanvasWrapper
+            canvasMode={canvasMode}
+            aspectRatio={aspectRatio}
+            position={floatingPosition}
+            size={floatingSize}
+            onPositionChange={setFloatingPosition}
+            onSizeChange={setFloatingSize}
+            onModeChange={setCanvasMode}
+        >
+            <div className="canvas-workspace">
+                {/* Canvas Controls Bar - Mode/Aspect/Grid */}
+                <CanvasControlsBar
+                    canvasMode={canvasMode}
+                    aspectRatio={aspectRatio}
+                    gridSize={gridSize}
+                    onModeChange={setCanvasMode}
+                    onAspectRatioChange={setAspectRatio}
+                    onGridSizeChange={setGridSize}
+                />
+
+                {/* Canvas Header - Navigation */}
+                <CanvasHeader
+                    viewport={viewport}
+                    gridSize={gridSize}
+                    onViewportChange={moveViewport}
+                    onGridSizeChange={setGridSize}
+                />
+
+                {/* Main content area */}
+                <div className="canvas-workspace__content">
+                {/* Left Edge Trigger */}
+                <EdgeTrigger
+                    side="left"
+                    onClick={toggleLeftPanel}
+                    active={leftPanelOpen}
+                />
+
                 {/* Canvas grid */}
                 <div className="canvas-workspace__canvas">
                     {isLoading && !canvas ? (
@@ -253,6 +368,7 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                             focusedSubset={focusedSubset}
                             highlightedPlacementId={highlightedPlacementId}
                             onPlacementClick={handlePlacementClick}
+                            onPlacementDoubleClick={handlePlacementDoubleClick}
                             onCellDoubleClick={handleCellDoubleClick}
                             onViewportChange={moveViewport}
                             onRemovePlacement={removePlacement}
@@ -270,7 +386,14 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     )}
                 </div>
 
-                {/* Subset panel (right sidebar) */}
+                {/* Right Edge Trigger */}
+                <EdgeTrigger
+                    side="right"
+                    onClick={toggleRightPanel}
+                    active={rightPanelOpen}
+                />
+
+                {/* Subset panel (right sidebar) - legacy, will be replaced by FloatingPanel */}
                 {showSubsetPanel && (
                     <div className="canvas-workspace__subset-panel">
                         <SubsetPanel
@@ -282,7 +405,51 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                         />
                     </div>
                 )}
+
+                {/* Left Floating Panel */}
+                <FloatingPanel
+                    side="left"
+                    visible={leftPanelOpen}
+                    onClose={() => setLeftPanelOpen(false)}
+                    title="Files"
+                    width={280}
+                >
+                    {leftPanelContent}
+                </FloatingPanel>
+
+                {/* Right Floating Panel */}
+                <FloatingPanel
+                    side="right"
+                    visible={rightPanelOpen}
+                    onClose={() => setRightPanelOpen(false)}
+                    title="Properties"
+                    width={280}
+                >
+                    {rightPanelContent}
+                </FloatingPanel>
             </div>
+
+            {/* Canvas Toolbar - Actions */}
+            <CanvasToolbar
+                canUndo={false}
+                canRedo={false}
+                onUndo={() => {}}
+                onRedo={() => {}}
+                activeSubset={focusedSubset}
+                subsets={subsets}
+                onSubsetChange={enterFocusMode}
+            />
+
+            {/* Canvas Status Bar - Info */}
+            <CanvasStatusBar
+                canvasSize={canvasSize}
+                viewportSize={gridSize}
+                cellSize={cellSize}
+                renderMode={renderMode}
+                isConnected={!loadError}
+                isSyncing={isLoading}
+                collaboratorCount={0}
+            />
 
             {/* Focus mode overlay */}
             {isFocusMode && focusedSubset && (
@@ -291,8 +458,27 @@ export function CanvasWorkspace({ userId, projectId: propProjectId }) {
                     onExit={exitFocusMode}
                 />
             )}
-        </div>
+            </div>
+        </FloatingCanvasWrapper>
+    );
+}
 
+/**
+ * CanvasWorkspace - Full canvas system with workspace selection
+ *
+ * Wraps the inner component with ViewStackProvider for navigation state
+ * Server-authoritative: No local fallback. Shows connection overlay when disconnected.
+ */
+export function CanvasWorkspace({ userId, projectId, leftPanelContent, rightPanelContent }) {
+    return (
+        <ViewStackProvider>
+            <CanvasWorkspaceInner
+                userId={userId}
+                projectId={projectId}
+                leftPanelContent={leftPanelContent}
+                rightPanelContent={rightPanelContent}
+            />
+        </ViewStackProvider>
     );
 }
 

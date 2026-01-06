@@ -324,6 +324,10 @@ export function InstanceViewport({
     onReady,      // Called when instance has loaded data and is ready to display
     currentSpan = '1x1',
     lifecycle = 'live', // 'live' | 'paused' - controls instance render loop and interactions
+    renderMode: propRenderMode, // 'full' | 'compact' | 'thumbnail' | 'snapshot' - passed from CanvasCell
+    onFocus, // Called when user clicks Focus button
+    collaborators = [], // Array of collaborators viewing this instance
+    isInFocusMode = false, // Whether this instance is currently in focus mode
 }) {
     // =========================================================================
     // REFS
@@ -443,6 +447,21 @@ export function InstanceViewport({
         isConstrained,
         showFullToolbars
     } = useInstanceSize(viewportRef);
+
+    // Compute effective render mode - prefer prop, fallback to size-based uiMode
+    // Maps uiMode ('full', 'compact', etc.) to renderMode format
+    const effectiveRenderMode = useMemo(() => {
+        if (propRenderMode) return propRenderMode;
+        // Map uiMode from useInstanceSize to render mode
+        switch (uiMode) {
+            case 'full': return 'full';
+            case 'compact': return 'compact';
+            case 'thumbnail': return 'thumbnail';
+            case 'snapshot': return 'snapshot';
+            case 'minimal': return 'snapshot';
+            default: return 'full';
+        }
+    }, [propRenderMode, uiMode]);
 
     // =========================================================================
     // DROPDOWN POSITIONING & CLICK AWAY
@@ -1448,7 +1467,11 @@ export function InstanceViewport({
                 isFullscreen={isFullscreen}
                 isActive={isFocused}
                 isLoading={loading || !hasData}
+                renderMode={effectiveRenderMode}
+                isInFocusMode={isInFocusMode}
+                collaborators={collaborators}
                 onFullscreen={handleFullscreen}
+                onFocus={onFocus}
                 onClose={handleClose}
                 onTrash={handleTrash}
                 onOpenInstanceTools={handleOpenInstanceTools}

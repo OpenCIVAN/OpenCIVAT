@@ -1,5 +1,14 @@
 /**
  * @file SecondaryHeader.jsx
+ * @deprecated This component has been replaced by canvas-embedded chrome components.
+ * Use the new canvas chrome components instead:
+ * - CanvasHeader: Navigation (back, home, breadcrumb, viewport nav, grid size)
+ * - CanvasToolbar: Actions (view mode, history, subset, active view, actions)
+ * - CanvasStatusBar: Info (canvas size, viewport size, render mode, sync status)
+ *
+ * These are now rendered inside CanvasWorkspace, not in ThreeEdgeLayout.
+ * See: src/ui/react/components/workspace/Canvas/
+ *
  * @description Secondary header bar with workspace context and navigation.
  * Height: 56px (18px label bar + 40px content) | z-index: 90
  *

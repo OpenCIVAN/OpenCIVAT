@@ -32,6 +32,11 @@ export { useCanvasDimensions } from "./useCanvasDimensions.js";
 export { useViewportSize } from "./useViewportSize.js";
 export { useViewportConstraints } from "./useViewportConstraints.js";
 export {
+  useViewStack,
+  ViewStackProvider,
+  VIEW_TYPES as CANVAS_VIEW_TYPES,
+} from "./useViewStack.js";
+export {
   VIEWPORT_STORAGE_KEY,
   VIEWPORT_SIZE_EVENT,
   DEFAULT_VIEWPORT_SIZE,

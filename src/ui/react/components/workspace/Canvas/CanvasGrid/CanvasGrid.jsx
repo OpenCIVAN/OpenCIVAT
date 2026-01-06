@@ -88,6 +88,7 @@ export function CanvasGrid({
     canvasId,
     onCellClick,
     onCellDoubleClick,
+    onPlacementDoubleClick,
     onAddContent,
     onRemovePlacement,
     onAddRow,
@@ -798,9 +799,16 @@ export function CanvasGrid({
         }
     }, [onCellClick, selectedCells, canvas?.placements]);
 
-    // Double-click triggers isolation mode for small cells
+    // Double-click triggers view stack navigation (focus mode)
+    // Also triggers isolation mode for small cells as fallback
     const handleCellDoubleClick = useCallback((placement, e) => {
-        // Only trigger isolation in thumbnail/snapshot modes
+        // If onPlacementDoubleClick is provided, use view stack navigation
+        if (onPlacementDoubleClick) {
+            onPlacementDoubleClick(placement);
+            return;
+        }
+
+        // Fallback: trigger isolation in thumbnail/snapshot modes
         if (shouldTriggerIsolation(renderMode)) {
             isolateCell({
                 id: placement.id,
@@ -810,7 +818,7 @@ export function CanvasGrid({
                 col: placement.col,
             });
         }
-    }, [renderMode, shouldTriggerIsolation, isolateCell]);
+    }, [onPlacementDoubleClick, renderMode, shouldTriggerIsolation, isolateCell]);
 
     // ==========================================================================
     // CONTEXT MENU HANDLERS

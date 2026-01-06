@@ -212,8 +212,10 @@ export const ICON_REGISTRY = {
   panelRightClose: "right_panel_close",
   gripHorizontal: "drag_handle",
   gripVertical: "drag_indicator",
+  grip: "drag_handle",
   dragHorizontal: "drag_handle",
   dragVertical: "drag_indicator",
+  dock: "view_module", // Grid layout for docked mode
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STATUS & FEEDBACK

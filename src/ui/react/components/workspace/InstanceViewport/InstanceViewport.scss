@@ -137,7 +137,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-// Instance Label - plain layout with color dot and neutral text
+// Instance Label - plain layout with color dot and neutral text (legacy)
 .instance-viewport__label {
   display: flex;
   align-items: center;
@@ -146,26 +146,62 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 0; // allow text to truncate instead of pushing controls
 }
 
+// Label Badge - color-tinted badge with glow (new from prototype)
+.instance-viewport__label-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(var(--instance-color-rgb), 0.12);
+  border: 1px solid rgba(var(--instance-color-rgb), 0.25);
+  border-radius: $radius-sm;
+  flex: 1;
+  min-width: 0;
+
+  // Compact mode
+  .instance-viewport__header--compact &,
+  .instance-viewport__header--thumbnail & {
+    padding: 2px 6px;
+    gap: 4px;
+  }
+}
+
 // Color dot - with glow
 .instance-viewport__label-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--instance-color);
   box-shadow: 0 0 6px var(--instance-color);
   flex-shrink: 0;
+
+  // Smaller in compact/thumbnail modes
+  .instance-viewport__header--compact &,
+  .instance-viewport__header--thumbnail & {
+    width: 5px;
+    height: 5px;
+  }
 }
 
-// Name text - NEUTRAL color, not instance color
+// Name text - uses instance color when in badge
 .instance-viewport__label-text {
   font-size: $font-size-sm;
-  font-weight: $font-weight-normal;
-  color: $color-text-secondary;  // Neutral gray
+  font-weight: $font-weight-medium;
+  color: var(--instance-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0; // Allow text to truncate instead of collapsing siblings
+  min-width: 0;
   transition: font-weight 0.15s ease, color 0.15s ease;
+
+  // Smaller in compact/thumbnail modes
+  .instance-viewport__header--compact & {
+    font-size: 11px;
+  }
+
+  .instance-viewport__header--thumbnail & {
+    font-size: 10px;
+  }
 }
 
 // Right side controls container

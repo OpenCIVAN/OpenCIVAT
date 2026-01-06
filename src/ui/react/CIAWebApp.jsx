@@ -1,25 +1,19 @@
 // src/ui/react/CIAWebApp.jsx
 // =============================================================================
-// MAIN APPLICATION COMPONENT - SIMPLIFIED VERSION
+// MAIN APPLICATION COMPONENT - CANVAS-CENTRIC VERSION
 // =============================================================================
-// 
-// KEY CHANGE: Uses self-contained SecondaryHeader and SecondaryFooter components
-// instead of assembling zone objects. This makes the code cleaner and keeps
-// all secondary bar logic contained within those components.
 //
-// BEFORE (zone objects pattern):
-//   const secondaryTopBarZones = useMemo(() => ({
-//     left: <WorkspaceSelector .../>,
-//     center: <div>...</div>,
-//     right: <RoomPresenceIndicator .../>,
-//   }), [...deps...]);
-//   <ThreeEdgeLayout secondaryTopBarZones={secondaryTopBarZones} />
+// KEY CHANGE: Secondary bars (SecondaryHeader/SecondaryFooter) have been moved
+// into the canvas itself. The canvas now has its own chrome:
+// - CanvasHeader: Navigation (back, home, breadcrumb, viewport nav, grid size)
+// - CanvasToolbar: Actions (view mode, history, subset, active view, actions)
+// - CanvasStatusBar: Info (canvas size, viewport size, render mode, sync status)
+// - EdgeTriggers + FloatingPanels: Panel access via edge hover
 //
-// AFTER (component pattern):
-//   <ThreeEdgeLayout 
-//     secondaryTopBar={<SecondaryHeader workspace={...} onNavigate={...} />}
-//     secondaryBottomBar={<SecondaryFooter voice={...} onToolChange={...} />}
-//   />
+// The ThreeEdgeLayout now has 3 rows instead of 5:
+// - Top bar (Header)
+// - Main content (activity bars + panels + workspace)
+// - Bottom bar (StatusBar)
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { ui as log } from "@Utils/logger.js";
@@ -37,10 +31,12 @@ import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
 import { Header } from "@UI/react/components/layout/Header";
 
 // =============================================================================
-// SECONDARY BARS (Self-contained - manage their own zones internally)
+// SECONDARY BARS - DEPRECATED
 // =============================================================================
-import { SecondaryHeader } from '@UI/react/components/layout/SecondaryHeader';
-import { SecondaryFooter } from "@UI/react/components/layout/SecondaryFooter";
+// SecondaryHeader and SecondaryFooter are now deprecated.
+// Canvas chrome is now handled by CanvasWorkspace which includes:
+// - CanvasHeader, CanvasToolbar, CanvasStatusBar
+// - EdgeTriggers + FloatingPanels for panel access
 
 // =============================================================================
 // FOOTER / STATUS BAR (28px - System Status)
@@ -668,34 +664,10 @@ export function CIAWebApp({ username, userId, projectId }) {
                 />
               }
               // ─────────────────────────────────────────────────────────────
-              // SECONDARY TOP BAR (48px - Self-contained component)
+              // SECONDARY BARS REMOVED - Now handled by CanvasWorkspace
               // ─────────────────────────────────────────────────────────────
-              secondaryTopBar={
-                <SecondaryHeader
-                  // Workspace props
-                  workspace={currentWorkspace}
-                  workspaces={workspaces}
-                  onWorkspaceChange={handleWorkspaceChange}
-                  onCreateWorkspace={handleCreateWorkspace}
-                  // Flow direction (connected to canvas)
-                  flowDirection={flowDirection}
-                  onFlowDirectionChange={handleFlowDirectionChange}
-                  // Canvas size (connected to canvas)
-                  canvasSize={canvasSize}
-                  canvasPlacements={canvas?.placements || []}
-                  onCanvasSizeChange={handleCanvasSizeChange}
-                  // Viewport size (how many cells visible)
-                  viewportSize={viewportSize}
-                  onViewportSizeChange={handleViewportSizeChange}
-                  // Room props
-                  room={currentRoom}
-                  members={roomMembers}
-                  availableRooms={availableRooms}
-                  onRoomChange={handleRoomSelect}
-                  onOpenRoomsPanel={handleOpenRoomsPanel}
-                  onCreateRoom={handleCreateRoom}
-                />
-              }
+              // Canvas chrome (CanvasHeader, CanvasToolbar, CanvasStatusBar)
+              // is now rendered inside CanvasWorkspace, not in ThreeEdgeLayout
               // ─────────────────────────────────────────────────────────────
               // LEFT PANEL (Activity Bar + Content)
               // ─────────────────────────────────────────────────────────────
@@ -710,26 +682,6 @@ export function CIAWebApp({ username, userId, projectId }) {
               // ─────────────────────────────────────────────────────────────
               rightActivityBar={<RightActivityBar />}
               rightPanelContent={<RightPanelContent />}
-              // ─────────────────────────────────────────────────────────────
-              // SECONDARY BOTTOM BAR (36px - Self-contained component)
-              // ─────────────────────────────────────────────────────────────
-              secondaryBottomBar={
-                <SecondaryFooter
-                  // Edit tools
-                  isEditMode={isEditMode}
-                  activeTool={activeTool}
-                  onToolChange={handleToolChange}
-                  onToggleEditMode={handleToggleEditMode}
-                  canUndo={false}
-                  canRedo={false}
-                  onUndo={handleUndo}
-                  onRedo={handleRedo}
-                  // View mode (for ViewContextBlock)
-                  viewMode={layoutMode}
-                  onViewModeChange={handleViewModeChange}
-                  // NOTE: Voice props removed - voice controls moved to right activity bar
-                />
-              }
               // ─────────────────────────────────────────────────────────────
               // BOTTOM BAR (28px Status Bar)
               // ─────────────────────────────────────────────────────────────

@@ -3,9 +3,19 @@
 // HEADER/FOOTER BAR COMPONENTS (per design spec)
 // =============================================================================
 export { Header } from "./Header";
-export { SecondaryHeader } from "./SecondaryHeader";
-export { SecondaryFooter } from "./SecondaryFooter";
 export { StatusBar } from "./StatusBar";
+
+// =============================================================================
+// DEPRECATED - Canvas chrome is now in CanvasWorkspace
+// =============================================================================
+// These components have been replaced by canvas-embedded chrome:
+// - CanvasHeader, CanvasToolbar, CanvasStatusBar (in workspace/Canvas/)
+// - Voice controls moved to RightActivityBar
+// Kept for backward compatibility - will be removed in a future version.
+/** @deprecated Use canvas chrome components instead */
+export { SecondaryHeader } from "./SecondaryHeader";
+/** @deprecated Use canvas chrome components instead */
+export { SecondaryFooter } from "./SecondaryFooter";
 
 // =============================================================================
 // LAYOUT INFRASTRUCTURE

@@ -6,6 +6,12 @@
 // ============================================================================
 // CANVAS WORKSPACE - Main container
 // ============================================================================
+// Layout:
+// - CanvasHeader (36px)
+// - Content area (flex: 1, with edge triggers)
+// - CanvasToolbar (54px)
+// - CanvasStatusBar (24px)
+// Total chrome: 114px
 
 .canvas-workspace {
   display: flex;
@@ -15,6 +21,7 @@
   min-height: 0;
   background: $color-bg-primary;
   overflow: hidden;
+  position: relative;
 }
 
 // ============================================================================

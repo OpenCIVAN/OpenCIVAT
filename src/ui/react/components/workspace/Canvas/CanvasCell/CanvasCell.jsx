@@ -1013,7 +1013,8 @@ function ViewContent({
                             viewConfigId={viewId}
                             isRemote={false}
                             currentSpan={`${colSpan}x${rowSpan}`}
-                            uiMode={renderMode === RENDER_MODES.COMPACT ? 'compact' : 'full'}
+                            renderMode={renderMode}
+                            onFocus={onActivate}
                             onReady={() => setIsReady(true)}
                             onClose={onClose}
                             onTrash={onTrash}

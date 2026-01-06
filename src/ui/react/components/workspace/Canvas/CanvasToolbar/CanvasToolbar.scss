@@ -1,0 +1,248 @@
+// src/ui/react/components/workspace/Canvas/CanvasToolbar/CanvasToolbar.scss
+// Canvas toolbar footer styling
+//
+// Height: 54px (18px label + 36px content)
+// Layout: View Mode | History | Subset | Active View | spacer | Actions
+
+@use "theme" as *;
+
+// =============================================================================
+// MAIN CONTAINER
+// =============================================================================
+
+.canvas-toolbar {
+  display: flex;
+  align-items: stretch;
+  background: $color-bg-tertiary;
+  border-top: 1px solid $color-border-default;
+  height: 54px;
+  min-height: 54px;
+  flex-shrink: 0;
+}
+
+// =============================================================================
+// ZONE BASE STYLES
+// =============================================================================
+
+.canvas-toolbar__zone {
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-xs $spacing-sm;
+  min-width: 0;
+}
+
+.canvas-toolbar__zone-label {
+  font-size: 9px;
+  font-weight: $font-weight-medium;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: $color-text-muted;
+  margin-bottom: $spacing-xs;
+  line-height: 1;
+}
+
+.canvas-toolbar__zone-content {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex: 1;
+}
+
+// =============================================================================
+// DIVIDER & SPACER
+// =============================================================================
+
+.canvas-toolbar__divider {
+  width: 1px;
+  background: $color-border-default;
+  margin: $spacing-sm 0;
+  flex-shrink: 0;
+}
+
+.canvas-toolbar__spacer {
+  flex: 1;
+  min-width: $spacing-md;
+}
+
+// =============================================================================
+// VIEW MODE ZONE
+// =============================================================================
+
+.canvas-toolbar__view-mode {
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-xs $spacing-sm;
+  min-width: 100px;
+}
+
+.canvas-toolbar__view-mode-display {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.canvas-toolbar__mode-btn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-text-tertiary;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    color: $color-text-secondary;
+    background: rgba($color-accent-blue, 0.08);
+  }
+
+  &--active {
+    color: $color-accent-blue;
+    background: rgba($color-accent-blue, 0.12);
+    border-color: rgba($color-accent-blue, 0.25);
+    cursor: default;
+  }
+
+  &:disabled:not(.canvas-toolbar__mode-btn--active) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// =============================================================================
+// HISTORY ZONE
+// =============================================================================
+
+.canvas-toolbar__zone--history {
+  min-width: 70px;
+}
+
+// =============================================================================
+// SUBSET ZONE
+// =============================================================================
+
+.canvas-toolbar__zone--subset {
+  min-width: 100px;
+}
+
+.canvas-toolbar__subset-select {
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  max-width: 120px;
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent-blue;
+  }
+}
+
+// =============================================================================
+// ACTIVE VIEW ZONE
+// =============================================================================
+
+.canvas-toolbar__zone--active-view {
+  min-width: 150px;
+  flex: 1;
+  max-width: 300px;
+}
+
+.canvas-toolbar__no-view {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  font-style: italic;
+}
+
+.canvas-toolbar__view-badge {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(var(--view-color-rgb, 96, 165, 250), 0.12);
+  border: 1px solid rgba(var(--view-color-rgb, 96, 165, 250), 0.25);
+  border-radius: $radius-sm;
+  max-width: 200px;
+}
+
+.canvas-toolbar__view-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.canvas-toolbar__view-name {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--view-color, $color-accent-blue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-toolbar__view-select {
+  padding: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  max-width: 80px;
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent-blue;
+  }
+}
+
+// =============================================================================
+// ACTIONS ZONE
+// =============================================================================
+
+.canvas-toolbar__zone--actions {
+  min-width: 140px;
+}
+
+// =============================================================================
+// RESPONSIVE
+// =============================================================================
+
+@media (max-width: 900px) {
+  .canvas-toolbar__zone-label {
+    display: none;
+  }
+
+  .canvas-toolbar {
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .canvas-toolbar__zone {
+    justify-content: center;
+  }
+
+  .canvas-toolbar__mode-btn span {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .canvas-toolbar__zone--active-view {
+    display: none;
+  }
+}
+
+@media (max-width: 500px) {
+  .canvas-toolbar__zone--subset {
+    display: none;
+  }
+}

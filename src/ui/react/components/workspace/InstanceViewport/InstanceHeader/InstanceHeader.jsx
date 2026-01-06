@@ -1,11 +1,19 @@
 // src/ui/react/components/workspace/InstanceViewport/InstanceHeader/InstanceHeader.jsx
 // Simplified, always-visible header bar for InstanceViewport
 // Renders even before instance data loads to allow early close actions
+//
+// Updated to match canvas-floating-architecture-prototype.jsx:
+// - Removed wrench button (access tools via More menu)
+// - Added LiveIndicator for collaborators
+// - Added Focus button
+// - Color-coded label badge with glow
+// - Responsive render modes (full, compact, thumbnail, snapshot)
 
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '@UI/react/components/atoms';
+import { Icon, IconButton } from '@UI/react/components/atoms';
 import { MenuItem } from '@UI/react/components/molecules';
+import { LiveIndicatorCompact } from '../LiveIndicator';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -38,6 +46,8 @@ function MoreMenu({
     onResetCamera,
     onFitView,
     onDuplicate,
+    onAddToSubset,
+    onShare,
     onCloseView,
     onDeleteView,
     triggerRef,
@@ -144,6 +154,16 @@ function MoreMenu({
                 label="Duplicate View"
                 onClick={() => handleItemClick(onDuplicate)}
             />
+            <MenuItem
+                icon="bookmark"
+                label="Add to Subset"
+                onClick={() => handleItemClick(onAddToSubset)}
+            />
+            <MenuItem
+                icon="share2"
+                label="Share View"
+                onClick={() => handleItemClick(onShare)}
+            />
 
             <div className="instance-viewport__more-menu__divider" />
 
@@ -177,9 +197,12 @@ function MoreMenu({
 /**
  * InstanceHeader - Always-visible header bar
  *
- * This component ALWAYS renders with all its content visible.
- * No responsive hiding of elements - everything is always shown.
- * This ensures the header is usable at all times.
+ * Matches canvas-floating-architecture-prototype.jsx design:
+ * - No wrench button (access tools via More menu)
+ * - LiveIndicator for collaborators
+ * - Focus button for focus mode
+ * - Color-coded label badge with glow
+ * - Responsive render modes
  */
 export const InstanceHeader = memo(function InstanceHeader({
     displayName,
@@ -188,7 +211,11 @@ export const InstanceHeader = memo(function InstanceHeader({
     isFullscreen,
     isActive,
     isLoading,
+    isInFocusMode = false,
+    renderMode = 'full', // 'full' | 'compact' | 'thumbnail' | 'snapshot'
+    collaborators = [],
     onFullscreen,
+    onFocus,
     onClose,
     onTrash,
     onOpenInstanceTools,
@@ -196,6 +223,8 @@ export const InstanceHeader = memo(function InstanceHeader({
     onResetCamera,
     onFitView,
     onDuplicate,
+    onAddToSubset,
+    onShare,
     instanceId,
     onShowToolbar,
     onHideToolbar,
@@ -208,94 +237,101 @@ export const InstanceHeader = memo(function InstanceHeader({
     const colorHex = instanceColor?.hex || '#60a5fa';
     const colorRgb = hexToRgb(colorHex);
 
-    // Force inline styles to ensure visibility
-    const forceVisible = {
-        visibility: 'visible',
-        opacity: 1,
-        display: 'flex',
-    };
+    // Render mode flags
+    const isCompact = renderMode === 'compact' || renderMode === 'thumbnail';
+    const isMinimal = renderMode === 'thumbnail';
+    const isSnapshot = renderMode === 'snapshot';
+
+    // Don't render header in snapshot mode
+    if (isSnapshot) return null;
+
+    // Icon sizes based on render mode
+    const iconSize = isMinimal ? 10 : (isCompact ? 11 : 12);
+    const buttonSize = isMinimal ? 16 : (isCompact ? 18 : 20);
 
     return (
         <div
-            className={`instance-viewport__header ${isActive ? 'instance-viewport__header--active' : ''}`}
+            className={`instance-viewport__header instance-viewport__header--${renderMode} ${isActive ? 'instance-viewport__header--active' : ''}`}
             style={{
                 '--instance-color': colorHex,
                 '--instance-color-rgb': colorRgb,
-                ...forceVisible,
-                alignItems: 'center',
-                justifyContent: 'space-between',
             }}
             onMouseEnter={onShowToolbar}
             onMouseLeave={onHideToolbar}
         >
-            {/* Left section - Instance Tools + Label */}
-            <div className="instance-viewport__header-left" style={forceVisible}>
-                <button
-                    onClick={onOpenInstanceTools}
-                    className="instance-viewport__header-button"
-                    title="Instance Tools (T)"
-                    style={forceVisible}
-                >
-                    <Icon name="wrench" size={12} />
-                </button>
+            {/* Left section - Live indicator + Label Badge */}
+            <div className="instance-viewport__header-left">
+                {/* Live indicator for collaborators */}
+                {collaborators.length > 0 && !isMinimal && (
+                    <LiveIndicatorCompact count={collaborators.length} />
+                )}
 
-                {/* Instance Label */}
-                <div className="instance-viewport__label" style={forceVisible}>
-                    <span className="instance-viewport__label-icon" style={forceVisible}>
-                        <Icon name={typeIconName} size={12} />
-                    </span>
-                    <span className="instance-viewport__label-text" style={{ visibility: 'visible', opacity: 1 }}>
+                {/* Label Badge - color-coded */}
+                <div className="instance-viewport__label-badge">
+                    <span className="instance-viewport__label-dot" />
+                    <span className="instance-viewport__label-text">
                         {displayName || 'Loading...'}
                     </span>
+                    {!isMinimal && (
+                        <span className="instance-viewport__label-icon">
+                            <Icon name={typeIconName} size={iconSize} />
+                        </span>
+                    )}
                 </div>
             </div>
 
-            {/* Right Controls - Always visible */}
-            <div className="instance-viewport__header-controls" style={forceVisible}>
-                {/* More Menu Button */}
-                <div className="instance-viewport__more-wrapper" ref={moreButtonRef} style={forceVisible}>
+            {/* Right Controls */}
+            <div className="instance-viewport__header-controls">
+                {/* More Menu Button - hidden in minimal mode */}
+                {!isMinimal && (
+                    <div className="instance-viewport__more-wrapper" ref={moreButtonRef}>
+                        <button
+                            onClick={() => setShowMoreMenu(!showMoreMenu)}
+                            className={`instance-viewport__header-button ${showMoreMenu ? 'active' : ''}`}
+                            title="More options"
+                            style={{ width: buttonSize, height: buttonSize }}
+                        >
+                            <Icon name="moreHorizontal" size={iconSize} />
+                        </button>
+                        <MoreMenu
+                            isOpen={showMoreMenu}
+                            onClose={() => setShowMoreMenu(false)}
+                            onOpenInstanceTools={onOpenInstanceTools}
+                            onFullscreen={onFullscreen}
+                            onVRMode={onVRMode}
+                            onResetCamera={onResetCamera}
+                            onFitView={onFitView}
+                            onDuplicate={onDuplicate}
+                            onAddToSubset={onAddToSubset}
+                            onShare={onShare}
+                            onCloseView={onClose}
+                            onDeleteView={onTrash}
+                            triggerRef={moreButtonRef}
+                            isFullscreen={isFullscreen}
+                        />
+                    </div>
+                )}
+
+                {/* Focus button - hidden when already in focus mode */}
+                {!isInFocusMode && onFocus && (
                     <button
-                        onClick={() => setShowMoreMenu(!showMoreMenu)}
-                        className={`instance-viewport__header-button ${showMoreMenu ? 'active' : ''}`}
-                        title="More options"
-                        style={forceVisible}
+                        onClick={onFocus}
+                        className="instance-viewport__header-button"
+                        title="Focus Mode (F)"
+                        style={{ width: buttonSize, height: buttonSize }}
                     >
-                        <Icon name="moreHorizontal" size={12} />
+                        <Icon name="focus" size={iconSize} />
                     </button>
-                    <MoreMenu
-                        isOpen={showMoreMenu}
-                        onClose={() => setShowMoreMenu(false)}
-                        onOpenInstanceTools={onOpenInstanceTools}
-                        onFullscreen={onFullscreen}
-                        onVRMode={onVRMode}
-                        onResetCamera={onResetCamera}
-                        onFitView={onFitView}
-                        onDuplicate={onDuplicate}
-                        onCloseView={onClose}
-                        onDeleteView={onTrash}
-                        triggerRef={moreButtonRef}
-                        isFullscreen={isFullscreen}
-                    />
-                </div>
+                )}
 
-                {/* Fullscreen button */}
-                <button
-                    onClick={onFullscreen}
-                    className="instance-viewport__header-button"
-                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                    style={forceVisible}
-                >
-                    <Icon name={isFullscreen ? "minimize2" : "maximize2"} size={12} />
-                </button>
-
-                {/* Close button */}
+                {/* Close button - ALWAYS visible */}
                 <button
                     onClick={onClose}
                     className="instance-viewport__header-button instance-viewport__header-button--danger"
                     title="Close"
-                    style={forceVisible}
+                    style={{ width: buttonSize, height: buttonSize }}
                 >
-                    <Icon name="close" size={12} />
+                    <Icon name="close" size={iconSize} />
                 </button>
             </div>
         </div>
