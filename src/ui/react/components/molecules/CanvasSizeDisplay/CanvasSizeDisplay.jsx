@@ -4,12 +4,22 @@
  * Prevents shrinking if it would affect existing placements.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { Dropdown } from '@UI/react/components/atoms/Dropdown';
 
 import './CanvasSizeDisplay.scss';
+
+// Quick pick presets for canvas sizes
+const CANVAS_PRESETS = [
+    { id: '3x3', label: '3×3', cols: 3, rows: 3 },
+    { id: '4x4', label: '4×4', cols: 4, rows: 4 },
+    { id: '5x5', label: '5×5', cols: 5, rows: 5 },
+    { id: '6x6', label: '6×6', cols: 6, rows: 6 },
+    { id: '8x8', label: '8×8', cols: 8, rows: 8 },
+    { id: '10x10', label: '10×10', cols: 10, rows: 10 },
+];
 
 /**
  * Calculate the minimum canvas size based on existing placements.
@@ -121,6 +131,26 @@ export function CanvasSizeDisplay({
         });
     };
 
+    // Handle preset selection - check if shrinking would affect placements
+    const handlePreset = useCallback((preset) => {
+        // Check if this preset would shrink and affect placements
+        const affectedByRows = preset.rows < safeRows ? getAffectedPlacements(placements, preset.rows, safeCols) : [];
+        const affectedByCols = preset.cols < safeCols ? getAffectedPlacements(placements, safeRows, preset.cols) : [];
+        const totalAffected = [...new Set([...affectedByRows, ...affectedByCols])];
+
+        if (totalAffected.length > 0) {
+            onShrinkBlocked?.({
+                dimension: 'both',
+                currentValue: { rows: safeRows, cols: safeCols },
+                requestedValue: { rows: preset.rows, cols: preset.cols },
+                affectedPlacements: totalAffected,
+            });
+            return;
+        }
+
+        onChange?.({ rows: preset.rows, cols: preset.cols });
+    }, [safeRows, safeCols, placements, onChange, onShrinkBlocked]);
+
     return (
         <Dropdown
             trigger={
@@ -136,6 +166,29 @@ export function CanvasSizeDisplay({
         >
             <div className="canvas-size-display__popover">
                 <div className="canvas-size-display__header">Canvas Size</div>
+
+                {/* Quick Pick Presets */}
+                <div className="canvas-size-display__presets">
+                    {CANVAS_PRESETS.map(preset => {
+                        // Check if this preset would affect placements
+                        const wouldAffect = preset.rows < minRows || preset.cols < minCols;
+                        const isActive = preset.cols === safeCols && preset.rows === safeRows;
+                        return (
+                            <button
+                                key={preset.id}
+                                className={`canvas-size-display__preset ${isActive ? 'canvas-size-display__preset--active' : ''}`}
+                                disabled={wouldAffect}
+                                onClick={() => handlePreset(preset)}
+                                title={wouldAffect ? 'Would affect existing views' : `Set to ${preset.label}`}
+                            >
+                                {preset.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="canvas-size-display__divider" />
+
                 <div className="canvas-size-display__row">
                     <span>Rows</span>
                     <div className="canvas-size-display__controls">

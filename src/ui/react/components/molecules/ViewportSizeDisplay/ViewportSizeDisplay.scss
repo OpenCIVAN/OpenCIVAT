@@ -39,9 +39,48 @@
     color: $color-text-muted;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
     margin-bottom: $spacing-xs;
-    padding-bottom: $spacing-xs;
-    border-bottom: 1px solid $color-border-subtle;
+  }
+
+  &__preset {
+    padding: $spacing-xs $spacing-sm;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-secondary;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: $color-bg-elevated;
+      border-color: $color-accent-teal;
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: color-mix(in srgb, $color-accent-teal 20%, transparent);
+      border-color: $color-accent-teal;
+      color: $color-accent-teal;
+    }
+  }
+
+  &__divider {
+    height: 1px;
+    background: $color-border-subtle;
+    margin: $spacing-sm 0;
   }
 
   &__row {

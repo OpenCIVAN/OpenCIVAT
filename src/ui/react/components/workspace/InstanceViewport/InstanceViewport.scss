@@ -21,7 +21,8 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   min-height: 100px; // Prevent collapsing when empty or errored
   overflow: hidden;
-  position: relative;
+  // CRITICAL: position: relative is needed for absolutely positioned header
+  position: relative !important;
   outline: none; // Remove focus outline, we handle focus visually
 
   // Inherit pointer-events from parent container
@@ -59,56 +60,38 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // ============================================================================
-// HEADER - Always visible, forced visibility
+// HEADER - Always visible, stays above WebGL canvas
 // ============================================================================
 
+// Adding styles back incrementally to find the culprit
 .instance-viewport__header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  flex-wrap: nowrap;
-  padding: $spacing-xs $spacing-sm !important;
-  background: $color-bg-secondary !important;
-  border-bottom: 1px solid $color-border-subtle !important;
-  flex-shrink: 0 !important;
-  min-height: 32px !important;
-  position: relative !important;
-  z-index: 100 !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  min-width: 0; // Let children shrink before clipping
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  overflow: visible; // Prevent children from being clipped when space is tight
+  flex-wrap: nowrap;
 
-  // FORCE all children to be visible
-  * {
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
+  // Sizing
+  padding: $spacing-xs $spacing-sm;
+  min-height: 32px;
+  flex-shrink: 0;
 
-  // Active state - accent border at bottom
-  &--active {
-    border-bottom-color: var(--instance-color, #{$color-accent-primary}) !important;
-    border-bottom-width: 2px !important;
+  // Appearance
+  background: $color-bg-secondary;
+  border-bottom: 1px solid $color-border-subtle;
 
-    // FORCE visibility even in active state
-    .instance-viewport__header-left,
-    .instance-viewport__header-controls,
-    .instance-viewport__label,
-    .instance-viewport__label-text,
-    .instance-viewport__label-icon,
-    .instance-viewport__header-button,
-    .instance-viewport__more-wrapper {
-      display: flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
+  // No z-index - causes WebGL interaction issues, rely on DOM order
+  position: relative;
+}
 
-    .instance-viewport__label-text {
-      font-weight: $font-weight-semibold !important;
-      color: $color-text-primary !important;
-    }
+// Active state kept separate
+.instance-viewport__header--active {
+  border-bottom-color: var(--instance-color, #{$color-accent-primary});
+  border-bottom-width: 2px;
+
+  .instance-viewport__label-text {
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
   }
 }
 
@@ -294,7 +277,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   flex: 1 1 auto; // Let the label claim remaining space between controls
   min-width: 0;   // Enable text ellipsis instead of pushing controls offscreen
   flex-wrap: nowrap;
-  overflow: hidden;
+  // Note: overflow: hidden removed - was potentially clipping content
 }
 
 // More menu wrapper
@@ -408,28 +391,19 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   top: 0; // Start behind header
   left: $spacing-sm;
   right: $spacing-sm;
-  z-index: 90; // Lower than header (100) so it slides from behind
+  z-index: 5; // Above header but below WebGL threshold of 10
+  // Visibility controlled entirely by inline styles - no CSS opacity/transform
 
-  // Hidden state - tucked behind header
-  opacity: 0;
-  transform: translateY(24px); // Partially visible behind 32px header
-  pointer-events: none;
-  transition: opacity $animation-duration $animation-easing,
-    transform $animation-duration $animation-easing;
-
-  // Visible state - slides down from behind header
+  // Visible state - visibility controlled by inline styles
+  // Transform removed to prevent conflicts
   &--visible {
-    opacity: 1;
-    transform: translateY(34px); // 2px below 32px header
-    pointer-events: auto;
+    // opacity, transform, pointer-events set via inline styles
   }
 
-  // Pinned state
+  // Pinned state - just add a subtle indicator, no box-shadow change
   &--pinned {
     .instance-toolbar {
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-        0 0 0 1px rgba($color-accent-primary, 0.3),
-        0 0 15px rgba($color-accent-primary, 0.15);
+      border-color: rgba($color-accent-primary, 0.3);
     }
   }
 }
@@ -465,8 +439,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   border-top-color: rgba(0, 0, 0, 0.6);
   border-bottom-color: rgba(255, 255, 255, 0.05);
 
-  // Subtle blur for polish
-  backdrop-filter: blur(12px);
+  // backdrop-filter: blur(12px); // DISABLED - causes WebGL glitching
 }
 
 .instance-toolbar__groups {
@@ -708,7 +681,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   bottom: $spacing-sm;
   left: 50%;
   transform: translateX(-50%) translateY(10px);
-  z-index: 150;
+  // No z-index - rely on DOM order
 
   // Ensure it only takes the width of its content
   display: inline-flex;
@@ -753,8 +726,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   border-top-color: rgba(0, 0, 0, 0.6);
   border-bottom-color: rgba(255, 255, 255, 0.05);
 
-  // Subtle blur for polish
-  backdrop-filter: blur(12px);
+  // backdrop-filter: blur(12px); // DISABLED - causes WebGL glitching
 }
 
 .instance-navbar__nav-buttons {
@@ -879,7 +851,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   position: absolute;
   top: $spacing-sm;
   right: $spacing-sm;
-  z-index: 150;
+  // No z-index - rely on DOM order
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
@@ -923,7 +895,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   position: absolute;
   top: $spacing-xs;
   right: $spacing-xs;
-  z-index: 150;
+  // No z-index - rely on DOM order
   // Override inherited pointer-events: none from parent during loading
   // The gear button must remain clickable even when viewport is loading
   pointer-events: auto;
@@ -1031,7 +1003,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   bottom: $spacing-sm;
   left: $spacing-sm;
   right: $spacing-sm;
-  z-index: 100;
+  // No z-index - rely on DOM order
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1083,6 +1055,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   flex: 1;
   min-height: 0;
   position: relative;
+  // No z-index - WebGL canvases have issues with stacking contexts
   background-color: $color-bg-canvas-cell;
   box-shadow: inset 4px 4px 12px rgba(0, 0, 0, 0.8),
     inset -2px -2px 8px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.9);

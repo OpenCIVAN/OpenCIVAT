@@ -12,9 +12,10 @@
 // - All logic comes from useCanvasNavigator hook
 // - This file is pure presentation
 
-import React, { memo, useState } from "react";
+import React, { memo, useState, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Dropdown } from '@UI/react/components/atoms/Dropdown';
 import { PanelHeader } from '@UI/react/components/molecules/PanelHeader';
 import { DirectionalButton } from '@UI/react/components/molecules';
 import { useAdaptive } from '@UI/react/context';
@@ -178,6 +179,30 @@ const DPad = memo(({ onMove, onHome, disabled, isAtHome }) => {
 // LocalStorage key for size controls expanded state
 const SIZE_CONTROLS_EXPANDED_KEY = 'cia-navigator-size-controls-expanded';
 
+// Quick pick presets for viewport sizes
+const VIEWPORT_PRESETS = [
+    { id: '1x1', label: '1×1', cols: 1, rows: 1 },
+    { id: '2x2', label: '2×2', cols: 2, rows: 2 },
+    { id: '3x3', label: '3×3', cols: 3, rows: 3 },
+    { id: '4x4', label: '4×4', cols: 4, rows: 4 },
+    { id: '2x1', label: '2×1 (wide)', cols: 2, rows: 1 },
+    { id: '1x2', label: '1×2 (tall)', cols: 1, rows: 2 },
+    { id: '3x2', label: '3×2', cols: 3, rows: 2 },
+    { id: '2x3', label: '2×3', cols: 2, rows: 3 },
+];
+
+// Quick pick presets for canvas sizes
+const CANVAS_PRESETS = [
+    { id: '3x3', label: '3×3', cols: 3, rows: 3 },
+    { id: '4x4', label: '4×4', cols: 4, rows: 4 },
+    { id: '5x5', label: '5×5', cols: 5, rows: 5 },
+    { id: '6x6', label: '6×6', cols: 6, rows: 6 },
+    { id: '8x8', label: '8×8', cols: 8, rows: 8 },
+    { id: '10x10', label: '10×10', cols: 10, rows: 10 },
+    { id: '5x3', label: '5×3 (wide)', cols: 5, rows: 3 },
+    { id: '3x5', label: '3×5 (tall)', cols: 3, rows: 5 },
+];
+
 // Collapsible Size Controls Footer
 const SizeControlsFooter = memo(({
     viewportSize,
@@ -203,7 +228,7 @@ const SizeControlsFooter = memo(({
     const { isVR } = useAdaptive();
 
     // Save expanded state when it changes
-    const handleToggleExpanded = React.useCallback(() => {
+    const handleToggleExpanded = useCallback(() => {
         const newValue = !isExpanded;
         setIsExpanded(newValue);
         try {
@@ -215,7 +240,7 @@ const SizeControlsFooter = memo(({
 
     // Create wrapper onChange handlers that detect increment/decrement
     // and call the appropriate function (which reads fresh from canvas.dimensions)
-    const handleCanvasColsChange = React.useCallback((newValue) => {
+    const handleCanvasColsChange = useCallback((newValue) => {
         if (newValue > canvasSize.cols) {
             addColumn?.();
         } else if (newValue < canvasSize.cols) {
@@ -223,13 +248,50 @@ const SizeControlsFooter = memo(({
         }
     }, [canvasSize.cols, addColumn, removeColumn]);
 
-    const handleCanvasRowsChange = React.useCallback((newValue) => {
+    const handleCanvasRowsChange = useCallback((newValue) => {
         if (newValue > canvasSize.rows) {
             addRow?.();
         } else if (newValue < canvasSize.rows) {
             removeRow?.();
         }
     }, [canvasSize.rows, addRow, removeRow]);
+
+    // Handle viewport preset selection
+    const handleViewportPreset = useCallback((item) => {
+        const preset = VIEWPORT_PRESETS.find(p => p.id === item.id);
+        if (preset) {
+            // Clamp to canvas bounds
+            const cols = Math.min(preset.cols, canvasSize.cols);
+            const rows = Math.min(preset.rows, canvasSize.rows);
+            setViewportSizeCols?.(cols);
+            setViewportSizeRows?.(rows);
+        }
+    }, [canvasSize.cols, canvasSize.rows, setViewportSizeCols, setViewportSizeRows]);
+
+    // Handle canvas preset selection
+    const handleCanvasPreset = useCallback((item) => {
+        const preset = CANVAS_PRESETS.find(p => p.id === item.id);
+        if (preset) {
+            // Resize canvas to preset size
+            // Need to add/remove rows and columns to match
+            const colDiff = preset.cols - canvasSize.cols;
+            const rowDiff = preset.rows - canvasSize.rows;
+
+            // Adjust columns
+            if (colDiff > 0) {
+                for (let i = 0; i < colDiff; i++) addColumn?.();
+            } else if (colDiff < 0) {
+                for (let i = 0; i < -colDiff; i++) removeColumn?.();
+            }
+
+            // Adjust rows
+            if (rowDiff > 0) {
+                for (let i = 0; i < rowDiff; i++) addRow?.();
+            } else if (rowDiff < 0) {
+                for (let i = 0; i < -rowDiff; i++) removeRow?.();
+            }
+        }
+    }, [canvasSize.cols, canvasSize.rows, addColumn, removeColumn, addRow, removeRow]);
 
     return (
         <div className="canvas-navigator__size-footer" data-expanded={isExpanded}>
@@ -249,7 +311,33 @@ const SizeControlsFooter = memo(({
             {isExpanded && (
                 <div className="canvas-navigator__size-controls">
                     <div className="canvas-navigator__size-col canvas-navigator__size-col--viewport">
-                        <span className="canvas-navigator__size-label">Viewport</span>
+                        <div className="canvas-navigator__size-header">
+                            <span className="canvas-navigator__size-label">Viewport</span>
+                            <Dropdown
+                                trigger={
+                                    <button className="canvas-navigator__quick-pick" title="Quick pick viewport size">
+                                        <Icon name="chevronDown" size={10} />
+                                    </button>
+                                }
+                                placement="bottom-end"
+                            >
+                                <div className="canvas-navigator__preset-menu">
+                                    {VIEWPORT_PRESETS.map(preset => {
+                                        const isDisabled = preset.cols > canvasSize.cols || preset.rows > canvasSize.rows;
+                                        return (
+                                            <button
+                                                key={preset.id}
+                                                className="canvas-navigator__preset-item"
+                                                disabled={isDisabled}
+                                                onClick={() => handleViewportPreset({ id: preset.id })}
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </Dropdown>
+                        </div>
                         <NumberSpinner
                             label="Cols"
                             value={viewportSize.cols}
@@ -271,7 +359,29 @@ const SizeControlsFooter = memo(({
                     </div>
 
                     <div className="canvas-navigator__size-col canvas-navigator__size-col--canvas">
-                        <span className="canvas-navigator__size-label">Canvas</span>
+                        <div className="canvas-navigator__size-header">
+                            <span className="canvas-navigator__size-label">Canvas</span>
+                            <Dropdown
+                                trigger={
+                                    <button className="canvas-navigator__quick-pick" title="Quick pick canvas size">
+                                        <Icon name="chevronDown" size={10} />
+                                    </button>
+                                }
+                                placement="bottom-end"
+                            >
+                                <div className="canvas-navigator__preset-menu">
+                                    {CANVAS_PRESETS.map(preset => (
+                                        <button
+                                            key={preset.id}
+                                            className="canvas-navigator__preset-item"
+                                            onClick={() => handleCanvasPreset({ id: preset.id })}
+                                        >
+                                            {preset.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </Dropdown>
+                        </div>
                         <NumberSpinner
                             label="Cols"
                             value={canvasSize.cols}

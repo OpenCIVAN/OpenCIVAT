@@ -23,34 +23,29 @@ import { VRButton } from '@UI/react/components/molecules';
 export const InstanceToolbar = memo(function InstanceToolbar({
     tools,
     isFocused,
-    pinned,
-    onTogglePin,
     renderTool,
     onOpenInstanceTools,
     instanceId,
-    isFullscreen,
-    onFullscreen,
-    onVRMode,
-    onResetCamera,
-    onFitView,
-    onDuplicate,
-    onClose,
-    onTrash,
 }) {
-    // Toolbar is visible when focused OR pinned
-    const isVisible = isFocused || pinned;
+    // Toolbar is visible when focused
+    const isVisible = isFocused;
 
-    // Inline styles to force visibility when active
+    // Inline styles to control visibility (CSS classes removed to prevent conflicts)
     const overlayStyle = isVisible ? {
         opacity: 1,
         visibility: 'visible',
         pointerEvents: 'auto',
-        transform: 'translateY(34px)',
-    } : {};
+        transform: 'translateY(42px)', // Below header + colored border
+    } : {
+        opacity: 0,
+        visibility: 'hidden',
+        pointerEvents: 'none',
+        transform: 'translateY(32px)',
+    };
 
     return (
         <div
-            className={`instance-viewport__toolbar-overlay ${isVisible ? 'instance-viewport__toolbar-overlay--visible' : ''} ${pinned ? 'instance-viewport__toolbar-overlay--pinned' : ''}`}
+            className="instance-viewport__toolbar-overlay"
             style={overlayStyle}
         >
             <div className="instance-toolbar">
@@ -71,15 +66,6 @@ export const InstanceToolbar = memo(function InstanceToolbar({
                     </button>
                     <VRButton instanceId={instanceId} size="sm" />
                 </div>
-
-                {/* Pin Button */}
-                <button
-                    className={`instance-toolbar__pin-button ${pinned ? 'active' : ''}`}
-                    onClick={onTogglePin}
-                    title={pinned ? 'Unpin toolbar' : 'Pin toolbar (stays visible)'}
-                >
-                    <Icon name={pinned ? 'pinOff' : 'pin'} size={14} />
-                </button>
             </div>
         </div>
     );

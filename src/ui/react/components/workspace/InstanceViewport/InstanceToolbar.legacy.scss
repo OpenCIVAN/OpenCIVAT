@@ -7,14 +7,17 @@
 // INSTANCE TOOLBAR
 // =============================================================================
 
-.instance-toolbar {
+// NOTE: The main .instance-toolbar styles are now in InstanceViewport.scss
+// This file is kept for the legacy standalone toolbar component
+// Visibility is controlled by the parent .instance-viewport__toolbar-overlay
+
+.instance-toolbar--standalone {
   position: absolute;
   left: 50%;
   transform: translateX(-50%) translateY(-50px);
   opacity: 0;
   pointer-events: none;
   transition: transform $transition-fast, opacity $transition-fast;
-  z-index: $z-dropdown;
 }
 
 .instance-toolbar--top {
@@ -26,11 +29,12 @@
   top: auto;
 }
 
-.instance-toolbar--visible {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-  pointer-events: auto;
-}
+// REMOVED - was conflicting with new implementation
+// .instance-toolbar--visible {
+//   transform: translateX(-50%) translateY(0);
+//   opacity: 1;
+//   pointer-events: auto;
+// }
 
 // =============================================================================
 // CONTAINER
@@ -42,7 +46,7 @@
   gap: 2px;
   padding: $spacing-xs $spacing-sm;
   background: rgba($color-bg-secondary, 0.95);
-  backdrop-filter: blur(12px);
+  // backdrop-filter: blur(12px); // DISABLED - causes WebGL glitching
   border: 1px solid $color-border-default;
   border-radius: $radius-md;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);

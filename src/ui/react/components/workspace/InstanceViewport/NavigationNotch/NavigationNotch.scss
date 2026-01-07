@@ -38,11 +38,11 @@ $notch-padding: $spacing-sm $spacing-md;
     display: flex;
     align-items: center;
     gap: $spacing-xs;
-    background: $notch-bg;
-    backdrop-filter: blur(8px);
+    background: $notch-bg-solid; // Use solid background instead of blur (WebGL compatibility)
+    // backdrop-filter: blur(8px); // DISABLED - causes WebGL glitching
     box-shadow: $notch-inset-shadow;
     transition: all $transition-base;
-    z-index: 10;
+    // No z-index - rely on DOM order
 
     // Accent border on exposed edge
     &::before {

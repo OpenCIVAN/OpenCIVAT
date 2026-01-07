@@ -4,12 +4,23 @@
  * Viewport is constrained to canvas dimensions (or max 10 if canvas not provided).
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { Dropdown } from '@UI/react/components/atoms/Dropdown';
 
 import './ViewportSizeDisplay.scss';
+
+// Quick pick presets for viewport sizes
+const VIEWPORT_PRESETS = [
+    { id: '1x1', label: '1×1', cols: 1, rows: 1 },
+    { id: '2x2', label: '2×2', cols: 2, rows: 2 },
+    { id: '3x3', label: '3×3', cols: 3, rows: 3 },
+    { id: '4x4', label: '4×4', cols: 4, rows: 4 },
+    { id: '2x1', label: '2×1', cols: 2, rows: 1 },
+    { id: '1x2', label: '1×2', cols: 1, rows: 2 },
+    { id: '3x2', label: '3×2', cols: 3, rows: 2 },
+];
 
 /**
  * Viewport size display and control component.
@@ -38,6 +49,13 @@ export function ViewportSizeDisplay({ size = { cols: 3, rows: 3 }, maxSize = { r
         });
     };
 
+    const handlePreset = useCallback((preset) => {
+        // Clamp to max bounds
+        const cols = Math.min(preset.cols, safeMaxCols);
+        const rows = Math.min(preset.rows, safeMaxRows);
+        onChange?.({ rows, cols });
+    }, [safeMaxRows, safeMaxCols, onChange]);
+
     return (
         <Dropdown
             trigger={
@@ -53,6 +71,27 @@ export function ViewportSizeDisplay({ size = { cols: 3, rows: 3 }, maxSize = { r
         >
             <div className="viewport-size-display__popover">
                 <div className="viewport-size-display__header">Viewport Size</div>
+
+                {/* Quick Pick Presets */}
+                <div className="viewport-size-display__presets">
+                    {VIEWPORT_PRESETS.map(preset => {
+                        const isDisabled = preset.cols > safeMaxCols || preset.rows > safeMaxRows;
+                        const isActive = preset.cols === safeCols && preset.rows === safeRows;
+                        return (
+                            <button
+                                key={preset.id}
+                                className={`viewport-size-display__preset ${isActive ? 'viewport-size-display__preset--active' : ''}`}
+                                disabled={isDisabled}
+                                onClick={() => handlePreset(preset)}
+                            >
+                                {preset.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="viewport-size-display__divider" />
+
                 <div className="viewport-size-display__row">
                     <span>Rows</span>
                     <div className="viewport-size-display__controls">

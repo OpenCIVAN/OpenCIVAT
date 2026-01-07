@@ -74,6 +74,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         error: canvasError,
         moveViewport,
         setViewportPosition: navigateTo,
+        setViewportSize,
         addPlacement: serverAddPlacement,
     } = useCanvas(activeCanvasId);
 
@@ -115,6 +116,13 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
     // NOTE: Viewport sync events are handled by CanvasGrid directly
     // Do NOT listen here to avoid double movement
+
+    // Sync local gridSize display state with actual viewport from useCanvas
+    useEffect(() => {
+        if (viewport?.rows && viewport?.cols) {
+            setGridSize({ rows: viewport.rows, cols: viewport.cols });
+        }
+    }, [viewport?.rows, viewport?.cols]);
 
     // Add placement (server-authoritative)
     const addPlacement = useCallback(async (placementData) => {
@@ -412,7 +420,9 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                         await canvasManager.updateCanvas(activeCanvasId, { dimensions: newDimensions });
                     }}
                     onViewportSizeChange={(newSize) => {
-                        // Update local viewport size
+                        // Update viewport size in useCanvas hook (this is the actual viewport used by CanvasGrid)
+                        setViewportSize(newSize.rows, newSize.cols);
+                        // Also update local gridSize state for UI display consistency
                         setGridSize({ rows: newSize.rows, cols: newSize.cols });
                     }}
                     // Canvas mode
