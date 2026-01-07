@@ -540,3 +540,106 @@ export const WithDisabledTools = {
         onSelectTool: (tool) => console.log('Selected:', tool),
     },
 };
+
+// =============================================================================
+// VTK CAMERA VIEWS (with camera-grid)
+// =============================================================================
+
+const vtkTools = [
+    {
+        id: 'views',
+        type: 'menu',
+        icon: 'camera',
+        label: 'Views',
+        description: 'Standard camera views',
+        options: [
+            {
+                type: 'camera-grid',
+                id: 'camera-grid-main',
+                views: [
+                    { id: 'top', label: 'Top' },
+                    { id: 'isometric', label: 'ISO', special: true },
+                    { id: 'left', label: 'Left' },
+                    { id: 'bottom', label: 'Bottom' },
+                    { id: 'front', label: 'Front' },
+                    { id: 'back', label: 'Back' },
+                ],
+                onViewSelect: (viewId) => console.log('Camera view selected:', viewId),
+            },
+            { type: 'separator' },
+            { id: 'reset', icon: 'rotateCcw', label: 'Reset Camera', shortcut: 'R' },
+        ],
+    },
+    {
+        id: 'representation',
+        type: 'menu',
+        icon: 'box',
+        label: 'Representation',
+        description: 'Surface representation',
+        options: [
+            { id: 'surface', icon: 'box', label: 'Surface', active: true },
+            { id: 'wireframe', icon: 'grid', label: 'Wireframe' },
+            { id: 'points', icon: 'scatter', label: 'Points' },
+        ],
+    },
+    { type: 'separator' },
+    { id: 'colormap', icon: 'palette', label: 'Colormap' },
+    { id: 'clip', icon: 'scissors', label: 'Clip Plane' },
+];
+
+export const VTKCameraViews = {
+    args: {
+        activeView: createMockView('3D Volume', COLORS.green),
+        tools: vtkTools,
+        onSelectTool: (tool) => console.log('Selected:', tool),
+        onOpenFullTools: () => console.log('Open full tools'),
+        zoomLevel: 100,
+        onZoomIn: () => console.log('Zoom in'),
+        onZoomOut: () => console.log('Zoom out'),
+        onFit: () => console.log('Fit'),
+        onResetCamera: () => console.log('Reset camera'),
+    },
+    parameters: {
+        docs: {
+            description: {
+                story: `
+Demonstrates the camera-grid feature used for VTK 3D views.
+Click the camera icon to see the grid of standard views:
+
+- **Top/Bottom** - View from above/below
+- **Front/Back** - View from front/rear
+- **Left** - View from side
+- **ISO** - Isometric view (highlighted as special)
+
+The camera-grid renders as a compact 3-column grid of buttons.
+                `,
+            },
+        },
+    },
+};
+
+// =============================================================================
+// ACCENT POSITION VARIANTS
+// =============================================================================
+
+export const AccentTop = {
+    args: {
+        activeView: createMockView('Volume Data', COLORS.blue),
+        tools: basicTools,
+        accentPosition: 'top',
+        onSelectTool: (tool) => console.log('Selected:', tool),
+        onOpenFullTools: () => console.log('Open full tools'),
+        zoomLevel: 100,
+    },
+};
+
+export const AccentBottom = {
+    args: {
+        activeView: createMockView('Chart Data', COLORS.purple),
+        tools: basicTools,
+        accentPosition: 'bottom',
+        onSelectTool: (tool) => console.log('Selected:', tool),
+        onOpenFullTools: () => console.log('Open full tools'),
+        zoomLevel: 100,
+    },
+};

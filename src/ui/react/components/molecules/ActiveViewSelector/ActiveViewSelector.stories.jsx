@@ -26,7 +26,7 @@ const manyViews = [
 ];
 
 export default {
-    title: 'Bars/ActiveViewSelector',
+    title: 'Molecules/ActiveViewSelector',
     component: ActiveViewSelector,
     parameters: {
         layout: 'centered',

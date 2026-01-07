@@ -34,7 +34,7 @@ const MockFlowDirectionToggle = ({ direction = 'row', onChange }) => {
                 type="button"
                 title="Row-first placement"
             >
-                <Icon name="flowRow" size={16} />
+                <Icon name="arrow_forward" size={16} />
             </button>
             <button
                 style={{
@@ -54,7 +54,7 @@ const MockFlowDirectionToggle = ({ direction = 'row', onChange }) => {
                 type="button"
                 title="Column-first placement"
             >
-                <Icon name="flowColumn" size={16} />
+                <Icon name="arrow_downward" size={16} />
             </button>
         </div>
     );
@@ -74,7 +74,7 @@ const InteractiveFlowToggle = () => {
 };
 
 export default {
-    title: 'Bars/FlowDirectionToggle',
+    title: 'Molecules/FlowDirectionToggle',
     component: MockFlowDirectionToggle,
     parameters: {
         layout: 'centered',

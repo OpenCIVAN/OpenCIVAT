@@ -27,6 +27,7 @@ import {
 } from "@Core/events/eventConstants.js";
 import { dispatchNavigateTo } from "@UI/react/hooks/useViewportSync.js";
 import { view as log } from "@Utils/logger.js";
+import { getCellColorHex } from "@UI/react/utils/canvasColors.js";
 
 // =============================================================================
 // VIEW MODES
@@ -112,8 +113,6 @@ function enrichView(view) {
 
   // Get placement info from canvas
   const placement = findPlacementForView(view.id);
-  const instanceColorObj = workspaceManager?.getViewColor?.(view.id);
-  const instanceColor = instanceColorObj?.hex || instanceColorObj;
 
   // Determine if view has any links
   const hasLinks =
@@ -130,6 +129,18 @@ function enrichView(view) {
   // isOnCanvas is determined by placement existence
   const isOnCanvas = placement !== null;
 
+  // For views ON the canvas, use position-based color (matches CanvasCell coloring)
+  // For views NOT on canvas, use workspaceManager color or random color
+  let viewColor;
+  if (isOnCanvas && placement) {
+    // Position-based color - matches CanvasCell exactly
+    viewColor = getCellColorHex(placement.row, placement.col);
+  } else {
+    // Fallback for views not on canvas
+    const instanceColorObj = workspaceManager?.getViewColor?.(view.id);
+    viewColor = instanceColorObj?.hex || instanceColorObj || view.color || "#60a5fa";
+  }
+
   // Look up actual dataset name from DatasetManager if not set on view
   let datasetName = view.datasetName;
   if (!datasetName && view.datasetId) {
@@ -144,7 +155,7 @@ function enrichView(view) {
     name: view.name || "Untitled View",
     datasetId: view.datasetId,
     datasetName: datasetName || "Unknown Dataset",
-    color: instanceColor || view.color || "#60a5fa",
+    color: viewColor,
 
     // Position & size
     position: placement ? { row: placement.row, col: placement.col } : null,

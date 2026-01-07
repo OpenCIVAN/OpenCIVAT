@@ -18,6 +18,7 @@ import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { dataset as log } from '@Utils/logger.js';
 import { DatasetSettingsModal } from '@UI/react/components/modals/DatasetSettingsModal';
+import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
 import { ViewItem } from '@UI/react/components/molecules/ViewItem';
 import { viewLifecycleService } from '@Services';
 import { formatFileSize, formatRelativeTime } from '@Utils/formatters.js';
@@ -340,14 +341,23 @@ export function DatasetsPanelContent() {
             return views
                 .filter(v => v.status !== 'trashed' && v.status !== 'archived')
                 .map(v => {
-                    const instanceColorObj = workspaceManager?.getViewColor?.(v.id);
-                    const instanceColor = instanceColorObj?.hex || instanceColorObj;
                     const placement = canvasManager?.getPlacementForView?.(v.id);
+
+                    // For views ON the canvas, use position-based color (matches CanvasCell)
+                    // For views NOT on canvas, use workspaceManager color or default
+                    let viewColor;
+                    if (placement) {
+                        viewColor = getCellColorHex(placement.row, placement.col);
+                    } else {
+                        const instanceColorObj = workspaceManager?.getViewColor?.(v.id);
+                        viewColor = instanceColorObj?.hex || instanceColorObj || v.color || '#60a5fa';
+                    }
+
                     return {
                         ...v,
                         // Ensure datasetName is set from the parent dataset, not derived from view name
                         datasetName: v.datasetName || datasetName,
-                        color: instanceColor || v.color || '#60a5fa',
+                        color: viewColor,
                         position: placement ? { row: placement.row, col: placement.col } : null,
                         status: v.status === 'active' || placement ? 'active' : 'inactive',
                     };

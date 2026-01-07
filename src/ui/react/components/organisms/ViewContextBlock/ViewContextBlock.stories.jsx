@@ -23,7 +23,7 @@ const mockActiveView = {
 };
 
 export default {
-    title: 'Bars/ViewContextBlock',
+    title: 'Organisms/ViewContextBlock',
     component: ViewContextBlock,
     parameters: {
         layout: 'centered',

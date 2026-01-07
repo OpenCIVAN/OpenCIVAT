@@ -36,3 +36,28 @@ export { ViewContextBlock } from './ViewContextBlock';
 
 // VoiceControlsPanel - Voice command controls panel
 export { VoiceControlsPanel } from './VoiceControlsPanel';
+
+// =============================================================================
+// MODE TOGGLE ORGANISMS (moved from controls/)
+// =============================================================================
+
+// LayoutModeToggle - Normal/Isolation/Subset mode toggle (built on SegmentedToggle)
+export {
+    LayoutModeToggle,
+    LayoutModeIndicator,
+    LAYOUT_MODES,
+    LAYOUT_MODE_INFO,
+    useLayoutModeToggle,
+    useLayoutModeKeyboardShortcut,
+} from './LayoutModeToggle';
+
+// ViewModeToggle - Desktop/VR mode toggle (built on SegmentedToggle)
+export {
+    ViewModeToggle,
+    ViewModeIndicator,
+    VIEW_MODES,
+    useViewModeToggle,
+    useWebXRAvailability,
+    useViewModeKeyboardShortcut,
+    useGlobalKeyboardShortcuts,
+} from './ViewModeToggle';

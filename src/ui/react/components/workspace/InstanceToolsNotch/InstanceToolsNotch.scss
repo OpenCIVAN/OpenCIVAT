@@ -224,7 +224,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  position: relative; // For chevron overlay positioning
 
   background: transparent;
   border: 1px solid transparent;
@@ -255,14 +255,24 @@
     cursor: not-allowed;
   }
 
-  svg {
+  // Main icon stays centered
+  > svg:first-child {
     flex-shrink: 0;
   }
 }
 
+// Chevron overlays in bottom-right corner, doesn't affect icon centering
 .instance-tools-notch__tool-chevron {
-  margin-left: -2px;
-  opacity: 0.6;
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  opacity: 0.7;
+  pointer-events: none; // Click passes through to button
+
+  // Small background pill for visibility
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  padding: 1px;
 }
 
 // =============================================================================

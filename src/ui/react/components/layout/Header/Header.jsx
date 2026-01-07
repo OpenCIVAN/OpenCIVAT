@@ -25,7 +25,7 @@ import { HelpButton } from './components/HelpButton';
 import { NotificationBell } from './components/NotificationBell';
 import { ThemeToggle } from './components/ThemeToggle';
 import { UserMenu } from './components/UserMenu';
-import { ViewModeToggle } from '@UI/react/components/controls/ViewModeToggle';
+import { ViewModeToggle } from '@UI/react/components/organisms';
 
 import './Header.scss';
 

@@ -177,7 +177,7 @@ const MockRoomPresenceIndicator = ({
 };
 
 export default {
-    title: 'Bars/RoomPresenceIndicator',
+    title: 'Organisms/RoomPresenceIndicator',
     component: MockRoomPresenceIndicator,
     parameters: {
         layout: 'centered',

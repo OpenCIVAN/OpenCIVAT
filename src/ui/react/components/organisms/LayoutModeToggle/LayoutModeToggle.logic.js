@@ -1,4 +1,4 @@
-// src/ui/react/components/controls/LayoutModeToggle/LayoutModeToggle.logic.js
+// src/ui/react/components/organisms/LayoutModeToggle/LayoutModeToggle.logic.js
 // Headless logic for layout mode toggle
 // Handles Normal/Isolation/Subset mode switching
 

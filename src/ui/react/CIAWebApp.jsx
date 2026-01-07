@@ -89,8 +89,8 @@ import {
   useWebXRAvailability,
   useViewModeKeyboardShortcut,
   useGlobalKeyboardShortcuts,
-} from "@UI/react/components/controls/ViewModeToggle";
-import { LAYOUT_MODES } from "@UI/react/components/controls/LayoutModeToggle";
+  LAYOUT_MODES,
+} from "@UI/react/components/organisms";
 import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
 import { useRoomIndicator } from "@UI/react/hooks/useRoomIndicator.js";
 

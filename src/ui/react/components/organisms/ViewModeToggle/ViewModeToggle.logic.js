@@ -1,4 +1,4 @@
-// src/ui/react/components/controls/ViewModeToggle/ViewModeToggle.logic.js
+// src/ui/react/components/organisms/ViewModeToggle/ViewModeToggle.logic.js
 // Headless logic for view mode toggle
 // Handles Desktop/VR mode switching with WebXR detection
 
