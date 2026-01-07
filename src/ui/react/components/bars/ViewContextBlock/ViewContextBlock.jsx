@@ -305,15 +305,14 @@ const ViewHubFlyout = memo(function ViewHubFlyout({
                                                 )}
                                             </div>
                                         </div>
-                                        {isActive && (
-                                            <span className="view-hub-flyout__item-indicator">●</span>
-                                        )}
-                                        {!isActive && !isSubset && (
+                                        {/* Show close button for all views except in subset mode */}
+                                        {!isSubset && (
                                             <button
                                                 type="button"
                                                 className="view-hub-flyout__item-remove"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    console.log('[ViewContextBlock] Remove clicked for:', v);
                                                     onAction?.('remove', v);
                                                 }}
                                                 title="Remove from canvas"

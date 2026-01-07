@@ -68,6 +68,13 @@ export function useViewContextLogic() {
   // Get cells (enriched placements) from context - this is the source of truth
   const cells = logic.cells || [];
 
+  // Debug: Log context availability
+  if (!layoutContext) {
+    log.warn("ViewContext: LayoutPanelContext not available - hook called outside provider?");
+  } else if (!logic.cells) {
+    log.debug("ViewContext: No cells in context yet");
+  }
+
   // Extract viewport position with safe defaults
   const viewport = useMemo(
     () => ({
@@ -249,23 +256,47 @@ export function useViewContextLogic() {
 
   /**
    * Get available views (not on canvas)
+   * Uses same approach as useViewsTab - access _viewConfigs directly
    */
   const availableViews = useMemo(() => {
     const vcm = getViewConfigurationManager?.();
-    if (!vcm) return [];
+    if (!vcm) {
+      console.log("[ViewContext] No ViewConfigurationManager available");
+      return [];
+    }
 
-    const allViews = vcm.getAllViewConfigurations?.() || [];
+    // Get all views - access _viewConfigs Map directly (same as useViewsTab)
+    let allViews = [];
+    if (vcm._viewConfigs instanceof Map) {
+      allViews = Array.from(vcm._viewConfigs.values());
+    } else {
+      // Fallback: combine available methods
+      const myViews = vcm.getMyViews?.() || [];
+      const sharedViews = vcm.getSharedWithMe?.() || [];
+      const viewMap = new Map();
+      [...myViews, ...sharedViews].forEach((v) => {
+        if (v?.id) viewMap.set(v.id, v);
+      });
+      allViews = Array.from(viewMap.values());
+    }
+
     const onCanvasIds = new Set(onCanvasViews.map((v) => v.id));
 
-    return allViews
-      .filter((v) => !onCanvasIds.has(v.id))
+    console.log("[ViewContext] All view configs:", allViews.length);
+    console.log("[ViewContext] On canvas:", onCanvasIds.size);
+
+    const available = allViews
+      .filter((v) => !onCanvasIds.has(v.id) && v.status !== "trashed")
       .map((v, index) => ({
         id: v.id,
         name: v.name || `View of ${v.datasetId || "Unknown"}`,
-        type: v.type || "vtk",
+        type: v.handlerType || v.type || "vtk",
         color: getViewColor(v.id, index),
         datasetName: v.datasetName || v.datasetId,
       }));
+
+    console.log("[ViewContext] Available (not on canvas):", available.length);
+    return available;
   }, [onCanvasViews, refreshKey]);
 
   /**
@@ -393,24 +424,33 @@ export function useViewContextLogic() {
 
   /**
    * Remove a view from the canvas
+   * Uses logic.removePlacement from LayoutPanelContext
    */
   const handleRemoveView = useCallback(
     async (viewId) => {
-      log.debug("ViewContext: Remove view", viewId);
-
-      const canvas = canvasManager?.getActiveCanvas?.();
-      if (!canvas) return;
+      console.log("[ViewContext] Remove view:", viewId);
+      console.log("[ViewContext] Available cells:", cells.map(c => ({ id: c.id, viewConfigurationId: c.viewConfigurationId })));
 
       // Find the placement with this view
       const placement = cells.find(
         (cell) => cell.viewConfigurationId === viewId || cell.id === viewId
       );
 
+      console.log("[ViewContext] Found placement:", placement);
+
       if (placement) {
-        await canvas.removePlacement?.(placement.row, placement.col);
+        console.log("[ViewContext] Removing placement id:", placement.id);
+        // Use removePlacement from layout context - takes placement ID
+        if (logic.removePlacement) {
+          await logic.removePlacement(placement.id);
+        } else {
+          console.warn("[ViewContext] removePlacement not available in context");
+        }
+      } else {
+        console.warn("[ViewContext] Placement not found for viewId:", viewId);
       }
     },
-    [cells]
+    [cells, logic]
   );
 
   /**
@@ -418,10 +458,11 @@ export function useViewContextLogic() {
    */
   const handleViewAction = useCallback(
     (action, view) => {
-      log.debug("ViewContext: View action", action, view);
+      console.log("[ViewContext] View action:", action, view);
 
       switch (action) {
         case "remove":
+          console.log("[ViewContext] Calling handleRemoveView with id:", view?.id);
           if (view?.id) handleRemoveView(view.id);
           break;
         case "place":
@@ -432,7 +473,7 @@ export function useViewContextLogic() {
           window.dispatchEvent(new CustomEvent("open:create-view"));
           break;
         default:
-          log.warn("Unknown view action:", action);
+          console.warn("[ViewContext] Unknown view action:", action);
       }
     },
     [handleRemoveView, handlePlaceView]

@@ -430,17 +430,7 @@ export const CanvasNavigator = memo(function CanvasNavigator({
         handleCellClick,
     } = logic;
 
-    // Debug: Log functions from logic hook
-    React.useEffect(() => {
-        console.log('[CanvasNavigator] Logic hook functions:', {
-            setViewportSizeRows: typeof setViewportSizeRows,
-            setViewportSizeCols: typeof setViewportSizeCols,
-            setCanvasRows: typeof setCanvasRows,
-            setCanvasCols: typeof setCanvasCols,
-            canvasSize,
-            viewportSize,
-        });
-    }, [setViewportSizeRows, setViewportSizeCols, setCanvasRows, setCanvasCols, canvasSize, viewportSize]);
+    // Debug logging removed - was causing console spam
 
     // Dock position from context
     const dockPosition_ = context?.dockPosition || DOCK_POSITIONS.FLOAT;
