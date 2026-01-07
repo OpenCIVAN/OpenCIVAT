@@ -28,7 +28,7 @@ import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
 import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
 import { NavigationNotch } from './NavigationNotch';
-import { InstanceHeader, hexToRgb } from './InstanceHeader';
+import { ViewHeader, hexToRgb } from '@UI/react/components/workspace/ViewHeader';
 import { InstanceToolbar } from './InstanceToolbar';
 
 // Instance Tools panel content for embedded fullscreen mode
@@ -1467,26 +1467,26 @@ export function InstanceViewport({
             onMouseDown={handleActivateInstance}
         >
             {/* Header - ALWAYS renders, even before data loads */}
-            <InstanceHeader
+            <ViewHeader
+                variant="active"
+                renderMode={effectiveRenderMode}
                 displayName={displayName}
-                fileTypeDisplayInfo={fileTypeDisplayInfo}
-                instanceColor={effectiveColor}
-                isFullscreen={isFullscreen}
+                color={effectiveColor}
+                fileTypeInfo={fileTypeDisplayInfo}
                 isActive={isFocused}
                 isLoading={loading || !hasData}
-                renderMode={effectiveRenderMode}
                 isInFocusMode={isInFocusMode}
+                isFullscreen={isFullscreen}
                 collaborators={collaborators}
-                onFullscreen={handleFullscreen}
                 onFocus={onFocus}
                 onClose={handleClose}
-                onTrash={handleTrash}
+                onDelete={handleTrash}
                 onOpenInstanceTools={handleOpenInstanceTools}
+                onFullscreen={handleFullscreen}
                 onVRMode={handleVRMode}
                 onResetCamera={handleResetCamera}
                 onFitView={handleFit}
                 onDuplicate={handleDuplicate}
-                instanceId={actualInstanceId}
                 onShowToolbar={showToolbar}
                 onHideToolbar={hideToolbar}
             />

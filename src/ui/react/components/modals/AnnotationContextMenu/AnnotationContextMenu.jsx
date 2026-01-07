@@ -130,7 +130,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__close"
                     onClick={onClose}
                 >
-                    <X size={12} />
+                    <Icon name="close" size={12} />
                 </button>
             </div>
 

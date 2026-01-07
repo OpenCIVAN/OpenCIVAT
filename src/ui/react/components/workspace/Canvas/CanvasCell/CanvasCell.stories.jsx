@@ -413,3 +413,94 @@ export const GridLayout = {
         );
     },
 };
+
+// =============================================================================
+// COLOR VARIANTS - Test different position-based colors
+// =============================================================================
+
+const CELL_COLORS = [
+    { name: 'Blue', hex: '#60a5fa', rgb: '96, 165, 250' },
+    { name: 'Green', hex: '#34d399', rgb: '52, 211, 153' },
+    { name: 'Purple', hex: '#c084fc', rgb: '192, 132, 252' },
+    { name: 'Pink', hex: '#fb7185', rgb: '251, 113, 133' },
+    { name: 'Amber', hex: '#fbbf24', rgb: '251, 191, 36' },
+    { name: 'Teal', hex: '#7dd3fc', rgb: '125, 211, 252' },
+];
+
+export const ColorVariants = {
+    render: () => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+            {CELL_COLORS.map((color, index) => {
+                const placement = {
+                    ...mockViewPlacement,
+                    id: `placement-${color.name}`,
+                    content: {
+                        ...mockViewPlacement.content,
+                        name: `View ${color.name}`,
+                        colorHex: color.hex,
+                    },
+                };
+                return (
+                    <div key={color.name}>
+                        <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px', textTransform: 'uppercase' }}>
+                            {color.name}
+                        </div>
+                        <CanvasCell
+                            placement={placement}
+                            row={Math.floor(index / 3)}
+                            col={index % 3}
+                            renderMode={RENDER_MODES.FULL}
+                            cellSize={{ width: 250, height: 180 }}
+                            positionColor={color}
+                        />
+                    </div>
+                );
+            })}
+        </div>
+    ),
+};
+
+export const BorderStates = {
+    render: () => (
+        <div style={{ display: 'flex', gap: '24px' }}>
+            <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    Default
+                </div>
+                <CanvasCell
+                    placement={mockViewPlacement}
+                    row={0}
+                    col={0}
+                    renderMode={RENDER_MODES.FULL}
+                    cellSize={{ width: 250, height: 180 }}
+                />
+            </div>
+            <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    Hover (simulated)
+                </div>
+                <CanvasCell
+                    placement={mockViewPlacement}
+                    row={0}
+                    col={1}
+                    renderMode={RENDER_MODES.FULL}
+                    cellSize={{ width: 250, height: 180 }}
+                    isHighlighted={true}
+                />
+            </div>
+            <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    Selected
+                </div>
+                <CanvasCell
+                    placement={mockViewPlacement}
+                    row={0}
+                    col={2}
+                    renderMode={RENDER_MODES.FULL}
+                    cellSize={{ width: 250, height: 180 }}
+                    isSelected={true}
+                />
+            </div>
+        </div>
+    ),
+};

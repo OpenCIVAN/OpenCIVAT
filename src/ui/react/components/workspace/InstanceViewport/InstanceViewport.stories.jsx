@@ -271,3 +271,137 @@ export const WithActiveTools = {
         ],
     },
 };
+
+// =============================================================================
+// COLOR VARIANTS - Test different instance colors
+// =============================================================================
+
+const INSTANCE_COLORS = [
+    { name: 'Blue', hex: '#60a5fa', rgb: '96, 165, 250' },
+    { name: 'Green', hex: '#34d399', rgb: '52, 211, 153' },
+    { name: 'Purple', hex: '#c084fc', rgb: '192, 132, 252' },
+    { name: 'Pink', hex: '#fb7185', rgb: '251, 113, 133' },
+    { name: 'Amber', hex: '#fbbf24', rgb: '251, 191, 36' },
+    { name: 'Teal', hex: '#7dd3fc', rgb: '125, 211, 252' },
+];
+
+export const ColorVariants = {
+    render: () => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            {INSTANCE_COLORS.map(color => (
+                <div key={color.name} style={{ width: '280px', height: '200px' }}>
+                    <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px', textTransform: 'uppercase' }}>
+                        {color.name}
+                    </div>
+                    <div
+                        className="instance-viewport"
+                        style={{
+                            '--instance-color': color.hex,
+                            '--instance-color-rgb': color.rgb,
+                            height: '180px'
+                        }}
+                    >
+                        <div className="instance-viewport__header">
+                            <div className="instance-viewport__header-left">
+                                <div className="instance-viewport__label">
+                                    <div className="instance-viewport__label-dot" />
+                                    <span className="instance-viewport__label-text">View {color.name}</span>
+                                </div>
+                            </div>
+                            <div className="instance-viewport__header-controls">
+                                <button className="instance-viewport__header-button" title="Close">
+                                    <Icon name="close" size={12} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="instance-viewport__content">
+                            <div style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'rgba(255,255,255,0.2)',
+                            }}>
+                                <Icon name="box" size={48} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    ),
+    parameters: {
+        layout: 'padded',
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ background: '#0a0a0f', padding: '24px' }}>
+                <Story />
+            </div>
+        ),
+    ],
+};
+
+export const ActiveState = {
+    render: () => (
+        <div style={{ display: 'flex', gap: '24px' }}>
+            <div style={{ width: '300px', height: '220px' }}>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    Inactive
+                </div>
+                <div
+                    className="instance-viewport"
+                    style={{
+                        '--instance-color': '#60a5fa',
+                        '--instance-color-rgb': '96, 165, 250',
+                        height: '200px'
+                    }}
+                >
+                    <div className="instance-viewport__header">
+                        <div className="instance-viewport__header-left">
+                            <div className="instance-viewport__label">
+                                <div className="instance-viewport__label-dot" />
+                                <span className="instance-viewport__label-text">Inactive View</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="instance-viewport__content" />
+                </div>
+            </div>
+            <div style={{ width: '300px', height: '220px' }}>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    Active
+                </div>
+                <div
+                    className="instance-viewport instance-viewport--active"
+                    style={{
+                        '--instance-color': '#60a5fa',
+                        '--instance-color-rgb': '96, 165, 250',
+                        height: '200px'
+                    }}
+                >
+                    <div className="instance-viewport__header instance-viewport__header--active">
+                        <div className="instance-viewport__header-left">
+                            <div className="instance-viewport__label">
+                                <div className="instance-viewport__label-dot" />
+                                <span className="instance-viewport__label-text">Active View</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="instance-viewport__content" />
+                </div>
+            </div>
+        </div>
+    ),
+    parameters: {
+        layout: 'padded',
+    },
+    decorators: [
+        (Story) => (
+            <div style={{ background: '#0a0a0f', padding: '24px' }}>
+                <Story />
+            </div>
+        ),
+    ],
+};

@@ -16,6 +16,7 @@
 import React, { memo, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
+import { ViewHeader } from '@UI/react/components/workspace/ViewHeader';
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -110,72 +111,46 @@ import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitial
 import './CanvasCell.scss';
 
 // =============================================================================
-// MINI HEADER - For thumbnail/snapshot modes
+// COLD VIEW HEADER - For thumbnail/snapshot modes (uses unified ViewHeader)
 // =============================================================================
 
 /**
- * MiniHeader - Compact header overlay for thumbnail/snapshot modes
- * Shows color dot, truncated name, and gear/close buttons on hover
+ * ColdViewHeader - Header for cold views (thumbnail/snapshot modes)
+ * Uses the unified ViewHeader component with variant='cold'
  */
-function MiniHeader({ viewId, viewColor, onClose, onActivate, isSnapshot }) {
-    const [showMenu, setShowMenu] = useState(false);
-
-    // Get view name
-    const displayName = useMemo(() => {
+function ColdViewHeader({ viewId, viewColor, onClose, onActivate, onVRMode, onFocus, renderMode }) {
+    // Get view name and file type info
+    const { displayName, fileTypeInfo } = useMemo(() => {
         try {
             const view = getViewConfigurationManager()?.getView(viewId);
             if (view) {
                 const dataset = getDatasetManager()?.getDataset(view.datasetId);
-                return dataset?.filename || view.name || 'View';
+                const name = dataset?.filename || view.name || 'View';
+                const fileType = dataset?.fileType;
+                const typeInfo = fileType ? { icon: 'box' } : { icon: 'box' };
+                return { displayName: name, fileTypeInfo: typeInfo };
             }
         } catch (e) {
             // Fall through
         }
-        return 'View';
+        return { displayName: 'View', fileTypeInfo: { icon: 'box' } };
     }, [viewId]);
 
     const colorHex = viewColor || '#60a5fa';
 
     return (
-        <div className="canvas-cell__mini-header">
-            {/* Color dot */}
-            <div
-                className="canvas-cell__mini-header-dot"
-                style={{ background: colorHex, boxShadow: `0 0 4px ${colorHex}` }}
-            />
-
-            {/* Name - shown on hover */}
-            <span className="canvas-cell__mini-header-name">
-                {displayName}
-            </span>
-
-            {/* Spacer */}
-            <div style={{ flex: 1 }} />
-
-            {/* Gear button */}
-            <button
-                className="canvas-cell__mini-header-btn"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onActivate?.();
-                }}
-                title="Open"
-            >
-                <Icon name="maximize2" size={10} />
-            </button>
-
-            {/* Close button */}
-            <button
-                className="canvas-cell__mini-header-btn canvas-cell__mini-header-close"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onClose?.();
-                }}
-                title="Close"
-            >
-                <Icon name="close" size={10} />
-            </button>
-        </div>
+        <ViewHeader
+            variant="cold"
+            renderMode={renderMode}
+            displayName={displayName}
+            color={{ hex: colorHex, name: 'position' }}
+            fileTypeInfo={fileTypeInfo}
+            isActive={false}
+            onActivate={onActivate}
+            onRemove={onClose}
+            onVRMode={onVRMode}
+            onOpenInIsolation={onFocus}
+        />
     );
 }
 
@@ -679,7 +654,7 @@ export const CanvasCell = memo(function CanvasCell({
                                 }}
                                 title="Remove invalid placement"
                             >
-                                <X size={14} />
+                                <Icon name="close" size={14} />
                                 <span>Remove</span>
                             </button>
                         )}
@@ -988,15 +963,16 @@ function ViewContent({
 
     return (
         <div className="canvas-cell__view-content">
-            {/* Mini header for THUMBNAIL/SNAPSHOT modes - shows on hover */}
-            {/* MiniHeader only for inactive views - active views use InstanceViewport's controls */}
+            {/* Cold view header for THUMBNAIL/SNAPSHOT modes - shows on hover */}
+            {/* ColdViewHeader only for inactive views - active views use InstanceViewport's controls */}
             {uiConfig.showMiniHeader && !isActiveView && (
-                <MiniHeader
+                <ColdViewHeader
                     viewId={viewId}
                     viewColor={viewColor}
                     onClose={onClose}
                     onActivate={onActivate}
-                    isSnapshot={uiConfig.renderContent === 'snapshot'}
+                    onFocus={onFocusView}
+                    renderMode={renderMode}
                 />
             )}
 
@@ -1088,7 +1064,7 @@ function NotesPlaceholder({ notesId, renderMode, onClose }) {
                     }}
                     title="Remove notes"
                 >
-                    <X size={14} />
+                    <Icon name="close" size={14} />
                 </button>
             </div>
             <div className="canvas-cell__notes-body">
@@ -1126,7 +1102,7 @@ function ImagePlaceholder({ imageId, renderMode, onClose }) {
                     }}
                     title="Remove image"
                 >
-                    <X size={14} />
+                    <Icon name="close" size={14} />
                 </button>
             </div>
             <div className="canvas-cell__image-body">

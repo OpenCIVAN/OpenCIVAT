@@ -809,9 +809,10 @@ function ViewContextBlock({
 
     return (
         <div className={`view-context-block ${className}`}>
-            {/* Row 1: Mode Toggle | Active View | Quick Actions */}
-            <div className="view-context-block__row view-context-block__row--main">
-                {/* Mode Toggle */}
+            {/* Column-based layout for vertical alignment */}
+
+            {/* Mode Column: Toggle + Indicator */}
+            <div className="view-context-block__column view-context-block__column--mode">
                 <div className="view-context-block__mode-toggle">
                     {VIEW_MODES.map((m) => (
                         <button
@@ -826,10 +827,23 @@ function ViewContextBlock({
                         </button>
                     ))}
                 </div>
+                <div
+                    className="view-context-block__mode-indicator"
+                    style={{ '--mode-color': currentMode.color }}
+                >
+                    <Icon name={currentMode.icon} size={10} />
+                    <span>
+                        {viewMode === 'normal' && 'All Views'}
+                        {viewMode === 'focus' && 'Focus'}
+                        {viewMode === 'subset' && 'Compare'}
+                    </span>
+                </div>
+            </div>
 
-                <div className="view-context-block__divider" />
+            <div className="view-context-block__divider view-context-block__divider--full" />
 
-                {/* Active View Selector */}
+            {/* View Column: Selector + Context Info */}
+            <div className="view-context-block__column view-context-block__column--view">
                 <div ref={hubRef} className="view-context-block__view-selector">
                     <button
                         type="button"
@@ -874,82 +888,7 @@ function ViewContextBlock({
                     )}
                 </div>
 
-                <div className="view-context-block__divider" />
-
-                {/* Links Button */}
-                <div ref={linksRef} className="view-context-block__links-wrapper">
-                    <button
-                        type="button"
-                        className={`view-context-block__links-btn ${showLinks ? 'view-context-block__links-btn--open' : ''}`}
-                        onClick={() => setShowLinks(!showLinks)}
-                    >
-                        <Icon name="link" size={12} />
-                        <span>Links</span>
-                        {activeLinkCount > 0 && (
-                            <span className="view-context-block__links-badge">{activeLinkCount}</span>
-                        )}
-                        <Icon
-                            name={showLinks ? 'chevronUp' : 'chevronDown'}
-                            size={10}
-                        />
-                    </button>
-
-                    {showLinks && activeView && (
-                        <LinksDropdown
-                            activeView={activeView}
-                            allViews={viewsForLinks}
-                            onUpdateLink={onUpdateLink}
-                            onClose={() => setShowLinks(false)}
-                        />
-                    )}
-                </div>
-
-                <div className="view-context-block__divider" />
-
-                {/* Quick Actions */}
-                <div className="view-context-block__quick-actions">
-                    <IconButton
-                        icon="camera"
-                        label="Snapshot"
-                        size="sm"
-                        disabled={!activeView}
-                        onClick={handleSnapshot}
-                    />
-                    <IconButton
-                        icon="copy"
-                        label="Duplicate"
-                        size="sm"
-                        disabled={!activeView}
-                        onClick={handleDuplicate}
-                    />
-                    <IconButton
-                        icon="settings"
-                        label="Settings"
-                        size="sm"
-                        disabled={!activeView}
-                        onClick={handleOpenSettings}
-                    />
-                </div>
-            </div>
-
-            {/* Row 2: Mode Indicator | Contextual Info */}
-            <div className="view-context-block__row view-context-block__row--context">
-                {/* Mode indicator */}
-                <div
-                    className="view-context-block__mode-indicator"
-                    style={{ '--mode-color': currentMode.color }}
-                >
-                    <Icon name={currentMode.icon} size={10} />
-                    <span>
-                        {viewMode === 'normal' && 'All Views'}
-                        {viewMode === 'focus' && 'Focus'}
-                        {viewMode === 'subset' && 'Compare'}
-                    </span>
-                </div>
-
-                <div className="view-context-block__divider view-context-block__divider--short" />
-
-                {/* Contextual content */}
+                {/* Contextual content below view selector */}
                 <div className="view-context-block__context-content">
                     {viewMode === 'normal' && (
                         <div className="view-context-block__normal-info">
@@ -1005,6 +944,67 @@ function ViewContextBlock({
                             )}
                         </div>
                     )}
+                </div>
+            </div>
+
+            <div className="view-context-block__divider view-context-block__divider--full" />
+
+            {/* Links Column */}
+            <div className="view-context-block__column view-context-block__column--links">
+                <div ref={linksRef} className="view-context-block__links-wrapper">
+                    <button
+                        type="button"
+                        className={`view-context-block__links-btn ${showLinks ? 'view-context-block__links-btn--open' : ''}`}
+                        onClick={() => setShowLinks(!showLinks)}
+                    >
+                        <Icon name="link" size={12} />
+                        <span>Links</span>
+                        {activeLinkCount > 0 && (
+                            <span className="view-context-block__links-badge">{activeLinkCount}</span>
+                        )}
+                        <Icon
+                            name={showLinks ? 'chevronUp' : 'chevronDown'}
+                            size={10}
+                        />
+                    </button>
+
+                    {showLinks && activeView && (
+                        <LinksDropdown
+                            activeView={activeView}
+                            allViews={viewsForLinks}
+                            onUpdateLink={onUpdateLink}
+                            onClose={() => setShowLinks(false)}
+                        />
+                    )}
+                </div>
+            </div>
+
+            <div className="view-context-block__divider view-context-block__divider--full" />
+
+            {/* Actions Column */}
+            <div className="view-context-block__column view-context-block__column--actions">
+                <div className="view-context-block__quick-actions">
+                    <IconButton
+                        icon="camera"
+                        label="Snapshot"
+                        size="sm"
+                        disabled={!activeView}
+                        onClick={handleSnapshot}
+                    />
+                    <IconButton
+                        icon="copy"
+                        label="Duplicate"
+                        size="sm"
+                        disabled={!activeView}
+                        onClick={handleDuplicate}
+                    />
+                    <IconButton
+                        icon="settings"
+                        label="Settings"
+                        size="sm"
+                        disabled={!activeView}
+                        onClick={handleOpenSettings}
+                    />
                 </div>
             </div>
         </div>

@@ -924,3 +924,49 @@
     border-color: rgba($accent-color, 0.3);
   }
 }
+
+// ============================================================================
+// GLASS WITH ACCENT BAR AND GRADIENT FADE
+// ============================================================================
+
+// Glass with left accent bar and gradient fade
+// This is THE pattern from toast notifications
+@mixin glass-with-left-accent(
+  $accent-color: $color-accent-primary,
+  $bar-width: 3px,
+  $gradient-intensity: 12%
+) {
+  background: linear-gradient(
+      90deg,
+      color-mix(in srgb, $accent-color $gradient-intensity, transparent) 0%,
+      transparent 50%
+    ),
+    $color-glass-panel;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid $color-border-default;
+  border-left: $bar-width solid $accent-color;
+  border-radius: 0 $radius-md $radius-md 0; // Flat left, rounded right
+  box-shadow: $shadow-glass;
+}
+
+// Glass with right accent bar and gradient fade
+// Mirror of left accent for right-side panels
+@mixin glass-with-right-accent(
+  $accent-color: $color-accent-primary,
+  $bar-width: 3px,
+  $gradient-intensity: 12%
+) {
+  background: linear-gradient(
+      270deg,
+      color-mix(in srgb, $accent-color $gradient-intensity, transparent) 0%,
+      transparent 50%
+    ),
+    $color-glass-panel;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid $color-border-default;
+  border-right: $bar-width solid $accent-color;
+  border-radius: $radius-md 0 0 $radius-md; // Rounded left, flat right
+  box-shadow: $shadow-glass;
+}

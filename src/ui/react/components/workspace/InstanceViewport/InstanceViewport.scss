@@ -33,22 +33,11 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   background: $color-bg-secondary;
   border-radius: $radius-lg; // Increased for softer appearance (8px)
 
-  // Base border - subtle when inactive
-  border: 1px solid $color-border-default;
+  // No border here - CanvasCell handles the border
+  border: none;
 
-  // Inactive state - inset shadow for depth, no outer glow
+  // Inset shadow for depth only
   box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
-
-  // Active state - controlled by React isFocused state
-  // This is the ONLY focus indicator we use - no CSS :focus/:focus-within
-  // to prevent flickering when focus moves between child elements
-  &--active {
-    border-color: var(--instance-color) !important;
-    box-shadow:
-      0 0 0 1px var(--instance-color),           // Inner ring for 2px total thickness
-      0 0 20px rgba(var(--instance-color-rgb), 0.25),  // Soft outer glow
-      inset 0 0 60px rgba(0, 0, 0, 0.5) !important;         // Keep depth shadow
-  }
 
   // Note: We intentionally don't use :focus, :focus-visible, or :focus-within
   // pseudo-classes because they cause flickering when focus moves between
@@ -60,148 +49,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // ============================================================================
-// HEADER - Always visible, stays above WebGL canvas
+// HEADER - Now uses unified ViewHeader component
 // ============================================================================
-
-// Adding styles back incrementally to find the culprit
-.instance-viewport__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: nowrap;
-
-  // Sizing
-  padding: $spacing-xs $spacing-sm;
-  min-height: 32px;
-  flex-shrink: 0;
-
-  // Appearance
-  background: $color-bg-secondary;
-  border-bottom: 1px solid $color-border-subtle;
-
-  // No z-index - causes WebGL interaction issues, rely on DOM order
-  position: relative;
-}
-
-// Active state kept separate
-.instance-viewport__header--active {
-  border-bottom-color: var(--instance-color, #{$color-accent-primary});
-  border-bottom-width: 2px;
-
-  .instance-viewport__label-text {
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-}
-
-// Color Dot - Status indicator with loading animation
-.instance-viewport__color-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--dot-color, #{$color-accent-primary});
-  box-shadow: 0 0 6px var(--dot-color, #{$color-accent-primary});
-  flex-shrink: 0;
-
-  // Loading state - spinning ring
-  &--loading {
-    background: transparent;
-    border: 2px solid transparent;
-    border-top-color: var(--dot-color, #{$color-accent-primary});
-    animation: spin-dot 0.8s linear infinite;
-    box-shadow: none;
-  }
-}
-
-@keyframes spin-dot {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-// Instance Label - plain layout with color dot and neutral text (legacy)
-.instance-viewport__label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1 1 0%;
-  min-width: 0; // allow text to truncate instead of pushing controls
-}
-
-// Label Badge - color-tinted badge with glow (new from prototype)
-.instance-viewport__label-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background: rgba(var(--instance-color-rgb), 0.12);
-  border: 1px solid rgba(var(--instance-color-rgb), 0.25);
-  border-radius: $radius-sm;
-  flex: 1;
-  min-width: 0;
-
-  // Compact mode
-  .instance-viewport__header--compact &,
-  .instance-viewport__header--thumbnail & {
-    padding: 2px 6px;
-    gap: 4px;
-  }
-}
-
-// Color dot - with glow
-.instance-viewport__label-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--instance-color);
-  box-shadow: 0 0 6px var(--instance-color);
-  flex-shrink: 0;
-
-  // Smaller in compact/thumbnail modes
-  .instance-viewport__header--compact &,
-  .instance-viewport__header--thumbnail & {
-    width: 5px;
-    height: 5px;
-  }
-}
-
-// Name text - uses instance color when in badge
-.instance-viewport__label-text {
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: var(--instance-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  transition: font-weight 0.15s ease, color 0.15s ease;
-
-  // Smaller in compact/thumbnail modes
-  .instance-viewport__header--compact & {
-    font-size: 11px;
-  }
-
-  .instance-viewport__header--thumbnail & {
-    font-size: 10px;
-  }
-}
-
-// Right side controls container
-.instance-viewport__header-controls {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex: 0 0 auto; // Keep control buttons from collapsing on narrow widths
-  flex-wrap: nowrap;
-  overflow: visible;
-}
-
-// Instance type icon - HIDDEN per spec
-// Type icon removed from header; orientation cube renders inside viewport instead
-.instance-viewport__type-icon {
-  display: none;
-}
+// Header styles moved to ViewHeader/ViewHeader.scss
+// The ViewHeader component handles all header rendering with consistent styling
 
 // Future: Orientation cube in viewport (rendered by VTK handler)
 .instance-viewport__orientation-cube {
@@ -218,169 +69,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-.instance-viewport__label-icon {
-  display: flex;
-  align-items: center;
-  color: var(--instance-color);
-  margin-right: 4px;
-  flex-shrink: 0; // Keep icon visible when space is tight
-}
-
-// Header buttons - subtle backlit style
-.instance-viewport__header-button {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: $radius-sm;
-  color: $color-text-tertiary;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex-shrink: 0; // Prevent icons from shrinking to zero when space is tight
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: $color-text-primary;
-  }
-
-  &.active {
-    background: rgba($color-accent-primary, 0.15);
-    border-color: rgba($color-accent-primary, 0.3);
-    color: $color-accent-primary;
-  }
-
-  &--danger {
-    &:hover {
-      background: rgba($color-error, 0.12);
-      border-color: rgba($color-error, 0.3);
-      color: $color-error;
-    }
-  }
-
-  svg {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-  }
-}
-
-// Header left section (wrench button + label)
-.instance-viewport__header-left {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex: 1 1 auto; // Let the label claim remaining space between controls
-  min-width: 0;   // Enable text ellipsis instead of pushing controls offscreen
-  flex-wrap: nowrap;
-  // Note: overflow: hidden removed - was potentially clipping content
-}
-
-// More menu wrapper
-.instance-viewport__more-wrapper {
-  position: relative;
-}
-
 // ============================================================================
-// MORE MENU DROPDOWN - Portal to document.body (or inline in fullscreen)
+// MORE MENU - Now uses unified ViewHeader menu
 // ============================================================================
-
-.instance-viewport__more-menu {
-  position: fixed;
-  top: 50px;
-  right: 20px;
-  z-index: 10000;
-  min-width: 220px;
-  padding: 4px;
-  background: rgba(25, 25, 30, 0.95);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-
-  // Inline variant for fullscreen mode (no portal)
-  &--inline {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 4px;
-  }
-
-  // Section headers
-  &__section-header {
-    padding: 8px 12px 4px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: rgba(255, 255, 255, 0.4);
-  }
-
-  // Menu items
-  &__item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.15s ease;
-    text-align: left;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
-
-    // Danger variant
-    &--danger {
-      color: #f87171;
-
-      &:hover {
-        background: rgba(248, 113, 113, 0.15);
-      }
-    }
-
-    // Radio button active state
-    &--active {
-      background: rgba(100, 150, 255, 0.15);
-      color: #60a5fa;
-    }
-
-    svg {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-    }
-
-    span {
-      flex: 1;
-    }
-  }
-
-  // Shortcut hint
-  &__shortcut {
-    margin-left: auto;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.3);
-    flex-shrink: 0;
-  }
-
-  // Divider between sections
-  &__divider {
-    height: 1px;
-    margin: 4px 8px;
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
+// Menu styles moved to ViewHeader/ViewHeader.scss
 
 // ============================================================================
 // TOP TOOLBAR OVERLAY - Slides down from behind header
@@ -1482,10 +1174,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 // ============================================================================
 
 @media (max-width: 768px) {
-  .instance-viewport__header {
-    padding: $spacing-xs $spacing-sm;
-    min-height: 36px;
-  }
+  // Header responsive styles now in ViewHeader/ViewHeader.scss
 
   .instance-toolbar {
     padding: $spacing-xs;
@@ -1724,16 +1413,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
     max-width: 50vw; // Allow more width in fullscreen
   }
 
-  // Ensure menus stay above content
-  .instance-viewport__more-menu--inline {
-    z-index: 10000;
-  }
-
-  // Make sure header and toolbar are visible
-  .instance-viewport__header {
-    z-index: 200;
-  }
-
+  // Make sure toolbar is visible
   .instance-viewport__toolbar-overlay {
     z-index: 150;
   }

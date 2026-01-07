@@ -16,27 +16,42 @@
 
 .view-context-block {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
   flex: 1;
   min-width: 0;
 }
 
 // =============================================================================
-// ROWS
+// COLUMNS
 // =============================================================================
 
-.view-context-block__row {
+.view-context-block__column {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
 
-  &--main {
-    min-height: 36px;
+  &--mode {
+    // Mode toggle + indicator column
+    align-items: flex-start;
   }
 
-  &--context {
-    min-height: 24px;
+  &--view {
+    // View selector + context info column - takes remaining space
+    flex: 1;
+    min-width: 0;
+  }
+
+  &--links {
+    // Links button column
+    align-items: flex-start;
+  }
+
+  &--actions {
+    // Quick actions column
+    align-items: flex-start;
   }
 }
 
@@ -71,8 +86,8 @@
   }
 
   &--active {
-    background: rgba(var(--mode-color-rgb, 96, 165, 250), 0.15);
-    border-color: var(--mode-color, $color-accent-blue);
+    background: rgba(var(--mode-color-rgb, 96, 165, 250), 0.04);
+    border-color: rgba(var(--mode-color-rgb, 96, 165, 250), 0.25);
     color: var(--mode-color, $color-accent-blue);
   }
 }
@@ -99,9 +114,16 @@
   height: 28px;
   background: $color-border-subtle;
   flex-shrink: 0;
+  align-self: center;
 
   &--short {
     height: 16px;
+  }
+
+  &--full {
+    // Full height divider for column layout
+    height: auto;
+    align-self: stretch;
   }
 }
 

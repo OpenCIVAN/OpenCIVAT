@@ -120,7 +120,7 @@ const ShareeItem = memo(function ShareeItem({
                 aria-label={`Remove ${sharee.name}`}
                 title={`Remove ${sharee.name}`}
             >
-                <X size={16} />
+                <Icon name="close" size={16} />
             </button>
         </div>
     );
