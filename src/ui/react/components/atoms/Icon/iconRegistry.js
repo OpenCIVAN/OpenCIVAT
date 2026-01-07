@@ -101,7 +101,7 @@ export const ICON_REGISTRY = {
   // VR & IMMERSIVE
   // ═══════════════════════════════════════════════════════════════════════════
   vr: "view_in_ar",
-  vrHeadset: "vrpano", // VR panorama headset view
+  vrHeadset: "head_mounted_device", // VR panorama headset view
   glasses: "vrpano", // VR glasses - using vrpano
   spatialAudio: "spatial_audio",
   gesture: "gesture",
