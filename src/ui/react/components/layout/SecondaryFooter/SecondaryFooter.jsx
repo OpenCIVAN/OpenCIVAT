@@ -44,8 +44,8 @@ import {
 // Atomic design components
 import { ButtonGroup, IconButton, Icon } from '@UI/react/components/atoms';
 
-// Hook for view logic
-import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic';
+// Hook for view logic (using backwards compat alias)
+import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic';
 
 import './SecondaryFooter.scss';
 
@@ -145,7 +145,7 @@ function SecondaryFooter({
         subsetIds,
         onSubsetChange,
         onUpdateLink,
-    } = useSecondaryHeaderLogic();
+    } = useViewContextLogic();
 
     // Handle tool selection - auto-enable edit mode
     const handleToolChange = useCallback((toolId) => {

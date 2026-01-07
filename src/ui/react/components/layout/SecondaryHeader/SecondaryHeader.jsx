@@ -16,7 +16,7 @@
  * zone content from the parent. This makes it self-contained and easier
  * to reason about.
  *
- * IMPORTANT: This component uses useSecondaryHeaderLogic internally for
+ * IMPORTANT: This component uses useViewContextLogic internally for
  * navigation and view props. It must be rendered inside a LayoutPanelProvider.
  *
  * Layout (with label bar above):
@@ -64,7 +64,7 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 import { IconButton } from '@UI/react/components/atoms/Button';
 
 // Hook for navigation and view logic - uses LayoutPanelContext internally
-import { useSecondaryHeaderLogic } from '@UI/react/hooks/useSecondaryHeaderLogic';
+import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic';
 
 import './SecondaryHeader.scss';
 
@@ -122,7 +122,7 @@ const HEADER_ZONE_LABELS = [
  * Secondary Header bar component.
  * Manages its own internal zones for workspace, navigation, flow, size, and room context.
  *
- * Navigation props are obtained from useSecondaryHeaderLogic hook,
+ * Navigation props are obtained from useViewContextLogic hook,
  * which must be called inside LayoutPanelProvider context.
  */
 function SecondaryHeader({
@@ -162,7 +162,7 @@ function SecondaryHeader({
         onNavigate,
         onHome,
         onBookmark,
-    } = useSecondaryHeaderLogic();
+    } = useViewContextLogic();
 
     return (
         <div className={`secondary-header ${className}`}>

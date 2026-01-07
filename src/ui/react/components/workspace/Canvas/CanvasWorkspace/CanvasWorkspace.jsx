@@ -358,8 +358,10 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         if (!placement) return null;
         return {
             id: placement.id,
-            name: placement.content?.name || 'View',
+            name: placement.content?.name || `View ${placement.row},${placement.col}`,
+            type: placement.content?.type || 'vtk',
             color: placement.content?.color || '#60a5fa',
+            position: { row: placement.row, col: placement.col },
         };
     }, [highlightedPlacementId, visiblePlacements]);
 
@@ -510,28 +512,9 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 }}
             />
 
-            {/* Canvas Toolbar - View Mode + Navigation + Actions */}
+            {/* Canvas Toolbar - Navigation + History + ViewContextBlock */}
+            {/* Note: ViewContextBlock gets its view data from useViewContextLogic hook */}
             <CanvasToolbar
-                // View mode
-                focusDisabled={!highlightedPlacementId}
-                subsetDisabled={false}
-                onEnterFocus={() => {
-                    if (highlightedPlacementId) {
-                        const placement = visiblePlacements.find(p => p.id === highlightedPlacementId);
-                        if (placement) {
-                            focusView({
-                                placementId: placement.id,
-                                name: placement.content?.name || 'View',
-                                row: placement.row,
-                                col: placement.col,
-                            });
-                        }
-                    }
-                }}
-                onEnterSubset={() => {
-                    // TODO: Implement subset mode entry
-                }}
-
                 // Navigation
                 viewportPosition={viewport}
                 homePosition={{ row: 0, col: 0 }}
@@ -555,35 +538,23 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 onUndo={() => {}}
                 onRedo={() => {}}
 
-                // Subset
-                subsetSelection={subsets.map(s => s.id)}
-                onSubsetToggle={(id) => {
-                    // TODO: Implement subset toggle
+                // View mode (for ViewContextBlock)
+                viewMode="normal"
+                onModeChange={(mode) => {
+                    // TODO: Implement view mode change
+                    log.debug('View mode change:', mode);
                 }}
-                onSubsetSelectAll={() => {}}
-                onSubsetClear={() => {}}
 
-                // Active view
-                activeView={activeViewForLinks}
-                availableViews={visiblePlacements.map(p => ({
-                    id: p.id,
-                    name: p.content?.name || 'View',
-                    color: p.content?.color || '#60a5fa',
-                    position: { row: p.row, col: p.col },
-                    onCanvas: true,
-                }))}
-                onSelectView={(id) => setHighlightedPlacementId(id)}
-
-                // Links
-                links={viewLinks}
-                recentUnlinks={recentUnlinks}
-                onUpdateLink={handleUpdateLink}
-                onRestoreLink={handleRestoreLink}
-
-                // Actions
-                onSnapshot={() => {}}
-                onDuplicate={() => {}}
-                onSettings={() => {}}
+                // Quick actions (for ViewContextBlock)
+                onSnapshot={() => {
+                    log.debug('Snapshot requested');
+                }}
+                onDuplicate={() => {
+                    log.debug('Duplicate requested');
+                }}
+                onSettings={() => {
+                    log.debug('Settings requested');
+                }}
             />
 
             {/* Focus mode overlay */}

@@ -158,4 +158,4 @@ export {
 
 export { useRoomIndicator } from "./useRoomIndicator.js";
 
-export { useSecondaryHeaderLogic } from "./useSecondaryHeaderLogic.js";
+export { useViewContextLogic } from "./useViewContextLogic.js";

@@ -1,16 +1,20 @@
 /**
- * @file useSecondaryHeaderLogic.js
- * @description Hook that wires SecondaryHeader to the canvas/layout system.
+ * @file useViewContextLogic.js
+ * @description Hook that provides view context data for canvas toolbars and footers.
  *
  * This hook bridges:
  * - LayoutPanelContext (canvas navigation, viewport)
  * - workspaceManager (active instance - source of truth)
  * - ViewConfigurationManager (view names, metadata)
  *
+ * Used by:
+ * - CanvasToolbar (ViewContextBlock)
+ * - SecondaryFooter (deprecated)
+ *
  * Usage:
  * ```jsx
- * const headerLogic = useSecondaryHeaderLogic();
- * <SecondaryHeader {...headerLogic} />
+ * const viewContext = useViewContextLogic();
+ * <ViewContextBlock {...viewContext} />
  * ```
  */
 
@@ -53,7 +57,7 @@ const getViewColor = (viewId, index = 0) => {
 // MAIN HOOK
 // =============================================================================
 
-export function useSecondaryHeaderLogic() {
+export function useViewContextLogic() {
   // =========================================================================
   // LAYOUT PANEL CONTEXT (canvas navigation + cells)
   // =========================================================================
@@ -98,7 +102,7 @@ export function useSecondaryHeaderLogic() {
    */
   const handleNavigate = useCallback(
     (direction) => {
-      log.debug("SecondaryHeader navigation:", direction);
+      log.debug("ViewContext navigation:", direction);
 
       switch (direction) {
         case "up":
@@ -124,7 +128,7 @@ export function useSecondaryHeaderLogic() {
    * Navigate to home/origin position
    */
   const handleHome = useCallback(() => {
-    log.debug("SecondaryHeader: Navigate home");
+    log.debug("ViewContext: Navigate home");
     if (homepoint) {
       navigateToCell(homepoint.row, homepoint.col);
     } else {
@@ -136,7 +140,7 @@ export function useSecondaryHeaderLogic() {
    * Open bookmarks panel/popout
    */
   const handleBookmark = useCallback(() => {
-    log.debug("SecondaryHeader: Open bookmarks");
+    log.debug("ViewContext: Open bookmarks");
     window.dispatchEvent(new CustomEvent("open:bookmarks"));
   }, []);
 
@@ -332,7 +336,7 @@ export function useSecondaryHeaderLogic() {
       const viewId = typeof viewOrId === "string" ? viewOrId : viewOrId?.id;
       if (!viewId) return;
 
-      log.debug("SecondaryHeader: Select view", viewId);
+      log.debug("ViewContext: Select view", viewId);
 
       // Find the instance by viewConfigId and set it as active
       const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
@@ -362,7 +366,7 @@ export function useSecondaryHeaderLogic() {
    */
   const handlePlaceView = useCallback(
     async (viewId) => {
-      log.debug("SecondaryHeader: Place view", viewId);
+      log.debug("ViewContext: Place view", viewId);
 
       // Find first empty cell or use current viewport position
       const canvas = canvasManager?.getActiveCanvas?.();
@@ -392,7 +396,7 @@ export function useSecondaryHeaderLogic() {
    */
   const handleRemoveView = useCallback(
     async (viewId) => {
-      log.debug("SecondaryHeader: Remove view", viewId);
+      log.debug("ViewContext: Remove view", viewId);
 
       const canvas = canvasManager?.getActiveCanvas?.();
       if (!canvas) return;
@@ -414,7 +418,7 @@ export function useSecondaryHeaderLogic() {
    */
   const handleViewAction = useCallback(
     (action, view) => {
-      log.debug("SecondaryHeader: View action", action, view);
+      log.debug("ViewContext: View action", action, view);
 
       switch (action) {
         case "remove":
@@ -438,7 +442,7 @@ export function useSecondaryHeaderLogic() {
    * Handle subset change - update which views are in the subset
    */
   const handleSubsetChange = useCallback((newSubsetIds) => {
-    log.debug("SecondaryHeader: Subset changed", newSubsetIds);
+    log.debug("ViewContext: Subset changed", newSubsetIds);
     setSubsetIds(newSubsetIds);
   }, []);
 
@@ -453,7 +457,7 @@ export function useSecondaryHeaderLogic() {
       const viewId = activeView?.id;
       if (!viewId) return;
 
-      log.debug("SecondaryHeader: Update link", {
+      log.debug("ViewContext: Update link", {
         viewId,
         linkType,
         targetViewId,
@@ -477,7 +481,10 @@ export function useSecondaryHeaderLogic() {
           ...prev,
           [viewId]: {
             ...viewLinksData,
-            [linkType]: { target: targetViewId, direction: direction || "bidirectional" },
+            [linkType]: {
+              target: targetViewId,
+              direction: direction || "bidirectional",
+            },
           },
         };
       });
@@ -522,4 +529,4 @@ export function useSecondaryHeaderLogic() {
   };
 }
 
-export default useSecondaryHeaderLogic;
+export default useViewContextLogic;
