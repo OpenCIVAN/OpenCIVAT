@@ -20,6 +20,7 @@ import { FloatingCanvasWrapper, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingC
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
+import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
@@ -203,6 +204,9 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         currentView,
     } = useViewStack();
 
+    // Get active view from view context (source of truth for what's currently selected)
+    const { activeView: contextActiveView } = useViewContextLogic();
+
     // Compute view mode for toolbar based on view stack state
     const toolbarViewMode = useMemo(() => {
         if (isFocusView) return 'focus';
@@ -218,11 +222,35 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             // Exit to grid view
             goHome();
         } else if (mode === 'focus') {
-            // Enter focus mode with active view
-            // Find the active/highlighted placement
-            const activePlacement = canvas?.placements?.find(p => p.id === highlightedPlacementId);
-            if (activePlacement) {
-                const viewId = activePlacement.content?.viewConfigurationId;
+            // Enter focus mode with active view from context (the currently focused instance)
+            // This is the source of truth - it's set when user clicks on a cell
+
+            // First try: Use the active view from context (user's current selection)
+            if (contextActiveView?.id) {
+                // Find the placement by viewConfigurationId or position
+                const activePlacement = canvas?.placements?.find(p =>
+                    p.content?.viewConfigurationId === contextActiveView.id ||
+                    (contextActiveView.position &&
+                     p.row === contextActiveView.position.row &&
+                     p.col === contextActiveView.position.col)
+                );
+
+                if (activePlacement) {
+                    focusView({
+                        placementId: activePlacement.id,
+                        viewConfigurationId: contextActiveView.id,
+                        name: contextActiveView.name || 'View',
+                        row: activePlacement.row,
+                        col: activePlacement.col,
+                    });
+                    return;
+                }
+            }
+
+            // Fallback: No active view - try to focus the first view on canvas
+            const firstViewPlacement = canvas?.placements?.find(p => p.content?.viewConfigurationId);
+            if (firstViewPlacement) {
+                const viewId = firstViewPlacement.content?.viewConfigurationId;
                 let viewName = 'View';
                 if (viewId) {
                     try {
@@ -236,45 +264,20 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     }
                 }
                 focusView({
-                    placementId: activePlacement.id,
+                    placementId: firstViewPlacement.id,
                     viewConfigurationId: viewId,
                     name: viewName,
-                    row: activePlacement.row,
-                    col: activePlacement.col,
+                    row: firstViewPlacement.row,
+                    col: firstViewPlacement.col,
                 });
             } else {
-                // No active view - try to focus the first view on canvas
-                const firstViewPlacement = canvas?.placements?.find(p => p.content?.viewConfigurationId);
-                if (firstViewPlacement) {
-                    const viewId = firstViewPlacement.content?.viewConfigurationId;
-                    let viewName = 'View';
-                    if (viewId) {
-                        try {
-                            const view = getViewConfigurationManager()?.getView(viewId);
-                            if (view) {
-                                const dataset = getDatasetManager()?.getDataset(view.datasetId);
-                                viewName = dataset?.filename || view.name || 'View';
-                            }
-                        } catch (e) {
-                            // Fall through
-                        }
-                    }
-                    focusView({
-                        placementId: firstViewPlacement.id,
-                        viewConfigurationId: viewId,
-                        name: viewName,
-                        row: firstViewPlacement.row,
-                        col: firstViewPlacement.col,
-                    });
-                } else {
-                    log.warn('No views available to focus');
-                }
+                log.warn('No views available to focus');
             }
         } else if (mode === 'subset') {
             // TODO: Enter subset mode
             log.debug('Subset mode requested - not yet implemented');
         }
-    }, [goHome, focusView, canvas?.placements, highlightedPlacementId]);
+    }, [goHome, focusView, canvas?.placements, contextActiveView]);
 
     // Handle placement click (single click - select)
     const handlePlacementClick = useCallback((placement) => {

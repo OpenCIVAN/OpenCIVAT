@@ -328,6 +328,7 @@ export function InstanceViewport({
     onFocus, // Called when user clicks Focus button
     collaborators = [], // Array of collaborators viewing this instance
     isInFocusMode = false, // Whether this instance is currently in focus mode
+    positionColor = null, // Position-based color from canvas cell (hex string)
 }) {
     // =========================================================================
     // REFS
@@ -1443,8 +1444,14 @@ export function InstanceViewport({
         return null;
     }, [viewConfigId, hasData]); // Include hasData to re-derive after data loads
 
-    const colorHex = instanceColor?.hex || '#60a5fa';
+    // Use position-based color when provided (from CanvasCell), fall back to instance color
+    const colorHex = positionColor || instanceColor?.hex || '#60a5fa';
     const colorRgb = hexToRgb(colorHex);
+
+    // Create color object for components that expect { hex, name } format
+    const effectiveColor = positionColor
+        ? { hex: positionColor, name: 'position' }
+        : instanceColor || { hex: '#60a5fa', name: 'blue' };
 
     return (
         <div
@@ -1463,7 +1470,7 @@ export function InstanceViewport({
             <InstanceHeader
                 displayName={displayName}
                 fileTypeDisplayInfo={fileTypeDisplayInfo}
-                instanceColor={instanceColor}
+                instanceColor={effectiveColor}
                 isFullscreen={isFullscreen}
                 isActive={isFocused}
                 isLoading={loading || !hasData}
@@ -1560,7 +1567,7 @@ export function InstanceViewport({
                     onFit={handleFit}
                     onResetCamera={handleResetCamera}
                     onCenterSelection={handleCenterSelection}
-                    instanceColor={instanceColor}
+                    instanceColor={effectiveColor}
                     availableSpace={width}
                     visible={isFocused}
                 />

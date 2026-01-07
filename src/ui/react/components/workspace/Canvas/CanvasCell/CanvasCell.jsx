@@ -32,6 +32,33 @@ const hexToRgb = (hex) => {
         : '96, 165, 250';
 };
 
+/**
+ * Position-based color palette for consistent cell coloring
+ * Colors rotate by position so adjacent cells have different colors
+ */
+const CELL_COLORS = [
+    { name: 'blue', hex: '#60a5fa' },
+    { name: 'green', hex: '#34d399' },
+    { name: 'purple', hex: '#c084fc' },
+    { name: 'pink', hex: '#fb7185' },
+    { name: 'amber', hex: '#fbbf24' },
+    { name: 'teal', hex: '#7dd3fc' },
+];
+
+/**
+ * Get color for a cell based on its grid position
+ * Uses diagonal stripe pattern: color = (row + col) % numColors
+ * This ensures adjacent cells (horizontal and vertical) have different colors
+ *
+ * @param {number} row - Row index (0-based)
+ * @param {number} col - Column index (0-based)
+ * @returns {{ name: string, hex: string }} Color object
+ */
+const getCellColorByPosition = (row, col) => {
+    const index = (row + col) % CELL_COLORS.length;
+    return CELL_COLORS[index];
+};
+
 // =============================================================================
 // DROP ZONE CONSTANTS
 // =============================================================================
@@ -214,15 +241,15 @@ export const CanvasCell = memo(function CanvasCell({
     const rowSpan = placement?.rowSpan || 1;
     const colSpan = placement?.colSpan || 1;
 
-    // Get instance color for the cell border when selected/active
+    // Get instance color based on cell position for consistent coloring
+    // Uses diagonal stripe pattern so adjacent cells have different colors
     const viewId = placement?.content?.viewConfigurationId;
-    const instanceColor = useMemo(() => {
-        if (!viewId) return null;
-        // Try multiple sources for color
-        const colorFromManager = workspaceManager?.getViewColor?.(viewId)?.hex;
-        const colorFromContent = placement?.content?.color?.hex || placement?.content?.colorHex;
-        return colorFromManager || colorFromContent || null;
-    }, [viewId, placement?.content?.color?.hex, placement?.content?.colorHex]);
+    const positionColor = useMemo(() => {
+        return getCellColorByPosition(row, col);
+    }, [row, col]);
+
+    // Use position-based color (hex string for CSS)
+    const instanceColor = positionColor.hex;
 
     // Determine which UI elements to show based on render mode
     const uiConfig = useMemo(() => {
@@ -611,7 +638,7 @@ export const CanvasCell = memo(function CanvasCell({
                         uiConfig={uiConfig}
                         onClose={() => onRemove?.()}
                         onTrash={handleTrashView}
-                        viewColor={placement.content?.color?.hex || placement.content?.colorHex}
+                        viewColor={instanceColor}
                         shouldMountViewport={shouldMountViewport}
                         isActiveView={isActiveView}
                         isInFocusMode={isInFocusMode}
@@ -1026,6 +1053,7 @@ function ViewContent({
                             onClose={onClose}
                             onTrash={onTrash}
                             lifecycle={lifecycle}
+                            positionColor={viewColor}
                         />
                     </ProgressiveLoader>
                 </div>
