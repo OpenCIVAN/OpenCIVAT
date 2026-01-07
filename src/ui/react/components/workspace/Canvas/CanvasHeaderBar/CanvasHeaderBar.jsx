@@ -7,6 +7,7 @@
 
 import React, { memo, useState, useCallback } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
+import { WorkspaceSelector, RoomPresenceIndicator } from '@UI/react/components/bars';
 import './CanvasHeaderBar.scss';
 
 // =============================================================================
@@ -14,8 +15,8 @@ import './CanvasHeaderBar.scss';
 // =============================================================================
 
 const ZONES = {
-    room: { width: 140, label: 'Room' },
-    workspace: { width: 130, label: 'Workspace' },
+    room: { width: 180, label: 'Room' },
+    workspace: { width: 160, label: 'Workspace' },
     editTools: { width: 'auto', label: 'Edit' },
     flow: { width: 65, label: 'Flow' },
     size: { width: 130, label: 'Size' },
@@ -29,16 +30,16 @@ const ZONES = {
 const ZoneLabelBar = memo(function ZoneLabelBar() {
     return (
         <div className="canvas-header-bar__label-bar">
-            {/* Left zones */}
-            <div className="canvas-header-bar__label" style={{ width: ZONES.room.width }}>
+            {/* Left zones - use same class names as content zones for alignment */}
+            <div className="canvas-header-bar__label canvas-header-bar__label--room">
                 {ZONES.room.label}
             </div>
             <div className="canvas-header-bar__label-separator" />
-            <div className="canvas-header-bar__label" style={{ width: ZONES.workspace.width }}>
+            <div className="canvas-header-bar__label canvas-header-bar__label--workspace">
                 {ZONES.workspace.label}
             </div>
             <div className="canvas-header-bar__label-separator" />
-            <div className="canvas-header-bar__label">
+            <div className="canvas-header-bar__label canvas-header-bar__label--edit">
                 {ZONES.editTools.label}
             </div>
 
@@ -46,140 +47,21 @@ const ZoneLabelBar = memo(function ZoneLabelBar() {
             <div className="canvas-header-bar__label-spacer" />
 
             {/* Right zones */}
-            <div className="canvas-header-bar__label canvas-header-bar__label--center" style={{ width: ZONES.flow.width }}>
+            <div className="canvas-header-bar__label canvas-header-bar__label--flow">
                 {ZONES.flow.label}
             </div>
             <div className="canvas-header-bar__label-separator" />
-            <div className="canvas-header-bar__label canvas-header-bar__label--center" style={{ width: ZONES.size.width }}>
+            <div className="canvas-header-bar__label canvas-header-bar__label--size">
                 {ZONES.size.label}
             </div>
             <div className="canvas-header-bar__label-separator" />
-            <div className="canvas-header-bar__label canvas-header-bar__label--center">
+            <div className="canvas-header-bar__label canvas-header-bar__label--canvas-mode">
                 {ZONES.canvasMode.label}
             </div>
         </div>
     );
 });
 
-// =============================================================================
-// ROOM ZONE
-// =============================================================================
-
-const RoomZone = memo(function RoomZone({
-    room = { id: 'default', name: 'Main Room' },
-    rooms = [],
-    collaborators = [],
-    onRoomChange,
-}) {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-        <div className="canvas-header-bar__zone" style={{ width: ZONES.room.width }}>
-            <div className="canvas-header-bar__dropdown-container">
-                <button
-                    type="button"
-                    className={`canvas-header-bar__room-btn ${isOpen ? 'canvas-header-bar__room-btn--open' : ''}`}
-                    onClick={() => setIsOpen(!isOpen)}
-                >
-                    <Icon name="doorOpen" size={14} className="canvas-header-bar__room-icon" />
-                    <span className="canvas-header-bar__room-name">{room.name}</span>
-
-                    {/* Collaborator avatars */}
-                    {collaborators.length > 0 && (
-                        <div className="canvas-header-bar__avatars">
-                            {collaborators.slice(0, 3).map((c, i) => (
-                                <div
-                                    key={c.id}
-                                    className="canvas-header-bar__avatar"
-                                    style={{ background: c.color, marginLeft: i > 0 ? -5 : 0 }}
-                                    title={c.name}
-                                >
-                                    {c.name.charAt(0)}
-                                </div>
-                            ))}
-                            {collaborators.length > 3 && (
-                                <div className="canvas-header-bar__avatar canvas-header-bar__avatar--more">
-                                    +{collaborators.length - 3}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <Icon name="chevronDown" size={10} className="canvas-header-bar__chevron" />
-                </button>
-
-                {isOpen && rooms.length > 0 && (
-                    <div className="canvas-header-bar__dropdown">
-                        <div className="canvas-header-bar__dropdown-header">Switch Room</div>
-                        <div className="canvas-header-bar__dropdown-list">
-                            {rooms.map(r => (
-                                <button
-                                    key={r.id}
-                                    type="button"
-                                    className={`canvas-header-bar__dropdown-item ${r.id === room.id ? 'canvas-header-bar__dropdown-item--active' : ''}`}
-                                    onClick={() => { onRoomChange?.(r); setIsOpen(false); }}
-                                >
-                                    <Icon name="doorOpen" size={14} />
-                                    <span className="canvas-header-bar__dropdown-item-name">{r.name}</span>
-                                    {r.memberCount && (
-                                        <span className="canvas-header-bar__dropdown-item-count">{r.memberCount}</span>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-});
-
-// =============================================================================
-// WORKSPACE ZONE
-// =============================================================================
-
-const WorkspaceZone = memo(function WorkspaceZone({
-    workspace = { id: 'default', name: 'My Workspace' },
-    workspaces = [],
-    onWorkspaceChange,
-}) {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-        <div className="canvas-header-bar__zone" style={{ width: ZONES.workspace.width }}>
-            <div className="canvas-header-bar__dropdown-container">
-                <button
-                    type="button"
-                    className={`canvas-header-bar__workspace-btn ${isOpen ? 'canvas-header-bar__workspace-btn--open' : ''}`}
-                    onClick={() => setIsOpen(!isOpen)}
-                >
-                    <Icon name="folder" size={14} className="canvas-header-bar__workspace-icon" />
-                    <span className="canvas-header-bar__workspace-name">{workspace.name}</span>
-                    <Icon name="chevronDown" size={10} className="canvas-header-bar__chevron" />
-                </button>
-
-                {isOpen && workspaces.length > 0 && (
-                    <div className="canvas-header-bar__dropdown">
-                        <div className="canvas-header-bar__dropdown-header">Switch Workspace</div>
-                        <div className="canvas-header-bar__dropdown-list">
-                            {workspaces.map(w => (
-                                <button
-                                    key={w.id}
-                                    type="button"
-                                    className={`canvas-header-bar__dropdown-item ${w.id === workspace.id ? 'canvas-header-bar__dropdown-item--active' : ''}`}
-                                    onClick={() => { onWorkspaceChange?.(w); setIsOpen(false); }}
-                                >
-                                    <Icon name="folder" size={14} />
-                                    <span className="canvas-header-bar__dropdown-item-name">{w.name}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-});
 
 // =============================================================================
 // FLOW ZONE (Row/Column direction)
@@ -361,24 +243,27 @@ const CanvasModeZone = memo(function CanvasModeZone({
  * Height: 62px (18px label bar + 44px content bar)
  *
  * Zones:
- * - Room: Room selector with collaborator avatars
- * - Workspace: Workspace/project selector
+ * - Room: Room selector with presence avatars (uses RoomPresenceIndicator)
+ * - Workspace: Workspace/project selector (uses WorkspaceSelector)
  * - Edit Tools: Select/Pan/Merge/Edit mode controls
  * - Flow: Row/Column flow direction toggle
  * - Size: Canvas and viewport size buttons
  * - Canvas Mode: Docked/Float/Fullscreen toggle (responsive)
  */
 export function CanvasHeaderBar({
-    // Room
+    // Room (uses RoomPresenceIndicator)
     room,
-    rooms = [],
-    collaborators = [],
+    roomMembers = [],
+    availableRooms = [],
     onRoomChange,
+    onOpenRoomsPanel,
+    onCreateRoom,
 
-    // Workspace
+    // Workspace (uses WorkspaceSelector)
     workspace,
     workspaces = [],
     onWorkspaceChange,
+    onCreateWorkspace,
 
     // Edit tools
     activeTool = 'select',
@@ -412,22 +297,31 @@ export function CanvasHeaderBar({
 
             {/* Content Bar */}
             <div className="canvas-header-bar__content-bar">
-                {/* Room Zone */}
-                <RoomZone
-                    room={room}
-                    rooms={rooms}
-                    collaborators={collaborators}
-                    onRoomChange={onRoomChange}
-                />
+                {/* Room Zone - uses RoomPresenceIndicator */}
+                <div className="canvas-header-bar__zone canvas-header-bar__zone--room">
+                    <RoomPresenceIndicator
+                        room={room}
+                        members={roomMembers}
+                        availableRooms={availableRooms}
+                        onRoomChange={onRoomChange}
+                        onClick={onOpenRoomsPanel}
+                        onCreateRoom={onCreateRoom}
+                        hideLabel
+                    />
+                </div>
 
                 <div className="canvas-header-bar__divider" />
 
-                {/* Workspace Zone */}
-                <WorkspaceZone
-                    workspace={workspace}
-                    workspaces={workspaces}
-                    onWorkspaceChange={onWorkspaceChange}
-                />
+                {/* Workspace Zone - uses WorkspaceSelector */}
+                <div className="canvas-header-bar__zone canvas-header-bar__zone--workspace">
+                    <WorkspaceSelector
+                        workspace={workspace}
+                        workspaces={workspaces}
+                        onSelect={onWorkspaceChange}
+                        onCreate={onCreateWorkspace}
+                        hideLabel
+                    />
+                </div>
 
                 <div className="canvas-header-bar__divider" />
 

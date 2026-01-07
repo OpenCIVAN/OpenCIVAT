@@ -44,6 +44,7 @@ const ROOM_TYPES = {
  * @param {Function} [props.onRoomChange] - Callback when room is selected
  * @param {Function} [props.onClick] - Callback when clicked (opens rooms panel)
  * @param {Function} [props.onCreateRoom] - Callback to create new room
+ * @param {boolean} [props.hideLabel] - Hide the "Currently In" label (for use with external label bar)
  */
 export function RoomPresenceIndicator({
     room,
@@ -52,6 +53,7 @@ export function RoomPresenceIndicator({
     onRoomChange,
     onClick,
     onCreateRoom,
+    hideLabel = false,
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
@@ -74,10 +76,10 @@ export function RoomPresenceIndicator({
 
         const updatePosition = () => {
             const rect = triggerRef.current.getBoundingClientRect();
-            // Position above the trigger button
+            // Position below the trigger button
             setDropdownPosition({
-                top: rect.top - 8,
-                left: rect.left + rect.width / 2,
+                top: rect.bottom + 6,
+                left: rect.left,
             });
         };
 
@@ -157,7 +159,6 @@ export function RoomPresenceIndicator({
                 position: 'fixed',
                 top: dropdownPosition.top,
                 left: dropdownPosition.left,
-                transform: 'translate(-50%, -100%)',
                 zIndex: 10000,
             }}
         >
@@ -303,7 +304,7 @@ export function RoomPresenceIndicator({
             >
                 {/* Label + Room Info */}
                 <div className="room-presence__info">
-                    <span className="room-presence__label">Currently In</span>
+                    {!hideLabel && <span className="room-presence__label">Currently In</span>}
                     <div className="room-presence__room">
                         <Icon name={roomIcon} size={12} className="room-presence__icon" />
                         <span className="room-presence__name">

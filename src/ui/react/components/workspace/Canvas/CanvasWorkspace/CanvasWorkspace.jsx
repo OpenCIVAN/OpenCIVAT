@@ -375,25 +375,38 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             <div className="canvas-workspace">
                 {/* Canvas Header Bar - Room/Workspace/Edit/Flow/Size/CanvasMode */}
                 <CanvasHeaderBar
-                    room={{ id: 'main', name: 'Main Room' }}
-                    rooms={[{ id: 'main', name: 'Main Room', memberCount: 1 }]}
-                    collaborators={[]}
+                    // Room props (uses RoomPresenceIndicator)
+                    room={{ id: 'main', name: 'Main Room', type: 'main' }}
+                    roomMembers={[
+                        { id: 'user1', name: 'Alice', color: '#60a5fa' },
+                        { id: 'user2', name: 'Bob', color: '#4ade80' },
+                        { id: 'user3', name: 'Carol', color: '#f472b6' },
+                    ]}
+                    availableRooms={[]}
                     onRoomChange={() => {}}
-                    workspace={{ id: projectId, name: 'Workspace' }}
-                    workspaces={[{ id: projectId, name: 'Workspace' }]}
+                    onOpenRoomsPanel={() => {}}
+                    onCreateRoom={() => {}}
+                    // Workspace props (uses WorkspaceSelector)
+                    workspace={{ id: projectId, name: 'Workspace', type: 'project' }}
+                    workspaces={[{ id: projectId, name: 'Workspace', type: 'project' }]}
                     onWorkspaceChange={() => {}}
+                    onCreateWorkspace={() => {}}
+                    // Edit tools
                     activeTool={activeTool}
                     onToolChange={setActiveTool}
                     mergeMode={false}
                     onMergeModeChange={() => {}}
                     editMode={editMode}
                     onEditModeChange={setEditMode}
+                    // Flow
                     flowDirection={flowDirection}
                     onFlowDirectionChange={setFlowDirection}
+                    // Size
                     canvasSize={canvasSize}
                     viewportSize={gridSize}
                     onCanvasSizeClick={() => {}}
                     onViewportSizeClick={() => {}}
+                    // Canvas mode
                     canvasMode={canvasMode}
                     onCanvasModeChange={setCanvasMode}
                 />

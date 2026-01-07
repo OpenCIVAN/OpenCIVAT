@@ -10,12 +10,18 @@
 // MAIN CONTAINER
 // =============================================================================
 
+// Minimum width to fit all components (calculated from zone widths + gaps + padding)
+// Room(180) + Workspace(160) + EditTools(~180) + Flow(65) + Size(130) + CanvasMode(~120) + dividers + gaps
+$header-min-width: 900px;
+
 .canvas-header-bar {
   display: flex;
   flex-direction: column;
   background: $color-bg-secondary;
   border-bottom: 1px solid $color-border-default;
   flex-shrink: 0;
+  min-width: $header-min-width;
+  overflow: visible; // Don't clip dropdowns
 }
 
 // =============================================================================
@@ -29,7 +35,10 @@
   background: $color-bg-canvas;
   border-bottom: 1px solid $color-border-subtle;
   padding: 0 $spacing-md;
+  // Match content bar gap for alignment
   gap: $spacing-md;
+  min-width: 0; // Allow shrinking
+  overflow: hidden; // Hide overflow text in labels
 }
 
 .canvas-header-bar__label {
@@ -41,13 +50,38 @@
   white-space: nowrap;
   display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-shrink: 0;
 
-  &--center {
-    justify-content: center;
+  // Width modifiers to match content zones exactly
+  &--room {
+    width: 180px;
+  }
+
+  &--workspace {
+    width: 160px;
+  }
+
+  &--edit {
+    // Auto width, matches edit tools zone
+  }
+
+  &--flow {
+    width: 65px;
+  }
+
+  &--size {
+    width: 130px;
+  }
+
+  &--canvas-mode {
+    // Auto width, matches canvas mode zone
   }
 }
 
 .canvas-header-bar__label-separator {
+  // Match divider width for alignment
   width: 1px;
   height: 10px;
   background: $color-border-subtle;
@@ -56,6 +90,7 @@
 
 .canvas-header-bar__label-spacer {
   flex: 1;
+  min-width: $spacing-sm;
 }
 
 // =============================================================================
@@ -68,6 +103,8 @@
   padding: $spacing-xs $spacing-md;
   height: 44px;
   gap: $spacing-md;
+  min-width: 0; // Allow content to shrink
+  overflow: visible; // Don't clip children
 }
 
 // =============================================================================
@@ -77,7 +114,9 @@
 .canvas-header-bar__zone {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  // Allow zones to shrink when space is constrained
+  flex-shrink: 1;
+  min-width: 0;
 
   &--center {
     justify-content: center;
@@ -93,6 +132,7 @@
 
 .canvas-header-bar__spacer {
   flex: 1;
+  min-width: $spacing-sm; // Minimum spacer width
 }
 
 .canvas-header-bar__separator {
@@ -187,123 +227,87 @@
 }
 
 // =============================================================================
-// ROOM ZONE
+// ROOM ZONE (wrapper for RoomPresenceIndicator)
 // =============================================================================
 
-.canvas-header-bar__room-btn {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  width: 100%;
-  padding: $spacing-xs $spacing-sm;
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-md;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-bg-elevated;
-    border-color: $color-border-default;
-  }
-
-  &--open {
-    background: $color-bg-elevated;
-    border-color: $color-accent-green;
-  }
-}
-
-.canvas-header-bar__room-icon {
-  color: $color-accent-green;
+.canvas-header-bar__zone--room {
+  width: 180px;
+  min-width: 160px;
   flex-shrink: 0;
-}
 
-.canvas-header-bar__room-name {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-  color: $color-text-primary;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-}
+  // Compact the RoomPresenceIndicator for header bar
+  .room-presence {
+    width: 100%;
+  }
 
-.canvas-header-bar__chevron {
-  color: $color-text-muted;
-  flex-shrink: 0;
-}
+  .room-presence__trigger {
+    padding: $spacing-xs $spacing-sm;
+    min-height: 32px;
+    width: 100%;
+    min-width: 0;
+    gap: $spacing-xs;
+  }
 
-// =============================================================================
-// AVATARS
-// =============================================================================
+  .room-presence__info {
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
 
-.canvas-header-bar__avatars {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
+  .room-presence__room {
+    min-width: 0;
+  }
 
-.canvas-header-bar__avatar {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid $color-bg-tertiary;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 7px;
-  font-weight: $font-weight-semibold;
-  color: #000;
+  .room-presence__name {
+    font-size: $font-size-xs;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
 
-  &--more {
-    background: $color-bg-canvas;
-    color: $color-text-muted;
-    font-size: 8px;
+  .room-presence__avatars {
+    flex-shrink: 0;
+  }
+
+  .room-presence__avatar {
+    width: 20px;
+    height: 20px;
   }
 }
 
 // =============================================================================
-// WORKSPACE ZONE
+// WORKSPACE ZONE (wrapper for WorkspaceSelector)
 // =============================================================================
 
-.canvas-header-bar__workspace-btn {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  width: 100%;
-  padding: $spacing-xs $spacing-sm;
-  background: $color-bg-tertiary;
-  border: 1px solid $color-border-subtle;
-  border-radius: $radius-md;
-  cursor: pointer;
-  transition: all $transition-fast;
-
-  &:hover {
-    background: $color-bg-elevated;
-    border-color: $color-border-default;
-  }
-
-  &--open {
-    background: $color-bg-elevated;
-    border-color: $color-accent-blue;
-  }
-}
-
-.canvas-header-bar__workspace-icon {
-  color: $color-accent-blue;
+.canvas-header-bar__zone--workspace {
+  width: 160px;
+  min-width: 140px;
   flex-shrink: 0;
-}
 
-.canvas-header-bar__workspace-name {
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
-  color: $color-text-primary;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
+  // Compact the WorkspaceSelector for header bar
+  .workspace-selector {
+    width: 100%;
+  }
+
+  .workspace-selector__trigger {
+    padding: $spacing-xs $spacing-sm;
+    min-height: 32px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .workspace-selector__info {
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .workspace-selector__name {
+    font-size: $font-size-xs;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 // =============================================================================
@@ -508,36 +512,11 @@
 }
 
 // =============================================================================
-// RESPONSIVE
+// RESPONSIVE - Minimal responsive changes since we have min-width scrolling
 // =============================================================================
 
-@media (max-width: 1000px) {
-  .canvas-header-bar__label-bar {
-    display: none;
-  }
-
-  .canvas-header-bar__content-bar {
-    height: 40px;
-  }
-}
-
-@media (max-width: 800px) {
-  .canvas-header-bar__zone {
-    &:first-child,
-    &:nth-child(3) {
-      // Room and Workspace get narrower
-      max-width: 120px;
-    }
-  }
-
-  .canvas-header-bar__room-name,
-  .canvas-header-bar__workspace-name {
-    max-width: 60px;
-  }
-}
-
+// At narrower viewports, switch to icon-only mode for buttons
 @media (max-width: 1100px) {
-  // Hide tool and mode labels, show icons only
   .canvas-header-bar__tool-label,
   .canvas-header-bar__mode-label {
     display: none;
@@ -546,50 +525,6 @@
   .canvas-header-bar__tool-btn,
   .canvas-header-bar__mode-btn {
     padding: 0 $spacing-xs;
-  }
-}
-
-@media (max-width: 900px) {
-  // Narrow the room/workspace zones
-  .canvas-header-bar__zone:first-child,
-  .canvas-header-bar__zone:nth-child(3) {
-    max-width: 100px;
-  }
-
-  .canvas-header-bar__room-name,
-  .canvas-header-bar__workspace-name {
-    max-width: 50px;
-  }
-
-  // Hide merge button
-  .canvas-header-bar__tool-btn--merge {
-    display: none;
-  }
-
-  .canvas-header-bar__tool-separator:first-of-type {
-    display: none;
-  }
-}
-
-@media (max-width: 700px) {
-  // Hide workspace zone entirely
-  .canvas-header-bar__zone:nth-child(3) {
-    display: none;
-  }
-
-  .canvas-header-bar__divider:nth-child(4) {
-    display: none;
-  }
-
-  // Hide edit zone label separators
-  .canvas-header-bar__tool-separator {
-    display: none;
-  }
-}
-
-@media (max-width: 500px) {
-  // Hide flow zone
-  .canvas-header-bar__zone:has(.canvas-header-bar__flow-toggle) {
-    display: none;
+    min-width: 28px;
   }
 }
