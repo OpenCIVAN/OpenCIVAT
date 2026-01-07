@@ -1,0 +1,452 @@
+// src/ui/react/components/workspace/InstanceToolsNotch/InstanceToolsNotch.scss
+// Full-width toolbar bar for instance tools
+//
+// Glass aesthetic with color-coded accent on the left based on active view
+// Layout: [View Indicator] | [Tools...] | [More]
+
+@use "theme" as *;
+
+// =============================================================================
+// MAIN CONTAINER - Full width bar
+// =============================================================================
+
+.instance-tools-notch {
+  display: flex;
+  width: 100%;
+  pointer-events: none; // Allow clicks through gaps
+
+  // Transition for appearing/disappearing
+  transition: opacity 0.2s ease;
+}
+
+// =============================================================================
+// BAR CONTAINER - ViewHeader gradient style
+// =============================================================================
+
+.instance-tools-notch__container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0 $spacing-md;
+  pointer-events: auto;
+  position: relative;
+
+  // Gradient background matching ViewHeader style (dimmed by default)
+  background: linear-gradient(
+      90deg,
+      rgba(var(--notch-color-rgb), 0.08) 0%,
+      transparent 50%
+    ),
+    $color-bg-secondary;
+
+  // Accent bar (default: bottom)
+  border-bottom: 2px solid rgba(var(--notch-color-rgb), 0.35);
+  border-top: 2px solid transparent;
+
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+// =============================================================================
+// ACCENT POSITION VARIANTS
+// =============================================================================
+
+.instance-tools-notch--accent-top {
+  .instance-tools-notch__container {
+    border-top-color: rgba(var(--notch-color-rgb), 0.35);
+    border-bottom-color: transparent;
+  }
+
+  &.instance-tools-notch--active .instance-tools-notch__container {
+    border-top-color: var(--notch-color);
+    border-bottom-color: transparent;
+  }
+}
+
+.instance-tools-notch--accent-bottom {
+  .instance-tools-notch__container {
+    border-bottom-color: rgba(var(--notch-color-rgb), 0.35);
+    border-top-color: transparent;
+  }
+
+  &.instance-tools-notch--active .instance-tools-notch__container {
+    border-bottom-color: var(--notch-color);
+    border-top-color: transparent;
+  }
+}
+
+// =============================================================================
+// STATE VARIATIONS
+// =============================================================================
+
+.instance-tools-notch--active {
+  .instance-tools-notch__container {
+    // Bright gradient when active (like ViewHeader--active)
+    background: linear-gradient(
+        90deg,
+        rgba(var(--notch-color-rgb), 0.15) 0%,
+        transparent 50%
+      ),
+      $color-bg-secondary;
+    // Note: border color is set by accent position variants
+  }
+
+  .instance-tools-notch__view-name {
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.instance-tools-notch--inactive {
+  .instance-tools-notch__container {
+    background: $color-bg-secondary;
+    border-top-color: $color-border-subtle;
+    border-bottom-color: $color-border-subtle;
+  }
+
+  .instance-tools-notch__view-dot {
+    background: $color-text-muted !important;
+    box-shadow: none !important;
+  }
+}
+
+// =============================================================================
+// VIEW INDICATOR - Left section
+// =============================================================================
+
+.instance-tools-notch__view-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: $spacing-md;
+  flex-shrink: 0;
+}
+
+.instance-tools-notch__view-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(var(--notch-color-rgb), 0.5);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.instance-tools-notch__view-name {
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  .instance-tools-notch--inactive & {
+    color: $color-text-muted;
+  }
+}
+
+.instance-tools-notch__hint {
+  font-size: 11px;
+  color: $color-text-muted;
+  font-style: italic;
+}
+
+// =============================================================================
+// NAVIGATION CONTROLS - Zoom, Fit, Reset
+// =============================================================================
+
+.instance-tools-notch__nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.instance-tools-notch__zoom-display {
+  min-width: 48px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+// =============================================================================
+// TOOLS SECTION - Center/flex area
+// =============================================================================
+
+.instance-tools-notch__tools {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex: 1;
+  justify-content: flex-start;
+  padding: 0 $spacing-sm;
+}
+
+// =============================================================================
+// DIVIDERS
+// =============================================================================
+
+.instance-tools-notch__divider {
+  width: 1px;
+  height: 20px;
+  background: $color-border-subtle;
+  margin: 0 $spacing-xs;
+  flex-shrink: 0;
+}
+
+.instance-tools-notch__separator {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 2px;
+}
+
+// =============================================================================
+// TOOL GROUP
+// =============================================================================
+
+.instance-tools-notch__group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+// =============================================================================
+// TOOL BUTTONS
+// =============================================================================
+
+.instance-tools-notch__tool {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-secondary;
+  }
+
+  &.active {
+    background: rgba(var(--notch-color-rgb), 0.2);
+    border-color: rgba(var(--notch-color-rgb), 0.3);
+    color: var(--notch-color);
+  }
+
+  &.menu-open {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.instance-tools-notch__tool-chevron {
+  margin-left: -2px;
+  opacity: 0.6;
+}
+
+// =============================================================================
+// MORE BUTTON - Right section
+// =============================================================================
+
+.instance-tools-notch__actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.instance-tools-notch__more-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-tertiary;
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-secondary;
+  }
+}
+
+// =============================================================================
+// DROPDOWN MENU (portaled to body)
+// =============================================================================
+
+.instance-tools-notch__menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 160px;
+  padding: $spacing-xs;
+
+  // Glass panel
+  background: $color-glass-panel;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid $color-border-default;
+  border-radius: $radius-lg;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 1px rgba(0, 0, 0, 0.5);
+
+  // Gradient accent at top
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      rgba(var(--notch-color-rgb), 0.6),
+      rgba(var(--notch-color-rgb), 0.2),
+      transparent
+    );
+    border-radius: $radius-lg $radius-lg 0 0;
+  }
+}
+
+.instance-tools-notch__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $color-text-secondary;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    color: $color-text-primary;
+  }
+
+  &.active {
+    background: rgba(var(--notch-color-rgb), 0.15);
+    color: var(--notch-color);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  svg {
+    flex-shrink: 0;
+    color: $color-text-tertiary;
+  }
+
+  &.active svg,
+  &:hover svg {
+    color: inherit;
+  }
+
+  span {
+    flex: 1;
+  }
+}
+
+.instance-tools-notch__menu-shortcut {
+  font-size: 11px;
+  color: $color-text-muted;
+  font-family: $font-family-mono;
+}
+
+.instance-tools-notch__menu-divider {
+  height: 1px;
+  background: $color-border-subtle;
+  margin: $spacing-xs 0;
+}
+
+// =============================================================================
+// CAMERA GRID (in menu)
+// =============================================================================
+
+.instance-tools-notch__camera-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: $spacing-xs;
+}
+
+.instance-tools-notch__camera-btn {
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+
+  &.special {
+    background: rgba(var(--notch-color-rgb), 0.1);
+    border-color: rgba(var(--notch-color-rgb), 0.2);
+    color: var(--notch-color);
+
+    &:hover:not(:disabled) {
+      background: rgba(var(--notch-color-rgb), 0.2);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// =============================================================================
+// RESPONSIVE
+// =============================================================================
+
+@media (max-width: 600px) {
+  .instance-tools-notch__view-name {
+    max-width: 100px;
+  }
+
+  .instance-tools-notch__hint {
+    display: none;
+  }
+}

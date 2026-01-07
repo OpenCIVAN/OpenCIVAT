@@ -755,6 +755,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       renderer.resetCamera();
 
       // Restore saved camera state from ViewConfiguration if reopening an existing view
+      // This handles both:
+      // 1. Views with previously saved camera state
+      // 2. Views spawned/duplicated from another view (which copy the source camera)
       if (instanceData.viewConfigId) {
         const viewConfig = getViewConfigurationManager()?.getView(
           instanceData.viewConfigId
@@ -780,6 +783,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           log.debug(`Camera state restored`);
         }
       }
+
+      // Store the initial camera state for reset functionality
+      // This captures either the saved/spawned state or the default fit-to-data state
+      this._storeInitialCameraState(instanceData);
     } finally {
       // Re-enable Y.js sync after initial setup is complete
       this._isApplyingRemoteState = false;
@@ -3738,12 +3745,73 @@ console.log('Tools:', tools);
   // ===========================================================================
 
   /**
-   * Reset camera to fit all data in view
+   * Store the initial camera state for this instance
+   * Called after data is loaded and camera is positioned (either from saved state or fit-to-data)
+   * This state is used by resetCamera() to restore the "home" position
+   * @param {Object} instanceData - Instance data object
+   * @private
+   */
+  _storeInitialCameraState(instanceData) {
+    if (!instanceData?.sceneObjects?.camera) {
+      return;
+    }
+
+    const camera = instanceData.sceneObjects.camera;
+    instanceData._initialCameraState = {
+      position: [...camera.getPosition()],
+      focalPoint: [...camera.getFocalPoint()],
+      viewUp: [...camera.getViewUp()],
+      parallelScale: camera.getParallelScale(),
+      clippingRange: [...camera.getClippingRange()],
+      viewAngle: camera.getViewAngle(),
+    };
+
+    log.debug(`Initial camera state stored for ${instanceData.instanceId}`);
+  }
+
+  /**
+   * Reset camera to initial state (the state when view was opened/spawned)
+   * For views spawned from another view, this restores to the spawn state.
+   * For new views, this restores to the default fit-to-data state.
    * @param {Object} instanceData - Instance data object
    */
   resetCamera(instanceData) {
-    if (!instanceData?.sceneObjects) {
+    if (!instanceData?.sceneObjects?.camera || !instanceData?.sceneObjects?.renderer) {
       log.warn("Cannot reset camera: VTK not initialized");
+      return;
+    }
+
+    const { camera, renderer } = instanceData.sceneObjects;
+
+    // If we have a stored initial state, restore it
+    if (instanceData._initialCameraState) {
+      const initial = instanceData._initialCameraState;
+      camera.setPosition(...initial.position);
+      camera.setFocalPoint(...initial.focalPoint);
+      camera.setViewUp(...initial.viewUp);
+      camera.setParallelScale(initial.parallelScale);
+      camera.setClippingRange(...initial.clippingRange);
+      camera.setViewAngle(initial.viewAngle);
+
+      renderer.resetCameraClippingRange();
+      this._requestRender(instanceData, "reset-camera");
+
+      log.debug(`Camera reset to initial state for ${instanceData.instanceId}`);
+    } else {
+      // Fallback: use VTK's default resetCamera (fit to data bounds)
+      instanceTools.resetCamera(instanceData.instanceId);
+      log.debug(`Camera reset to fit-to-data for ${instanceData.instanceId} (no initial state)`);
+    }
+  }
+
+  /**
+   * Reset camera to fit all data in view (VTK default behavior)
+   * This ignores the initial state and fits to current data bounds.
+   * @param {Object} instanceData - Instance data object
+   */
+  fitToData(instanceData) {
+    if (!instanceData?.sceneObjects) {
+      log.warn("Cannot fit to data: VTK not initialized");
       return;
     }
     instanceTools.resetCamera(instanceData.instanceId);
@@ -3798,11 +3866,41 @@ console.log('Tools:', tools);
   }
 
   /**
+   * Get the dataset diagonal length for zoom reference
+   * @param {Object} instanceData - Instance data object
+   * @returns {number} Diagonal length of the dataset bounding box
+   */
+  _getDatasetDiagonal(instanceData) {
+    // Try to get bounds from actor first (most reliable)
+    const actor = instanceData?.sceneObjects?.actor;
+    if (actor?.getBounds) {
+      const bounds = actor.getBounds();
+      const dx = bounds[1] - bounds[0];
+      const dy = bounds[3] - bounds[2];
+      const dz = bounds[5] - bounds[4];
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    // Fallback to polydata bounds
+    if (instanceData?.polydata?.getBounds) {
+      const bounds = instanceData.polydata.getBounds();
+      const dx = bounds[1] - bounds[0];
+      const dy = bounds[3] - bounds[2];
+      const dz = bounds[5] - bounds[4];
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    // Default fallback
+    return 1.0;
+  }
+
+  /**
    * Register a callback for camera changes on an instance
    * Used to sync zoom percentage display with actual camera state
-   * Zoom is relative to initial fit view: 100% = data fits in viewport
+   * Zoom is DATASET-RELATIVE: 100% = dataset diagonal fills ~60% of viewport
+   * This makes zoom transferable between views of the same dataset.
    * @param {Object} instanceData - Instance data object
-   * @param {Function} callback - Callback receiving { zoomLevel, parallelScale, distance }
+   * @param {Function} callback - Callback receiving { zoomLevel, parallelScale, distance, datasetDiagonal }
    * @returns {Function} Unsubscribe function
    */
   onCameraChange(instanceData, callback) {
@@ -3813,29 +3911,33 @@ console.log('Tools:', tools);
 
     const { camera } = instanceData.sceneObjects;
 
-    // Store the initial camera state as baseline for zoom calculation (100%)
-    // This is set after resetCamera/fitView is called, representing the "fit" state
-    if (!instanceData._baselineCameraState) {
-      instanceData._baselineCameraState = {
-        parallelScale: camera.getParallelScale(),
-        distance: camera.getDistance(),
-      };
-    }
+    // Calculate dataset diagonal for reference (dataset-relative zoom)
+    // This is based on the actual data, not the view, so it's transferable
+    const datasetDiagonal = this._getDatasetDiagonal(instanceData);
+
+    // Reference parallel scale: at 100% zoom, the dataset diagonal fills ~60% of viewport height
+    // parallelScale is half the viewport height in world units
+    // So referenceScale = diagonal * 0.6 / 2 = diagonal * 0.3 means diagonal = 60% of viewport
+    // We use 0.5 for a comfortable fit (diagonal = 100% of viewport height at 100% zoom)
+    const referenceParallelScale = datasetDiagonal * 0.5;
+
+    // For perspective: reference distance where diagonal subtends similar angle
+    // This is approximate - perspective zoom is less linear
+    const referenceDistance = datasetDiagonal * 2.5;
 
     // Create the observer function
     const observer = () => {
-      const baseline = instanceData._baselineCameraState;
       const currentParallelScale = camera.getParallelScale();
       const currentDistance = camera.getDistance();
 
-      // Calculate zoom level relative to baseline (100% = fit view)
-      // For parallel projection: zoom = baseline / current (larger parallelScale = zoomed out)
-      // For perspective projection: zoom = baseline / current (larger distance = zoomed out)
+      // Calculate zoom level relative to DATASET size (not fit state)
+      // For parallel projection: zoom = reference / current
+      // For perspective projection: zoom = reference / current
       let zoomLevel;
       if (camera.getParallelProjection()) {
-        zoomLevel = (baseline.parallelScale / currentParallelScale) * 100;
+        zoomLevel = (referenceParallelScale / currentParallelScale) * 100;
       } else {
-        zoomLevel = (baseline.distance / currentDistance) * 100;
+        zoomLevel = (referenceDistance / currentDistance) * 100;
       }
 
       // No clamping - allow whatever zoom VTK supports
@@ -3843,11 +3945,15 @@ console.log('Tools:', tools);
         zoomLevel,
         parallelScale: currentParallelScale,
         distance: currentDistance,
+        datasetDiagonal,
       });
     };
 
     // Subscribe to camera modifications
     const subscription = camera.onModified(observer);
+
+    // Call immediately to get initial value
+    observer();
 
     // Return unsubscribe function
     return () => {
@@ -3858,22 +3964,64 @@ console.log('Tools:', tools);
   }
 
   /**
-   * Reset the baseline camera state for zoom calculation
-   * Called when fit/reset is triggered to establish new 100% baseline
+   * Set zoom level to a specific percentage (dataset-relative)
    * @param {Object} instanceData - Instance data object
+   * @param {number} zoomPercent - Target zoom percentage (100 = dataset fills viewport)
    */
-  resetZoomBaseline(instanceData) {
-    if (!instanceData?.sceneObjects?.camera) {
+  setZoomLevel(instanceData, zoomPercent) {
+    if (!instanceData?.sceneObjects?.camera || !instanceData?.sceneObjects?.renderer) {
+      log.warn("Cannot set zoom: VTK not initialized");
       return;
     }
 
-    const { camera } = instanceData.sceneObjects;
-    instanceData._baselineCameraState = {
-      parallelScale: camera.getParallelScale(),
-      distance: camera.getDistance(),
-    };
+    const { camera, renderer } = instanceData.sceneObjects;
+    const datasetDiagonal = this._getDatasetDiagonal(instanceData);
 
-    log.debug(`Zoom baseline reset for instance ${instanceData.instanceId}`);
+    // Reference scales (same as in onCameraChange)
+    const referenceParallelScale = datasetDiagonal * 0.5;
+    const referenceDistance = datasetDiagonal * 2.5;
+
+    // Calculate target scale from zoom percentage
+    // zoomPercent = (reference / current) * 100
+    // current = reference / (zoomPercent / 100)
+    const targetParallelScale = referenceParallelScale / (zoomPercent / 100);
+    const targetDistance = referenceDistance / (zoomPercent / 100);
+
+    if (camera.getParallelProjection()) {
+      camera.setParallelScale(targetParallelScale);
+    } else {
+      // For perspective, we need to dolly to achieve the target distance
+      const currentDistance = camera.getDistance();
+      const dollyFactor = currentDistance / targetDistance;
+      camera.dolly(dollyFactor);
+    }
+
+    renderer.resetCameraClippingRange();
+    this._requestRender(instanceData, "setZoomLevel");
+
+    log.trace(`Zoom set to ${zoomPercent}% for ${instanceData.instanceId}`);
+  }
+
+  /**
+   * Get current zoom level as percentage (dataset-relative)
+   * @param {Object} instanceData - Instance data object
+   * @returns {number} Current zoom percentage
+   */
+  getZoomLevel(instanceData) {
+    if (!instanceData?.sceneObjects?.camera) {
+      return 100;
+    }
+
+    const { camera } = instanceData.sceneObjects;
+    const datasetDiagonal = this._getDatasetDiagonal(instanceData);
+    const referenceParallelScale = datasetDiagonal * 0.5;
+    const referenceDistance = datasetDiagonal * 2.5;
+
+    if (camera.getParallelProjection()) {
+      return (referenceParallelScale / camera.getParallelScale()) * 100;
+    } else {
+      return (referenceDistance / camera.getDistance()) * 100;
+    }
   }
 }
 

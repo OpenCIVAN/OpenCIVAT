@@ -19,46 +19,13 @@ import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { ViewHeader } from '@UI/react/components/workspace/ViewHeader';
 
 // =============================================================================
-// UTILITY FUNCTIONS
+// SHARED COLOR UTILITIES
 // =============================================================================
 
-/**
- * Convert hex color to RGB string for rgba() usage in CSS
- */
-const hexToRgb = (hex) => {
-    if (!hex) return '96, 165, 250'; // Default blue
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-        : '96, 165, 250';
-};
-
-/**
- * Position-based color palette for consistent cell coloring
- * Colors rotate by position so adjacent cells have different colors
- */
-const CELL_COLORS = [
-    { name: 'blue', hex: '#60a5fa' },
-    { name: 'green', hex: '#34d399' },
-    { name: 'purple', hex: '#c084fc' },
-    { name: 'pink', hex: '#fb7185' },
-    { name: 'amber', hex: '#fbbf24' },
-    { name: 'teal', hex: '#7dd3fc' },
-];
-
-/**
- * Get color for a cell based on its grid position
- * Uses diagonal stripe pattern: color = (row + col) % numColors
- * This ensures adjacent cells (horizontal and vertical) have different colors
- *
- * @param {number} row - Row index (0-based)
- * @param {number} col - Column index (0-based)
- * @returns {{ name: string, hex: string }} Color object
- */
-const getCellColorByPosition = (row, col) => {
-    const index = (row + col) % CELL_COLORS.length;
-    return CELL_COLORS[index];
-};
+import {
+    hexToRgbString,
+    getCellColorByPosition,
+} from '@UI/react/utils/canvasColors.js';
 
 // =============================================================================
 // DROP ZONE CONSTANTS
@@ -682,7 +649,7 @@ export const CanvasCell = memo(function CanvasCell({
                 // Apply instance color for selected border/glow styling
                 ...(instanceColor && {
                     '--instance-color': instanceColor,
-                    '--instance-color-rgb': hexToRgb(instanceColor),
+                    '--instance-color-rgb': hexToRgbString(instanceColor),
                 }),
             }}
             onMouseDown={handleMouseDown}

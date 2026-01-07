@@ -6,6 +6,7 @@
 // - Gets DATASET name separately
 // - Listens for name change events to update display
 // - Shows both view name (primary) and dataset name (secondary)
+// - Uses InstanceCard for consistent styling and position-based coloring
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
@@ -15,9 +16,16 @@ import { ToolsList } from './subtabs/ToolsSubtab';
 import { LayersSubtab } from './subtabs/LayersSubtab';
 import { AnnotationsSubtab } from './subtabs/AnnotationsSubtab';
 
+// Import InstanceCard for view header display
+import { InstanceCard } from '@UI/react/components/organisms/InstanceCard';
+
 // Import managers
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
+
+// Import color utilities for position-based coloring
+import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
+import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 
 import './InstanceToolsTab.scss';
 
@@ -125,24 +133,49 @@ function NoInstancePlaceholder() {
  * Extract proper display info for an instance.
  * Gets VIEW name from ViewConfigurationManager (not dataset filename).
  * Gets DATASET name separately.
+ * Uses position-based coloring to match canvas cells.
  */
 function getInstanceDisplayInfo(instance) {
     if (!instance) return null;
 
     const viewManager = getViewConfigurationManager();
     const datasetManager = getDatasetManager();
+    const viewId = instance.viewConfigId || instance.viewId;
 
     // Get the ViewConfiguration for the real view name
-    const viewConfig = viewManager?.getView?.(
-        instance.viewConfigId || instance.viewId
-    );
+    const viewConfig = viewManager?.getView?.(viewId);
 
     // Get the dataset for the dataset name
     const datasetId = viewConfig?.datasetId || instance.instanceData?.dataset?.id;
     const dataset = datasetId ? datasetManager?.getDataset?.(datasetId) : null;
 
+    // Try to get position from canvas for position-based coloring
+    let position = null;
+    let colorHex = '#60a5fa'; // Default blue
+
+    try {
+        const activeCanvasId = canvasManager?.getActiveCanvasId?.();
+        if (activeCanvasId) {
+            const canvas = canvasManager?.getCanvas?.(activeCanvasId);
+            if (canvas?.placements) {
+                const placement = canvas.placements.find(
+                    p => p.content?.viewConfigurationId === viewId
+                );
+                if (placement) {
+                    position = { row: placement.row, col: placement.col };
+                    colorHex = getCellColorHex(placement.row, placement.col);
+                }
+            }
+        }
+    } catch (e) {
+        // Fall back to default color
+    }
+
     // Build display info
     return {
+        // View ID for InstanceCard
+        viewId,
+
         // Primary: View name from ViewConfiguration
         name: viewConfig?.name ||
             instance.name ||
@@ -158,11 +191,9 @@ function getInstanceDisplayInfo(instance) {
         // Handler type
         type: instance.type || viewConfig?.handlerType || 'vtk',
 
-        // Color from view config or instance
-        color: viewConfig?.color?.hex ||
-            instance.color?.hex ||
-            instance.color?.name ||
-            'blue',
+        // Position-based color
+        color: colorHex,
+        position,
     };
 }
 
@@ -278,25 +309,17 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                 <>
                     {/* ========================================================
                         FOCUSED INSTANCE HEADER
-                        Shows view name (primary) + dataset name (secondary)
+                        Uses InstanceCard for consistent styling & position-based color
                         ======================================================== */}
-                    <div
-                        className="instance-tools-tab__instance-header"
-                        style={{ '--instance-color': instanceInfo?.color || 'var(--color-accent-blue)' }}
-                    >
-                        <Icon name="monitor" size={14} />
-                        <div className="instance-tools-tab__instance-info">
-                            <span className="instance-tools-tab__instance-name">
-                                {instanceInfo?.name || 'Untitled View'}
-                            </span>
-                            <span className="instance-tools-tab__instance-dataset">
-                                {instanceInfo?.dataset || 'No data loaded'}
-                            </span>
-                        </div>
-                        <span className="instance-tools-tab__instance-type">
-                            {(instanceInfo?.type || 'vtk').toUpperCase()}
-                        </span>
-                    </div>
+                    <InstanceCard
+                        viewId={instanceInfo?.viewId}
+                        color={instanceInfo?.color}
+                        position={instanceInfo?.position}
+                        variant="header"
+                        colorPosition="right"
+                        showSettings={false}
+                        className="instance-tools-tab__instance-card"
+                    />
 
                     {/* ========================================================
                         SUBTAB BAR - Tools / Layers / Annotations

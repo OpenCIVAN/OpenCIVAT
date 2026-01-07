@@ -23,6 +23,8 @@ import {
     getViewConfigurationManager,
     getDatasetManager,
 } from '@Init/appInitializer.js';
+import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
+import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import './InstanceCard.scss';
 
 // =============================================================================
@@ -55,6 +57,7 @@ function getViewDisplayInfo(viewId) {
             dataset: null,
             type: 'vtk',
             color: '#60a5fa',
+            position: null,
         };
     }
 
@@ -65,6 +68,7 @@ function getViewDisplayInfo(viewId) {
             dataset: null,
             type: 'vtk',
             color: '#60a5fa',
+            position: null,
         };
     }
 
@@ -83,9 +87,33 @@ function getViewDisplayInfo(viewId) {
         ? dataset?.filename || viewConfig.name || 'View'
         : viewConfig.name;
 
-    // Get color from view config or workspaceManager
-    const colorObj = viewConfig.color || workspaceManager?.getViewColor?.(viewId);
-    const colorHex = colorObj?.hex || colorObj || '#60a5fa';
+    // Try to get position from active canvas to use position-based color
+    let colorHex = '#60a5fa';
+    let position = null;
+
+    try {
+        const activeCanvasId = canvasManager?.getActiveCanvasId?.();
+        if (activeCanvasId) {
+            const canvas = canvasManager?.getCanvas?.(activeCanvasId);
+            if (canvas?.placements) {
+                const placement = canvas.placements.find(
+                    p => p.content?.viewConfigurationId === viewId
+                );
+                if (placement) {
+                    position = { row: placement.row, col: placement.col };
+                    colorHex = getCellColorHex(placement.row, placement.col);
+                }
+            }
+        }
+    } catch (e) {
+        // Fall back to default color
+    }
+
+    // If no position found, fall back to workspaceManager color
+    if (!position) {
+        const colorObj = viewConfig.color || workspaceManager?.getViewColor?.(viewId);
+        colorHex = colorObj?.hex || colorObj || '#60a5fa';
+    }
 
     return {
         name: displayName,
@@ -93,6 +121,7 @@ function getViewDisplayInfo(viewId) {
         type: viewConfig.handlerType || viewConfig.instanceType || 'vtk',
         color: colorHex,
         datasetId: viewConfig.datasetId,
+        position,
     };
 }
 
@@ -105,6 +134,8 @@ export const InstanceCard = memo(function InstanceCard({
     viewId,
     view = null,              // Optional pre-fetched view object
     dataset = null,           // Optional pre-fetched dataset object
+    color = null,             // Optional color override (uses position-based if not provided)
+    position = null,          // Optional grid position { row, col } for position-based coloring
 
     // Display options
     variant = VARIANTS.HEADER,
@@ -139,19 +170,36 @@ export const InstanceCard = memo(function InstanceCard({
     // =========================================================================
 
     const viewInfo = useMemo(() => {
+        let info;
+
         if (view) {
             // Use provided view object
-            const colorObj = view.color || workspaceManager?.getViewColor?.(view.id);
-            return {
+            info = {
                 name: view.name || 'Untitled View',
                 dataset: dataset?.filename || dataset?.name || view.datasetName || null,
                 type: view.handlerType || view.instanceType || 'vtk',
-                color: colorObj?.hex || colorObj || '#60a5fa',
+                color: view.color || '#60a5fa', // Use view.color if provided
                 datasetId: view.datasetId,
+                position: view.position || position,
             };
+        } else {
+            info = getViewDisplayInfo(viewId);
         }
-        return getViewDisplayInfo(viewId);
-    }, [viewId, view, dataset, refreshKey]);
+
+        // Priority for color override:
+        // 1. Explicit color prop (highest priority)
+        // 2. Position-based color (from position prop or info.position)
+        // 3. Keep existing info.color (from view.color or getViewDisplayInfo)
+        if (color) {
+            info.color = color;
+        } else if (position || info.position) {
+            const pos = position || info.position;
+            info.color = getCellColorHex(pos.row, pos.col);
+        }
+        // else: keep info.color as-is (from view.color or getViewDisplayInfo)
+
+        return info;
+    }, [viewId, view, dataset, refreshKey, color, position]);
 
     // =========================================================================
     // EVENT LISTENERS - Update on view changes

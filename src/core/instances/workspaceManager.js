@@ -639,7 +639,9 @@ class WorkspaceManager {
   // =========================================================================
 
   /**
-   * Reset camera to fit all data in view
+   * Reset camera to initial state (the state when view was opened/spawned)
+   * For views spawned from another view, this restores to the spawn state.
+   * For new views, this restores to the default fit-to-data state.
    * @param {string} instanceId - Instance to reset camera for
    */
   resetCamera(instanceId) {
@@ -652,11 +654,19 @@ class WorkspaceManager {
   }
 
   /**
-   * Fit view to content (alias for resetCamera)
+   * Fit view to data bounds (VTK default behavior)
+   * This ignores the initial state and fits to current data bounds.
+   * Use resetCamera() to go back to the initial/spawn state.
    * @param {string} instanceId - Instance to fit
    */
   fitView(instanceId) {
-    this.resetCamera(instanceId);
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.fitToData) {
+      // Fallback to resetCamera if fitToData not available
+      this.resetCamera(instanceId);
+      return;
+    }
+    instance.handler.fitToData(instance.instanceData);
   }
 
   /**
@@ -674,7 +684,7 @@ class WorkspaceManager {
   }
 
   /**
-   * Apply zoom to camera
+   * Apply zoom to camera (relative zoom by factor)
    * @param {string} instanceId - Instance ID
    * @param {number} factor - Zoom factor (> 1 = zoom in, < 1 = zoom out)
    */
@@ -685,6 +695,34 @@ class WorkspaceManager {
       return;
     }
     instance.handler.zoom(instance.instanceData, factor);
+  }
+
+  /**
+   * Set zoom level to a specific percentage (dataset-relative)
+   * 100% = dataset fills viewport, transferable between views of same dataset
+   * @param {string} instanceId - Instance ID
+   * @param {number} zoomPercent - Target zoom percentage
+   */
+  setZoomLevel(instanceId, zoomPercent) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.setZoomLevel) {
+      log.warn(`Cannot set zoom level: no handler for instance ${instanceId}`);
+      return;
+    }
+    instance.handler.setZoomLevel(instance.instanceData, zoomPercent);
+  }
+
+  /**
+   * Get current zoom level as percentage (dataset-relative)
+   * @param {string} instanceId - Instance ID
+   * @returns {number} Current zoom percentage (100 = dataset fills viewport)
+   */
+  getZoomLevel(instanceId) {
+    const instance = this.getInstance(instanceId);
+    if (!instance?.handler?.getZoomLevel) {
+      return 100;
+    }
+    return instance.handler.getZoomLevel(instance.instanceData);
   }
 
   /**

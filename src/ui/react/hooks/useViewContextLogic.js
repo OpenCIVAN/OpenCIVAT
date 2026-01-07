@@ -30,28 +30,14 @@ import { ui as log } from "@Utils/logger.js";
 // Viewport events are dispatched by LayoutPanel.logic.js - no need to import here
 
 // =============================================================================
-// CONSTANTS
+// SHARED COLOR UTILITIES - Single source of truth
 // =============================================================================
 
-const VIEW_COLORS = [
-  "#60a5fa", // Blue
-  "#34d399", // Green
-  "#2dd4bf", // Teal
-  "#fb7185", // Pink
-  "#c084fc", // Purple
-  "#fbbf24", // Amber
-];
-
-/**
- * Get consistent color for a view based on its ID
- */
-const getViewColor = (viewId, index = 0) => {
-  if (!viewId) return VIEW_COLORS[0];
-  const hash = viewId
-    .split("")
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return VIEW_COLORS[(hash + index) % VIEW_COLORS.length];
-};
+import {
+  getCellColorHex,
+  getViewColor,
+  VIEW_COLORS,
+} from "@UI/react/utils/canvasColors.js";
 
 // =============================================================================
 // MAIN HOOK
@@ -259,12 +245,15 @@ export function useViewContextLogic() {
         displayName = dataset?.filename || cellName || `View ${index + 1}`;
       }
 
+      // Use position-based color to match CanvasCell
+      const positionColor = getCellColorHex(cell.row, cell.col);
+
       return {
         id: viewId,
         name: displayName,
         type: cell.content?.type || "vtk",
         position: { col: cell.col, row: cell.row },
-        color: cell.color || cell.instanceColor || getViewColor(viewId, index),
+        color: positionColor,
         datasetName: cell.datasetName || cell.datasetId,
       };
     });
@@ -349,12 +338,16 @@ export function useViewContextLogic() {
         "Active View"
       : viewConfig.name;
 
+    // Use position-based color from canvasView (matches CanvasCell coloring)
+    // Fall back to workspaceManager color or default
+    const finalColor = canvasView?.color || colorHex || VIEW_COLORS[0];
+
     return {
       id: viewConfigId,
       name: displayName,
       type: viewConfig?.handlerType || activeInstance.type || "vtk",
       position: canvasView?.position || null,
-      color: colorHex || canvasView?.color || VIEW_COLORS[0],
+      color: finalColor,
       datasetName:
         dataset?.filename || viewConfig?.datasetName || canvasView?.datasetName,
       links: viewLinks[viewConfigId] || {},

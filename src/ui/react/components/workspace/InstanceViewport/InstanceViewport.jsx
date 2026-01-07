@@ -27,9 +27,9 @@ import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
 
 import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
-import { NavigationNotch } from './NavigationNotch';
+// NOTE: NavigationNotch removed - navigation controls now in InstanceToolsNotch at canvas level
 import { ViewHeader, hexToRgb } from '@UI/react/components/workspace/ViewHeader';
-import { InstanceToolbar } from './InstanceToolbar';
+// NOTE: InstanceToolbar import removed - tools now displayed in InstanceToolsNotch at canvas level
 
 // Instance Tools panel content for embedded fullscreen mode
 import { InstanceToolsPanelContent } from "@UI/react/components/panels/LeftPanel/tabs/InstanceToolsTab";
@@ -1491,26 +1491,11 @@ export function InstanceViewport({
                 onHideToolbar={hideToolbar}
             />
 
-            {/* Top Toolbar - Shows when focused OR pinned */}
-            {tools.length > 0 && (
-                <InstanceToolbar
-                    tools={tools}
-                    isFocused={isFocused}
-                    pinned={toolbarPinned}
-                    onTogglePin={toggleToolbarPin}
-                    renderTool={renderTool}
-                    onOpenInstanceTools={handleOpenInstanceTools}
-                    instanceId={actualInstanceId}
-                    isFullscreen={isFullscreen}
-                    onFullscreen={handleFullscreen}
-                    onVRMode={handleVRMode}
-                    onResetCamera={handleResetCamera}
-                    onFitView={handleFit}
-                    onDuplicate={handleDuplicate}
-                    onClose={handleClose}
-                    onTrash={handleTrash}
-                />
-            )}
+            {/* NOTE: InstanceToolbar removed - tools now displayed in InstanceToolsNotch
+             * above the canvas toolbar for a cleaner viewport appearance.
+             * Tools are populated from workspaceManager.getInstanceTools() in CanvasWorkspace.
+             * If needed in fullscreen mode, use the embedded tools panel (T key).
+             */}
 
             {/* VR Mode Indicator - Shows when in VR */}
             {isInVR && <VRModeIndicator onExit={handleExitVR} />}
@@ -1558,20 +1543,7 @@ export function InstanceViewport({
                 </div>
             )}
 
-            {/* Navigation Notch - Carved navigation control at bottom */}
-            {hasData && (
-                <NavigationNotch
-                    position="bottom"
-                    zoomLevel={zoomLevel}
-                    onZoomChange={handleZoomChange}
-                    onFit={handleFit}
-                    onResetCamera={handleResetCamera}
-                    onCenterSelection={handleCenterSelection}
-                    instanceColor={effectiveColor}
-                    availableSpace={width}
-                    visible={isFocused}
-                />
-            )}
+            {/* NOTE: NavigationNotch removed - navigation controls now in InstanceToolsNotch at canvas level */}
         </div>
     );
 }

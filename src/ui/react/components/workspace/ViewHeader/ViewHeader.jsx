@@ -15,23 +15,12 @@ import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms';
 import { MenuItem } from '@UI/react/components/molecules';
+import { hexToRgbString } from '@UI/react/utils/canvasColors.js';
 
 import './ViewHeader.scss';
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Convert hex color to RGB string for rgba() usage in CSS
- */
-export const hexToRgb = (hex) => {
-    if (!hex) return '96, 165, 250';
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-        : '96, 165, 250';
-};
+// Re-export for backwards compatibility (used by InstanceViewport)
+export { hexToRgbString as hexToRgb };
 
 // ============================================================================
 // LIVE INDICATOR (for active views with collaborators)
@@ -310,7 +299,7 @@ export const ViewHeader = memo(function ViewHeader({
 
     // Color handling
     const colorHex = color?.hex || '#60a5fa';
-    const colorRgb = hexToRgb(colorHex);
+    const colorRgb = hexToRgbString(colorHex);
 
     // Icon from file type
     const typeIconName = fileTypeInfo?.icon || 'box';

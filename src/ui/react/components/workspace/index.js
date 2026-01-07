@@ -8,3 +8,6 @@ export { CanvasCell } from "./Canvas";
 // Full canvas workspace integration
 export { CanvasWorkspace } from "./Canvas";
 export { IsolationOverlay, useIsolationMode } from "./Canvas";
+
+// Instance tools notch
+export { InstanceToolsNotch } from "./InstanceToolsNotch";

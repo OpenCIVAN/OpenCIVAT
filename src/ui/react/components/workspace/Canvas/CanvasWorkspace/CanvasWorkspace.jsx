@@ -17,6 +17,7 @@ import { CanvasToolbar } from '../CanvasToolbar/CanvasToolbar.jsx';
 import { CanvasInfoFooter } from '../CanvasInfoFooter/CanvasInfoFooter.jsx';
 import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
 import { FloatingCanvasWrapper, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
+import { InstanceToolsNotch } from '@UI/react/components/workspace/InstanceToolsNotch';
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
@@ -24,6 +25,7 @@ import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
+import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { workspace as log } from '@Utils/logger.js';
 // Viewport sync handled by CanvasGrid - no need to import here
 
@@ -206,6 +208,138 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
     // Get active view from view context (source of truth for what's currently selected)
     const { activeView: contextActiveView } = useViewContextLogic();
+
+    // ==========================================================================
+    // INSTANCE TOOLS NOTCH STATE
+    // ==========================================================================
+
+    const [instanceTools, setInstanceTools] = useState([]);
+    const [zoomLevel, setZoomLevel] = useState(100);
+
+    // Get active instance from workspaceManager for tools
+    const activeInstance = useMemo(() => {
+        return workspaceManager?.getActiveInstance?.();
+    }, [contextActiveView]);
+
+    // Load tools when active instance changes
+    useEffect(() => {
+        const loadInstanceTools = () => {
+            const instance = workspaceManager?.getActiveInstance?.();
+            log.debug('InstanceToolsNotch: Active instance:', instance?.instanceId);
+
+            if (!instance?.instanceId) {
+                log.debug('InstanceToolsNotch: No active instance, clearing tools');
+                setInstanceTools([]);
+                return;
+            }
+
+            try {
+                // Get all tools from the instance handler
+                const tools = workspaceManager.getInstanceTools(instance.instanceId);
+                log.debug('InstanceToolsNotch: Loaded tools:', tools?.length, tools?.map(t => t.id));
+                setInstanceTools(tools || []);
+            } catch (err) {
+                log.warn('Failed to load instance tools:', err);
+                setInstanceTools([]);
+            }
+        };
+
+        loadInstanceTools();
+
+        // Listen for instance focus changes
+        const handleInstanceFocus = () => {
+            log.debug('InstanceToolsNotch: Instance focus event received');
+            loadInstanceTools();
+        };
+        window.addEventListener('cia:instance-focused', handleInstanceFocus);
+        window.addEventListener('cia:active-instance-changed', handleInstanceFocus);
+        window.addEventListener('cia:tools-updated', handleInstanceFocus);
+
+        return () => {
+            window.removeEventListener('cia:instance-focused', handleInstanceFocus);
+            window.removeEventListener('cia:active-instance-changed', handleInstanceFocus);
+            window.removeEventListener('cia:tools-updated', handleInstanceFocus);
+        };
+    }, [contextActiveView]);
+
+    // Handle tool selection from notch
+    // Note: For menu items, the onClick is already called directly in ToolMenu.handleSelect
+    // This callback is mainly for logging and handling non-menu tools
+    const handleNotchToolSelect = useCallback((tool) => {
+        log.debug('Notch tool selected:', tool?.id, tool?.selectedOption?.id);
+        // onClick is already called in ToolMenu.handleSelect for menu options
+        // For non-menu tools (type !== 'menu'), the onClick would be on the tool itself
+        if (tool.type !== 'menu' && tool.onClick) {
+            log.debug('  -> Calling tool.onClick() for non-menu tool');
+            tool.onClick();
+        }
+    }, []);
+
+    // Handle opening full Instance Tools panel
+    const handleOpenFullInstanceTools = useCallback(() => {
+        const instance = workspaceManager?.getActiveInstance?.();
+        if (instance?.instanceId) {
+            window.dispatchEvent(new CustomEvent('cia:open-instance-tools', {
+                detail: { instanceId: instance.instanceId }
+            }));
+        }
+    }, []);
+
+    // ==========================================================================
+    // NAVIGATION CONTROLS (Zoom, Fit, Reset)
+    // ==========================================================================
+
+    // Subscribe to camera changes to track zoom level
+    useEffect(() => {
+        const instance = workspaceManager?.getActiveInstance?.();
+        if (!instance?.instanceId) {
+            setZoomLevel(100);
+            return;
+        }
+
+        // Subscribe to camera changes for this instance
+        const unsubscribe = workspaceManager.onCameraChange?.(instance.instanceId, ({ zoomLevel: newZoom }) => {
+            if (typeof newZoom === 'number' && !isNaN(newZoom)) {
+                setZoomLevel(Math.round(newZoom));
+            }
+        });
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [contextActiveView]); // Re-subscribe when active view changes
+
+    const handleZoomIn = useCallback(() => {
+        const instance = workspaceManager?.getActiveInstance?.();
+        if (instance?.instanceId) {
+            // Zoom in with factor > 1 (1.25 = 25% zoom in)
+            workspaceManager.zoom?.(instance.instanceId, 1.25);
+        }
+    }, []);
+
+    const handleZoomOut = useCallback(() => {
+        const instance = workspaceManager?.getActiveInstance?.();
+        if (instance?.instanceId) {
+            // Zoom out with factor < 1 (0.8 = 20% zoom out)
+            workspaceManager.zoom?.(instance.instanceId, 0.8);
+        }
+    }, []);
+
+    const handleFit = useCallback(() => {
+        const instance = workspaceManager?.getActiveInstance?.();
+        if (instance?.instanceId) {
+            workspaceManager.fitView?.(instance.instanceId);
+            // Zoom level will be updated via onCameraChange subscription
+        }
+    }, []);
+
+    const handleResetCamera = useCallback(() => {
+        const instance = workspaceManager?.getActiveInstance?.();
+        if (instance?.instanceId) {
+            workspaceManager.resetCamera?.(instance.instanceId);
+            // Zoom level will be updated via onCameraChange subscription
+        }
+    }, []);
 
     // Compute view mode for toolbar based on view stack state
     const toolbarViewMode = useMemo(() => {
@@ -599,6 +733,21 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     {rightPanelContent}
                 </FloatingPanel>
             </div>
+
+            {/* Instance Tools Notch - Full-width bar for active instance tools */}
+            {/* Includes navigation controls (zoom, fit, reset) + instance-specific tools */}
+            <InstanceToolsNotch
+                activeView={contextActiveView}
+                tools={instanceTools}
+                onSelectTool={handleNotchToolSelect}
+                onOpenFullTools={handleOpenFullInstanceTools}
+                // Navigation controls
+                zoomLevel={zoomLevel}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onFit={handleFit}
+                onResetCamera={handleResetCamera}
+            />
 
             {/* Canvas Toolbar - Navigation + History + ViewContextBlock */}
             {/* Note: Navigation and ViewContextBlock use useViewContextLogic hook internally */}
