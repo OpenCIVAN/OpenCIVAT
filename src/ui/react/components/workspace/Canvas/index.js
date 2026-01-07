@@ -10,7 +10,9 @@ export { CanvasHeader } from "./CanvasHeader/CanvasHeader.jsx";
 export { CanvasHeaderBar } from "./CanvasHeaderBar/CanvasHeaderBar.jsx";
 // CanvasToolbar now integrates canvas controls + status info
 export { CanvasToolbar } from "./CanvasToolbar/CanvasToolbar.jsx";
-// CanvasStatusBar kept for standalone use if needed
+// CanvasInfoFooter - compact info bar (canvas size, viewport, cell size, sync status)
+export { CanvasInfoFooter } from "./CanvasInfoFooter/CanvasInfoFooter.jsx";
+// CanvasStatusBar kept for standalone use if needed (legacy)
 export { CanvasStatusBar } from "./CanvasStatusBar/CanvasStatusBar.jsx";
 export { SubsetCard } from "./SubsetCard/SubsetCard.jsx";
 export { EdgeTrigger, FloatingPanel } from "./EdgePanels";

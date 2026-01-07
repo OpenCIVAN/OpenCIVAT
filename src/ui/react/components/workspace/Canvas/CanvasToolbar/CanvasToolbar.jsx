@@ -32,15 +32,16 @@ const ZONES = {
 const ZoneLabelBar = memo(function ZoneLabelBar({ showSubset }) {
     return (
         <div className="canvas-toolbar__label-bar">
-            <div className="canvas-toolbar__label" style={{ width: ZONES.viewMode.width }}>
+            {/* Left zones - use CSS classes for widths to match content zones */}
+            <div className="canvas-toolbar__label canvas-toolbar__label--view-mode">
                 {ZONES.viewMode.label}
             </div>
             <div className="canvas-toolbar__label-separator" />
-            <div className="canvas-toolbar__label" style={{ width: ZONES.navigation.width }}>
+            <div className="canvas-toolbar__label canvas-toolbar__label--navigation">
                 {ZONES.navigation.label}
             </div>
             <div className="canvas-toolbar__label-separator" />
-            <div className="canvas-toolbar__label" style={{ width: ZONES.history.width }}>
+            <div className="canvas-toolbar__label canvas-toolbar__label--history">
                 {ZONES.history.label}
             </div>
 
@@ -48,19 +49,19 @@ const ZoneLabelBar = memo(function ZoneLabelBar({ showSubset }) {
             <div className="canvas-toolbar__label-center">
                 {showSubset && (
                     <>
-                        <div className="canvas-toolbar__label" style={{ width: ZONES.subset.width }}>
+                        <div className="canvas-toolbar__label canvas-toolbar__label--subset">
                             {ZONES.subset.label}
                         </div>
                         <div className="canvas-toolbar__label-separator" />
                     </>
                 )}
-                <div className="canvas-toolbar__label canvas-toolbar__label--flex">
+                <div className="canvas-toolbar__label canvas-toolbar__label--active-view">
                     {showSubset ? 'Active in Subset' : 'Active View'}
                 </div>
             </div>
 
             <div className="canvas-toolbar__label-separator" />
-            <div className="canvas-toolbar__label" style={{ width: ZONES.actions.width, textAlign: 'right' }}>
+            <div className="canvas-toolbar__label canvas-toolbar__label--actions">
                 {ZONES.actions.label}
             </div>
         </div>

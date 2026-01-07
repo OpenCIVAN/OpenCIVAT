@@ -14,6 +14,7 @@ import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay';
 // New canvas chrome components
 import { CanvasHeaderBar } from '../CanvasHeaderBar/CanvasHeaderBar.jsx';
 import { CanvasToolbar } from '../CanvasToolbar/CanvasToolbar.jsx';
+import { CanvasInfoFooter } from '../CanvasInfoFooter/CanvasInfoFooter.jsx';
 import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
 import { FloatingCanvasWrapper, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
 
@@ -496,6 +497,18 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     {rightPanelContent}
                 </FloatingPanel>
             </div>
+
+            {/* Canvas Info Footer - Canvas/Viewport/Cell size + Sync status */}
+            <CanvasInfoFooter
+                canvasSize={canvasSize}
+                viewportSize={gridSize}
+                cellSize={cellSize}
+                collaboratorCount={3} // TODO: Get from actual collab state
+                syncStatus="synced" // TODO: Get from actual sync state
+                onOpenNavigator={() => {
+                    // TODO: Open canvas navigator
+                }}
+            />
 
             {/* Canvas Toolbar - View Mode + Navigation + Actions */}
             <CanvasToolbar

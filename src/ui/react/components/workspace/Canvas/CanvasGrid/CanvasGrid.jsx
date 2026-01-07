@@ -1402,23 +1402,6 @@ export function CanvasGrid({
                 </div>
             </div>
 
-            {/* Viewport info bar */}
-            {measurementsReady && (
-                <div className="canvas-grid__viewport-info">
-                    <span>
-                        Viewport: {effectiveViewport.rows}×{effectiveViewport.cols}
-                        {' | '}
-                        Position: [{effectiveViewport.row}, {effectiveViewport.col}]
-                        {' | '}
-                        Mode: {renderMode}
-                    </span>
-                    <span>
-                        Cell: {Math.round(cellSize.width)}×{Math.round(cellSize.height)}px
-                    </span>
-                </div>
-            )}
-
-            {/* Isolation Mode Overlay */}
             {/* Isolation Mode Overlay */}
             <IsolationOverlay
                 isOpen={isIsolationOpen}

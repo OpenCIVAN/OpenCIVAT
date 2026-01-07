@@ -1,0 +1,136 @@
+// src/ui/react/components/workspace/Canvas/CanvasInfoFooter/CanvasInfoFooter.scss
+// Canvas info footer styling
+//
+// Based on canvas-chrome-v12.jsx spec
+// Height: 24px
+
+@use "theme" as *;
+
+// =============================================================================
+// MAIN CONTAINER
+// =============================================================================
+
+.canvas-info-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px $spacing-md;
+  background: $color-bg-tertiary;
+  border-top: 1px solid $color-border-subtle;
+  font-size: 10px;
+  color: $color-text-muted;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+// =============================================================================
+// SECTIONS
+// =============================================================================
+
+.canvas-info-footer__section {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+
+  &--left {
+    gap: $spacing-md;
+  }
+
+  &--right {
+    gap: $spacing-md;
+  }
+}
+
+// =============================================================================
+// ITEMS
+// =============================================================================
+
+.canvas-info-footer__item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  &--collab {
+    color: $color-text-secondary;
+  }
+}
+
+// =============================================================================
+// NAVIGATOR BUTTON
+// =============================================================================
+
+.canvas-info-footer__nav-btn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  padding: 2px $spacing-xs;
+  margin: -2px -#{$spacing-xs};
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-glass-light;
+    color: $color-text-secondary;
+  }
+}
+
+// =============================================================================
+// SYNC STATUS
+// =============================================================================
+
+.canvas-info-footer__sync {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.canvas-info-footer__sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $color-accent-green;
+  flex-shrink: 0;
+}
+
+.canvas-info-footer__sync--syncing {
+  .canvas-info-footer__sync-dot {
+    background: $color-accent-amber;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+.canvas-info-footer__sync--disconnected {
+  color: $color-error;
+
+  .canvas-info-footer__sync-dot {
+    background: $color-error;
+  }
+}
+
+// =============================================================================
+// ANIMATIONS
+// =============================================================================
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+// =============================================================================
+// RESPONSIVE
+// =============================================================================
+
+@media (max-width: 768px) {
+  .canvas-info-footer {
+    font-size: 9px;
+    padding: 2px $spacing-sm;
+  }
+
+  .canvas-info-footer__section {
+    gap: $spacing-sm;
+  }
+}

@@ -276,36 +276,6 @@
 }
 
 // =============================================================================
-// VIEWPORT INFO BAR
-// =============================================================================
-
-.canvas-grid__viewport-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-xs $spacing-sm;
-  background: $color-bg-secondary;
-  border-top: 1px solid $color-border-subtle;
-  font-size: $font-size-xs;
-  color: $color-text-muted;
-  flex-shrink: 0;
-
-  span {
-    font-family: $font-family-mono;
-  }
-
-  // Render mode indicator
-  &::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--render-mode-indicator, $color-text-muted);
-    margin-right: $spacing-xs;
-  }
-}
-
-// =============================================================================
 // RUBBER BAND SELECTION
 // =============================================================================
 
@@ -328,13 +298,6 @@
   .canvas-grid__edit-banner {
     padding: $spacing-xs $spacing-sm;
     font-size: 10px;
-  }
-
-  .canvas-grid__viewport-info {
-    font-size: 10px;
-    flex-direction: column;
-    gap: 2px;
-    padding: $spacing-xs;
   }
 }
 
