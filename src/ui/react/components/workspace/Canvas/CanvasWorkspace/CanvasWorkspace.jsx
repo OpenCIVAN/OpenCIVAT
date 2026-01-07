@@ -193,7 +193,88 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     }, [canvas]);
 
     // Access view stack for navigation
-    const { focusView, openSubset, isGridView } = useViewStack();
+    const {
+        focusView,
+        openSubset,
+        isGridView,
+        isFocusView,
+        isSubsetView,
+        goHome,
+        currentView,
+    } = useViewStack();
+
+    // Compute view mode for toolbar based on view stack state
+    const toolbarViewMode = useMemo(() => {
+        if (isFocusView) return 'focus';
+        if (isSubsetView) return 'subset';
+        return 'normal';
+    }, [isFocusView, isSubsetView]);
+
+    // Handle toolbar mode change - enter/exit focus/subset modes
+    const handleToolbarModeChange = useCallback((mode) => {
+        log.debug('Toolbar mode change:', mode);
+
+        if (mode === 'normal') {
+            // Exit to grid view
+            goHome();
+        } else if (mode === 'focus') {
+            // Enter focus mode with active view
+            // Find the active/highlighted placement
+            const activePlacement = canvas?.placements?.find(p => p.id === highlightedPlacementId);
+            if (activePlacement) {
+                const viewId = activePlacement.content?.viewConfigurationId;
+                let viewName = 'View';
+                if (viewId) {
+                    try {
+                        const view = getViewConfigurationManager()?.getView(viewId);
+                        if (view) {
+                            const dataset = getDatasetManager()?.getDataset(view.datasetId);
+                            viewName = dataset?.filename || view.name || 'View';
+                        }
+                    } catch (e) {
+                        // Fall through
+                    }
+                }
+                focusView({
+                    placementId: activePlacement.id,
+                    viewConfigurationId: viewId,
+                    name: viewName,
+                    row: activePlacement.row,
+                    col: activePlacement.col,
+                });
+            } else {
+                // No active view - try to focus the first view on canvas
+                const firstViewPlacement = canvas?.placements?.find(p => p.content?.viewConfigurationId);
+                if (firstViewPlacement) {
+                    const viewId = firstViewPlacement.content?.viewConfigurationId;
+                    let viewName = 'View';
+                    if (viewId) {
+                        try {
+                            const view = getViewConfigurationManager()?.getView(viewId);
+                            if (view) {
+                                const dataset = getDatasetManager()?.getDataset(view.datasetId);
+                                viewName = dataset?.filename || view.name || 'View';
+                            }
+                        } catch (e) {
+                            // Fall through
+                        }
+                    }
+                    focusView({
+                        placementId: firstViewPlacement.id,
+                        viewConfigurationId: viewId,
+                        name: viewName,
+                        row: firstViewPlacement.row,
+                        col: firstViewPlacement.col,
+                    });
+                } else {
+                    log.warn('No views available to focus');
+                }
+            }
+        } else if (mode === 'subset') {
+            // TODO: Enter subset mode
+            log.debug('Subset mode requested - not yet implemented');
+        }
+    }, [goHome, focusView, canvas?.placements, highlightedPlacementId]);
 
     // Handle placement click (single click - select)
     const handlePlacementClick = useCallback((placement) => {
@@ -527,11 +608,8 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 onRedo={() => {}}
 
                 // View mode (for ViewContextBlock)
-                viewMode="normal"
-                onModeChange={(mode) => {
-                    // TODO: Implement view mode change
-                    log.debug('View mode change:', mode);
-                }}
+                viewMode={toolbarViewMode}
+                onModeChange={handleToolbarModeChange}
 
                 // Quick actions (for ViewContextBlock)
                 onSnapshot={() => {

@@ -25,7 +25,7 @@ export default {
     argTypes: {
         viewMode: {
             control: 'select',
-            options: ['normal', 'isolation', 'subset'],
+            options: ['normal', 'focus', 'subset'],
         },
         onModeChange: { action: 'mode changed' },
         onNavigate: { action: 'navigate' },
@@ -81,10 +81,10 @@ export const NormalMode = {
     },
 };
 
-export const IsolationMode = {
+export const FocusMode = {
     args: {
         ...Default.args,
-        viewMode: 'isolation',
+        viewMode: 'focus',
         activeView: mockViews[0],
     },
 };

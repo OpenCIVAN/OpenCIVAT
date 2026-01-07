@@ -29,7 +29,7 @@ import './ViewContextBlock.scss';
 
 const VIEW_MODES = [
     { id: 'normal', icon: 'grid', color: 'var(--color-accent-blue)', label: 'Normal' },
-    { id: 'isolation', icon: 'target', color: 'var(--color-accent-amber)', label: 'Isolation' },
+    { id: 'focus', icon: 'focus', color: 'var(--color-accent-amber)', label: 'Focus' },
     { id: 'subset', icon: 'compare', color: 'var(--color-accent-purple)', label: 'Subset' },
 ];
 
@@ -715,9 +715,9 @@ function ViewContextBlock({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // ESC to exit isolation mode
+    // ESC to exit focus mode
     useEffect(() => {
-        if (viewMode !== 'isolation') return;
+        if (viewMode !== 'focus') return;
 
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
@@ -942,7 +942,7 @@ function ViewContextBlock({
                     <Icon name={currentMode.icon} size={10} />
                     <span>
                         {viewMode === 'normal' && 'All Views'}
-                        {viewMode === 'isolation' && 'Focus'}
+                        {viewMode === 'focus' && 'Focus'}
                         {viewMode === 'subset' && 'Compare'}
                     </span>
                 </div>
@@ -964,7 +964,7 @@ function ViewContextBlock({
                         </div>
                     )}
 
-                    {viewMode === 'isolation' && (
+                    {viewMode === 'focus' && (
                         <span className="view-context-block__escape-hint">
                             Press <kbd>Esc</kbd> to exit
                         </span>
