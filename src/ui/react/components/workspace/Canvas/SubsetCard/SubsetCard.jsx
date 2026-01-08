@@ -7,8 +7,9 @@
 // - Hover overlay with "Open Subset" button
 // - Double-click to open subset view
 
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useMemo } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
+import { getSubsetManager } from '@Init/appInitializer.js';
 import './SubsetCard.scss';
 
 // =============================================================================
@@ -232,5 +233,76 @@ export function SubsetCard({
         </div>
     );
 }
+
+/**
+ * SubsetCardById - Wrapper that looks up subset by ID
+ *
+ * Used by CanvasCell when rendering a subset placement
+ */
+export const SubsetCardById = memo(function SubsetCardById({
+    subsetId,
+    renderMode = 'full',
+    isActive = false,
+    onOpen,
+    onClose,
+    onClick,
+    onShare,
+}) {
+    // Look up subset from manager
+    const subset = useMemo(() => {
+        try {
+            const subsetData = getSubsetManager()?.getSubset(subsetId);
+            if (!subsetData) return null;
+
+            // Convert Subset model to the format SubsetCard expects
+            const layout = subsetData.calculateFocusLayout?.() || { rows: 2, cols: 2 };
+            return {
+                id: subsetData.id,
+                name: subsetData.name || 'Unnamed Subset',
+                color: 'var(--color-accent-amber)', // Default color for subsets
+                layout: `${layout.cols}x${layout.rows}`,
+                viewIds: subsetData.placementIds || [],
+            };
+        } catch (e) {
+            console.warn('Failed to get subset:', subsetId, e);
+            return null;
+        }
+    }, [subsetId]);
+
+    // Handle missing subset
+    if (!subset) {
+        return (
+            <div className="subset-card subset-card--error">
+                <div className="subset-card__error-content">
+                    <Icon name="alertTriangle" size={20} />
+                    <span>Subset not found</span>
+                    {onClose && (
+                        <button
+                            className="subset-card__close-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onClose();
+                            }}
+                        >
+                            <Icon name="x" size={14} />
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <SubsetCard
+            subset={subset}
+            renderMode={renderMode}
+            isActive={isActive}
+            onOpen={onOpen}
+            onClose={onClose}
+            onClick={onClick}
+            onShare={onShare}
+        />
+    );
+});
 
 export default memo(SubsetCard);

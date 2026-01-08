@@ -579,6 +579,20 @@ export function useSubsets(canvasId) {
     subsetManager.toggleSelection(placementId);
   }, []);
 
+  const addPlacementsToSubset = useCallback(
+    async (subsetId, placementIds) => {
+      return subsetManager.addPlacementsToSubset(subsetId, placementIds);
+    },
+    []
+  );
+
+  const removePlacementsFromSubset = useCallback(
+    async (subsetId, placementIds) => {
+      return subsetManager.removePlacementsFromSubset(subsetId, placementIds);
+    },
+    []
+  );
+
   return {
     subsets,
     loading,
@@ -593,5 +607,7 @@ export function useSubsets(canvasId) {
     enterSelectionMode,
     exitSelectionMode,
     toggleSelection,
+    addPlacementsToSubset,
+    removePlacementsFromSubset,
   };
 }

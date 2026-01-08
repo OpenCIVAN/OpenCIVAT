@@ -121,6 +121,11 @@
 
   &--selectable {
     cursor: pointer;
+
+    &:hover {
+      outline: 2px solid rgba($color-accent-teal, 0.5);
+      outline-offset: -2px;
+    }
   }
 
   // ==========================================================================
@@ -153,9 +158,44 @@
 
   &__selection-overlay {
     position: absolute;
-    top: $spacing-xs;
-    left: $spacing-xs;
+    top: $spacing-sm;
+    left: $spacing-sm;
     z-index: 10;
+
+    // Hide native checkbox, use custom styling
+    input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      transition: all 0.15s ease;
+
+      &:hover {
+        border-color: $color-accent-teal;
+        background: rgba(0, 0, 0, 0.8);
+      }
+
+      &:checked {
+        background: $color-accent-teal;
+        border-color: $color-accent-teal;
+
+        // Checkmark
+        &::after {
+          content: '';
+          display: block;
+          width: 4px;
+          height: 8px;
+          border: solid white;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg) translate(-1px, -1px);
+          margin: 2px 0 0 5px;
+        }
+      }
+    }
   }
 
   // ==========================================================================

@@ -47,34 +47,21 @@ export class Subset {
    * @param {string} options.createdAt - ISO timestamp
    * @param {string} options.updatedAt - ISO timestamp
    */
-  constructor({
-    id = null,
-    projectId,
-    canvasId,
-    name = "Untitled Focus Group",
-    description = "",
-    placementIds = [],
-    attachedNotes = [],
-    attachedImages = [],
-    visibility = SubsetVisibility.PRIVATE,
-    sharedWith = [],
-    createdBy = null,
-    createdAt = null,
-    updatedAt = null,
-  } = {}) {
-    this.id = id;
-    this.projectId = projectId;
-    this.canvasId = canvasId;
-    this.name = name;
-    this.description = description;
-    this.placementIds = [...placementIds];
-    this.attachedNotes = [...attachedNotes];
-    this.attachedImages = [...attachedImages];
-    this.visibility = visibility;
-    this.sharedWith = [...sharedWith];
-    this.createdBy = createdBy;
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
+  constructor(data = {}) {
+    // Handle both camelCase and snake_case from server
+    this.id = data.id || null;
+    this.projectId = data.projectId || data.project_id || null;
+    this.canvasId = data.canvasId || data.canvas_id || null;
+    this.name = data.name || "Untitled Focus Group";
+    this.description = data.description || "";
+    this.placementIds = [...(data.placementIds || data.placement_ids || [])];
+    this.attachedNotes = [...(data.attachedNotes || data.attached_notes || [])];
+    this.attachedImages = [...(data.attachedImages || data.attached_images || [])];
+    this.visibility = data.visibility || SubsetVisibility.PRIVATE;
+    this.sharedWith = [...(data.sharedWith || data.shared_with || [])];
+    this.createdBy = data.createdBy || data.created_by || null;
+    this.createdAt = data.createdAt || data.created_at || null;
+    this.updatedAt = data.updatedAt || data.updated_at || null;
   }
 
   // ===========================================================================

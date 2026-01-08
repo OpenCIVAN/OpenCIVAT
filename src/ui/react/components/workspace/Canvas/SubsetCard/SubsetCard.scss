@@ -250,3 +250,51 @@
     border: none;
   }
 }
+
+// =============================================================================
+// ERROR STATE
+// =============================================================================
+
+.subset-card--error {
+  background: rgba($color-accent-red, 0.08);
+  border: 2px dashed rgba($color-accent-red, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.subset-card__error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  color: $color-text-muted;
+  text-align: center;
+  padding: $spacing-md;
+
+  svg {
+    color: rgba($color-accent-red, 0.6);
+  }
+
+  span {
+    font-size: $font-size-sm;
+  }
+}
+
+.subset-card__close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba($color-accent-red, 0.15);
+  border: 1px solid rgba($color-accent-red, 0.3);
+  border-radius: $radius-sm;
+  color: $color-accent-red;
+  cursor: pointer;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba($color-accent-red, 0.25);
+  }
+}

@@ -181,11 +181,21 @@ function ViewHeaderMenu({
                     onClick={() => handleItemClick(onDuplicate)}
                 />
             )}
-            {isActive && onAddToSubset && (
+            {isActive && (
                 <MenuItem
-                    icon="bookmark"
+                    icon="layers"
                     label="Add to Subset"
-                    onClick={() => handleItemClick(onAddToSubset)}
+                    onClick={() => {
+                        if (onAddToSubset) {
+                            handleItemClick(onAddToSubset);
+                        } else {
+                            // Dispatch global event for CanvasWorkspace to handle
+                            window.dispatchEvent(new CustomEvent('cia:add-to-subset-request', {
+                                detail: { viewId: displayName }
+                            }));
+                            handleItemClick(() => {});
+                        }
+                    }}
                 />
             )}
             {isActive && onShare && (

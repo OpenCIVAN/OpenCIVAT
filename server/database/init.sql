@@ -662,7 +662,7 @@ CREATE TABLE placements (
     col_index INT NOT NULL DEFAULT 0,
     row_span INT NOT NULL DEFAULT 1 CHECK (row_span BETWEEN 1 AND 3),
     col_span INT NOT NULL DEFAULT 1 CHECK (col_span BETWEEN 1 AND 3),
-    content_type VARCHAR(20) NOT NULL DEFAULT 'empty' CHECK (content_type IN ('view', 'note', 'image', 'empty')),
+    content_type VARCHAR(20) NOT NULL DEFAULT 'empty' CHECK (content_type IN ('view', 'note', 'image', 'subset', 'empty')),
     content_id UUID,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),

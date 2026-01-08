@@ -1,2 +1,2 @@
 // src/ui/react/components/workspace/Canvas/SubsetCard/index.js
-export { SubsetCard, default } from './SubsetCard.jsx';
+export { SubsetCard, SubsetCardById, default } from './SubsetCard.jsx';

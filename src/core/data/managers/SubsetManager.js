@@ -133,11 +133,12 @@ export class SubsetManager extends BaseManager {
     const canvas = this._canvasManager?.getCanvas(canvasId);
     const projectId = canvas?.projectId;
 
+    const placementIds = options.placementIds || Array.from(this._selectedPlacementIds);
+
     const payload = {
       name: options.name || "Untitled Focus Group",
       description: options.description || "",
-      placementIds:
-        options.placementIds || Array.from(this._selectedPlacementIds),
+      placementIds,
     };
 
     try {
@@ -158,8 +159,27 @@ export class SubsetManager extends BaseManager {
 
       return subset;
     } catch (error) {
-      this._emit("error", { operation: "createSubset", error });
-      throw error;
+      // Fallback: Create local-only subset if server fails
+      log.warn("Server subset creation failed, creating local subset:", error.message);
+
+      const localSubset = new Subset({
+        id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        canvasId,
+        name: payload.name,
+        description: payload.description,
+        placementIds,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      this._subsets.set(localSubset.id, localSubset);
+
+      // Clear selection after creating subset
+      this.clearSelection();
+
+      this._emit("subsetCreated", { canvasId, subset: localSubset });
+
+      return localSubset;
     }
   }
 
@@ -170,6 +190,22 @@ export class SubsetManager extends BaseManager {
    * @returns {Promise<Subset>}
    */
   async updateSubset(subsetId, updates) {
+    const existingSubset = this._subsets.get(subsetId);
+
+    // For local subsets (prefixed with 'local-'), update locally only
+    if (subsetId.startsWith('local-') && existingSubset) {
+      const updatedSubset = new Subset({
+        ...existingSubset.toJSON?.() || existingSubset,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      });
+
+      this._subsets.set(subsetId, updatedSubset);
+      this._emit("subsetUpdated", { subset: updatedSubset, updates });
+
+      return updatedSubset;
+    }
+
     try {
       const response = await this._fetch(`/subsets/${subsetId}`, {
         method: "PUT",
@@ -184,6 +220,22 @@ export class SubsetManager extends BaseManager {
 
       return subset;
     } catch (error) {
+      // Fallback: Update locally if server fails
+      if (existingSubset) {
+        log.warn("Server subset update failed, updating locally:", error.message);
+
+        const updatedSubset = new Subset({
+          ...existingSubset.toJSON?.() || existingSubset,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        });
+
+        this._subsets.set(subsetId, updatedSubset);
+        this._emit("subsetUpdated", { subset: updatedSubset, updates });
+
+        return updatedSubset;
+      }
+
       this._emit("error", { operation: "updateSubset", error });
       throw error;
     }

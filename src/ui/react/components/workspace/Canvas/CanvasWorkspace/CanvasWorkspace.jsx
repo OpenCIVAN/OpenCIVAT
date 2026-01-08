@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { CanvasGrid } from '@UI/react/components/workspace';
 import { SubsetPanel } from '@UI/react/components/panels/SubsetPanel';
 import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay';
+import { SubsetSelectorModal } from '@UI/react/components/modals/SubsetSelectorModal';
 
 // New canvas chrome components
 import { CanvasHeaderBar } from '../CanvasHeaderBar/CanvasHeaderBar.jsx';
@@ -42,6 +43,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
     const [activeCanvasId, setActiveCanvasId] = useState(null);
     const [showSubsetPanel, setShowSubsetPanel] = useState(false);
+    const [showSubsetSelector, setShowSubsetSelector] = useState(false);
     const [highlightedPlacementId, setHighlightedPlacementId] = useState(null);
     const [loadError, setLoadError] = useState(null);
     const instanceCreationInProgress = useRef(false);
@@ -84,10 +86,17 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     // Subsets hook
     const {
         subsets,
-        focusedSubset,
-        isFocusMode,
+        activeSubset: focusedSubset,
+        inFocusMode: isFocusMode,
+        selectionMode,
+        selectedIds,
+        createSubset,
         enterFocusMode,
         exitFocusMode,
+        enterSelectionMode,
+        exitSelectionMode,
+        toggleSelection,
+        addPlacementsToSubset,
     } = useSubsets(activeCanvasId);
 
     // Load initial workspace/canvas (server-authoritative, no local fallback)
@@ -262,6 +271,20 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         };
     }, [contextActiveView]);
 
+    // Listen for "Add to Subset" requests from ViewHeader menus
+    useEffect(() => {
+        const handleAddToSubsetRequest = (e) => {
+            log.debug('Add to Subset request received:', e.detail);
+            // Show the subset selector modal
+            setShowSubsetSelector(true);
+        };
+
+        window.addEventListener('cia:add-to-subset-request', handleAddToSubsetRequest);
+        return () => {
+            window.removeEventListener('cia:add-to-subset-request', handleAddToSubsetRequest);
+        };
+    }, []);
+
     // Handle tool selection from notch
     // Note: For menu items, the onClick is already called directly in ToolMenu.handleSelect
     // This callback is mainly for logging and handling non-menu tools
@@ -408,10 +431,11 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 log.warn('No views available to focus');
             }
         } else if (mode === 'subset') {
-            // TODO: Enter subset mode
-            log.debug('Subset mode requested - not yet implemented');
+            // Enter subset mode - show the subset selector modal
+            log.debug('Subset mode requested - opening subset selector');
+            setShowSubsetSelector(true);
         }
-    }, [goHome, focusView, canvas?.placements, contextActiveView]);
+    }, [goHome, focusView, openSubset, canvas?.placements, contextActiveView, subsets]);
 
     // Handle placement click (single click - select)
     const handlePlacementClick = useCallback((placement) => {
@@ -504,6 +528,89 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 log.warn(`Unknown content type: ${type}`);
         }
     }, [activeCanvasId, addPlacement]);
+
+    // ==========================================================================
+    // SUBSET SELECTOR MODAL HANDLERS
+    // ==========================================================================
+
+    // Handle selecting an existing subset from the modal
+    const handleSelectSubset = useCallback((subset) => {
+        log.debug('Subset selected:', subset.id, subset.name);
+        openSubset({
+            subsetId: subset.id,
+            name: subset.name || 'Subset',
+            placementIds: subset.placementIds || [],
+        });
+        setShowSubsetSelector(false);
+    }, [openSubset]);
+
+    // Handle creating a new subset from selected placements
+    const handleCreateSubset = useCallback(async ({ name, placementIds }) => {
+        log.debug('Creating subset:', name, 'with placements:', placementIds);
+        try {
+            const newSubset = await createSubset({
+                name,
+                placementIds,
+            });
+            // Exit selection mode and clear selection
+            exitSelectionMode(true);
+            setShowSubsetSelector(false);
+            // Return the subset so the modal can optionally place it on canvas
+            return newSubset;
+        } catch (err) {
+            log.error('Failed to create subset:', err);
+            setShowSubsetSelector(false);
+            return null;
+        }
+    }, [createSubset, exitSelectionMode]);
+
+    // Handle entering selection mode from the modal
+    const handleEnterSelectionMode = useCallback(() => {
+        log.debug('Entering selection mode for subset creation');
+        enterSelectionMode();
+        setShowSubsetSelector(false);
+    }, [enterSelectionMode]);
+
+    // Handle adding placements to an existing subset
+    const handleAddToExistingSubset = useCallback(async (subsetId, placementIds) => {
+        log.debug('Adding placements to subset:', subsetId, placementIds);
+        try {
+            await addPlacementsToSubset(subsetId, placementIds);
+            // Exit selection mode and clear selection
+            exitSelectionMode(true);
+        } catch (err) {
+            log.error('Failed to add placements to subset:', err);
+        }
+    }, [addPlacementsToSubset, exitSelectionMode]);
+
+    // Handle placing a subset on the canvas as a first-class citizen
+    const handlePlaceSubsetOnCanvas = useCallback(async (subsetId) => {
+        log.debug('Placing subset on canvas:', subsetId);
+        if (!activeCanvasId) {
+            log.error('No canvas available for placing subset');
+            return;
+        }
+
+        try {
+            // Find next empty cell
+            const { row, col } = findNextEmptyCell();
+
+            // Create a subset placement
+            await addPlacement({
+                row,
+                col,
+                rowSpan: 1,
+                colSpan: 1,
+                content: {
+                    type: 'subset',
+                    subsetId,
+                },
+            });
+            log.debug('Subset placement added at', row, col);
+        } catch (err) {
+            log.error('Failed to place subset on canvas:', err);
+        }
+    }, [activeCanvasId, findNextEmptyCell, addPlacement]);
 
     // Show error if canvas loading failed
     const showError = (canvasError || loadError) && !canvas;
@@ -680,6 +787,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                             onAddRow={addRow}
                             onAddColumn={addColumn}
                             onAddContent={handleAddContent}
+                            onOpenSubsetSelector={() => setShowSubsetSelector(true)}
                         />
                     ) : (
                         <div className="canvas-workspace__empty">
@@ -795,6 +903,20 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     onExit={exitFocusMode}
                 />
             )}
+
+            {/* Subset selector modal */}
+            <SubsetSelectorModal
+                isOpen={showSubsetSelector}
+                onClose={() => setShowSubsetSelector(false)}
+                subsets={subsets}
+                allPlacements={visiblePlacements}
+                selectedPlacementIds={selectedIds}
+                onSelectSubset={handleSelectSubset}
+                onCreateSubset={handleCreateSubset}
+                onAddToSubset={handleAddToExistingSubset}
+                onPlaceOnCanvas={handlePlaceSubsetOnCanvas}
+                onEnterSelectionMode={handleEnterSelectionMode}
+            />
             </div>
         </FloatingCanvasWrapper>
     );

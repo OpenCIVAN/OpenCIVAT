@@ -377,6 +377,7 @@ router.post("/:id/placements", async (req, res, next) => {
         content.viewConfigurationId ||
         content.notesBlockId ||
         content.imageBlockId ||
+        content.subsetId ||
         content.id ||
         null;
     }
@@ -419,6 +420,21 @@ router.post("/:id/placements", async (req, res, next) => {
           error: "InvalidReference",
           message: `Note ${resolvedContentId} does not exist`,
           code: "NOTE_NOT_FOUND",
+        });
+      }
+    }
+
+    if (resolvedContentType === "subset" && resolvedContentId) {
+      const subsetCheck = await pool.query(
+        `SELECT id FROM subsets WHERE id = $1`,
+        [resolvedContentId]
+      );
+
+      if (subsetCheck.rows.length === 0) {
+        return res.status(400).json({
+          error: "InvalidReference",
+          message: `Subset ${resolvedContentId} does not exist`,
+          code: "SUBSET_NOT_FOUND",
         });
       }
     }

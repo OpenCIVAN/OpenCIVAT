@@ -74,6 +74,7 @@ import { InstanceViewport } from '@UI/react/components/workspace/InstanceViewpor
 import { ProgressiveLoader } from '@UI/react/components/molecules/ThumbnailPreview';
 import { RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { Thumbnail } from '@UI/react/components/atoms/Thumbnail';
+import { SubsetCardById } from '@UI/react/components/workspace/Canvas/SubsetCard';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import './CanvasCell.scss';
 
@@ -87,7 +88,7 @@ import './CanvasCell.scss';
  *
  * Also used during loading state to show header immediately
  */
-function ColdViewHeader({ viewId, viewColor, onClose, onActivate, onVRMode, onFocus, renderMode, isLoading = false, isActive = false }) {
+function ColdViewHeader({ viewId, viewColor, onClose, onActivate, onVRMode, onFocus, onAddToSubset, renderMode, isLoading = false, isActive = false }) {
     // Get view name and file type info
     const { displayName, fileTypeInfo } = useMemo(() => {
         try {
@@ -120,6 +121,7 @@ function ColdViewHeader({ viewId, viewColor, onClose, onActivate, onVRMode, onFo
             onRemove={onClose}
             onVRMode={onVRMode}
             onOpenInIsolation={onFocus}
+            onAddToSubset={onAddToSubset}
         />
     );
 }
@@ -480,10 +482,16 @@ export const CanvasCell = memo(function CanvasCell({
     }, [contentType, placement?.content?.viewConfigurationId]);
 
     const handleClick = useCallback((e) => {
+        // In selection mode, clicking the cell toggles selection
+        if (selectionMode) {
+            e.stopPropagation();
+            onSelect?.();
+            return;
+        }
         if (onClick) {
             onClick(e);
         }
-    }, [onClick]);
+    }, [onClick, selectionMode, onSelect]);
 
     const handleAddClick = useCallback((type) => {
         if (onAddContent) {
@@ -607,6 +615,22 @@ export const CanvasCell = memo(function CanvasCell({
                     <ImagePlaceholder
                         imageId={placement.content.imageBlockId}
                         renderMode={renderMode}
+                        onClose={() => onRemove?.()}
+                    />
+                );
+
+            case PlacementContentType.SUBSET:
+                return (
+                    <SubsetCardById
+                        subsetId={placement.content.subsetId}
+                        renderMode={renderMode}
+                        isActive={false}
+                        onOpen={() => {
+                            // Dispatch event to open subset in focus mode
+                            window.dispatchEvent(new CustomEvent('cia:open-subset', {
+                                detail: { subsetId: placement.content.subsetId }
+                            }));
+                        }}
                         onClose={() => onRemove?.()}
                     />
                 );

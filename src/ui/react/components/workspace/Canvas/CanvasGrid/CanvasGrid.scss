@@ -267,6 +267,51 @@
   background: rgba($color-accent-teal, 0.15);
   border-bottom: 1px solid rgba($color-accent-teal, 0.3);
   color: $color-accent-teal;
+  justify-content: space-between;
+}
+
+.canvas-grid__selection-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.canvas-grid__selection-btn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 4px $spacing-sm;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all $transition-fast;
+  border: none;
+  background: transparent;
+
+  &--create {
+    background: $color-accent-teal;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: color.adjust($color-accent-teal, $lightness: 5%);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &--cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-secondary;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: $color-text-primary;
+    }
+  }
 }
 
 .canvas-grid__edit-banner {
@@ -409,4 +454,112 @@
 // Viewport in focus mode
 .canvas-grid__viewport--focus-mode {
   padding: 0; // Remove padding in focus mode
+}
+
+// =============================================================================
+// SUBSET VIEW MODE - Multiple cells in optimized grid layout
+// =============================================================================
+
+.canvas-grid--subset-view-mode {
+  .canvas-grid__container {
+    border: none;
+    border-radius: 0;
+  }
+}
+
+// Subset mode header bar
+.canvas-grid__subset-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-bg-elevated, 0.95);
+  border-bottom: 1px solid $color-border-default;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.canvas-grid__subset-back {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-primary;
+  }
+
+  span {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.canvas-grid__subset-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  color: $color-success; // Green accent for subset mode
+}
+
+.canvas-grid__subset-name {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.canvas-grid__subset-count {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+}
+
+.canvas-grid__subset-hint {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+
+  kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    font-family: $font-family-mono;
+    font-size: 10px;
+  }
+}
+
+// Subset view container - grid layout for subset cells
+.canvas-grid__subset-view-container {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+}
+
+// Individual cell in subset grid
+.canvas-grid__subset-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+
+  > .canvas-cell {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+// Viewport in subset mode
+.canvas-grid__viewport--subset-mode {
+  padding: 0;
 }

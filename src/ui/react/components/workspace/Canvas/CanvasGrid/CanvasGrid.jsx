@@ -99,6 +99,7 @@ export function CanvasGrid({
     flowDirection: propFlowDirection,
     onLayoutModeChange,
     onFlowDirectionChange,
+    onOpenSubsetSelector,
 }) {
     const gridRef = useRef(null);
 
@@ -373,6 +374,7 @@ export function CanvasGrid({
         selectionMode,
         selectedIds,
         toggleSelection,
+        exitSelectionMode,
         inFocusMode,
         activeSubset,
     } = useSubsets(canvasId);
@@ -384,6 +386,7 @@ export function CanvasGrid({
 
     const {
         isFocusView,
+        isSubsetView,
         currentView,
         focusView,
         goBack: exitFocusMode,
@@ -531,10 +534,17 @@ export function CanvasGrid({
                 }
             }
 
-            // Escape - Exit focus mode first, then deselect all
+            // Escape - Exit focus/subset mode first, then deselect all
             if (e.key === 'Escape') {
                 // Priority 1: Exit focus mode if in it
                 if (isFocusView && exitFocusMode) {
+                    e.preventDefault();
+                    exitFocusMode();
+                    return;
+                }
+
+                // Priority 1.5: Exit subset mode if in it
+                if (isSubsetView && exitFocusMode) {
                     e.preventDefault();
                     exitFocusMode();
                     return;
@@ -664,7 +674,7 @@ export function CanvasGrid({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells, contextMenu.isOpen, renderMode, shouldTriggerIsolation, isolateCell, onRemovePlacement, isFocusView, exitFocusMode]);
+    }, [moveViewport, incrementViewportSize, decrementViewportSize, resetViewportSize, setViewportSize, canvas?.placements, selectedCells, contextMenu.isOpen, renderMode, shouldTriggerIsolation, isolateCell, onRemovePlacement, isFocusView, isSubsetView, exitFocusMode]);
 
     // ==========================================================================
     // SELECTION MODIFIER KEY TRACKING (for cursor feedback)
@@ -1328,11 +1338,12 @@ export function CanvasGrid({
                                 selectedCellsSet.has(key) ||
                                 (activeViewId && placement?.content?.viewConfigurationId === activeViewId)
                             }
+                            selectionMode={selectionMode}
                             inEditMode={editMode}
                             activeViewId={activeViewId}
                             recentViewIds={recentViewIds}
                             isInFocusMode={isFocusView}
-                            onSelect={toggleSelection}
+                            onSelect={() => placement?.id && toggleSelection(placement.id)}
                             onClick={(e) => placement && handleCellClick(placement, e)}
                             onDoubleClick={(e) => placement && handleCellDoubleClick(placement, e)}
                             onAddContent={(type) => onAddContent?.(canvasRow, canvasCol, type)}
@@ -1355,6 +1366,7 @@ export function CanvasGrid({
         highlightedPlacementId,
         selectedIdsSet,
         selectedCellsSet,
+        selectionMode,
         editMode,
         activeViewId,
         recentViewIds,
@@ -1406,6 +1418,88 @@ export function CanvasGrid({
     }, [isFocusView, focusedPlacement, containerSize, exitFocusMode, onRemovePlacement, handleCellDrop]);
 
     // ==========================================================================
+    // SUBSET MODE RENDERING
+    // ==========================================================================
+
+    // Get subset placements when in subset mode
+    const subsetPlacements = useMemo(() => {
+        if (!isSubsetView || !currentView?.data?.placementIds) return [];
+        const placementIds = currentView.data.placementIds;
+        return canvas?.placements?.filter(p => placementIds.includes(p.id)) || [];
+    }, [isSubsetView, currentView?.data?.placementIds, canvas?.placements]);
+
+    // Calculate optimal grid layout for subset
+    const subsetLayout = useMemo(() => {
+        const n = subsetPlacements.length;
+        if (n === 0) return { rows: 1, cols: 1 };
+        if (n === 1) return { rows: 1, cols: 1 };
+        if (n === 2) return { rows: 1, cols: 2 };
+        if (n === 3) return { rows: 1, cols: 3 };
+        if (n === 4) return { rows: 2, cols: 2 };
+        if (n <= 6) return { rows: 2, cols: 3 };
+        if (n <= 9) return { rows: 3, cols: 3 };
+        // For more than 9, calculate closest square
+        const cols = Math.ceil(Math.sqrt(n));
+        const rows = Math.ceil(n / cols);
+        return { rows, cols };
+    }, [subsetPlacements.length]);
+
+    // Calculate cell size for subset mode
+    const subsetCellSize = useMemo(() => {
+        if (!isSubsetView || subsetPlacements.length === 0) return containerSize;
+        const { rows, cols } = subsetLayout;
+        const gap = 8; // Gap between cells
+        const width = (containerSize.width - (cols - 1) * gap) / cols;
+        const height = (containerSize.height - (rows - 1) * gap) / rows;
+        return { width, height };
+    }, [isSubsetView, subsetPlacements.length, subsetLayout, containerSize]);
+
+    // Render subset cells
+    const renderSubsetCells = useMemo(() => {
+        if (!isSubsetView || subsetPlacements.length === 0) return null;
+
+        const { cols } = subsetLayout;
+
+        return subsetPlacements.map((placement, index) => {
+            const gridRow = Math.floor(index / cols);
+            const gridCol = index % cols;
+
+            return (
+                <div
+                    key={placement.id}
+                    className="canvas-grid__subset-cell"
+                    style={{
+                        gridRow: gridRow + 1,
+                        gridColumn: gridCol + 1,
+                    }}
+                >
+                    <CanvasCell
+                        placement={placement}
+                        row={placement.row}
+                        col={placement.col}
+                        renderMode={RENDER_MODES.FULL}
+                        cellSize={subsetCellSize}
+                        isHighlighted={false}
+                        isSelected={false}
+                        inEditMode={false}
+                        activeViewId={activeViewId}
+                        recentViewIds={recentViewIds}
+                        isInFocusMode={false}
+                        onRemove={() => onRemovePlacement?.(placement.id)}
+                        onDrop={handleCellDrop}
+                        onFocusView={() => focusView({
+                            placementId: placement.id,
+                            name: placement.content?.name || 'View',
+                            row: placement.row,
+                            col: placement.col,
+                        })}
+                    />
+                </div>
+            );
+        });
+    }, [isSubsetView, subsetPlacements, subsetLayout, subsetCellSize, activeViewId, recentViewIds, onRemovePlacement, handleCellDrop, focusView]);
+
+    // ==========================================================================
     // RENDER
     // ==========================================================================
 
@@ -1429,7 +1523,7 @@ export function CanvasGrid({
 
     return (
         <div
-            className={`canvas-grid canvas-grid--${layoutMode} ${inFocusMode ? 'canvas-grid--subset-focus-mode' : ''} ${isFocusView ? 'canvas-grid--view-focus-mode' : ''}`}
+            className={`canvas-grid canvas-grid--${layoutMode} ${inFocusMode ? 'canvas-grid--subset-focus-mode' : ''} ${isFocusView ? 'canvas-grid--view-focus-mode' : ''} ${isSubsetView ? 'canvas-grid--subset-view-mode' : ''}`}
             data-render-mode={renderMode}
         >
             {/* Mode banners */}
@@ -1459,9 +1553,56 @@ export function CanvasGrid({
                 </div>
             )}
 
+            {/* Subset Mode Header - Shows when viewing subset of views */}
+            {isSubsetView && currentView && (
+                <div className="canvas-grid__subset-header">
+                    <button
+                        className="canvas-grid__subset-back"
+                        onClick={exitFocusMode}
+                        title="Exit subset mode (Escape)"
+                    >
+                        <Icon name="arrowLeft" size={16} />
+                        <span>Back</span>
+                    </button>
+                    <div className="canvas-grid__subset-title">
+                        <Icon name="layers" size={16} />
+                        <span className="canvas-grid__subset-name">{currentView.label}</span>
+                        <span className="canvas-grid__subset-count">
+                            ({subsetPlacements.length} view{subsetPlacements.length !== 1 ? 's' : ''})
+                        </span>
+                    </div>
+                    <div className="canvas-grid__subset-hint">
+                        Press <kbd>Escape</kbd> to exit
+                    </div>
+                </div>
+            )}
+
             {selectionMode && (
                 <div className="canvas-grid__selection-banner">
-                    <span>Selection Mode - Click cells to add/remove from selection</span>
+                    <span>
+                        <Icon name="pointer" size={14} />
+                        Selection Mode - {selectedIds.length} selected
+                    </span>
+                    <div className="canvas-grid__selection-actions">
+                        <button
+                            className="canvas-grid__selection-btn canvas-grid__selection-btn--create"
+                            onClick={() => {
+                                if (onOpenSubsetSelector) {
+                                    onOpenSubsetSelector();
+                                }
+                            }}
+                            disabled={selectedIds.length === 0}
+                        >
+                            <Icon name="layers" size={12} />
+                            Create Subset
+                        </button>
+                        <button
+                            className="canvas-grid__selection-btn canvas-grid__selection-btn--cancel"
+                            onClick={() => exitSelectionMode(true)}
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -1495,22 +1636,37 @@ export function CanvasGrid({
                     {/* Grid viewport - ALWAYS rendered to preserve VTK instances */}
                     <div
                         ref={gridRef}
-                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''} ${selectionModifierHeld ? 'canvas-grid__viewport--selection-mode' : ''} ${isFocusView ? 'canvas-grid__viewport--focus-mode' : ''}`}
+                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''} ${selectionModifierHeld ? 'canvas-grid__viewport--selection-mode' : ''} ${isFocusView ? 'canvas-grid__viewport--focus-mode' : ''} ${isSubsetView ? 'canvas-grid__viewport--subset-mode' : ''}`}
                         tabIndex={0}
                         onClick={handleGridClick}
                         onContextMenu={handleContextMenu}
                     >
-                        {/* Show either focus mode view or normal grid */}
+                        {/* Show focus view, subset view, or normal grid */}
                         {isFocusView ? (
                             <div className="canvas-grid__focus-view-container">
                                 {renderFocusedCell}
+                            </div>
+                        ) : isSubsetView ? (
+                            <div
+                                className="canvas-grid__subset-view-container"
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: `repeat(${subsetLayout.cols}, 1fr)`,
+                                    gridTemplateRows: `repeat(${subsetLayout.rows}, 1fr)`,
+                                    gap: '8px',
+                                    width: '100%',
+                                    height: '100%',
+                                    padding: '8px',
+                                }}
+                            >
+                                {renderSubsetCells}
                             </div>
                         ) : (
                             renderCells
                         )}
 
-                        {/* Edge Drop Zones - show at canvas edges during drag (hidden in focus mode) */}
-                        {!isFocusView && (
+                        {/* Edge Drop Zones - show at canvas edges during drag (hidden in focus/subset mode) */}
+                        {!isFocusView && !isSubsetView && (
                         <CanvasEdgeDropZones
                             isDragActive={isDragActive}
                             canExpandTop={effectiveViewport.row === 0}

@@ -14,6 +14,7 @@ export const PlacementContentType = {
   VIEW: "view", // A ViewConfiguration
   NOTES: "notes", // A NotesBlock (markdown notes)
   IMAGE: "image", // An ImageBlock (reference image)
+  SUBSET: "subset", // A Subset (focus group of views)
   EMPTY: "empty", // Empty slot placeholder
 };
 
@@ -90,6 +91,13 @@ export class CanvasPlacement {
           this.content = {
             type: PlacementContentType.IMAGE,
             imageBlockId: contentId,
+          };
+          break;
+        case "subset":
+        case PlacementContentType.SUBSET:
+          this.content = {
+            type: PlacementContentType.SUBSET,
+            subsetId: contentId,
           };
           break;
         default:
@@ -214,6 +222,13 @@ export class CanvasPlacement {
   }
 
   /**
+   * Check if placement holds a subset
+   */
+  isSubset() {
+    return this.content.type === PlacementContentType.SUBSET;
+  }
+
+  /**
    * Check if placement is empty
    */
   isEmpty() {
@@ -245,6 +260,14 @@ export class CanvasPlacement {
   }
 
   /**
+   * Get the subset ID (if this is a subset placement)
+   * @returns {string|null}
+   */
+  getSubsetId() {
+    return this.isSubset() ? this.content.subsetId : null;
+  }
+
+  /**
    * Get the content reference ID (regardless of type)
    * @returns {string|null}
    */
@@ -256,6 +279,8 @@ export class CanvasPlacement {
         return this.content.notesBlockId;
       case PlacementContentType.IMAGE:
         return this.content.imageBlockId;
+      case PlacementContentType.SUBSET:
+        return this.content.subsetId;
       default:
         return null;
     }
@@ -295,6 +320,17 @@ export class CanvasPlacement {
     this.content = {
       type: PlacementContentType.IMAGE,
       imageBlockId,
+    };
+  }
+
+  /**
+   * Set content to a subset
+   * @param {string} subsetId
+   */
+  setSubset(subsetId) {
+    this.content = {
+      type: PlacementContentType.SUBSET,
+      subsetId,
     };
   }
 
@@ -470,6 +506,27 @@ export class CanvasPlacement {
       content: {
         type: PlacementContentType.IMAGE,
         imageBlockId,
+      },
+    });
+  }
+
+  /**
+   * Create a subset placement
+   * @param {string} subsetId
+   * @param {number} row
+   * @param {number} col
+   * @param {Object} options
+   * @returns {CanvasPlacement}
+   */
+  static createSubsetPlacement(subsetId, row, col, options = {}) {
+    return new CanvasPlacement({
+      row,
+      col,
+      rowSpan: options.rowSpan || 1,
+      colSpan: options.colSpan || 1,
+      content: {
+        type: PlacementContentType.SUBSET,
+        subsetId,
       },
     });
   }

@@ -94,6 +94,14 @@ export function getDataCacheAdapter() {
 }
 
 /**
+ * Get the SubsetManager instance
+ * Use this for subset operations in components.
+ */
+export function getSubsetManager() {
+  return subsetManager;
+}
+
+/**
  * Phase 0: Server Sync Check
  *
  * Runs BEFORE Phase 1 to detect server resets and prepare for reconciliation.
