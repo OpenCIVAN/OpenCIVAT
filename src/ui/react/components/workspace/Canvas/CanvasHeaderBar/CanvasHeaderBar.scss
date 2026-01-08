@@ -10,9 +10,9 @@
 // =============================================================================
 
 .canvas-header-bar {
-    // Override ToolbarContainer if needed
-    min-width: 800px;
+    // Allow responsive shrinking, content will adapt via container queries
     overflow: visible; // Don't clip dropdowns
+    width: 100%;
 }
 
 // =============================================================================
@@ -239,10 +239,11 @@
 }
 
 // =============================================================================
-// RESPONSIVE - Icon-only mode for narrow viewports
+// RESPONSIVE - Progressive collapse using container queries
 // =============================================================================
 
-@media (max-width: 1100px) {
+// MEDIUM: < 900px - Hide button labels
+@container canvas-workspace (max-width: 900px) {
     .canvas-header-bar__tool-label,
     .canvas-header-bar__mode-label {
         display: none;
@@ -252,5 +253,49 @@
     .canvas-header-bar__mode-btn {
         padding: 0 $spacing-xs;
         min-width: 28px;
+    }
+}
+
+// SMALL: < 700px - Compact everything
+@container canvas-workspace (max-width: 700px) {
+    .canvas-header-bar__tool-group {
+        padding: 1px;
+    }
+
+    .canvas-header-bar__tool-btn,
+    .canvas-header-bar__mode-btn {
+        height: 22px;
+        min-width: 24px;
+    }
+
+    .canvas-header-bar__size-content {
+        display: none;
+    }
+}
+
+// EXTRA SMALL: < 500px - Hide non-essential zones
+@container canvas-workspace (max-width: 500px) {
+    .canvas-header-bar__canvas-mode {
+        display: none;
+    }
+
+    .canvas-header-bar__edit-zone .canvas-header-bar__tool-separator {
+        display: none;
+    }
+}
+
+// Fallback for browsers without container queries
+@supports not (container-type: inline-size) {
+    @media (max-width: 1100px) {
+        .canvas-header-bar__tool-label,
+        .canvas-header-bar__mode-label {
+            display: none;
+        }
+
+        .canvas-header-bar__tool-btn,
+        .canvas-header-bar__mode-btn {
+            padding: 0 $spacing-xs;
+            min-width: 28px;
+        }
     }
 }

@@ -162,6 +162,71 @@ export function useViewContextLogic() {
   const [subsetIds, setSubsetIds] = useState([]);
   const [viewLinks, setViewLinks] = useState({}); // { viewId: { linkType: { target, direction } } }
 
+  // Helper to extract links from a ViewConfiguration (Hub Model)
+  // Now includes all sync group members, not just direct link target
+  const extractLinksFromView = useCallback((viewConfigId) => {
+    const vcm = getViewConfigurationManager?.();
+    if (!vcm) return {};
+
+    const extractedLinks = {};
+    const linkableProps = ["camera", "cursors", "filters", "widgets", "annotationDisplay", "colorMaps"];
+
+    for (const prop of linkableProps) {
+      // Get all sync group members for this property
+      const groupMembers = vcm.getSyncGroupMembers?.(viewConfigId, prop) || [];
+
+      if (groupMembers.length > 0) {
+        extractedLinks[prop] = {
+          targets: groupMembers, // Array of all synced view IDs
+          direction: "bidirectional", // Hub model is always bidirectional
+        };
+      }
+    }
+
+    return extractedLinks;
+  }, []);
+
+  // Sync viewLinks from actual ViewConfiguration when active view changes
+  useEffect(() => {
+    const instance = activeInstance;
+    if (!instance) return;
+
+    const viewConfigId = instance.viewConfigId || instance.viewId;
+    if (!viewConfigId) return;
+
+    const extractedLinks = extractLinksFromView(viewConfigId);
+
+    // Update state (even if empty - clears stale links)
+    setViewLinks((prev) => ({
+      ...prev,
+      [viewConfigId]: extractedLinks,
+    }));
+  }, [activeInstance, extractLinksFromView]);
+
+  // Listen for linkChanged events to update UI when links change (including reverse links)
+  useEffect(() => {
+    const vcm = getViewConfigurationManager?.();
+    if (!vcm) return;
+
+    const handleLinkChanged = ({ viewId, property, action }) => {
+      log.debug("ViewContext: Link changed event", { viewId, property, action });
+
+      // Re-extract links for the affected view
+      const extractedLinks = extractLinksFromView(viewId);
+
+      setViewLinks((prev) => ({
+        ...prev,
+        [viewId]: extractedLinks,
+      }));
+    };
+
+    vcm.on("linkChanged", handleLinkChanged);
+
+    return () => {
+      vcm.off("linkChanged", handleLinkChanged);
+    };
+  }, [extractLinksFromView]);
+
   // Listen for view/placement changes
   useEffect(() => {
     const refresh = () => setRefreshKey((k) => k + 1);
@@ -234,14 +299,17 @@ export function useViewContextLogic() {
         cellName === "Untitled View" ||
         cellName === "Default View";
 
+      // Get view config and dataset info
+      const vcm = getViewConfigurationManager?.();
+      const viewConfig = vcm?.getView?.(viewId);
+      const datasetId = viewConfig?.datasetId || cell.datasetId;
+      const dataset = datasetId
+        ? getDatasetManager?.()?.getDataset?.(datasetId)
+        : null;
+
       // Get dataset filename as fallback for default names
       let displayName = cellName;
       if (isDefaultName) {
-        const vcm = getViewConfigurationManager?.();
-        const viewConfig = vcm?.getView?.(viewId);
-        const dataset = viewConfig?.datasetId
-          ? getDatasetManager?.()?.getDataset?.(viewConfig.datasetId)
-          : null;
         displayName = dataset?.filename || cellName || `View ${index + 1}`;
       }
 
@@ -251,10 +319,11 @@ export function useViewContextLogic() {
       return {
         id: viewId,
         name: displayName,
-        type: cell.content?.type || "vtk",
+        type: cell.content?.type || viewConfig?.handlerType || "vtk",
         position: { col: cell.col, row: cell.row },
         color: positionColor,
-        datasetName: cell.datasetName || cell.datasetId,
+        datasetId: datasetId, // Include datasetId for smart linking
+        datasetName: dataset?.filename || dataset?.name || cell.datasetName || datasetId,
       };
     });
   }, [cells, refreshKey]);
@@ -286,13 +355,19 @@ export function useViewContextLogic() {
 
     const available = allViews
       .filter((v) => !onCanvasIds.has(v.id) && v.status !== "trashed")
-      .map((v, index) => ({
-        id: v.id,
-        name: v.name || `View of ${v.datasetId || "Unknown"}`,
-        type: v.handlerType || v.type || "vtk",
-        color: getViewColor(v.id, index),
-        datasetName: v.datasetName || v.datasetId,
-      }));
+      .map((v, index) => {
+        const dataset = v.datasetId
+          ? getDatasetManager?.()?.getDataset?.(v.datasetId)
+          : null;
+        return {
+          id: v.id,
+          name: v.name || `View of ${v.datasetId || "Unknown"}`,
+          type: v.handlerType || v.type || "vtk",
+          color: getViewColor(v.id, index),
+          datasetId: v.datasetId, // Include datasetId for smart linking
+          datasetName: dataset?.filename || dataset?.name || v.datasetName || v.datasetId,
+        };
+      });
 
     return available;
   }, [onCanvasViews, refreshKey]);
@@ -348,6 +423,7 @@ export function useViewContextLogic() {
       type: viewConfig?.handlerType || activeInstance.type || "vtk",
       position: canvasView?.position || null,
       color: finalColor,
+      datasetId: viewConfig?.datasetId || canvasView?.datasetId, // Include datasetId for smart linking
       datasetName:
         dataset?.filename || viewConfig?.datasetName || canvasView?.datasetName,
       links: viewLinks[viewConfigId] || {},
@@ -475,9 +551,10 @@ export function useViewContextLogic() {
 
   /**
    * Handle link update - update link configuration for a view
-   * @param {string} linkType - Type of link (camera, filter, selection, etc.)
+   * Uses ViewConfigurationManager methods for proper sync and persistence
+   * @param {string} linkType - Type of link (camera, filters, cursors, widgets, colorMaps, annotationDisplay)
    * @param {string|null} targetViewId - Target view ID or null to remove link
-   * @param {string} direction - Link direction (bidirectional, parent, child)
+   * @param {string} direction - Link direction (bidirectional, follow, broadcast)
    */
   const handleUpdateLink = useCallback(
     (linkType, targetViewId, direction) => {
@@ -491,6 +568,38 @@ export function useViewContextLogic() {
         direction,
       });
 
+      // Get the ViewConfigurationManager
+      const vcm = getViewConfigurationManager?.();
+      if (!vcm) {
+        log.warn("ViewContext: ViewConfigurationManager not available");
+        return;
+      }
+
+      // Map UI direction names to LINK_MODES
+      const directionToMode = {
+        bidirectional: "bidirectional",
+        follow: "follow",
+        broadcast: "broadcast",
+      };
+      const linkMode = directionToMode[direction] || "bidirectional";
+
+      try {
+        // If targetViewId is null, unlink the property
+        if (targetViewId === null) {
+          // Use ViewConfigurationManager's unlinkProperty for proper sync
+          vcm.unlinkProperty(viewId, linkType);
+          log.debug("ViewContext: Unlinked", linkType);
+        } else {
+          // Use ViewConfigurationManager's linkProperty for proper sync
+          // This handles: creating link, registering observers, applying initial state, syncing to server
+          vcm.linkProperty(viewId, linkType, targetViewId, linkMode);
+          log.debug("ViewContext: Linked", linkType, "to", targetViewId, "mode:", linkMode);
+        }
+      } catch (error) {
+        log.error("ViewContext: Failed to update link", error);
+      }
+
+      // Update local state for UI
       setViewLinks((prev) => {
         const viewLinksData = prev[viewId] || {};
 

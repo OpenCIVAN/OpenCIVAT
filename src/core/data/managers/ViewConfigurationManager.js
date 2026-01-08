@@ -54,6 +54,14 @@ export class ViewConfigurationManager extends BaseManager {
 
     // Track which views we're observing for link updates
     this._linkObservers = new Map(); // targetViewId -> Set of subscriberViewIds
+
+    // Sync groups: property -> Map<hubViewId, Set<memberViewIds>>
+    // Each property can have multiple independent sync groups
+    // All members of a group link to the hub, hub broadcasts to all
+    this._syncGroups = new Map();
+    for (const prop of LINKABLE_PROPERTIES) {
+      this._syncGroups.set(prop, new Map());
+    }
   }
 
   // ===========================================================================
@@ -641,7 +649,7 @@ export class ViewConfigurationManager extends BaseManager {
   }
 
   /**
-   * Update view camera state
+   * Update view camera state and propagate to linked views
    */
   updateCamera(viewId, cameraState) {
     const view = this._viewConfigs.get(viewId);
@@ -649,6 +657,59 @@ export class ViewConfigurationManager extends BaseManager {
 
     view.updateCamera(cameraState);
     this._syncToServer(view);
+
+    // Emit camera changed event for this view
+    this._emit("cameraChanged", { viewId, camera: cameraState });
+
+    // Propagate to views that are linked to this one (followers)
+    this._propagateCameraToLinkedViews(viewId, cameraState);
+  }
+
+  /**
+   * Propagate camera state to all views in the same sync group (Hub Model)
+   *
+   * When any member of a sync group updates camera, ALL other members receive it.
+   * This provides true multi-view synchronization.
+   *
+   * @private
+   */
+  _propagateCameraToLinkedViews(sourceViewId, cameraState) {
+    // Find the sync group for this view's camera property
+    const group = this._findSyncGroup(sourceViewId, "camera");
+
+    if (!group) {
+      // Not in a sync group, nothing to propagate
+      return;
+    }
+
+    const { members } = group;
+
+    // Propagate to all other members of the group
+    for (const memberId of members) {
+      if (memberId === sourceViewId) continue; // Don't send back to source
+
+      const memberView = this._viewConfigs.get(memberId);
+      if (!memberView) continue;
+
+      // Update the member's camera state
+      memberView.updateCamera(cameraState);
+
+      // Update sync timestamp if link exists
+      const cameraLink = memberView.links?.camera;
+      if (cameraLink?.updateLastSync) {
+        cameraLink.updateLastSync();
+      }
+
+      // Emit event so workspaceManager can update the actual instance
+      this._emit("cameraChanged", {
+        viewId: memberId,
+        camera: cameraState,
+        sourceViewId: sourceViewId,
+        isLinkedUpdate: true,
+      });
+    }
+
+    log.trace(`Propagated camera from ${sourceViewId} to ${members.size - 1} group members`);
   }
 
   /**
@@ -735,9 +796,19 @@ export class ViewConfigurationManager extends BaseManager {
   // ===========================================================================
 
   /**
-   * Link a property of one view to another
+   * Link a property of one view to another using the Hub Model
+   *
+   * Hub Model: All views in a sync group link to a single "hub" view.
+   * - When joining an existing group, the new view links to the hub
+   * - When creating a new group, the target becomes the hub
+   * - Hub broadcasts updates to all members, members send updates to hub
+   *
+   * @param {string} viewId - The view to link (will join/create group)
+   * @param {string} property - The property to link (camera, filters, etc.)
+   * @param {string} targetViewId - The target view (or any member of target's group)
+   * @param {string} mode - Link mode (for hub model, always treated as bidirectional)
    */
-  linkProperty(viewId, property, targetViewId, mode = LINK_MODES.FOLLOW) {
+  linkProperty(viewId, property, targetViewId, mode = LINK_MODES.BIDIRECTIONAL) {
     const view = this._viewConfigs.get(viewId);
     const targetView = this._viewConfigs.get(targetViewId);
 
@@ -746,48 +817,247 @@ export class ViewConfigurationManager extends BaseManager {
       return null;
     }
 
-    // Create the link
-    const link = view.linkProperty(property, targetView, mode);
-
-    // Register this view as observing the target
-    this._registerLinkObserver(targetViewId, viewId);
-
-    // Apply initial state from target if following
-    if (mode === LINK_MODES.FOLLOW || mode === LINK_MODES.BIDIRECTIONAL) {
-      this._applyLinkedProperty(view, property, targetView);
+    // Can't link to self
+    if (viewId === targetViewId) {
+      log.warn(`Cannot link view to itself`);
+      return null;
     }
+
+    // If source is already in this group, nothing to do
+    const sourceGroup = this._findSyncGroup(viewId, property);
+    const targetGroup = this._findSyncGroup(targetViewId, property);
+
+    if (sourceGroup && targetGroup && sourceGroup.hubId === targetGroup.hubId) {
+      log.debug(`View ${viewId} already in same sync group as ${targetViewId}`);
+      return view.links[property];
+    }
+
+    // Remove source from its current group (if any)
+    if (sourceGroup) {
+      this.unlinkProperty(viewId, property);
+    }
+
+    // Determine the hub - either target's existing hub or target itself
+    let hubId;
+    if (targetGroup) {
+      hubId = targetGroup.hubId;
+      log.debug(`Joining existing sync group (hub: ${hubId})`);
+    } else {
+      // Create new group with target as hub
+      hubId = targetViewId;
+      this._addToSyncGroup(targetViewId, property, hubId, mode);
+      log.debug(`Created new sync group with hub: ${hubId}`);
+    }
+
+    // Add source to the group
+    this._addToSyncGroup(viewId, property, hubId, mode);
+
+    // Get hub view for linking
+    const hubView = this._viewConfigs.get(hubId);
+    if (!hubView) {
+      log.error(`Hub view ${hubId} not found`);
+      return null;
+    }
+
+    // Create link from source to hub (non-hub members link to hub)
+    const link = view.linkProperty(property, hubView, LINK_MODES.BIDIRECTIONAL);
+    this._registerLinkObserver(hubId, viewId);
+
+    // Apply initial state from hub
+    this._applyLinkedProperty(view, property, hubView);
 
     // Sync changes
     this._syncToServer(view);
 
-    // Emit event
+    // Emit events for UI updates
     this._emit("linkChanged", {
       viewId,
       property,
-      targetViewId,
-      mode,
+      targetViewId: hubId,
+      mode: LINK_MODES.BIDIRECTIONAL,
       action: "created",
+      groupMembers: Array.from(this._syncGroups.get(property).get(hubId) || []),
+    });
+
+    // Also emit for hub so its UI updates to show new member
+    this._emit("linkChanged", {
+      viewId: hubId,
+      property,
+      action: "memberAdded",
+      groupMembers: Array.from(this._syncGroups.get(property).get(hubId) || []),
     });
 
     return link;
   }
 
+  // ===========================================================================
+  // SYNC GROUP HELPERS (Hub Model)
+  // ===========================================================================
+
   /**
-   * Unlink a property
+   * Find the sync group a view belongs to for a property
+   * @returns {{ hubId: string, members: Set<string> } | null}
+   */
+  _findSyncGroup(viewId, property) {
+    const groups = this._syncGroups.get(property);
+    if (!groups) return null;
+
+    for (const [hubId, members] of groups) {
+      if (members.has(viewId)) {
+        return { hubId, members };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get all members of a view's sync group (excluding itself)
+   */
+  getSyncGroupMembers(viewId, property) {
+    const group = this._findSyncGroup(viewId, property);
+    if (!group) return [];
+    return Array.from(group.members).filter(id => id !== viewId);
+  }
+
+  /**
+   * Get the hub of a view's sync group
+   */
+  getSyncGroupHub(viewId, property) {
+    const group = this._findSyncGroup(viewId, property);
+    return group?.hubId || null;
+  }
+
+  /**
+   * Add a view to a sync group (creates link to hub)
+   * @private
+   */
+  _addToSyncGroup(viewId, property, hubId, mode) {
+    const groups = this._syncGroups.get(property);
+    if (!groups.has(hubId)) {
+      groups.set(hubId, new Set([hubId]));
+    }
+    groups.get(hubId).add(viewId);
+    log.debug(`Added ${viewId} to sync group for ${property} (hub: ${hubId})`);
+  }
+
+  /**
+   * Remove a view from its sync group
+   * @private
+   * @returns {string|null} New hub ID if hub was transferred, null otherwise
+   */
+  _removeFromSyncGroup(viewId, property) {
+    const group = this._findSyncGroup(viewId, property);
+    if (!group) return null;
+
+    const { hubId, members } = group;
+    members.delete(viewId);
+
+    // If group is now empty, remove it
+    if (members.size === 0) {
+      this._syncGroups.get(property).delete(hubId);
+      log.debug(`Removed empty sync group for ${property}`);
+      return null;
+    }
+
+    // If the hub was removed, elect a new hub
+    if (viewId === hubId && members.size > 0) {
+      const newHubId = members.values().next().value;
+      const groupMembers = new Set(members);
+
+      // Remove old group, create new one with new hub
+      this._syncGroups.get(property).delete(hubId);
+      this._syncGroups.get(property).set(newHubId, groupMembers);
+
+      log.debug(`Transferred hub for ${property} from ${hubId} to ${newHubId}`);
+      return newHubId;
+    }
+
+    return null;
+  }
+
+  /**
+   * Relink all group members to a new hub
+   * @private
+   */
+  _relinkGroupToNewHub(property, oldHubId, newHubId, members) {
+    const newHubView = this._viewConfigs.get(newHubId);
+    if (!newHubView) return;
+
+    // Clear the new hub's outgoing link (hub doesn't link out)
+    newHubView.unlinkProperty(property);
+    this._syncToServer(newHubView);
+
+    // Update all other members to link to new hub
+    for (const memberId of members) {
+      if (memberId === newHubId) continue;
+
+      const memberView = this._viewConfigs.get(memberId);
+      if (!memberView) continue;
+
+      // Update link to point to new hub
+      memberView.linkProperty(property, newHubView, LINK_MODES.BIDIRECTIONAL);
+      this._registerLinkObserver(newHubId, memberId);
+      this._syncToServer(memberView);
+
+      this._emit("linkChanged", {
+        viewId: memberId,
+        property,
+        targetViewId: newHubId,
+        mode: LINK_MODES.BIDIRECTIONAL,
+        action: "created",
+      });
+    }
+
+    // Emit for new hub
+    this._emit("linkChanged", {
+      viewId: newHubId,
+      property,
+      action: "hubChanged",
+    });
+  }
+
+  // ===========================================================================
+  // LINK OPERATIONS
+  // ===========================================================================
+
+  /**
+   * Unlink a property - removes view from its sync group
    */
   unlinkProperty(viewId, property) {
     const view = this._viewConfigs.get(viewId);
     if (!view) return;
 
-    const link = view.links[property];
-    if (link) {
-      const targetViewId = link.targetViewId;
-      this._unregisterLinkObserver(targetViewId, viewId);
+    const existingGroup = this._findSyncGroup(viewId, property);
+    if (!existingGroup) {
+      // Not in a group, just clear any local link
+      view.unlinkProperty(property);
+      this._syncToServer(view);
+      this._emit("linkChanged", { viewId, property, action: "removed" });
+      return;
     }
 
+    const { hubId, members } = existingGroup;
+    const wasHub = viewId === hubId;
+
+    // Remove from group and potentially elect new hub
+    const newHubId = this._removeFromSyncGroup(viewId, property);
+
+    // Clear this view's link
+    if (view.links[property]) {
+      this._unregisterLinkObserver(view.links[property].targetViewId, viewId);
+    }
     view.unlinkProperty(property);
     this._syncToServer(view);
 
+    // If this was the hub, relink remaining members to new hub
+    if (wasHub && newHubId) {
+      const remainingMembers = this._syncGroups.get(property).get(newHubId);
+      if (remainingMembers) {
+        this._relinkGroupToNewHub(property, hubId, newHubId, remainingMembers);
+      }
+    }
+
+    // Emit for this view
     this._emit("linkChanged", { viewId, property, action: "removed" });
   }
 

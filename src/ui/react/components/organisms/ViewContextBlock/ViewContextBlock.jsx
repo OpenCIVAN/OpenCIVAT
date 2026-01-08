@@ -19,6 +19,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { IconButton } from '@UI/react/components/atoms/Button';
 import './ViewContextBlock.scss';
@@ -50,19 +51,69 @@ const SORT_OPTIONS = [
     { id: 'position', label: 'By Position' },
 ];
 
+// Smart linking: some link types require same dataset, others work across any views
 const LINK_TYPES = [
-    { id: 'camera', icon: 'camera', label: 'Camera', color: 'var(--color-accent-teal)' },
-    { id: 'filter', icon: 'filter', label: 'Filters', color: 'var(--color-accent-amber)' },
-    { id: 'selection', icon: 'crosshair', label: 'Selection', color: 'var(--color-accent-purple)' },
-    { id: 'annotations', icon: 'edit', label: 'Annotations', color: 'var(--color-accent-pink)' },
-    { id: 'transforms', icon: 'move', label: 'Transforms', color: 'var(--color-accent-cyan)' },
-    { id: 'params', icon: 'sliders', label: 'Parameters', color: 'var(--color-accent-orange)' },
+    {
+        id: 'camera',
+        icon: 'camera',
+        label: 'Camera',
+        color: 'var(--color-accent-teal)',
+        requiresSameDataset: false, // Camera sync works across any views
+        description: 'Sync view position and rotation',
+    },
+    {
+        id: 'filters',
+        icon: 'filter',
+        label: 'Filters',
+        color: 'var(--color-accent-amber)',
+        requiresSameDataset: true, // Filters are data-specific
+        description: 'Sync filter criteria',
+    },
+    {
+        id: 'cursors',
+        icon: 'crosshair',
+        label: 'Cursors',
+        color: 'var(--color-accent-purple)',
+        requiresSameDataset: true, // Cursor position on data points
+        description: 'Sync cursor/selection position',
+    },
+    {
+        id: 'widgets',
+        icon: 'ruler',
+        label: 'Widgets',
+        color: 'var(--color-accent-pink)',
+        requiresSameDataset: true, // Measurements are data-bound
+        description: 'Sync measurement widgets',
+    },
+    {
+        id: 'colorMaps',
+        icon: 'palette',
+        label: 'Colors',
+        color: 'var(--color-accent-cyan)',
+        requiresSameDataset: true, // Color mapping is data-specific
+        description: 'Sync color schemes',
+    },
+    {
+        id: 'annotationDisplay',
+        icon: 'edit',
+        label: 'Annotations',
+        color: 'var(--color-accent-orange)',
+        requiresSameDataset: true, // Annotations are typically data-bound
+        description: 'Sync annotation visibility',
+    },
+];
+
+// Link direction modes matching LINK_MODES from ViewConfiguration
+const LINK_DIRECTIONS = [
+    { id: 'follow', icon: '←', label: 'Follow', description: 'Receive updates from target' },
+    { id: 'bidirectional', icon: '↔', label: 'Sync', description: 'Two-way synchronization' },
+    { id: 'broadcast', icon: '→', label: 'Broadcast', description: 'Push updates to target' },
 ];
 
 const DIRECTION_LABELS = {
-    bidirectional: { icon: '↔', label: 'Both' },
-    parent: { icon: '→', label: 'Push' },
-    child: { icon: '←', label: 'Receive' },
+    follow: { icon: '←', label: 'Following' },
+    bidirectional: { icon: '↔', label: 'Synced' },
+    broadcast: { icon: '→', label: 'Broadcasting' },
 };
 
 // =============================================================================
@@ -508,166 +559,265 @@ const LinksDropdown = memo(function LinksDropdown({
     allViews,
     onUpdateLink,
     onClose,
+    triggerRef, // Reference to the trigger button for positioning
 }) {
     const [expandedLink, setExpandedLink] = useState(null);
+    const dropdownRef = useRef(null);
+
+    // Calculate position from trigger
+    const getPosition = () => {
+        if (!triggerRef?.current) return { top: 100, left: 100 };
+        const rect = triggerRef.current.getBoundingClientRect();
+        let top = rect.top - 400;
+        let left = rect.left + rect.width / 2 - 160;
+        if (left < 8) left = 8;
+        if (left + 320 > window.innerWidth - 8) left = window.innerWidth - 328;
+        if (top < 8) top = rect.bottom + 8;
+        return { top, left };
+    };
+    const pos = getPosition();
+
+    const links = activeView?.links || {};
     const otherViews = allViews.filter((v) => v.id !== activeView?.id);
 
-    const getViewById = useCallback(
-        (id) => allViews.find((v) => v.id === id),
-        [allViews]
-    );
+    // Smart filtering: check if a view shares the same dataset
+    const viewSharesDataset = useCallback((view) => {
+        if (!activeView?.datasetId || !view?.datasetId) return false;
+        return activeView.datasetId === view.datasetId;
+    }, [activeView?.datasetId]);
 
-    if (!activeView) return null;
+    // Get compatible views for a link type
+    const getCompatibleViews = useCallback((linkType) => {
+        if (!linkType.requiresSameDataset) {
+            return { compatible: otherViews, incompatible: [] };
+        }
+        const compatible = otherViews.filter(viewSharesDataset);
+        const incompatible = otherViews.filter((v) => !viewSharesDataset(v));
+        return { compatible, incompatible };
+    }, [otherViews, viewSharesDataset]);
 
-    // Get links from activeView, default to empty object
-    const links = activeView.links || {};
+    // Count views with same dataset
+    const sameDatasetCount = useMemo(() => {
+        return otherViews.filter(viewSharesDataset).length;
+    }, [otherViews, viewSharesDataset]);
 
-    return (
-        <div className="links-dropdown">
-            {/* Header */}
-            <div className="links-dropdown__header">
-                <div className="links-dropdown__header-label">Links for</div>
-                <div className="links-dropdown__header-view">
-                    <span
-                        className="links-dropdown__header-dot"
-                        style={{ background: activeView.color }}
-                    />
-                    <span className="links-dropdown__header-name">{activeView.name}</span>
+    // Handle view selection - applies link immediately
+    const handleViewSelect = useCallback((linkTypeId, viewId, currentDirection) => {
+        onUpdateLink?.(linkTypeId, viewId, currentDirection || 'bidirectional');
+    }, [onUpdateLink]);
+
+    // Handle direction change - applies immediately
+    const handleDirectionChange = useCallback((linkTypeId, targetViewId, newDirection) => {
+        onUpdateLink?.(linkTypeId, targetViewId, newDirection);
+    }, [onUpdateLink]);
+
+    return createPortal(
+        <>
+            <div className="links-dropdown__backdrop" onClick={onClose} />
+            <div
+                ref={dropdownRef}
+                className="links-dropdown"
+                style={{
+                    position: 'fixed',
+                    top: pos.top,
+                    left: pos.left,
+                    width: 320,
+                    zIndex: 99999,
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="links-dropdown__header">
+                    <div className="links-dropdown__header-label">Links for</div>
+                    <div className="links-dropdown__header-view">
+                        {activeView ? (
+                            <>
+                                <span className="links-dropdown__header-dot" style={{ background: activeView.color }} />
+                                <span className="links-dropdown__header-name">{activeView.name}</span>
+                            </>
+                        ) : (
+                            <span className="links-dropdown__header-name">No view selected</span>
+                        )}
+                    </div>
+                    {activeView?.datasetName && (
+                        <div className="links-dropdown__header-dataset">
+                            <Icon name="file" size={10} />
+                            <span>{activeView.datasetName}</span>
+                            {sameDatasetCount > 0 && (
+                                <span className="links-dropdown__header-dataset-count">{sameDatasetCount} shared</span>
+                            )}
+                        </div>
+                    )}
                 </div>
-            </div>
 
-            {/* Link Types */}
-            <div className="links-dropdown__list">
-                {LINK_TYPES.map((linkType) => {
-                    const link = links[linkType.id];
-                    const isExpanded = expandedLink === linkType.id;
-                    const targetView = link ? getViewById(link.target) : null;
+                <div className="links-dropdown__list">
+                    {LINK_TYPES.map((linkType) => {
+                        const link = links[linkType.id];
+                        const isExpanded = expandedLink === linkType.id;
+                        // Hub model: targets is an array of all synced view IDs
+                        const syncedViewIds = link?.targets || [];
+                        const syncedViews = syncedViewIds.map(id => allViews.find(v => v.id === id)).filter(Boolean);
+                        const isSynced = syncedViews.length > 0;
+                        const { compatible, incompatible } = getCompatibleViews(linkType);
+                        const hasCompatibleViews = compatible.length > 0;
+                        const hasIncompatibleViews = incompatible.length > 0;
 
-                    return (
-                        <div key={linkType.id} className="links-dropdown__item">
-                            <button
-                                type="button"
-                                className={`links-dropdown__item-header ${isExpanded ? 'links-dropdown__item-header--expanded' : ''}`}
-                                onClick={() => setExpandedLink(isExpanded ? null : linkType.id)}
-                            >
-                                <span
-                                    className="links-dropdown__item-icon"
-                                    style={{ color: link ? linkType.color : undefined }}
+                        return (
+                            <div key={linkType.id} className="links-dropdown__item">
+                                <button
+                                    type="button"
+                                    className={`links-dropdown__item-header ${isExpanded ? 'links-dropdown__item-header--expanded' : ''}`}
+                                    onClick={() => setExpandedLink(isExpanded ? null : linkType.id)}
                                 >
-                                    <Icon name={linkType.icon} size={12} />
-                                </span>
-                                <span className="links-dropdown__item-label">{linkType.label}</span>
+                                    <span className="links-dropdown__item-icon" style={{ color: isSynced ? linkType.color : undefined }}>
+                                        <Icon name={linkType.icon} size={12} />
+                                    </span>
+                                    <span className="links-dropdown__item-label">{linkType.label}</span>
 
-                                {link && targetView ? (
-                                    <>
-                                        <span
-                                            className="links-dropdown__item-direction"
-                                            style={{ color: linkType.color }}
-                                        >
-                                            {DIRECTION_LABELS[link.direction]?.icon || '↔'}
+                                    {linkType.requiresSameDataset && (
+                                        <span className="links-dropdown__item-requires-dataset" title="Requires same dataset">
+                                            <Icon name="database" size={10} />
                                         </span>
-                                        <span
-                                            className="links-dropdown__item-target-dot"
-                                            style={{ background: targetView.color }}
-                                        />
-                                        <span className="links-dropdown__item-target-name">
-                                            {targetView.name}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            className="links-dropdown__item-unlink"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onUpdateLink?.(linkType.id, null, null);
-                                            }}
-                                            title="Unlink"
-                                        >
-                                            <Icon name="close" size={10} />
-                                        </button>
-                                    </>
-                                ) : (
-                                    <span className="links-dropdown__item-empty">— Not linked</span>
-                                )}
-                                <Icon
-                                    name="chevronRight"
-                                    size={10}
-                                    className={`links-dropdown__item-chevron ${isExpanded ? 'links-dropdown__item-chevron--expanded' : ''}`}
-                                />
-                            </button>
+                                    )}
 
-                            {/* Expanded panel */}
-                            {isExpanded && (
-                                <div className="links-dropdown__expand">
-                                    <div className="links-dropdown__expand-section">
-                                        <div className="links-dropdown__expand-label">Link to:</div>
-                                        <div className="links-dropdown__expand-views">
-                                            {otherViews.length === 0 ? (
-                                                <div className="links-dropdown__expand-empty">
-                                                    No other views available
+                                    {isSynced ? (
+                                        <div className="links-dropdown__item-synced">
+                                            <span className="links-dropdown__item-direction" style={{ color: linkType.color }}>↔</span>
+                                            <div className="links-dropdown__item-targets">
+                                                {syncedViews.slice(0, 3).map((view, idx) => (
+                                                    <span
+                                                        key={view.id}
+                                                        className="links-dropdown__item-target-dot"
+                                                        style={{ background: view.color, marginLeft: idx > 0 ? '-4px' : 0 }}
+                                                        title={view.name}
+                                                    />
+                                                ))}
+                                                {syncedViews.length > 3 && (
+                                                    <span className="links-dropdown__item-more">+{syncedViews.length - 3}</span>
+                                                )}
+                                            </div>
+                                            <span className="links-dropdown__item-count">{syncedViews.length} synced</span>
+                                        </div>
+                                    ) : (
+                                        <span className="links-dropdown__item-empty">
+                                            {linkType.requiresSameDataset && !hasCompatibleViews ? 'No compatible views' : 'Not synced'}
+                                        </span>
+                                    )}
+                                    <Icon
+                                        name="chevronRight"
+                                        size={10}
+                                        className={`links-dropdown__item-chevron ${isExpanded ? 'links-dropdown__item-chevron--expanded' : ''}`}
+                                    />
+                                </button>
+
+                                {isExpanded && (
+                                    <div className="links-dropdown__expand">
+                                        <div className="links-dropdown__expand-desc">{linkType.description}</div>
+
+                                        {/* Currently synced views */}
+                                        {isSynced && (
+                                            <div className="links-dropdown__expand-section">
+                                                <div className="links-dropdown__expand-label">Synced with:</div>
+                                                <div className="links-dropdown__synced-list">
+                                                    {syncedViews.map((view) => (
+                                                        <div key={view.id} className="links-dropdown__synced-item">
+                                                            <span className="links-dropdown__view-dot" style={{ background: view.color }} />
+                                                            <span className="links-dropdown__view-name">{view.name}</span>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ) : (
-                                                otherViews.map((view) => {
-                                                    const isSelected = link?.target === view.id;
+                                                <button
+                                                    type="button"
+                                                    className="links-dropdown__unlink-btn"
+                                                    onClick={() => onUpdateLink?.(linkType.id, null, null)}
+                                                >
+                                                    <Icon name="linkOff" size={12} />
+                                                    <span>Leave sync group</span>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Add more views to sync group */}
+                                        <div className="links-dropdown__expand-section">
+                                            <div className="links-dropdown__expand-label">
+                                                {isSynced ? 'Add to sync:' : 'Sync with:'}
+                                                {linkType.requiresSameDataset && (
+                                                    <span className="links-dropdown__expand-label-note">(same dataset)</span>
+                                                )}
+                                            </div>
+                                            <div className="links-dropdown__expand-views">
+                                                {compatible.length === 0 && incompatible.length === 0 && (
+                                                    <div className="links-dropdown__expand-empty">No other views available</div>
+                                                )}
+
+                                                {compatible.length === 0 && incompatible.length > 0 && linkType.requiresSameDataset && (
+                                                    <div className="links-dropdown__expand-empty">
+                                                        <Icon name="alert" size={12} />
+                                                        No views with same dataset
+                                                    </div>
+                                                )}
+
+                                                {compatible.map((view) => {
+                                                    const isAlreadySynced = syncedViewIds.includes(view.id);
                                                     return (
                                                         <button
                                                             key={view.id}
                                                             type="button"
-                                                            className={`links-dropdown__view-option ${isSelected ? 'links-dropdown__view-option--selected' : ''}`}
-                                                            style={{
-                                                                '--link-color': linkType.color,
-                                                            }}
-                                                            onClick={() =>
-                                                                onUpdateLink?.(
-                                                                    linkType.id,
-                                                                    view.id,
-                                                                    link?.direction || 'bidirectional'
-                                                                )
-                                                            }
+                                                            className={`links-dropdown__view-option ${isAlreadySynced ? 'links-dropdown__view-option--selected' : ''}`}
+                                                            onClick={() => !isAlreadySynced && handleViewSelect(linkType.id, view.id, 'bidirectional')}
+                                                            disabled={isAlreadySynced}
                                                         >
-                                                            <span
-                                                                className={`links-dropdown__view-radio ${isSelected ? 'links-dropdown__view-radio--selected' : ''}`}
-                                                            />
-                                                            <span
-                                                                className="links-dropdown__view-dot"
-                                                                style={{ background: view.color }}
-                                                            />
-                                                            <span className="links-dropdown__view-name">
-                                                                {view.name}
-                                                            </span>
+                                                            <span className={`links-dropdown__view-radio ${isAlreadySynced ? 'links-dropdown__view-radio--selected' : ''}`} />
+                                                            <span className="links-dropdown__view-dot" style={{ background: view.color }} />
+                                                            <div className="links-dropdown__view-info">
+                                                                <span className="links-dropdown__view-name">{view.name}</span>
+                                                                {view.datasetName && <span className="links-dropdown__view-dataset">{view.datasetName}</span>}
+                                                            </div>
+                                                            {isAlreadySynced ? (
+                                                                <span className="links-dropdown__view-synced-badge">synced</span>
+                                                            ) : viewSharesDataset(view) ? (
+                                                                <span className="links-dropdown__view-same-dataset" title="Same dataset">
+                                                                    <Icon name="check" size={10} />
+                                                                </span>
+                                                            ) : null}
                                                         </button>
                                                     );
-                                                })
-                                            )}
-                                        </div>
-                                    </div>
+                                                })}
 
-                                    {link && (
-                                        <div className="links-dropdown__expand-section">
-                                            <div className="links-dropdown__expand-label">Direction:</div>
-                                            <div className="links-dropdown__direction-btns">
-                                                {Object.entries(DIRECTION_LABELS).map(([key, value]) => (
-                                                    <button
-                                                        key={key}
-                                                        type="button"
-                                                        className={`links-dropdown__direction-btn ${link.direction === key ? 'links-dropdown__direction-btn--active' : ''}`}
-                                                        style={{ '--link-color': linkType.color }}
-                                                        onClick={() =>
-                                                            onUpdateLink?.(linkType.id, link.target, key)
-                                                        }
-                                                    >
-                                                        {value.icon} {value.label}
-                                                    </button>
-                                                ))}
+                                                {hasIncompatibleViews && linkType.requiresSameDataset && (
+                                                    <>
+                                                        <div className="links-dropdown__expand-divider">
+                                                            <span>Different datasets</span>
+                                                        </div>
+                                                        {incompatible.map((view) => (
+                                                            <div
+                                                                key={view.id}
+                                                                className="links-dropdown__view-option links-dropdown__view-option--disabled"
+                                                                title={`Cannot link: ${view.name} uses a different dataset`}
+                                                            >
+                                                                <span className="links-dropdown__view-radio links-dropdown__view-radio--disabled" />
+                                                                <span className="links-dropdown__view-dot" style={{ background: view.color, opacity: 0.4 }} />
+                                                                <div className="links-dropdown__view-info">
+                                                                    <span className="links-dropdown__view-name">{view.name}</span>
+                                                                    {view.datasetName && <span className="links-dropdown__view-dataset">{view.datasetName}</span>}
+                                                                </div>
+                                                                <span className="links-dropdown__view-incompatible">
+                                                                    <Icon name="alert" size={10} />
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
-        </div>
+        </>,
+        document.body
     );
 });
 
@@ -696,6 +846,7 @@ function ViewContextBlock({
     const [showSubset, setShowSubset] = useState(false);
     const hubRef = useRef(null);
     const linksRef = useRef(null);
+    const linksBtnRef = useRef(null);
     const subsetRef = useRef(null);
 
     // Close on outside click
@@ -704,8 +855,12 @@ function ViewContextBlock({
             if (hubRef.current && !hubRef.current.contains(e.target)) {
                 setShowHub(false);
             }
+            // For links, also check if click is on the portal dropdown
             if (linksRef.current && !linksRef.current.contains(e.target)) {
-                setShowLinks(false);
+                const isOnDropdown = e.target.closest('.links-dropdown') || e.target.closest('.links-dropdown__backdrop');
+                if (!isOnDropdown) {
+                    setShowLinks(false);
+                }
             }
             if (subsetRef.current && !subsetRef.current.contains(e.target)) {
                 setShowSubset(false);
@@ -953,6 +1108,7 @@ function ViewContextBlock({
             <div className="view-context-block__column view-context-block__column--links">
                 <div ref={linksRef} className="view-context-block__links-wrapper">
                     <button
+                        ref={linksBtnRef}
                         type="button"
                         className={`view-context-block__links-btn ${showLinks ? 'view-context-block__links-btn--open' : ''}`}
                         onClick={() => setShowLinks(!showLinks)}
@@ -968,12 +1124,13 @@ function ViewContextBlock({
                         />
                     </button>
 
-                    {showLinks && activeView && (
+                    {showLinks && (
                         <LinksDropdown
                             activeView={activeView}
                             allViews={viewsForLinks}
                             onUpdateLink={onUpdateLink}
                             onClose={() => setShowLinks(false)}
+                            triggerRef={linksBtnRef}
                         />
                     )}
                 </div>

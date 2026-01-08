@@ -465,6 +465,41 @@ export const CanvasCell = memo(function CanvasCell({
     }, [activeDropZone, parseDropData, isEmpty, row, col, placement, onDrop, onSwap, onPush]);
 
     // ==========================================================================
+    // CELL DRAGGING (Edit Mode)
+    // ==========================================================================
+
+    const handleDragStart = useCallback((e) => {
+        // Only allow dragging in edit mode and for non-empty cells
+        if (!inEditMode || isEmpty) {
+            e.preventDefault();
+            return;
+        }
+
+        // Set drag data with placement info for swap handling
+        const dragData = {
+            type: 'canvas-cell',
+            placementId: placement?.id,
+            row,
+            col,
+            contentType,
+            viewConfigId: placement?.content?.viewConfigurationId,
+            sourcePlacementId: placement?.id,
+        };
+
+        e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+        e.dataTransfer.effectAllowed = 'move';
+
+        // Add dragging class after a small delay for visual feedback
+        requestAnimationFrame(() => {
+            cellRef.current?.classList.add('canvas-cell--dragging');
+        });
+    }, [inEditMode, isEmpty, placement, row, col, contentType]);
+
+    const handleDragEnd = useCallback(() => {
+        cellRef.current?.classList.remove('canvas-cell--dragging');
+    }, []);
+
+    // ==========================================================================
     // CLICK HANDLERS
     // ==========================================================================
 
@@ -679,6 +714,10 @@ export const CanvasCell = memo(function CanvasCell({
                     '--instance-color-rgb': hexToRgbString(instanceColor),
                 }),
             }}
+            // Enable dragging in edit mode for non-empty cells
+            draggable={inEditMode && !isEmpty}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
             onMouseDown={handleMouseDown}
             onClick={handleClick}
             onDoubleClick={onDoubleClick}

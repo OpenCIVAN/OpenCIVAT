@@ -31,6 +31,16 @@ export const ASPECT_RATIOS = {
 };
 
 // =============================================================================
+// SIZE CONSTRAINTS
+// =============================================================================
+
+export const CANVAS_SIZE_CONSTRAINTS = {
+    MIN_WIDTH: 400,
+    MIN_HEIGHT: 350,
+    COMFORTABLE_MIN_WIDTH: 600, // Width where all controls fit nicely
+};
+
+// =============================================================================
 // CANVAS CONTROLS BAR
 // =============================================================================
 // Responsive: collapses to icon-only at smaller widths
@@ -208,14 +218,15 @@ export function FloatingCanvasWrapper({
             if (resizing) {
                 const deltaX = e.clientX - resizeStartRef.current.x;
                 const deltaY = e.clientY - resizeStartRef.current.y;
-                const newWidth = Math.max(400, resizeStartRef.current.width + deltaX);
-                const newHeight = Math.max(300, resizeStartRef.current.height + deltaY);
+                const newWidth = Math.max(CANVAS_SIZE_CONSTRAINTS.MIN_WIDTH, resizeStartRef.current.width + deltaX);
+                const newHeight = Math.max(CANVAS_SIZE_CONSTRAINTS.MIN_HEIGHT, resizeStartRef.current.height + deltaY);
 
                 // Apply aspect ratio constraint if set
                 const ratioInfo = ASPECT_RATIOS[aspectRatio];
                 if (ratioInfo?.ratio) {
                     const constrainedHeight = newWidth / ratioInfo.ratio;
-                    onSizeChange?.({ width: newWidth, height: constrainedHeight });
+                    const finalHeight = Math.max(CANVAS_SIZE_CONSTRAINTS.MIN_HEIGHT, constrainedHeight);
+                    onSizeChange?.({ width: newWidth, height: finalHeight });
                 } else {
                     onSizeChange?.({ width: newWidth, height: newHeight });
                 }

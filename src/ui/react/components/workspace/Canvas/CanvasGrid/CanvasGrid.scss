@@ -147,6 +147,35 @@
       cursor: crosshair;
     }
   }
+
+  // Pan tool mode - show grab cursor
+  &--pan-tool {
+    cursor: grab;
+
+    .canvas-cell {
+      cursor: grab;
+    }
+
+    &:active {
+      cursor: grabbing;
+
+      .canvas-cell {
+        cursor: grabbing;
+      }
+    }
+  }
+
+  // Edit mode indicator
+  &--edit-mode {
+    // Add subtle border to indicate edit mode
+    box-shadow: inset 0 0 0 2px rgba($color-accent-amber, 0.2);
+  }
+
+  // Merge mode indicator
+  &--merge-mode {
+    // Add purple border for merge mode
+    box-shadow: inset 0 0 0 2px rgba($color-accent-purple, 0.3);
+  }
 }
 
 // =============================================================================
@@ -315,9 +344,40 @@
 }
 
 .canvas-grid__edit-banner {
-  background: rgba($color-accent-primary, 0.1);
-  border-bottom: 1px solid rgba($color-accent-primary, 0.2);
+  background: rgba($color-accent-amber, 0.1);
+  border-bottom: 1px solid rgba($color-accent-amber, 0.2);
   color: $color-text-secondary;
+  justify-content: space-between;
+
+  &--merge {
+    background: rgba($color-accent-purple, 0.15);
+    border-bottom: 1px solid rgba($color-accent-purple, 0.3);
+    color: $color-accent-purple;
+  }
+}
+
+.canvas-grid__edit-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.canvas-grid__selection-btn--merge {
+  background: $color-accent-purple;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: color.adjust($color-accent-purple, $lightness: 5%);
+  }
+}
+
+.canvas-grid__selection-btn--swap {
+  background: $color-accent-blue;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: color.adjust($color-accent-blue, $lightness: 5%);
+  }
 }
 
 // =============================================================================

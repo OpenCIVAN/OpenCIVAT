@@ -114,7 +114,14 @@ export function CanvasGrid({
     const [isDragActive, setIsDragActive] = useState(false);
     const [dragModifiers, setDragModifiers] = useState({ shift: false, ctrl: false, alt: false });
 
-    // Listen for edit mode and tool changes from secondary footer
+    // Pan state (for pan tool)
+    const [isPanning, setIsPanning] = useState(false);
+    const panStartRef = useRef({ x: 0, y: 0, viewportRow: 0, viewportCol: 0 });
+
+    // Merge mode state
+    const [mergeMode, setMergeMode] = useState(false);
+
+    // Listen for edit mode, tool, and merge mode changes from header
     useEffect(() => {
         const handleEditModeChange = (e) => {
             setEditMode(e.detail.editMode);
@@ -126,13 +133,18 @@ export function CanvasGrid({
                 setEditMode(true);
             }
         };
+        const handleMergeModeChange = (e) => {
+            setMergeMode(e.detail.mergeMode);
+        };
 
         window.addEventListener('canvas:editModeChange', handleEditModeChange);
         window.addEventListener('canvas:toolChange', handleToolChange);
+        window.addEventListener('canvas:mergeModeChange', handleMergeModeChange);
 
         return () => {
             window.removeEventListener('canvas:editModeChange', handleEditModeChange);
             window.removeEventListener('canvas:toolChange', handleToolChange);
+            window.removeEventListener('canvas:mergeModeChange', handleMergeModeChange);
         };
     }, []);
 
@@ -407,6 +419,75 @@ export function CanvasGrid({
         rows: canvas?.dimensions?.rows || 10,
         cols: canvas?.dimensions?.cols || 10,
     }), [canvas?.dimensions?.rows, canvas?.dimensions?.cols]);
+
+    // ==========================================================================
+    // PAN TOOL HANDLERS
+    // ==========================================================================
+
+    const handlePanStart = useCallback((e) => {
+        if (activeTool !== 'pan') return;
+
+        e.preventDefault();
+        setIsPanning(true);
+        panStartRef.current = {
+            x: e.clientX,
+            y: e.clientY,
+            viewportRow: viewport.row,
+            viewportCol: viewport.col,
+        };
+
+        // Add cursor style
+        document.body.style.cursor = 'grabbing';
+    }, [activeTool, viewport.row, viewport.col]);
+
+    const handlePanMove = useCallback((e) => {
+        if (!isPanning || activeTool !== 'pan') return;
+
+        const deltaX = e.clientX - panStartRef.current.x;
+        const deltaY = e.clientY - panStartRef.current.y;
+
+        // Convert pixel delta to cell delta (invert for natural panning)
+        // Threshold: move viewport after dragging ~half a cell width/height
+        const cellThresholdX = (cellSize.width + GAP) / 2;
+        const cellThresholdY = (cellSize.height + GAP) / 2;
+
+        const cellDeltaCol = Math.round(-deltaX / cellThresholdX);
+        const cellDeltaRow = Math.round(-deltaY / cellThresholdY);
+
+        // Calculate new viewport position
+        const newRow = Math.max(0, panStartRef.current.viewportRow + cellDeltaRow);
+        const newCol = Math.max(0, panStartRef.current.viewportCol + cellDeltaCol);
+
+        // Only move if position changed
+        const currentRowDelta = newRow - viewport.row;
+        const currentColDelta = newCol - viewport.col;
+
+        if (currentRowDelta !== 0 || currentColDelta !== 0) {
+            moveViewport(currentRowDelta, currentColDelta);
+        }
+    }, [isPanning, activeTool, cellSize, viewport.row, viewport.col, moveViewport]);
+
+    const handlePanEnd = useCallback(() => {
+        if (isPanning) {
+            setIsPanning(false);
+            document.body.style.cursor = '';
+        }
+    }, [isPanning]);
+
+    // Add pan event listeners
+    useEffect(() => {
+        if (activeTool === 'pan') {
+            window.addEventListener('mousemove', handlePanMove);
+            window.addEventListener('mouseup', handlePanEnd);
+            window.addEventListener('mouseleave', handlePanEnd);
+
+            return () => {
+                window.removeEventListener('mousemove', handlePanMove);
+                window.removeEventListener('mouseup', handlePanEnd);
+                window.removeEventListener('mouseleave', handlePanEnd);
+            };
+        }
+    }, [activeTool, handlePanMove, handlePanEnd]);
 
     // ==========================================================================
     // RETRY CONNECTION
@@ -754,6 +835,9 @@ export function CanvasGrid({
         // Selection modifiers bypass isolation mode
         const isSelectionClick = e.ctrlKey || e.metaKey || e.shiftKey;
 
+        // In edit mode OR merge mode, clicking selects cells for operations
+        const isSelectionMode = editMode || mergeMode;
+
         // Ctrl/Cmd+Click - toggle cell in selection
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
             const cellData = { row: placement.row, col: placement.col, placement };
@@ -823,12 +907,19 @@ export function CanvasGrid({
             return;
         }
 
+        // In edit/merge mode, single click selects the cell (replaces selection)
+        if (isSelectionMode) {
+            const cellData = { row: placement.row, col: placement.col, placement };
+            setSelectedCells([cellData]);
+            return;
+        }
+
         // Single click just focuses/activates the view (no isolation)
         // Isolation is now triggered by double-click for finer-grained control
         if (onCellClick) {
             onCellClick(placement, e);
         }
-    }, [onCellClick, selectedCells, canvas?.placements]);
+    }, [onCellClick, selectedCells, canvas?.placements, editMode, mergeMode]);
 
     // Double-click triggers view stack navigation (focus mode)
     // Also triggers isolation mode for small cells as fallback
@@ -891,7 +982,7 @@ export function CanvasGrid({
         setSelectedCells([]);
     }, [selectedCells]);
 
-    const handleMergeCells = useCallback(() => {
+    const handleMergeCells = useCallback(async () => {
         if (selectedCells.length < 2) return;
 
         // Calculate bounds of selected cells
@@ -902,10 +993,58 @@ export function CanvasGrid({
         const minCol = Math.min(...cols);
         const maxCol = Math.max(...cols);
 
-        // TODO: Implement merge via canvasManager
-        log.info(`Merge cells from [${minRow},${minCol}] to [${maxRow},${maxCol}]`);
+        // Calculate span
+        const rowSpan = maxRow - minRow + 1;
+        const colSpan = maxCol - minCol + 1;
+
+        // Find the top-left cell (first one to keep) - prioritize cells with content
+        const cellsWithContent = selectedCells
+            .filter(c => c.placement?.content?.type && c.placement.content.type !== 'empty')
+            .sort((a, b) => {
+                // Sort by row first, then by column (top-left first)
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            });
+
+        // Use the first cell with content, or the top-left cell if all are empty
+        const primaryCell = cellsWithContent[0] || selectedCells.sort((a, b) => {
+            if (a.row !== b.row) return a.row - b.row;
+            return a.col - b.col;
+        })[0];
+
+        if (!primaryCell?.placement) {
+            log.warn('No valid placement to merge');
+            setSelectedCells([]);
+            return;
+        }
+
+        try {
+            // First, move the primary placement to top-left if it's not already there
+            if (primaryCell.row !== minRow || primaryCell.col !== minCol) {
+                await canvasManager.movePlacement(primaryCell.placement.id, minRow, minCol);
+            }
+
+            // Resize the primary placement to span all selected cells
+            await canvasManager.resizePlacement(primaryCell.placement.id, rowSpan, colSpan);
+
+            // Remove all other placements in the selection (they're now covered by the merged cell)
+            const otherPlacements = selectedCells
+                .filter(c => c.placement && c.placement.id !== primaryCell.placement.id)
+                .map(c => c.placement);
+
+            for (const placement of otherPlacements) {
+                if (placement?.content?.type && placement.content.type !== 'empty') {
+                    await canvasManager.removePlacement(canvasId, placement.id);
+                }
+            }
+
+            log.info(`Merged cells from [${minRow},${minCol}] to [${maxRow},${maxCol}] (${rowSpan}x${colSpan})`);
+        } catch (error) {
+            log.error('Failed to merge cells:', error);
+        }
+
         setSelectedCells([]);
-    }, [selectedCells]);
+    }, [selectedCells, canvasId]);
 
     const handleAlignCells = useCallback((direction) => {
         if (selectedCells.length < 2) return;
@@ -1145,6 +1284,28 @@ export function CanvasGrid({
 
             // IMPORTANT: Check type field FIRST before checking for id
             // Every object has an id, so we must check type to distinguish
+
+            // Case 0: Canvas cell dragged (reordering cells in edit mode)
+            // This is a MOVE operation, not a duplicate
+            if (dropData.type === 'canvas-cell' && dropData.placementId) {
+                const sourcePlacementId = dropData.placementId;
+
+                // Find the target placement at the drop location
+                const targetPlacement = canvas?.placements?.find(
+                    p => p.row === row && p.col === col
+                );
+
+                if (targetPlacement && targetPlacement.id !== sourcePlacementId) {
+                    // Swap with existing cell
+                    log.debug(`Swapping cells: ${sourcePlacementId} <-> ${targetPlacement.id}`);
+                    await canvasManager.swapPlacements(sourcePlacementId, targetPlacement.id);
+                } else if (!targetPlacement || targetPlacement.content?.type === 'empty') {
+                    // Move to empty cell
+                    log.debug(`Moving cell ${sourcePlacementId} to [${row}, ${col}]`);
+                    await canvasManager.movePlacement(sourcePlacementId, row, col);
+                }
+                return;
+            }
 
             // Case 1: File dropped (from FilesTab)
             // Check this FIRST because files have both 'id' and other properties
@@ -1606,13 +1767,41 @@ export function CanvasGrid({
                 </div>
             )}
 
-            {editMode && (
-                <div className="canvas-grid__edit-banner">
+            {(editMode || mergeMode) && (
+                <div className={`canvas-grid__edit-banner ${mergeMode ? 'canvas-grid__edit-banner--merge' : ''}`}>
                     <span>
-                        {isFlowMode
-                            ? 'Flow Mode - Views auto-arrange. Switch to Grid for manual placement.'
-                            : 'Grid Mode - Select cells to merge, or use + to add content'}
+                        {mergeMode
+                            ? `Merge Mode - ${selectedCells.length} cell${selectedCells.length !== 1 ? 's' : ''} selected`
+                            : isFlowMode
+                                ? 'Flow Mode - Views auto-arrange. Switch to Grid for manual placement.'
+                                : `Edit Mode - ${selectedCells.length > 0 ? `${selectedCells.length} selected. ` : ''}Drag to move, Ctrl+click to multi-select`}
                     </span>
+                    {selectedCells.length >= 2 && (
+                        <div className="canvas-grid__edit-actions">
+                            <button
+                                className="canvas-grid__selection-btn canvas-grid__selection-btn--merge"
+                                onClick={handleMergeCells}
+                            >
+                                <Icon name="merge" size={12} />
+                                Merge ({selectedCells.length})
+                            </button>
+                            {selectedCells.length === 2 && (
+                                <button
+                                    className="canvas-grid__selection-btn canvas-grid__selection-btn--swap"
+                                    onClick={handleSwapCells}
+                                >
+                                    <Icon name="arrowLeftRight" size={12} />
+                                    Swap
+                                </button>
+                            )}
+                            <button
+                                className="canvas-grid__selection-btn canvas-grid__selection-btn--cancel"
+                                onClick={() => setSelectedCells([])}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1636,10 +1825,11 @@ export function CanvasGrid({
                     {/* Grid viewport - ALWAYS rendered to preserve VTK instances */}
                     <div
                         ref={gridRef}
-                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''} ${selectionModifierHeld ? 'canvas-grid__viewport--selection-mode' : ''} ${isFocusView ? 'canvas-grid__viewport--focus-mode' : ''} ${isSubsetView ? 'canvas-grid__viewport--subset-mode' : ''}`}
+                        className={`canvas-grid__viewport ${!measurementsReady ? 'canvas-grid__viewport--loading' : ''} ${selectionModifierHeld ? 'canvas-grid__viewport--selection-mode' : ''} ${isFocusView ? 'canvas-grid__viewport--focus-mode' : ''} ${isSubsetView ? 'canvas-grid__viewport--subset-mode' : ''} ${activeTool === 'pan' ? 'canvas-grid__viewport--pan-tool' : ''} ${editMode ? 'canvas-grid__viewport--edit-mode' : ''} ${mergeMode ? 'canvas-grid__viewport--merge-mode' : ''}`}
                         tabIndex={0}
                         onClick={handleGridClick}
                         onContextMenu={handleContextMenu}
+                        onMouseDown={handlePanStart}
                     >
                         {/* Show focus view, subset view, or normal grid */}
                         {isFocusView ? (

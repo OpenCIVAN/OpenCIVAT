@@ -9,24 +9,27 @@
 // Layout:
 // - CanvasHeader (36px)
 // - Content area (flex: 1, with edge triggers)
-// - CanvasToolbar (54px)
+// - CanvasToolbar (54px or auto when wrapped)
 // - CanvasStatusBar (24px)
-// Total chrome: 114px
-
-// Minimum width to ensure header bar fits all components
-$canvas-min-width: 900px;
+//
+// RESPONSIVE BEHAVIOR:
+// - Uses container queries to detect width and adapt layout
+// - Toolbar collapses labels first, then button text, then wraps
 
 .canvas-workspace {
   display: flex;
   flex-direction: column;
   height: 100%;
   width: 100%;
-  min-width: $canvas-min-width;
-  min-height: 0;
+  min-width: 320px; // Absolute minimum for mobile
+  min-height: 300px;
   background: $color-bg-primary;
-  overflow-x: auto; // Allow horizontal scroll when viewport is too narrow
-  overflow-y: hidden;
+  overflow: hidden;
   position: relative;
+
+  // Enable container queries
+  container-type: inline-size;
+  container-name: canvas-workspace;
 }
 
 // ============================================================================

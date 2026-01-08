@@ -64,7 +64,40 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     // Header bar state (edit mode, tools, flow)
     const [editMode, setEditMode] = useState(false);
     const [activeTool, setActiveTool] = useState('select');
+    const [mergeMode, setMergeMode] = useState(false);
     const [flowDirection, setFlowDirection] = useState('row');
+
+    // Dispatch edit mode changes to CanvasGrid
+    const handleEditModeChange = useCallback((newEditMode) => {
+        setEditMode(newEditMode);
+        window.dispatchEvent(new CustomEvent('canvas:editModeChange', {
+            detail: { editMode: newEditMode }
+        }));
+    }, []);
+
+    // Dispatch tool changes to CanvasGrid
+    const handleToolChange = useCallback((newTool) => {
+        setActiveTool(newTool);
+        window.dispatchEvent(new CustomEvent('canvas:toolChange', {
+            detail: { tool: newTool }
+        }));
+        // Pan tool automatically enables edit mode
+        if (newTool === 'pan') {
+            handleEditModeChange(true);
+        }
+    }, [handleEditModeChange]);
+
+    // Handle merge mode toggle
+    const handleMergeModeChange = useCallback((newMergeMode) => {
+        setMergeMode(newMergeMode);
+        if (newMergeMode) {
+            // Entering merge mode also enables edit mode
+            handleEditModeChange(true);
+        }
+        window.dispatchEvent(new CustomEvent('canvas:mergeModeChange', {
+            detail: { mergeMode: newMergeMode }
+        }));
+    }, [handleEditModeChange]);
 
     // Links state
     const [viewLinks, setViewLinks] = useState({});
@@ -719,11 +752,11 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     onCreateWorkspace={() => {}}
                     // Edit tools
                     activeTool={activeTool}
-                    onToolChange={setActiveTool}
-                    mergeMode={false}
-                    onMergeModeChange={() => {}}
+                    onToolChange={handleToolChange}
+                    mergeMode={mergeMode}
+                    onMergeModeChange={handleMergeModeChange}
                     editMode={editMode}
-                    onEditModeChange={setEditMode}
+                    onEditModeChange={handleEditModeChange}
                     // Flow (uses FlowDirectionToggle)
                     flowDirection={flowDirection}
                     onFlowDirectionChange={setFlowDirection}

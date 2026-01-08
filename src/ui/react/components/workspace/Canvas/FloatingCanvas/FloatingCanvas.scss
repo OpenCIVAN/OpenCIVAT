@@ -220,6 +220,14 @@
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   border: 1px solid $color-border-medium;
+
+  // Minimum size constraints
+  min-width: 400px;
+  min-height: 350px;
+
+  // Enable container queries for responsive child behavior
+  container-type: inline-size;
+  container-name: canvas-workspace;
 }
 
 .floating-canvas--dragging {
@@ -302,18 +310,12 @@
     display: none;
   }
 
-  // Force docked mode on mobile
+  // Compact floating mode on mobile (but don't force docked)
   .floating-canvas--floating {
-    position: static;
-    width: 100% !important;
-    height: 100% !important;
-    border-radius: 0;
-    box-shadow: none;
-    border: none;
-  }
+    border-radius: $radius-md;
 
-  .floating-canvas__drag-handle,
-  .floating-canvas__resize-handle {
-    display: none;
+    .floating-canvas__drag-handle {
+      height: 20px;
+    }
   }
 }

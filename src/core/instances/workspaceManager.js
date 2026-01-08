@@ -105,6 +105,42 @@ class WorkspaceManager {
         this._handleRemoteViewUpdate(view);
       });
       log.debug("Server view sync listener registered (persistence)");
+
+      // LINKED VIEWS: Listen for camera changes on linked views
+      getViewConfigurationManager()?.on("cameraChanged", ({ viewId, camera, isLinkedUpdate }) => {
+        if (isLinkedUpdate && camera) {
+          this._applyLinkedCameraUpdate(viewId, camera);
+        }
+      });
+      log.debug("Linked camera sync listener registered");
+    }
+  }
+
+  /**
+   * Apply camera update from a linked view source
+   * @private
+   */
+  _applyLinkedCameraUpdate(viewId, camera) {
+    // Find all instances viewing this view
+    for (const [instanceId, instance] of this.instances) {
+      if (instance.viewConfigId !== viewId) continue;
+      if (!instance.handler || !instance.instanceData) continue;
+
+      try {
+        // Call handler's applySharedState for immediate camera update
+        if (typeof instance.handler.applySharedState === "function") {
+          instance.handler.applySharedState(
+            instance.instanceData,
+            { camera },
+            "linked"
+          );
+        }
+      } catch (error) {
+        log.error(
+          `Failed to apply linked camera to instance ${instanceId}:`,
+          error
+        );
+      }
     }
   }
 
