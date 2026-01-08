@@ -346,11 +346,16 @@ export const ViewHeader = memo(function ViewHeader({
 
                 {/* Label */}
                 <div className="view-header__label">
-                    <span className="view-header__label-dot" />
+                    {/* Loading spinner - shows during loading instead of color dot */}
+                    {isLoading ? (
+                        <span className="view-header__loader" />
+                    ) : (
+                        <span className="view-header__label-dot" />
+                    )}
                     <span className="view-header__label-text">
                         {isLoading ? 'Loading...' : displayName}
                     </span>
-                    {!isMinimal && (
+                    {!isMinimal && !isLoading && (
                         <span className="view-header__label-icon">
                             <Icon name={typeIconName} size={iconSize} />
                         </span>

@@ -478,12 +478,12 @@
   inset: 0;
   z-index: 2;
   overflow: hidden;
-  background: transparent; // No background - thumbnail fills completely
+  background: $color-bg-canvas; // Match canvas background for seamless loading
   pointer-events: none; // Allow clicks to pass through to cell for selection
 
   // Crossfade transition - fades out when viewport becomes ready
   opacity: 1;
-  transition: opacity 0.25s ease-out;
+  transition: opacity 0.3s ease-out;
 
   &--hidden {
     opacity: 0;
@@ -547,6 +547,30 @@
   &--activating {
     // Smooth fade-in when viewport mounts for active thumbnail
     animation: viewport-fade-in 0.3s ease-out;
+  }
+}
+
+// =============================================================================
+// LOADING STATE - Header above thumbnail, content transparent
+// =============================================================================
+// During loading, thumbnail overlay shows behind the instance-viewport
+// Header floats above everything, content is transparent until ready
+
+.canvas-cell__view-content--loading {
+  // Pull the header above thumbnail overlay during loading
+  .canvas-cell__instance-container {
+    z-index: 3; // Above thumbnail (z-index: 2)
+  }
+
+  // Make InstanceViewport content transparent so thumbnail shows through
+  .instance-viewport__content {
+    background: transparent !important;
+  }
+
+  // But keep the header visible with its background
+  .instance-viewport .view-header {
+    position: relative;
+    z-index: 10;
   }
 }
 
@@ -868,9 +892,29 @@
 // =============================================================================
 // COLD VIEW THUMBNAIL POSITIONING
 // =============================================================================
-// Thumbnail fills the entire cell (no header in thumbnail/snapshot modes)
+// Thumbnail fills the entire cell with header floating on top
 
 .canvas-cell__thumbnail-overlay--cold {
   // No offset - thumbnail fills entire cell
   top: 0;
+}
+
+// =============================================================================
+// FLOATING HEADER - Header floats on top of thumbnail for seamless transition
+// =============================================================================
+// In thumbnail/snapshot modes, the header should overlay on top of the thumbnail
+// so the thumbnail fills the entire cell for a smooth loading-to-active transition
+
+.canvas-cell__view-content {
+  // ViewHeader inside view-content should float on top
+  > .view-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5; // Above thumbnail (z-index: 2) but below drop zones (z-index: 50)
+
+    // Slight shadow to separate from thumbnail below
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
 }

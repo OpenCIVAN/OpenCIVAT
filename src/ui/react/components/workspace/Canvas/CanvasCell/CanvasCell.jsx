@@ -84,8 +84,10 @@ import './CanvasCell.scss';
 /**
  * ColdViewHeader - Header for cold views (thumbnail/snapshot modes)
  * Uses the unified ViewHeader component with variant='cold'
+ *
+ * Also used during loading state to show header immediately
  */
-function ColdViewHeader({ viewId, viewColor, onClose, onActivate, onVRMode, onFocus, renderMode }) {
+function ColdViewHeader({ viewId, viewColor, onClose, onActivate, onVRMode, onFocus, renderMode, isLoading = false, isActive = false }) {
     // Get view name and file type info
     const { displayName, fileTypeInfo } = useMemo(() => {
         try {
@@ -107,12 +109,13 @@ function ColdViewHeader({ viewId, viewColor, onClose, onActivate, onVRMode, onFo
 
     return (
         <ViewHeader
-            variant="cold"
+            variant={isActive ? 'active' : 'cold'}
             renderMode={renderMode}
             displayName={displayName}
             color={{ hex: colorHex, name: 'position' }}
             fileTypeInfo={fileTypeInfo}
-            isActive={false}
+            isActive={isActive}
+            isLoading={isLoading}
             onActivate={onActivate}
             onRemove={onClose}
             onVRMode={onVRMode}
@@ -912,27 +915,43 @@ function ViewContent({
 }) {
     const [isReady, setIsReady] = useState(false);
 
-    // Determine if we should show thumbnail overlay vs live render
-    // Show thumbnail when in thumbnail/snapshot mode AND viewport is not mounted
+    // Determine render mode type
     const isThumbnailMode =
         uiConfig.renderContent === 'thumbnail' ||
         uiConfig.renderContent === 'snapshot';
+    const isFullMode = uiConfig.renderContent === 'full';
 
     // Cold mode = thumbnail mode AND viewport NOT mounted
     const isCold = isThumbnailMode && !shouldMountViewport;
 
-    // Show thumbnail overlay unless viewport is mounted AND ready AND live
-    // Paused viewports should also show the thumbnail overlay to hide the frozen frame
-    const showThumbnailOverlay = isThumbnailMode && !(shouldMountViewport && isReady && lifecycle === 'live');
+    // Loading state: viewport is mounting but not ready yet
+    const isLoading = shouldMountViewport && !isReady;
+
+    // ==========================================================================
+    // PROGRESSIVE LOADING - Show thumbnail while viewport loads (ALL modes)
+    // ==========================================================================
+    // Show thumbnail overlay:
+    // - In THUMBNAIL/SNAPSHOT mode: until viewport is ready and live
+    // - In FULL/COMPACT mode: while loading, then fade out
+    // This provides smooth visual transition from thumbnail to live content
+    const showThumbnailOverlay = isThumbnailMode
+        ? !(shouldMountViewport && isReady && lifecycle === 'live')  // Thumbnail mode: show until live
+        : isLoading;  // Full mode: show only while loading
 
     // CSS class for crossfade transition when becoming active
-    const viewportTransitionClass = isActiveView && isThumbnailMode ? 'canvas-cell__instance-container--activating' : '';
+    const viewportTransitionClass = (isActiveView || isLoading) ? 'canvas-cell__instance-container--activating' : '';
+
+    // Show standalone header when viewport is NOT mounted (cold thumbnail views)
+    // When viewport IS mounted, InstanceViewport renders its own header
+    const showStandaloneHeader = !shouldMountViewport && uiConfig.showMiniHeader;
 
     return (
-        <div className="canvas-cell__view-content">
-            {/* Cold view header for THUMBNAIL/SNAPSHOT modes - shows on hover */}
-            {/* ColdViewHeader only for inactive views - active views use InstanceViewport's controls */}
-            {uiConfig.showMiniHeader && !isActiveView && (
+        <div className={`canvas-cell__view-content ${isLoading ? 'canvas-cell__view-content--loading' : ''}`}>
+            {/* ================================================================
+                STANDALONE HEADER - For cold views (viewport not mounted)
+                ================================================================ */}
+            {/* When InstanceViewport is mounted, IT renders the header instead */}
+            {showStandaloneHeader && (
                 <ColdViewHeader
                     viewId={viewId}
                     viewColor={viewColor}
@@ -940,32 +959,29 @@ function ViewContent({
                     onActivate={onActivate}
                     onFocus={onFocusView}
                     renderMode={renderMode}
+                    isLoading={false}
+                    isActive={isActiveView}
                 />
             )}
 
             {/* ================================================================
-                THUMBNAIL/CONTENT AREA
+                THUMBNAIL OVERLAY - Progressive loading for ALL modes
                 ================================================================ */}
-
-            {/* Thumbnail overlay - shows OVER the instance when not active */}
-            {/* Fades out when viewport becomes ready and is live */}
-            {/* For COLD views, thumbnail sits below the header */}
-            {isThumbnailMode && (
-                <div
-                    className={`canvas-cell__thumbnail-overlay ${showThumbnailOverlay ? '' : 'canvas-cell__thumbnail-overlay--hidden'} ${isCold ? 'canvas-cell__thumbnail-overlay--cold' : ''}`}
-                >
-                    <Thumbnail
-                        viewId={viewId}
-                        size="fill"
-                        instanceType="vtk"
-                        fallback={
-                            <div className="canvas-cell__thumbnail-placeholder">
-                                <Icon name="box" size={uiConfig.renderContent === 'snapshot' ? 16 : 24} />
-                            </div>
-                        }
-                    />
-                </div>
-            )}
+            {/* Shows thumbnail while viewport loads, fades out when ready */}
+            <div
+                className={`canvas-cell__thumbnail-overlay ${showThumbnailOverlay ? '' : 'canvas-cell__thumbnail-overlay--hidden'} ${isCold ? 'canvas-cell__thumbnail-overlay--cold' : ''}`}
+            >
+                <Thumbnail
+                    viewId={viewId}
+                    size="fill"
+                    instanceType="vtk"
+                    fallback={
+                        <div className="canvas-cell__thumbnail-placeholder">
+                            <Icon name="box" size={uiConfig.renderContent === 'snapshot' ? 16 : 24} />
+                        </div>
+                    }
+                />
+            </div>
 
             {/* Mount InstanceViewport when:
                 - FULL/COMPACT mode (always render live), OR
