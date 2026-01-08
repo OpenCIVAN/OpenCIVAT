@@ -476,6 +476,7 @@
 .canvas-cell__thumbnail-overlay {
   position: absolute;
   inset: 0;
+  top: 32px; // Offset below header (header min-height is 32px)
   z-index: 2;
   overflow: hidden;
   background: $color-bg-canvas; // Match canvas background for seamless loading
@@ -488,6 +489,21 @@
   &--hidden {
     opacity: 0;
     pointer-events: none;
+  }
+
+  // Compact mode has smaller header
+  .canvas-cell--mode-compact & {
+    top: 28px;
+  }
+
+  // Thumbnail mode has even smaller header
+  .canvas-cell--mode-thumbnail & {
+    top: 24px;
+  }
+
+  // Snapshot mode - minimal header
+  .canvas-cell--mode-snapshot & {
+    top: 24px;
   }
 
   // Thumbnail fills entire cell - override component defaults
@@ -551,27 +567,41 @@
 }
 
 // =============================================================================
-// LOADING STATE - Header above thumbnail, content transparent
+// LOADING STATE - Thumbnail visible, header floats above
 // =============================================================================
-// During loading, thumbnail overlay shows behind the instance-viewport
-// Header floats above everything, content is transparent until ready
+// During loading:
+// - Thumbnail overlay (z-index: 2) is visible and fills the cell
+// - Instance container (z-index: 3) is above but transparent
+// - Header floats above everything
+// - Content area is hidden (opacity: 0) until ready
 
 .canvas-cell__view-content--loading {
-  // Pull the header above thumbnail overlay during loading
+  // Instance container above thumbnail so header is visible
   .canvas-cell__instance-container {
-    z-index: 3; // Above thumbnail (z-index: 2)
+    z-index: 3;
   }
 
-  // Make InstanceViewport content transparent so thumbnail shows through
-  .instance-viewport__content {
+  // Make the instance-viewport completely transparent
+  .instance-viewport {
     background: transparent !important;
+    box-shadow: none !important;
   }
 
-  // But keep the header visible with its background
-  .instance-viewport .view-header {
-    position: relative;
-    z-index: 10;
+  // Hide the content area during loading (will fade in when ready)
+  .instance-viewport__content {
+    opacity: 0;
   }
+
+  // Also hide the progressive-loader's internal thumbnail
+  // (we use the canvas-cell thumbnail overlay instead)
+  .progressive-loader .thumbnail-preview {
+    display: none;
+  }
+}
+
+// Content area fades in smoothly when loading completes
+.instance-viewport__content {
+  transition: opacity 0.3s ease-out;
 }
 
 // Viewport activation animation
