@@ -1353,6 +1353,794 @@
 }
 
 // =============================================================================
+// SYNC PANEL (Floating menu for view syncing - VR-friendly)
+// =============================================================================
+
+.sync-panel {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s ease;
+
+  &--dragging {
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 2px $color-accent-blue;
+    user-select: none;
+  }
+}
+
+// Instance Card Header (clickable to switch views, draggable)
+.sync-panel__instance-header {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid $color-border-subtle;
+  cursor: grab;
+
+  .sync-panel--dragging & {
+    cursor: grabbing;
+  }
+}
+
+.sync-panel__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: $color-text-muted;
+  flex-shrink: 0;
+  cursor: grab;
+  opacity: 0.5;
+  transition: opacity $transition-fast, color $transition-fast;
+
+  &:hover {
+    opacity: 1;
+    color: $color-text-secondary;
+  }
+
+  .sync-panel--dragging & {
+    cursor: grabbing;
+    opacity: 1;
+    color: $color-accent-blue;
+  }
+}
+
+.sync-panel__instance-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, var(--instance-color) 0%, var(--instance-color) 4px, transparent 4px);
+  border: none;
+  border-radius: 12px 0 0 0;
+  cursor: pointer;
+  text-align: left;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: linear-gradient(90deg, var(--instance-color) 0%, var(--instance-color) 4px, $color-hover-bg 4px);
+  }
+}
+
+.sync-panel__instance-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sync-panel__instance-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-panel__instance-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: $color-text-muted;
+
+  span {
+    text-transform: capitalize;
+  }
+}
+
+.sync-panel__instance-badge {
+  font-size: 10px;
+  color: $color-accent-teal;
+  background: rgba($color-accent-teal, 0.15);
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sync-panel__instance-chevron {
+  color: $color-text-muted;
+  transition: transform $transition-fast;
+
+  &--open {
+    transform: rotate(180deg);
+  }
+}
+
+.sync-panel__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid $color-border-subtle;
+  border-radius: 0 12px 0 0;
+  color: $color-text-muted;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-hover-bg;
+    color: $color-text-primary;
+  }
+}
+
+// View Picker Dropdown
+.sync-panel__view-picker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 40px;
+  margin-top: 4px;
+  background: $color-bg-secondary;
+  border: 1px solid $color-border-default;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.sync-panel__view-picker-label {
+  padding: 8px 12px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// View Picker Search
+.sync-panel__view-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid $color-border-subtle;
+  background: $color-bg-tertiary;
+
+  > svg {
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: $color-text-primary;
+    font-size: 12px;
+    min-width: 0;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+}
+
+.sync-panel__view-picker-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: $color-bg-base;
+  border: none;
+  border-radius: 4px;
+  color: $color-text-muted;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: $color-hover-bg;
+    color: $color-text-primary;
+  }
+}
+
+// View Picker Type Filters
+.sync-panel__view-picker-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.sync-panel__view-picker-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: $color-bg-base;
+  border: 1px solid $color-border-subtle;
+  border-radius: 12px;
+  color: $color-text-muted;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: $color-hover-bg;
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba($color-accent-teal, 0.15);
+    border-color: $color-accent-teal;
+    color: $color-accent-teal;
+  }
+}
+
+.sync-panel__view-picker-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.sync-panel__view-picker-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: $color-text-muted;
+  font-size: 11px;
+}
+
+.sync-panel__view-picker-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sync-panel__view-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: $color-text-secondary;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: $color-hover-bg;
+  }
+
+  &--active {
+    background: rgba($color-accent-teal, 0.1);
+    color: $color-text-primary;
+  }
+
+  &--synced {
+    background: rgba($color-accent-teal, 0.05);
+    border-left: 2px solid $color-accent-teal;
+  }
+
+  > svg {
+    margin-left: auto;
+    color: $color-accent-teal;
+  }
+}
+
+// Sync indicator icons in view picker
+.sync-panel__view-picker-sync-icons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  margin-right: 4px;
+}
+
+.sync-panel__view-picker-sync-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--sync-color, $color-accent-teal);
+}
+
+.sync-panel__body {
+  display: flex;
+  height: 340px;
+}
+
+// Left sidebar with property tabs
+.sync-panel__sidebar {
+  width: 100px;
+  background: $color-bg-tertiary;
+  border-right: 1px solid $color-border-subtle;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  border-radius: 0 0 0 12px;
+}
+
+.sync-panel__sidebar-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px 6px;
+}
+
+.sync-panel__tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+
+  &:hover {
+    background: $color-hover-bg;
+    color: $color-text-primary;
+  }
+
+  &--active {
+    background: $color-bg-base;
+    color: var(--tab-color, $color-text-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+
+    .sync-panel__tab-label {
+      font-weight: 500;
+    }
+  }
+
+  &--synced {
+    .sync-panel__tab-count {
+      display: flex;
+    }
+  }
+}
+
+.sync-panel__tab-label {
+  font-size: 11px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-panel__tab-count {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  font-size: 9px;
+  font-weight: 600;
+  background: $color-accent-teal;
+  color: white;
+  border-radius: 8px;
+  padding: 0 4px;
+}
+
+// Right content panel
+.sync-panel__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sync-panel__property-info {
+  padding: 12px 14px;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border-subtle;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sync-panel__property-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sync-panel__property-desc {
+  font-size: 11px;
+  color: $color-text-muted;
+  flex: 1;
+}
+
+.sync-panel__property-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: $color-text-muted;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+// Direction selector row
+.sync-panel__direction-row {
+  display: flex;
+  gap: 4px;
+  padding: 8px 14px;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.sync-panel__direction-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: $color-bg-tertiary;
+  border: 1px solid $color-border-subtle;
+  border-radius: 6px;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover:not(&--active) {
+    background: $color-hover-bg;
+    border-color: $color-border-default;
+    color: $color-text-secondary;
+  }
+
+  &--active {
+    background: rgba($color-accent-teal, 0.15);
+    border-color: $color-accent-teal;
+    color: $color-accent-teal;
+  }
+}
+
+.sync-panel__direction-icon {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sync-panel__direction-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+// Sections
+.sync-panel__section {
+  padding: 10px 14px;
+  border-bottom: 1px solid $color-border-subtle;
+
+  &--available {
+    flex: 1;
+    border-bottom: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.sync-panel__section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.sync-panel__section-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sync-panel__section-direction {
+  font-size: 12px;
+  color: $color-accent-teal;
+  font-weight: 600;
+}
+
+.sync-panel__section-count {
+  font-size: 10px;
+  color: $color-text-muted;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+// Synced section (compact)
+.sync-panel__section--synced {
+  padding: 8px 12px;
+  background: rgba($color-accent-teal, 0.05);
+}
+
+.sync-panel__synced-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sync-panel__synced-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  background: rgba($color-accent-teal, 0.12);
+  border-radius: 12px;
+  font-size: 11px;
+  color: $color-text-secondary;
+}
+
+.sync-panel__synced-direction {
+  font-size: 10px;
+  font-weight: 600;
+  color: $color-accent-teal;
+  margin-left: 2px;
+}
+
+.sync-panel__leave-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: $color-text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba($color-accent-red, 0.15);
+    color: $color-accent-red;
+  }
+}
+
+// Toolbar with search and sort
+.sync-panel__toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid $color-border-subtle;
+}
+
+.sync-panel__search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: $color-bg-base;
+  border: 1px solid $color-border-subtle;
+  border-radius: 6px;
+
+  &:focus-within {
+    border-color: $color-accent-blue;
+  }
+
+  > svg {
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: $color-text-primary;
+    font-size: 12px;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+}
+
+.sync-panel__search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: $color-bg-tertiary;
+  border: none;
+  border-radius: 4px;
+  color: $color-text-muted;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-hover-bg;
+    color: $color-text-primary;
+  }
+}
+
+.sync-panel__sort-select {
+  padding: 6px 8px;
+  background: $color-bg-base;
+  border: 1px solid $color-border-subtle;
+  border-radius: 6px;
+  color: $color-text-secondary;
+  font-size: 11px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-border-default;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-accent-blue;
+  }
+}
+
+// Available views list
+.sync-panel__available-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+}
+
+.sync-panel__empty {
+  padding: 20px 16px;
+  text-align: center;
+  color: $color-text-muted;
+  font-size: 11px;
+}
+
+.sync-panel__view-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all $transition-fast;
+  text-align: left;
+
+  &:hover:not(.sync-panel__view-item--disabled) {
+    background: $color-hover-bg;
+    border-color: $color-border-subtle;
+
+    .sync-panel__view-add {
+      opacity: 1;
+    }
+  }
+
+  &--disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.sync-panel__view-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.sync-panel__view-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sync-panel__view-name {
+  font-size: 12px;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-panel__view-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: $color-text-muted;
+}
+
+.sync-panel__view-type {
+  text-transform: capitalize;
+}
+
+.sync-panel__view-dataset {
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-panel__view-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &--same {
+    background: rgba($color-accent-teal, 0.15);
+    color: $color-accent-teal;
+  }
+
+  &--incompatible {
+    background: rgba($color-accent-amber, 0.15);
+    color: $color-accent-amber;
+  }
+}
+
+.sync-panel__view-add {
+  color: $color-accent-teal;
+  opacity: 0;
+  transition: opacity $transition-fast;
+  flex-shrink: 0;
+}
+
+.sync-panel__view-incompatible {
+  color: $color-accent-amber;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+// =============================================================================
 // SUBSET PICKER DROPDOWN
 // =============================================================================
 

@@ -551,272 +551,528 @@ const SubsetPickerDropdown = memo(function SubsetPickerDropdown({
 });
 
 // =============================================================================
-// LINKS DROPDOWN
+// SYNC PANEL (Floating menu for view syncing)
 // =============================================================================
+
+const SORT_OPTIONS_SYNC = [
+    { id: 'name', label: 'Name A→Z' },
+    { id: 'name-desc', label: 'Name Z→A' },
+    { id: 'dataset', label: 'Same dataset first' },
+    { id: 'type', label: 'By type' },
+];
 
 const LinksDropdown = memo(function LinksDropdown({
     activeView,
     allViews,
     onUpdateLink,
     onClose,
-    triggerRef, // Reference to the trigger button for positioning
+    onSelectView,
+    triggerRef,
 }) {
-    const [expandedLink, setExpandedLink] = useState(null);
+    const [selectedProperty, setSelectedProperty] = useState('camera');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState('dataset');
+    const [showViewPicker, setShowViewPicker] = useState(false);
+    const [viewPickerSearch, setViewPickerSearch] = useState('');
+    const [viewPickerTypeFilter, setViewPickerTypeFilter] = useState(null);
+    const [selectedDirection, setSelectedDirection] = useState('bidirectional');
     const dropdownRef = useRef(null);
+    const searchRef = useRef(null);
+    const viewPickerSearchRef = useRef(null);
 
-    // Calculate position from trigger
-    const getPosition = () => {
-        if (!triggerRef?.current) return { top: 100, left: 100 };
-        const rect = triggerRef.current.getBoundingClientRect();
-        let top = rect.top - 400;
-        let left = rect.left + rect.width / 2 - 160;
-        if (left < 8) left = 8;
-        if (left + 320 > window.innerWidth - 8) left = window.innerWidth - 328;
-        if (top < 8) top = rect.bottom + 8;
+    // Draggable position state
+    const [position, setPosition] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef({ x: 0, y: 0 });
+    const positionStartRef = useRef({ x: 0, y: 0 });
+
+    // Calculate initial position - anchor to top-right area of screen
+    const getInitialPosition = useCallback(() => {
+        const panelWidth = 380;
+        const panelHeight = 420;
+        const padding = 16;
+
+        let left = window.innerWidth - panelWidth - padding;
+        let top = padding + 60;
+
+        if (left < padding) left = padding;
+        if (top + panelHeight > window.innerHeight - padding) {
+            top = window.innerHeight - panelHeight - padding;
+        }
+
         return { top, left };
-    };
-    const pos = getPosition();
+    }, []);
+
+    // Initialize position on mount
+    useEffect(() => {
+        if (!position) {
+            setPosition(getInitialPosition());
+        }
+    }, [position, getInitialPosition]);
+
+    const pos = position || getInitialPosition();
+
+    // Drag handlers
+    const handleDragStart = useCallback((e) => {
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) {
+            return; // Don't drag when clicking interactive elements
+        }
+        e.preventDefault();
+        setIsDragging(true);
+        dragStartRef.current = { x: e.clientX, y: e.clientY };
+        positionStartRef.current = { x: pos.left, y: pos.top };
+    }, [pos]);
+
+    const handleDragMove = useCallback((e) => {
+        if (!isDragging) return;
+
+        const deltaX = e.clientX - dragStartRef.current.x;
+        const deltaY = e.clientY - dragStartRef.current.y;
+
+        const panelWidth = 380;
+        const panelHeight = 420;
+        const padding = 8;
+
+        let newLeft = positionStartRef.current.x + deltaX;
+        let newTop = positionStartRef.current.y + deltaY;
+
+        // Constrain to viewport
+        newLeft = Math.max(padding, Math.min(window.innerWidth - panelWidth - padding, newLeft));
+        newTop = Math.max(padding, Math.min(window.innerHeight - panelHeight - padding, newTop));
+
+        setPosition({ top: newTop, left: newLeft });
+    }, [isDragging]);
+
+    const handleDragEnd = useCallback(() => {
+        setIsDragging(false);
+    }, []);
+
+    // Global mouse events for dragging
+    useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('mousemove', handleDragMove);
+            document.addEventListener('mouseup', handleDragEnd);
+            return () => {
+                document.removeEventListener('mousemove', handleDragMove);
+                document.removeEventListener('mouseup', handleDragEnd);
+            };
+        }
+    }, [isDragging, handleDragMove, handleDragEnd]);
+
+    // Focus view picker search when opened
+    useEffect(() => {
+        if (showViewPicker && viewPickerSearchRef.current) {
+            viewPickerSearchRef.current.focus();
+        }
+    }, [showViewPicker]);
 
     const links = activeView?.links || {};
     const otherViews = allViews.filter((v) => v.id !== activeView?.id);
 
-    // Smart filtering: check if a view shares the same dataset
+    // Get current link type config
+    const currentLinkType = LINK_TYPES.find(lt => lt.id === selectedProperty) || LINK_TYPES[0];
+
+    // Check if view shares dataset with active view
     const viewSharesDataset = useCallback((view) => {
         if (!activeView?.datasetId || !view?.datasetId) return false;
         return activeView.datasetId === view.datasetId;
     }, [activeView?.datasetId]);
 
-    // Get compatible views for a link type
-    const getCompatibleViews = useCallback((linkType) => {
-        if (!linkType.requiresSameDataset) {
-            return { compatible: otherViews, incompatible: [] };
+    // Get synced view IDs for current property
+    const syncedViewIds = useMemo(() => {
+        return links[selectedProperty]?.targets || [];
+    }, [links, selectedProperty]);
+
+    // Get synced views
+    const syncedViews = useMemo(() => {
+        return syncedViewIds.map(id => allViews.find(v => v.id === id)).filter(Boolean);
+    }, [syncedViewIds, allViews]);
+
+    // Filter and sort available views
+    const availableViews = useMemo(() => {
+        let views = otherViews.filter(v => !syncedViewIds.includes(v.id));
+
+        // Apply search filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            views = views.filter(v =>
+                v.name?.toLowerCase().includes(query) ||
+                v.datasetName?.toLowerCase().includes(query) ||
+                v.type?.toLowerCase().includes(query)
+            );
         }
-        const compatible = otherViews.filter(viewSharesDataset);
-        const incompatible = otherViews.filter((v) => !viewSharesDataset(v));
-        return { compatible, incompatible };
-    }, [otherViews, viewSharesDataset]);
 
-    // Count views with same dataset
-    const sameDatasetCount = useMemo(() => {
-        return otherViews.filter(viewSharesDataset).length;
-    }, [otherViews, viewSharesDataset]);
+        // Check compatibility (same dataset requirement)
+        const isCompatible = (v) => !currentLinkType.requiresSameDataset || viewSharesDataset(v);
 
-    // Handle view selection - applies link immediately
-    const handleViewSelect = useCallback((linkTypeId, viewId, currentDirection) => {
-        onUpdateLink?.(linkTypeId, viewId, currentDirection || 'bidirectional');
-    }, [onUpdateLink]);
+        // Sort views
+        views.sort((a, b) => {
+            // Incompatible views always go to bottom
+            const aCompat = isCompatible(a);
+            const bCompat = isCompatible(b);
+            if (aCompat !== bCompat) return bCompat ? 1 : -1;
 
-    // Handle direction change - applies immediately
-    const handleDirectionChange = useCallback((linkTypeId, targetViewId, newDirection) => {
-        onUpdateLink?.(linkTypeId, targetViewId, newDirection);
-    }, [onUpdateLink]);
+            switch (sortBy) {
+                case 'name':
+                    return (a.name || '').localeCompare(b.name || '');
+                case 'name-desc':
+                    return (b.name || '').localeCompare(a.name || '');
+                case 'dataset':
+                    const aShares = viewSharesDataset(a);
+                    const bShares = viewSharesDataset(b);
+                    if (aShares !== bShares) return bShares ? 1 : -1;
+                    return (a.name || '').localeCompare(b.name || '');
+                case 'type':
+                    return (a.type || '').localeCompare(b.type || '');
+                default:
+                    return 0;
+            }
+        });
+
+        return views.map(v => ({
+            ...v,
+            isCompatible: isCompatible(v),
+        }));
+    }, [otherViews, syncedViewIds, searchQuery, sortBy, currentLinkType, viewSharesDataset]);
+
+    // Handle adding a view to sync group
+    const handleAddToSync = useCallback((viewId) => {
+        onUpdateLink?.(selectedProperty, viewId, selectedDirection);
+    }, [onUpdateLink, selectedProperty, selectedDirection]);
+
+    // Handle removing from sync group (leave group)
+    const handleLeaveSync = useCallback(() => {
+        onUpdateLink?.(selectedProperty, null, null);
+    }, [onUpdateLink, selectedProperty]);
+
+    // Handle switching the active view
+    const handleSwitchView = useCallback((view) => {
+        onSelectView?.(view);
+        setShowViewPicker(false);
+        setViewPickerSearch('');
+    }, [onSelectView]);
+
+    // Count synced properties
+    const syncedPropertyCount = useMemo(() => {
+        return LINK_TYPES.filter(lt => (links[lt.id]?.targets?.length || 0) > 0).length;
+    }, [links]);
+
+    // Get all unique types for the view picker filter
+    const viewPickerTypes = useMemo(() => {
+        const types = new Set(allViews.map(v => v.type).filter(Boolean));
+        return Array.from(types).sort();
+    }, [allViews]);
+
+    // Get sync info for each view (which properties are synced)
+    const viewSyncInfo = useMemo(() => {
+        const syncMap = new Map();
+        LINK_TYPES.forEach(lt => {
+            const targets = links[lt.id]?.targets || [];
+            targets.forEach(targetId => {
+                if (!syncMap.has(targetId)) {
+                    syncMap.set(targetId, []);
+                }
+                syncMap.get(targetId).push(lt);
+            });
+        });
+        return syncMap;
+    }, [links]);
+
+    // Filter views for the view picker
+    const filteredPickerViews = useMemo(() => {
+        let views = allViews;
+
+        // Apply type filter
+        if (viewPickerTypeFilter) {
+            views = views.filter(v => v.type === viewPickerTypeFilter);
+        }
+
+        // Apply search filter
+        if (viewPickerSearch) {
+            const query = viewPickerSearch.toLowerCase();
+            views = views.filter(v =>
+                v.name?.toLowerCase().includes(query) ||
+                v.datasetName?.toLowerCase().includes(query) ||
+                v.type?.toLowerCase().includes(query)
+            );
+        }
+
+        return views;
+    }, [allViews, viewPickerSearch, viewPickerTypeFilter]);
 
     return createPortal(
-        <>
-            <div className="links-dropdown__backdrop" onClick={onClose} />
+        <div
+            ref={dropdownRef}
+            className={`sync-panel ${isDragging ? 'sync-panel--dragging' : ''}`}
+            style={{
+                position: 'fixed',
+                top: pos.top,
+                left: pos.left,
+                zIndex: 99999,
+            }}
+            onClick={(e) => e.stopPropagation()}
+        >
+            {/* Draggable Header with Instance Card and View Picker */}
             <div
-                ref={dropdownRef}
-                className="links-dropdown"
-                style={{
-                    position: 'fixed',
-                    top: pos.top,
-                    left: pos.left,
-                    width: 320,
-                    zIndex: 99999,
-                }}
-                onClick={(e) => e.stopPropagation()}
+                className="sync-panel__instance-header"
+                onMouseDown={handleDragStart}
+                style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
             >
-                <div className="links-dropdown__header">
-                    <div className="links-dropdown__header-label">Links for</div>
-                    <div className="links-dropdown__header-view">
-                        {activeView ? (
-                            <>
-                                <span className="links-dropdown__header-dot" style={{ background: activeView.color }} />
-                                <span className="links-dropdown__header-name">{activeView.name}</span>
-                            </>
-                        ) : (
-                            <span className="links-dropdown__header-name">No view selected</span>
-                        )}
+                <div className="sync-panel__drag-handle" title="Drag to move">
+                    <Icon name="gripVertical" size={12} />
+                </div>
+                <button
+                    className="sync-panel__instance-card"
+                    onClick={() => setShowViewPicker(!showViewPicker)}
+                    style={{ '--instance-color': activeView?.color || '#60a5fa' }}
+                >
+                    <div className="sync-panel__instance-info">
+                        <span className="sync-panel__instance-name">{activeView?.name || 'No view'}</span>
+                        <span className="sync-panel__instance-meta">
+                            {activeView?.type && <span>{activeView.type}</span>}
+                            {activeView?.datasetName && <span>{activeView.datasetName}</span>}
+                        </span>
                     </div>
-                    {activeView?.datasetName && (
-                        <div className="links-dropdown__header-dataset">
-                            <Icon name="file" size={10} />
-                            <span>{activeView.datasetName}</span>
-                            {sameDatasetCount > 0 && (
-                                <span className="links-dropdown__header-dataset-count">{sameDatasetCount} shared</span>
+                    {syncedPropertyCount > 0 && (
+                        <span className="sync-panel__instance-badge">{syncedPropertyCount} synced</span>
+                    )}
+                    <Icon name="chevronDown" size={12} className={`sync-panel__instance-chevron ${showViewPicker ? 'sync-panel__instance-chevron--open' : ''}`} />
+                </button>
+                <button className="sync-panel__close" onClick={onClose} title="Close">
+                    <Icon name="close" size={14} />
+                </button>
+
+                {/* View Picker Dropdown */}
+                {showViewPicker && (
+                    <div className="sync-panel__view-picker">
+                        <div className="sync-panel__view-picker-search">
+                            <Icon name="search" size={12} />
+                            <input
+                                ref={viewPickerSearchRef}
+                                type="text"
+                                placeholder="Search views..."
+                                value={viewPickerSearch}
+                                onChange={(e) => setViewPickerSearch(e.target.value)}
+                            />
+                            {viewPickerSearch && (
+                                <button
+                                    className="sync-panel__view-picker-clear"
+                                    onClick={() => setViewPickerSearch('')}
+                                >
+                                    <Icon name="close" size={10} />
+                                </button>
                             )}
                         </div>
-                    )}
-                </div>
-
-                <div className="links-dropdown__list">
-                    {LINK_TYPES.map((linkType) => {
-                        const link = links[linkType.id];
-                        const isExpanded = expandedLink === linkType.id;
-                        // Hub model: targets is an array of all synced view IDs
-                        const syncedViewIds = link?.targets || [];
-                        const syncedViews = syncedViewIds.map(id => allViews.find(v => v.id === id)).filter(Boolean);
-                        const isSynced = syncedViews.length > 0;
-                        const { compatible, incompatible } = getCompatibleViews(linkType);
-                        const hasCompatibleViews = compatible.length > 0;
-                        const hasIncompatibleViews = incompatible.length > 0;
-
-                        return (
-                            <div key={linkType.id} className="links-dropdown__item">
+                        {/* Type filters */}
+                        {viewPickerTypes.length > 1 && (
+                            <div className="sync-panel__view-picker-filters">
                                 <button
-                                    type="button"
-                                    className={`links-dropdown__item-header ${isExpanded ? 'links-dropdown__item-header--expanded' : ''}`}
-                                    onClick={() => setExpandedLink(isExpanded ? null : linkType.id)}
+                                    className={`sync-panel__view-picker-filter ${!viewPickerTypeFilter ? 'sync-panel__view-picker-filter--active' : ''}`}
+                                    onClick={() => setViewPickerTypeFilter(null)}
                                 >
-                                    <span className="links-dropdown__item-icon" style={{ color: isSynced ? linkType.color : undefined }}>
-                                        <Icon name={linkType.icon} size={12} />
-                                    </span>
-                                    <span className="links-dropdown__item-label">{linkType.label}</span>
-
-                                    {linkType.requiresSameDataset && (
-                                        <span className="links-dropdown__item-requires-dataset" title="Requires same dataset">
-                                            <Icon name="database" size={10} />
-                                        </span>
-                                    )}
-
-                                    {isSynced ? (
-                                        <div className="links-dropdown__item-synced">
-                                            <span className="links-dropdown__item-direction" style={{ color: linkType.color }}>↔</span>
-                                            <div className="links-dropdown__item-targets">
-                                                {syncedViews.slice(0, 3).map((view, idx) => (
-                                                    <span
-                                                        key={view.id}
-                                                        className="links-dropdown__item-target-dot"
-                                                        style={{ background: view.color, marginLeft: idx > 0 ? '-4px' : 0 }}
-                                                        title={view.name}
-                                                    />
-                                                ))}
-                                                {syncedViews.length > 3 && (
-                                                    <span className="links-dropdown__item-more">+{syncedViews.length - 3}</span>
+                                    All
+                                </button>
+                                {viewPickerTypes.map((type) => (
+                                    <button
+                                        key={type}
+                                        className={`sync-panel__view-picker-filter ${viewPickerTypeFilter === type ? 'sync-panel__view-picker-filter--active' : ''}`}
+                                        onClick={() => setViewPickerTypeFilter(viewPickerTypeFilter === type ? null : type)}
+                                    >
+                                        <Icon name={VIEW_TYPE_ICONS[type] || VIEW_TYPE_ICONS.default} size={10} />
+                                        {type}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        <div className="sync-panel__view-picker-list">
+                            {filteredPickerViews.length === 0 ? (
+                                <div className="sync-panel__view-picker-empty">No views match</div>
+                            ) : (
+                                filteredPickerViews.map((view) => {
+                                    const syncedProps = viewSyncInfo.get(view.id) || [];
+                                    const isSynced = syncedProps.length > 0;
+                                    return (
+                                        <button
+                                            key={view.id}
+                                            className={`sync-panel__view-picker-item ${view.id === activeView?.id ? 'sync-panel__view-picker-item--active' : ''} ${isSynced ? 'sync-panel__view-picker-item--synced' : ''}`}
+                                            onClick={() => handleSwitchView(view)}
+                                        >
+                                            <span className="sync-panel__view-dot" style={{ background: view.color }} />
+                                            <div className="sync-panel__view-picker-info">
+                                                <span className="sync-panel__view-name">{view.name}</span>
+                                                {view.datasetName && (
+                                                    <span className="sync-panel__view-dataset">{view.datasetName}</span>
                                                 )}
                                             </div>
-                                            <span className="links-dropdown__item-count">{syncedViews.length} synced</span>
-                                        </div>
-                                    ) : (
-                                        <span className="links-dropdown__item-empty">
-                                            {linkType.requiresSameDataset && !hasCompatibleViews ? 'No compatible views' : 'Not synced'}
-                                        </span>
-                                    )}
-                                    <Icon
-                                        name="chevronRight"
-                                        size={10}
-                                        className={`links-dropdown__item-chevron ${isExpanded ? 'links-dropdown__item-chevron--expanded' : ''}`}
-                                    />
-                                </button>
-
-                                {isExpanded && (
-                                    <div className="links-dropdown__expand">
-                                        <div className="links-dropdown__expand-desc">{linkType.description}</div>
-
-                                        {/* Currently synced views */}
-                                        {isSynced && (
-                                            <div className="links-dropdown__expand-section">
-                                                <div className="links-dropdown__expand-label">Synced with:</div>
-                                                <div className="links-dropdown__synced-list">
-                                                    {syncedViews.map((view) => (
-                                                        <div key={view.id} className="links-dropdown__synced-item">
-                                                            <span className="links-dropdown__view-dot" style={{ background: view.color }} />
-                                                            <span className="links-dropdown__view-name">{view.name}</span>
-                                                        </div>
+                                            {/* Sync indicators - show which properties are linked */}
+                                            {isSynced && (
+                                                <div className="sync-panel__view-picker-sync-icons">
+                                                    {syncedProps.map(prop => (
+                                                        <span
+                                                            key={prop.id}
+                                                            className="sync-panel__view-picker-sync-icon"
+                                                            style={{ '--sync-color': prop.color }}
+                                                            title={`${prop.label} synced`}
+                                                        >
+                                                            <Icon name={prop.icon} size={10} />
+                                                        </span>
                                                     ))}
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    className="links-dropdown__unlink-btn"
-                                                    onClick={() => onUpdateLink?.(linkType.id, null, null)}
-                                                >
-                                                    <Icon name="linkOff" size={12} />
-                                                    <span>Leave sync group</span>
-                                                </button>
-                                            </div>
-                                        )}
+                                            )}
+                                            {view.id === activeView?.id && <Icon name="check" size={12} />}
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
 
-                                        {/* Add more views to sync group */}
-                                        <div className="links-dropdown__expand-section">
-                                            <div className="links-dropdown__expand-label">
-                                                {isSynced ? 'Add to sync:' : 'Sync with:'}
-                                                {linkType.requiresSameDataset && (
-                                                    <span className="links-dropdown__expand-label-note">(same dataset)</span>
-                                                )}
-                                            </div>
-                                            <div className="links-dropdown__expand-views">
-                                                {compatible.length === 0 && incompatible.length === 0 && (
-                                                    <div className="links-dropdown__expand-empty">No other views available</div>
-                                                )}
-
-                                                {compatible.length === 0 && incompatible.length > 0 && linkType.requiresSameDataset && (
-                                                    <div className="links-dropdown__expand-empty">
-                                                        <Icon name="alert" size={12} />
-                                                        No views with same dataset
-                                                    </div>
-                                                )}
-
-                                                {compatible.map((view) => {
-                                                    const isAlreadySynced = syncedViewIds.includes(view.id);
-                                                    return (
-                                                        <button
-                                                            key={view.id}
-                                                            type="button"
-                                                            className={`links-dropdown__view-option ${isAlreadySynced ? 'links-dropdown__view-option--selected' : ''}`}
-                                                            onClick={() => !isAlreadySynced && handleViewSelect(linkType.id, view.id, 'bidirectional')}
-                                                            disabled={isAlreadySynced}
-                                                        >
-                                                            <span className={`links-dropdown__view-radio ${isAlreadySynced ? 'links-dropdown__view-radio--selected' : ''}`} />
-                                                            <span className="links-dropdown__view-dot" style={{ background: view.color }} />
-                                                            <div className="links-dropdown__view-info">
-                                                                <span className="links-dropdown__view-name">{view.name}</span>
-                                                                {view.datasetName && <span className="links-dropdown__view-dataset">{view.datasetName}</span>}
-                                                            </div>
-                                                            {isAlreadySynced ? (
-                                                                <span className="links-dropdown__view-synced-badge">synced</span>
-                                                            ) : viewSharesDataset(view) ? (
-                                                                <span className="links-dropdown__view-same-dataset" title="Same dataset">
-                                                                    <Icon name="check" size={10} />
-                                                                </span>
-                                                            ) : null}
-                                                        </button>
-                                                    );
-                                                })}
-
-                                                {hasIncompatibleViews && linkType.requiresSameDataset && (
-                                                    <>
-                                                        <div className="links-dropdown__expand-divider">
-                                                            <span>Different datasets</span>
-                                                        </div>
-                                                        {incompatible.map((view) => (
-                                                            <div
-                                                                key={view.id}
-                                                                className="links-dropdown__view-option links-dropdown__view-option--disabled"
-                                                                title={`Cannot link: ${view.name} uses a different dataset`}
-                                                            >
-                                                                <span className="links-dropdown__view-radio links-dropdown__view-radio--disabled" />
-                                                                <span className="links-dropdown__view-dot" style={{ background: view.color, opacity: 0.4 }} />
-                                                                <div className="links-dropdown__view-info">
-                                                                    <span className="links-dropdown__view-name">{view.name}</span>
-                                                                    {view.datasetName && <span className="links-dropdown__view-dataset">{view.datasetName}</span>}
-                                                                </div>
-                                                                <span className="links-dropdown__view-incompatible">
-                                                                    <Icon name="alert" size={10} />
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
+            <div className="sync-panel__body">
+                {/* Left sidebar: Property tabs */}
+                <div className="sync-panel__sidebar">
+                    <div className="sync-panel__sidebar-label">Sync</div>
+                    {LINK_TYPES.map((linkType) => {
+                        const hasSynced = (links[linkType.id]?.targets?.length || 0) > 0;
+                        const syncCount = links[linkType.id]?.targets?.length || 0;
+                        return (
+                            <button
+                                key={linkType.id}
+                                className={`sync-panel__tab ${selectedProperty === linkType.id ? 'sync-panel__tab--active' : ''} ${hasSynced ? 'sync-panel__tab--synced' : ''}`}
+                                onClick={() => setSelectedProperty(linkType.id)}
+                                style={{ '--tab-color': linkType.color }}
+                                title={linkType.description}
+                            >
+                                <Icon name={linkType.icon} size={14} />
+                                <span className="sync-panel__tab-label">{linkType.label}</span>
+                                {hasSynced && (
+                                    <span className="sync-panel__tab-count">{syncCount}</span>
                                 )}
-                            </div>
+                            </button>
                         );
                     })}
                 </div>
+
+                {/* Right panel: Views */}
+                <div className="sync-panel__content">
+                    {/* Property description */}
+                    <div className="sync-panel__property-info">
+                        <Icon name={currentLinkType.icon} size={14} style={{ color: currentLinkType.color }} />
+                        <span className="sync-panel__property-name">{currentLinkType.label}</span>
+                        {currentLinkType.requiresSameDataset && (
+                            <span className="sync-panel__property-note">
+                                <Icon name="database" size={10} />
+                                Same dataset
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Direction selector */}
+                    <div className="sync-panel__direction-row">
+                        {LINK_DIRECTIONS.map((dir) => (
+                            <button
+                                key={dir.id}
+                                className={`sync-panel__direction-btn ${selectedDirection === dir.id ? 'sync-panel__direction-btn--active' : ''}`}
+                                onClick={() => setSelectedDirection(dir.id)}
+                                title={dir.description}
+                            >
+                                <span className="sync-panel__direction-icon">{dir.icon}</span>
+                                <span className="sync-panel__direction-label">{dir.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Synced views section */}
+                    {syncedViews.length > 0 && (
+                        <div className="sync-panel__section sync-panel__section--synced">
+                            <div className="sync-panel__section-header">
+                                <span className="sync-panel__section-title">
+                                    Synced
+                                    <span className="sync-panel__section-direction">
+                                        {DIRECTION_LABELS[links[selectedProperty]?.direction]?.icon || '↔'}
+                                    </span>
+                                </span>
+                                <button className="sync-panel__leave-btn" onClick={handleLeaveSync} title="Leave sync group">
+                                    <Icon name="linkOff" size={11} />
+                                </button>
+                            </div>
+                            <div className="sync-panel__synced-list">
+                                {syncedViews.map((view) => (
+                                    <div key={view.id} className="sync-panel__synced-item">
+                                        <span className="sync-panel__view-dot" style={{ background: view.color }} />
+                                        <span className="sync-panel__view-name">{view.name}</span>
+                                        <span className="sync-panel__synced-direction" title={DIRECTION_LABELS[links[selectedProperty]?.direction]?.label || 'Synced'}>
+                                            {DIRECTION_LABELS[links[selectedProperty]?.direction]?.icon || '↔'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Search bar */}
+                    <div className="sync-panel__toolbar">
+                        <div className="sync-panel__search">
+                            <Icon name="search" size={12} />
+                            <input
+                                ref={searchRef}
+                                type="text"
+                                placeholder="Search..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery && (
+                                <button className="sync-panel__search-clear" onClick={() => setSearchQuery('')}>
+                                    <Icon name="close" size={10} />
+                                </button>
+                            )}
+                        </div>
+                        <select
+                            className="sync-panel__sort-select"
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                        >
+                            {SORT_OPTIONS_SYNC.map((option) => (
+                                <option key={option.id} value={option.id}>{option.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Available views section */}
+                    <div className="sync-panel__available-list">
+                        {availableViews.length === 0 ? (
+                            <div className="sync-panel__empty">
+                                {searchQuery ? 'No matches' : 'No views available'}
+                            </div>
+                        ) : (
+                            availableViews.map((view) => (
+                                <button
+                                    key={view.id}
+                                    className={`sync-panel__view-item ${!view.isCompatible ? 'sync-panel__view-item--disabled' : ''}`}
+                                    onClick={() => view.isCompatible && handleAddToSync(view.id)}
+                                    disabled={!view.isCompatible}
+                                    title={!view.isCompatible ? 'Requires same dataset' : `Sync ${currentLinkType.label.toLowerCase()} with ${view.name}`}
+                                >
+                                    <span className="sync-panel__view-dot" style={{ background: view.color, opacity: view.isCompatible ? 1 : 0.4 }} />
+                                    <div className="sync-panel__view-info">
+                                        <span className="sync-panel__view-name">{view.name}</span>
+                                        {view.datasetName && (
+                                            <span className="sync-panel__view-dataset">{view.datasetName}</span>
+                                        )}
+                                    </div>
+                                    {view.isCompatible ? (
+                                        <Icon name="plus" size={14} className="sync-panel__view-add" />
+                                    ) : (
+                                        <Icon name="alert" size={12} className="sync-panel__view-incompatible" />
+                                    )}
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </div>
             </div>
-        </>,
+        </div>,
         document.body
     );
 });
@@ -849,19 +1105,14 @@ function ViewContextBlock({
     const linksBtnRef = useRef(null);
     const subsetRef = useRef(null);
 
-    // Close on outside click
+    // Close dropdowns on outside click (but NOT the sync panel - it stays open for VR usability)
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (hubRef.current && !hubRef.current.contains(e.target)) {
                 setShowHub(false);
             }
-            // For links, also check if click is on the portal dropdown
-            if (linksRef.current && !linksRef.current.contains(e.target)) {
-                const isOnDropdown = e.target.closest('.links-dropdown') || e.target.closest('.links-dropdown__backdrop');
-                if (!isOnDropdown) {
-                    setShowLinks(false);
-                }
-            }
+            // Sync panel stays open - user can interact with background and click X to close
+            // This is intentional for VR usability
             if (subsetRef.current && !subsetRef.current.contains(e.target)) {
                 setShowSubset(false);
             }
@@ -1129,6 +1380,7 @@ function ViewContextBlock({
                             activeView={activeView}
                             allViews={viewsForLinks}
                             onUpdateLink={onUpdateLink}
+                            onSelectView={handleViewSelect}
                             onClose={() => setShowLinks(false)}
                             triggerRef={linksBtnRef}
                         />
