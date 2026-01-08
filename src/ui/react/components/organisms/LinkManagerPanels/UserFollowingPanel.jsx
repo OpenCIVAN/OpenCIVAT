@@ -1,8 +1,8 @@
 /**
  * UserFollowingPanel Component
  *
- * Panel for following other collaborators in the workspace.
- * Shows list of active users and allows quick follow actions.
+ * Panel for following other collaborators' viewports (separate from view linking).
+ * Shows who you're following, follow options, workspace members, and who follows you.
  *
  * @module UserFollowingPanel
  */
@@ -10,7 +10,6 @@
 import React, { memo, useState, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { UserAvatar } from '@UI/react/components/atoms/UserAvatar';
-import { ColorDot } from '@UI/react/components/atoms/ColorDot';
 import './UserFollowingPanel.scss';
 
 /**
@@ -18,10 +17,12 @@ import './UserFollowingPanel.scss';
  */
 const StatusIndicator = memo(function StatusIndicator({ status = 'online' }) {
     const statusConfig = {
-        online: { color: '#22c55e', label: 'Online' },
-        busy: { color: '#ef4444', label: 'Busy' },
-        away: { color: '#f59e0b', label: 'Away' },
-        offline: { color: '#6b7280', label: 'Offline' },
+        online: { color: 'var(--color-success)', label: 'Online' },
+        active: { color: 'var(--color-success)', label: 'Active' },
+        busy: { color: 'var(--color-error)', label: 'Busy' },
+        idle: { color: 'var(--color-warning)', label: 'Idle' },
+        away: { color: 'var(--color-warning)', label: 'Away' },
+        offline: { color: 'var(--color-text-muted)', label: 'Offline' },
     };
 
     const config = statusConfig[status] || statusConfig.online;
@@ -36,66 +37,40 @@ const StatusIndicator = memo(function StatusIndicator({ status = 'online' }) {
 });
 
 /**
- * Single user row in the following list
+ * Follow options checkboxes
  */
-const UserRow = memo(function UserRow({
-    user,
-    isFollowing,
-    onFollow,
-    onUnfollow,
-    onViewProfile,
-}) {
+const FollowOptions = memo(function FollowOptions({ options, onChange }) {
+    const optionsList = [
+        { id: 'jumpToView', label: 'Jump to their active view', icon: 'eye' },
+        { id: 'showCursor', label: 'Show their cursor', icon: 'crosshair' },
+        { id: 'mirrorCamera', label: 'Mirror their camera angle', icon: 'camera' },
+        { id: 'autoFollowViews', label: 'Auto-follow view changes', icon: 'layers' },
+    ];
+
     return (
-        <div className={`user-row ${isFollowing ? 'user-row--following' : ''}`}>
-            <div className="user-row__avatar-wrapper">
-                <UserAvatar
-                    userName={user.userName}
-                    color={user.userColor}
-                    size="md"
-                />
-                <StatusIndicator status={user.status} />
-            </div>
-
-            <div className="user-row__info">
-                <div className="user-row__name">{user.userName}</div>
-                <div className="user-row__view">
-                    {user.currentViewColor && (
-                        <ColorDot color={user.currentViewColor} size="xs" />
-                    )}
-                    <span>{user.currentViewName || 'No active view'}</span>
-                </div>
-            </div>
-
-            <div className="user-row__actions">
-                {isFollowing ? (
-                    <button
-                        className="user-row__btn user-row__btn--following"
-                        onClick={() => onUnfollow(user)}
-                        title="Stop following"
-                    >
-                        <Icon name="eye" size={14} />
-                        <span>Following</span>
-                    </button>
-                ) : (
-                    <button
-                        className="user-row__btn"
-                        onClick={() => onFollow(user)}
-                        title="Follow this user"
-                    >
-                        <Icon name="userPlus" size={14} />
-                        <span>Follow</span>
-                    </button>
-                )}
-            </div>
+        <div className="follow-options">
+            {optionsList.map(option => (
+                <label key={option.id} className="follow-options__item">
+                    <input
+                        type="checkbox"
+                        checked={options[option.id] || false}
+                        onChange={(e) => onChange({ ...options, [option.id]: e.target.checked })}
+                    />
+                    <Icon name={option.icon} size={12} />
+                    <span>{option.label}</span>
+                </label>
+            ))}
         </div>
     );
 });
 
 /**
- * Currently following section
+ * Currently following section - shows when following someone
  */
 const CurrentlyFollowing = memo(function CurrentlyFollowing({
     followingUser,
+    followOptions,
+    onFollowOptionsChange,
     onStopFollowing,
 }) {
     if (!followingUser) return null;
@@ -104,21 +79,37 @@ const CurrentlyFollowing = memo(function CurrentlyFollowing({
         <div className="currently-following">
             <div className="currently-following__header">
                 <Icon name="eye" size={14} />
-                <span>Currently Following</span>
+                <span>You Are Following</span>
             </div>
-            <div className="currently-following__user">
-                <UserAvatar
-                    userName={followingUser.userName}
-                    color={followingUser.userColor}
-                    size="sm"
+
+            <div className="currently-following__card">
+                <div className="currently-following__user">
+                    <div className="currently-following__avatar-wrapper">
+                        <UserAvatar
+                            userName={followingUser.userName}
+                            color={followingUser.userColor}
+                            size="lg"
+                        />
+                        <StatusIndicator status={followingUser.status} />
+                    </div>
+                    <div className="currently-following__info">
+                        <div className="currently-following__name">{followingUser.userName}</div>
+                        <div className="currently-following__view">
+                            Viewing: {followingUser.activeView || 'No active view'}
+                        </div>
+                    </div>
+                </div>
+
+                <FollowOptions
+                    options={followOptions}
+                    onChange={onFollowOptionsChange}
                 />
-                <span className="currently-following__name">{followingUser.userName}</span>
+
                 <button
-                    className="currently-following__stop"
+                    className="currently-following__stop-btn"
                     onClick={() => onStopFollowing(followingUser)}
                 >
-                    <Icon name="x" size={14} />
-                    <span>Stop</span>
+                    Stop Following
                 </button>
             </div>
         </div>
@@ -126,13 +117,94 @@ const CurrentlyFollowing = memo(function CurrentlyFollowing({
 });
 
 /**
- * UserFollowingPanel - Follow collaborators in the workspace
+ * Empty state when not following anyone
+ */
+const NotFollowingState = memo(function NotFollowingState() {
+    return (
+        <div className="not-following-state">
+            <Icon name="eye" size={24} />
+            <span>Not following anyone</span>
+        </div>
+    );
+});
+
+/**
+ * Single member row in the workspace members list
+ */
+const MemberRow = memo(function MemberRow({
+    member,
+    isFollowing,
+    onFollow,
+}) {
+    return (
+        <div className="member-row">
+            <div className="member-row__avatar-wrapper">
+                <UserAvatar
+                    userName={member.userName}
+                    color={member.userColor}
+                    size="sm"
+                />
+                <StatusIndicator status={member.status} />
+            </div>
+
+            <div className="member-row__info">
+                <div className="member-row__name">{member.userName}</div>
+                <div className="member-row__view">
+                    {member.activeView || 'No active view'}
+                </div>
+            </div>
+
+            <button
+                className={`member-row__follow-btn ${isFollowing ? 'member-row__follow-btn--following' : ''}`}
+                onClick={() => !isFollowing && onFollow(member)}
+                disabled={isFollowing}
+            >
+                {isFollowing ? 'Following' : 'Follow →'}
+            </button>
+        </div>
+    );
+});
+
+/**
+ * Followers section - shows who is following the current user
+ */
+const FollowersSection = memo(function FollowersSection({ followers }) {
+    if (!followers || followers.length === 0) return null;
+
+    return (
+        <div className="followers-section">
+            <div className="followers-section__header">
+                <span className="followers-section__label">Following You</span>
+                <span className="followers-section__count">
+                    {followers.length} {followers.length === 1 ? 'person' : 'people'}
+                </span>
+            </div>
+            <div className="followers-section__list">
+                {followers.map((follower, index) => (
+                    <div key={follower.clientId || follower.userId || index} className="followers-section__item">
+                        <UserAvatar
+                            userName={follower.userName}
+                            color={follower.userColor}
+                            size="xs"
+                        />
+                        <span>{follower.userName}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+});
+
+/**
+ * UserFollowingPanel - Follow collaborators' viewports
  *
  * @param {Array} users - List of users in the workspace
  * @param {string} currentUserId - ID of current user
  * @param {Object} followingUser - User currently being followed (if any)
+ * @param {Array} followers - Users who are following the current user
  * @param {function} onFollow - Handler to start following a user
  * @param {function} onUnfollow - Handler to stop following a user
+ * @param {function} onStartPresenting - Handler to start presenting mode
  * @param {function} onClose - Close panel handler
  * @param {string} className - Additional CSS classes
  */
@@ -140,19 +212,29 @@ export const UserFollowingPanel = memo(function UserFollowingPanel({
     users = [],
     currentUserId,
     followingUser,
+    followers = [],
     onFollow,
     onUnfollow,
+    onStartPresenting,
     onClose,
     className = '',
 }) {
-    const [searchQuery, setSearchQuery] = useState('');
-
-    // Filter out current user and apply search
-    const filteredUsers = users.filter(user => {
-        if (user.clientId === currentUserId || user.userId === currentUserId) return false;
-        if (!searchQuery) return true;
-        return user.userName.toLowerCase().includes(searchQuery.toLowerCase());
+    const [followOptions, setFollowOptions] = useState({
+        jumpToView: true,
+        showCursor: true,
+        mirrorCamera: false,
+        autoFollowViews: false,
     });
+
+    // Filter out current user from the list
+    const otherUsers = users.filter(user =>
+        user.clientId !== currentUserId && user.userId !== currentUserId
+    );
+
+    // Count online users
+    const onlineCount = otherUsers.filter(u =>
+        u.status === 'online' || u.status === 'active'
+    ).length;
 
     const handleFollow = useCallback((user) => {
         onFollow?.(user);
@@ -164,10 +246,11 @@ export const UserFollowingPanel = memo(function UserFollowingPanel({
 
     return (
         <div className={`user-following-panel ${className}`}>
+            {/* Header */}
             <div className="user-following-panel__header">
                 <div className="user-following-panel__title">
                     <Icon name="users" size={16} />
-                    <span>Follow Collaborators</span>
+                    <span>Following</span>
                 </div>
                 {onClose && (
                     <button className="user-following-panel__close" onClick={onClose}>
@@ -176,41 +259,71 @@ export const UserFollowingPanel = memo(function UserFollowingPanel({
                 )}
             </div>
 
-            <CurrentlyFollowing
-                followingUser={followingUser}
-                onStopFollowing={handleUnfollow}
-            />
-
-            <div className="user-following-panel__search">
-                <Icon name="search" size={14} />
-                <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+            {/* Currently Following Section */}
+            {followingUser ? (
+                <CurrentlyFollowing
+                    followingUser={followingUser}
+                    followOptions={followOptions}
+                    onFollowOptionsChange={setFollowOptions}
+                    onStopFollowing={handleUnfollow}
                 />
+            ) : (
+                <div className="user-following-panel__not-following">
+                    <NotFollowingState />
+                </div>
+            )}
+
+            {/* Separator */}
+            <div className="user-following-panel__separator" />
+
+            {/* Workspace Members */}
+            <div className="user-following-panel__members">
+                <div className="user-following-panel__members-header">
+                    <span className="user-following-panel__members-label">Workspace Members</span>
+                    <span className="user-following-panel__online-count">
+                        {onlineCount} online
+                    </span>
+                </div>
+
+                <div className="user-following-panel__members-list">
+                    {otherUsers.length > 0 ? (
+                        otherUsers.map((member, index) => (
+                            <MemberRow
+                                key={member.clientId || member.userId || index}
+                                member={member}
+                                isFollowing={
+                                    followingUser?.clientId === member.clientId ||
+                                    followingUser?.userId === member.userId
+                                }
+                                onFollow={handleFollow}
+                            />
+                        ))
+                    ) : (
+                        <div className="user-following-panel__empty">
+                            <span>No other users in workspace</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div className="user-following-panel__list">
-                {filteredUsers.length > 0 ? (
-                    filteredUsers.map((user, index) => (
-                        <UserRow
-                            key={user.clientId || user.userId || index}
-                            user={user}
-                            isFollowing={followingUser?.clientId === user.clientId || followingUser?.userId === user.userId}
-                            onFollow={handleFollow}
-                            onUnfollow={handleUnfollow}
-                        />
-                    ))
-                ) : (
-                    <div className="user-following-panel__empty">
-                        <Icon name="users" size={24} />
-                        <span>
-                            {searchQuery ? 'No users match your search' : 'No other users in workspace'}
-                        </span>
+            {/* Followers Section */}
+            <FollowersSection followers={followers} />
+
+            {/* Start Presenting */}
+            {onStartPresenting && (
+                <div className="user-following-panel__presenting">
+                    <button
+                        className="user-following-panel__present-btn"
+                        onClick={onStartPresenting}
+                    >
+                        <Icon name="radio" size={14} />
+                        <span>Start Presenting</span>
+                    </button>
+                    <div className="user-following-panel__present-desc">
+                        Followers will see what you see
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 });
