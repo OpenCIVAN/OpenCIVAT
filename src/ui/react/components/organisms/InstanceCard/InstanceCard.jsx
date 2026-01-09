@@ -25,6 +25,14 @@ import {
 } from '@Init/appInitializer.js';
 import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
+// Import link badges from atoms for link system integration
+import {
+    LinkBadge,
+    ViewerBadge,
+    HubBadge,
+    ModeBadge,
+    SyncStatusIndicator,
+} from '@UI/react/components/atoms/LinkBadges';
 import './InstanceCard.scss';
 
 // =============================================================================
@@ -145,6 +153,16 @@ export const InstanceCard = memo(function InstanceCard({
     showDataset = true,
     showType = true,
     showSettings = true,
+
+    // Link system props
+    linkCount = 0,            // Number of linked properties
+    viewerCount = 0,          // Number of viewers
+    isHub = false,            // Whether this view is the hub (source of truth)
+    linkMode = null,          // Link mode: 'follow' | 'sync' | 'broadcast'
+    syncStatus = null,        // Sync status: 'synced' | 'syncing' | 'error' | 'paused'
+    showBadges = false,       // Whether to show link badges
+    onLinkClick,              // Callback when link badge is clicked
+    onLinkDragStart,          // Callback when link badge drag starts
 
     // Interaction callbacks
     onRename,
@@ -376,6 +394,35 @@ export const InstanceCard = memo(function InstanceCard({
         );
     };
 
+    const renderLinkBadges = () => {
+        if (!showBadges) return null;
+
+        const hasBadges = isHub || linkMode || linkCount > 0 || viewerCount > 0 || syncStatus;
+        if (!hasBadges) return null;
+
+        return (
+            <div className="instance-card__badges">
+                {isHub && <HubBadge size="small" />}
+                {linkMode && <ModeBadge mode={linkMode} size="small" />}
+                <LinkBadge
+                    count={linkCount}
+                    size="small"
+                    onClick={onLinkClick}
+                    draggable={!!onLinkDragStart}
+                    onDragStart={onLinkDragStart}
+                />
+                <ViewerBadge count={viewerCount} size="small" />
+                {syncStatus && (
+                    <SyncStatusIndicator
+                        status={syncStatus}
+                        size="small"
+                        showLabel={false}
+                    />
+                )}
+            </div>
+        );
+    };
+
     // =========================================================================
     // MAIN RENDER
     // =========================================================================
@@ -386,6 +433,7 @@ export const InstanceCard = memo(function InstanceCard({
         `instance-card--color-${colorPosition}`,
         showGradient && 'instance-card--gradient',
         onClick && 'instance-card--clickable',
+        isHub && 'instance-card--hub',
         className,
     ].filter(Boolean).join(' ');
 
@@ -410,6 +458,9 @@ export const InstanceCard = memo(function InstanceCard({
 
                 {/* Type badge */}
                 {renderTypeBadge()}
+
+                {/* Link badges */}
+                {renderLinkBadges()}
 
                 {/* Settings button */}
                 {renderSettingsButton()}

@@ -305,3 +305,28 @@
         }
     }
 }
+
+// =============================================================================
+// HUB INDICATOR
+// =============================================================================
+
+.instance-card--hub {
+    &.instance-card--color-left {
+        border-left-color: $color-accent-amber;
+    }
+
+    &.instance-card--color-right {
+        border-right-color: $color-accent-amber;
+    }
+}
+
+// =============================================================================
+// LINK BADGES SECTION
+// =============================================================================
+
+.instance-card__badges {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex-shrink: 0;
+}

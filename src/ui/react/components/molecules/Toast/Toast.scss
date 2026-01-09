@@ -163,6 +163,19 @@ $toast-z-index: 600;
       color: $color-error;
     }
   }
+
+  &--sync {
+    border-left: 3px solid $color-accent-teal;
+    background: linear-gradient(90deg, color-mix(in srgb, $color-accent-teal 12%, transparent) 0%, transparent 50%), $color-glass-panel;
+
+    .toast__icon {
+      color: $color-accent-teal;
+    }
+
+    .toast__action {
+      color: $color-accent-teal;
+    }
+  }
 }
 
 // ============================================================================
@@ -192,6 +205,46 @@ $toast-z-index: 600;
   line-height: $line-height-normal;
   color: $color-text-primary;
   word-break: break-word;
+}
+
+.toast__description {
+  margin: 4px 0 0;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  color: $color-text-secondary;
+}
+
+// ============================================================================
+// TOAST VIEW INDICATOR (for link toasts)
+// ============================================================================
+
+.toast__view-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+}
+
+.toast__view-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.toast__view-name {
+  color: $color-text-secondary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.toast__user-name {
+  color: $color-text-muted;
+  white-space: nowrap;
 }
 
 // ============================================================================

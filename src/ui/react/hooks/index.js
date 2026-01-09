@@ -75,6 +75,10 @@ export {
   useCanvasCellDropTarget,
 } from "./useDropTarget.js";
 
+// Link drag-and-drop hooks
+export { useLinkDragSource } from "./useLinkDragSource.js";
+export { useLinkDropTarget } from "./useLinkDropTarget.js";
+
 // =============================================================================
 // MANAGER SUBSCRIPTIONS (CENTRALIZED)
 // =============================================================================

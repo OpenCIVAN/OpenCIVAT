@@ -578,3 +578,201 @@ export const HandlerTypes = () => {
         </div>
     );
 };
+
+// =============================================================================
+// LINK SYSTEM STORIES
+// =============================================================================
+
+export const WithLinkBadges = () => {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                InstanceCard with link system badges enabled
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <InstanceCard
+                    view={{ ...sampleView, name: 'Hub View (Synced)' }}
+                    dataset={sampleDataset}
+                    variant="header"
+                    showGradient={true}
+                    showBadges={true}
+                    isHub={true}
+                    linkCount={4}
+                    viewerCount={2}
+                    syncStatus="synced"
+                    onLinkClick={() => console.log('Link clicked')}
+                />
+                <InstanceCard
+                    view={{ ...sampleView, name: 'Following View', color: '#34d399' }}
+                    dataset={sampleDataset}
+                    variant="header"
+                    showGradient={true}
+                    showBadges={true}
+                    linkMode="follow"
+                    linkCount={2}
+                    syncStatus="syncing"
+                    onLinkClick={() => console.log('Link clicked')}
+                />
+                <InstanceCard
+                    view={{ ...sampleView, name: 'Broadcasting View', color: '#c084fc' }}
+                    dataset={sampleDataset}
+                    variant="header"
+                    showGradient={true}
+                    showBadges={true}
+                    linkMode="broadcast"
+                    linkCount={6}
+                    viewerCount={5}
+                    onLinkClick={() => console.log('Link clicked')}
+                />
+            </div>
+        </div>
+    );
+};
+
+export const HubIndicator = () => {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                Hub views have an amber color bar indicator
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <InstanceCard
+                    view={{ ...sampleView, name: 'Normal View' }}
+                    dataset={sampleDataset}
+                    variant="header"
+                    showGradient={true}
+                />
+                <InstanceCard
+                    view={{ ...sampleView, name: 'Hub View (Source of Truth)' }}
+                    dataset={sampleDataset}
+                    variant="header"
+                    showGradient={true}
+                    isHub={true}
+                    showBadges={true}
+                />
+            </div>
+        </div>
+    );
+};
+
+export const LinkModes = () => {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
+                Different link modes: Follow, Sync, Broadcast
+            </p>
+            <InstanceCard
+                view={{ ...sampleView, name: 'Following Camera & Filters', color: '#2dd4bf' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                linkMode="follow"
+                linkCount={2}
+            />
+            <InstanceCard
+                view={{ ...sampleView, name: 'Synced Bi-directionally', color: '#34d399' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                linkMode="sync"
+                linkCount={3}
+            />
+            <InstanceCard
+                view={{ ...sampleView, name: 'Broadcasting to Others', color: '#a78bfa' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                linkMode="broadcast"
+                linkCount={4}
+                viewerCount={3}
+            />
+        </div>
+    );
+};
+
+export const SyncStatuses = () => {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
+                Sync status indicators: synced, syncing, error, paused
+            </p>
+            <InstanceCard
+                view={{ ...sampleView, name: 'Synced' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                syncStatus="synced"
+                linkCount={2}
+            />
+            <InstanceCard
+                view={{ ...sampleView, name: 'Syncing...', color: '#2dd4bf' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                syncStatus="syncing"
+                linkCount={2}
+            />
+            <InstanceCard
+                view={{ ...sampleView, name: 'Sync Error', color: '#fb7185' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                syncStatus="error"
+                linkCount={2}
+            />
+            <InstanceCard
+                view={{ ...sampleView, name: 'Paused', color: '#fbbf24' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                syncStatus="paused"
+                linkCount={2}
+            />
+        </div>
+    );
+};
+
+export const CompactWithBadges = () => {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
+                Compact variant works well with badges for dense lists
+            </p>
+            <InstanceCard
+                view={{ ...sampleView, name: 'Hub: Main Analysis', color: '#fbbf24' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                isHub={true}
+                linkCount={5}
+                viewerCount={3}
+                syncStatus="synced"
+            />
+            <InstanceCard
+                view={{ ...sampleView, name: 'Following: Dr. Smith View', color: '#34d399' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+                linkMode="follow"
+                linkCount={2}
+                syncStatus="syncing"
+            />
+            <InstanceCard
+                view={{ ...sampleView, name: 'Unlinked View', color: '#60a5fa' }}
+                dataset={sampleDataset}
+                variant="compact"
+                showGradient={true}
+                showBadges={true}
+            />
+        </div>
+    );
+};

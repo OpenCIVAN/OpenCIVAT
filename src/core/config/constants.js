@@ -5,7 +5,7 @@
 // ----------------------------------------------------------------------------
 export const NETWORK_CONFIG = {
   // Y.js WebSocket URL is now in clientConfig.js (yjsWebSocketUrl)
-  CURSOR_UPDATE_THROTTLE: 50, // ms
+  CURSOR_UPDATE_THROTTLE: 16, // ms
   STALE_CURSOR_THRESHOLD: 30000, // ms
 };
 

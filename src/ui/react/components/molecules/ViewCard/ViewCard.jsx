@@ -22,7 +22,18 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 import { ColorDot } from '@UI/react/components/atoms/ColorDot';
 import { StatusDot } from '@UI/react/components/atoms/StatusDot';
 import { Badge } from '@UI/react/components/atoms/Badge';
+// Import link badges from atoms
+import {
+    LinkBadge,
+    ViewerBadge,
+    HubBadge,
+    ModeBadge,
+    SyncStatusIndicator,
+} from '@UI/react/components/atoms/LinkBadges';
 import './ViewCard.scss';
+
+// Re-export link badges for convenience
+export { LinkBadge, ViewerBadge, HubBadge, ModeBadge, SyncStatusIndicator };
 
 // =============================================================================
 // LINK MODE CONFIGURATION
@@ -34,67 +45,6 @@ export const LINK_MODES = {
     bidirectional: { icon: '↔', label: 'Synced', color: 'var(--color-accent-teal)' },
     broadcast: { icon: '→', label: 'Broadcasting', color: 'var(--color-accent-purple)' },
 };
-
-// =============================================================================
-// VIEW-SPECIFIC BADGE COMPONENTS (composed from atoms)
-// =============================================================================
-
-export const LinkBadge = memo(function LinkBadge({
-    count,
-    onClick,
-    draggable,
-    onDragStart,
-}) {
-    if (!count || count === 0) return null;
-
-    return (
-        <button
-            className="view-card__link-badge"
-            onClick={onClick}
-            draggable={draggable}
-            onDragStart={onDragStart}
-            title={`${count} linked ${count === 1 ? 'property' : 'properties'}`}
-        >
-            <Icon name="link" size={10} />
-            {count}
-        </button>
-    );
-});
-
-export const ViewerBadge = memo(function ViewerBadge({ count }) {
-    if (!count || count === 0) return null;
-
-    return (
-        <span className="view-card__viewer-badge" title={`${count} ${count === 1 ? 'viewer' : 'viewers'}`}>
-            <Icon name="eye" size={10} />
-            {count}
-        </span>
-    );
-});
-
-export const HubBadge = memo(function HubBadge() {
-    return (
-        <span className="view-card__hub-badge" title="Hub (source of truth)">
-            <Icon name="star" size={8} />
-            Hub
-        </span>
-    );
-});
-
-export const ModeBadge = memo(function ModeBadge({ mode }) {
-    const config = LINK_MODES[mode];
-    if (!config) return null;
-
-    return (
-        <span
-            className="view-card__mode-badge"
-            style={{ '--mode-color': config.color }}
-            title={config.label}
-        >
-            {config.icon}
-        </span>
-    );
-});
 
 // =============================================================================
 // VIEW CARD - DOT VARIANT

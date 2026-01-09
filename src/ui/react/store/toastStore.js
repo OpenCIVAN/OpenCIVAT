@@ -57,24 +57,32 @@ const DEFAULT_DURATION = 4000;
 
 /**
  * @typedef {Object} ToastOptions
- * @property {'info'|'success'|'warning'|'error'} [type='info'] - Toast type
+ * @property {'info'|'success'|'warning'|'error'|'sync'} [type='info'] - Toast type
  * @property {string} message - Toast message
+ * @property {string} [description] - Optional secondary description
  * @property {number} [duration=4000] - Auto-dismiss duration in ms (0 for persistent)
  * @property {string} [actionLabel] - Optional action button text
  * @property {() => void} [onAction] - Optional action callback
  * @property {boolean} [dismissible=true] - Show dismiss button
  * @property {string} [id] - Custom ID (auto-generated if not provided)
+ * @property {string} [viewColor] - Optional view color indicator (for link toasts)
+ * @property {string} [viewName] - Optional view name (for link toasts)
+ * @property {string} [userName] - Optional user name (for link toasts)
  */
 
 /**
  * @typedef {Object} Toast
  * @property {string} id - Unique toast identifier
- * @property {'info'|'success'|'warning'|'error'} type - Toast type
+ * @property {'info'|'success'|'warning'|'error'|'sync'} type - Toast type
  * @property {string} message - Toast message
+ * @property {string} [description] - Optional secondary description
  * @property {number} duration - Auto-dismiss duration
  * @property {string} [actionLabel] - Action button text
  * @property {() => void} [onAction] - Action callback
  * @property {boolean} dismissible - Whether toast can be dismissed
+ * @property {string} [viewColor] - Optional view color indicator (for link toasts)
+ * @property {string} [viewName] - Optional view name (for link toasts)
+ * @property {string} [userName] - Optional user name (for link toasts)
  * @property {number} createdAt - Timestamp when toast was created
  */
 
@@ -114,11 +122,15 @@ export const useToastStore = create((set, get) => ({
   addToast: ({
     type = "info",
     message,
+    description,
     duration = DEFAULT_DURATION,
     actionLabel,
     onAction,
     dismissible = true,
     id: customId,
+    viewColor,
+    viewName,
+    userName,
   }) => {
     // Generate unique ID if not provided
     const id = customId || `toast-${++toastIdCounter}-${Date.now()}`;
@@ -128,10 +140,14 @@ export const useToastStore = create((set, get) => ({
       id,
       type,
       message,
+      description,
       duration,
       actionLabel,
       onAction,
       dismissible,
+      viewColor,
+      viewName,
+      userName,
       createdAt: Date.now(),
     };
 
@@ -280,6 +296,15 @@ export const toast = {
    */
   error: (message, options = {}) =>
     useToastStore.getState().addToast({ type: "error", message, ...options }),
+
+  /**
+   * Shows a sync toast (for link events).
+   * @param {string} message - Toast message
+   * @param {Omit<ToastOptions, 'type' | 'message'>} [options] - Additional options
+   * @returns {string} Toast ID
+   */
+  sync: (message, options = {}) =>
+    useToastStore.getState().addToast({ type: "sync", message, duration: 3000, ...options }),
 
   /**
    * Removes a toast by ID.

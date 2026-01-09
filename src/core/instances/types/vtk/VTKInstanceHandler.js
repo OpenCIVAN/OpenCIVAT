@@ -3332,8 +3332,8 @@ console.log('Tools:', tools);
     // PHASE 6: Set up 3D cursor broadcasting via raycasting
     // =========================================================================
 
-    // Throttle configuration (~30fps)
-    const CURSOR_UPDATE_INTERVAL = 33; // ms
+    // Throttle configuration (~60fps)
+    const CURSOR_UPDATE_INTERVAL = 16; // ms
     let lastCursorUpdate = 0;
     let cursorUpdatePending = false;
 

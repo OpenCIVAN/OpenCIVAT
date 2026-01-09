@@ -24,7 +24,9 @@ const yCursorPrefs = ydoc.getMap("cursorPreferences"); // Visibility, style
 
 // Cursor position tracking
 let lastMousePosition = { x: 0, y: 0, timestamp: 0 };
-let mouseMoveTimeout = null;
+let lastBroadcastTime = 0;
+let broadcastPending = false;
+let lastWindowActive = true;
 
 // Local display preferences (not synced - each user controls their own view)
 let showCursorNames = true;
@@ -95,19 +97,16 @@ export function initializeCursorTracking() {
       timestamp: now,
     };
 
-    // Throttle updates
-    if (mouseMoveTimeout) {
-      clearTimeout(mouseMoveTimeout);
-    }
-
-    mouseMoveTimeout = setTimeout(() => {
-      broadcastCursorPosition();
-    }, NETWORK_CONFIG.CURSOR_UPDATE_THROTTLE);
+    // Render locally at input rate, throttle Y.js sync separately
+    notifyLocalCursorUpdate(true);
+    scheduleBroadcast(true);
   });
 
   // Handle window focus/blur
   window.addEventListener("blur", () => {
-    broadcastCursorPosition(false);
+    lastWindowActive = false;
+    notifyLocalCursorUpdate(false);
+    scheduleBroadcast(false);
     // Clear cursor from awareness when window loses focus
     const currentState = awareness.getLocalState() || {};
     awareness.setLocalState({
@@ -117,8 +116,10 @@ export function initializeCursorTracking() {
   });
 
   window.addEventListener("focus", () => {
+    lastWindowActive = true;
     if (lastMousePosition.timestamp > 0) {
-      broadcastCursorPosition(true);
+      notifyLocalCursorUpdate(true);
+      scheduleBroadcast(true);
     }
   });
 
@@ -130,7 +131,30 @@ export function initializeCursorTracking() {
 // ----------------------------------------------------------------------------
 
 function broadcastCursorPosition(windowActive = true) {
-  if (!lastMousePosition || lastMousePosition.timestamp === 0) return;
+  const cursorData = buildCursorData(windowActive);
+  if (!cursorData) return;
+
+  yCursors.set(getUserId(), cursorData);
+
+  // Also update awareness for server-side recording
+  const currentState = awareness.getLocalState() || {};
+  awareness.setLocalState({
+    ...currentState,
+    cursor: {
+      instanceId: activeInstanceId,
+      viewConfigId: activeViewConfigId,
+      screen: { x: lastMousePosition.x, y: lastMousePosition.y },
+      x: lastMousePosition.x,
+      y: lastMousePosition.y,
+      world: lastWorldPosition ? { ...lastWorldPosition } : null,
+      normal: lastWorldNormal ? { ...lastWorldNormal } : null,
+      timestamp: lastMousePosition.timestamp,
+    },
+  });
+}
+
+function buildCursorData(windowActive = true) {
+  if (!lastMousePosition || lastMousePosition.timestamp === 0) return null;
 
   // Read visibility preference
   const prefs = yCursorPrefs.get(getUserId()) || {
@@ -139,10 +163,9 @@ function broadcastCursorPosition(windowActive = true) {
   };
 
   // Update position data in Y.js
-  if (!activeInstanceId) return;
+  if (!activeInstanceId) return null;
 
-  // Build cursor data with extended 3D support
-  const cursorData = {
+  return {
     instanceId: activeInstanceId,
     // ViewConfigId for collaborative matching (shared across users viewing same content)
     viewConfigId: activeViewConfigId,
@@ -165,23 +188,50 @@ function broadcastCursorPosition(windowActive = true) {
     windowActive: windowActive,
     visible: prefs.visible, // Include visibility in position data for convenience
   };
+}
 
-  yCursors.set(getUserId(), cursorData);
+function notifyLocalCursorUpdate(windowActive = true) {
+  const cursorData = buildCursorData(windowActive);
+  if (!cursorData) return;
 
-  // Also update awareness for server-side recording
-  const currentState = awareness.getLocalState() || {};
-  awareness.setLocalState({
-    ...currentState,
-    cursor: {
-      instanceId: activeInstanceId,
-      viewConfigId: activeViewConfigId,
-      screen: { x: lastMousePosition.x, y: lastMousePosition.y },
-      x: lastMousePosition.x,
-      y: lastMousePosition.y,
-      world: lastWorldPosition ? { ...lastWorldPosition } : null,
-      normal: lastWorldNormal ? { ...lastWorldNormal } : null,
-      timestamp: lastMousePosition.timestamp,
-    },
+  const userId = getUserId();
+  if (cursorData.visible !== false) {
+    cursorUpdateListeners.forEach((callback) => {
+      try {
+        callback({ userId, cursorData });
+      } catch (error) {
+        log.error("Error in cursor update listener:", error);
+      }
+    });
+  } else {
+    cursorRemoveListeners.forEach((callback) => {
+      try {
+        callback({ userId });
+      } catch (error) {
+        log.error("Error in cursor remove listener:", error);
+      }
+    });
+  }
+}
+
+function scheduleBroadcast(windowActive = lastWindowActive) {
+  if (broadcastPending) return;
+  broadcastPending = true;
+
+  requestAnimationFrame(() => {
+    broadcastPending = false;
+    const now = Date.now();
+    const elapsed = now - lastBroadcastTime;
+
+    if (elapsed < NETWORK_CONFIG.CURSOR_UPDATE_THROTTLE) {
+      setTimeout(() => {
+        scheduleBroadcast(windowActive);
+      }, NETWORK_CONFIG.CURSOR_UPDATE_THROTTLE - elapsed);
+      return;
+    }
+
+    lastBroadcastTime = now;
+    broadcastCursorPosition(windowActive);
   });
 }
 
@@ -195,7 +245,8 @@ export function setMyCursorVisible(visible) {
   yCursorPrefs.set(getUserId(), prefs);
 
   // Update current position with new visibility
-  broadcastCursorPosition();
+  notifyLocalCursorUpdate(lastWindowActive);
+  scheduleBroadcast(lastWindowActive);
 
   log.debug(`My cursor visibility: ${visible}`);
 }
@@ -350,7 +401,8 @@ export function setMyCursorColor(color) {
   yCursorPrefs.set(getUserId(), prefs);
 
   // Update current position with new color
-  broadcastCursorPosition();
+  notifyLocalCursorUpdate(lastWindowActive);
+  scheduleBroadcast(lastWindowActive);
 
   log.debug(`My cursor color: ${color}`);
 }
@@ -411,7 +463,8 @@ export function updateCursorWorldPosition(worldPos, normal = null) {
 
   // Broadcast the updated position (includes world coordinates now)
   if (lastMousePosition.timestamp > 0) {
-    broadcastCursorPosition();
+    notifyLocalCursorUpdate(lastWindowActive);
+    scheduleBroadcast(lastWindowActive);
   }
 }
 
@@ -423,7 +476,8 @@ export function clearCursorWorldPosition() {
   lastWorldNormal = null;
 
   if (lastMousePosition.timestamp > 0) {
-    broadcastCursorPosition();
+    notifyLocalCursorUpdate(lastWindowActive);
+    scheduleBroadcast(lastWindowActive);
   }
 }
 
@@ -563,6 +617,7 @@ export function onCursorRemove(callback) {
 // specially (no name label, hides native OS cursor).
 yCursors.observe((event) => {
   event.changes.keys.forEach((change, userId) => {
+    if (userId === getUserId()) return;
     if (change.action === "add" || change.action === "update") {
       const cursorData = yCursors.get(userId);
 

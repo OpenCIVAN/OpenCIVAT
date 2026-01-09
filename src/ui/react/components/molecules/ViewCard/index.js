@@ -14,11 +14,12 @@ export {
     ViewCardMini,
     ViewCardCompact,
     ViewCardFull,
-    // View-specific badges (composed from atoms)
+    // Link badges (re-exported from atoms)
     LinkBadge,
     ViewerBadge,
     HubBadge,
     ModeBadge,
+    SyncStatusIndicator,
     // Constants
     LINK_MODES,
 } from './ViewCard';

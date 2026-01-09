@@ -38,6 +38,13 @@ const CURSOR_RING_RADIUS = 0.025; // Relative to scene scale
 const CURSOR_RING_RESOLUTION = 32; // Smoothness of the circle
 const ACTOR_POOL_SIZE = 10; // Pre-allocate this many cursor actors
 const LABEL_OFFSET_Y = 25; // Pixels below cursor for label
+const REMOTE_CURSOR_SMOOTHING = 0.35; // Lerp factor per frame
+const REMOTE_PREDICTION_LIMIT_MS = 100; // Max dead-reckon prediction horizon
+const REMOTE_ANIMATION_IDLE_MS = 250; // Stop animating if updates stall
+const REMOTE_ADAPTIVE_SMOOTHING = true;
+const REMOTE_SMOOTHING_MIN = 0.15;
+const REMOTE_SMOOTHING_MAX = 0.85;
+const REFERENCE_PIXELS_PER_WORLD = 120;
 
 /**
  * Parse hex color to RGB array [0-1]
@@ -50,6 +57,10 @@ function hexToRgb(hexColor) {
   const g = parseInt(hex.substring(2, 4), 16) / 255;
   const b = parseInt(hex.substring(4, 6), 16) / 255;
   return [r, g, b];
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
 /**
@@ -109,9 +120,7 @@ class VTKInstanceCursors {
       }
 
       // Re-render
-      if (state.sceneObjects?.renderWindow) {
-        state.sceneObjects.renderWindow.render();
-      }
+      this._scheduleRender(state, "self-visibility");
     });
 
     log.debug(`Updated self cursor visibility: ${visible}`);
@@ -148,9 +157,7 @@ class VTKInstanceCursors {
       });
 
       // Re-render
-      if (state.sceneObjects?.renderWindow) {
-        state.sceneObjects.renderWindow.render();
-      }
+      this._scheduleRender(state, "others-visibility");
     });
 
     log.debug(`Updated others cursors visibility: ${visible}`);
@@ -182,9 +189,7 @@ class VTKInstanceCursors {
       });
 
       // Re-render to reflect changes
-      if (state.sceneObjects?.renderWindow) {
-        state.sceneObjects.renderWindow.render();
-      }
+      this._scheduleRender(state, "label-visibility");
     });
 
     log.debug(`Updated all cursor labels visibility: ${visible}`);
@@ -223,6 +228,13 @@ class VTKInstanceCursors {
       labels: new Map(),
       // Track which render mode each user is using
       renderModes: new Map(), // userId → 'actor' | 'dom'
+      pendingRender: false,
+      lastRectRead: 0,
+      cachedRect: null,
+      ringRadiusCache: null,
+      ringRadiusUpdatedAt: 0,
+      cursorMotion: new Map(),
+      animationFrameId: null,
     };
 
     this.instanceStates.set(instanceId, state);
@@ -274,6 +286,225 @@ class VTKInstanceCursors {
     }
 
     log.debug(`Initialized actor pool with ${ACTOR_POOL_SIZE} cursors`);
+  }
+
+  _scheduleRender(state, reason = "cursor") {
+    if (!state.sceneObjects?.renderWindow) return;
+    if (state.pendingRender) return;
+    state.pendingRender = true;
+
+    requestAnimationFrame(() => {
+      state.pendingRender = false;
+      try {
+        state.sceneObjects.renderWindow.render();
+      } catch (error) {
+        log.warn(`Cursor render failed (${reason}): ${error.message}`);
+      }
+    });
+  }
+
+  _getContainerRect(state) {
+    const now = Date.now();
+    if (state.cachedRect && now - state.lastRectRead < 16) {
+      return state.cachedRect;
+    }
+
+    state.cachedRect = state.container.getBoundingClientRect();
+    state.lastRectRead = now;
+    return state.cachedRect;
+  }
+
+  _getRingRadius(state) {
+    if (!state.sceneObjects?.renderer) return CURSOR_RING_RADIUS;
+
+    const now = Date.now();
+    if (state.ringRadiusCache && now - state.ringRadiusUpdatedAt < 500) {
+      return state.ringRadiusCache;
+    }
+
+    const bounds = state.sceneObjects.renderer.computeVisiblePropBounds();
+    const sceneSize = Math.max(
+      bounds[1] - bounds[0],
+      bounds[3] - bounds[2],
+      bounds[5] - bounds[4]
+    );
+
+    state.ringRadiusCache = sceneSize * CURSOR_RING_RADIUS;
+    state.ringRadiusUpdatedAt = now;
+    return state.ringRadiusCache;
+  }
+
+  _getAdaptiveSmoothing(state, worldPos) {
+    if (!REMOTE_ADAPTIVE_SMOOTHING || !state.sceneObjects?.camera) {
+      return REMOTE_CURSOR_SMOOTHING;
+    }
+
+    if (!worldPos || !isFinite(worldPos.x) || !isFinite(worldPos.y)) {
+      return REMOTE_CURSOR_SMOOTHING;
+    }
+
+    const camera = state.sceneObjects.camera;
+    const direction = camera.getDirectionOfProjection?.() || [0, 0, -1];
+    const viewUp = camera.getViewUp?.() || [0, 1, 0];
+    const right = [
+      direction[1] * viewUp[2] - direction[2] * viewUp[1],
+      direction[2] * viewUp[0] - direction[0] * viewUp[2],
+      direction[0] * viewUp[1] - direction[1] * viewUp[0],
+    ];
+
+    const rightLength = Math.hypot(right[0], right[1], right[2]);
+    if (!rightLength) return REMOTE_CURSOR_SMOOTHING;
+    right[0] /= rightLength;
+    right[1] /= rightLength;
+    right[2] /= rightLength;
+
+    const ringRadius = this._getRingRadius(state);
+    const sceneSize = ringRadius / CURSOR_RING_RADIUS || 1;
+    const epsilon = Math.max(sceneSize * 0.01, 1e-3);
+    const worldA = [worldPos.x, worldPos.y, worldPos.z ?? 0];
+    const worldB = [
+      worldPos.x + right[0] * epsilon,
+      worldPos.y + right[1] * epsilon,
+      (worldPos.z ?? 0) + right[2] * epsilon,
+    ];
+
+    const screenA = worldToScreen(state.sceneObjects, worldA, state.container);
+    const screenB = worldToScreen(state.sceneObjects, worldB, state.container);
+    if (!screenA || !screenB) return REMOTE_CURSOR_SMOOTHING;
+
+    const dx = screenB.screenX - screenA.screenX;
+    const dy = screenB.screenY - screenA.screenY;
+    const pixelsPerWorld = Math.hypot(dx, dy) / epsilon;
+    if (!isFinite(pixelsPerWorld) || pixelsPerWorld <= 0) {
+      return REMOTE_CURSOR_SMOOTHING;
+    }
+
+    const scale = REFERENCE_PIXELS_PER_WORLD / pixelsPerWorld;
+    const smoothing = REMOTE_CURSOR_SMOOTHING * scale;
+    return clamp(smoothing, REMOTE_SMOOTHING_MIN, REMOTE_SMOOTHING_MAX);
+  }
+
+  _ensureAnimation(state) {
+    if (state.animationFrameId) return;
+    const animate = () => {
+      state.animationFrameId = null;
+      const now = performance.now();
+      let hasActive = false;
+
+      state.cursorMotion.forEach((motion, userId) => {
+        if (!motion || !motion.renderPos) return;
+
+        const idleTime = now - motion.lastReceivedAt;
+        if (idleTime > REMOTE_ANIMATION_IDLE_MS) {
+          return;
+        }
+
+        hasActive = true;
+
+        const elapsed = Math.min(idleTime, REMOTE_PREDICTION_LIMIT_MS);
+        const predicted = {
+          x: motion.lastPos.x + motion.velocity.x * (elapsed / 1000),
+          y: motion.lastPos.y + motion.velocity.y * (elapsed / 1000),
+          z:
+            motion.lastPos.z !== undefined
+              ? motion.lastPos.z + motion.velocity.z * (elapsed / 1000)
+              : undefined,
+        };
+
+        const smoothing =
+          motion.mode === "actor"
+            ? this._getAdaptiveSmoothing(state, predicted)
+            : REMOTE_CURSOR_SMOOTHING;
+
+        motion.renderPos = {
+          x: motion.renderPos.x + (predicted.x - motion.renderPos.x) * smoothing,
+          y: motion.renderPos.y + (predicted.y - motion.renderPos.y) * smoothing,
+          z:
+            motion.renderPos.z !== undefined
+              ? motion.renderPos.z +
+                (predicted.z - motion.renderPos.z) * smoothing
+              : undefined,
+        };
+
+        this._renderFromMotion(state, userId, motion);
+      });
+
+      if (hasActive) {
+        state.animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+
+    state.animationFrameId = requestAnimationFrame(animate);
+  }
+
+  _updateRemoteMotion(state, userId, cursorData, mode) {
+    const now = performance.now();
+    const target =
+      mode === "actor"
+        ? cursorData.world
+        : cursorData.screen || { x: cursorData.x, y: cursorData.y };
+
+    if (!target) return null;
+
+    const current = state.cursorMotion.get(userId);
+    const motion =
+      current && current.mode === mode
+        ? current
+        : {
+            mode,
+            lastPos: { ...target },
+            renderPos: { ...target },
+            velocity: { x: 0, y: 0, z: 0 },
+            cursorData,
+            lastReceivedAt: now,
+          };
+
+    if (current && current.mode === mode) {
+      const dt = Math.max(now - motion.lastReceivedAt, 1);
+      motion.velocity = {
+        x: (target.x - motion.lastPos.x) / (dt / 1000),
+        y: (target.y - motion.lastPos.y) / (dt / 1000),
+        z:
+          target.z !== undefined && motion.lastPos.z !== undefined
+            ? (target.z - motion.lastPos.z) / (dt / 1000)
+            : 0,
+      };
+      motion.lastPos = { ...target };
+      motion.lastReceivedAt = now;
+      motion.cursorData = cursorData;
+    }
+
+    if (!motion.renderPos) {
+      motion.renderPos = { ...target };
+    }
+
+    state.cursorMotion.set(userId, motion);
+    return motion;
+  }
+
+  _renderFromMotion(state, userId, motion) {
+    const cursorData = motion.cursorData;
+    if (!cursorData) return;
+
+    if (motion.mode === "actor") {
+      const data = {
+        ...cursorData,
+        world: {
+          x: motion.renderPos.x,
+          y: motion.renderPos.y,
+          z: motion.renderPos.z,
+        },
+      };
+      this._renderActorCursor(state, userId, data, false);
+    } else {
+      const data = {
+        ...cursorData,
+        screen: { x: motion.renderPos.x, y: motion.renderPos.y },
+        x: motion.renderPos.x,
+        y: motion.renderPos.y,
+      };
+      this._renderDomCursor(state, userId, data, false);
+    }
   }
 
   /**
@@ -408,8 +639,28 @@ class VTKInstanceCursors {
     // Determine render mode based on available coordinates
     const hasWorld = hasWorldPosition(cursorData);
     const hasSceneObjects = !!state.sceneObjects?.renderer;
+    const mode = hasWorld && hasSceneObjects ? "actor" : "dom";
 
-    if (hasWorld && hasSceneObjects) {
+    if (!isSelf) {
+      const previousMode = state.renderModes.get(userId);
+      if (previousMode && previousMode !== mode) {
+        if (mode === "actor") {
+          this._removeDomCursor(state, userId);
+        } else {
+          this._releaseActor(state, userId);
+          this._removeLabel(state, userId);
+        }
+      }
+
+      const motion = this._updateRemoteMotion(state, userId, cursorData, mode);
+      if (!motion) return;
+      this._renderFromMotion(state, userId, motion);
+      this._ensureAnimation(state);
+      state.renderModes.set(userId, mode);
+      return;
+    }
+
+    if (mode === "actor") {
       // Render as 3D actor (ring on surface)
       this._renderActorCursor(state, userId, cursorData, isSelf);
       // Remove any existing DOM cursor
@@ -431,14 +682,8 @@ class VTKInstanceCursors {
     const cursorActor = this._acquireActor(state, userId);
     const { world, normal, color } = cursorData;
 
-    // Calculate cursor size based on scene scale
-    const bounds = state.sceneObjects.renderer.computeVisiblePropBounds();
-    const sceneSize = Math.max(
-      bounds[1] - bounds[0],
-      bounds[3] - bounds[2],
-      bounds[5] - bounds[4]
-    );
-    const ringRadius = sceneSize * CURSOR_RING_RADIUS;
+    // Calculate cursor size based on scene scale (cached)
+    const ringRadius = this._getRingRadius(state);
 
     // Update circle source
     cursorActor.circleSource.setRadius(ringRadius);
@@ -466,9 +711,7 @@ class VTKInstanceCursors {
     }
 
     // Trigger render
-    if (state.sceneObjects?.renderWindow) {
-      state.sceneObjects.renderWindow.render();
-    }
+    this._scheduleRender(state, "actor-update");
   }
 
   /**
@@ -493,14 +736,13 @@ class VTKInstanceCursors {
     const screenY = cursorData.screen?.y ?? cursorData.y;
 
     // Convert from global page coords to container-relative coords
-    const rect = state.container.getBoundingClientRect();
+    const rect = this._getContainerRect(state);
     const x = screenX - rect.left;
     const y = screenY - rect.top;
 
     // Only show if cursor is within container bounds
     if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-      cursorEl.style.left = `${x}px`;
-      cursorEl.style.top = `${y}px`;
+      cursorEl.style.transform = `translate3d(${x}px, ${y}px, 0)`;
       cursorEl.style.display = "block";
 
       // Update label visibility based on global setting (never show for self)
@@ -586,12 +828,15 @@ class VTKInstanceCursors {
     cursor.className = "collaborative-cursor";
     cursor.style.cssText = `
       position: absolute;
+      left: 0;
+      top: 0;
       width: 0;
       height: 0;
       pointer-events: none;
       z-index: 10000;
-      transform: translate(0, 0);
-      transition: left 0.016s linear, top 0.016s linear;
+      transform: translate3d(0, 0, 0);
+      transition: ${isSelf ? "none" : "transform 0.016s linear"};
+      will-change: transform;
     `;
 
     // Create OS-style arrow cursor SVG
@@ -687,11 +932,10 @@ class VTKInstanceCursors {
 
     // Clear render mode
     state.renderModes.delete(userId);
+    state.cursorMotion.delete(userId);
 
     // Trigger render to show removal
-    if (state.sceneObjects?.renderWindow) {
-      state.sceneObjects.renderWindow.render();
-    }
+    this._scheduleRender(state, "remove");
   }
 
   /**
@@ -730,6 +974,12 @@ class VTKInstanceCursors {
 
     // Clear render modes
     state.renderModes.clear();
+    state.cursorMotion.clear();
+
+    if (state.animationFrameId) {
+      cancelAnimationFrame(state.animationFrameId);
+      state.animationFrameId = null;
+    }
 
     // Remove state
     this.instanceStates.delete(instanceId);

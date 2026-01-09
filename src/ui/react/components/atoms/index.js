@@ -53,3 +53,10 @@ export { Thumbnail } from './Thumbnail';
 
 // DropdownPortal - Portal-based dropdown container
 export { DropdownPortal } from './DropdownPortal';
+
+// =============================================================================
+// LINK SYSTEM BADGES
+// =============================================================================
+
+// LinkBadges - Badge atoms for the view linking system
+export { LinkBadge, ViewerBadge, HubBadge, ModeBadge, SyncStatusIndicator } from './LinkBadges';

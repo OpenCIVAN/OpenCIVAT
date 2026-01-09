@@ -8,6 +8,8 @@ import React from "react";
 import { Toast } from "./Toast";
 import { ToastContainer } from "./ToastContainer";
 import { toast, useToastStore } from "@UI/react/store/toastStore";
+import { linkToasts } from "@UI/react/store/linkToasts";
+import { appToasts } from "@UI/react/store/appToasts";
 
 export default {
     title: "Molecules/Toast",
@@ -18,7 +20,7 @@ export default {
     argTypes: {
         type: {
             control: "select",
-            options: ["info", "success", "warning", "error"],
+            options: ["info", "success", "warning", "error", "sync"],
             description: "Toast severity type",
         },
         message: {
@@ -28,6 +30,22 @@ export default {
         actionLabel: {
             control: "text",
             description: "Optional action button label",
+        },
+        description: {
+            control: "text",
+            description: "Optional secondary description",
+        },
+        viewColor: {
+            control: "color",
+            description: "View color indicator (for link toasts)",
+        },
+        viewName: {
+            control: "text",
+            description: "View name (for link toasts)",
+        },
+        userName: {
+            control: "text",
+            description: "User name (for link toasts)",
         },
         dismissible: {
             control: "boolean",
@@ -75,6 +93,25 @@ export const Error = {
         type: "error",
         message: "Failed to save changes. Please try again.",
         dismissible: true,
+    },
+};
+
+export const Sync = {
+    args: {
+        id: "toast-sync",
+        type: "sync",
+        message: "Camera linked",
+        description: 'Now syncing with "Bones View"',
+        viewColor: "#2dd4bf",
+        viewName: "Bones View",
+        dismissible: true,
+    },
+    parameters: {
+        docs: {
+            description: {
+                story: "Sync toast for link-related events. Shows view color indicator.",
+            },
+        },
     },
 };
 
@@ -324,6 +361,247 @@ export const StackedToasts = {
             description: {
                 story:
                     "Demo showing toast stacking behavior. Maximum 5 toasts are visible at once.",
+            },
+        },
+    },
+};
+
+// ============================================================================
+// LINK TOASTS
+// ============================================================================
+
+/**
+ * Demo showing link-specific toast notifications.
+ */
+export const LinkToastsDemo = {
+    render: () => {
+        const { addToast } = useToastStore();
+
+        const showViewLinked = () => {
+            addToast(linkToasts.viewLinked('Camera', 'Skull View', '#2dd4bf'));
+        };
+
+        const showViewUnlinked = () => {
+            addToast(linkToasts.viewUnlinked('Camera', 'Skull View'));
+        };
+
+        const showJoinedGroup = () => {
+            addToast(linkToasts.joinedGroup('Camera', 'Hub View', '#a78bfa', 4));
+        };
+
+        const showBecameHub = () => {
+            addToast(linkToasts.becameHub('Camera', 3));
+        };
+
+        const showLinkBroken = () => {
+            addToast(linkToasts.linkBroken('Camera', 'Remote View'));
+        };
+
+        const showSyncReceived = () => {
+            addToast(linkToasts.syncReceived('Camera', 'Dr. Smith', 'Bones', '#4ade80'));
+        };
+
+        const showFollowerJoined = () => {
+            addToast(linkToasts.followerJoined('Sarah', 'Camera'));
+        };
+
+        const showAllLinked = () => {
+            addToast(linkToasts.allPropertiesLinked('Partner View', '#f472b6'));
+        };
+
+        const showCannotLink = () => {
+            addToast(linkToasts.cannotLink('Views must be in the same workspace'));
+        };
+
+        return (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h3 style={{ color: "#fff", margin: 0 }}>Link Toasts Demo</h3>
+                <p style={{ color: "#999", fontSize: "13px", margin: 0 }}>
+                    Pre-built toasts for view linking events.
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    <button onClick={showViewLinked} style={buttonStyle}>
+                        View Linked
+                    </button>
+                    <button onClick={showViewUnlinked} style={buttonStyle}>
+                        View Unlinked
+                    </button>
+                    <button onClick={showJoinedGroup} style={buttonStyle}>
+                        Joined Group
+                    </button>
+                    <button onClick={showBecameHub} style={buttonStyle}>
+                        Became Hub
+                    </button>
+                    <button onClick={showLinkBroken} style={buttonStyle}>
+                        Link Broken
+                    </button>
+                    <button onClick={showSyncReceived} style={buttonStyle}>
+                        Sync Received
+                    </button>
+                    <button onClick={showFollowerJoined} style={buttonStyle}>
+                        Follower Joined
+                    </button>
+                    <button onClick={showAllLinked} style={buttonStyle}>
+                        All Linked
+                    </button>
+                    <button onClick={showCannotLink} style={buttonStyle}>
+                        Cannot Link
+                    </button>
+                    <button onClick={() => toast.dismissAll()} style={{ ...buttonStyle, background: "#333" }}>
+                        Clear All
+                    </button>
+                </div>
+                <ToastContainer />
+            </div>
+        );
+    },
+    parameters: {
+        layout: "padded",
+        docs: {
+            description: {
+                story:
+                    "Demo showing pre-built link toast helpers for common view linking events.",
+            },
+        },
+    },
+};
+
+// ============================================================================
+// APP TOASTS
+// ============================================================================
+
+/**
+ * Demo showing general app toast notifications.
+ */
+export const AppToastsDemo = {
+    render: () => {
+        const { addToast } = useToastStore();
+
+        const showFileUploaded = () => {
+            addToast(appToasts.fileUploaded('skull_data.vtp'));
+        };
+
+        const showDatasetLoaded = () => {
+            addToast(appToasts.datasetLoaded('Patient MRI Scan'));
+        };
+
+        const showViewCreated = () => {
+            addToast(appToasts.viewCreated('Bones View', '#60a5fa'));
+        };
+
+        const showViewDeleted = () => {
+            addToast(appToasts.viewDeleted('Old View'));
+        };
+
+        const showUserJoined = () => {
+            addToast(appToasts.userJoined('Dr. Johnson'));
+        };
+
+        const showNetworkError = () => {
+            addToast(appToasts.networkError());
+        };
+
+        const showReconnected = () => {
+            addToast(appToasts.reconnected());
+        };
+
+        const showCopied = () => {
+            addToast(appToasts.copied('Link copied to clipboard'));
+        };
+
+        const showUndo = () => {
+            addToast(appToasts.undoAvailable('View deleted', () => console.log('Undo!')));
+        };
+
+        return (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h3 style={{ color: "#fff", margin: 0 }}>App Toasts Demo</h3>
+                <p style={{ color: "#999", fontSize: "13px", margin: 0 }}>
+                    Pre-built toasts for general application events.
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    <button onClick={showFileUploaded} style={buttonStyle}>
+                        File Uploaded
+                    </button>
+                    <button onClick={showDatasetLoaded} style={buttonStyle}>
+                        Dataset Loaded
+                    </button>
+                    <button onClick={showViewCreated} style={buttonStyle}>
+                        View Created
+                    </button>
+                    <button onClick={showViewDeleted} style={buttonStyle}>
+                        View Deleted
+                    </button>
+                    <button onClick={showUserJoined} style={buttonStyle}>
+                        User Joined
+                    </button>
+                    <button onClick={showNetworkError} style={buttonStyle}>
+                        Network Error
+                    </button>
+                    <button onClick={showReconnected} style={buttonStyle}>
+                        Reconnected
+                    </button>
+                    <button onClick={showCopied} style={buttonStyle}>
+                        Copied
+                    </button>
+                    <button onClick={showUndo} style={buttonStyle}>
+                        With Undo
+                    </button>
+                    <button onClick={() => toast.dismissAll()} style={{ ...buttonStyle, background: "#333" }}>
+                        Clear All
+                    </button>
+                </div>
+                <ToastContainer />
+            </div>
+        );
+    },
+    parameters: {
+        layout: "padded",
+        docs: {
+            description: {
+                story:
+                    "Demo showing pre-built app toast helpers for common application events.",
+            },
+        },
+    },
+};
+
+// ============================================================================
+// WITH VIEW INDICATOR
+// ============================================================================
+
+export const WithViewIndicator = {
+    args: {
+        id: "toast-view-indicator",
+        type: "sync",
+        message: "Camera updated",
+        description: "Dr. Smith changed the camera",
+        viewColor: "#4ade80",
+        viewName: "Bones View",
+        userName: "Dr. Smith",
+        dismissible: true,
+    },
+    parameters: {
+        docs: {
+            description: {
+                story: "Sync toast showing view color indicator with user attribution.",
+            },
+        },
+    },
+};
+
+export const WithDescription = {
+    args: {
+        id: "toast-description",
+        type: "info",
+        message: "Processing started",
+        description: "Calculating mesh normals for skull.vtp",
+        dismissible: true,
+    },
+    parameters: {
+        docs: {
+            description: {
+                story: "Toast with a secondary description for additional context.",
             },
         },
     },

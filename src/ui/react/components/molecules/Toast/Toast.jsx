@@ -43,7 +43,8 @@ const TOAST_ICONS = {
     info: 'info',
     success: 'check',
     warning: 'warning',
-    error: 'error'
+    error: 'error',
+    sync: 'link'
 };
 
 /**
@@ -63,12 +64,16 @@ const EXIT_ANIMATION_DURATION = 150;
 /**
  * @typedef {Object} ToastProps
  * @property {string} id - Unique toast identifier
- * @property {'info'|'success'|'warning'|'error'} [type='info'] - Toast type
+ * @property {'info'|'success'|'warning'|'error'|'sync'} [type='info'] - Toast type
  * @property {string} message - Toast message
+ * @property {string} [description] - Optional secondary description
  * @property {string} [actionLabel] - Text for action button
  * @property {() => void} [onAction] - Callback when action button is clicked
  * @property {boolean} [dismissible=true] - Whether to show dismiss button
  * @property {string} [mode] - Display mode: 'desktop' | 'vr' (default: from context)
+ * @property {string} [viewColor] - Optional view color indicator (for link toasts)
+ * @property {string} [viewName] - Optional view name (for link toasts)
+ * @property {string} [userName] - Optional user name (for link toasts)
  * @property {(id: string) => void} onDismiss - Callback to dismiss the toast
  */
 
@@ -83,10 +88,14 @@ function Toast({
     id,
     type = "info",
     message,
+    description,
     actionLabel,
     onAction,
     dismissible = true,
     mode: modeProp,
+    viewColor,
+    viewName,
+    userName,
     onDismiss
 }) {
     // Track whether the toast is in exit animation
@@ -152,6 +161,23 @@ function Toast({
             {/* Content */}
             <div className="toast__content">
                 <p className="toast__message">{message}</p>
+
+                {/* Description (optional) */}
+                {description && (
+                    <p className="toast__description">{description}</p>
+                )}
+
+                {/* View indicator (for link toasts) */}
+                {viewColor && (
+                    <div className="toast__view-indicator">
+                        <span
+                            className="toast__view-color"
+                            style={{ backgroundColor: viewColor }}
+                        />
+                        {viewName && <span className="toast__view-name">{viewName}</span>}
+                        {userName && <span className="toast__user-name">• {userName}</span>}
+                    </div>
+                )}
 
                 {/* Action button */}
                 {actionLabel && onAction && (
