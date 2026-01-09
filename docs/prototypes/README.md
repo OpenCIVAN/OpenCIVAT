@@ -12,7 +12,7 @@ Alternatively, copy the JSX content into a React playground like CodeSandbox or 
 
 ---
 
-## Prototype Files
+## Active Prototype Files
 
 ### 1. final-cell-explorer.jsx
 **Purpose:** Complete instance cell UI design with all three control areas
@@ -24,33 +24,7 @@ Alternatively, copy the JSX content into a React playground like CodeSandbox or 
 - Header Menu (simplified structure, no type-specific options)
 - Interactive cell simulation with resize
 
-**Key Decisions Captured:**
-- Header underline accent style (2px border in instance color)
-- Toolbar menu direction logic (left/right based on position)
-- Navigation notch positions (left/bottom/right)
-- Zoom % behavior (click=dropdown, double-click=edit)
-- Responsive breakpoints for all components
-
-### 2. adaptive-components.jsx
-**Purpose:** VR-first, desktop-friendly component system
-
-**Contains:**
-- ModeContext (desktop/VR switching)
-- Icon component with weight system
-- AdaptiveButton, AdaptiveToggle, AdaptiveSlider
-- AdaptiveSection, AdaptiveOptionList, AdaptiveTabs
-- AdaptiveCameraGrid, AdaptiveZoomControl
-- InstanceInfoCard, QuickToolsBar
-- AdaptivePanel (draggable container)
-- AdaptiveViewItem (view list item with tools)
-
-**Key Decisions Captured:**
-- Sizing tokens for desktop vs VR
-- Icon weight system (thin→bold, default varies by mode)
-- Touch target sizes (32px desktop → 56px VR)
-- No hover-dependent interactions (VR compatibility)
-
-### 3. canvas-minimap-operations-v2.jsx
+### 2. canvas-minimap-operations-v2.jsx
 **Purpose:** Canvas grid operations and minimap navigation
 
 **Contains:**
@@ -61,13 +35,20 @@ Alternatively, copy the JSX content into a React playground like CodeSandbox or 
 - Collaborator presence indicators
 - Selection rectangle tool
 
-**Key Decisions Captured:**
-- Minimap interaction patterns
-- Cell selection for merge operations
-- Viewport navigation controls
-- Presence visualization
+### 3. canvas-operations-panel-v2.jsx
+**Purpose:** Canvas operations panel prototype
 
-### 4. react-component-viewer.html
+### 4. canvas-theme-explorer-v2.jsx
+**Purpose:** Theme system exploration and testing tool
+
+### 5. secondary-bars-v3.jsx
+**Purpose:** Header/footer toolbar designs (latest version)
+
+---
+
+## Tools
+
+### react-component-viewer.html
 **Purpose:** Standalone viewer for testing JSX prototypes
 
 **Usage:**
@@ -77,53 +58,23 @@ Alternatively, copy the JSX content into a React playground like CodeSandbox or 
 
 ---
 
-## Design Tokens (from prototypes)
+## Documentation
 
-### Colors
-```javascript
-const tokens = {
-  bgPrimary: '#0a0c10',      // Blue-tinted dark
-  bgSecondary: '#10141c',
-  bgTertiary: '#161c28',
-  borderSubtle: 'rgba(96, 165, 250, 0.06)',
-  borderDefault: 'rgba(96, 165, 250, 0.1)',
-  textPrimary: '#f0f0f5',
-  textSecondary: '#a0a0b0',
-  textMuted: '#606070',
-  accentBlue: '#60a5fa',
-  accentGreen: '#4ade80',
-  accentAmber: '#fbbf24',
-  accentPurple: '#a78bfa',
-  accentTeal: '#2dd4bf',
-  accentPink: '#f472b6',
-  accentRed: '#f87171',
-};
-```
+### Instance_Tools_Canvas_System_Implementation.md
+Full implementation notes for the instance tools and canvas system.
 
-### Instance Colors
-```javascript
-const VIEW_COLORS = [
-  { hex: '#60a5fa', name: 'Blue' },
-  { hex: '#4ade80', name: 'Green' },
-  { hex: '#f472b6', name: 'Pink' },
-  { hex: '#fbbf24', name: 'Amber' },
-  { hex: '#2dd4bf', name: 'Teal' },
-  { hex: '#a78bfa', name: 'Purple' },
-];
-```
+---
 
-### Responsive Breakpoints
-```javascript
-// Instance Cell Breakpoints
-const getBreakpoint = (width) => {
-  if (width >= 450) return 'full';
-  if (width >= 380) return 'large';
-  if (width >= 300) return 'medium';
-  if (width >= 220) return 'small';
-  if (width >= 160) return 'tiny';
-  return 'micro';
-};
-```
+## Archived Prototypes
+
+Older versions and implemented prototypes have been moved to `../archive/prototypes/`:
+
+- `adaptive-components.jsx` - Now implemented in atomic design system
+- `view-context-complete.jsx` - Now implemented as ViewContextBlock
+- `view-context-isolated.jsx` - Now implemented as ViewContextBlock
+- `secondary-bars-v2.jsx` - Superseded by v3
+- `CLAUDE_CODE_PROMPT.md` - Task-specific prompt
+- `Instance_Viewport_Fixes_Prompt.md` - Task-specific prompt
 
 ---
 
@@ -141,11 +92,9 @@ These prototypes use inline styles for rapid iteration. When implementing:
 
 ## Related Documentation
 
-- `Instance_Tools_Canvas_System_Implementation.md` - Full implementation prompt
-- `Canvas_Area_Design_Specification.md` - Formal specification
-- `Adaptive_Components_Implementation_Prompt.md` - Detailed component specs
-- `Implementation_Priorities.md` - Project roadmap
+- `../specifications/Canvas_Area_Design_Specification.md` - Formal specification
+- `../specifications/Adaptive_Components_Implementation_Prompt.md` - Detailed component specs
 
 ---
 
-*Created: January 2025*
+*Last Updated: January 2025*

@@ -52,39 +52,39 @@ The Right Panel is the **collaboration hub** of CIA Web, providing tools for com
 ### Tab Order and Groupings
 
 ```
-┌─────────────────────────────────────┐
-│  PRESENCE & LOCATION                │
-│  ─────────────────────────────      │
-│  👥 People     (pink)               │
-│  🎤 Voice      (green)              │
-│  🚪 Rooms      (purple)             │
-│  ───────── divider ─────────        │
-│  COMMUNICATION                      │
-│  ─────────────────────────────      │
-│  💬 Chat       (blue)               │
-│  📊 Activity   (amber)              │
-│  ───────── divider ─────────        │
-│  DOCUMENTATION                      │
-│  ─────────────────────────────      │
-│  📝 Notes      (teal)               │
-│  🎬 Recording  (red)                │
-│  ───────── divider ─────────        │
-│  ☰  Settings   (gray)               │  ← SlidersHorizontal icon
-└─────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  PRESENCE & LOCATION                â”‚
+â”‚  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€      â”‚
+â”‚  ðŸ‘¥ People     (pink)               â”‚
+â”‚  ðŸŽ¤ Voice      (green)              â”‚
+â”‚  ðŸšª Rooms      (purple)             â”‚
+â”‚  â”€â”€â”€â”€â”€â”€â”€â”€â”€ divider â”€â”€â”€â”€â”€â”€â”€â”€â”€        â”‚
+â”‚  COMMUNICATION                      â”‚
+â”‚  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€      â”‚
+â”‚  ðŸ’¬ Chat       (blue)               â”‚
+â”‚  ðŸ“Š Activity   (amber)              â”‚
+â”‚  â”€â”€â”€â”€â”€â”€â”€â”€â”€ divider â”€â”€â”€â”€â”€â”€â”€â”€â”€        â”‚
+â”‚  DOCUMENTATION                      â”‚
+â”‚  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€      â”‚
+â”‚  ðŸ“ Notes      (teal)               â”‚
+â”‚  ðŸŽ¬ Recording  (red)                â”‚
+â”‚  â”€â”€â”€â”€â”€â”€â”€â”€â”€ divider â”€â”€â”€â”€â”€â”€â”€â”€â”€        â”‚
+â”‚  â˜°  Settings   (gray)               â”‚  â† SlidersHorizontal icon
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Tab Configuration
 
 ```javascript
 const RIGHT_PANEL_TABS = [
-  { id: 'people', icon: 'users', label: 'People', color: 'pink' },
-  { id: 'voice', icon: 'mic2', label: 'Voice', color: 'green' },
-  { id: 'rooms', icon: 'doorOpen', label: 'Rooms', color: 'purple' },
-  { id: 'chat', icon: 'messageSquare', label: 'Chat', color: 'blue' },
-  { id: 'activity', icon: 'activity', label: 'Activity', color: 'amber' },
-  { id: 'notes', icon: 'fileText', label: 'Notes', color: 'teal' },
-  { id: 'recording', icon: 'video', label: 'Recording', color: 'red' },
-  { id: 'settings', icon: 'slidersHorizontal', label: 'Settings', color: 'gray' },
+  { id: 'people', icon: Users, label: 'People', color: 'pink' },
+  { id: 'voice', icon: Mic2, label: 'Voice', color: 'green' },
+  { id: 'rooms', icon: DoorOpen, label: 'Rooms', color: 'purple' },
+  { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'blue' },
+  { id: 'activity', icon: Activity, label: 'Activity', color: 'amber' },
+  { id: 'notes', icon: FileText, label: 'Notes', color: 'teal' },
+  { id: 'recording', icon: Video, label: 'Recording', color: 'red' },
+  { id: 'settings', icon: SlidersHorizontal, label: 'Settings', color: 'gray' },
 ];
 
 const DIVIDERS_AFTER = ['rooms', 'activity', 'recording'];
@@ -100,7 +100,7 @@ const DIVIDERS_AFTER = ['rooms', 'activity', 'recording'];
 | Chat | Unread message count (red for mentions) |
 | Activity | Unread notification count (red for urgent) |
 | Notes | None |
-| Recording | 🔴 indicator when recording active |
+| Recording | ðŸ”´ indicator when recording active |
 | Settings | None |
 
 ---
@@ -122,12 +122,12 @@ Show who's in the project/room with presence status and enable quick actions.
 
 | Status | Color | Icon | Description |
 |--------|-------|------|-------------|
-| **In VR** | Purple | 🟣 | User is in a VR session |
-| **In Voice** | Green | 🟢 | In voice chat (with speaking/muted indicator) |
-| **Online** | Blue | 🔵 | In room, not in voice |
-| **Presenting** | Yellow/Gold | 🟡 | Screen sharing or presenting mode |
-| **Do Not Disturb** | Red | 🔴 | Online but blocking notifications |
-| **Away** | Gray | ⚫ | Idle or offline (shows last seen) |
+| **In VR** | Purple | ðŸŸ£ | User is in a VR session |
+| **In Voice** | Green | ðŸŸ¢ | In voice chat (with speaking/muted indicator) |
+| **Online** | Blue | ðŸ”µ | In room, not in voice |
+| **Presenting** | Yellow/Gold | ðŸŸ¡ | Screen sharing or presenting mode |
+| **Do Not Disturb** | Red | ðŸ”´ | Online but blocking notifications |
+| **Away** | Gray | âš« | Idle or offline (shows last seen) |
 
 ### Section Groupings
 
@@ -139,11 +139,11 @@ Show who's in the project/room with presence status and enable quick actions.
 ### Member Row Components
 
 ```
-┌──────────────────────────────────────────────────┐
-│ [Status] [Avatar] [Name]              [Actions]  │
-│          [Viewing: Dataset/View name]            │
-│          [VR Session info if applicable]         │
-└──────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ [Status] [Avatar] [Name]              [Actions]  â”‚
+â”‚          [Viewing: Dataset/View name]            â”‚
+â”‚          [VR Session info if applicable]         â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Quick Actions (Hover)
@@ -154,7 +154,7 @@ Show who's in the project/room with presence status and enable quick actions.
 | **Message** | MessageSquare | Opens Chat tab with DM to this person |
 | **Toggle Cursor** | Eye/EyeOff | Show/hide this person's cursor on your view |
 
-### More Menu (⋮)
+### More Menu (â‹®)
 
 | Action | Visibility | Description |
 |--------|------------|-------------|
@@ -174,7 +174,7 @@ Show who's in the project/room with presence status and enable quick actions.
 | **Invite Only** | Only invited users | "Request Invite" button visible |
 | **Closed/Solo** | No one | Shows "Private Session" label |
 
-### People Settings (⚙️ gear)
+### People Settings (âš™ï¸ gear)
 
 - Show offline members toggle
 - Show cursor badges toggle
@@ -214,20 +214,20 @@ Audio control center - manage voice settings, channels, and per-person volume.
 ### Your Controls Section
 
 ```
-┌─────────────────────────────────────────────────┐
-│              YOUR CONTROLS                       │
-│                                                  │
-│   ┌───────┐    ┌────────┐    ┌───────┐         │
-│   │  🎤   │    │   🎧   │    │  📞   │         │
-│   │ Mute  │    │ Deafen │    │ Leave │         │
-│   │  (M)  │    │  (D)   │    │       │         │
-│   └───────┘    └────────┘    └───────┘         │
-│                                                  │
-│   🔊 Output ━━━━━━━━━━━●━━━━  85%               │
-│   🎤 Input  ━━━━━━━●━━━━━━━━  60%               │
-│                                                  │
-│   [||||||||    ] ← Live input level meter       │
-└─────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚              YOUR CONTROLS                       â”‚
+â”‚                                                  â”‚
+â”‚   â”Œâ”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”         â”‚
+â”‚   â”‚  ðŸŽ¤   â”‚    â”‚   ðŸŽ§   â”‚    â”‚  ðŸ“ž   â”‚         â”‚
+â”‚   â”‚ Mute  â”‚    â”‚ Deafen â”‚    â”‚ Leave â”‚         â”‚
+â”‚   â”‚  (M)  â”‚    â”‚  (D)   â”‚    â”‚       â”‚         â”‚
+â”‚   â””â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”˜         â”‚
+â”‚                                                  â”‚
+â”‚   ðŸ”Š Output â”â”â”â”â”â”â”â”â”â”â”â—â”â”â”â”  85%               â”‚
+â”‚   ðŸŽ¤ Input  â”â”â”â”â”â”â”â—â”â”â”â”â”â”â”â”  60%               â”‚
+â”‚                                                  â”‚
+â”‚   [||||||||    ] â† Live input level meter       â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Keyboard Shortcuts
@@ -270,7 +270,7 @@ Audio control center - manage voice settings, channels, and per-person volume.
 - Types: Temporary (auto-delete when empty) or Persistent
 - Created from Voice tab dropdown or Rooms tab
 
-### Voice Settings (⚙️)
+### Voice Settings (âš™ï¸)
 
 **Behavior:**
 - Mute on join
@@ -294,9 +294,9 @@ Audio control center - manage voice settings, channels, and per-person volume.
 ### Bottom Bar Integration
 
 ```
-┌──────────────────────────────────────┐
-│ 🎤 Main Room (3)  [🔇] [🎧] [📞]    │
-└──────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ ðŸŽ¤ Main Room (3)  [ðŸ”‡] [ðŸŽ§] [ðŸ“ž]    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 Clicking channel name opens Voice tab.
@@ -331,7 +331,7 @@ Spatial organization - manage where work happens (workspaces, breakout rooms, VR
 - Voice channel participant count
 - Non-voice viewers
 - Creator and last activity
-- Permission indicator (🔒 for invite-only)
+- Permission indicator (ðŸ”’ for invite-only)
 
 ### Room Actions
 
@@ -410,7 +410,7 @@ Fields:
 - Archived rooms preserve data, can be restored
 - Never truly delete (research compliance)
 
-### Room Settings (⚙️)
+### Room Settings (âš™ï¸)
 
 - Auto-join voice when entering room
 - Show room previews on hover
@@ -444,29 +444,29 @@ Project/Room/DM messaging with mentions, file sharing, and annotation linking.
 ### Message Components
 
 ```
-┌─────────────────────────────────────────────────┐
-│ [Avatar] [Sender Name]                    [⋮]   │
-│                                                  │
-│ [Message content with @mentions]                │
-│                                                  │
-│ [📍 Linked annotation] (optional)               │
-│ [📎 Attachment] (optional)                      │
-│                                                  │
-│ [Reactions] 😀 👍 (2)              [Timestamp]  │
-└─────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ [Avatar] [Sender Name]                    [â‹®]   â”‚
+â”‚                                                  â”‚
+â”‚ [Message content with @mentions]                â”‚
+â”‚                                                  â”‚
+â”‚ [ðŸ“ Linked annotation] (optional)               â”‚
+â”‚ [ðŸ“Ž Attachment] (optional)                      â”‚
+â”‚                                                  â”‚
+â”‚ [Reactions] ðŸ˜€ ðŸ‘ (2)              [Timestamp]  â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Input Area
 
 ```
-┌─────────────────────────────────────────────────┐
-│ [📎] [@] [📍] Type a message...           [➤]  │
-└─────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ [ðŸ“Ž] [@] [ðŸ“] Type a message...           [âž¤]  â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
-- 📎 Attach file/image
+- ðŸ“Ž Attach file/image
 - @ Mention someone
-- 📍 Link to annotation
+- ðŸ“ Link to annotation
 
 ### Mentions
 
@@ -476,7 +476,7 @@ Project/Room/DM messaging with mentions, file sharing, and annotation linking.
 | @everyone | Notify all in this chat |
 | @here | Notify online members only |
 
-### Annotation Linking (📍)
+### Annotation Linking (ðŸ“)
 
 - Search recent annotations
 - Select annotation to link
@@ -540,7 +540,7 @@ Project/Room/DM messaging with mentions, file sharing, and annotation linking.
 - Admins can view in audit log
 - Export includes deleted messages (marked as deleted)
 
-### Chat Settings (⚙️)
+### Chat Settings (âš™ï¸)
 
 **Notifications:**
 - Project/Room/DM message notifications
@@ -580,44 +580,44 @@ Personalized notification feed - catch up on what you missed, stay aware of impo
 
 ### Activity Event Categories
 
-**💬 Mentions & Messages:**
+**ðŸ’¬ Mentions & Messages:**
 - @mentioned in chat
 - Direct message received
 - Reply to your message
 - Reaction to your message
 
-**📍 Annotations:**
+**ðŸ“ Annotations:**
 - New annotation in subscribed room
 - Tagged in annotation
 - Your annotation was edited/commented
 
-**🚪 Rooms & Invitations:**
+**ðŸšª Rooms & Invitations:**
 - Invited to room
 - Room access request (if admin)
 - New room created
 - Room archived
 
-**👥 People:**
+**ðŸ‘¥ People:**
 - Someone joined/left subscribed room
 - New project member
 - Followed person came online
 
-**🥽 VR Sessions:**
+**ðŸ¥½ VR Sessions:**
 - Open VR session started
 - Invited to VR session
 - VR session ended
 
-**📂 Data & Views:**
+**ðŸ“‚ Data & Views:**
 - New dataset added
 - Dataset processed
 - View shared with you
 
-**🎬 Recordings:**
+**ðŸŽ¬ Recordings:**
 - Recording started in your room
 - Recording you participated in is ready
 - Recording shared with you
 
-**🔔 System:**
+**ðŸ”” System:**
 - Project settings changed
 - Your permissions changed
 - Scheduled maintenance
@@ -625,12 +625,12 @@ Personalized notification feed - catch up on what you missed, stay aware of impo
 ### Activity Item Structure
 
 ```
-┌─────────────────────────────────────────────────┐
-│ [Icon] [Title]                            [•]   │  ← Unread indicator
-│ [Subtitle / Context]                            │
-│ [Preview / Quote] (optional)                    │
-│ [Timestamp]                        [Actions]    │
-└─────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ [Icon] [Title]                            [â€¢]   â”‚  â† Unread indicator
+â”‚ [Subtitle / Context]                            â”‚
+â”‚ [Preview / Quote] (optional)                    â”‚
+â”‚ [Timestamp]                        [Actions]    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Actions by Event Type
@@ -681,7 +681,7 @@ When returning after being offline:
 - VR sessions
 - Recordings
 
-### Activity Settings (⚙️)
+### Activity Settings (âš™ï¸)
 
 **What to Show:**
 - Toggle each event category
@@ -721,10 +721,10 @@ Documentation, task tracking, and knowledge sharing with rich text, checklists, 
 
 | Type | Description | Use Case |
 |------|-------------|----------|
-| **📝 Standard** | Rich text content | Observations, documentation |
-| **☑ Checklist** | To-do items with checkboxes | Task lists, objectives |
-| **📍 Anchored** | Linked to annotation/view | Contextual observations |
-| **📋 Template** | Pre-defined structure | Standardized reports |
+| **ðŸ“ Standard** | Rich text content | Observations, documentation |
+| **â˜‘ Checklist** | To-do items with checkboxes | Task lists, objectives |
+| **ðŸ“ Anchored** | Linked to annotation/view | Contextual observations |
+| **ðŸ“‹ Template** | Pre-defined structure | Standardized reports |
 
 ### Visibility Options
 
@@ -746,7 +746,7 @@ Documentation, task tracking, and knowledge sharing with rich text, checklists, 
 ### Rich Text Toolbar
 
 ```
-│B│I│U│S│ • │1.│ ─ │" │</>│📎│🔗│📍│
+â”‚Bâ”‚Iâ”‚Uâ”‚Sâ”‚ â€¢ â”‚1.â”‚ â”€ â”‚" â”‚</>â”‚ðŸ“Žâ”‚ðŸ”—â”‚ðŸ“â”‚
 ```
 
 - Bold, Italic, Underline, Strikethrough
@@ -775,7 +775,7 @@ Documentation, task tracking, and knowledge sharing with rich text, checklists, 
 - Title
 - Author + timestamp
 - Scope indicator (Project/Room/Personal/Shared)
-- Linked indicator (📍) if anchored
+- Linked indicator (ðŸ“) if anchored
 - Checklist progress if checklist type
 
 ### Note Comments
@@ -822,7 +822,7 @@ Documentation, task tracking, and knowledge sharing with rich text, checklists, 
 - Compare versions
 - Restore selected version
 
-### Note Actions (⋮ Menu)
+### Note Actions (â‹® Menu)
 
 | Action | Availability | Description |
 |--------|--------------|-------------|
@@ -841,7 +841,7 @@ Documentation, task tracking, and knowledge sharing with rich text, checklists, 
 - **Global search** across all scopes
 - Search by title, content, author, tags
 
-### Notes Settings (⚙️)
+### Notes Settings (âš™ï¸)
 
 **Default Settings:**
 - Default scope for new notes
@@ -932,7 +932,7 @@ Capture sessions for compliance, documentation, training, and review.
 ### Markers
 
 - Timestamped notes during recording
-- Types: General (📍), Key moment (⭐), Question (❓), Issue (⚠️)
+- Types: General (ðŸ“), Key moment (â­), Question (â“), Issue (âš ï¸)
 - Keyboard shortcut: M
 - Quick add with auto-timestamp
 
@@ -1029,7 +1029,7 @@ Capture sessions for compliance, documentation, training, and review.
 - Configurable per-project who can start recordings
 - Allow simultaneous recordings from multiple users
 
-### Recording Settings (⚙️)
+### Recording Settings (âš™ï¸)
 
 **Default Capture Options:**
 - Default mode
@@ -1056,7 +1056,7 @@ Capture sessions for compliance, documentation, training, and review.
 
 When recording active, show in header/status bar:
 ```
-🔴 Recording · 00:15:32  [⏹]
+ðŸ”´ Recording Â· 00:15:32  [â¹]
 ```
 
 Visible to all in room. Click opens Recording tab.
@@ -1070,7 +1070,7 @@ Project-specific settings and preferences (complements global settings in header
 
 ### Icon
 
-**SlidersHorizontal** - Differentiates from global settings gear (⚙️)
+**SlidersHorizontal** - Differentiates from global settings gear (âš™ï¸)
 
 ### Sections
 
@@ -1269,66 +1269,66 @@ Exportable content:
 
 ```
 src/ui/react/components/panels/RightPanel/
-├── index.jsx                    # Main panel component
-├── RightPanel.scss              # Panel styles
-├── RightPanelContext.jsx        # Shared state
-├── RightActivityBar.jsx         # Activity bar icons
-├── RightPanelContent.jsx        # Content renderer
-├── tabs/
-│   ├── PeopleTab/
-│   │   ├── index.jsx
-│   │   ├── PeopleTab.scss
-│   │   ├── MemberRow.jsx
-│   │   ├── PresenceStatus.jsx
-│   │   └── VRSessionCard.jsx
-│   ├── VoiceTab/
-│   │   ├── index.jsx
-│   │   ├── VoiceTab.scss
-│   │   ├── VoiceControls.jsx
-│   │   ├── ChannelSelector.jsx
-│   │   └── ParticipantRow.jsx
-│   ├── RoomsTab/
-│   │   ├── index.jsx
-│   │   ├── RoomsTab.scss
-│   │   ├── RoomCard.jsx
-│   │   ├── VoiceChannelCard.jsx
-│   │   └── VRSessionCard.jsx
-│   ├── ChatTab/
-│   │   ├── index.jsx
-│   │   ├── ChatTab.scss
-│   │   ├── MessageBubble.jsx
-│   │   ├── ChatInput.jsx
-│   │   ├── ConversationList.jsx
-│   │   └── SystemMessage.jsx
-│   ├── ActivityTab/
-│   │   ├── index.jsx
-│   │   ├── ActivityTab.scss
-│   │   ├── ActivityItem.jsx
-│   │   ├── ActivityGroup.jsx
-│   │   └── CatchUpCard.jsx
-│   ├── NotesTab/
-│   │   ├── index.jsx
-│   │   ├── NotesTab.scss
-│   │   ├── NoteCard.jsx
-│   │   ├── NoteEditor.jsx
-│   │   ├── ChecklistNote.jsx
-│   │   └── TemplateSelector.jsx
-│   ├── RecordingTab/
-│   │   ├── index.jsx
-│   │   ├── RecordingTab.scss
-│   │   ├── RecordingControls.jsx
-│   │   ├── RecordingCard.jsx
-│   │   ├── RecordingPlayer.jsx
-│   │   └── MarkerList.jsx
-│   └── SettingsTab/
-│       ├── index.jsx
-│       ├── SettingsTab.scss
-│       ├── YourPreferences.jsx
-│       ├── ProjectInfo.jsx
-│       ├── AdminSettings.jsx
-│       ├── MemberManagement.jsx
-│       ├── RolesPermissions.jsx
-│       └── DangerZone.jsx
+â”œâ”€â”€ index.jsx                    # Main panel component
+â”œâ”€â”€ RightPanel.scss              # Panel styles
+â”œâ”€â”€ RightPanelContext.jsx        # Shared state
+â”œâ”€â”€ RightActivityBar.jsx         # Activity bar icons
+â”œâ”€â”€ RightPanelContent.jsx        # Content renderer
+â”œâ”€â”€ tabs/
+â”‚   â”œâ”€â”€ PeopleTab/
+â”‚   â”‚   â”œâ”€â”€ index.jsx
+â”‚   â”‚   â”œâ”€â”€ PeopleTab.scss
+â”‚   â”‚   â”œâ”€â”€ MemberRow.jsx
+â”‚   â”‚   â”œâ”€â”€ PresenceStatus.jsx
+â”‚   â”‚   â””â”€â”€ VRSessionCard.jsx
+â”‚   â”œâ”€â”€ VoiceTab/
+â”‚   â”‚   â”œâ”€â”€ index.jsx
+â”‚   â”‚   â”œâ”€â”€ VoiceTab.scss
+â”‚   â”‚   â”œâ”€â”€ VoiceControls.jsx
+â”‚   â”‚   â”œâ”€â”€ ChannelSelector.jsx
+â”‚   â”‚   â””â”€â”€ ParticipantRow.jsx
+â”‚   â”œâ”€â”€ RoomsTab/
+â”‚   â”‚   â”œâ”€â”€ index.jsx
+â”‚   â”‚   â”œâ”€â”€ RoomsTab.scss
+â”‚   â”‚   â”œâ”€â”€ RoomCard.jsx
+â”‚   â”‚   â”œâ”€â”€ VoiceChannelCard.jsx
+â”‚   â”‚   â””â”€â”€ VRSessionCard.jsx
+â”‚   â”œâ”€â”€ ChatTab/
+â”‚   â”‚   â”œâ”€â”€ index.jsx
+â”‚   â”‚   â”œâ”€â”€ ChatTab.scss
+â”‚   â”‚   â”œâ”€â”€ MessageBubble.jsx
+â”‚   â”‚   â”œâ”€â”€ ChatInput.jsx
+â”‚   â”‚   â”œâ”€â”€ ConversationList.jsx
+â”‚   â”‚   â””â”€â”€ SystemMessage.jsx
+â”‚   â”œâ”€â”€ ActivityTab/
+â”‚   â”‚   â”œâ”€â”€ index.jsx
+â”‚   â”‚   â”œâ”€â”€ ActivityTab.scss
+â”‚   â”‚   â”œâ”€â”€ ActivityItem.jsx
+â”‚   â”‚   â”œâ”€â”€ ActivityGroup.jsx
+â”‚   â”‚   â””â”€â”€ CatchUpCard.jsx
+â”‚   â”œâ”€â”€ NotesTab/
+â”‚   â”‚   â”œâ”€â”€ index.jsx
+â”‚   â”‚   â”œâ”€â”€ NotesTab.scss
+â”‚   â”‚   â”œâ”€â”€ NoteCard.jsx
+â”‚   â”‚   â”œâ”€â”€ NoteEditor.jsx
+â”‚   â”‚   â”œâ”€â”€ ChecklistNote.jsx
+â”‚   â”‚   â””â”€â”€ TemplateSelector.jsx
+â”‚   â”œâ”€â”€ RecordingTab/
+â”‚   â”‚   â”œâ”€â”€ index.jsx
+â”‚   â”‚   â”œâ”€â”€ RecordingTab.scss
+â”‚   â”‚   â”œâ”€â”€ RecordingControls.jsx
+â”‚   â”‚   â”œâ”€â”€ RecordingCard.jsx
+â”‚   â”‚   â”œâ”€â”€ RecordingPlayer.jsx
+â”‚   â”‚   â””â”€â”€ MarkerList.jsx
+â”‚   â””â”€â”€ SettingsTab/
+â”‚       â”œâ”€â”€ index.jsx
+â”‚       â”œâ”€â”€ SettingsTab.scss
+â”‚       â”œâ”€â”€ YourPreferences.jsx
+â”‚       â”œâ”€â”€ ProjectInfo.jsx
+â”‚       â”œâ”€â”€ AdminSettings.jsx
+â”‚       â”œâ”€â”€ MemberManagement.jsx
+â”‚       â”œâ”€â”€ RolesPermissions.jsx
+â”‚       â””â”€â”€ DangerZone.jsx
 ```
 
 ### Key Dependencies

@@ -24,20 +24,20 @@ This specification defines the complete design for the Canvas Area of CIA Web, t
 
 | Component | Status | Priority |
 |-----------|--------|----------|
-| CanvasGrid | 🔄 Partial | P0 |
-| CanvasCell | 🔄 Partial | P0 |
-| DropZone System | ❌ TODO | P0 |
-| InstanceViewport | 🔄 Partial | P0 |
-| InstanceHeader | 🔄 Partial | P0 |
-| InstanceToolbar | 🔄 Partial | P1 |
-| ThumbnailLayer | ❌ TODO | P1 |
-| SelectionManager | ❌ TODO | P1 |
-| Canvas Navigator (Popout) | ❌ TODO | P2 |
-| FloatingPanel System | ❌ TODO | P1 |
+| CanvasGrid | ðŸ”„ Partial | P0 |
+| CanvasCell | ðŸ”„ Partial | P0 |
+| DropZone System | âŒ TODO | P0 |
+| InstanceViewport | ðŸ”„ Partial | P0 |
+| InstanceHeader | ðŸ”„ Partial | P0 |
+| InstanceToolbar | ðŸ”„ Partial | P1 |
+| ThumbnailLayer | âŒ TODO | P1 |
+| SelectionManager | âŒ TODO | P1 |
+| Canvas Navigator (Popout) | âŒ TODO | P2 |
+| FloatingPanel System | âŒ TODO | P1 |
 
 ---
 
-## ✅ IMPLEMENTED
+## âœ… IMPLEMENTED
 
 ### Canvas Grid (Partial)
 
@@ -77,7 +77,7 @@ This specification defines the complete design for the Canvas Area of CIA Web, t
 
 ---
 
-## ❌ REMAINING TO IMPLEMENT
+## âŒ REMAINING TO IMPLEMENT
 
 ### Canvas Grid - Complete Implementation
 
@@ -89,8 +89,8 @@ The Canvas Grid is a flexible, resizable grid system that contains instance view
 |----------|-------|
 | Cell Aspect Ratio | Fill available space (no fixed ratio) |
 | Grid Gap | 4px consistent between all cells |
-| Min Grid Size | 1 column × 1 row |
-| Max Grid Size | Unlimited (practical limit ~50×50) |
+| Min Grid Size | 1 column Ã— 1 row |
+| Max Grid Size | Unlimited (practical limit ~50Ã—50) |
 | Cell Calculation | height = (viewport_height - gaps) / rows |
 
 **Empty Cell Appearance:**
@@ -223,7 +223,7 @@ The thumbnail system provides progressive loading with smooth transitions from p
 
 | Handler Type | Format | Rationale |
 |--------------|--------|-----------|
-| VTK (3D meshes) | WebP 512×512 | Best compression for 3D renders |
+| VTK (3D meshes) | WebP 512Ã—512 | Best compression for 3D renders |
 | Chart (2D plots) | SVG | Vectors scale perfectly |
 | Table | SVG | Simple grid representation |
 | Image Viewer | WebP | Match source characteristics |
@@ -324,10 +324,10 @@ A floating panel providing full access to instance controls without requiring th
 |----------|-------|
 | ID | instance-tools |
 | Default Position | Near active viewport |
-| Default Size | 300×450 px |
-| Min Size | 260×300 px |
+| Default Size | 300Ã—450 px |
+| Min Size | 260Ã—300 px |
 | Resizable | Yes |
-| Dock Target | Left Panel → Instance Tools tab |
+| Dock Target | Left Panel â†’ Instance Tools tab |
 
 **Triggers:**
 - Click wrench icon in instance header
@@ -363,9 +363,9 @@ All floating panels share common behavior and appearance for consistency.
 |----------|-------|
 | ID | canvas-navigator |
 | Default Position | Bottom-left, above Secondary Footer |
-| Default Size | 400×320 px |
-| Min Size | 280×200 px |
-| Dock Target | Left Panel → Layout tab |
+| Default Size | 400Ã—320 px |
+| Min Size | 280Ã—200 px |
+| Dock Target | Left Panel â†’ Layout tab |
 | Trigger | Secondary Footer map button, Ctrl+M |
 
 **Features:** Mode toggle (Layout/Views), minimap, D-pad navigation, position display, zoom controls, canvas size controls
@@ -376,8 +376,8 @@ All floating panels share common behavior and appearance for consistency.
 |----------|-------|
 | ID | scratchpad |
 | Default Position | Bottom-right, above Secondary Footer |
-| Default Size | 320×280 px |
-| Min Size | 240×180 px |
+| Default Size | 320Ã—280 px |
+| Min Size | 240Ã—180 px |
 | Dock Target | None (standalone) |
 | Trigger | Secondary Footer sticky note button, Ctrl+S |
 
@@ -435,30 +435,30 @@ Recommended file organization for Canvas Area components:
 
 ```
 src/ui/react/components/canvas/
-├── CanvasGrid/
-│   ├── CanvasGrid.jsx
-│   ├── CanvasGrid.logic.js
-│   ├── CanvasGrid.scss
-│   ├── CanvasCell.jsx
-│   └── DropZone.jsx
-├── InstanceViewport/
-│   ├── InstanceViewport.jsx
-│   ├── InstanceViewport.logic.js
-│   ├── InstanceViewport.scss
-│   ├── InstanceHeader.jsx
-│   ├── InstanceToolbar.jsx
-│   └── ThumbnailLayer.jsx
-├── FloatingPanels/
-│   ├── FloatingPanel.jsx
-│   ├── FloatingPanel.scss
-│   ├── useFloatingPanel.js
-│   ├── CanvasNavigatorPopout.jsx
-│   ├── ScratchpadPopout.jsx
-│   └── InstanceToolsPopout.jsx
-└── Selection/
-    ├── SelectionManager.js
-    ├── useSelection.js
-    └── SelectionContextMenu.jsx
+â”œâ”€â”€ CanvasGrid/
+â”‚   â”œâ”€â”€ CanvasGrid.jsx
+â”‚   â”œâ”€â”€ CanvasGrid.logic.js
+â”‚   â”œâ”€â”€ CanvasGrid.scss
+â”‚   â”œâ”€â”€ CanvasCell.jsx
+â”‚   â””â”€â”€ DropZone.jsx
+â”œâ”€â”€ InstanceViewport/
+â”‚   â”œâ”€â”€ InstanceViewport.jsx
+â”‚   â”œâ”€â”€ InstanceViewport.logic.js
+â”‚   â”œâ”€â”€ InstanceViewport.scss
+â”‚   â”œâ”€â”€ InstanceHeader.jsx
+â”‚   â”œâ”€â”€ InstanceToolbar.jsx
+â”‚   â””â”€â”€ ThumbnailLayer.jsx
+â”œâ”€â”€ FloatingPanels/
+â”‚   â”œâ”€â”€ FloatingPanel.jsx
+â”‚   â”œâ”€â”€ FloatingPanel.scss
+â”‚   â”œâ”€â”€ useFloatingPanel.js
+â”‚   â”œâ”€â”€ CanvasNavigatorPopout.jsx
+â”‚   â”œâ”€â”€ ScratchpadPopout.jsx
+â”‚   â””â”€â”€ InstanceToolsPopout.jsx
+â””â”€â”€ Selection/
+    â”œâ”€â”€ SelectionManager.js
+    â”œâ”€â”€ useSelection.js
+    â””â”€â”€ SelectionContextMenu.jsx
 ```
 
 ---

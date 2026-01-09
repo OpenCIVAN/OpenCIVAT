@@ -24,14 +24,14 @@ This specification defines the complete design for the Left Panel of CIA Web, th
 
 | Tab | Status | Priority |
 |-----|--------|----------|
-| Files | 🔄 Partial | P0 |
-| Datasets | 🔄 Partial | P0 |
-| Views | 🔄 Partial | P0 |
-| Instance Tools | 🔄 Partial | P0 |
-| Layout | ❌ TODO | P1 |
-| Annotations | ❌ TODO | P1 |
-| Bookmarks & Filters | ❌ TODO | P2 |
-| Cursors | ❌ TODO | P2 |
+| Files | ðŸ”„ Partial | P0 |
+| Datasets | ðŸ”„ Partial | P0 |
+| Views | ðŸ”„ Partial | P0 |
+| Instance Tools | ðŸ”„ Partial | P0 |
+| Layout | âŒ TODO | P1 |
+| Annotations | âŒ TODO | P1 |
+| Bookmarks & Filters | âŒ TODO | P2 |
+| Cursors | âŒ TODO | P2 |
 
 ---
 
@@ -41,14 +41,14 @@ The Left Panel contains 8 tabs organized into logical groupings with visual divi
 
 | Tab | Icon | Color | Purpose |
 |-----|------|-------|---------|
-| Files | 📁 | Blue | Project storage, upload, versioning, organization |
-| Datasets | 🗃️ | Teal | Loaded data palette, dataset management |
-| Views | 👁 | Purple | View creation, placement, linking, lifecycle |
-| Instance Tools | 🔧 | Amber | Active instance control panel |
-| Layout | 📐 | Green | Canvas structure, templates, navigation |
-| Annotations | 📍 | Pink | All annotation management (central hub) |
-| Bookmarks & Filters | 🔖 | Indigo | Saved states and presets |
-| Cursors | 🎯 | Teal/Cyan | Cursor visibility and color settings |
+| Files | ðŸ“ | Blue | Project storage, upload, versioning, organization |
+| Datasets | ðŸ—ƒï¸ | Teal | Loaded data palette, dataset management |
+| Views | ðŸ‘ | Purple | View creation, placement, linking, lifecycle |
+| Instance Tools | ðŸ”§ | Amber | Active instance control panel |
+| Layout | ðŸ“ | Green | Canvas structure, templates, navigation |
+| Annotations | ðŸ“ | Pink | All annotation management (central hub) |
+| Bookmarks & Filters | ðŸ”– | Indigo | Saved states and presets |
+| Cursors | ðŸŽ¯ | Teal/Cyan | Cursor visibility and color settings |
 
 ### Divider Placement
 
@@ -95,7 +95,7 @@ All state persists to server for synchronous and asynchronous collaboration. Use
 
 ---
 
-## ✅ IMPLEMENTED
+## âœ… IMPLEMENTED
 
 ### Files Tab (Partial)
 
@@ -109,12 +109,12 @@ All state persists to server for synchronous and asynchronous collaboration. Use
 
 | Icon | State | Description |
 |------|-------|-------------|
-| ○ | Stored | In storage, not loaded as dataset |
-| ◐ | Loading | Currently loading into dataset |
-| ● | Loaded | Active as dataset (in Datasets Tab) |
-| ⟳ | Processing | Server-side compute running |
-| ⚠️ | Error | Failed to process/validate |
-| 🔒 | Restricted | User doesn't have access |
+| â—‹ | Stored | In storage, not loaded as dataset |
+| â— | Loading | Currently loading into dataset |
+| â— | Loaded | Active as dataset (in Datasets Tab) |
+| âŸ³ | Processing | Server-side compute running |
+| âš ï¸ | Error | Failed to process/validate |
+| ðŸ”’ | Restricted | User doesn't have access |
 
 ### Datasets Tab (Partial)
 
@@ -124,7 +124,7 @@ All state persists to server for synchronous and asynchronous collaboration. Use
 - View creation workflow started
 
 **Structure (Specified):**
-Single view 'By Dataset' - hierarchical tree showing Dataset → Views relationship.
+Single view 'By Dataset' - hierarchical tree showing Dataset â†’ Views relationship.
 
 ### Instance Tools Tab (Partial)
 
@@ -138,7 +138,7 @@ Always shows which instance is being controlled: color dot, name, dataset, type,
 
 ---
 
-## ❌ REMAINING TO IMPLEMENT
+## âŒ REMAINING TO IMPLEMENT
 
 ### Files Tab - Remaining Items
 
@@ -182,7 +182,7 @@ Shows: Type icon, name, view count, handler type, file size, load timestamp. Exp
 | Element | Description |
 |---------|-------------|
 | Color dot | Instance color |
-| Status dot | ● Active (filled), ○ Inactive (outline) |
+| Status dot | â— Active (filled), â—‹ Inactive (outline) |
 | Name | View configuration name |
 | Position | Grid position if active, '---' if inactive |
 | Menu | View actions |
@@ -216,7 +216,7 @@ Instance color, status dot, name, position, quick info (type, annotation count, 
 **ViewItem Component - Expanded State:**
 - Thumbnail and metadata
 - Applied filters (as removable chips)
-- Size picker (1×1, 2×1, 1×2, 2×2, Custom)
+- Size picker (1Ã—1, 2Ã—1, 1Ã—2, 2Ã—2, Custom)
 - Linking configuration (camera, filters, widgets, cursors)
 - Action buttons (Go To, Tools, Duplicate, Bookmark, Share, Close, Delete)
 - Origin tracking (if spawned from bookmark)
@@ -279,10 +279,10 @@ Shared with Views Tab. Supports docking/undocking. When floating, shows combined
 | Flow | Auto-arrangement - new views fill next available slot (row-first or column-first) |
 
 **New View Size (Spawn Settings):**
-Presets: 1×1, 2×1, 1×2, 2×2, 3×1, 3×2, Custom. Determines default size when creating new views.
+Presets: 1Ã—1, 2Ã—1, 1Ã—2, 2Ã—2, 3Ã—1, 3Ã—2, Custom. Determines default size when creating new views.
 
 **Quick Layouts:**
-Preset arrangements: Single, Side-by-Side, Stacked, 2×2 Grid, 3-up, 1+2, Custom. Rearranges existing views when applied.
+Preset arrangements: Single, Side-by-Side, Stacked, 2Ã—2 Grid, 3-up, 1+2, Custom. Rearranges existing views when applied.
 
 **Layout Templates:**
 Key Concept: Layouts are structural templates, NOT view containers.
@@ -291,7 +291,7 @@ A layout template defines canvas dimensions, merged cell regions, slot names/lab
 
 **Use Cases:**
 - Standard Analysis: Team always uses 3-column comparison layout
-- Research Protocol: 20×28 grid for systematic review
+- Research Protocol: 20Ã—28 grid for systematic review
 - Presentation Mode: Large main view + 4 thumbnails
 
 **Template Scope:**
@@ -306,7 +306,7 @@ Personal, Workspace, Project, or Global. Templates can be exported/imported as .
 | Edit | Enable resize handles, show drop zones |
 
 **Canvas Size:**
-Manual control of canvas dimensions (columns × rows). Protection prevents reducing size if views would be removed. Compact Layout option auto-moves views to fit.
+Manual control of canvas dimensions (columns Ã— rows). Protection prevents reducing size if views would be removed. Compact Layout option auto-moves views to fit.
 
 ### Annotations Tab (Full implementation needed)
 
@@ -335,9 +335,9 @@ Annotations can have threaded replies (like GitHub comments). Reply count badge 
 **Status States:**
 | Status | Icon | Description |
 |--------|------|-------------|
-| Open | ⚪ | Active, needs attention |
-| Resolved | ✅ | Addressed, still visible |
-| Archived | 📦 | Completed, hidden from default view (preserved for audit) |
+| Open | âšª | Active, needs attention |
+| Resolved | âœ… | Addressed, still visible |
+| Archived | ðŸ“¦ | Completed, hidden from default view (preserved for audit) |
 
 **View-Specific Snapshots:**
 View-specific annotations capture a snapshot of view state (camera, filters) when created. Essential for audit - allows 'Restore View Context' to recreate the visual context.
@@ -425,15 +425,15 @@ CIEDE2000 deltaE < 30 = too similar, warn user when selecting custom color.
 
 ```
 src/ui/react/components/panels/LeftPanel/
-├── tabs/
-│   ├── FilesTab/
-│   ├── DatasetsTab/
-│   ├── ViewsTab/
-│   ├── InstanceToolsTab/
-│   ├── LayoutTab/
-│   ├── AnnotationsTab/
-│   ├── BookmarksFiltersTab/
-│   └── CursorsTab/
+â”œâ”€â”€ tabs/
+â”‚   â”œâ”€â”€ FilesTab/
+â”‚   â”œâ”€â”€ DatasetsTab/
+â”‚   â”œâ”€â”€ ViewsTab/
+â”‚   â”œâ”€â”€ InstanceToolsTab/
+â”‚   â”œâ”€â”€ LayoutTab/
+â”‚   â”œâ”€â”€ AnnotationsTab/
+â”‚   â”œâ”€â”€ BookmarksFiltersTab/
+â”‚   â””â”€â”€ CursorsTab/
 ```
 
 ### Component Pattern
@@ -526,7 +526,7 @@ The Left Panel provides comprehensive project and visualization management throu
 
 ### Key Architectural Decisions
 
-- Three-layer data model (Files → Datasets → Views) with clear separation
+- Three-layer data model (Files â†’ Datasets â†’ Views) with clear separation
 - Server-authority persistence for sync/async collaboration
 - Shared Canvas Navigator between Layout and Views tabs
 - Annotations tab as central hub (Instance Tools subtab is a portal)
