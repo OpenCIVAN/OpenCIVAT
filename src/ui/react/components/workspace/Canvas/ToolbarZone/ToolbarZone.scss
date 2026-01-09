@@ -50,6 +50,31 @@
     letter-spacing: 0.5px;
     color: $color-text-muted;
     white-space: nowrap;
+
+    // Color variants for better readability
+    &--blue {
+        color: $color-accent-blue;
+    }
+
+    &--purple {
+        color: $color-accent-purple;
+    }
+
+    &--amber {
+        color: $color-accent-amber;
+    }
+
+    &--teal {
+        color: $color-accent-teal;
+    }
+
+    &--green {
+        color: $color-accent-green;
+    }
+
+    &--pink {
+        color: $color-accent-pink;
+    }
 }
 
 .toolbar-zone__content {

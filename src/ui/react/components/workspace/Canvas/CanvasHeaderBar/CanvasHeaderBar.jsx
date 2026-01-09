@@ -205,7 +205,7 @@ export function CanvasHeaderBar({
     return (
         <ToolbarContainer className={`canvas-header-bar ${className}`}>
             {/* Room Zone */}
-            <ToolbarZone label="Room" width={180}>
+            <ToolbarZone label="Room" width={180} labelColor="pink">
                 <RoomPresenceIndicator
                     room={room}
                     members={roomMembers}
@@ -220,7 +220,7 @@ export function CanvasHeaderBar({
             <ToolbarDivider />
 
             {/* Workspace Zone */}
-            <ToolbarZone label="Workspace" width={160}>
+            <ToolbarZone label="Workspace" width={160} labelColor="purple">
                 <WorkspaceSelector
                     workspace={workspace}
                     workspaces={workspaces}
@@ -233,7 +233,7 @@ export function CanvasHeaderBar({
             <ToolbarDivider />
 
             {/* Edit Tools Zone */}
-            <ToolbarZone label="Edit">
+            <ToolbarZone label="Edit" labelColor="amber">
                 <EditToolsContent
                     activeTool={activeTool}
                     onToolChange={onToolChange}
@@ -245,11 +245,15 @@ export function CanvasHeaderBar({
                 />
             </ToolbarZone>
 
+            <ToolbarDivider />
+
             {/* Spacer */}
             <ToolbarSpacer />
 
+            <ToolbarDivider />
+
             {/* Flow Zone */}
-            <ToolbarZone label="Flow">
+            <ToolbarZone label="Flow" labelColor="teal">
                 <FlowDirectionToggle
                     direction={flowDirection}
                     onChange={onFlowDirectionChange}
@@ -259,7 +263,7 @@ export function CanvasHeaderBar({
             <ToolbarDivider />
 
             {/* Size Zone */}
-            <ToolbarZone label="Size">
+            <ToolbarZone label="Size" labelColor="green">
                 <SizeContent
                     canvasSize={canvasSize}
                     viewportSize={viewportSize}
@@ -272,7 +276,7 @@ export function CanvasHeaderBar({
             <ToolbarDivider />
 
             {/* Canvas Mode Zone */}
-            <ToolbarZone label="Canvas">
+            <ToolbarZone label="Canvas" labelColor="blue">
                 <CanvasModeContent
                     canvasMode={canvasMode}
                     onCanvasModeChange={onCanvasModeChange}

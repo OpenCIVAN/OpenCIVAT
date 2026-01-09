@@ -17,6 +17,7 @@ import './ToolbarZone.scss';
  * @param {number|string} width - Optional fixed width (number for px, string for CSS value)
  * @param {number|string} minWidth - Optional minimum width
  * @param {boolean} flex - If true, zone grows to fill available space
+ * @param {string} labelColor - Optional color variant for the label (blue, purple, amber, teal, green)
  * @param {string} className - Additional CSS classes
  */
 export function ToolbarZone({
@@ -25,6 +26,7 @@ export function ToolbarZone({
     width,
     minWidth,
     flex = false,
+    labelColor,
     className = '',
 }) {
     const style = {};
@@ -32,12 +34,14 @@ export function ToolbarZone({
     if (minWidth) style.minWidth = typeof minWidth === 'number' ? `${minWidth}px` : minWidth;
     if (flex) style.flex = 1;
 
+    const labelColorClass = labelColor ? `toolbar-zone__label--${labelColor}` : '';
+
     return (
         <div
             className={`toolbar-zone ${flex ? 'toolbar-zone--flex' : ''} ${className}`}
             style={style}
         >
-            <div className="toolbar-zone__label">
+            <div className={`toolbar-zone__label ${labelColorClass}`}>
                 {label}
             </div>
             <div className="toolbar-zone__content">

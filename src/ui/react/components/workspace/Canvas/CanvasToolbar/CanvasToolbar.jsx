@@ -11,6 +11,11 @@ import { ViewContextBlock } from '@UI/react/components/organisms';
 import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
+import {
+    ToolbarZone,
+    ToolbarDivider,
+    ToolbarContainer,
+} from '../ToolbarZone';
 import './CanvasToolbar.scss';
 
 // =============================================================================
@@ -25,33 +30,6 @@ const ZONES = {
     actions: { width: 120, label: 'Actions' },
     viewContext: { label: 'View Context' }, // flex - handles mode, view, links, actions
 };
-
-// =============================================================================
-// ZONE LABEL BAR
-// =============================================================================
-
-const ZoneLabelBar = memo(function ZoneLabelBar() {
-    return (
-        <div className="canvas-toolbar__label-bar">
-            {/* Navigation */}
-            <div className="canvas-toolbar__label canvas-toolbar__label--navigation">
-                {ZONES.navigation.label}
-            </div>
-            <div className="canvas-toolbar__label-separator" />
-
-            {/* History */}
-            <div className="canvas-toolbar__label canvas-toolbar__label--history">
-                {ZONES.history.label}
-            </div>
-            <div className="canvas-toolbar__label-separator" />
-
-            {/* View Context - flexible */}
-            <div className="canvas-toolbar__label canvas-toolbar__label--view-context">
-                {ZONES.viewContext.label}
-            </div>
-        </div>
-    );
-});
 
 // =============================================================================
 // VIEW MODE TOGGLE (Grid/Focus/Subset)
@@ -108,7 +86,7 @@ const ViewModeZone = memo(function ViewModeZone({
 // Uses useViewContextLogic for navigation to stay in sync with LayoutPanelContext
 // =============================================================================
 
-const NavigationZone = memo(function NavigationZone() {
+const NavigationContent = memo(function NavigationContent() {
     // Get navigation from useViewContextLogic - this connects to LayoutPanelContext
     // which is the source of truth for viewport position
     const {
@@ -120,55 +98,53 @@ const NavigationZone = memo(function NavigationZone() {
     } = useViewContextLogic();
 
     return (
-        <div className="canvas-toolbar__zone" style={{ width: ZONES.navigation.width }}>
-            <div className="canvas-toolbar__nav-controls">
-                <IconButton
-                    icon="home"
-                    label="Go to Home Position"
-                    size="sm"
-                    active={isAtOrigin}
-                    onClick={onHome}
-                />
-                <IconButton
-                    icon="bookmark"
-                    label="Save Position"
-                    size="sm"
-                    onClick={onBookmark}
-                />
+        <div className="canvas-toolbar__nav-controls">
+            <IconButton
+                icon="home"
+                label="Go to Home Position"
+                size="sm"
+                active={isAtOrigin}
+                onClick={onHome}
+            />
+            <IconButton
+                icon="bookmark"
+                label="Save Position"
+                size="sm"
+                onClick={onBookmark}
+            />
 
-                <div className="canvas-toolbar__nav-arrows">
+            <div className="canvas-toolbar__nav-arrows">
+                <IconButton
+                    icon="chevronLeft"
+                    label="Pan Left"
+                    size="xs"
+                    onClick={() => onNavigate('left')}
+                />
+                <div className="canvas-toolbar__nav-arrows-vertical">
                     <IconButton
-                        icon="chevronLeft"
-                        label="Pan Left"
+                        icon="chevronUp"
+                        label="Pan Up"
                         size="xs"
-                        onClick={() => onNavigate('left')}
+                        onClick={() => onNavigate('up')}
                     />
-                    <div className="canvas-toolbar__nav-arrows-vertical">
-                        <IconButton
-                            icon="chevronUp"
-                            label="Pan Up"
-                            size="xs"
-                            onClick={() => onNavigate('up')}
-                        />
-                        <IconButton
-                            icon="chevronDown"
-                            label="Pan Down"
-                            size="xs"
-                            onClick={() => onNavigate('down')}
-                        />
-                    </div>
                     <IconButton
-                        icon="chevronRight"
-                        label="Pan Right"
+                        icon="chevronDown"
+                        label="Pan Down"
                         size="xs"
-                        onClick={() => onNavigate('right')}
+                        onClick={() => onNavigate('down')}
                     />
                 </div>
-
-                <span className="canvas-toolbar__position">
-                    {canvasPosition.col},{canvasPosition.row}
-                </span>
+                <IconButton
+                    icon="chevronRight"
+                    label="Pan Right"
+                    size="xs"
+                    onClick={() => onNavigate('right')}
+                />
             </div>
+
+            <span className="canvas-toolbar__position">
+                {canvasPosition.col},{canvasPosition.row}
+            </span>
         </div>
     );
 });
@@ -177,30 +153,28 @@ const NavigationZone = memo(function NavigationZone() {
 // HISTORY ZONE (Undo/Redo)
 // =============================================================================
 
-const HistoryZone = memo(function HistoryZone({
+const HistoryContent = memo(function HistoryContent({
     canUndo,
     canRedo,
     onUndo,
     onRedo,
 }) {
     return (
-        <div className="canvas-toolbar__zone" style={{ width: ZONES.history.width }}>
-            <div className="canvas-toolbar__history-controls">
-                <IconButton
-                    icon="undo"
-                    label="Undo (Ctrl+Z)"
-                    size="sm"
-                    disabled={!canUndo}
-                    onClick={onUndo}
-                />
-                <IconButton
-                    icon="redo"
-                    label="Redo (Ctrl+Shift+Z)"
-                    size="sm"
-                    disabled={!canRedo}
-                    onClick={onRedo}
-                />
-            </div>
+        <div className="canvas-toolbar__history-controls">
+            <IconButton
+                icon="undo"
+                label="Undo (Ctrl+Z)"
+                size="sm"
+                disabled={!canUndo}
+                onClick={onUndo}
+            />
+            <IconButton
+                icon="redo"
+                label="Redo (Ctrl+Shift+Z)"
+                size="sm"
+                disabled={!canRedo}
+                onClick={onRedo}
+            />
         </div>
     );
 });
@@ -273,7 +247,7 @@ const SubsetZone = memo(function SubsetZone({
 // VIEW CONTEXT ZONE (uses ViewContextBlock component with useViewContextLogic)
 // =============================================================================
 
-const ViewContextZone = memo(function ViewContextZone({
+const ViewContextContent = memo(function ViewContextContent({
     viewMode,
     onModeChange,
     onSnapshot,
@@ -298,23 +272,21 @@ const ViewContextZone = memo(function ViewContextZone({
     const viewInfo = isFocusView && currentView?.data ? currentView.data : activeView;
 
     return (
-        <div className="canvas-toolbar__zone canvas-toolbar__zone--view-context">
-            <ViewContextBlock
-                viewMode={viewMode}
-                onModeChange={onModeChange}
-                activeView={viewInfo}
-                onCanvasViews={onCanvasViews}
-                availableViews={availableViews}
-                onSelectView={onSelectView}
-                onViewAction={onViewAction}
-                onUpdateLink={onUpdateLink}
-                subsetIds={subsetIds}
-                onSubsetChange={onSubsetChange}
-                onSnapshot={onSnapshot}
-                onDuplicate={onDuplicate}
-                onOpenSettings={onOpenSettings}
-            />
-        </div>
+        <ViewContextBlock
+            viewMode={viewMode}
+            onModeChange={onModeChange}
+            activeView={viewInfo}
+            onCanvasViews={onCanvasViews}
+            availableViews={availableViews}
+            onSelectView={onSelectView}
+            onViewAction={onViewAction}
+            onUpdateLink={onUpdateLink}
+            subsetIds={subsetIds}
+            onSubsetChange={onSubsetChange}
+            onSnapshot={onSnapshot}
+            onDuplicate={onDuplicate}
+            onOpenSettings={onOpenSettings}
+        />
     );
 });
 
@@ -415,45 +387,37 @@ export function CanvasToolbar({
     className = '',
 }) {
     return (
-        <div className={`canvas-toolbar ${className}`}>
-            {/* Zone Label Bar */}
-            <ZoneLabelBar />
+        <ToolbarContainer className={`canvas-toolbar ${className}`}>
+            {/* Navigation - uses useViewContextLogic internally */}
+            <ToolbarZone label="Navigation" width={ZONES.navigation.width} labelColor="blue">
+                <NavigationContent />
+            </ToolbarZone>
 
-            {/* Content Bar */}
-            <div className="canvas-toolbar__content-bar">
-                {/* Navigation - uses useViewContextLogic internally */}
-                <NavigationZone />
+            <ToolbarDivider />
 
-                <div className="canvas-toolbar__divider" />
-
-                {/* History */}
-                <HistoryZone
+            {/* History */}
+            <ToolbarZone label="History" width={ZONES.history.width} labelColor="amber">
+                <HistoryContent
                     canUndo={canUndo}
                     canRedo={canRedo}
                     onUndo={onUndo}
                     onRedo={onRedo}
                 />
+            </ToolbarZone>
 
-                <div className="canvas-toolbar__divider" />
+            <ToolbarDivider />
 
-                {/* View Context Block - handles mode, view selection, links, actions */}
-                <ViewContextZone
+            {/* View Context Block - handles mode, view selection, links, actions */}
+            <ToolbarZone label="View Context" flex labelColor="teal">
+                <ViewContextContent
                     viewMode={viewMode}
                     onModeChange={onModeChange}
-                    activeView={activeView}
-                    availableViews={availableViews}
-                    offCanvasViews={offCanvasViews}
-                    onSelectView={onSelectView}
-                    onViewAction={onViewAction}
-                    onUpdateLink={onUpdateLink}
-                    subsetIds={subsetSelection}
-                    onSubsetChange={onSubsetChange}
                     onSnapshot={onSnapshot}
                     onDuplicate={onDuplicate}
                     onOpenSettings={onSettings}
                 />
-            </div>
-        </div>
+            </ToolbarZone>
+        </ToolbarContainer>
     );
 }
 

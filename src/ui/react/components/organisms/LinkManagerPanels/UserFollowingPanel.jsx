@@ -292,8 +292,8 @@ export const UserFollowingPanel = memo(function UserFollowingPanel({
                                 key={member.clientId || member.userId || index}
                                 member={member}
                                 isFollowing={
-                                    followingUser?.clientId === member.clientId ||
-                                    followingUser?.userId === member.userId
+                                    (followingUser?.clientId && followingUser.clientId === member.clientId) ||
+                                    (followingUser?.userId && followingUser.userId === member.userId)
                                 }
                                 onFollow={handleFollow}
                             />

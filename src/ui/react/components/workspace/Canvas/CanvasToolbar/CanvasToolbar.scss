@@ -8,143 +8,29 @@
 @use "theme" as *;
 
 // =============================================================================
-// MAIN CONTAINER
+// MAIN CONTAINER - Uses ToolbarContainer with taller content for footer
 // =============================================================================
 
 .canvas-toolbar {
-  display: flex;
-  flex-direction: column;
-  background: $color-bg-secondary;
+  // Override border direction for footer (top instead of bottom)
   border-top: 1px solid $color-border-default;
-  flex-shrink: 0;
-  overflow: visible;
-  width: 100%;
-}
+  border-bottom: none;
 
-// =============================================================================
-// ZONE LABEL BAR (18px)
-// =============================================================================
-
-.canvas-toolbar__label-bar {
-  display: flex;
-  align-items: center;
-  height: 18px;
-  background: $color-bg-canvas;
-  border-bottom: 1px solid $color-border-subtle;
-  padding: 0 $spacing-md;
-  gap: $spacing-md;
-  min-width: 0;
-}
-
-.canvas-toolbar__label {
-  font-size: 9px;
-  font-weight: $font-weight-semibold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: $color-text-muted;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  flex-shrink: 0;
-
-  // Width modifiers to match content zones exactly
-  &--view-mode {
-    width: 110px;
+  // Make content zones taller for the footer toolbar (72px vs 44px)
+  .toolbar-zone__content {
+    height: 72px;
+    padding: $spacing-xs $spacing-sm;
   }
 
-  &--navigation {
-    width: 160px;
+  // Match taller dividers
+  .toolbar-divider__content {
+    height: 72px;
   }
 
-  &--history {
-    width: 70px;
+  // Match taller spacers
+  .toolbar-spacer__content {
+    height: 72px;
   }
-
-  &--subset {
-    width: 100px;
-  }
-
-  &--active-view {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &--actions {
-    width: 160px;
-  }
-}
-
-.canvas-toolbar__label-separator {
-  width: 1px;
-  height: 10px;
-  background: $color-border-subtle;
-  flex-shrink: 0;
-}
-
-.canvas-toolbar__label-center {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-md;
-  min-width: 0;
-}
-
-// =============================================================================
-// CONTENT BAR (72px - fits ViewContextBlock's two rows)
-// =============================================================================
-
-.canvas-toolbar__content-bar {
-  display: flex;
-  align-items: center;
-  padding: $spacing-xs $spacing-md;
-  height: 72px;
-  gap: $spacing-md;
-  min-width: 0;
-  overflow: visible;
-}
-
-// =============================================================================
-// ZONE BASE STYLES
-// =============================================================================
-
-.canvas-toolbar__zone {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  &--active-view {
-    flex: 1;
-    min-width: 0;
-    justify-content: flex-start;
-  }
-}
-
-// =============================================================================
-// CENTER ZONE (flexible)
-// =============================================================================
-
-.canvas-toolbar__center {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-md;
-  min-width: 0;
-}
-
-// =============================================================================
-// DIVIDER
-// =============================================================================
-
-.canvas-toolbar__divider {
-  width: 1px;
-  height: 24px;
-  background: $color-border-default;
-  flex-shrink: 0;
 }
 
 // =============================================================================
@@ -443,121 +329,84 @@
 // RESPONSIVE - Progressive collapse as container gets narrower
 // =============================================================================
 
-// Helper classes for responsive visibility
-.canvas-toolbar__text-label {
-  // Visible by default
-}
-
 // -----------------------------------------------------------------------------
 // CONTAINER QUERIES - Respond to canvas-workspace width
 // -----------------------------------------------------------------------------
 
 // MEDIUM: < 1000px - Hide some labels, compact spacing
 @container canvas-workspace (max-width: 1000px) {
-  .canvas-toolbar__label-bar {
-    padding: 0 $spacing-sm;
-    gap: $spacing-sm;
-  }
-
-  .canvas-toolbar__content-bar {
-    padding: $spacing-xs $spacing-sm;
-    gap: $spacing-sm;
-  }
-
-  .canvas-toolbar__links-btn span:not(.canvas-toolbar__links-badge) {
-    display: none;
-  }
-
-  .canvas-toolbar__label--navigation,
-  .canvas-toolbar__label--history,
-  .canvas-toolbar__label--subset,
-  .canvas-toolbar__label--actions {
-    display: none;
+  .canvas-toolbar {
+    .canvas-toolbar__links-btn span:not(.canvas-toolbar__links-badge) {
+      display: none;
+    }
   }
 }
 
 // SMALL: < 800px - Icon-only buttons, hide label bar
 @container canvas-workspace (max-width: 800px) {
-  .canvas-toolbar__label-bar {
-    display: none;
-  }
+  .canvas-toolbar {
+    .toolbar-zone__label {
+      display: none;
+    }
 
-  .canvas-toolbar__content-bar {
-    height: auto;
-    min-height: 54px;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: $spacing-xs;
-    padding: $spacing-sm;
-  }
+    .toolbar-zone__content {
+      height: auto;
+      min-height: 54px;
+    }
 
-  .canvas-toolbar__zone {
-    flex-shrink: 1;
-  }
+    .toolbar-divider {
+      display: none;
+    }
 
-  .canvas-toolbar__zone--active-view {
-    order: 10;
-    width: 100%;
-    flex: none;
-    justify-content: center;
-    margin-top: $spacing-xs;
-    padding-top: $spacing-xs;
-    border-top: 1px solid $color-border-subtle;
-  }
+    .canvas-toolbar__mode-btn {
+      width: 28px;
+      height: 26px;
+    }
 
-  .canvas-toolbar__divider {
-    display: none;
-  }
+    .canvas-toolbar__nav-controls {
+      gap: 2px;
+    }
 
-  .canvas-toolbar__mode-btn {
-    width: 28px;
-    height: 26px;
-  }
-
-  .canvas-toolbar__nav-controls {
-    gap: 2px;
-  }
-
-  .canvas-toolbar__position {
-    display: none;
+    .canvas-toolbar__position {
+      display: none;
+    }
   }
 }
 
 // EXTRA SMALL: < 600px - Minimal mode, essentials only
 @container canvas-workspace (max-width: 600px) {
-  .canvas-toolbar__content-bar {
-    min-height: 44px;
-    padding: $spacing-xs;
-  }
+  .canvas-toolbar {
+    // Hide history zone
+    .toolbar-zone:has(.canvas-toolbar__history-controls) {
+      display: none;
+    }
 
-  // Hide history zone
-  .canvas-toolbar__zone:has(.canvas-toolbar__history-controls) {
-    display: none;
-  }
+    // Compact nav controls
+    .canvas-toolbar__nav-arrows-vertical {
+      display: none;
+    }
 
-  // Compact nav controls
-  .canvas-toolbar__nav-arrows-vertical {
-    display: none;
-  }
+    .canvas-toolbar__mode-toggle {
+      padding: 1px;
+    }
 
-  .canvas-toolbar__mode-toggle {
-    padding: 1px;
-  }
+    .canvas-toolbar__mode-btn {
+      width: 24px;
+      height: 22px;
+    }
 
-  .canvas-toolbar__mode-btn {
-    width: 24px;
-    height: 22px;
-  }
-
-  .canvas-toolbar__subset-btn span:not(svg) {
-    display: none;
+    .canvas-toolbar__subset-btn span:not(svg) {
+      display: none;
+    }
   }
 }
 
 // TINY: < 450px - Absolute essentials
 @container canvas-workspace (max-width: 450px) {
-  .canvas-toolbar__actions {
-    display: none;
+  .canvas-toolbar {
+    .canvas-toolbar__actions {
+      display: none;
+    }
   }
 }
 
@@ -567,26 +416,23 @@
 
 @supports not (container-type: inline-size) {
   @media (max-width: 1000px) {
-    .canvas-toolbar__links-btn span:not(.canvas-toolbar__links-badge) {
+    .canvas-toolbar .canvas-toolbar__links-btn span:not(.canvas-toolbar__links-badge) {
       display: none;
     }
   }
 
   @media (max-width: 800px) {
-    .canvas-toolbar__label-bar {
+    .canvas-toolbar .toolbar-zone__label {
       display: none;
     }
 
-    .canvas-toolbar__content-bar {
-      height: auto;
-      flex-wrap: wrap;
-      gap: $spacing-xs;
+    .canvas-toolbar .toolbar-divider {
+      display: none;
     }
   }
 
   @media (max-width: 600px) {
-    .canvas-toolbar__divider,
-    .canvas-toolbar__position {
+    .canvas-toolbar .canvas-toolbar__position {
       display: none;
     }
   }
