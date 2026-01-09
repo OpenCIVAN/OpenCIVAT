@@ -126,6 +126,13 @@ export function PeopleTab({ workspaceId, roomId }) {
                     size="sm"
                 />
                 <IconButton
+                    icon="eye"
+                    size="sm"
+                    variant="ghost"
+                    tooltip="View Following"
+                    onClick={() => window.dispatchEvent(new CustomEvent('cia:open-user-following'))}
+                />
+                <IconButton
                     icon="hand"
                     size="sm"
                     variant="ghost"

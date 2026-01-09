@@ -277,6 +277,22 @@ export function LinksDropdown({
                         allViews={allViews}
                         onRestoreLink={onRestoreLink}
                     />
+
+                    {/* Footer with link to full manager */}
+                    <div className="links-dropdown__footer">
+                        <button
+                            type="button"
+                            className="links-dropdown__open-manager"
+                            onClick={() => {
+                                setIsOpen(false);
+                                window.dispatchEvent(new CustomEvent('cia:open-view-link-manager'));
+                            }}
+                        >
+                            <Icon name="settings" size={12} />
+                            <span>Open Link Manager</span>
+                            <Icon name="arrowUpRight" size={10} />
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

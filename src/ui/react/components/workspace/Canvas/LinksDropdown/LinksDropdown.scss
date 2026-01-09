@@ -420,3 +420,36 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
+
+// =============================================================================
+// FOOTER - Open Link Manager
+// =============================================================================
+
+.links-dropdown__footer {
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-tertiary;
+  border-top: 1px solid $color-border-subtle;
+}
+
+.links-dropdown__open-manager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: $spacing-sm;
+  background: transparent;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba($color-accent-teal, 0.1);
+    border-color: $color-accent-teal;
+    color: $color-accent-teal;
+  }
+}

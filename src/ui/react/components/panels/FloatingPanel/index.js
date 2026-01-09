@@ -35,3 +35,18 @@ export {
 
 // Annotation Creator floating panel
 export { FloatingAnnotationCreator } from "./FloatingAnnotationCreator";
+
+// Link Manager floating panels (View Linking System)
+export {
+  AllLinkManagerFloating,
+  ViewLinkManagerFloating,
+  UserFollowingFloating,
+  WorkspaceLinksHubFloating,
+  useViewLinkManagerFloating,
+  useUserFollowingFloating,
+  useWorkspaceLinksHubFloating,
+  VIEW_LINK_MANAGER_PANEL_ID,
+  USER_FOLLOWING_PANEL_ID,
+  WORKSPACE_LINKS_HUB_PANEL_ID,
+  LINK_PANEL_CONFIGS,
+} from "./LinkManagerFloating.jsx";

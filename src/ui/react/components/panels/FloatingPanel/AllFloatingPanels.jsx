@@ -32,6 +32,14 @@ import { ScratchPadFloating, SCRATCHPAD_PANEL_ID } from "./ScratchPadFloating";
 // Instance Tools floating panel
 import { InstanceToolsFloating, INSTANCE_TOOLS_PANEL_ID } from "./InstanceToolsFloating";
 
+// Link Manager floating panels (View Links, User Following, Workspace Links Hub)
+import {
+    AllLinkManagerFloating,
+    VIEW_LINK_MANAGER_PANEL_ID,
+    USER_FOLLOWING_PANEL_ID,
+    WORKSPACE_LINKS_HUB_PANEL_ID,
+} from "./LinkManagerFloating";
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -91,7 +99,13 @@ export function AllFloatingPanels() {
         <>
             {/* Render all floating panels from registry (left/right panel tabs) */}
             {Object.entries(floatingPanels)
-                .filter(([id]) => id !== SCRATCHPAD_PANEL_ID && id !== INSTANCE_TOOLS_PANEL_ID) // Handled separately
+                .filter(([id]) =>
+                    id !== SCRATCHPAD_PANEL_ID &&
+                    id !== INSTANCE_TOOLS_PANEL_ID &&
+                    id !== VIEW_LINK_MANAGER_PANEL_ID &&
+                    id !== USER_FOLLOWING_PANEL_ID &&
+                    id !== WORKSPACE_LINKS_HUB_PANEL_ID
+                ) // Handled separately
                 .map(([panelId, panelState]) => {
                     // Find tab config for icon/color
                     let tabConfig = null;
@@ -122,6 +136,9 @@ export function AllFloatingPanels() {
 
             {/* Instance Tools - Floating panel for viewport tools */}
             <InstanceToolsFloating />
+
+            {/* Link Manager Panels - View Links, User Following, Workspace Links Hub */}
+            <AllLinkManagerFloating />
         </>
     );
 }

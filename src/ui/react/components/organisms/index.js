@@ -61,3 +61,21 @@ export {
     useViewModeKeyboardShortcut,
     useGlobalKeyboardShortcuts,
 } from './ViewModeToggle';
+
+// =============================================================================
+// LINK MANAGER PANELS (View Linking System)
+// =============================================================================
+
+// ViewLinkManager - Main panel for managing view-to-view links
+// UserFollowingPanel - Panel for following other users' views
+// WorkspaceLinksHub - Overview of all sync groups in workspace
+export {
+    ViewLinkManager,
+    UserFollowingPanel,
+    WorkspaceLinksHub,
+    LINK_PROPERTIES,
+    LINK_MODES,
+    getPropertyById,
+    getModeById,
+    getModeIconChar,
+} from './LinkManagerPanels';
