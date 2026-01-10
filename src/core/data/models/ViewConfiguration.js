@@ -177,6 +177,9 @@ export class ViewSnapshot {
     this.isAutoSave = config.isAutoSave || false;
     this.restoredFrom = config.restoredFrom || null;
     this.tags = config.tags || [];
+
+    // Extended metadata (for VR snapshots, etc.)
+    this.metadata = config.metadata || {};
   }
 
   static fromView(view, options = {}) {
@@ -188,6 +191,7 @@ export class ViewSnapshot {
       createdByName: options.userName,
       isAutoSave: options.isAutoSave || false,
       tags: options.tags || [],
+      metadata: options.metadata || {},
       state: {
         camera: JSON.parse(JSON.stringify(view.camera)),
         filters: JSON.parse(JSON.stringify(view.filters)),
@@ -195,6 +199,7 @@ export class ViewSnapshot {
         colorMaps: JSON.parse(JSON.stringify(view.colorMaps)),
         annotationDisplay: JSON.parse(JSON.stringify(view.annotationDisplay)),
         cursorConfig: JSON.parse(JSON.stringify(view.cursorConfig)),
+        vrHints: JSON.parse(JSON.stringify(view.vrHints)),
       },
     });
   }
@@ -225,6 +230,7 @@ export class ViewSnapshot {
       isAutoSave: this.isAutoSave,
       restoredFrom: this.restoredFrom,
       tags: this.tags,
+      metadata: this.metadata,
     };
   }
 
@@ -347,6 +353,19 @@ export class ViewConfiguration {
       config.annotationDisplay instanceof AnnotationDisplayConfig
         ? config.annotationDisplay
         : new AnnotationDisplayConfig(config.annotationDisplay || {});
+
+    // =========================================================================
+    // VR RENDERING HINTS
+    // These are preferences for VR rendering, NOT synced state
+    // =========================================================================
+
+    this.vrHints = config.vrHints || {
+      vrScale: 1.0, // Default scale for VR
+      vrOrigin: [0, 0, 0], // Default origin in data coords
+      explorationMode: "fly", // Default exploration mode
+      lastToolId: null, // Last used VR tool
+      toolSettings: {}, // Per-tool settings
+    };
 
     // =========================================================================
     // SELECTIVE LINKING
@@ -685,6 +704,63 @@ export class ViewConfiguration {
   }
 
   // ===========================================================================
+  // VR SNAPSHOT METHODS
+  // ===========================================================================
+
+  /**
+   * Create a VR-specific snapshot with VR context metadata
+   * @param {Object} options - Snapshot options
+   * @param {Object} options.vrSession - VR exploration session
+   * @param {string} options.name - Snapshot name
+   * @param {string} options.userId - User ID
+   * @param {string} options.userName - User name
+   */
+  createVRSnapshot(options = {}) {
+    const { vrSession, name, userId, userName } = options;
+
+    return this.createSnapshot({
+      name: name || `VR: ${new Date().toLocaleTimeString()}`,
+      userId,
+      userName,
+      metadata: {
+        isVRSnapshot: true,
+        vrSessionId: vrSession?.id,
+        vrContext: {
+          vrScale: this.vrHints.vrScale,
+          vrOrigin: this.vrHints.vrOrigin,
+          explorationMode: this.vrHints.explorationMode,
+          activeTools: vrSession?.activeTools || [],
+          participantCount: vrSession?.participants?.length || 1,
+        },
+      },
+    });
+  }
+
+  /**
+   * Get all VR snapshots
+   */
+  getVRSnapshots() {
+    return this.snapshots.filter((s) => s.metadata?.isVRSnapshot);
+  }
+
+  /**
+   * Get snapshots from a specific VR session
+   * @param {string} vrSessionId - VR session ID
+   */
+  getSessionSnapshots(vrSessionId) {
+    return this.snapshots.filter((s) => s.metadata?.vrSessionId === vrSessionId);
+  }
+
+  /**
+   * Update VR hints
+   * @param {Object} updates - Fields to update
+   */
+  updateVRHints(updates) {
+    this.vrHints = { ...this.vrHints, ...updates };
+    this.updatedAt = Date.now();
+  }
+
+  // ===========================================================================
   // FORKING / DUPLICATION
   // ===========================================================================
 
@@ -988,6 +1064,8 @@ export class ViewConfiguration {
         this.annotationDisplay instanceof AnnotationDisplayConfig
           ? this.annotationDisplay.toJSON()
           : this.annotationDisplay,
+
+      vrHints: this.vrHints,
 
       links: {
         camera: this.links.camera?.toJSON() || null,

@@ -447,6 +447,106 @@ class WebSocketManager {
     });
   }
 
+  // ============================================================================
+  // VR SESSION EVENTS
+  // ============================================================================
+
+  /**
+   * Broadcast VR session created event
+   */
+  vrSessionCreated(projectId, session) {
+    this.broadcastToProject(projectId, {
+      type: "vr:session-created",
+      projectId,
+      session: {
+        id: session.id,
+        ownerUserId: session.owner_user_id,
+        ownerUserName: session.owner_user_name,
+        datasetId: session.dataset_id,
+        viewConfigurationId: session.view_configuration_id,
+        status: session.status,
+        allowJoin: session.allow_join,
+        createdAt: session.created_at,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Broadcast VR session updated event
+   */
+  vrSessionUpdated(projectId, sessionId, updates) {
+    this.broadcastToProject(projectId, {
+      type: "vr:session-updated",
+      projectId,
+      sessionId,
+      updates,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Broadcast VR session ended event
+   */
+  vrSessionEnded(projectId, sessionId) {
+    this.broadcastToProject(projectId, {
+      type: "vr:session-ended",
+      projectId,
+      sessionId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Broadcast VR participant joined event
+   */
+  vrParticipantJoined(projectId, sessionId, participant) {
+    this.broadcastToProject(projectId, {
+      type: "vr:participant-joined",
+      projectId,
+      sessionId,
+      participant: {
+        odUserId: participant.od_user_id,
+        userName: participant.user_name,
+        mode: participant.mode,
+        joinedAt: participant.joined_at,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Broadcast VR participant left event
+   */
+  vrParticipantLeft(projectId, sessionId, userId) {
+    this.broadcastToProject(projectId, {
+      type: "vr:participant-left",
+      projectId,
+      sessionId,
+      userId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Broadcast VR snapshot created event
+   */
+  vrSnapshotCreated(projectId, sessionId, snapshot) {
+    this.broadcastToProject(projectId, {
+      type: "vr:snapshot-created",
+      projectId,
+      sessionId,
+      snapshot: {
+        id: snapshot.id,
+        name: snapshot.name,
+        createdBy: snapshot.created_by,
+        createdByName: snapshot.created_by_name,
+        timestamp: snapshot.timestamp,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   /**
    * Get count of connected clients
    */

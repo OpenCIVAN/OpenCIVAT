@@ -1,6 +1,15 @@
 // src/core/data/models/Annotation.js
 // v2.0: Server-authoritative - IDs must come from server
 
+// =============================================================================
+// ANNOTATION OWNERSHIP MODEL
+// =============================================================================
+
+export const ANNOTATION_OWNERSHIP = Object.freeze({
+  INDIVIDUAL: "individual", // Single user owns
+  GROUP: "group", // Session/team owns
+});
+
 /**
  * Annotation - Represents user-created annotations on datasets
  *
@@ -55,6 +64,28 @@ export class Annotation {
     // For 'region': might include {points: [[x,y,z], [x,y,z], ...]}
     this.metadata = config.metadata || {};
 
+    // =========================================================================
+    // OWNERSHIP MODEL
+    // =========================================================================
+    this.ownership = config.ownership || ANNOTATION_OWNERSHIP.INDIVIDUAL;
+
+    // Group ownership fields
+    this.groupId = config.groupId || null; // VR session ID or team ID
+    this.groupName = config.groupName || null; // "VR Session: Brain Analysis"
+    this.contributors = config.contributors || []; // User IDs who contributed
+
+    // =========================================================================
+    // CREATION CONTEXT
+    // =========================================================================
+    this.creationContext = config.creationContext || {
+      mode: "desktop", // 'desktop' | 'vr'
+      vrSessionId: null, // If created in VR
+      vrScale: null, // Scale at which annotation was made
+    };
+
+    // User display name (for showing in UI)
+    this.createdByName = config.createdByName || null;
+
     // Validate required fields
     if (!this.datasetId) {
       throw new Error("Annotation requires a datasetId");
@@ -81,8 +112,59 @@ export class Annotation {
    * @returns {boolean} - Whether the user can edit this annotation
    */
   canEdit(userId) {
-    // Only the creator can edit (you might expand this later)
-    return userId === this.createdBy;
+    // For individual ownership, only creator can edit
+    if (this.ownership === ANNOTATION_OWNERSHIP.INDIVIDUAL) {
+      return userId === this.createdBy;
+    }
+    // For group ownership, any contributor can edit
+    return this.contributors.includes(userId);
+  }
+
+  // ===========================================================================
+  // OWNERSHIP METHODS
+  // ===========================================================================
+
+  /**
+   * Check if annotation is group owned
+   */
+  isGroupOwned() {
+    return this.ownership === ANNOTATION_OWNERSHIP.GROUP;
+  }
+
+  /**
+   * Check if a user can claim ownership of a group annotation
+   * @param {string} userId - The user who wants to claim ownership
+   */
+  canClaimOwnership(userId) {
+    return this.isGroupOwned() && this.contributors.includes(userId);
+  }
+
+  /**
+   * Claim individual ownership of a group annotation
+   * @param {string} userId - The user claiming ownership
+   * @param {string} userName - Display name of the user
+   */
+  claimOwnership(userId, userName) {
+    if (!this.canClaimOwnership(userId)) {
+      throw new Error("User is not a contributor");
+    }
+
+    this.ownership = ANNOTATION_OWNERSHIP.INDIVIDUAL;
+    this.createdBy = userId;
+    this.createdByName = userName;
+    this.modifiedBy = userId;
+    this.modifiedAt = Date.now();
+    // Keep groupId for provenance
+  }
+
+  /**
+   * Add a contributor to a group annotation
+   * @param {string} userId - The user who contributed
+   */
+  addContributor(userId) {
+    if (!this.contributors.includes(userId)) {
+      this.contributors.push(userId);
+    }
   }
 
   /**
@@ -126,6 +208,7 @@ export class Annotation {
       text: this.text,
       type: this.type,
       createdBy: this.createdBy,
+      createdByName: this.createdByName,
       createdAt: this.createdAt,
       modifiedBy: this.modifiedBy,
       modifiedAt: this.modifiedAt,
@@ -133,6 +216,11 @@ export class Annotation {
       visibility: this.visibility,
       sharedWith: this.sharedWith,
       metadata: this.metadata,
+      ownership: this.ownership,
+      groupId: this.groupId,
+      groupName: this.groupName,
+      contributors: this.contributors,
+      creationContext: this.creationContext,
     };
   }
 

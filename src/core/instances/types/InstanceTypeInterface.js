@@ -777,6 +777,145 @@ export class InstanceTypeHandler {
     // Default: use regular annotation rendering
     return this.setAnnotationVisibility(instanceData, true, annotations);
   }
+
+  // =========================================================================
+  // VR EXPLORATION
+  // These methods enable immersive VR exploration features
+  // =========================================================================
+
+  /**
+   * Does this handler support immersive VR exploration?
+   *
+   * Different from supportsInstanceVR() which just views in VR.
+   * Exploration means fly-through, scaling, slicing, etc.
+   *
+   * @returns {boolean}
+   */
+  supportsVRExploration() {
+    return false;
+  }
+
+  /**
+   * Get VR exploration capabilities
+   *
+   * @returns {Object}
+   */
+  getVRExplorationCapabilities() {
+    return {
+      supported: this.supportsVRExploration(),
+      explorationModes: [], // ['fly', 'teleport', 'walk', 'scale']
+      tools: [], // ['slice', 'measure', 'annotate', 'clip', 'probe']
+      maxRegionSize: null,
+      supportsLiveSync: false,
+      requiresPreprocessing: [],
+    };
+  }
+
+  /**
+   * Prepare data for VR exploration
+   *
+   * Called before entering VR to check if preprocessing is needed.
+   * May return status indicating preprocessing required.
+   *
+   * @param {Object} instanceData
+   * @param {VRExplorationSession} session
+   * @returns {Promise<Object>} { ready: boolean, message?: string }
+   */
+  async prepareForVRExploration(instanceData, session) {
+    return { ready: true };
+  }
+
+  /**
+   * Enter VR exploration mode
+   *
+   * @param {Object} instanceData
+   * @param {VRExplorationSession} session
+   * @param {XRSession} xrSession
+   * @returns {Promise<Object>} VR exploration context
+   */
+  async enterVRExploration(instanceData, session, xrSession) {
+    throw new Error(
+      `${this.getDisplayName()} does not support VR exploration. ` +
+        `Set supportsVRExploration() to true and implement this method.`
+    );
+  }
+
+  /**
+   * Update VR exploration frame
+   *
+   * @param {Object} vrContext - From enterVRExploration
+   * @param {XRFrame} frame
+   * @param {Object} inputState
+   */
+  async updateVRExploration(vrContext, frame, inputState) {
+    // Default: do nothing
+  }
+
+  /**
+   * Exit VR exploration
+   *
+   * @param {Object} vrContext
+   * @returns {Promise<Object>} Final state for archival
+   */
+  async exitVRExploration(vrContext) {
+    return {};
+  }
+
+  // =========================================================================
+  // VR TOOL SUPPORT
+  // =========================================================================
+
+  /**
+   * Add a slice plane
+   *
+   * @param {Object} vrContext
+   * @param {Object} plane - { id, origin, normal, visible, color, opacity }
+   */
+  async addSlicePlane(vrContext, plane) {
+    // Override in handler
+  }
+
+  /**
+   * Update a slice plane
+   *
+   * @param {Object} vrContext
+   * @param {Object} plane
+   */
+  async updateSlicePlane(vrContext, plane) {
+    // Override in handler
+  }
+
+  /**
+   * Remove a slice plane
+   *
+   * @param {Object} vrContext
+   * @param {string} planeId
+   */
+  async removeSlicePlane(vrContext, planeId) {
+    // Override in handler
+  }
+
+  /**
+   * Perform raycast in VR
+   *
+   * @param {Object} vrContext
+   * @param {Object} ray - { origin, direction }
+   * @returns {Object|null} { hit, position, normal, distance }
+   */
+  raycastVR(vrContext, ray) {
+    return null;
+  }
+
+  /**
+   * Get data value at position
+   *
+   * @param {Object} vrContext
+   * @param {Object} position - { x, y, z }
+   * @returns {Object|null} Data value info
+   */
+  probeDataVR(vrContext, position) {
+    return null;
+  }
 }
 
 /**

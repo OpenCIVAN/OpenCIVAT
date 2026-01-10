@@ -163,3 +163,13 @@ export {
 export { useRoomIndicator } from "./useRoomIndicator.js";
 
 export { useViewContextLogic } from "./useViewContextLogic.js";
+
+// =============================================================================
+// VR EXPLORATION
+// =============================================================================
+
+export { useVRSession } from "./useVRSession.js";
+export {
+  useVRPreprocessing,
+  PreprocessingStatus,
+} from "./useVRPreprocessing.js";

@@ -22,6 +22,8 @@ const WORKER_TYPES = {
   DECIMATION: "decimation",
   // Thumbnail generation (headless browser)
   THUMBNAIL: "thumbnail",
+  // VR preprocessing (LOD, octree, bounds)
+  VR_PREPROCESSING: "vr-preprocessing",
   // General compute (catch-all)
   GENERAL: "general",
 };
@@ -57,6 +59,12 @@ const OPERATION_WORKER_MAP = {
   "dr-pca": WORKER_TYPES.GENERAL,
   "dr-tsne": WORKER_TYPES.GENERAL,
   "dr-umap": WORKER_TYPES.GENERAL,
+
+  // VR preprocessing operations
+  "vr-lod-generation": WORKER_TYPES.VR_PREPROCESSING,
+  "vr-octree-build": WORKER_TYPES.VR_PREPROCESSING,
+  "vr-bounds-calculation": WORKER_TYPES.VR_PREPROCESSING,
+  "vr-texture-compress": WORKER_TYPES.VR_PREPROCESSING,
 };
 
 // ============================================================================

@@ -50,3 +50,11 @@ export {
   WORKSPACE_LINKS_HUB_PANEL_ID,
   LINK_PANEL_CONFIGS,
 } from "./LinkManagerFloating.jsx";
+
+// VR Session floating panel
+export {
+  VRSessionFloating,
+  useVRSessionFloating,
+  VR_SESSION_PANEL_ID,
+  VR_SESSION_CONFIG,
+} from "./VRSessionFloating.jsx";

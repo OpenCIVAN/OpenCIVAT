@@ -325,6 +325,98 @@ class ServerSyncService {
       // Show error toast (longer duration for errors)
       toast.error(`${jobName} failed: ${msg.error || "Unknown error"}`, 6000);
     });
+
+    // VR Session events - dispatch custom events for UI components
+    this.on("vr:session-created", (msg) => {
+      log.info(`VR session created: ${msg.session?.id}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-session-created", {
+          detail: msg,
+        })
+      );
+    });
+
+    this.on("vr:session-updated", (msg) => {
+      log.info(`VR session updated: ${msg.sessionId}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-session-updated", {
+          detail: msg,
+        })
+      );
+    });
+
+    this.on("vr:session-ended", (msg) => {
+      log.info(`VR session ended: ${msg.sessionId}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-session-ended", {
+          detail: msg,
+        })
+      );
+    });
+
+    this.on("vr:participant-joined", (msg) => {
+      log.info(`VR participant joined: ${msg.participant?.userName}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-participant-joined", {
+          detail: msg,
+        })
+      );
+    });
+
+    this.on("vr:participant-left", (msg) => {
+      log.info(`VR participant left: ${msg.userId}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-participant-left", {
+          detail: msg,
+        })
+      );
+    });
+
+    this.on("vr:snapshot-created", (msg) => {
+      log.info(`VR snapshot created: ${msg.snapshot?.name}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-snapshot-created", {
+          detail: msg,
+        })
+      );
+    });
+
+    // VR Preprocessing events
+    this.on("vr:preprocessing-started", (msg) => {
+      log.info(`VR preprocessing started: ${msg.datasetId}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-preprocessing-started", {
+          detail: msg,
+        })
+      );
+    });
+
+    this.on("vr:preprocessing-progress", (msg) => {
+      log.debug(`VR preprocessing progress: ${msg.datasetId} - ${msg.progress}%`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-preprocessing-progress", {
+          detail: msg,
+        })
+      );
+    });
+
+    this.on("vr:preprocessing-complete", (msg) => {
+      log.info(`VR preprocessing complete: ${msg.datasetId}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-preprocessing-complete", {
+          detail: msg,
+        })
+      );
+    });
+
+    this.on("vr:preprocessing-failed", (msg) => {
+      log.error(`VR preprocessing failed: ${msg.datasetId}`);
+      window.dispatchEvent(
+        new CustomEvent("cia:vr-preprocessing-failed", {
+          detail: msg,
+        })
+      );
+    });
   }
 
   on(type, handler) {

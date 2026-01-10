@@ -40,6 +40,9 @@ import {
     WORKSPACE_LINKS_HUB_PANEL_ID,
 } from "./LinkManagerFloating";
 
+// VR Session floating panel
+import { VRSessionFloating, VR_SESSION_PANEL_ID } from "./VRSessionFloating";
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -104,7 +107,8 @@ export function AllFloatingPanels() {
                     id !== INSTANCE_TOOLS_PANEL_ID &&
                     id !== VIEW_LINK_MANAGER_PANEL_ID &&
                     id !== USER_FOLLOWING_PANEL_ID &&
-                    id !== WORKSPACE_LINKS_HUB_PANEL_ID
+                    id !== WORKSPACE_LINKS_HUB_PANEL_ID &&
+                    id !== VR_SESSION_PANEL_ID
                 ) // Handled separately
                 .map(([panelId, panelState]) => {
                     // Find tab config for icon/color
@@ -139,6 +143,9 @@ export function AllFloatingPanels() {
 
             {/* Link Manager Panels - View Links, User Following, Workspace Links Hub */}
             <AllLinkManagerFloating />
+
+            {/* VR Session Panel - Shows during active VR sessions */}
+            <VRSessionFloating />
         </>
     );
 }

@@ -1444,6 +1444,32 @@ export function InstanceViewport({
         return null;
     }, [viewConfigId, hasData]); // Include hasData to re-derive after data loads
 
+    // =========================================================================
+    // VR EXPLORATION DATA
+    // =========================================================================
+    // Get viewConfig and dataset for VRExploreButton in ViewHeader
+
+    const vrExplorationData = useMemo(() => {
+        if (!viewConfigId || !hasData) return null;
+
+        try {
+            const view = getViewConfigurationManager()?.getView(viewConfigId);
+            if (!view) return null;
+
+            const dataset = view.datasetId
+                ? getDatasetManager()?.getDataset(view.datasetId)
+                : null;
+
+            return {
+                viewConfig: view,
+                dataset: dataset,
+                projectId: view.projectId || null,
+            };
+        } catch (e) {
+            return null;
+        }
+    }, [viewConfigId, hasData]);
+
     // Use position-based color when provided (from CanvasCell), fall back to instance color
     const colorHex = positionColor || instanceColor?.hex || '#60a5fa';
     const colorRgb = hexToRgb(colorHex);
@@ -1489,6 +1515,11 @@ export function InstanceViewport({
                 onDuplicate={handleDuplicate}
                 onShowToolbar={showToolbar}
                 onHideToolbar={hideToolbar}
+                // VR Exploration props
+                instanceId={actualInstanceId}
+                dataset={vrExplorationData?.dataset}
+                viewConfig={vrExplorationData?.viewConfig}
+                projectId={vrExplorationData?.projectId}
             />
 
             {/* NOTE: InstanceToolbar removed - tools now displayed in InstanceToolsNotch

@@ -15,6 +15,7 @@ import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms';
 import { MenuItem } from '@UI/react/components/molecules';
+import { VRExploreButton } from '@UI/react/components/molecules/VRExploreButton';
 import { hexToRgbString } from '@UI/react/utils/canvasColors.js';
 
 import './ViewHeader.scss';
@@ -300,6 +301,14 @@ export const ViewHeader = memo(function ViewHeader({
     onShare,
     onOpenInIsolation,
 
+    // VR Exploration props (optional - enables VRExploreButton)
+    instanceId,
+    dataset,
+    viewConfig,
+    projectId,
+    selection,
+    activeSessions = [],
+
     // Hover callbacks
     onShowToolbar,
     onHideToolbar,
@@ -412,8 +421,22 @@ export const ViewHeader = memo(function ViewHeader({
                     </div>
                 )}
 
-                {/* VR/AR button */}
-                {!isMinimal && onVRMode && (
+                {/* VR Exploration button - use VRExploreButton when dataset available */}
+                {!isMinimal && dataset && (
+                    <VRExploreButton
+                        instanceId={instanceId}
+                        dataset={dataset}
+                        viewConfig={viewConfig}
+                        projectId={projectId}
+                        selection={selection}
+                        activeSessions={activeSessions}
+                        size="sm"
+                        variant="minimal"
+                        className="view-header__vr-button"
+                    />
+                )}
+                {/* Fallback VR/AR button when no dataset (legacy behavior) */}
+                {!isMinimal && !dataset && onVRMode && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();

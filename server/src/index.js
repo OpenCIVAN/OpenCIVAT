@@ -199,6 +199,9 @@ const thumbnailsRouter = require("./routes/thumbnails");
 // Thumbnail callback (worker-to-server communication)
 const thumbnailCallbackRouter = require("./routes/thumbnailCallback");
 
+// VR exploration routes
+const vrRouter = require("./routes/vr");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
@@ -240,6 +243,9 @@ app.use("/api", optionalAuth, chatRouter);
 
 // Sync status routes (client reconciliation)
 app.use("/api/sync", optionalAuth, syncRouter);
+
+// VR exploration routes
+app.use("/api/vr", optionalAuth, vrRouter);
 
 // ============================================================================
 // HEALTH & STATUS ENDPOINTS

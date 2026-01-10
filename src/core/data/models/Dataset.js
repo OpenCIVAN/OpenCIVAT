@@ -4,6 +4,19 @@
 import { Annotation } from "@Core/data/models/Annotation.js";
 import { dataset as log } from "@Utils/logger.js";
 
+// =============================================================================
+// VR READINESS STATUS
+// =============================================================================
+
+export const VR_READINESS_STATUS = Object.freeze({
+  PENDING: "pending", // Not yet processed
+  QUEUED: "queued", // In preprocessing queue
+  PROCESSING: "processing", // Currently being processed
+  READY: "ready", // Fully optimized for VR
+  FAILED: "failed", // Processing failed
+  NOT_APPLICABLE: "n-a", // File type doesn't support VR
+});
+
 /**
  * Dataset - Represents a raw data file with associated metadata and annotations
  *
@@ -45,6 +58,29 @@ export class Dataset {
     this.fileStatus = config.fileStatus || this._determineInitialFileStatus();
 
     this.annotations = config.annotations || [];
+
+    // =========================================================================
+    // VR OPTIMIZATION STATUS
+    // =========================================================================
+    this.vrReadiness = config.vrReadiness || {
+      status: VR_READINESS_STATUS.PENDING,
+      queuedAt: null,
+      startedAt: null,
+      completedAt: null,
+      progress: 0, // 0-100
+      estimatedCompletion: null,
+
+      // Results (when status is 'ready')
+      lodLevels: 0, // Number of LOD levels generated
+      chunkCount: 0, // Number of volume chunks
+      recommendedScale: 1.0, // Recommended VR scale
+      bounds: null, // Data bounds [xMin, xMax, yMin, yMax, zMin, zMax]
+      processedFiles: [], // S3 paths to processed files
+
+      // Error info (when status is 'failed')
+      errorMessage: null,
+      errorCode: null,
+    };
   }
 
   /**
@@ -142,6 +178,7 @@ export class Dataset {
       userId: this.userId,
       metadata: this.metadata,
       annotations: this.annotations,
+      vrReadiness: this.vrReadiness,
       // Note: fileStatus, rawFile, parsedDataCache are NOT persisted
       // They are runtime state that gets recreated on load
     };
@@ -194,9 +231,50 @@ export class Dataset {
       userId: json.userId,
       metadata: json.metadata,
       annotations: json.annotations,
+      vrReadiness: json.vrReadiness,
       // fileStatus will be determined by _determineInitialFileStatus()
       // based on whether publicPath exists
     });
+  }
+
+  // ===========================================================================
+  // VR READINESS METHODS
+  // ===========================================================================
+
+  /**
+   * Check if dataset is ready for VR exploration
+   */
+  isVRReady() {
+    return this.vrReadiness.status === VR_READINESS_STATUS.READY;
+  }
+
+  /**
+   * Check if VR preprocessing is in progress
+   */
+  isVRProcessing() {
+    return (
+      this.vrReadiness.status === VR_READINESS_STATUS.PROCESSING ||
+      this.vrReadiness.status === VR_READINESS_STATUS.QUEUED
+    );
+  }
+
+  /**
+   * Get a specific VR processed file
+   * @param {string} type - File type (e.g., 'lod', 'chunk')
+   * @param {number} level - LOD level or chunk index
+   */
+  getVRProcessedFile(type, level = 0) {
+    return this.vrReadiness.processedFiles?.find(
+      (f) => f.type === type && f.level === level
+    );
+  }
+
+  /**
+   * Update VR readiness status
+   * @param {Object} updates - Fields to update
+   */
+  updateVRReadiness(updates) {
+    this.vrReadiness = { ...this.vrReadiness, ...updates };
   }
 
   /**

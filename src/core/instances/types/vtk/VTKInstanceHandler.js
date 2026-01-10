@@ -46,6 +46,7 @@ import {
   worldToScreen,
 } from "@VTK/utils/vtkRaycaster.js";
 import { vrManager } from "@Core/vr/VRManager.js";
+import { VRControllerRenderer } from "@Core/vr/VRControllerRenderer.js";
 import { vrControllers } from "@VTK/vr/VTKVRController.js";
 import {
   updateCursorWorldPosition,
@@ -71,6 +72,8 @@ import vtkSphereSource from "@kitware/vtk.js/Filters/Sources/SphereSource";
 import vtkConeSource from "@kitware/vtk.js/Filters/Sources/ConeSource";
 import vtkCubeSource from "@kitware/vtk.js/Filters/Sources/CubeSource";
 import vtkCylinderSource from "@kitware/vtk.js/Filters/Sources/CylinderSource";
+import vtkPlaneSource from "@kitware/vtk.js/Filters/Sources/PlaneSource";
+import vtkCellPicker from "@kitware/vtk.js/Rendering/Core/CellPicker";
 import "@kitware/vtk.js/Rendering/Profiles/Geometry";
 
 /**
@@ -3660,6 +3663,528 @@ console.log('Tools:', tools);
     // - Disable expensive effects
     // - Adjust LOD settings
     return null;
+  }
+
+  // ===========================================================================
+  // VR EXPLORATION IMPLEMENTATION
+  // ===========================================================================
+
+  /**
+   * Does this handler support immersive VR exploration?
+   */
+  supportsVRExploration() {
+    return true;
+  }
+
+  /**
+   * Get VR exploration capabilities
+   */
+  getVRExplorationCapabilities() {
+    return {
+      supported: true,
+      explorationModes: ["fly", "teleport", "walk", "scale"],
+      tools: ["slice", "measure", "annotate", "clip", "probe"],
+      maxRegionSize: null,
+      supportsLiveSync: true,
+      requiresPreprocessing: ["lod-generation"],
+    };
+  }
+
+  /**
+   * Prepare data for VR exploration
+   */
+  async prepareForVRExploration(instanceData, session) {
+    const dataset = instanceData.dataset;
+
+    if (!dataset?.vrReadiness) {
+      // No preprocessing info, assume ready
+      return { ready: true };
+    }
+
+    if (dataset.vrReadiness.status === "ready") {
+      return { ready: true };
+    }
+
+    if (dataset.vrReadiness.status === "processing") {
+      return {
+        ready: false,
+        message: "VR preprocessing in progress",
+        progress: dataset.vrReadiness.progress,
+      };
+    }
+
+    return { ready: false, message: "VR preprocessing required" };
+  }
+
+  /**
+   * Enter VR exploration mode
+   */
+  async enterVRExploration(instanceData, session, xrSession) {
+    const { instanceId, sceneObjects } = instanceData;
+
+    log.info(`Entering VR exploration for instance ${instanceId}`);
+
+    if (!sceneObjects) {
+      throw new Error("Cannot enter VR exploration: instance not initialized");
+    }
+
+    const { renderer, renderWindow, openGLRenderWindow, camera } = sceneObjects;
+
+    // Get dataset bounds
+    const bounds = renderer.computeVisiblePropBounds();
+    const dataBounds = bounds || [-1, 1, -1, 1, -1, 1];
+
+    // Store original camera state
+    const originalCameraState = {
+      position: camera.getPosition(),
+      focalPoint: camera.getFocalPoint(),
+      viewUp: camera.getViewUp(),
+      parallelScale: camera.getParallelScale(),
+      clippingRange: camera.getClippingRange(),
+      viewAngle: camera.getViewAngle(),
+    };
+
+    // Get WebGL context
+    const canvas = openGLRenderWindow.getCanvas();
+    const gl =
+      canvas.getContext("webgl2", { xrCompatible: true }) ||
+      canvas.getContext("webgl", { xrCompatible: true });
+
+    if (!gl) {
+      throw new Error("Could not get WebGL context for VR exploration");
+    }
+
+    // Make context XR compatible
+    await gl.makeXRCompatible();
+
+    // Create XR WebGL layer
+    const xrLayer = new XRWebGLLayer(xrSession, gl);
+
+    // Update session render state
+    await xrSession.updateRenderState({
+      baseLayer: xrLayer,
+    });
+
+    // Create VR exploration context
+    const vrContext = {
+      instanceId,
+      session,
+      xrSession,
+      xrLayer,
+      gl,
+      sceneObjects,
+      dataBounds,
+      originalCameraState,
+
+      // VR state
+      vrScale: session.defaultVRScale || 1.0,
+      vrOrigin: [0, 0, 0],
+
+      // Slice planes
+      slicePlanes: new Map(),
+
+      // Measurements
+      measurements: [],
+
+      // Clipping
+      clipBox: null,
+
+      // Controller renderer (initialized by _initVRExplorationControllers)
+      controllerRenderer: null,
+    };
+
+    // Initialize VR controllers visualization
+    await this._initVRExplorationControllers(vrContext);
+
+    log.info(`VR exploration started for instance ${instanceId}`);
+
+    return vrContext;
+  }
+
+  /**
+   * Update VR exploration frame
+   */
+  async updateVRExploration(vrContext, frame, inputState) {
+    const { sceneObjects, xrSession, xrLayer, gl, vrScale, vrOrigin } =
+      vrContext;
+    const { renderer, renderWindow, camera } = sceneObjects;
+
+    if (!frame) return;
+
+    // Get reference space
+    let refSpace;
+    try {
+      refSpace = await xrSession.requestReferenceSpace("local-floor");
+    } catch (e) {
+      refSpace = await xrSession.requestReferenceSpace("local");
+    }
+
+    const viewerPose = frame.getViewerPose(refSpace);
+    if (!viewerPose) return;
+
+    // Bind XR framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, xrLayer.framebuffer);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Render for each eye
+    for (const view of viewerPose.views) {
+      const viewport = xrLayer.getViewport(view);
+      gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+
+      // Update camera from VR view
+      this._updateCameraFromVRPose(camera, view, vrScale, vrOrigin);
+
+      // Render the scene
+      renderer.render();
+    }
+
+    // Update controller visuals
+    this._updateVRExplorationControllers(vrContext, inputState);
+  }
+
+  /**
+   * Exit VR exploration
+   */
+  async exitVRExploration(vrContext) {
+    const { instanceId, sceneObjects, originalCameraState, slicePlanes } =
+      vrContext;
+    const { camera, renderer, renderWindow } = sceneObjects;
+
+    log.info(`Exiting VR exploration for instance ${instanceId}`);
+
+    // Restore original camera
+    if (originalCameraState) {
+      camera.setPosition(...originalCameraState.position);
+      camera.setFocalPoint(...originalCameraState.focalPoint);
+      camera.setViewUp(...originalCameraState.viewUp);
+      camera.setParallelScale(originalCameraState.parallelScale);
+      camera.setClippingRange(...originalCameraState.clippingRange);
+      camera.setViewAngle(originalCameraState.viewAngle);
+      camera.setProjectionMatrix(null);
+    }
+
+    // Clean up slice planes
+    for (const [id, planeData] of slicePlanes) {
+      if (planeData.actor) {
+        renderer.removeActor(planeData.actor);
+      }
+    }
+    slicePlanes.clear();
+
+    // Clean up controller visuals
+    this._cleanupVRExplorationControllers(vrContext);
+
+    renderWindow.render();
+
+    log.info(`VR exploration ended for instance ${instanceId}`);
+
+    return {
+      finalSlicePlanes: Array.from(slicePlanes.values()),
+      measurements: vrContext.measurements,
+    };
+  }
+
+  // ===========================================================================
+  // VR SLICE PLANE SUPPORT
+  // ===========================================================================
+
+  /**
+   * Add a slice plane
+   */
+  async addSlicePlane(vrContext, plane) {
+    const { sceneObjects, slicePlanes, dataBounds } = vrContext;
+    const { renderer, renderWindow } = sceneObjects;
+
+    // Create VTK plane source
+    const planeSource = vtkPlaneSource.newInstance();
+
+    // Size plane based on data bounds
+    const size = this._computePlaneSize(dataBounds);
+    const halfSize = size / 2;
+
+    // Calculate plane corners based on origin and normal
+    const origin = plane.origin;
+    const normal = plane.normal;
+
+    // Create orthogonal vectors to the normal
+    const up = Math.abs(normal[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+    const right = this._crossProduct(normal, up);
+    this._normalizeVector(right);
+    const actualUp = this._crossProduct(right, normal);
+    this._normalizeVector(actualUp);
+
+    // Set plane corners
+    planeSource.setOrigin(
+      origin[0] - right[0] * halfSize - actualUp[0] * halfSize,
+      origin[1] - right[1] * halfSize - actualUp[1] * halfSize,
+      origin[2] - right[2] * halfSize - actualUp[2] * halfSize
+    );
+    planeSource.setPoint1(
+      origin[0] + right[0] * halfSize - actualUp[0] * halfSize,
+      origin[1] + right[1] * halfSize - actualUp[1] * halfSize,
+      origin[2] + right[2] * halfSize - actualUp[2] * halfSize
+    );
+    planeSource.setPoint2(
+      origin[0] - right[0] * halfSize + actualUp[0] * halfSize,
+      origin[1] - right[1] * halfSize + actualUp[1] * halfSize,
+      origin[2] - right[2] * halfSize + actualUp[2] * halfSize
+    );
+
+    const mapper = vtkMapper.newInstance();
+    mapper.setInputConnection(planeSource.getOutputPort());
+
+    const actor = vtkActor.newInstance();
+    actor.setMapper(mapper);
+    actor.getProperty().setColor(...(plane.color || [1, 0.5, 0]));
+    actor.getProperty().setOpacity(plane.opacity || 0.5);
+    actor.getProperty().setRepresentationToSurface();
+
+    renderer.addActor(actor);
+
+    slicePlanes.set(plane.id, {
+      ...plane,
+      source: planeSource,
+      mapper,
+      actor,
+    });
+
+    renderWindow.render();
+  }
+
+  /**
+   * Update a slice plane
+   */
+  async updateSlicePlane(vrContext, plane) {
+    const planeData = vrContext.slicePlanes.get(plane.id);
+    if (!planeData) return;
+
+    const { dataBounds } = vrContext;
+    const size = this._computePlaneSize(dataBounds);
+    const halfSize = size / 2;
+
+    const origin = plane.origin;
+    const normal = plane.normal;
+
+    // Recalculate orthogonal vectors
+    const up = Math.abs(normal[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+    const right = this._crossProduct(normal, up);
+    this._normalizeVector(right);
+    const actualUp = this._crossProduct(right, normal);
+    this._normalizeVector(actualUp);
+
+    // Update plane corners
+    planeData.source.setOrigin(
+      origin[0] - right[0] * halfSize - actualUp[0] * halfSize,
+      origin[1] - right[1] * halfSize - actualUp[1] * halfSize,
+      origin[2] - right[2] * halfSize - actualUp[2] * halfSize
+    );
+    planeData.source.setPoint1(
+      origin[0] + right[0] * halfSize - actualUp[0] * halfSize,
+      origin[1] + right[1] * halfSize - actualUp[1] * halfSize,
+      origin[2] + right[2] * halfSize - actualUp[2] * halfSize
+    );
+    planeData.source.setPoint2(
+      origin[0] - right[0] * halfSize + actualUp[0] * halfSize,
+      origin[1] - right[1] * halfSize + actualUp[1] * halfSize,
+      origin[2] - right[2] * halfSize + actualUp[2] * halfSize
+    );
+
+    planeData.source.modified();
+    Object.assign(planeData, plane);
+
+    vrContext.sceneObjects.renderWindow.render();
+  }
+
+  /**
+   * Remove a slice plane
+   */
+  async removeSlicePlane(vrContext, planeId) {
+    const planeData = vrContext.slicePlanes.get(planeId);
+    if (!planeData) return;
+
+    vrContext.sceneObjects.renderer.removeActor(planeData.actor);
+    vrContext.slicePlanes.delete(planeId);
+
+    vrContext.sceneObjects.renderWindow.render();
+  }
+
+  // ===========================================================================
+  // VR RAYCASTING
+  // ===========================================================================
+
+  /**
+   * Perform raycast in VR
+   */
+  raycastVR(vrContext, ray) {
+    if (!ray || !vrContext?.sceneObjects) return null;
+
+    const { renderer } = vrContext.sceneObjects;
+
+    // Create VTK picker
+    const picker = vtkCellPicker.newInstance();
+    picker.setTolerance(0.001);
+
+    // Convert ray to VTK format
+    const p1 = [ray.origin.x, ray.origin.y, ray.origin.z];
+    const direction = [ray.direction.x, ray.direction.y, ray.direction.z];
+    const p2 = [
+      p1[0] + direction[0] * 1000,
+      p1[1] + direction[1] * 1000,
+      p1[2] + direction[2] * 1000,
+    ];
+
+    const hit = picker.pick(p1, p2, renderer);
+
+    if (hit) {
+      const position = picker.getPickPosition();
+      const normal = picker.getPickNormal() || [0, 1, 0];
+
+      return {
+        hit: true,
+        position: { x: position[0], y: position[1], z: position[2] },
+        normal: { x: normal[0], y: normal[1], z: normal[2] },
+        distance: Math.sqrt(
+          Math.pow(position[0] - p1[0], 2) +
+            Math.pow(position[1] - p1[1], 2) +
+            Math.pow(position[2] - p1[2], 2)
+        ),
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Get data value at position
+   */
+  probeDataVR(vrContext, position) {
+    if (!vrContext?.sceneObjects) return null;
+
+    // For point data, we would find the nearest point and return its data
+    // For volume data, we would sample at the position
+    // This is a placeholder that would need to be implemented based on data type
+
+    return null;
+  }
+
+  // ===========================================================================
+  // VR EXPLORATION HELPER METHODS
+  // ===========================================================================
+
+  /**
+   * Initialize VR controller visuals for exploration
+   * @private
+   */
+  async _initVRExplorationControllers(vrContext) {
+    const { sceneObjects, vrScale, vrOrigin } = vrContext;
+    const { renderer } = sceneObjects;
+
+    // Use VRControllerRenderer for richer visualization
+    vrContext.controllerRenderer = new VRControllerRenderer(renderer, {
+      vrScale,
+      vrOrigin,
+    });
+
+    log.debug("VR controller renderer initialized");
+  }
+
+  /**
+   * Update VR controller visuals
+   * @private
+   */
+  _updateVRExplorationControllers(vrContext, inputState) {
+    const { controllerRenderer, vrScale, vrOrigin } = vrContext;
+    if (!controllerRenderer) return;
+
+    // Update VR transform if it changed
+    controllerRenderer.setVRTransform(vrScale, vrOrigin);
+
+    // Delegate to controller renderer
+    controllerRenderer.update(inputState);
+  }
+
+  /**
+   * Clean up VR controller visuals
+   * @private
+   */
+  _cleanupVRExplorationControllers(vrContext) {
+    const { controllerRenderer } = vrContext;
+    if (!controllerRenderer) return;
+
+    controllerRenderer.dispose();
+    vrContext.controllerRenderer = null;
+  }
+
+  /**
+   * Update camera from VR pose
+   * @private
+   */
+  _updateCameraFromVRPose(camera, xrView, vrScale, vrOrigin) {
+    const viewMatrix = xrView.transform.inverse.matrix;
+
+    // Extract position (column-major: indices 12, 13, 14)
+    const position = [
+      viewMatrix[12] / vrScale + vrOrigin[0],
+      viewMatrix[13] / vrScale + vrOrigin[1],
+      viewMatrix[14] / vrScale + vrOrigin[2],
+    ];
+
+    // Extract forward direction (negative Z in WebXR)
+    const forward = [-viewMatrix[8], -viewMatrix[9], -viewMatrix[10]];
+
+    // Extract up direction (column 1)
+    const up = [viewMatrix[4], viewMatrix[5], viewMatrix[6]];
+
+    // Calculate focal point
+    const focalDistance = camera.getDistance() || 1.0;
+    const focalPoint = [
+      position[0] + forward[0] * focalDistance,
+      position[1] + forward[1] * focalDistance,
+      position[2] + forward[2] * focalDistance,
+    ];
+
+    camera.setPosition(...position);
+    camera.setFocalPoint(...focalPoint);
+    camera.setViewUp(...up);
+
+    // Set projection matrix from XR
+    camera.setProjectionMatrix(xrView.projectionMatrix);
+  }
+
+  /**
+   * Compute plane size from data bounds
+   * @private
+   */
+  _computePlaneSize(bounds) {
+    const sizeX = bounds[1] - bounds[0];
+    const sizeY = bounds[3] - bounds[2];
+    const sizeZ = bounds[5] - bounds[4];
+    return Math.max(sizeX, sizeY, sizeZ) * 1.5;
+  }
+
+  /**
+   * Cross product of two vectors
+   * @private
+   */
+  _crossProduct(a, b) {
+    return [
+      a[1] * b[2] - a[2] * b[1],
+      a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0],
+    ];
+  }
+
+  /**
+   * Normalize a vector in place
+   * @private
+   */
+  _normalizeVector(v) {
+    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    if (len > 0) {
+      v[0] /= len;
+      v[1] /= len;
+      v[2] /= len;
+    }
   }
 
   // ===========================================================================
