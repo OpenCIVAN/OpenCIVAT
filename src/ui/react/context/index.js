@@ -40,3 +40,11 @@ export {
     INPUT_MODES,
     VR_CONTROLLER_MAPPING,
 } from './VRInteractionContext.jsx';
+
+// VR accessibility settings context
+export {
+    VRAccessibilityProvider,
+    useVRAccessibility,
+    useVRAccessibilitySection,
+    DEFAULT_VR_ACCESSIBILITY,
+} from './VRAccessibilityContext.jsx';

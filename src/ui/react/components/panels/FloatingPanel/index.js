@@ -5,6 +5,7 @@
 
 // Core floating panel components
 export { FloatingPanel, FloatingPanelPortal } from "./FloatingPanel.jsx";
+export { PriorityPanel } from "./PriorityPanel.jsx";
 export { PopOutButton } from "./PopOutButton.jsx";
 export { AllFloatingPanels } from "./AllFloatingPanels.jsx";
 

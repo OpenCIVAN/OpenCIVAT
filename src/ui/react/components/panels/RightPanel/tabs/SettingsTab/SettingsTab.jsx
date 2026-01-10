@@ -16,6 +16,7 @@ import {
 } from '@UI/react/components/organisms/ResizableSections';
 import { useSettingsTab } from './hooks/useSettingsTab';
 import { YourPreferences } from './sections/YourPreferences';
+import { VRSettings } from './sections/VRSettings';
 import { ProjectInfo } from './sections/ProjectInfo';
 import { AdminSettings } from './sections/AdminSettings';
 import { DangerZone } from './sections/DangerZone';
@@ -73,6 +74,7 @@ export function SettingsTab({
     // Section states for resizable sections
     const { states: sectionStates, toggleSection, resizeSection } = useSectionStates({
         preferences: { expanded: true, flexGrow: 2 },
+        vr: { expanded: true, flexGrow: 1 },
         project: { expanded: true, flexGrow: 1 },
         admin: { expanded: true, flexGrow: 1 },
         danger: { expanded: false, flexGrow: 1 },
@@ -120,10 +122,19 @@ export function SettingsTab({
                 </ResizableSection>
 
                 <ResizableSection
+                    id="vr"
+                    icon="glasses"
+                    label="VR Settings"
+                    color="purple"
+                >
+                    <VRSettings />
+                </ResizableSection>
+
+                <ResizableSection
                     id="project"
                     icon="building"
                     label="Project Info"
-                    color="purple"
+                    color="teal"
                 >
                     <ProjectInfo project={project} />
                 </ResizableSection>

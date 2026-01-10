@@ -69,6 +69,7 @@ import {
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 import { FloatingCanvasNavigator, useNavigatorButton } from "@UI/react/components/panels/LayoutPanel";
 import { CanvasOperationsPanel } from "@UI/react/components/panels/FloatingPanel/CanvasOperationsPanel";
+import { VRAccessibilityProvider } from "@UI/react/context/VRAccessibilityContext";
 
 // =============================================================================
 // MODALS
@@ -77,6 +78,17 @@ import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
 import { KeyboardShortcutsModal } from "@UI/react/components/modals/KeyboardShortcutsModal";
 import { GlobalSearchModal } from "@UI/react/components/modals/GlobalSearchModal";
 import { DeleteViewDialog } from "@UI/react/components/modals/confirmations/DeleteViewDialog";
+
+// =============================================================================
+// TOAST NOTIFICATIONS
+// =============================================================================
+import { ToastContainer } from "@UI/react/components/molecules/Toast";
+import { toast } from "@UI/react/store/toastStore";
+
+// =============================================================================
+// CANVAS HISTORY (UNDO/REDO)
+// =============================================================================
+import { canvasHistory } from "@UI/react/store/canvasHistoryStore";
 
 // =============================================================================
 // HOOKS
@@ -350,13 +362,21 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, [setViewportSize]);
 
   const handleUndo = useCallback(() => {
-    log.debug("Undo - not yet implemented");
-    // TODO: Implement undo with canvas history
+    if (canvasHistory.canUndo()) {
+      log.debug("Undo triggered");
+      canvasHistory.undo();
+    } else {
+      log.debug("Nothing to undo");
+    }
   }, []);
 
   const handleRedo = useCallback(() => {
-    log.debug("Redo - not yet implemented");
-    // TODO: Implement redo with canvas history
+    if (canvasHistory.canRedo()) {
+      log.debug("Redo triggered");
+      canvasHistory.redo();
+    } else {
+      log.debug("Nothing to redo");
+    }
   }, []);
 
   const handleTogglePopout = useCallback((popoutId) => {
@@ -497,19 +517,91 @@ export function CIAWebApp({ username, userId, projectId }) {
     }));
   }, []);
 
-  const handleViewDuplicate = useCallback((event) => {
-    const { viewId, view } = event.detail || {};
+  const handleViewDuplicate = useCallback(async (event) => {
+    const { viewId, view, canvasId: eventCanvasId } = event.detail || {};
     if (!viewId) return;
 
     log.info("Duplicating view:", view?.name || viewId);
-    // TODO: Implement view duplication
-    // This should:
-    // 1. Create a copy of the view configuration
-    // 2. Place it on the canvas (next available cell or prompt user)
-    // 3. Focus the new view
-    window.dispatchEvent(new CustomEvent('cia:toast', {
-      detail: { message: `Duplicated "${view?.name || 'view'}"`, type: 'success' }
-    }));
+
+    try {
+      // Get the managers
+      const viewConfigManager = getViewConfigurationManager();
+      const { canvasManager } = await import('@Core/data/managers/CanvasManager.js');
+
+      // 1. Duplicate the view configuration
+      const newView = await viewConfigManager.duplicateView(viewId);
+
+      // 2. Find the canvas to place the new view on
+      const targetCanvasId = eventCanvasId || canvasManager.getActiveCanvas()?.id;
+      if (!targetCanvasId) {
+        toast.error('No active canvas to place duplicated view');
+        return;
+      }
+
+      // 3. Find an empty cell (scan row by row for first empty)
+      const canvas = canvasManager.getActiveCanvas();
+      const placements = canvas?.placements || [];
+      const occupiedCells = new Set(placements.map(p => `${p.row}-${p.col}`));
+
+      let targetRow = 0;
+      let targetCol = 0;
+      const maxRows = canvas?.size?.rows || 10;
+      const maxCols = canvas?.size?.cols || 10;
+
+      // Find first empty cell
+      let found = false;
+      for (let r = 0; r < maxRows && !found; r++) {
+        for (let c = 0; c < maxCols && !found; c++) {
+          if (!occupiedCells.has(`${r}-${c}`)) {
+            targetRow = r;
+            targetCol = c;
+            found = true;
+          }
+        }
+      }
+
+      // 4. Place the new view on the canvas
+      await canvasManager.addPlacement(targetCanvasId, {
+        row: targetRow,
+        col: targetCol,
+        rowSpan: 1,
+        colSpan: 1,
+        content: {
+          type: 'view',
+          viewConfigurationId: newView.id,
+        },
+      });
+
+      // 5. Record in history for undo
+      canvasHistory.record({
+        type: 'ADD',
+        description: `Duplicate "${view?.name || 'view'}"`,
+        undo: async () => {
+          // Remove the placement
+          const placement = canvasManager.getPlacementForView(newView.id, targetCanvasId);
+          if (placement) {
+            await canvasManager.removePlacement(targetCanvasId, placement.id);
+          }
+        },
+        redo: async () => {
+          await canvasManager.addPlacement(targetCanvasId, {
+            row: targetRow,
+            col: targetCol,
+            rowSpan: 1,
+            colSpan: 1,
+            content: {
+              type: 'view',
+              viewConfigurationId: newView.id,
+            },
+          });
+        },
+      });
+
+      toast.success(`Duplicated "${view?.name || 'view'}" to ${newView.name}`);
+    } catch (error) {
+      log.error("Failed to duplicate view:", error);
+      toast.error(`Failed to duplicate view: ${error.message}`);
+    }
   }, []);
 
   const handleViewSettings = useCallback((event) => {
@@ -561,6 +653,37 @@ export function CIAWebApp({ username, userId, projectId }) {
   }, [handleDeleteView]);
 
   // ===========================================================================
+  // TOAST EVENT LISTENER
+  // ===========================================================================
+  useEffect(() => {
+    const handleToastEvent = (e) => {
+      const { message, type = 'info', ...options } = e.detail || {};
+      if (!message) return;
+
+      // Call the appropriate toast method based on type
+      switch (type) {
+        case 'success':
+          toast.success(message, options);
+          break;
+        case 'warning':
+          toast.warning(message, options);
+          break;
+        case 'error':
+          toast.error(message, options);
+          break;
+        case 'sync':
+          toast.sync(message, options);
+          break;
+        default:
+          toast.info(message, options);
+      }
+    };
+
+    window.addEventListener('cia:toast', handleToastEvent);
+    return () => window.removeEventListener('cia:toast', handleToastEvent);
+  }, []);
+
+  // ===========================================================================
   // KEYBOARD SHORTCUTS FOR MODALS
   // ===========================================================================
   useEffect(() => {
@@ -602,11 +725,25 @@ export function CIAWebApp({ username, userId, projectId }) {
         window.dispatchEvent(new CustomEvent('cia:toggle-canvas-navigator'));
         return;
       }
+
+      // ⌘/Ctrl + Z = Undo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      // ⌘/Ctrl + Shift + Z OR ⌘/Ctrl + Y = Redo
+      if ((e.metaKey || e.ctrlKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleUndo, handleRedo]);
 
   // ===========================================================================
   // RENDER CENTER PANEL
@@ -636,10 +773,11 @@ export function CIAWebApp({ username, userId, projectId }) {
   // RENDER
   // ===========================================================================
   return (
-    <FloatingPanelProvider>
-      <LeftPanelProvider>
-        <RightPanelProvider>
-          <LayoutPanelProvider canvasId={canvasId}>
+    <VRAccessibilityProvider>
+      <FloatingPanelProvider>
+        <LeftPanelProvider>
+          <RightPanelProvider>
+            <LayoutPanelProvider canvasId={canvasId}>
             <ThreeEdgeLayout
               // ─────────────────────────────────────────────────────────────
               // TOP BAR (48px Header)
@@ -750,10 +888,14 @@ export function CIAWebApp({ username, userId, projectId }) {
               view={deleteViewTarget}
               onConfirm={handleConfirmDeleteView}
             />
-          </LayoutPanelProvider>
-        </RightPanelProvider>
-      </LeftPanelProvider>
-    </FloatingPanelProvider>
+
+            {/* Toast Notifications */}
+            <ToastContainer />
+            </LayoutPanelProvider>
+          </RightPanelProvider>
+        </LeftPanelProvider>
+      </FloatingPanelProvider>
+    </VRAccessibilityProvider>
   );
 }
 

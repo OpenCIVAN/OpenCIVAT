@@ -30,6 +30,7 @@ import { useViewportEventListener } from '@UI/react/hooks/useViewportSync';
 import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
 import { workspace as log } from '@Utils/logger.js';
+import { canvasHistory } from '@UI/react/store/canvasHistoryStore';
 import './CanvasGrid.scss';
 
 // =============================================================================
@@ -1290,6 +1291,11 @@ export function CanvasGrid({
             if (dropData.type === 'canvas-cell' && dropData.placementId) {
                 const sourcePlacementId = dropData.placementId;
 
+                // Find source placement to get original position
+                const sourcePlacement = canvas?.placements?.find(p => p.id === sourcePlacementId);
+                const originalRow = sourcePlacement?.row;
+                const originalCol = sourcePlacement?.col;
+
                 // Find the target placement at the drop location
                 const targetPlacement = canvas?.placements?.find(
                     p => p.row === row && p.col === col
@@ -1299,10 +1305,28 @@ export function CanvasGrid({
                     // Swap with existing cell
                     log.debug(`Swapping cells: ${sourcePlacementId} <-> ${targetPlacement.id}`);
                     await canvasManager.swapPlacements(sourcePlacementId, targetPlacement.id);
+
+                    // Record history for undo/redo
+                    canvasHistory.record({
+                        type: 'SWAP',
+                        description: 'Swap views',
+                        undo: () => canvasManager.swapPlacements(sourcePlacementId, targetPlacement.id),
+                        redo: () => canvasManager.swapPlacements(sourcePlacementId, targetPlacement.id),
+                    });
                 } else if (!targetPlacement || targetPlacement.content?.type === 'empty') {
                     // Move to empty cell
                     log.debug(`Moving cell ${sourcePlacementId} to [${row}, ${col}]`);
                     await canvasManager.movePlacement(sourcePlacementId, row, col);
+
+                    // Record history for undo/redo
+                    if (originalRow !== undefined && originalCol !== undefined) {
+                        canvasHistory.record({
+                            type: 'MOVE',
+                            description: `Move view to row ${row + 1}, col ${col + 1}`,
+                            undo: () => canvasManager.movePlacement(sourcePlacementId, originalRow, originalCol),
+                            redo: () => canvasManager.movePlacement(sourcePlacementId, row, col),
+                        });
+                    }
                 }
                 return;
             }

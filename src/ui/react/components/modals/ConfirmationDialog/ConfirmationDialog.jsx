@@ -364,6 +364,7 @@ function ConfirmationDialog({
             icon={IconComponent}
             severity={severity}
             size="sm"
+            closeOnBackdrop={false}
             footer={renderFooter()}
             testId={testId}
         >

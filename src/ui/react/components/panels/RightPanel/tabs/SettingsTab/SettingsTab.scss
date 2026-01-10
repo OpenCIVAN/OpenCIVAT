@@ -568,6 +568,78 @@
     justify-content: flex-end;
     gap: $spacing-sm;
   }
+
+  // Button item (for settings that open modals)
+  &__button-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: background $transition-fast;
+    text-align: left;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 2px;
+    }
+  }
+
+  &__button-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__button-label {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  &__button-desc {
+    font-size: 10px;
+    color: $color-text-muted;
+  }
+
+  &__button-arrow {
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  // Summary display
+  &__summary {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: $radius-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10px;
+  }
+
+  &__summary-label {
+    color: $color-text-muted;
+  }
+
+  &__summary-value {
+    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
+  }
 }
 
 // Spin animation

@@ -2,20 +2,10 @@
  * @file Modal.jsx
  * @description Base Modal component for CIA Web.
  * This is the foundation component for all 21 modals in the application.
- * Provides accessibility, focus trapping, animations, and consistent styling.
- *
- * VR MIGRATION NOTE:
- * This component will be migrated to use FloatingPanel internally.
- * See: docs/specs/FloatingPanel_Component_Specification.md
- *
- * Modals should be classified as either:
- * - STANDARD: FloatingPanel with priority={false} (Help, Settings, Forms)
- * - PRIORITY: FloatingPanel with priority={true} (Confirmations, Consent)
- *
- * Priority panels in VR: Follow user gaze, cannot be dismissed by backdrop.
+ * Now uses PriorityPanel internally for VR compatibility.
  *
  * Features:
- * - Full accessibility support (role="dialog", aria-modal, aria-labelledby, aria-describedby)
+ * - Full accessibility support (role="dialog", aria-modal, aria-labelledby)
  * - Focus trapping with Tab/Shift+Tab cycling
  * - Return focus to trigger element on close
  * - Auto-focus first interactive element on open
@@ -26,10 +16,10 @@
  * - Body scroll lock when modal is open
  * - Three size variants: sm (400px), md (520px), lg (640px)
  * - Four severity levels: info, warning, danger, success
+ * - VR compatibility: In VR mode, follows user gaze
  *
  * @example
  * import { Modal, useModal } from '@UI/react/components/modals/Modal';
- * import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
  *
  * function DeleteConfirmation({ itemName, onDelete }) {
  *   const { isOpen, open, close } = useModal();
@@ -63,12 +53,8 @@
  * }
  */
 
-import React, { useRef, useEffect, useCallback, useId } from 'react';
-import { createPortal } from 'react-dom';
-import ModalHeader from './ModalHeader';
-import ModalContent from './ModalContent';
-import ModalFooter from './ModalFooter';
-import { useFocusTrap } from './useFocusTrap';
+import React, { useId } from 'react';
+import { PriorityPanel } from '@UI/react/components/panels/FloatingPanel';
 import './Modal.scss';
 
 /**
@@ -91,9 +77,10 @@ import './Modal.scss';
 /**
  * Base Modal component for CIA Web.
  * Serves as the foundation for all modal dialogs in the application.
+ * Uses PriorityPanel internally for VR compatibility.
  *
  * @param {ModalProps} props - Component props
- * @returns {React.ReactPortal|null} Portal containing the modal, or null if not open
+ * @returns {JSX.Element|null} PriorityPanel component, or null if not open
  */
 function Modal({
     isOpen,
@@ -110,84 +97,11 @@ function Modal({
     className = '',
     testId
 }) {
-    // Generate unique IDs for accessibility
+    // Generate unique ID for accessibility
     const uniqueId = useId();
-    const titleId = `modal-title-${uniqueId}`;
-    const descriptionId = `modal-description-${uniqueId}`;
+    const modalId = `modal-${uniqueId}`;
 
-    // Refs for DOM elements
-    const containerRef = useRef(null);
-
-    // Focus trap hook
-    const { returnFocus } = useFocusTrap(containerRef, isOpen);
-
-    /**
-     * Handles closing the modal.
-     * Returns focus to the trigger element before calling onClose.
-     */
-    const handleClose = useCallback(() => {
-        returnFocus();
-        onClose();
-    }, [returnFocus, onClose]);
-
-    /**
-     * Handles backdrop click.
-     * Only closes if closeOnBackdrop is true.
-     */
-    const handleBackdropClick = useCallback((event) => {
-        // Only close if clicking directly on the backdrop, not on the modal content
-        if (event.target === event.currentTarget && closeOnBackdrop) {
-            handleClose();
-        }
-    }, [closeOnBackdrop, handleClose]);
-
-    /**
-     * Handles keydown events for the modal.
-     * Closes on Escape if closeOnEscape is true.
-     */
-    const handleKeyDown = useCallback((event) => {
-        if (event.key === 'Escape' && closeOnEscape) {
-            event.preventDefault();
-            handleClose();
-        }
-    }, [closeOnEscape, handleClose]);
-
-    /**
-     * Prevents click propagation from modal container.
-     * This ensures clicks inside the modal don't trigger backdrop close.
-     */
-    const handleContainerClick = useCallback((event) => {
-        event.stopPropagation();
-    }, []);
-
-    // Effect: Lock body scroll when modal is open
-    useEffect(() => {
-        if (isOpen) {
-            const originalOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
-
-            return () => {
-                document.body.style.overflow = originalOverflow;
-            };
-        }
-    }, [isOpen]);
-
-    // Effect: Add escape key listener at document level
-    useEffect(() => {
-        if (isOpen && closeOnEscape) {
-            document.addEventListener('keydown', handleKeyDown);
-            return () => {
-                document.removeEventListener('keydown', handleKeyDown);
-            };
-        }
-    }, [isOpen, closeOnEscape, handleKeyDown]);
-
-    // Don't render anything if modal is not open
-    if (!isOpen) {
-        return null;
-    }
-
-    // Build class names
+    // Build combined class names for backwards compatibility
     const modalClasses = [
         'modal',
         `modal--${size}`,
@@ -195,47 +109,25 @@ function Modal({
         className
     ].filter(Boolean).join(' ');
 
-    // Render the modal content
-    const modalContent = (
-        <div
-            className="modal__backdrop"
-            onClick={handleBackdropClick}
-            data-testid={testId ? `${testId}-backdrop` : undefined}
+    return (
+        <PriorityPanel
+            id={modalId}
+            isOpen={isOpen}
+            onClose={onClose}
+            title={title}
+            icon={icon}
+            severity={severity}
+            size={size}
+            showCloseButton={showCloseButton}
+            closeOnEscape={closeOnEscape}
+            closeOnBackdrop={closeOnBackdrop}
+            className={modalClasses}
+            testId={testId}
+            footer={footer}
         >
-            <div
-                ref={containerRef}
-                className={modalClasses}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={titleId}
-                aria-describedby={descriptionId}
-                onClick={handleContainerClick}
-                data-testid={testId}
-            >
-                <ModalHeader
-                    title={title}
-                    titleId={titleId}
-                    icon={icon}
-                    severity={severity}
-                    showCloseButton={showCloseButton}
-                    onClose={handleClose}
-                />
-
-                <ModalContent descriptionId={descriptionId}>
-                    {children}
-                </ModalContent>
-
-                {footer && (
-                    <ModalFooter>
-                        {footer}
-                    </ModalFooter>
-                )}
-            </div>
-        </div>
+            {children}
+        </PriorityPanel>
     );
-
-    // Render via portal to document.body
-    return createPortal(modalContent, document.body);
 }
 
 export default Modal;
