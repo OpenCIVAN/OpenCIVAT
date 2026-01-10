@@ -3,13 +3,49 @@
 // Renders in ThreeEdgeLayout's left activity bar slot
 //
 // Uses TabButton molecule with etched variant for consistent styling
+// UPDATED: Added peek/preview support for overlay panel system
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TabButton } from '@UI/react/components/molecules';
 import { useLeftPanelContext, LEFT_PANEL_TABS } from './LeftPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { useNavigatorButton } from '@UI/react/components/panels/LayoutPanel';
+import { useAdaptiveHover } from '@UI/react/hooks/useAdaptiveHover';
+import { DwellIndicator } from '@UI/react/components/atoms/DwellIndicator';
 import './LeftPanel.scss';
+
+// =============================================================================
+// TAB BUTTON WITH PEEK SUPPORT
+// =============================================================================
+
+/**
+ * PeekableTabButton - TabButton wrapper with hover peek functionality
+ */
+function PeekableTabButton({ tab, isActive, isPeeking, onClick, onPeekStart, onPeekEnd, children }) {
+    const tabRef = useRef(null);
+
+    const { dwellProgress } = useAdaptiveHover(tabRef, {
+        onHoverStart: () => onPeekStart?.(tab.id),
+        onHoverEnd: () => onPeekEnd?.(tab.id),
+    });
+
+    return (
+        <div ref={tabRef} className="left-panel__activity-btn-wrapper" data-hover-id={`left-tab-${tab.id}`}>
+            <TabButton
+                icon={tab.icon}
+                label={tab.label}
+                color={tab.color}
+                variant="etched"
+                iconOnly
+                active={isActive || isPeeking}
+                onClick={onClick}
+                className={isPeeking ? 'peeking' : ''}
+            />
+            {children}
+            <DwellIndicator progress={dwellProgress} size={32} />
+        </div>
+    );
+}
 
 // =============================================================================
 // LEFT ACTIVITY BAR
@@ -26,7 +62,22 @@ import './LeftPanel.scss';
  */
 export function LeftActivityBar() {
     const { activeTab, setActiveTab } = useLeftPanelContext();
-    const { leftOpen: isOpen, setLeftOpen } = useLayoutContext();
+    const {
+        leftOpen: isOpen,
+        setLeftOpen,
+        leftPeekingTab,
+        startPeek,
+        endPeek,
+    } = useLayoutContext();
+
+    // Peek handlers for overlay panel preview
+    const handlePeekStart = useCallback((tabId) => {
+        startPeek?.('left', tabId);
+    }, [startPeek]);
+
+    const handlePeekEnd = useCallback((tabId) => {
+        endPeek?.('left');
+    }, [endPeek]);
 
     // Navigator state from context
     const { isFloating: navigatorOpen, toggleNavigator } = useNavigatorButton();
@@ -84,23 +135,23 @@ export function LeftActivityBar() {
             <div className="left-panel__activity-tabs">
                 {LEFT_PANEL_TABS.map((tab) => {
                     const isActive = activeTab === tab.id;
+                    const isPeeking = leftPeekingTab === tab.id;
 
                     return (
-                        <div key={tab.id} className="left-panel__activity-btn-wrapper">
-                            <TabButton
-                                icon={tab.icon}
-                                label={tab.label}
-                                color={tab.color}
-                                variant="etched"
-                                iconOnly
-                                active={isActive}
-                                onClick={() => handleTabClick(tab.id)}
-                            />
+                        <PeekableTabButton
+                            key={tab.id}
+                            tab={tab}
+                            isActive={isActive}
+                            isPeeking={isPeeking}
+                            onClick={() => handleTabClick(tab.id)}
+                            onPeekStart={handlePeekStart}
+                            onPeekEnd={handlePeekEnd}
+                        >
                             {/* "Soon" badge for unimplemented tabs */}
                             {tab.implemented === false && (
                                 <span className="left-panel__activity-badge">Soon</span>
                             )}
-                        </div>
+                        </PeekableTabButton>
                     );
                 })}
             </div>

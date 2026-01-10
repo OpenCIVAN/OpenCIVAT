@@ -23,6 +23,7 @@ import { InstanceToolsNotch } from '@UI/react/components/workspace/InstanceTools
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
+import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
@@ -250,6 +251,25 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
     // Get active view from view context (source of truth for what's currently selected)
     const { activeView: contextActiveView } = useViewContextLogic();
+
+    // Get layout context for panel focus mode (collapse panels when entering focus view)
+    // Renamed to avoid collision with useSubsets's enterFocusMode/exitFocusMode
+    const {
+        enterFocusMode: enterPanelFocusMode,
+        exitFocusMode: exitPanelFocusMode
+    } = useLayoutContext();
+
+    // Track previous focus view state to detect exit
+    const wasFocusViewRef = useRef(isFocusView);
+
+    // Restore panels when exiting focus view (e.g., pressing Escape, clicking back)
+    useEffect(() => {
+        // Detect transition from focus view to non-focus view
+        if (wasFocusViewRef.current && !isFocusView) {
+            exitPanelFocusMode?.();
+        }
+        wasFocusViewRef.current = isFocusView;
+    }, [isFocusView, exitPanelFocusMode]);
 
     // ==========================================================================
     // INSTANCE TOOLS NOTCH STATE
@@ -490,15 +510,18 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 views: placement.content.views || [],
             });
         } else {
-            // Double-click view → focus mode
+            // Double-click view → focus mode (view stack + panel collapse)
             focusView({
                 placementId: placement.id,
                 name: placement.content?.name || 'View',
                 row: placement.row,
                 col: placement.col,
             });
+
+            // Also collapse panels for maximum canvas space
+            enterPanelFocusMode?.(placement.id);
         }
-    }, [focusView, openSubset]);
+    }, [focusView, openSubset, enterPanelFocusMode]);
 
     // Handle cell double-click (empty cell - add content)
     const handleCellDoubleClick = useCallback((row, col) => {

@@ -144,3 +144,13 @@ export { StackedNavBlock, NAV_DIRECTIONS } from './StackedNavBlock';
 
 // ActiveViewSelector - Active view dropdown selector
 export { ActiveViewSelector } from './ActiveViewSelector';
+
+// =============================================================================
+// PANEL OVERLAY MOLECULES
+// =============================================================================
+
+// PreviewHintBanner - Banner shown when panel is in preview mode
+export { PreviewHintBanner } from './PreviewHintBanner';
+
+// OverlayPanelHeader - Panel header with context-aware buttons
+export { OverlayPanelHeader } from './OverlayPanelHeader';

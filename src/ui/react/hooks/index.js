@@ -173,3 +173,11 @@ export {
   useVRPreprocessing,
   PreprocessingStatus,
 } from "./useVRPreprocessing.js";
+
+// =============================================================================
+// PANEL OVERLAY SYSTEM
+// =============================================================================
+
+export { useAdaptiveHover } from "./useAdaptiveHover.js";
+export { usePanelState } from "./usePanelState.js";
+export { useFocusMode } from "./useFocusMode.js";

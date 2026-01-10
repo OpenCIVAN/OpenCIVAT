@@ -4,13 +4,49 @@
 //
 // Uses TabButton molecule with etched variant for consistent styling
 // Includes compact voice controls at the bottom (moved from SecondaryFooter)
+// UPDATED: Added peek/preview support for overlay panel system
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TabButton } from '@UI/react/components/molecules';
 import { Icon } from '@UI/react/components/atoms';
 import { useRightPanelContext, RIGHT_PANEL_TABS } from './RightPanelContext';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
+import { useAdaptiveHover } from '@UI/react/hooks/useAdaptiveHover';
+import { DwellIndicator } from '@UI/react/components/atoms/DwellIndicator';
 import './RightActivityBar.scss';
+
+// =============================================================================
+// TAB BUTTON WITH PEEK SUPPORT
+// =============================================================================
+
+/**
+ * PeekableTabButton - TabButton wrapper with hover peek functionality
+ */
+function PeekableTabButton({ tab, isActive, isPeeking, onClick, onPeekStart, onPeekEnd, children }) {
+    const tabRef = useRef(null);
+
+    const { dwellProgress } = useAdaptiveHover(tabRef, {
+        onHoverStart: () => onPeekStart?.(tab.id),
+        onHoverEnd: () => onPeekEnd?.(tab.id),
+    });
+
+    return (
+        <div ref={tabRef} className="right-panel__activity-btn-wrapper" data-hover-id={`right-tab-${tab.id}`}>
+            <TabButton
+                icon={tab.icon}
+                label={tab.label}
+                color={tab.color}
+                variant="etched"
+                iconOnly
+                active={isActive || isPeeking}
+                onClick={onClick}
+                className={isPeeking ? 'peeking' : ''}
+            />
+            {children}
+            <DwellIndicator progress={dwellProgress} size={32} />
+        </div>
+    );
+}
 
 // =============================================================================
 // COMPACT VOICE CONTROLS
@@ -106,7 +142,22 @@ function CompactVoiceControls({
  */
 export function RightActivityBar() {
     const { activeTab, setActiveTab } = useRightPanelContext();
-    const { rightOpen: isOpen, setRightOpen } = useLayoutContext();
+    const {
+        rightOpen: isOpen,
+        setRightOpen,
+        rightPeekingTab,
+        startPeek,
+        endPeek,
+    } = useLayoutContext();
+
+    // Peek handlers for overlay panel preview
+    const handlePeekStart = useCallback((tabId) => {
+        startPeek?.('right', tabId);
+    }, [startPeek]);
+
+    const handlePeekEnd = useCallback((tabId) => {
+        endPeek?.('right');
+    }, [endPeek]);
 
     // Voice state - synced via events from main app
     const [voiceState, setVoiceState] = useState({
@@ -178,23 +229,23 @@ export function RightActivityBar() {
             <div className="right-panel__activity-tabs">
                 {RIGHT_PANEL_TABS.map((tab) => {
                     const isActive = activeTab === tab.id;
+                    const isPeeking = rightPeekingTab === tab.id;
 
                     return (
-                        <div key={tab.id} className="right-panel__activity-btn-wrapper">
-                            <TabButton
-                                icon={tab.icon}
-                                label={tab.label}
-                                color={tab.color}
-                                variant="etched"
-                                iconOnly
-                                active={isActive}
-                                onClick={() => handleTabClick(tab.id)}
-                            />
+                        <PeekableTabButton
+                            key={tab.id}
+                            tab={tab}
+                            isActive={isActive}
+                            isPeeking={isPeeking}
+                            onClick={() => handleTabClick(tab.id)}
+                            onPeekStart={handlePeekStart}
+                            onPeekEnd={handlePeekEnd}
+                        >
                             {/* "Soon" badge for unimplemented tabs */}
                             {tab.implemented === false && (
                                 <span className="right-panel__activity-badge">Soon</span>
                             )}
-                        </div>
+                        </PeekableTabButton>
                     );
                 })}
             </div>

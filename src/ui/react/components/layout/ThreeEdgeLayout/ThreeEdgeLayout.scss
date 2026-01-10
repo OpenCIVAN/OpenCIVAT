@@ -188,8 +188,65 @@
     background: $color-bg-base;
     min-width: 0;
     min-height: 0;
-    position: relative; // Required for FloatingCanvasNavigator absolute positioning
+    position: relative; // Required for overlay panels and FloatingCanvasNavigator
     // The minmax(300px, 1fr) in grid-template-columns ensures this expands
+  }
+
+  // =============================================================================
+  // CANVAS CONTAINER - Holds canvas within workspace for overlay mode
+  // =============================================================================
+
+  .three-edge-layout__canvas-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    // Canvas fills the container
+    > * {
+      flex: 1;
+      min-height: 0;
+    }
+  }
+
+  // =============================================================================
+  // OVERLAY MODE - Panels float over canvas instead of pushing it
+  // =============================================================================
+
+  &.three-edge-layout--overlay-mode {
+    // Simplified grid: only 3 columns (activity bars + workspace)
+    grid-template-columns:
+      #{$panel-activity-bar-width} // 1: Left activity bar
+      1fr                          // 2: Workspace (fills remaining space)
+      #{$panel-activity-bar-width}; // 3: Right activity bar
+
+    // Activity bars span from secondary top bar to secondary bottom bar
+    .three-edge-layout__left-activity {
+      grid-column: 1;
+      grid-row: 2 / 5;
+    }
+
+    .three-edge-layout__right-activity {
+      grid-column: 3;
+      grid-row: 2 / 5;
+    }
+
+    // Workspace takes the center column
+    .three-edge-layout__workspace {
+      grid-column: 2;
+      grid-row: 3;
+      position: relative; // For overlay panel positioning
+    }
+
+    // Secondary bars span between activity bars
+    .three-edge-layout__sec-top {
+      grid-column: 2;
+    }
+
+    .three-edge-layout__sec-bot {
+      grid-column: 2;
+    }
   }
 
   // =============================================================================
@@ -283,7 +340,7 @@
 }
 
 // =============================================================================
-// RESIZE HANDLES
+// RESIZE HANDLES (Grid mode - legacy)
 // =============================================================================
 
 .grid-resize-handle {
@@ -310,6 +367,38 @@
   // Right panel resize handle - positioned at LEFT edge of right panel
   &--right {
     left: -3px; // Overlap slightly into workspace for easier grabbing
+    right: auto;
+  }
+}
+
+// =============================================================================
+// RESIZE HANDLES (Overlay mode)
+// =============================================================================
+
+.overlay-resize-handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 50;
+  background: transparent;
+  transition: background $transition-fast;
+
+  &:hover,
+  &--active {
+    background: rgba($color-accent-primary, 0.4);
+  }
+
+  // Left panel resize handle - at right edge of overlay panel
+  &--left {
+    right: 0;
+    left: auto;
+  }
+
+  // Right panel resize handle - at left edge of overlay panel
+  &--right {
+    left: 0;
     right: auto;
   }
 }

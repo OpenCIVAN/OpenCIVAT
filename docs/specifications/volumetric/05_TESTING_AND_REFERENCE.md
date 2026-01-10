@@ -1,5 +1,8 @@
 # Testing Checklist & Quick Reference
 
+> **NOTE (2026-01-09):** VR headset testing required when hardware available (~2 weeks).
+> All VR exploration features are implemented and ready for end-to-end testing in actual VR.
+
 ## Testing Checklist
 
 ### Phase 1: Core Infrastructure Tests

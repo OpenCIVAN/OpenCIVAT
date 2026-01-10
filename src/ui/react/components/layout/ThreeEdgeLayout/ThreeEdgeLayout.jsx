@@ -6,11 +6,14 @@
 // - Pattern 1 (legacy): secondaryTopBarZones={{ left, center, right }}
 // - Pattern 2 (recommended): secondaryTopBar={<SecondaryHeader {...props} />}
 
-import React, { useMemo, cloneElement, useCallback, isValidElement } from 'react';
+import React, { useMemo, cloneElement, useCallback, isValidElement, useContext } from 'react';
 import { LayoutPanelProvider } from '@UI/react/components/panels/LayoutPanel/LayoutPanelContext';
 import { LayoutPanel } from '@UI/react/components/panels/LayoutPanel';
 import { CanvasWorkspace } from '@UI/react/components/workspace';
 import { useLayoutState, usePanelPersistence, PANEL_CONSTRAINTS, useResizeHandler } from './ThreeEdgeLayout.logic.js';
+import { usePanelState } from '@UI/react/hooks/usePanelState';
+import { useFocusMode } from '@UI/react/hooks/useFocusMode';
+import { OverlayPanel } from '@UI/react/components/panels/OverlayPanel';
 import './ThreeEdgeLayout.scss';
 
 /**
@@ -53,7 +56,7 @@ export function ThreeEdgeLayout({
     secondaryBottomBar,      // <SecondaryFooter {...props} />
     children, // Additional content rendered inside LayoutContext (e.g., floating panels)
 }) {
-    // Layout state management
+    // Layout state management (legacy - keeps backward compatibility)
     const {
         leftOpen,
         setLeftOpen,
@@ -64,6 +67,13 @@ export function ThreeEdgeLayout({
         rightWidth,
         setRightWidth
     } = useLayoutState();
+
+    // New overlay panel state management
+    const leftPanelState = usePanelState('left');
+    const rightPanelState = usePanelState('right');
+
+    // Focus mode management
+    const focusModeState = useFocusMode(leftPanelState, rightPanelState);
 
     // Persist state to localStorage
     usePanelPersistence({
@@ -81,16 +91,86 @@ export function ThreeEdgeLayout({
         rightPanelOpen: rightOpen,
     }), [leftOpen, leftWidth, rightOpen, rightWidth]);
 
+    // Panel state helper functions
+    const shouldShowPanel = useCallback((side, tabId) => {
+        const state = side === 'left' ? leftPanelState : rightPanelState;
+        return state.shouldShow(tabId);
+    }, [leftPanelState, rightPanelState]);
+
+    const isPreviewMode = useCallback((side, tabId) => {
+        const state = side === 'left' ? leftPanelState : rightPanelState;
+        return state.isPreview(tabId);
+    }, [leftPanelState, rightPanelState]);
+
+    const startPeek = useCallback((side, tabId) => {
+        const state = side === 'left' ? leftPanelState : rightPanelState;
+        state.startPeek(tabId);
+    }, [leftPanelState, rightPanelState]);
+
+    const endPeek = useCallback((side) => {
+        const state = side === 'left' ? leftPanelState : rightPanelState;
+        state.endPeek();
+    }, [leftPanelState, rightPanelState]);
+
+    const pinPeek = useCallback((side) => {
+        const state = side === 'left' ? leftPanelState : rightPanelState;
+        state.pinPeek();
+    }, [leftPanelState, rightPanelState]);
+
+    const onPanelMouseEnter = useCallback((side) => {
+        const state = side === 'left' ? leftPanelState : rightPanelState;
+        state.onPanelMouseEnter();
+    }, [leftPanelState, rightPanelState]);
+
+    const onPanelMouseLeave = useCallback((side) => {
+        const state = side === 'left' ? leftPanelState : rightPanelState;
+        state.onPanelMouseLeave();
+    }, [leftPanelState, rightPanelState]);
+
     // Context value for child components
     const contextValue = useMemo(() => ({
+        // Legacy state
         leftOpen,
         setLeftOpen,
         rightOpen,
         setRightOpen,
         leftWidth,
         rightWidth,
-        ...layoutDimensions
-    }), [leftOpen, setLeftOpen, rightOpen, setRightOpen, leftWidth, rightWidth, layoutDimensions]);
+        ...layoutDimensions,
+
+        // New overlay panel state
+        leftPeekingTab: leftPanelState.peekingTab,
+        rightPeekingTab: rightPanelState.peekingTab,
+        leftActiveTab: leftPanelState.activeTab,
+        rightActiveTab: rightPanelState.activeTab,
+
+        // Panel state helpers
+        shouldShowPanel,
+        isPreviewMode,
+
+        // Panel actions
+        startPeek,
+        endPeek,
+        pinPeek,
+        setLeftActiveTab: leftPanelState.setActiveTab,
+        setRightActiveTab: rightPanelState.setActiveTab,
+
+        // Panel mouse handlers
+        onPanelMouseEnter,
+        onPanelMouseLeave,
+
+        // Focus mode
+        ...focusModeState,
+    }), [
+        leftOpen, setLeftOpen, rightOpen, setRightOpen, leftWidth, rightWidth,
+        layoutDimensions,
+        leftPanelState.peekingTab, rightPanelState.peekingTab,
+        leftPanelState.activeTab, rightPanelState.activeTab,
+        shouldShowPanel, isPreviewMode, startPeek, endPeek, pinPeek,
+        leftPanelState.setActiveTab, rightPanelState.setActiveTab,
+        onPanelMouseEnter, onPanelMouseLeave,
+        focusModeState,
+    ]);
 
     return (
         <LayoutContext.Provider value={contextValue}>
@@ -178,16 +258,44 @@ function GridZonesLayout({
     setRightWidth,
     layoutDimensions,
 }) {
+    // Access layout context for overlay panel state
+    const layoutContext = useContext(LayoutContext);
+    const {
+        leftPeekingTab,
+        rightPeekingTab,
+        leftActiveTab,
+        rightActiveTab,
+        onPanelMouseEnter,
+        onPanelMouseLeave,
+        pinPeek,
+    } = layoutContext;
+
     const { isResizing: leftResizing, handleMouseDown: leftMouseDown } = useResizeHandler('left', setLeftWidth);
     const { isResizing: rightResizing, handleMouseDown: rightMouseDown } = useResizeHandler('right', setRightWidth);
 
-    const gridStyles = useGridStyles(leftOpen, rightOpen, leftWidth, rightWidth);
+    // Determine if panels should show (either pinned open or peeking)
+    const showLeftPanel = leftOpen || leftPeekingTab;
+    const showRightPanel = rightOpen || rightPeekingTab;
+    const leftIsPreview = !leftOpen && leftPeekingTab;
+    const rightIsPreview = !rightOpen && rightPeekingTab;
+
+    // Grid styles for overlay mode - panels don't take columns
+    const gridStyles = useMemo(() => {
+        const leftActivityWidth = PANEL_CONSTRAINTS.left.collapsed;
+        const rightActivityWidth = PANEL_CONSTRAINTS.right.collapsed;
+
+        return {
+            '--left-activity-width': `${leftActivityWidth}px`,
+            '--right-activity-width': `${rightActivityWidth}px`,
+            '--left-panel-width': `${leftWidth - leftActivityWidth}px`,
+            '--right-panel-width': `${rightWidth - rightActivityWidth}px`,
+        };
+    }, [leftWidth, rightWidth]);
 
     const layoutClassName = [
         'three-edge-layout',
         'three-edge-layout--grid-zones',
-        !leftOpen && 'three-edge-layout--left-collapsed',
-        !rightOpen && 'three-edge-layout--right-collapsed',
+        'three-edge-layout--overlay-mode',
     ].filter(Boolean).join(' ');
 
     // ==========================================================================
@@ -288,34 +396,67 @@ function GridZonesLayout({
             {/* Row 2: Secondary Top Bar */}
             {renderSecondaryTopBar()}
 
-            {/* Row 3: Main Content Area */}
+            {/* Row 3: Main Content Area - Activity bars + Workspace with overlay panels */}
             <div className="three-edge-layout__left-activity">
                 {leftActivityBar}
             </div>
 
-            {leftOpen && (
-                <div className="three-edge-layout__left-panel">
-                    {leftPanelContent}
-                    <div
-                        className={`grid-resize-handle grid-resize-handle--left ${leftResizing ? 'grid-resize-handle--active' : ''}`}
-                        onMouseDown={leftMouseDown}
-                    />
-                </div>
-            )}
-
             <div className="three-edge-layout__workspace">
-                {centerPanel}
-            </div>
-
-            {rightOpen && (
-                <div className="three-edge-layout__right-panel">
-                    <div
-                        className={`grid-resize-handle grid-resize-handle--right ${rightResizing ? 'grid-resize-handle--active' : ''}`}
-                        onMouseDown={rightMouseDown}
-                    />
-                    {rightPanelContent}
+                {/* Canvas fills the workspace */}
+                <div className="three-edge-layout__canvas-container">
+                    {centerPanel}
                 </div>
-            )}
+
+                {/* Left Panel - Overlay */}
+                <OverlayPanel
+                    side="left"
+                    isOpen={leftOpen}
+                    isPreview={leftIsPreview}
+                    onClose={() => setLeftOpen(false)}
+                    onPin={() => {
+                        pinPeek?.('left');
+                        setLeftOpen(true);
+                    }}
+                    title={leftPeekingTab || leftActiveTab || 'Panel'}
+                    tabId={leftPeekingTab || leftActiveTab}
+                    onMouseEnter={() => onPanelMouseEnter?.('left')}
+                    onMouseLeave={() => onPanelMouseLeave?.('left')}
+                    width={leftWidth - PANEL_CONSTRAINTS.left.collapsed}
+                >
+                    {showLeftPanel && leftPanelContent}
+                    {showLeftPanel && (
+                        <div
+                            className={`overlay-resize-handle overlay-resize-handle--left ${leftResizing ? 'overlay-resize-handle--active' : ''}`}
+                            onMouseDown={leftMouseDown}
+                        />
+                    )}
+                </OverlayPanel>
+
+                {/* Right Panel - Overlay */}
+                <OverlayPanel
+                    side="right"
+                    isOpen={rightOpen}
+                    isPreview={rightIsPreview}
+                    onClose={() => setRightOpen(false)}
+                    onPin={() => {
+                        pinPeek?.('right');
+                        setRightOpen(true);
+                    }}
+                    title={rightPeekingTab || rightActiveTab || 'Panel'}
+                    tabId={rightPeekingTab || rightActiveTab}
+                    onMouseEnter={() => onPanelMouseEnter?.('right')}
+                    onMouseLeave={() => onPanelMouseLeave?.('right')}
+                    width={rightWidth - PANEL_CONSTRAINTS.right.collapsed}
+                >
+                    {showRightPanel && rightPanelContent}
+                    {showRightPanel && (
+                        <div
+                            className={`overlay-resize-handle overlay-resize-handle--right ${rightResizing ? 'overlay-resize-handle--active' : ''}`}
+                            onMouseDown={rightMouseDown}
+                        />
+                    )}
+                </OverlayPanel>
+            </div>
 
             <div className="three-edge-layout__right-activity">
                 {rightActivityBar}
@@ -341,6 +482,7 @@ export { GridZonesLayout, useGridStyles };
 // =============================================================================
 
 export const LayoutContext = React.createContext({
+    // Legacy panel state (for backward compatibility)
     leftOpen: true,
     setLeftOpen: () => { },
     rightOpen: true,
@@ -351,6 +493,36 @@ export const LayoutContext = React.createContext({
     rightPanelWidth: PANEL_CONSTRAINTS.right.default,
     leftPanelOpen: true,
     rightPanelOpen: true,
+
+    // New overlay panel state
+    leftPeekingTab: null,
+    rightPeekingTab: null,
+    leftActiveTab: null,
+    rightActiveTab: null,
+
+    // Panel state helpers
+    shouldShowPanel: () => false,
+    isPreviewMode: () => false,
+
+    // Panel actions
+    startPeek: () => { },
+    endPeek: () => { },
+    pinPeek: () => { },
+    setLeftActiveTab: () => { },
+    setRightActiveTab: () => { },
+
+    // Panel mouse handlers
+    onPanelMouseEnter: () => { },
+    onPanelMouseLeave: () => { },
+
+    // Focus mode
+    focusMode: false,
+    focusedCell: null,
+    enterFocusMode: () => { },
+    exitFocusMode: () => { },
+    toggleFocusMode: () => { },
+    focusCell: () => { },
+    exitCell: () => { },
 });
 
 export function useLayoutContext() {

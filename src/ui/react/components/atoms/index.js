@@ -60,3 +60,13 @@ export { DropdownPortal } from './DropdownPortal';
 
 // LinkBadges - Badge atoms for the view linking system
 export { LinkBadge, ViewerBadge, HubBadge, ModeBadge, SyncStatusIndicator } from './LinkBadges';
+
+// =============================================================================
+// VR/ADAPTIVE ATOMS
+// =============================================================================
+
+// DwellIndicator - Circular progress for VR dwell hover
+export { DwellIndicator } from './DwellIndicator';
+
+// Slider - Range input control
+export { Slider } from './Slider';

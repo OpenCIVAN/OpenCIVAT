@@ -64,6 +64,15 @@ export const ADAPTIVE_TOKENS = {
             showHoverStates: true,
             showLabelsOnButtons: false,
             animationDuration: '0.15s',
+
+            // Panel overlay timing
+            hoverDelay: 300,        // ms before peek activates
+            peekGracePeriod: 400,   // ms before peek closes
+            dwellTime: 0,           // No dwell on desktop (uses hover)
+
+            // Panel dimensions
+            panelWidth: 320,
+            activityBarWidth: 48,
         },
         compact: {
             itemHeight: 28,
@@ -99,6 +108,15 @@ export const ADAPTIVE_TOKENS = {
             showHoverStates: true,
             showLabelsOnButtons: false,
             animationDuration: '0.1s',
+
+            // Panel overlay timing
+            hoverDelay: 300,
+            peekGracePeriod: 400,
+            dwellTime: 0,
+
+            // Panel dimensions
+            panelWidth: 280,
+            activityBarWidth: 40,
         },
     },
     vr: {
@@ -142,6 +160,15 @@ export const ADAPTIVE_TOKENS = {
             showHoverStates: false,
             showLabelsOnButtons: true,
             animationDuration: '0.2s',
+
+            // Panel overlay timing - VR uses dwell instead of hover
+            hoverDelay: 0,          // No delay in VR (dwell handles it)
+            peekGracePeriod: 600,   // Longer grace in VR (controllers less precise)
+            dwellTime: 500,         // ms for VR dwell hover
+
+            // Panel dimensions - larger for VR
+            panelWidth: 400,
+            activityBarWidth: 64,
         },
         compact: {
             itemHeight: 52,
@@ -177,6 +204,15 @@ export const ADAPTIVE_TOKENS = {
             showHoverStates: false,
             showLabelsOnButtons: true,
             animationDuration: '0.15s',
+
+            // Panel overlay timing
+            hoverDelay: 0,
+            peekGracePeriod: 600,
+            dwellTime: 500,
+
+            // Panel dimensions
+            panelWidth: 360,
+            activityBarWidth: 56,
         },
     },
 };

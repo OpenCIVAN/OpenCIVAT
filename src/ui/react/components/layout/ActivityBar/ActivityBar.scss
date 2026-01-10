@@ -54,6 +54,26 @@
       border-color: rgba(var(--tab-color-rgb, 96, 165, 250), 0.3);
       color: var(--tab-color, $color-accent-blue);
     }
+
+    // Peeking state (hover preview for overlay panels)
+    &.peeking {
+      background: rgba(var(--tab-color-rgb, 96, 165, 250), 0.1);
+      color: var(--tab-color, $color-accent-blue);
+      border-color: rgba(var(--tab-color-rgb, 96, 165, 250), 0.2);
+
+      // Subtle pulsing animation to indicate temporary state
+      animation: peekPulse 2s ease-in-out infinite;
+    }
+  }
+
+  // Animation for peeking state
+  @keyframes peekPulse {
+    0%, 100% {
+      border-color: rgba(var(--tab-color-rgb, 96, 165, 250), 0.2);
+    }
+    50% {
+      border-color: rgba(var(--tab-color-rgb, 96, 165, 250), 0.4);
+    }
   }
 
   &__badge {
