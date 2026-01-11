@@ -78,6 +78,7 @@ import { CreateRoomModal } from "@UI/react/components/modals/CreateRoomModal";
 import { KeyboardShortcutsModal } from "@UI/react/components/modals/KeyboardShortcutsModal";
 import { GlobalSearchModal } from "@UI/react/components/modals/GlobalSearchModal";
 import { DeleteViewDialog } from "@UI/react/components/modals/confirmations/DeleteViewDialog";
+import { DatasetSelectorModal } from "@UI/react/components/modals/DatasetSelectorModal";
 
 // =============================================================================
 // TOAST NOTIFICATIONS
@@ -222,6 +223,7 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [deleteViewTarget, setDeleteViewTarget] = useState(null); // { id, name } or null
+  const [datasetSelectorTarget, setDatasetSelectorTarget] = useState(null); // { row, col } or null
 
   const {
     currentRoom,
@@ -724,17 +726,25 @@ export function CIAWebApp({ username, userId, projectId }) {
       const { view } = e.detail || {};
       if (view) handleDeleteView(view);
     };
+    const handleOpenDatasetSelector = (e) => {
+      const { targetRow, targetCol } = e.detail || {};
+      if (targetRow !== undefined && targetCol !== undefined) {
+        setDatasetSelectorTarget({ row: targetRow, col: targetCol });
+      }
+    };
 
     window.addEventListener('open:global-search', handleOpenGlobalSearch);
     window.addEventListener('open:keyboard-shortcuts', handleOpenShortcuts);
     window.addEventListener('open:help', handleOpenShortcuts); // Help opens shortcuts
     window.addEventListener('cia:delete-view', handleDeleteViewEvent);
+    window.addEventListener('cia:open-dataset-selector', handleOpenDatasetSelector);
 
     return () => {
       window.removeEventListener('open:global-search', handleOpenGlobalSearch);
       window.removeEventListener('open:keyboard-shortcuts', handleOpenShortcuts);
       window.removeEventListener('open:help', handleOpenShortcuts);
       window.removeEventListener('cia:delete-view', handleDeleteViewEvent);
+      window.removeEventListener('cia:open-dataset-selector', handleOpenDatasetSelector);
     };
   }, [handleDeleteView]);
 
@@ -1052,6 +1062,14 @@ export function CIAWebApp({ username, userId, projectId }) {
               onClose={() => setDeleteViewTarget(null)}
               view={deleteViewTarget}
               onConfirm={handleConfirmDeleteView}
+            />
+
+            {/* Dataset Selector Modal (for empty cell view button) */}
+            <DatasetSelectorModal
+              isOpen={datasetSelectorTarget !== null}
+              onClose={() => setDatasetSelectorTarget(null)}
+              targetRow={datasetSelectorTarget?.row ?? 0}
+              targetCol={datasetSelectorTarget?.col ?? 0}
             />
 
             {/* Toast Notifications */}

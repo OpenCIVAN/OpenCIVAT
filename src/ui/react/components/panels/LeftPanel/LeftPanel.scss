@@ -220,6 +220,7 @@
 // =============================================================================
 
 .left-panel__content {
+  position: relative; // For absolute positioned action buttons
   flex: 1;
   min-width: 0; // Allow shrinking
   min-height: 0; // Critical for flex children to shrink properly
@@ -306,23 +307,27 @@
 
 .panel-header {
   @include etched-bar;
-  padding: $spacing-sm $spacing-md;
+  padding: $spacing-xs $spacing-sm;
   display: flex;
   align-items: center;
   gap: $spacing-sm;
   flex-shrink: 0;
+  min-height: 28px;
 
   &__icon {
     flex-shrink: 0;
   }
 
   &__title {
-    flex: 1;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: $color-text-secondary;
+  }
+
+  &__spacer {
+    flex: 1;
   }
 
   &__count {
@@ -338,7 +343,7 @@
   &__actions {
     display: flex;
     align-items: center;
-    gap: $spacing-xs;
+    gap: 2px;
   }
 
   &__action-btn {
@@ -346,16 +351,18 @@
     border: none;
     color: $color-text-muted;
     cursor: pointer;
-    padding: 2px;
+    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: $radius-xs;
     transition: all $transition-fast;
+    opacity: 0.6;
 
     &:hover {
-      color: $color-text-secondary;
-      background: rgba(255, 255, 255, 0.05);
+      color: $color-text-primary;
+      background: rgba(255, 255, 255, 0.1);
+      opacity: 1;
     }
   }
 }
@@ -659,23 +666,29 @@
 }
 
 // =============================================================================
-// POP-OUT PANEL SUPPORT
+// PANEL ACTION BUTTONS (Pop-out, Close)
 // =============================================================================
 
-// Mini toolbar at top of content - contains pop-out button
-.left-panel__toolbar {
+// Action buttons container - overlays on top-right of panel header
+.left-panel__actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 2px $spacing-xs;
-  min-height: 24px;
-  flex-shrink: 0;
-  border-bottom: 1px solid rgba($color-border-subtle, 0.5);
-  background: rgba(0, 0, 0, 0.1);
+  gap: 2px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity $transition-fast;
 }
 
-// Pop-out button in toolbar
-.left-panel__pop-out-btn {
+// Show action buttons on panel hover
+.left-panel__content:hover .left-panel__actions {
+  opacity: 1;
+}
+
+// Individual action button
+.left-panel__action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -684,22 +697,15 @@
   padding: 0;
   border: none;
   border-radius: $radius-xs;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.4);
   color: $color-text-muted;
   cursor: pointer;
-  opacity: 0.5;
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.6);
     color: $color-text-primary;
-    opacity: 1;
   }
-}
-
-// Show pop-out button more prominently on panel hover
-.left-panel__content:hover .left-panel__pop-out-btn {
-  opacity: 0.8;
 }
 
 // Popped-out state placeholder

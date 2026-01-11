@@ -21,6 +21,7 @@ import React, { useMemo, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
+import { PanelHeader } from '../../components/PanelHeader';
 import {
     ResizableSectionsContainer,
     ResizableSection,

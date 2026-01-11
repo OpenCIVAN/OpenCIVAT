@@ -18,6 +18,7 @@ import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
+import { PanelHeader } from '../../components/PanelHeader';
 import { getScopeChips } from './constants';
 import { BookmarksSubtab } from './subtabs/BookmarksSubtab';
 import { FiltersSubtab } from './subtabs/FiltersSubtab';
@@ -99,8 +100,8 @@ export function BookmarksFiltersPanelContent({
     const [selectedItems, setSelectedItems] = useState([]);
 
     // Get data and actions for scope counts
-    const { bookmarks, createBookmark } = useBookmarks();
-    const { filters } = useFilters();
+    const { bookmarks, createBookmark, deleteBookmark } = useBookmarks();
+    const { filters, deleteFilter } = useFilters();
 
     // ==========================================================================
     // KEYBOARD SHORTCUTS
@@ -169,17 +170,100 @@ export function BookmarksFiltersPanelContent({
     }, [createBookmark]);
 
     // Batch operations
-    const handleBatchDelete = useCallback(() => {
-        // TODO: Implement batch delete
-        console.log('Batch delete:', selectedItems);
+    const handleBatchDelete = useCallback(async () => {
+        if (selectedItems.length === 0) return;
+
+        const itemType = activeSubTab === 'bookmarks' ? 'bookmark' : 'filter';
+        const deleteFunc = activeSubTab === 'bookmarks' ? deleteBookmark : deleteFilter;
+
+        if (!deleteFunc) {
+            console.error(`Delete function not available for ${itemType}s`);
+            return;
+        }
+
+        // Delete items sequentially to avoid overwhelming the server
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const id of selectedItems) {
+            try {
+                await deleteFunc(id);
+                successCount++;
+            } catch (error) {
+                console.error(`Failed to delete ${itemType} ${id}:`, error);
+                failCount++;
+            }
+        }
+
+        // Show result via toast event
+        if (successCount > 0) {
+            window.dispatchEvent(new CustomEvent('cia:toast', {
+                detail: {
+                    message: `Deleted ${successCount} ${itemType}${successCount !== 1 ? 's' : ''}${failCount > 0 ? ` (${failCount} failed)` : ''}`,
+                    type: failCount > 0 ? 'warning' : 'success',
+                },
+            }));
+        } else if (failCount > 0) {
+            window.dispatchEvent(new CustomEvent('cia:toast', {
+                detail: {
+                    message: `Failed to delete ${failCount} ${itemType}${failCount !== 1 ? 's' : ''}`,
+                    type: 'error',
+                },
+            }));
+        }
+
         setSelectedItems([]);
         setBatchMode(false);
-    }, [selectedItems]);
+    }, [selectedItems, activeSubTab, deleteBookmark, deleteFilter]);
 
     const handleBatchExport = useCallback(() => {
-        // TODO: Implement batch export
-        console.log('Batch export:', selectedItems);
-    }, [selectedItems]);
+        if (selectedItems.length === 0) return;
+
+        // Get the items to export
+        const items = activeSubTab === 'bookmarks' ? bookmarks : filters;
+        const exportItems = items.filter(item => selectedItems.includes(item.id));
+
+        if (exportItems.length === 0) {
+            window.dispatchEvent(new CustomEvent('cia:toast', {
+                detail: {
+                    message: 'No items to export',
+                    type: 'warning',
+                },
+            }));
+            return;
+        }
+
+        // Create export data
+        const exportData = {
+            exportedAt: new Date().toISOString(),
+            type: activeSubTab,
+            count: exportItems.length,
+            items: exportItems.map(item => ({
+                ...item,
+                // Remove internal fields that shouldn't be exported
+                _id: undefined,
+                __v: undefined,
+            })),
+        };
+
+        // Create and download JSON file
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${activeSubTab}-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        window.dispatchEvent(new CustomEvent('cia:toast', {
+            detail: {
+                message: `Exported ${exportItems.length} ${activeSubTab === 'bookmarks' ? 'bookmark' : 'filter'}${exportItems.length !== 1 ? 's' : ''}`,
+                type: 'success',
+            },
+        }));
+    }, [selectedItems, activeSubTab, bookmarks, filters]);
 
     const toggleItemSelection = useCallback((id) => {
         setSelectedItems(prev =>
@@ -224,11 +308,8 @@ export function BookmarksFiltersPanelContent({
 
     return (
         <div className="bookmarks-filters-tab">
-            {/* Header - ALL CAPS like other tabs */}
-            <div className="panel-header panel-header--indigo">
-                <Icon name="bookmark" size={14} className="panel-header__icon" />
-                <span className="panel-header__title">Bookmarks & Filters</span>
-            </div>
+            {/* Header with pop-out/close buttons */}
+            <PanelHeader icon="bookmark" color="indigo" />
 
             {/* Sub-tabs */}
             <SubTabs activeTab={activeSubTab} onTabChange={setActiveSubTab} />

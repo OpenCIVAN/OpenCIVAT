@@ -37,6 +37,9 @@ import './CanvasWorkspace.scss';
  * CanvasWorkspaceInner - Internal component with ViewStack context
  */
 function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelContent, rightPanelContent }) {
+    const layoutContext = useLayoutContext();
+    const setLeftDockedOpen = layoutContext?.setLeftOpen || (() => { });
+    const setRightDockedOpen = layoutContext?.setRightOpen || (() => { });
     // Use sessionManager room ID as fallback project ID
     const projectId = useMemo(() => {
         return propProjectId || sessionManager.getRoomId?.() || 'default-project';
@@ -132,6 +135,16 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         toggleSelection,
         addPlacementsToSubset,
     } = useSubsets(activeCanvasId);
+
+    const handleDockLeftPanel = useCallback(() => {
+        setLeftDockedOpen(true);
+        setLeftPanelOpen(false);
+    }, [setLeftDockedOpen, setLeftPanelOpen]);
+
+    const handleDockRightPanel = useCallback(() => {
+        setRightDockedOpen(true);
+        setRightPanelOpen(false);
+    }, [setRightDockedOpen, setRightPanelOpen]);
 
     // Load initial workspace/canvas (server-authoritative, no local fallback)
     useEffect(() => {
@@ -541,13 +554,14 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
         switch (type) {
             case 'view':
-                // TODO: Implement view button functionality
-                // Options to consider:
-                // 1. Open file browser sidebar with target cell context
-                // 2. Show dataset selector modal
-                // 3. Quick-add from recent datasets
-                log.debug('[STUB] View button clicked - need to implement dataset selection', { row, col });
-                console.info('[TODO] View button needs implementation - should open dataset selector for cell', row, col);
+                // Dispatch event to open dataset selector modal
+                window.dispatchEvent(new CustomEvent('cia:open-dataset-selector', {
+                    detail: {
+                        targetRow: row,
+                        targetCol: col,
+                    }
+                }));
+                log.debug('Dispatched cia:open-dataset-selector', { row, col });
                 break;
 
             case 'notes':
@@ -880,6 +894,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     side="left"
                     visible={leftPanelOpen}
                     onClose={() => setLeftPanelOpen(false)}
+                    onDock={handleDockLeftPanel}
                     title="Files"
                     width={280}
                 >
@@ -891,6 +906,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                     side="right"
                     visible={rightPanelOpen}
                     onClose={() => setRightPanelOpen(false)}
+                    onDock={handleDockRightPanel}
                     title="Properties"
                     width={280}
                 >

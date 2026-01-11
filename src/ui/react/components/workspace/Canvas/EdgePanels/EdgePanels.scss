@@ -133,6 +133,13 @@
   color: $color-text-primary;
 }
 
+.floating-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-left: auto;
+}
+
 // =============================================================================
 // FLOATING PANEL CONTENT
 // =============================================================================
@@ -142,6 +149,12 @@
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
+}
+
+.floating-panel__content .panel-header__actions,
+.floating-panel__content .panel-header__controls,
+.floating-panel__content .right-panel__actions {
+  display: none;
 }
 
 .floating-panel__placeholder {

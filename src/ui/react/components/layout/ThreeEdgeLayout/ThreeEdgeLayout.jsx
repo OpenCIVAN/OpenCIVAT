@@ -14,6 +14,9 @@ import { useLayoutState, usePanelPersistence, PANEL_CONSTRAINTS, useResizeHandle
 import { usePanelState } from '@UI/react/hooks/usePanelState';
 import { useFocusMode } from '@UI/react/hooks/useFocusMode';
 import { OverlayPanel } from '@UI/react/components/panels/OverlayPanel';
+import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel';
+import LeftPanelContext, { LEFT_PANEL_TABS } from '@UI/react/components/panels/LeftPanel/LeftPanelContext';
+import RightPanelContext, { RIGHT_PANEL_TABS } from '@UI/react/components/panels/RightPanel/RightPanelContext';
 import './ThreeEdgeLayout.scss';
 
 /**
@@ -263,12 +266,16 @@ function GridZonesLayout({
     const {
         leftPeekingTab,
         rightPeekingTab,
-        leftActiveTab,
-        rightActiveTab,
         onPanelMouseEnter,
         onPanelMouseLeave,
         pinPeek,
     } = layoutContext;
+
+    const { popOutPanel } = useFloatingPanels();
+    const leftPanelContext = useContext(LeftPanelContext);
+    const rightPanelContext = useContext(RightPanelContext);
+    const activeLeftTab = leftPanelContext?.activeTab;
+    const activeRightTab = rightPanelContext?.activeTab;
 
     const { isResizing: leftResizing, handleMouseDown: leftMouseDown } = useResizeHandler('left', setLeftWidth);
     const { isResizing: rightResizing, handleMouseDown: rightMouseDown } = useResizeHandler('right', setRightWidth);
@@ -278,6 +285,43 @@ function GridZonesLayout({
     const showRightPanel = rightOpen || rightPeekingTab;
     const leftIsPreview = !leftOpen && leftPeekingTab;
     const rightIsPreview = !rightOpen && rightPeekingTab;
+    const currentLeftTabId = leftPeekingTab || activeLeftTab;
+    const currentRightTabId = rightPeekingTab || activeRightTab;
+
+    const handleLeftPopOut = useCallback(() => {
+        const tabId = leftPeekingTab || activeLeftTab;
+        if (!tabId) return;
+
+        const tabConfig = LEFT_PANEL_TABS.find((tab) => tab.id === tabId);
+        popOutPanel(`left-${tabId}`, {
+            title: tabConfig?.label || tabId,
+            icon: tabConfig?.icon,
+            color: tabConfig?.color,
+            x: 100,
+            y: 100,
+            width: 400,
+            height: 600,
+        });
+        setLeftOpen(true);
+    }, [leftPeekingTab, activeLeftTab, popOutPanel, setLeftOpen]);
+
+    const handleRightPopOut = useCallback(() => {
+        const tabId = rightPeekingTab || activeRightTab;
+        if (!tabId) return;
+
+        const tabConfig = RIGHT_PANEL_TABS.find((tab) => tab.id === tabId);
+        const baseX = typeof window !== 'undefined' ? window.innerWidth - 500 : 100;
+        popOutPanel(`right-${tabId}`, {
+            title: tabConfig?.label || tabId,
+            icon: tabConfig?.icon,
+            color: tabConfig?.color,
+            x: baseX,
+            y: 100,
+            width: 400,
+            height: 600,
+        });
+        setRightOpen(true);
+    }, [rightPeekingTab, activeRightTab, popOutPanel, setRightOpen]);
 
     // Grid styles for overlay mode - panels don't take columns
     const gridStyles = useMemo(() => {
@@ -417,8 +461,9 @@ function GridZonesLayout({
                         pinPeek?.('left');
                         setLeftOpen(true);
                     }}
-                    title={leftPeekingTab || leftActiveTab || 'Panel'}
-                    tabId={leftPeekingTab || leftActiveTab}
+                    onPopOut={handleLeftPopOut}
+                    title=""
+                    tabId={currentLeftTabId}
                     onMouseEnter={() => onPanelMouseEnter?.('left')}
                     onMouseLeave={() => onPanelMouseLeave?.('left')}
                     width={leftWidth - PANEL_CONSTRAINTS.left.collapsed}
@@ -442,8 +487,9 @@ function GridZonesLayout({
                         pinPeek?.('right');
                         setRightOpen(true);
                     }}
-                    title={rightPeekingTab || rightActiveTab || 'Panel'}
-                    tabId={rightPeekingTab || rightActiveTab}
+                    onPopOut={handleRightPopOut}
+                    title=""
+                    tabId={currentRightTabId}
                     onMouseEnter={() => onPanelMouseEnter?.('right')}
                     onMouseLeave={() => onPanelMouseLeave?.('right')}
                     width={rightWidth - PANEL_CONSTRAINTS.right.collapsed}

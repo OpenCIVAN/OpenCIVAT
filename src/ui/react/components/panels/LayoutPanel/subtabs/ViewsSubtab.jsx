@@ -22,6 +22,8 @@ import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { ViewItem } from '@UI/react/components/molecules/ViewItem';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
+import { getViewConfigurationManager, getCanvasManager } from '@Init/appInitializer.js';
+import { toast } from '@UI/react/store/toastStore';
 import './ViewsSubtab.scss';
 
 // Filter chip configuration for Views
@@ -232,6 +234,126 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
     }, []);
 
     // =========================================================================
+    // CONTEXT MENU ACTION CALLBACKS
+    // =========================================================================
+
+    const handleStarWorkspace = useCallback((viewId) => {
+        const viewManager = getViewConfigurationManager();
+        const view = viewManager?.getView(viewId);
+        if (!view) return;
+
+        // Toggle starred workspace status
+        const newValue = !view.starredWorkspace;
+        view.starredWorkspace = newValue;
+        view.updatedAt = Date.now();
+
+        // Sync to server (triggers internal _syncToServer)
+        viewManager._syncToServer?.(view);
+        viewManager._emit?.('viewUpdated', view);
+
+        toast.success(newValue ? 'Added to workspace favorites' : 'Removed from workspace favorites');
+    }, []);
+
+    const handleStarPersonal = useCallback((viewId) => {
+        const viewManager = getViewConfigurationManager();
+        const view = viewManager?.getView(viewId);
+        if (!view) return;
+
+        // Toggle starred personal status
+        const newValue = !view.starredPersonal;
+        view.starredPersonal = newValue;
+        view.updatedAt = Date.now();
+
+        viewManager._syncToServer?.(view);
+        viewManager._emit?.('viewUpdated', view);
+
+        toast.success(newValue ? 'Added to personal favorites' : 'Removed from personal favorites');
+    }, []);
+
+    const handleSaveState = useCallback((viewId) => {
+        const viewManager = getViewConfigurationManager();
+        if (!viewManager) return;
+
+        try {
+            const snapshot = viewManager.createSnapshot(viewId, {
+                name: `State ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+                description: 'Quick save from views panel',
+            });
+
+            if (snapshot) {
+                toast.success('View state saved');
+            } else {
+                toast.error('Failed to save view state');
+            }
+        } catch (error) {
+            console.error('Save state error:', error);
+            toast.error('Failed to save view state');
+        }
+    }, []);
+
+    const handleLoadState = useCallback((viewId) => {
+        // Dispatch event to show snapshot picker modal
+        window.dispatchEvent(new CustomEvent('cia:show-snapshot-picker', {
+            detail: { viewId },
+        }));
+    }, []);
+
+    const handleShare = useCallback((viewId) => {
+        // Dispatch event to show share modal
+        window.dispatchEvent(new CustomEvent('cia:show-share-modal', {
+            detail: { viewId },
+        }));
+    }, []);
+
+    const handleDuplicate = useCallback(async (viewId) => {
+        const viewManager = getViewConfigurationManager();
+        const canvasManager = getCanvasManager();
+        if (!viewManager) return;
+
+        try {
+            // Duplicate the view configuration
+            const newView = await viewManager.duplicateView(viewId);
+
+            if (newView) {
+                // Find an empty cell on the canvas
+                const emptyCell = canvasManager?.findFirstEmptyCell();
+                if (emptyCell && canvasManager) {
+                    // Create placement for the new view
+                    canvasManager.createPlacement(
+                        newView.id,
+                        emptyCell.row,
+                        emptyCell.col,
+                        1, // rowSpan
+                        1  // colSpan
+                    );
+                    toast.success(`View duplicated to row ${emptyCell.row + 1}, col ${emptyCell.col + 1}`);
+                } else {
+                    toast.success('View duplicated (place from Datasets panel)');
+                }
+            }
+        } catch (error) {
+            console.error('Duplicate view error:', error);
+            toast.error('Failed to duplicate view');
+        }
+    }, []);
+
+    const handleLock = useCallback((viewId) => {
+        const viewManager = getViewConfigurationManager();
+        const view = viewManager?.getView(viewId);
+        if (!view) return;
+
+        // Toggle locked status
+        const newValue = !view.isLocked;
+        view.isLocked = newValue;
+        view.updatedAt = Date.now();
+
+        viewManager._syncToServer?.(view);
+        viewManager._emit?.('viewUpdated', view);
+
+        toast.success(newValue ? 'View locked' : 'View unlocked');
+    }, []);
+
+    // =========================================================================
     // RENDER
     // =========================================================================
 
@@ -360,14 +482,14 @@ export const ViewsSubtab = memo(function ViewsSubtab({ logic }) {
                                                     colSpan: view.colSpan,
                                                 }));
                                             }}
-                                            // Stubs for features not yet wired up
-                                            onStarWorkspace={() => console.log('TODO: Star workspace', view.id)}
-                                            onStarPersonal={() => console.log('TODO: Star personal', view.id)}
-                                            onSaveState={() => console.log('TODO: Save state', view.id)}
-                                            onLoadState={() => console.log('TODO: Load state', view.id)}
-                                            onShare={() => console.log('TODO: Share', view.id)}
-                                            onDuplicate={() => console.log('TODO: Duplicate', view.id)}
-                                            onLock={() => console.log('TODO: Lock', view.id)}
+                                            // Context menu actions
+                                            onStarWorkspace={() => handleStarWorkspace(view.id)}
+                                            onStarPersonal={() => handleStarPersonal(view.id)}
+                                            onSaveState={() => handleSaveState(view.id)}
+                                            onLoadState={() => handleLoadState(view.id)}
+                                            onShare={() => handleShare(view.id)}
+                                            onDuplicate={() => handleDuplicate(view.id)}
+                                            onLock={() => handleLock(view.id)}
                                             className="views-subtab__view-item"
                                         />
                                     );

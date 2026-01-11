@@ -5,7 +5,7 @@
 // Reuses existing panel content components
 
 import React, { memo, useCallback, useRef, useEffect } from 'react';
-import { IconButton, Icon } from '@UI/react/components/atoms';
+import { IconButton } from '@UI/react/components/atoms';
 import './EdgePanels.scss';
 
 /**
@@ -15,6 +15,7 @@ import './EdgePanels.scss';
  * - side: 'left' | 'right'
  * - visible: Whether panel is shown
  * - onClose: Called when panel should close
+ * - onDock: Called when panel should dock
  * - title: Panel header title
  * - children: Panel content
  * - width: Panel width (default 280px)
@@ -23,7 +24,8 @@ export function FloatingPanel({
     side = 'left',
     visible = false,
     onClose,
-    title = 'Panel',
+    onDock,
+    title = '',
     children,
     width = 280,
     className = '',
@@ -74,13 +76,23 @@ export function FloatingPanel({
         >
             {/* Header */}
             <div className="floating-panel__header">
-                <span className="floating-panel__title">{title}</span>
-                <IconButton
-                    icon="x"
-                    label="Close"
-                    size="xs"
-                    onClick={onClose}
-                />
+                {title && <span className="floating-panel__title">{title}</span>}
+                <div className="floating-panel__header-actions">
+                    {onDock && (
+                        <IconButton
+                            icon="pinOff"
+                            label="Dock"
+                            size="xs"
+                            onClick={onDock}
+                        />
+                    )}
+                    <IconButton
+                        icon="x"
+                        label="Close"
+                        size="xs"
+                        onClick={onClose}
+                    />
+                </div>
             </div>
 
             {/* Content */}

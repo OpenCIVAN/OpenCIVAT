@@ -9,8 +9,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 44px;
-    padding: 0 12px;
+    height: 32px;
+    padding: 0 8px;
     border-bottom: 1px solid $color-border-default;
     flex-shrink: 0;
 
@@ -24,7 +24,8 @@
     &__actions {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 2px;
+        margin-left: auto;
     }
 
     &__pin {

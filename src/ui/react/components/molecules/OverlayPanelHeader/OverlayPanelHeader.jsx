@@ -33,7 +33,7 @@ export function OverlayPanelHeader({
 }) {
     return (
         <div className="overlay-panel-header">
-            <h3 className="overlay-panel-header__title">{title}</h3>
+            {title && <h3 className="overlay-panel-header__title">{title}</h3>}
 
             <div className="overlay-panel-header__actions">
                 {/* Pop-out button (always visible if handler provided) */}
@@ -42,7 +42,7 @@ export function OverlayPanelHeader({
                         icon="open_in_new"
                         size="sm"
                         variant="ghost"
-                        title="Pop out to floating panel"
+                        title="Undock panel"
                         onClick={onPopOut}
                     />
                 )}

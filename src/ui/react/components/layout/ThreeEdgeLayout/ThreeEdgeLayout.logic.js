@@ -11,15 +11,15 @@ import { ui as log } from "@Utils/logger.js";
  */
 export const PANEL_CONSTRAINTS = {
   left: {
-    min: 240,
+    min: 300, // Increased from 240 for better button visibility
     max: 600,
-    default: 320,
+    default: 340, // Slightly wider default
     collapsed: 48,
   },
   right: {
-    min: 280,
+    min: 320, // Increased from 280 for better button visibility
     max: 600,
-    default: 340,
+    default: 360, // Slightly wider default
     collapsed: 48,
   },
 };

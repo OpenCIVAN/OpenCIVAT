@@ -102,6 +102,14 @@ export function getSubsetManager() {
 }
 
 /**
+ * Get the CanvasManager instance
+ * Use this for canvas operations in components.
+ */
+export function getCanvasManager() {
+  return canvasManager;
+}
+
+/**
  * Phase 0: Server Sync Check
  *
  * Runs BEFORE Phase 1 to detect server resets and prepare for reconciliation.
