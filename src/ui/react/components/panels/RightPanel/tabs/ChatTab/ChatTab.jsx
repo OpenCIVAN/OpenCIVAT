@@ -19,10 +19,13 @@
 import React, { useRef, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { SubtabBar } from '@UI/react/components/molecules/SubtabBar';
+import { sync as log } from '@Utils/logger.js';
 
 import { useChatTab } from './hooks/useChatTab';
+import { useMatrixFederation } from './hooks/useMatrixFederation';
 import { MessageBubble } from './components/MessageBubble';
 import { MessageInput } from './components/MessageInput';
+import { RoomDirectory } from './components/RoomDirectory';
 
 import './ChatTab.scss';
 
@@ -42,8 +45,9 @@ import './ChatTab.scss';
  * @param {ChatTabProps} props - Component props
  * @returns {React.ReactElement} The rendered tab
  */
-export function ChatTab({ workspaceId }) {
+export function ChatTab({ workspaceId, roomId, projectId }) {
     const messagesEndRef = useRef(null);
+    const [showRoomDirectory, setShowRoomDirectory] = React.useState(false);
 
     const {
         messages,
@@ -55,7 +59,15 @@ export function ChatTab({ workspaceId }) {
         subtabs,
         handleSend,
         handleDelete,
+        refreshMessages,
     } = useChatTab({ workspaceId });
+
+    // Matrix federation status (Phase 6)
+    const {
+        federatedUserCount,
+        isFederationEnabled,
+        isFederationConnected,
+    } = useMatrixFederation(roomId);
 
     // Scroll to bottom when messages change
     useEffect(() => {
@@ -65,6 +77,16 @@ export function ChatTab({ workspaceId }) {
     // Get subtab label for display
     const currentSubtabLabel = subtabs.find(t => t.id === activeSubtab)?.label || 'Room';
 
+    // Handle room joined from directory
+    const handleRoomJoined = (room) => {
+        log.info('Joined external Matrix room:', room);
+        setShowRoomDirectory(false);
+        // Refresh messages to show new room
+        if (refreshMessages) {
+            refreshMessages();
+        }
+    };
+
     return (
         <div className="chat-tab">
             {/* Header */}
@@ -72,6 +94,7 @@ export function ChatTab({ workspaceId }) {
                 <Icon name="messageSquare" size={14} className="panel-header__icon file-icon--blue" />
                 <span className="panel-header__title">Chat</span>
                 <div className="panel-header__status">
+                    {/* Y.js connection status */}
                     {isLoading ? (
                         <span className="chat-status chat-status--loading">
                             <Icon name="loader" size={12} className="spin" />
@@ -79,13 +102,38 @@ export function ChatTab({ workspaceId }) {
                         </span>
                     ) : isSynced ? (
                         <span className="chat-status chat-status--connected">
-                            <Icon name="globe" size={12} />
+                            <Icon name="wifi" size={12} />
                             Connected
                         </span>
                     ) : (
                         <span className="chat-status chat-status--offline">
+                            <Icon name="wifiOff" size={12} />
                             Offline
                         </span>
+                    )}
+
+                    {/* Matrix federation status (Phase 6) */}
+                    {isFederationEnabled && isFederationConnected && (
+                        <>
+                            <span
+                                className="chat-status chat-status--federation"
+                                title={`Matrix federation enabled${federatedUserCount > 0 ? ` · ${federatedUserCount} federated user${federatedUserCount > 1 ? 's' : ''}` : ''}`}
+                            >
+                                <Icon name="globe" size={12} />
+                                Matrix
+                                {federatedUserCount > 0 && (
+                                    <span className="chat-status__badge">{federatedUserCount}</span>
+                                )}
+                            </span>
+                            {/* Room Directory Button (Phase 7) */}
+                            <button
+                                className="chat-status chat-status--directory-btn"
+                                onClick={() => setShowRoomDirectory(!showRoomDirectory)}
+                                title="Browse Matrix room directory"
+                            >
+                                <Icon name="search" size={12} />
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -138,6 +186,17 @@ export function ChatTab({ workspaceId }) {
 
             {/* Message Input */}
             <MessageInput onSend={handleSend} disabled={isLoading || activeSubtab === 'dm'} />
+
+            {/* Room Directory Overlay (Phase 7) */}
+            {showRoomDirectory && (
+                <div className="chat-tab__overlay">
+                    <RoomDirectory
+                        projectId={projectId}
+                        onRoomJoined={handleRoomJoined}
+                        onClose={() => setShowRoomDirectory(false)}
+                    />
+                </div>
+            )}
         </div>
     );
 }

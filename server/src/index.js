@@ -15,6 +15,8 @@ const { server: log, db, http: httpLog } = require("./utils/logger");
 
 const { createRecordingService } = require("./services/recordingService");
 const thumbnailService = require("./services/thumbnailService");
+const { createMatrixBridge } = require("./services/matrixBridge");
+const { createMatrixUserResolver } = require("./services/matrixUserResolver");
 
 const app = express();
 const server = http.createServer(app);
@@ -79,6 +81,42 @@ wsManager.initialize(server);
 
 // Initialize audit logger
 auditLogger.initialize(pool);
+
+// Initialize Matrix bridge (if enabled)
+const matrixBridge = createMatrixBridge({
+  enabled: process.env.MATRIX_FEDERATION_ENABLED === 'true',
+  homeserverUrl: process.env.MATRIX_BASE_URL || 'http://localhost:8008',
+  serverName: process.env.MATRIX_SERVER_NAME || 'matrix.cia-web.local',
+  asToken: process.env.MATRIX_AS_TOKEN,
+  hsToken: process.env.MATRIX_HS_TOKEN,
+  senderLocalpart: 'cia_bridge',
+});
+
+let matrixUserResolver = null;
+
+// Initialize Matrix bridge asynchronously (don't block server startup)
+if (matrixBridge.config.enabled) {
+  (async () => {
+    try {
+      // Note: Y.js persistence will be passed when websocket initializes
+      // For now, initialize with pool only
+      await matrixBridge.initialize(null, pool);
+
+      // Create user resolver
+      if (matrixBridge.client) {
+        matrixUserResolver = createMatrixUserResolver(matrixBridge.client, pool);
+        log.info('Matrix user resolver initialized');
+      }
+
+      log.info('Matrix federation is active');
+    } catch (error) {
+      log.error('Failed to initialize Matrix bridge:', error.message);
+      log.warn('Server will continue without Matrix federation');
+    }
+  })();
+} else {
+  log.info('Matrix federation is disabled (set MATRIX_FEDERATION_ENABLED=true to enable)');
+}
 
 // ============================================================================
 // MIDDLEWARE
@@ -150,6 +188,8 @@ app.locals.minioClient = minioClient;
 app.locals.bucketName = BUCKET_NAME;
 app.locals.wsManager = wsManager;
 app.locals.auditLogger = auditLogger;
+app.locals.matrixBridge = matrixBridge;
+app.locals.matrixUserResolver = matrixUserResolver;
 
 // Auth routes (no auth required for these)
 app.use("/api/auth", authRouter);
@@ -202,6 +242,9 @@ const thumbnailCallbackRouter = require("./routes/thumbnailCallback");
 // VR exploration routes
 const vrRouter = require("./routes/vr");
 
+// Matrix federation routes (Phase 5)
+const matrixRouter = require("./routes/matrix");
+
 app.use("/api/files", optionalAuth, filesRouter);
 app.use("/api/annotations", optionalAuth, annotationsRouter);
 app.use("/api/views", optionalAuth, viewsRouter);
@@ -247,6 +290,9 @@ app.use("/api/sync", optionalAuth, syncRouter);
 // VR exploration routes
 app.use("/api/vr", optionalAuth, vrRouter);
 
+// Matrix federation routes (Phase 5)
+app.use("/api/matrix", optionalAuth, matrixRouter);
+
 // ============================================================================
 // HEALTH & STATUS ENDPOINTS
 // ============================================================================
@@ -271,6 +317,7 @@ app.get("/api/health", async (req, res) => {
           active: recordingService.getActiveRecordings(),
         },
         audit: "active",
+        matrix: matrixBridge.getStatus(),
       },
       timestamp: new Date().toISOString(),
     });
@@ -366,6 +413,11 @@ async function shutdown(signal) {
 
   // Flush and shutdown audit logger
   await auditLogger.shutdown();
+
+  // Shutdown Matrix bridge
+  if (matrixBridge) {
+    await matrixBridge.shutdown();
+  }
 
   // Close database pool
   await pool.end();

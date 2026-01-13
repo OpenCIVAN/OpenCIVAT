@@ -755,8 +755,71 @@ CREATE TABLE chat_messages (
     metadata JSONB DEFAULT '{}',
     deleted_at TIMESTAMPTZ,
     deleted_by UUID REFERENCES users(id),
-    yjs_update_id UUID REFERENCES yjs_updates(id) ON DELETE SET NULL
+    yjs_update_id UUID REFERENCES yjs_updates(id) ON DELETE SET NULL,
+    -- Matrix federation columns (Phase 3)
+    matrix_event_id VARCHAR(255),
+    matrix_room_id VARCHAR(255),
+    federation_source VARCHAR(50)
 );
+
+-- ============================================================================
+-- MATRIX FEDERATION (Phase 3-7)
+-- ============================================================================
+
+-- Maps CIA Web rooms to Matrix rooms
+CREATE TABLE matrix_room_mappings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    cia_room_id VARCHAR(255) NOT NULL UNIQUE,
+    matrix_room_id VARCHAR(255) NOT NULL UNIQUE,
+    matrix_alias VARCHAR(255),
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    last_synced_at TIMESTAMPTZ DEFAULT NOW(),
+    status VARCHAR(50) DEFAULT 'active',
+    config JSONB DEFAULT '{}'
+);
+
+CREATE INDEX idx_matrix_room_mappings_cia_room ON matrix_room_mappings(cia_room_id);
+CREATE INDEX idx_matrix_room_mappings_matrix_room ON matrix_room_mappings(matrix_room_id);
+CREATE INDEX idx_matrix_room_mappings_project ON matrix_room_mappings(project_id) WHERE project_id IS NOT NULL;
+CREATE INDEX idx_matrix_room_mappings_status ON matrix_room_mappings(status);
+
+-- Deduplication log for Matrix events
+CREATE TABLE matrix_event_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    matrix_event_id VARCHAR(255) NOT NULL UNIQUE,
+    cia_message_id UUID REFERENCES chat_messages(id) ON DELETE SET NULL,
+    direction VARCHAR(20) NOT NULL CHECK (direction IN ('outbound', 'inbound')),
+    matrix_room_id VARCHAR(255) NOT NULL,
+    cia_room_id VARCHAR(255),
+    matrix_user_id VARCHAR(255),
+    processed_at TIMESTAMPTZ DEFAULT NOW(),
+    event_data JSONB DEFAULT '{}'
+);
+
+CREATE INDEX idx_matrix_event_log_matrix_event_id ON matrix_event_log(matrix_event_id);
+CREATE INDEX idx_matrix_event_log_cia_message_id ON matrix_event_log(cia_message_id) WHERE cia_message_id IS NOT NULL;
+CREATE INDEX idx_matrix_event_log_direction ON matrix_event_log(direction);
+CREATE INDEX idx_matrix_event_log_processed_at ON matrix_event_log(processed_at);
+
+-- Cache of federated Matrix users
+CREATE TABLE federated_user_cache (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    matrix_user_id VARCHAR(255) NOT NULL UNIQUE,
+    cia_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    display_name VARCHAR(255),
+    avatar_url TEXT,
+    server_name VARCHAR(255),
+    last_seen TIMESTAMPTZ DEFAULT NOW(),
+    cached_at TIMESTAMPTZ DEFAULT NOW(),
+    profile_data JSONB DEFAULT '{}',
+    status VARCHAR(50) DEFAULT 'active'
+);
+
+CREATE INDEX idx_federated_user_cache_matrix_user_id ON federated_user_cache(matrix_user_id);
+CREATE INDEX idx_federated_user_cache_cia_user_id ON federated_user_cache(cia_user_id) WHERE cia_user_id IS NOT NULL;
+CREATE INDEX idx_federated_user_cache_server_name ON federated_user_cache(server_name);
+CREATE INDEX idx_federated_user_cache_last_seen ON federated_user_cache(last_seen);
 
 -- ============================================================================
 -- CANVAS SYSTEM (Canvases, Placements, Subsets, Notes, Images)
@@ -920,6 +983,9 @@ CREATE INDEX idx_chat_user ON chat_messages(user_id);
 CREATE INDEX idx_chat_thread ON chat_messages(thread_root_id) WHERE thread_root_id IS NOT NULL;
 CREATE INDEX idx_chat_not_deleted ON chat_messages(room_id, timestamp) WHERE deleted_at IS NULL;
 CREATE INDEX idx_chat_type ON chat_messages(message_type) WHERE message_type != 'text';
+CREATE INDEX idx_chat_matrix_event_id ON chat_messages(matrix_event_id) WHERE matrix_event_id IS NOT NULL;
+CREATE INDEX idx_chat_matrix_room_id ON chat_messages(matrix_room_id) WHERE matrix_room_id IS NOT NULL;
+CREATE INDEX idx_chat_federation_source ON chat_messages(federation_source) WHERE federation_source IS NOT NULL;
 
 -- ============================================================================
 -- HELPER FUNCTIONS
@@ -1000,6 +1066,33 @@ BEGIN
         RETURNING id INTO v_workspace_id;
     END IF;
     RETURN v_workspace_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Matrix Federation: Clean up old event log entries (run via cron)
+CREATE OR REPLACE FUNCTION cleanup_matrix_event_log()
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM matrix_event_log
+    WHERE processed_at < NOW() - INTERVAL '7 days';
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Matrix Federation: Clean up stale user cache entries (run via cron)
+CREATE OR REPLACE FUNCTION cleanup_federated_user_cache()
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM federated_user_cache
+    WHERE cached_at < NOW() - INTERVAL '30 days'
+    AND last_seen < NOW() - INTERVAL '30 days';
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql;
 

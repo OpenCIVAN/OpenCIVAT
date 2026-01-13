@@ -156,6 +156,26 @@ router.post("/", async (req, res, next) => {
 
     log.info("Room created:", { roomId: room.id, name: room.name, projectId });
 
+    // Auto-create Matrix room (Phase 4)
+    const { matrixBridge } = req.app.locals;
+    if (matrixBridge && matrixBridge.isConnected) {
+      try {
+        const matrixRoomId = await matrixBridge.createOrGetMatrixRoom(
+          room.id,
+          {
+            name: room.name,
+            topic: room.description || `Breakout room: ${room.name}`,
+            visibility: room.is_public ? 'public' : 'private',
+            projectId: projectId,
+          }
+        );
+        log.info("Matrix room auto-created:", { ciaRoomId: room.id, matrixRoomId });
+      } catch (matrixError) {
+        log.error("Failed to auto-create Matrix room:", matrixError.message);
+        // Non-fatal - room still works without federation
+      }
+    }
+
     // Broadcast to project members
     if (wsManager) {
       wsManager.broadcastToProject(projectId, {
@@ -507,8 +527,13 @@ router.get("/:roomId/members", async (req, res, next) => {
 /**
  * Creates the main room for a project
  * Called when a project is created
+ * @param {Object} client - PostgreSQL client (from pool.connect())
+ * @param {string} projectId - Project UUID
+ * @param {string} createdBy - User UUID
+ * @param {Object} matrixBridge - Optional Matrix bridge instance (Phase 4)
+ * @returns {Promise<Object>} Created room object
  */
-async function createMainRoom(client, projectId, createdBy) {
+async function createMainRoom(client, projectId, createdBy, matrixBridge = null) {
   const result = await client.query(
     `
     INSERT INTO rooms (project_id, name, room_type, is_public, created_by)
@@ -530,6 +555,25 @@ async function createMainRoom(client, projectId, createdBy) {
   );
 
   log.info("Main room created for project:", { projectId, roomId: room.id });
+
+  // Auto-create Matrix room (Phase 4)
+  if (matrixBridge && matrixBridge.isConnected) {
+    try {
+      const matrixRoomId = await matrixBridge.createOrGetMatrixRoom(
+        room.id,
+        {
+          name: 'Main Room',
+          topic: `Main discussion room for project ${projectId}`,
+          visibility: 'public',
+          projectId: projectId,
+        }
+      );
+      log.info("Matrix main room auto-created:", { ciaRoomId: room.id, matrixRoomId });
+    } catch (matrixError) {
+      log.error("Failed to auto-create Matrix main room:", matrixError.message);
+      // Non-fatal - room still works without federation
+    }
+  }
 
   return room;
 }

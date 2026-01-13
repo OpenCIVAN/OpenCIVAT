@@ -19,11 +19,15 @@ import { CanvasInfoFooter } from '../CanvasInfoFooter/CanvasInfoFooter.jsx';
 import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
 import { FloatingCanvasWrapper, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
 import { InstanceToolsNotch } from '@UI/react/components/workspace/InstanceToolsNotch';
+import { CreateWorkspacePanel } from '@UI/react/components/panels/FloatingPanel';
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
+import { useWorkspaces } from '@UI/react/hooks/useWorkspaces.js';
+import { useRoomPresence, useRoomActions } from '@UI/react/hooks/useRoomPresence.js';
+import { useRoomsTab } from '@UI/react/components/panels/RightPanel/tabs/RoomsTab/hooks/useRoomsTab.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
@@ -55,6 +59,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     // Floating panel state
     const [leftPanelOpen, setLeftPanelOpen] = useState(false);
     const [rightPanelOpen, setRightPanelOpen] = useState(false);
+    const [showCreateWorkspacePanel, setShowCreateWorkspacePanel] = useState(false);
 
     // Grid size state
     const [gridSize, setGridSize] = useState({ rows: 3, cols: 3 });
@@ -70,6 +75,73 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     const [activeTool, setActiveTool] = useState('select');
     const [mergeMode, setMergeMode] = useState(false);
     const [flowDirection, setFlowDirection] = useState('row');
+
+    // Rooms and workspaces hooks
+    const {
+        rooms,
+        currentRoom,
+        handleJoinRoom,
+        handleCreateRoom: handleCreateRoomAPI,
+    } = useRoomsTab({ projectId });
+
+    const { users: roomMembers } = useRoomPresence(currentRoom?.id);
+    const { setRoom, setWorkspace: setWorkspacePresence } = useRoomActions();
+
+    const {
+        workspaces: allWorkspaces,
+        currentWorkspaceId,
+        selectWorkspace,
+        createBreakout,
+        createProjectWorkspace,
+    } = useWorkspaces({ userId, projectId });
+
+    // Transform workspaces for the selector
+    const workspacesForSelector = useMemo(() => {
+        return allWorkspaces || [];
+    }, [allWorkspaces]);
+
+    const currentWorkspace = useMemo(() => {
+        return allWorkspaces?.find(ws => ws.id === currentWorkspaceId) || null;
+    }, [allWorkspaces, currentWorkspaceId]);
+
+    // Handle workspace change
+    const handleWorkspaceChange = useCallback((workspaceId) => {
+        selectWorkspace(workspaceId);
+        setWorkspacePresence(workspaceId);
+    }, [selectWorkspace, setWorkspacePresence]);
+
+    // Handle workspace creation - open the panel
+    const handleOpenCreateWorkspace = useCallback(() => {
+        setShowCreateWorkspacePanel(true);
+    }, []);
+
+    // Handle actual workspace creation from the panel
+    const handleCreateWorkspace = useCallback(async ({ name, description, type }) => {
+        try {
+            let workspace;
+            if (type === 'breakout') {
+                workspace = await createBreakout(name, 2, currentRoom?.id);
+            } else {
+                workspace = await createProjectWorkspace(name, description);
+            }
+
+            if (workspace) {
+                // Select the newly created workspace
+                selectWorkspace(workspace.id);
+                setWorkspacePresence(workspace.id);
+                log.info('Created and selected workspace:', workspace.name);
+            }
+        } catch (error) {
+            log.error('Failed to create workspace:', error);
+            throw error; // Re-throw so the panel can handle it
+        }
+    }, [createProjectWorkspace, createBreakout, selectWorkspace, setWorkspacePresence, currentRoom]);
+
+    // Handle room change
+    const handleRoomChange = useCallback((roomId) => {
+        handleJoinRoom(roomId);
+        setRoom(roomId);
+    }, [handleJoinRoom, setRoom]);
 
     // Dispatch edit mode changes to CanvasGrid
     const handleEditModeChange = useCallback((newEditMode) => {
@@ -772,21 +844,17 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 {/* Canvas Header Bar - Room/Workspace/Edit/Flow/Size/CanvasMode */}
                 <CanvasHeaderBar
                     // Room props (uses RoomPresenceIndicator)
-                    room={{ id: 'main', name: 'Main Room', type: 'main' }}
-                    roomMembers={[
-                        { id: 'user1', name: 'Alice', color: '#60a5fa' },
-                        { id: 'user2', name: 'Bob', color: '#4ade80' },
-                        { id: 'user3', name: 'Carol', color: '#f472b6' },
-                    ]}
-                    availableRooms={[]}
-                    onRoomChange={() => {}}
-                    onOpenRoomsPanel={() => {}}
-                    onCreateRoom={() => {}}
+                    room={currentRoom || { id: 'main', name: 'Main Room', type: 'main' }}
+                    roomMembers={roomMembers || []}
+                    availableRooms={rooms || []}
+                    onRoomChange={handleRoomChange}
+                    onOpenRoomsPanel={() => setRightDockedOpen(true)}
+                    onCreateRoom={handleCreateRoomAPI}
                     // Workspace props (uses WorkspaceSelector)
-                    workspace={{ id: projectId, name: 'Workspace', type: 'project' }}
-                    workspaces={[{ id: projectId, name: 'Workspace', type: 'project' }]}
-                    onWorkspaceChange={() => {}}
-                    onCreateWorkspace={() => {}}
+                    workspace={currentWorkspace || { id: projectId, name: 'Workspace', type: 'project' }}
+                    workspaces={workspacesForSelector}
+                    onWorkspaceChange={handleWorkspaceChange}
+                    onCreateWorkspace={handleOpenCreateWorkspace}
                     // Edit tools
                     activeTool={activeTool}
                     onToolChange={handleToolChange}
@@ -988,6 +1056,15 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 onAddToSubset={handleAddToExistingSubset}
                 onPlaceOnCanvas={handlePlaceSubsetOnCanvas}
                 onEnterSelectionMode={handleEnterSelectionMode}
+            />
+
+            {/* Create Workspace Panel */}
+            <CreateWorkspacePanel
+                isOpen={showCreateWorkspacePanel}
+                onClose={() => setShowCreateWorkspacePanel(false)}
+                onCreate={handleCreateWorkspace}
+                userId={userId}
+                projectId={projectId}
             />
             </div>
         </FloatingCanvasWrapper>

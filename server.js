@@ -18,11 +18,13 @@ const { createLogger } = require("./server/src/utils/logger");
 const {
   YjsPersistenceService,
 } = require("./server/src/services/yjsPersistence");
+const { createMatrixBridge } = require("./server/src/services/matrixBridge");
 
 const wsLog = createLogger("ws");
 const serverLog = createLogger("server");
 const syncLog = createLogger("sync");
 const recordingLog = createLogger("recording");
+const matrixLog = createLogger("matrix-bridge");
 
 // Message types (Y.js protocol)
 const MESSAGE_SYNC = 0;
@@ -47,6 +49,73 @@ try {
 } catch (err) {
   syncLog.error("Failed to initialize persistence:", err.message);
   syncLog.warn("Running without persistence - data will not be saved");
+}
+
+// Initialize Matrix bridge (if enabled)
+let matrixBridge = null;
+if (process.env.MATRIX_FEDERATION_ENABLED === 'true' && persistence) {
+  try {
+    matrixBridge = createMatrixBridge({
+      enabled: true,
+      homeserverUrl: process.env.MATRIX_BASE_URL || 'http://localhost:8008',
+      serverName: process.env.MATRIX_SERVER_NAME || 'matrix.cia-web.local',
+      asToken: process.env.MATRIX_AS_TOKEN,
+      hsToken: process.env.MATRIX_HS_TOKEN,
+      senderLocalpart: 'cia_bridge',
+    });
+
+    // Initialize Matrix bridge asynchronously
+    (async () => {
+      try {
+        await matrixBridge.initialize(persistence, persistence.pool);
+
+        // Set Matrix bridge on persistence service
+        persistence.setMatrixBridge(matrixBridge);
+
+        // Set up callback for inbound Matrix messages
+        matrixBridge.onMessageFromMatrix = (messageData) => {
+          // Find the Y.js room for this message
+          const room = rooms.get(messageData.roomId);
+          if (!room) {
+            matrixLog.warn('Received Matrix message for unknown room:', messageData.roomId);
+            return;
+          }
+
+          // Add the message to the Y.js chatMessages array
+          const chatArray = room.doc.getArray('chatMessages');
+
+          // Create message object matching Y.js chat format
+          const yjsMessage = {
+            id: messageData.messageId,
+            userName: messageData.username,
+            text: messageData.message,
+            timestamp: messageData.timestamp.toISOString(),
+            messageType: 'text',
+            metadata: {
+              ...messageData.federation,
+              isFederated: true,
+            },
+          };
+
+          // Add to Y.js array (this will sync to all connected clients)
+          chatArray.push([yjsMessage]);
+
+          matrixLog.info('Broadcast Matrix message to Y.js clients:', messageData.roomId);
+        };
+
+        matrixLog.info('Matrix federation enabled for Y.js chat');
+      } catch (error) {
+        matrixLog.error('Failed to initialize Matrix bridge:', error.message);
+        matrixLog.warn('Chat will continue without Matrix federation');
+      }
+    })();
+  } catch (error) {
+    matrixLog.error('Failed to create Matrix bridge:', error.message);
+  }
+} else if (process.env.MATRIX_FEDERATION_ENABLED === 'true') {
+  matrixLog.warn('Matrix federation enabled but persistence not available');
+} else {
+  matrixLog.info('Matrix federation disabled');
 }
 
 /**
@@ -831,6 +900,11 @@ async function shutdown() {
   wss.clients.forEach((client) => {
     client.close();
   });
+
+  // Shutdown Matrix bridge
+  if (matrixBridge) {
+    await matrixBridge.shutdown();
+  }
 
   // Shutdown persistence service
   if (persistence) {

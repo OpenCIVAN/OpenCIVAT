@@ -21,6 +21,7 @@ class YjsPersistenceService {
     this.pool = pool;
     this.snapshotInterval = 60000; // 60 seconds default
     this.snapshotTimers = new Map(); // roomId -> timer
+    this.matrixBridge = null; // Set via setMatrixBridge()
   }
 
   /**
@@ -39,6 +40,15 @@ class YjsPersistenceService {
     });
 
     return new YjsPersistenceService(pool);
+  }
+
+  /**
+   * Set Matrix bridge for federation sync
+   * @param {MatrixBridgeService} matrixBridge - Matrix bridge instance
+   */
+  setMatrixBridge(matrixBridge) {
+    this.matrixBridge = matrixBridge;
+    log.info("Matrix bridge connected to Y.js persistence");
   }
 
   /**
@@ -240,9 +250,29 @@ class YjsPersistenceService {
 
     log.debug("Stored chat message in room:", roomId, "from:", username);
 
-    return {
+    const messageData = {
       id: result.rows[0].id,
       timestamp: result.rows[0].timestamp,
+      roomId,
+      projectId,
+      userId,
+      username,
+      message,
+      metadata,
+    };
+
+    // Sync to Matrix federation (if enabled and connected)
+    if (this.matrixBridge && this.matrixBridge.isConnected) {
+      // Async sync - don't block chat message storage
+      this.matrixBridge.syncToMatrix(messageData).catch((err) => {
+        log.error("Failed to sync message to Matrix:", err.message);
+        // Message is already stored in PostgreSQL, so this is non-fatal
+      });
+    }
+
+    return {
+      id: messageData.id,
+      timestamp: messageData.timestamp,
     };
   }
 

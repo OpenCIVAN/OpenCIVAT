@@ -32,6 +32,7 @@ import {
   DivergenceLevel,
 } from "@Services/syncService.js";
 import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
+import { viewLinkingService } from "@Services/ViewLinkingService.js";
 
 // =============================================================================
 // INITIALIZATION PROGRESS TRACKING
@@ -493,6 +494,12 @@ export async function initializePhase2() {
 
     viewLifecycleService.initialize();
     log.info("ViewLifecycleService initialized");
+
+    // Initialize view linking service
+    log.debug("Initializing view linking service...");
+    viewLinkingService.initialize();
+    log.info("ViewLinkingService initialized");
+
     emitProgress('workspace', 'complete', 100);
 
     log.info("Phase 2 complete - User services ready");

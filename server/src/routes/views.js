@@ -619,4 +619,379 @@ router.post("/:id/share", async (req, res, next) => {
   }
 });
 
+// ============================================================================
+// GRANULAR SHARING ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/views/:id/shares
+ * Get list of users this view is shared with
+ */
+router.get("/:id/shares", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { pool } = req.app.locals;
+    const user = getUser(req);
+
+    // Get view with sharing info
+    const result = await pool.query(
+      `
+      SELECT v.id, v.name, v.owner_user_id, v.shared_with
+      FROM view_configurations v
+      WHERE v.id = $1
+    `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "View not found" });
+    }
+
+    const view = result.rows[0];
+
+    // Check permission (owner or has share access)
+    const sharedWith = view.shared_with || [];
+    const hasAccess =
+      view.owner_user_id === user.id ||
+      sharedWith.some((share) => share.userId === user.id);
+
+    if (!hasAccess) {
+      return res
+        .status(403)
+        .json({ error: "You don't have access to this view" });
+    }
+
+    res.json({
+      shares: sharedWith,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/views/:id/shares
+ * Add or update shares for a view
+ */
+router.post("/:id/shares", async (req, res, next) => {
+  const { pool, wsManager } = req.app.locals;
+
+  try {
+    const { id } = req.params;
+    const user = getUser(req);
+    const { added = [], updated = [], removed = [] } = req.body;
+
+    // Get existing view
+    const existing = await pool.query(
+      "SELECT * FROM view_configurations WHERE id = $1",
+      [id]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: "View not found" });
+    }
+
+    const view = existing.rows[0];
+
+    // Check permission (owner only for now)
+    if (view.owner_user_id !== user.id) {
+      return res
+        .status(403)
+        .json({ error: "Only the owner can modify sharing settings" });
+    }
+
+    // Get current shares
+    let sharedWith = view.shared_with || [];
+
+    // Process removals
+    for (const userId of removed) {
+      sharedWith = sharedWith.filter((share) => share.userId !== userId);
+    }
+
+    // Process additions
+    for (const newShare of added) {
+      // Remove if already exists (will be re-added with new settings)
+      sharedWith = sharedWith.filter(
+        (share) => share.userId !== newShare.userId
+      );
+      // Add new share
+      sharedWith.push({
+        userId: newShare.userId,
+        permission: newShare.permission || "viewer",
+        addedAt: new Date().toISOString(),
+        addedBy: user.id,
+      });
+    }
+
+    // Process updates
+    for (const updatedShare of updated) {
+      const index = sharedWith.findIndex(
+        (share) => share.userId === updatedShare.userId
+      );
+      if (index !== -1) {
+        sharedWith[index] = {
+          ...sharedWith[index],
+          permission: updatedShare.permission || sharedWith[index].permission,
+        };
+      }
+    }
+
+    // Update database
+    const result = await pool.query(
+      `
+      UPDATE view_configurations
+      SET shared_with = $1, is_shared = $2, updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `,
+      [JSON.stringify(sharedWith), sharedWith.length > 0, id]
+    );
+
+    const updatedView = result.rows[0];
+
+    // Audit log
+    if (req.audit) {
+      await req.audit({
+        action: "view:update_shares",
+        entityType: "view",
+        entityId: id,
+        details: {
+          added: added.length,
+          updated: updated.length,
+          removed: removed.length,
+        },
+      });
+    }
+
+    // Broadcast update to all clients in the project
+    if (wsManager && view.dataset_id) {
+      const projects = await pool.query(
+        "SELECT project_id FROM file_project_access WHERE file_id = $1",
+        [view.dataset_id]
+      );
+
+      for (const row of projects.rows) {
+        wsManager.viewUpdated(row.project_id, updatedView);
+      }
+    }
+
+    res.json({
+      success: true,
+      shares: sharedWith,
+      view: updatedView,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * DELETE /api/views/:id/shares/:userId
+ * Remove a specific user's access to a view
+ */
+router.delete("/:id/shares/:userId", async (req, res, next) => {
+  const { pool, wsManager } = req.app.locals;
+
+  try {
+    const { id, userId } = req.params;
+    const user = getUser(req);
+
+    // Get existing view
+    const existing = await pool.query(
+      "SELECT * FROM view_configurations WHERE id = $1",
+      [id]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: "View not found" });
+    }
+
+    const view = existing.rows[0];
+
+    // Check permission (owner only)
+    if (view.owner_user_id !== user.id) {
+      return res
+        .status(403)
+        .json({ error: "Only the owner can modify sharing settings" });
+    }
+
+    // Remove user from shared_with
+    let sharedWith = view.shared_with || [];
+    sharedWith = sharedWith.filter((share) => share.userId !== userId);
+
+    // Update database
+    const result = await pool.query(
+      `
+      UPDATE view_configurations
+      SET shared_with = $1, is_shared = $2, updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `,
+      [JSON.stringify(sharedWith), sharedWith.length > 0, id]
+    );
+
+    // Audit log
+    if (req.audit) {
+      await req.audit({
+        action: "view:remove_share",
+        entityType: "view",
+        entityId: id,
+        details: { removedUserId: userId },
+      });
+    }
+
+    // Broadcast update
+    if (wsManager && view.dataset_id) {
+      const projects = await pool.query(
+        "SELECT project_id FROM file_project_access WHERE file_id = $1",
+        [view.dataset_id]
+      );
+
+      for (const row of projects.rows) {
+        wsManager.viewUpdated(row.project_id, result.rows[0]);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Share removed",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/views/:id/stop-sharing
+ * Remove all shares and make view private
+ */
+router.post("/:id/stop-sharing", async (req, res, next) => {
+  const { pool, wsManager } = req.app.locals;
+
+  try {
+    const { id } = req.params;
+    const user = getUser(req);
+
+    // Get existing view
+    const existing = await pool.query(
+      "SELECT * FROM view_configurations WHERE id = $1",
+      [id]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: "View not found" });
+    }
+
+    const view = existing.rows[0];
+
+    // Check permission (owner only)
+    if (view.owner_user_id !== user.id) {
+      return res
+        .status(403)
+        .json({ error: "Only the owner can stop sharing" });
+    }
+
+    // Clear all shares and set to private
+    const result = await pool.query(
+      `
+      UPDATE view_configurations
+      SET shared_with = '[]'::jsonb,
+          is_shared = false,
+          visibility = 'private',
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+      [id]
+    );
+
+    // Audit log
+    if (req.audit) {
+      await req.audit({
+        action: "view:stop_sharing",
+        entityType: "view",
+        entityId: id,
+      });
+    }
+
+    // Broadcast update
+    if (wsManager && view.dataset_id) {
+      const projects = await pool.query(
+        "SELECT project_id FROM file_project_access WHERE file_id = $1",
+        [view.dataset_id]
+      );
+
+      for (const row of projects.rows) {
+        wsManager.viewUpdated(row.project_id, result.rows[0]);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Sharing stopped, view is now private",
+      view: result.rows[0],
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/views/:id/share-link
+ * Generate a shareable link for the view
+ */
+router.post("/:id/share-link", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = getUser(req);
+    const { pool } = req.app.locals;
+
+    // Get view
+    const result = await pool.query(
+      "SELECT * FROM view_configurations WHERE id = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "View not found" });
+    }
+
+    const view = result.rows[0];
+
+    // Check permission (owner or has can-share permission)
+    const sharedWith = view.shared_with || [];
+    const userShare = sharedWith.find((share) => share.userId === user.id);
+    const canShare =
+      view.owner_user_id === user.id ||
+      (userShare && userShare.permission === "can-share");
+
+    if (!canShare) {
+      return res
+        .status(403)
+        .json({ error: "You don't have permission to share this view" });
+    }
+
+    // Generate shareable link
+    const baseUrl =
+      req.headers.origin || `${req.protocol}://${req.get("host")}`;
+    const shareLink = `${baseUrl}/view/${id}`;
+
+    // Audit log
+    if (req.audit) {
+      await req.audit({
+        action: "view:generate_share_link",
+        entityType: "view",
+        entityId: id,
+      });
+    }
+
+    res.json({
+      success: true,
+      shareLink,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

@@ -16,6 +16,10 @@ import { Icon } from '@UI/react/components/atoms/Icon';
  * @property {string} text - Message content
  * @property {number} timestamp - Message timestamp
  * @property {boolean} [isSystem] - Whether this is a system message
+ * @property {Object} [metadata] - Additional message metadata
+ * @property {boolean} [metadata.isFederated] - Whether message is from Matrix federation
+ * @property {string} [metadata.federation_source] - Federation source (e.g., 'matrix')
+ * @property {string} [metadata.matrix_sender] - Matrix user ID of sender
  */
 
 /**
@@ -35,6 +39,8 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 export function MessageBubble({ message, currentUserId, onDelete }) {
     const isMe = message.userId === currentUserId;
     const isSystem = message.isSystem;
+    const isFederated = message.metadata?.isFederated || message.metadata?.federation_source === 'matrix';
+    const matrixSender = message.metadata?.matrix_sender;
 
     if (isSystem) {
         return (
@@ -51,8 +57,11 @@ export function MessageBubble({ message, currentUserId, onDelete }) {
     });
     const userColor = message.userColor || '#2196F3';
 
+    // Extract server name from Matrix user ID for display
+    const serverName = matrixSender ? matrixSender.split(':')[1] : null;
+
     return (
-        <div className={`message ${isMe ? 'message--me' : ''}`}>
+        <div className={`message ${isMe ? 'message--me' : ''} ${isFederated ? 'message--federated' : ''}`}>
             <div
                 className="message__avatar"
                 style={{ '--avatar-color': userColor }}
@@ -62,9 +71,20 @@ export function MessageBubble({ message, currentUserId, onDelete }) {
 
             <div className="message__content">
                 {!isMe && (
-                    <span className="message__user" style={{ color: userColor }}>
-                        {message.userName}
-                    </span>
+                    <div className="message__user-info">
+                        <span className="message__user" style={{ color: userColor }}>
+                            {message.userName}
+                        </span>
+                        {isFederated && (
+                            <span
+                                className="message__federation-badge"
+                                title={`Federated user from ${serverName || 'Matrix server'}`}
+                            >
+                                <Icon name="globe" size={10} />
+                                {serverName && <span className="message__server-name">{serverName}</span>}
+                            </span>
+                        )}
+                    </div>
                 )}
                 <div className="message__bubble">
                     {message.text}

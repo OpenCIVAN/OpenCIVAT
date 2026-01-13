@@ -10,6 +10,7 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
 
   .panel-header {
     display: flex;
@@ -53,6 +54,42 @@
     color: $color-text-muted;
     background: rgba(255, 255, 255, 0.05);
   }
+
+  &--federation {
+    color: $color-accent-purple;
+    background: rgba($color-accent-purple, 0.1);
+    border: 1px solid rgba($color-accent-purple, 0.2);
+    margin-left: $spacing-xs;
+  }
+
+  &--directory-btn {
+    color: $color-accent-purple;
+    background: transparent;
+    border: 1px solid rgba($color-accent-purple, 0.2);
+    margin-left: $spacing-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: rgba($color-accent-purple, 0.15);
+      border-color: rgba($color-accent-purple, 0.4);
+    }
+  }
+}
+
+.chat-status__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: rgba($color-accent-purple, 0.3);
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: $font-weight-bold;
+  color: white;
+  margin-left: 2px;
 }
 
 @keyframes spin {
@@ -164,6 +201,18 @@
     border-radius: $radius-full;
     margin: $spacing-xs 0;
   }
+
+  &--federated {
+    .message__bubble {
+      background: rgba($color-accent-purple, 0.08);
+      border-color: rgba($color-accent-purple, 0.2);
+      border-left: 2px solid rgba($color-accent-purple, 0.5);
+    }
+
+    &:hover {
+      background: rgba($color-accent-purple, 0.03);
+    }
+  }
 }
 
 .message__avatar {
@@ -188,9 +237,39 @@
   max-width: 80%;
 }
 
+.message__user-info {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+}
+
 .message__user {
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
+}
+
+.message__federation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px $spacing-xs;
+  background: rgba($color-accent-purple, 0.15);
+  border: 1px solid rgba($color-accent-purple, 0.3);
+  border-radius: $radius-full;
+  font-size: 9px;
+  color: $color-accent-purple;
+  font-weight: $font-weight-medium;
+
+  svg {
+    color: $color-accent-purple;
+  }
+}
+
+.message__server-name {
+  font-size: 9px;
+  color: $color-accent-purple;
+  opacity: 0.9;
 }
 
 .message__bubble {
@@ -382,4 +461,39 @@
   align-items: center;
   justify-content: center;
   color: white;
+}
+
+// =============================================================================
+// ROOM DIRECTORY OVERLAY (Phase 7)
+// =============================================================================
+
+.chat-tab__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+
+  > * {
+    max-width: 600px;
+    width: 100%;
+    max-height: 90%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

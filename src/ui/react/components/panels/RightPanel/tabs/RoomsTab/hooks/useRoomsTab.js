@@ -13,7 +13,12 @@
  * } = useRoomsTab();
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { config } from "@Core/config/clientConfig.js";
+import { sessionManager } from "@Core/session/sessionManager.js";
+import { createLogger } from "@Utils/logger.js";
+
+const log = createLogger("rooms");
 
 /**
  * Sample current user
@@ -86,18 +91,137 @@ const SAMPLE_ROOMS = [
  *
  * @param {Object} options - Hook options
  * @param {string} [options.workspaceId] - Current workspace ID
+ * @param {string} [options.projectId] - Current project ID
  * @returns {Object} Rooms state and handlers
  */
 export function useRoomsTab(options = {}) {
+  const { projectId: propProjectId } = options;
+
+  // Get project ID from props or sessionManager
+  const projectId = propProjectId || sessionManager.getProjectId?.() || sessionManager.getRoomId?.();
+
+  // Debug: Log which projectId we're using
+  log.debug("useRoomsTab initialized with projectId:", {
+    fromProps: propProjectId,
+    fromSessionManager: sessionManager.getProjectId?.(),
+    fromRoomId: sessionManager.getRoomId?.(),
+    final: projectId,
+  });
+
   // State
-  const [rooms, setRooms] = useState(SAMPLE_ROOMS);
+  const [rooms, setRooms] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentRoomId, setCurrentRoomId] = useState(null);
+
+  // Fetch rooms from API
+  useEffect(() => {
+    if (!projectId) {
+      log.warn("No projectId provided, skipping room fetch");
+      setIsLoading(false);
+      return;
+    }
+
+    log.debug("Fetching rooms for project:", projectId);
+
+    const fetchRooms = async () => {
+      setIsLoading(true);
+      setError(null);
+      setRooms([]); // Clear existing rooms before fetch
+
+      try {
+        const url = `${config.apiBaseUrl}/projects/${projectId}/rooms`;
+        log.debug("Fetching from URL:", url);
+
+        const response = await fetch(url, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch rooms: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const fetchedRooms = data.rooms || [];
+
+        // Debug: Log raw API response
+        log.debug("Raw rooms from API:", fetchedRooms);
+        log.debug("Number of rooms:", fetchedRooms.length);
+
+        // Check for duplicate main rooms
+        const mainRoomsRaw = fetchedRooms.filter(r => r.room_type === 'main');
+        if (mainRoomsRaw.length > 1) {
+          log.warn("Multiple main rooms detected for project:", projectId, mainRoomsRaw);
+        }
+
+        // Transform API rooms to UI format
+        const transformedRooms = fetchedRooms.map((room) => ({
+          id: room.id,
+          name: room.name,
+          type: room.room_type || room.type, // Use room_type from database
+          access: room.settings?.access || room.is_public ? "open" : "private",
+          hasVoice: room.settings?.hasVoice ?? true,
+          hasText: room.settings?.hasText ?? true,
+          isPersistent: room.room_type === "main" || room.is_main,
+          members: room.members || [],
+          isCurrentRoom: room.isCurrent || room.is_member || false,
+          settings: room.settings,
+          createdAt: room.created_at,
+          memberCount: room.member_count || 0,
+          myRole: room.my_role,
+        }));
+
+        // Deduplicate rooms by ID
+        let uniqueRooms = transformedRooms.filter((room, index, self) =>
+          index === self.findIndex((r) => r.id === room.id)
+        );
+
+        // SPECIAL FIX: If there are multiple "main" type rooms, keep only one
+        // This handles the seed project bug where there are 2 main rooms
+        const mainRoomsAfterDedup = uniqueRooms.filter(r => r.type === "main");
+        log.debug("Main rooms found after ID dedup:", mainRoomsAfterDedup.length, mainRoomsAfterDedup);
+
+        if (mainRoomsAfterDedup.length > 1) {
+          log.warn(`Found ${mainRoomsAfterDedup.length} main rooms, keeping only the first one`);
+          // Keep the first main room, remove the rest
+          const firstMainRoom = mainRoomsAfterDedup[0];
+          uniqueRooms = uniqueRooms.filter(r =>
+            r.type !== "main" || r.id === firstMainRoom.id
+          );
+          log.debug("After removing duplicate main rooms:", uniqueRooms.filter(r => r.type === "main"));
+        }
+
+        if (uniqueRooms.length !== transformedRooms.length) {
+          log.warn(`Removed ${transformedRooms.length - uniqueRooms.length} duplicate/extra rooms`);
+        }
+
+        setRooms(uniqueRooms);
+
+        // Set current room if one is marked as current
+        const current = transformedRooms.find((r) => r.isCurrentRoom);
+        if (current) {
+          setCurrentRoomId(current.id);
+        }
+      } catch (err) {
+        log.error("Failed to fetch rooms:", err);
+        setError(err.message);
+        // DO NOT fallback to sample data - keep rooms empty to see the real error
+        // setRooms(SAMPLE_ROOMS);
+        setRooms([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRooms();
+  }, [projectId]);
 
   // Get current room
   const currentRoom = useMemo(() => {
-    return rooms.find((r) => r.isCurrentRoom);
-  }, [rooms]);
+    return rooms.find((r) => r.isCurrentRoom || r.id === currentRoomId);
+  }, [rooms, currentRoomId]);
 
   // Filter rooms by search and group by type
   const groupedRooms = useMemo(() => {
@@ -105,69 +229,178 @@ export function useRoomsTab(options = {}) {
     const filtered = rooms.filter(
       (r) =>
         r.name.toLowerCase().includes(query) ||
-        r.members.some((m) => m.name.toLowerCase().includes(query))
+        r.members.some((m) => m.name?.toLowerCase().includes(query))
     );
 
-    return {
-      project: filtered.filter((r) => r.type === "project"),
+    const grouped = {
+      // "main" rooms are displayed as "project" rooms in the UI
+      project: filtered.filter((r) => r.type === "main" || r.type === "project"),
       breakout: filtered.filter((r) => r.type === "breakout"),
       personal: filtered.filter((r) => r.type === "personal"),
     };
+
+    // Debug: Log grouped rooms
+    log.debug("Grouped rooms:", {
+      project: grouped.project.map(r => ({ id: r.id, name: r.name, type: r.type })),
+      breakout: grouped.breakout.map(r => ({ id: r.id, name: r.name, type: r.type })),
+      personal: grouped.personal.map(r => ({ id: r.id, name: r.name, type: r.type })),
+    });
+
+    return grouped;
   }, [rooms, searchQuery]);
 
   // Handlers
-  const handleJoinRoom = useCallback((roomId) => {
-    setRooms((prev) =>
-      prev.map((r) => ({
-        ...r,
-        isCurrentRoom: r.id === roomId,
-        members:
-          r.id === roomId && !r.members.find((m) => m.id === "current")
-            ? [...r.members, SAMPLE_CURRENT_USER]
-            : r.members,
-      }))
-    );
-  }, []);
+  const handleJoinRoom = useCallback(async (roomId) => {
+    if (!projectId) return;
 
-  const handleLeaveRoom = useCallback((roomId) => {
-    // When leaving, go back to main room
-    setRooms((prev) =>
-      prev.map((r) => ({
-        ...r,
-        isCurrentRoom: r.id === "main",
-        members:
-          r.id === roomId
-            ? r.members.filter((m) => m.id !== "current")
-            : r.members,
-      }))
-    );
-  }, []);
+    try {
+      const response = await fetch(
+        `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}/join`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-  const handleCreateRoom = useCallback((config) => {
-    const newRoom = {
-      id: `breakout-${Date.now()}`,
-      name: config.name,
-      type: "breakout",
-      access: config.access,
-      hasVoice: config.hasVoice,
-      hasText: config.hasText,
-      isPersistent: false,
-      members: [{ ...SAMPLE_CURRENT_USER, isOwner: true }],
-      isCurrentRoom: false,
-    };
-    setRooms((prev) => [...prev, newRoom]);
-    setShowCreateForm(false);
-  }, []);
+      if (!response.ok) {
+        throw new Error(`Failed to join room: ${response.status}`);
+      }
 
-  const handleDeleteRoom = useCallback((roomId) => {
-    setRooms((prev) => prev.filter((r) => r.id !== roomId));
-  }, []);
+      // Update local state optimistically
+      setRooms((prev) =>
+        prev.map((r) => ({
+          ...r,
+          isCurrentRoom: r.id === roomId,
+        }))
+      );
+      setCurrentRoomId(roomId);
+    } catch (err) {
+      log.error("Failed to join room:", err);
+    }
+  }, [projectId]);
+
+  const handleLeaveRoom = useCallback(async (roomId) => {
+    if (!projectId) return;
+
+    try {
+      const response = await fetch(
+        `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}/leave`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to leave room: ${response.status}`);
+      }
+
+      // Go back to main room
+      const mainRoom = rooms.find((r) => r.type === "main");
+      if (mainRoom) {
+        setCurrentRoomId(mainRoom.id);
+        setRooms((prev) =>
+          prev.map((r) => ({
+            ...r,
+            isCurrentRoom: r.id === mainRoom.id,
+          }))
+        );
+      }
+    } catch (err) {
+      log.error("Failed to leave room:", err);
+    }
+  }, [projectId, rooms]);
+
+  const handleCreateRoom = useCallback(async (roomConfig) => {
+    if (!projectId) return;
+
+    try {
+      const response = await fetch(
+        `${config.apiBaseUrl}/projects/${projectId}/rooms`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: roomConfig.name,
+            type: "breakout",
+            settings: {
+              access: roomConfig.access,
+              hasVoice: roomConfig.hasVoice,
+              hasText: roomConfig.hasText,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to create room: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const newRoom = data.room;
+
+      // Add to local state
+      setRooms((prev) => [
+        ...prev,
+        {
+          id: newRoom.id,
+          name: newRoom.name,
+          type: newRoom.type,
+          access: newRoom.settings?.access || "open",
+          hasVoice: newRoom.settings?.hasVoice ?? true,
+          hasText: newRoom.settings?.hasText ?? true,
+          isPersistent: false,
+          members: newRoom.members || [],
+          isCurrentRoom: false,
+          settings: newRoom.settings,
+          createdAt: newRoom.created_at,
+        },
+      ]);
+      setShowCreateForm(false);
+    } catch (err) {
+      log.error("Failed to create room:", err);
+    }
+  }, [projectId]);
+
+  const handleDeleteRoom = useCallback(async (roomId) => {
+    if (!projectId) return;
+
+    try {
+      const response = await fetch(
+        `${config.apiBaseUrl}/projects/${projectId}/rooms/${roomId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete room: ${response.status}`);
+      }
+
+      // Remove from local state
+      setRooms((prev) => prev.filter((r) => r.id !== roomId));
+    } catch (err) {
+      log.error("Failed to delete room:", err);
+    }
+  }, [projectId]);
 
   return {
     // Data
     rooms,
     currentRoom,
     groupedRooms,
+    isLoading,
+    error,
 
     // Search state
     searchQuery,
