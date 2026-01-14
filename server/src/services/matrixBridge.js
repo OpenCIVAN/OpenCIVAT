@@ -8,10 +8,12 @@
 // - PostgreSQL is the authoritative source of truth
 // - Bridge ensures messages sync both directions with deduplication
 
-const sdk = require('matrix-js-sdk');
 const { createLogger } = require('../utils/logger');
 
 const log = createLogger('matrix-bridge');
+
+// Matrix SDK (loaded dynamically as ES Module)
+let matrixSdk = null;
 
 /**
  * Circuit Breaker Pattern (Phase 8)
@@ -186,8 +188,21 @@ class MatrixBridgeService {
     log.info('Matrix homeserver:', this.config.homeserverUrl);
 
     try {
+      // Load Matrix SDK dynamically (ES Module)
+      if (!matrixSdk) {
+        log.info('Loading matrix-js-sdk...');
+
+        // Polyfill for Web Crypto API (required by matrix-js-sdk)
+        if (!global.crypto) {
+          const { webcrypto } = require('crypto');
+          global.crypto = webcrypto;
+        }
+
+        matrixSdk = await import('matrix-js-sdk');
+      }
+
       // Create Matrix client with application service credentials
-      this.client = sdk.createClient({
+      this.client = matrixSdk.createClient({
         baseUrl: this.config.homeserverUrl,
         accessToken: this.config.asToken, // Application service token
         userId: `@${this.config.senderLocalpart}:${this.config.serverName}`,

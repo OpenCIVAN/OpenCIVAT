@@ -23,33 +23,43 @@ router.use(validateProjectId);
 /**
  * GET /api/projects/:projectId/rooms
  * List all rooms in a project (with membership info and online counts)
+ * Query params:
+ *   - type: Filter by room type (e.g., 'dm', 'breakout', 'main')
  */
 router.get("/", async (req, res, next) => {
   try {
     const { projectId } = req.params;
+    const { type } = req.query;
     const userId = getUserId(req);
     const { pool } = req.app.locals;
 
-    const result = await pool.query(
-      `
+    // Build query with optional type filter
+    let query = `
       SELECT
         r.*,
         (SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.id) as member_count,
         EXISTS(SELECT 1 FROM room_members rm WHERE rm.room_id = r.id AND rm.user_id = $2) as is_member,
         (SELECT rm.role FROM room_members rm WHERE rm.room_id = r.id AND rm.user_id = $2) as my_role,
-        u.display_name as created_by_name
+        u.display_name as created_by_name,
+        ARRAY(SELECT user_id FROM room_members WHERE room_id = r.id) as participants
       FROM rooms r
       LEFT JOIN users u ON r.created_by = u.id
       WHERE r.project_id = $1
-      ORDER BY r.room_type = 'main' DESC, r.created_at ASC
-    `,
-      [projectId, userId]
-    );
+    `;
 
-    res.json({
-      rooms: result.rows,
-      count: result.rows.length,
-    });
+    const params = [projectId, userId];
+
+    // Add type filter if provided
+    if (type) {
+      query += ` AND r.room_type = $${params.length + 1}`;
+      params.push(type);
+    }
+
+    query += ` ORDER BY r.room_type = 'main' DESC, r.created_at ASC`;
+
+    const result = await pool.query(query, params);
+
+    res.json(result.rows);
   } catch (error) {
     log.error("Error listing rooms:", error);
     next(error);
@@ -101,10 +111,32 @@ router.post("/", async (req, res, next) => {
     const { projectId } = req.params;
     const userId = getUserId(req);
     const { wsManager } = req.app.locals;
-    const { name, description, isPublic = true, maxMembers = null } = req.body;
+    const {
+      name,
+      description,
+      isPublic = true,
+      maxMembers = null,
+      roomType = 'breakout',
+      participants = [],
+    } = req.body;
 
     if (!name || name.trim().length === 0) {
       return res.status(400).json({ error: "Room name is required" });
+    }
+
+    // Validate room type
+    const validRoomTypes = ['main', 'breakout', 'dm'];
+    if (!validRoomTypes.includes(roomType)) {
+      return res.status(400).json({ error: `Invalid room type. Must be one of: ${validRoomTypes.join(', ')}` });
+    }
+
+    // For DM rooms, validate participants
+    if (roomType === 'dm') {
+      if (!Array.isArray(participants) || participants.length === 0) {
+        return res.status(400).json({ error: "DM rooms require at least one participant" });
+      }
+      // DM rooms are always private
+      isPublic = false;
     }
 
     await client.query("BEGIN");
@@ -124,11 +156,11 @@ router.post("/", async (req, res, next) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    // Create the breakout room
+    // Create the room
     const result = await client.query(
       `
       INSERT INTO rooms (project_id, name, description, is_public, room_type, max_members, created_by)
-      VALUES ($1, $2, $3, $4, 'breakout', $5, $6)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `,
       [
@@ -136,6 +168,7 @@ router.post("/", async (req, res, next) => {
         name.trim(),
         description || null,
         isPublic,
+        roomType,
         maxMembers,
         userId,
       ]
@@ -151,6 +184,23 @@ router.post("/", async (req, res, next) => {
     `,
       [room.id, userId]
     );
+
+    // Add additional participants for DM rooms
+    if (roomType === 'dm' && participants.length > 0) {
+      for (const participantId of participants) {
+        // Skip if it's the creator (already added)
+        if (participantId === userId) continue;
+
+        await client.query(
+          `
+          INSERT INTO room_members (room_id, user_id, role)
+          VALUES ($1, $2, 'member')
+          ON CONFLICT (room_id, user_id) DO NOTHING
+        `,
+          [room.id, participantId]
+        );
+      }
+    }
 
     await client.query("COMMIT");
 
@@ -176,20 +226,34 @@ router.post("/", async (req, res, next) => {
       }
     }
 
+    // Get participant IDs for the response
+    const membersResult = await client.query(
+      `SELECT user_id FROM room_members WHERE room_id = $1`,
+      [room.id]
+    );
+    const participantIds = membersResult.rows.map(row => row.user_id);
+
     // Broadcast to project members
     if (wsManager) {
       wsManager.broadcastToProject(projectId, {
         type: "room:created",
-        room: { ...room, member_count: 1, is_member: true, my_role: "admin" },
+        room: {
+          ...room,
+          member_count: participantIds.length,
+          is_member: true,
+          my_role: "admin",
+          participants: participantIds,
+        },
         userId,
       });
     }
 
     res.status(201).json({
       ...room,
-      member_count: 1,
+      member_count: participantIds.length,
       is_member: true,
       my_role: "admin",
+      participants: participantIds,
     });
   } catch (error) {
     await client.query("ROLLBACK");

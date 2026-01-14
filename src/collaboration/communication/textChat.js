@@ -19,16 +19,38 @@ class TextChat {
     this.deleteListeners = [];
     this.maxMessages = 100;
     this._initialized = false;
+    this.currentRoomId = null;
+    this.observeHandler = null;
   }
 
-  initialize() {
-    if (this._initialized) return;
+  initialize(roomId = 'global') {
     this._initialized = true;
+    this.setRoom(roomId);
+    log.debug("Text chat initialized for room:", roomId);
+  }
 
-    this.messages = ydoc.getArray("chatMessages");
+  setRoom(roomId) {
+    // If switching to the same room, do nothing
+    if (this.currentRoomId === roomId && this.messages) {
+      return;
+    }
 
-    // Listen for ALL changes (add, delete, update)
-    this.messages.observe((event) => {
+    log.info("Switching chat to room:", roomId);
+
+    // Unobserve old array
+    if (this.messages && this.observeHandler) {
+      this.messages.unobserve(this.observeHandler);
+    }
+
+    // Set new room
+    this.currentRoomId = roomId;
+
+    // Get Y.js array for this specific room
+    const arrayName = `chatMessages_${roomId}`;
+    this.messages = ydoc.getArray(arrayName);
+
+    // Create observer handler
+    this.observeHandler = (event) => {
       // Check what changed
       event.changes.delta.forEach((change) => {
         // New messages added
@@ -57,9 +79,17 @@ class TextChat {
       ) {
         this.notifyClearListeners();
       }
-    });
+    };
 
-    log.debug("Text chat initialized");
+    // Attach observer
+    this.messages.observe(this.observeHandler);
+
+    // Notify listeners that room changed (they should refresh)
+    this.notifyDeleteListeners();
+  }
+
+  getCurrentRoomId() {
+    return this.currentRoomId;
   }
 
   sendMessage(text) {

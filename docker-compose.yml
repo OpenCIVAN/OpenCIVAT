@@ -88,6 +88,12 @@ services:
       API_URL: http://api:3001
       # Development bypass
       DEV_BYPASS_AUTH: ${DEV_BYPASS_AUTH:-false}
+      # Matrix Federation
+      MATRIX_FEDERATION_ENABLED: ${MATRIX_FEDERATION_ENABLED:-true}
+      MATRIX_BASE_URL: ${MATRIX_BASE_URL:-http://synapse:8008}
+      MATRIX_SERVER_NAME: ${MATRIX_SERVER_NAME:-matrix.cia-web.local}
+      MATRIX_AS_TOKEN: ${MATRIX_AS_TOKEN:-d20e1866d22403e4cef2486e9f24c594c52afd519dae909cee4d3e82393237b1}
+      MATRIX_HS_TOKEN: ${MATRIX_HS_TOKEN:-524effc36cba16203cc75d6270d6ed796639e45f0afa10eaa72b841f1c382cd6}
     ports:
       - "3001:3001"
     depends_on:
@@ -97,6 +103,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - default
+      - cia_matrix_network
 
 
   yjs:
@@ -212,3 +221,8 @@ volumes:
   minio_data:
   redis_data:
   yjs_data:  # Uncomment when adding persistence
+
+networks:
+  cia_matrix_network:
+    external: true
+    name: cia_matrix_network

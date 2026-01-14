@@ -38,6 +38,13 @@ echo ""
 echo "🐳 Starting Docker services (PostgreSQL, MinIO, Redis, API, Y.js, VTK Worker, Thumbnail Worker)..."
 docker-compose up -d
 
+# Start Matrix Federation services
+echo ""
+echo "🔐 Starting Matrix Federation services (Synapse, Matrix DB, Matrix Redis)..."
+cd server
+docker-compose -f docker-compose.matrix.yml up -d
+cd ..
+
 # Wait for services to be healthy
 echo ""
 echo "⏳ Waiting for services to be healthy..."
@@ -97,6 +104,41 @@ else
     sleep 3
 fi
 
+# Check Matrix PostgreSQL
+echo -n "  Matrix PostgreSQL: "
+if docker exec cia_matrix_postgres pg_isready -U synapse_user -d synapse > /dev/null 2>&1; then
+    print_status "Ready"
+else
+    print_warning "Not ready yet, waiting..."
+    sleep 5
+fi
+
+# Check Matrix Redis
+echo -n "  Matrix Redis: "
+if docker exec cia_matrix_redis redis-cli ping > /dev/null 2>&1; then
+    print_status "Ready"
+else
+    print_warning "Not ready yet, waiting..."
+    sleep 2
+fi
+
+# Check Synapse
+echo -n "  Synapse (Matrix): "
+MAX_RETRIES=15
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s http://localhost:8008/health > /dev/null 2>&1; then
+        print_status "Ready"
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+            print_warning "Synapse not ready yet. Check logs with: docker logs cia_matrix_synapse"
+            break
+        fi
+        sleep 3
+    fi
+done
 
 echo ""
 print_status "All Docker services are running!"
@@ -110,6 +152,8 @@ if [ ! -d "node_modules" ]; then
 fi
 
 echo "🌐 Services running:"
+echo ""
+echo "  Core Services:"
 echo "  • PostgreSQL:       localhost:5432"
 echo "  • MinIO:            localhost:9000 (Console: localhost:9002)"
 echo "  • Redis:            localhost:6379"
@@ -117,6 +161,11 @@ echo "  • API:              http://localhost:3001"
 echo "  • Y.js WebSocket:   ws://localhost:9001"
 echo "  • VTK Worker:       Processing compute jobs from Redis queue"
 echo "  • Thumbnail Worker: Generating thumbnails via headless browser"
+echo ""
+echo "  Matrix Federation:"
+echo "  • Synapse:          http://localhost:8008 (Federation: 8448)"
+echo "  • Matrix PostgreSQL: localhost:5433"
+echo "  • Matrix Redis:     (internal)"
 echo ""
 
 echo "📝 Next steps:"
@@ -127,5 +176,8 @@ echo ""
 echo "  Or use the convenience script:"
 echo "     ${YELLOW}./scripts/start-frontend.sh${NC}"
 echo ""
+echo "  Check Matrix federation status:"
+echo "     ${YELLOW}curl http://localhost:3001/api/matrix/status${NC}"
+echo ""
 
-print_status "Backend services ready!"
+print_status "Backend services ready! (Matrix federation enabled)"

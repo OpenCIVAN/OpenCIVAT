@@ -35,16 +35,21 @@ export const CHAT_SUBTABS = [
  *
  * @param {Object} options - Hook options
  * @param {string} [options.workspaceId] - Current workspace ID
+ * @param {string} [options.roomId] - Current room ID (auto-detected from workspace)
+ * @param {string} [options.projectId] - Current project ID
  * @returns {Object} Chat state and handlers
  */
 export function useChatTab(options = {}) {
-  const { workspaceId, defaultSubtab = "room" } = options;
+  const { workspaceId, roomId: initialRoomId, projectId, defaultSubtab = "room" } = options;
 
   // State
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSynced, setIsSynced] = useState(false);
   const [activeSubtab, setActiveSubtab] = useState(defaultSubtab);
+  const [currentRoomId, setCurrentRoomId] = useState(initialRoomId || 'global');
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [isLoadingRooms, setIsLoadingRooms] = useState(false);
 
   // Current user
   const currentUserId = getUserId();
@@ -56,10 +61,75 @@ export function useChatTab(options = {}) {
     setMessages([...allMessages]);
   }, []);
 
+  // Fetch available rooms for the project
+  const fetchRooms = useCallback(async () => {
+    if (!projectId) return;
+
+    setIsLoadingRooms(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/rooms`);
+      if (response.ok) {
+        const rooms = await response.json();
+        setAvailableRooms(rooms);
+        log.debug("Loaded rooms:", rooms.length);
+      }
+    } catch (error) {
+      log.error("Failed to fetch rooms:", error);
+    } finally {
+      setIsLoadingRooms(false);
+    }
+  }, [projectId]);
+
+  // Switch to a different room
+  const switchRoom = useCallback((roomId) => {
+    log.info("Switching to room:", roomId);
+    setCurrentRoomId(roomId);
+    textChat.setRoom(roomId);
+    refreshMessages();
+  }, [refreshMessages]);
+
+  // Fetch rooms when projectId changes
+  useEffect(() => {
+    if (projectId) {
+      fetchRooms();
+    }
+  }, [projectId, fetchRooms]);
+
+  // Calculate the appropriate room ID based on active subtab
+  const getSubtabRoomId = useCallback(() => {
+    switch (activeSubtab) {
+      case 'room':
+        return initialRoomId || 'global';
+      case 'project':
+        return projectId ? `project_${projectId}` : 'global';
+      case 'dm':
+        // DM room is handled separately in ChatTab component
+        return currentRoomId;
+      default:
+        return 'global';
+    }
+  }, [activeSubtab, initialRoomId, projectId, currentRoomId]);
+
+  // Switch room when roomId prop changes
+  useEffect(() => {
+    if (initialRoomId && initialRoomId !== currentRoomId && activeSubtab === 'room') {
+      switchRoom(initialRoomId);
+    }
+  }, [initialRoomId, activeSubtab]);
+
+  // Switch room when subtab changes
+  useEffect(() => {
+    const targetRoomId = getSubtabRoomId();
+    if (targetRoomId && targetRoomId !== currentRoomId && activeSubtab !== 'dm') {
+      log.info(`Switching to ${activeSubtab} chat:`, targetRoomId);
+      switchRoom(targetRoomId);
+    }
+  }, [activeSubtab, getSubtabRoomId]);
+
   // Initialize chat and set up listeners
   useEffect(() => {
-    // Initialize the textChat system
-    textChat.initialize();
+    // Initialize the textChat system with current room
+    textChat.initialize(currentRoomId);
 
     // Handle new messages
     const handleNewMessage = (message) => {
@@ -149,6 +219,11 @@ export function useChatTab(options = {}) {
     isSynced,
     currentUserId,
 
+    // Room state
+    currentRoomId,
+    availableRooms,
+    isLoadingRooms,
+
     // Subtab state
     activeSubtab,
     setActiveSubtab,
@@ -157,9 +232,11 @@ export function useChatTab(options = {}) {
     // Handlers
     handleSend,
     handleDelete,
+    switchRoom,
 
     // Actions
     refreshMessages,
+    fetchRooms,
   };
 }
 

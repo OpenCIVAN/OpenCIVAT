@@ -611,4 +611,52 @@ router.get("/files/:id/download", async (req, res, next) => {
   }
 });
 
+/**
+ * GET /api/projects/:id/members
+ * Get all members of a project
+ */
+router.get("/:id/members", async (req, res, next) => {
+  try {
+    const { id: projectId } = req.params;
+    const userId = getUserId(req);
+    const { pool } = req.app.locals;
+
+    // Verify user has access to project
+    const projectCheck = await pool.query(
+      `
+      SELECT 1 FROM projects p
+      LEFT JOIN project_members pm ON p.id = pm.project_id
+      WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)
+    `,
+      [projectId, userId]
+    );
+
+    if (projectCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Get all project members with their user info
+    const result = await pool.query(
+      `
+      SELECT
+        u.id,
+        u.display_name as name,
+        u.email,
+        u.avatar_url,
+        pm.role,
+        pm.added_at as joined_at
+      FROM project_members pm
+      JOIN users u ON pm.user_id = u.id
+      WHERE pm.project_id = $1
+      ORDER BY pm.added_at ASC
+    `,
+      [projectId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

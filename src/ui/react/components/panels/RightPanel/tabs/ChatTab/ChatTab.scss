@@ -26,6 +26,19 @@
 }
 
 // =============================================================================
+// MATRIX FEDERATION BAR
+// =============================================================================
+
+.chat-tab__federation-bar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  background: rgba($color-accent-purple, 0.05);
+  border-bottom: 1px solid rgba($color-accent-purple, 0.2);
+}
+
+// =============================================================================
 // CHAT STATUS INDICATOR
 // =============================================================================
 
@@ -123,6 +136,100 @@
 .chat-tab__message-count {
   margin-left: auto;
   color: $color-text-tertiary;
+}
+
+.chat-tab__room-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+
+  select {
+    appearance: none;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+    padding: 4px 24px 4px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: $color-accent-blue;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-accent-blue;
+      box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.1);
+    }
+  }
+
+  svg {
+    position: absolute;
+    right: 6px;
+    pointer-events: none;
+  }
+}
+
+.chat-tab__create-room-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: rgba($color-accent-blue, 0.1);
+  border: 1px solid rgba($color-accent-blue, 0.3);
+  border-radius: $radius-sm;
+  color: $color-accent-blue;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba($color-accent-blue, 0.2);
+    border-color: $color-accent-blue;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.chat-tab__dm-info {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 1;
+
+  span {
+    font-weight: $font-weight-medium;
+  }
+}
+
+.chat-tab__dm-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px $spacing-xs;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: $color-accent-blue;
+    color: $color-accent-blue;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 // =============================================================================
