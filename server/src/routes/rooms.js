@@ -5,7 +5,7 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true }); // For :projectId from parent route
 const { createLogger } = require("../utils/logger");
-const { getUserId } = require("../middleware/auth");
+const { getUserId, checkProjectMembership } = require("../middleware/auth");
 const {
   validateProjectId,
   validateRoomId,
@@ -144,9 +144,8 @@ router.post("/", async (req, res, next) => {
     // Verify user has access to project
     const projectCheck = await client.query(
       `
-      SELECT 1 FROM projects p
-      LEFT JOIN project_members pm ON p.id = pm.project_id
-      WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)
+      SELECT 1 FROM project_members
+      WHERE project_id = $1 AND user_id = $2
     `,
       [projectId, userId]
     );
@@ -437,6 +436,15 @@ router.post("/:roomId/join", async (req, res, next) => {
     const { projectId, roomId } = req.params;
     const userId = getUserId(req);
     const { pool, wsManager } = req.app.locals;
+
+    const membershipRole = await checkProjectMembership(
+      pool,
+      projectId,
+      userId
+    );
+    if (!membershipRole) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     // Check room exists and is in this project
     const roomCheck = await pool.query(

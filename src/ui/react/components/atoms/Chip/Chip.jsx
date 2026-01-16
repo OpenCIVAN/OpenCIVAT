@@ -82,13 +82,24 @@ export const Chip = memo(function Chip({
         }
     };
 
-    const Component = isInteractive ? 'button' : 'span';
-    const interactiveProps = isInteractive ? {
-        type: 'button',
-        onClick: handleClick,
-        onKeyDown: handleKeyDown,
-        disabled,
-    } : {};
+    const renderAsDivButton = isInteractive && removable;
+    const Component = renderAsDivButton ? 'div' : (isInteractive ? 'button' : 'span');
+    const interactiveProps = isInteractive ? (
+        renderAsDivButton
+            ? {
+                role: 'button',
+                tabIndex: disabled ? -1 : 0,
+                onClick: handleClick,
+                onKeyDown: handleKeyDown,
+                'aria-disabled': disabled,
+            }
+            : {
+                type: 'button',
+                onClick: handleClick,
+                onKeyDown: handleKeyDown,
+                disabled,
+            }
+    ) : {};
 
     return (
         <Component

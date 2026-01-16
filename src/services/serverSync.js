@@ -4,6 +4,7 @@
 import { config } from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { ws as log } from "@Utils/logger.js";
+import { authService } from "@Services/authService.js";
 import { useComputeJobStore } from "@UI/react/store/computeJobStore.js";
 import { toast } from "@UI/react/store/toastStore.js";
 
@@ -19,6 +20,8 @@ class ServerSyncService {
     this.viewConfigurationManager = null;
     this.canvasManager = null;
     this.subsetManager = null;
+    this.pendingProjectId = null;
+    this._authUnsubscribe = null;
   }
 
   initialize(datasetManager, viewConfigurationManager = null) {
@@ -66,14 +69,9 @@ class ServerSyncService {
         this.isConnected = true;
         this.reconnectAttempts = 0;
 
-        this._send({
-          type: "auth",
-          userId: "00000000-0000-0000-0000-000000000001",
-        });
-
-        const projectId =
+        this.pendingProjectId =
           sessionManager.getProjectId?.() || config.defaultSessionId;
-        this._send({ type: "join:project", projectId });
+        void this._authenticate();
       };
 
       this.ws.onmessage = (event) => this._handleMessage(event.data);
@@ -102,9 +100,18 @@ class ServerSyncService {
 
   _setupDefaultHandlers() {
     this.on("connected", () => log.debug("Server hello received"));
-    this.on("auth:success", (msg) =>
-      log.info(`Authenticated as ${msg.userId}`)
-    );
+    this.on("auth:success", (msg) => {
+      log.info(`Authenticated as ${msg.userId}`);
+      if (this.pendingProjectId) {
+        this._send({ type: "join:project", projectId: this.pendingProjectId });
+      }
+    });
+    this.on("auth:error", (msg) => {
+      log.warn(`Authentication failed: ${msg.error || "unknown error"}`);
+    });
+    this.on("project:join-error", (msg) => {
+      log.warn(`Project join failed: ${msg.error || "unknown error"}`);
+    });
     this.on("project:joined", (msg) =>
       log.info(`Joined project ${msg.projectId}`)
     );
@@ -419,6 +426,51 @@ class ServerSyncService {
     });
   }
 
+  async _authenticate() {
+    try {
+      const token = await authService.getAccessToken();
+      const isDevBypass =
+        config.devBypassAuth === true || config.devBypassAuth === "true";
+      if (!token && !isDevBypass) {
+        this._waitForAuth();
+        return;
+      }
+      const user = authService.getUser?.();
+      this._send({
+        type: "auth",
+        token,
+        userId: user?.id,
+        userName: user?.name,
+        userEmail: user?.email,
+      });
+    } catch (error) {
+      log.warn("Failed to authenticate WebSocket:", error.message);
+    }
+  }
+
+  _waitForAuth() {
+    if (this._authUnsubscribe) {
+      return;
+    }
+
+    this._authUnsubscribe = authService.onAuthStateChange(async (event) => {
+      if (event === "authenticated") {
+        const unsubscribe = this._authUnsubscribe;
+        this._authUnsubscribe = null;
+        if (unsubscribe) {
+          unsubscribe();
+        }
+        await this._authenticate();
+      } else if (event === "logout" || event === "session_expired") {
+        const unsubscribe = this._authUnsubscribe;
+        this._authUnsubscribe = null;
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      }
+    });
+  }
+
   on(type, handler) {
     this.handlers.set(type, handler);
   }
@@ -444,6 +496,10 @@ class ServerSyncService {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
+    }
+    if (this._authUnsubscribe) {
+      this._authUnsubscribe();
+      this._authUnsubscribe = null;
     }
   }
 }

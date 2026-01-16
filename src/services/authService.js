@@ -473,8 +473,18 @@ class AuthService {
       return this.#accessToken;
     }
 
+    if (!this.#accessToken) {
+      return null;
+    }
+
     // Check if token needs refresh
     if (this._shouldRefreshToken()) {
+      if (!this.#refreshToken) {
+        this._clearTokens();
+        this._notifyListeners("session_expired");
+        return null;
+      }
+
       try {
         await this.refreshAccessToken();
       } catch (error) {

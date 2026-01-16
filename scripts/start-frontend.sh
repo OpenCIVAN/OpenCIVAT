@@ -15,6 +15,14 @@ print_status() {
     echo -e "${GREEN}✓${NC} $1"
 }
 
+# Load environment variables (if present)
+if [ -f ".env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+fi
+
 # Check if backend services are running
 if ! curl -s http://localhost:3001/api/health > /dev/null 2>&1; then
     echo -e "${YELLOW}⚠${NC} Backend services not detected. Run ./start.sh first!"

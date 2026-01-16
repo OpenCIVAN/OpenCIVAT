@@ -4,6 +4,7 @@
 
 const WebSocket = require("ws");
 const { createLogger } = require("../utils/logger");
+const { DEV_BYPASS_AUTH, verifyJwtToken } = require("../middleware/auth");
 
 const ws = createLogger("ws");
 const auth = createLogger("auth");
@@ -13,25 +14,25 @@ class WebSocketManager {
     this.wss = null;
     this.clients = new Map(); // Map<userId, Set<WebSocket>>
     this.rooms = new Map(); // Map<projectId, Set<WebSocket>>
+    this.pool = null;
   }
 
   /**
    * Initialize WebSocket server
    * @param {http.Server} server - HTTP server instance
    */
-  initialize(server) {
+  initialize(server, pool = null) {
     this.wss = new WebSocket.Server({ server, path: "/ws" });
+    this.pool = pool;
 
     this.wss.on("connection", (wsClient, req) => {
       ws.info("WebSocket client connected");
 
-      // Parse token from query string
-      const url = new URL(req.url, `http://${req.headers.host}`);
-      const token = url.searchParams.get("token");
-
       // Store connection metadata
       wsClient.isAlive = true;
       wsClient.userId = null;
+      wsClient.user = null;
+      wsClient.isAuthenticated = false;
       wsClient.projectId = null;
 
       // Handle pong responses
@@ -41,7 +42,7 @@ class WebSocketManager {
 
       // Handle incoming messages
       wsClient.on("message", (data) => {
-        this._handleMessage(wsClient, data);
+        void this._handleMessage(wsClient, data);
       });
 
       // Handle disconnection
@@ -79,7 +80,7 @@ class WebSocketManager {
   /**
    * Handle incoming WebSocket messages
    */
-  _handleMessage(socket, data) {
+  async _handleMessage(socket, data) {
     try {
       const message = JSON.parse(data.toString());
 
@@ -92,11 +93,11 @@ class WebSocketManager {
           break;
 
         case "auth":
-          this._handleAuth(socket, message);
+          await this._handleAuth(socket, message);
           break;
 
         case "join:project":
-          this._handleJoinProject(socket, message.projectId);
+          await this._handleJoinProject(socket, message.projectId);
           break;
 
         case "leave:project":
@@ -114,29 +115,78 @@ class WebSocketManager {
   /**
    * Handle authentication
    */
-  _handleAuth(socket, message) {
-    // TODO: Validate JWT token with Keycloak
-    // For now, trust the userId in the message
-    socket.userId = message.userId;
+  async _handleAuth(socket, message) {
+    try {
+      let user = null;
 
-    // Add to clients map
-    if (!this.clients.has(socket.userId)) {
-      this.clients.set(socket.userId, new Set());
+      if (DEV_BYPASS_AUTH) {
+        const userId = message.userId;
+        if (!userId) {
+          throw new Error("Missing userId in dev bypass mode");
+        }
+        user = {
+          id: userId,
+          email: message.userEmail || "developer@localhost",
+          name: message.userName || "Development User",
+          roles: message.roles || ["user", "admin"],
+        };
+      } else {
+        const token = message.token || message.accessToken;
+        user = await verifyJwtToken(token);
+      }
+
+      socket.userId = user.id;
+      socket.user = user;
+      socket.isAuthenticated = true;
+
+      // Add to clients map
+      if (!this.clients.has(socket.userId)) {
+        this.clients.set(socket.userId, new Set());
+      }
+      this.clients.get(socket.userId).add(socket);
+
+      this._send(socket, {
+        type: "auth:success",
+        userId: socket.userId,
+      });
+
+      auth.info("User authenticated via WebSocket:", socket.userId);
+    } catch (error) {
+      auth.warn("WebSocket auth failed:", error.message);
+      this._send(socket, { type: "auth:error", error: error.message });
+      socket.close(1008, "Authentication failed");
     }
-    this.clients.get(socket.userId).add(socket);
-
-    this._send(socket, {
-      type: "auth:success",
-      userId: socket.userId,
-    });
-
-    auth.info("User authenticated via WebSocket:", socket.userId);
   }
 
   /**
    * Handle joining a project room
    */
-  _handleJoinProject(socket, projectId) {
+  async _handleJoinProject(socket, projectId) {
+    if (!socket.isAuthenticated || !socket.userId) {
+      this._send(socket, {
+        type: "project:join-error",
+        error: "Authentication required",
+      });
+      return;
+    }
+
+    if (!projectId) {
+      this._send(socket, {
+        type: "project:join-error",
+        error: "Missing projectId",
+      });
+      return;
+    }
+
+    const hasAccess = await this._checkProjectAccess(projectId, socket.userId);
+    if (!hasAccess) {
+      this._send(socket, {
+        type: "project:join-error",
+        error: "Access denied",
+      });
+      return;
+    }
+
     // Leave previous room if any
     if (socket.projectId) {
       this._handleLeaveProject(socket);
@@ -169,6 +219,31 @@ class WebSocketManager {
       type: "project:joined",
       projectId,
     });
+  }
+
+  /**
+   * Check if a user has access to a project
+   */
+  async _checkProjectAccess(projectId, userId) {
+    if (!this.pool) {
+      ws.warn("Project access check skipped (no DB pool configured)");
+      return false;
+    }
+
+    try {
+      const result = await this.pool.query(
+        `
+        SELECT 1
+        FROM project_members
+        WHERE project_id = $1 AND user_id = $2
+      `,
+        [projectId, userId]
+      );
+      return result.rows.length > 0;
+    } catch (error) {
+      ws.error("Failed to check project access:", error);
+      return false;
+    }
   }
 
   /**

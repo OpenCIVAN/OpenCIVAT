@@ -49,6 +49,7 @@ const config = {
     name: "thumbnail",
     concurrency: 2, // Process 2 thumbnails at a time
   },
+  internalToken: process.env.INTERNAL_API_TOKEN || null,
 };
 
 // =============================================================================
@@ -418,9 +419,14 @@ async function reportCompletion(callbackUrl, jobId, jobData, result) {
     // If viewId is set, it's a view thumbnail; otherwise it's a file thumbnail
     const thumbnailType = jobData.viewId ? "view" : "file";
 
+    const headers = { "Content-Type": "application/json" };
+    if (config.internalToken) {
+      headers["x-internal-token"] = config.internalToken;
+    }
+
     const response = await fetch(callbackUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         jobId,
         success: result.success,

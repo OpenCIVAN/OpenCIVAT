@@ -47,6 +47,11 @@ MINIO_SECURE = os.environ.get("MINIO_SECURE", "false").lower() == "true"
 API_BASE_URL = os.environ.get(
     "API_BASE_URL", "http://localhost:3001/api/vr/preprocessing/internal"
 )
+INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN")
+
+INTERNAL_HEADERS = (
+    {"x-internal-token": INTERNAL_API_TOKEN} if INTERNAL_API_TOKEN else {}
+)
 
 # =============================================================================
 # LOGGING
@@ -438,6 +443,7 @@ def report_progress(preprocessing_id: str, progress: int, operation: str = None,
 
         requests.post(
             f"{API_BASE_URL}/progress",
+            headers=INTERNAL_HEADERS,
             json=payload,
             timeout=5,
         )
@@ -450,6 +456,7 @@ def report_complete(preprocessing_id: str, results: Dict):
     try:
         requests.post(
             f"{API_BASE_URL}/complete",
+            headers=INTERNAL_HEADERS,
             json={
                 "preprocessingId": preprocessing_id,
                 "results": results,
@@ -465,6 +472,7 @@ def report_failed(preprocessing_id: str, error: str):
     try:
         requests.post(
             f"{API_BASE_URL}/failed",
+            headers=INTERNAL_HEADERS,
             json={
                 "preprocessingId": preprocessing_id,
                 "error": error,

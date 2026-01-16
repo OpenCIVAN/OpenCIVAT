@@ -17,6 +17,7 @@
 import { Room, RoomEvent, Track, ConnectionState } from "livekit-client";
 import { ws as log } from "@Utils/logger.js";
 import { config } from "@Core/config/clientConfig.js";
+import { authService } from "@Services/authService.js";
 
 /**
  * Connection status enum
@@ -111,9 +112,15 @@ class VoiceRoomService {
   async getToken(roomName, userName) {
     log.debug(`Fetching token for room: ${roomName}, user: ${userName}`);
 
+    const authToken = await authService.getAccessToken();
+    const headers = { "Content-Type": "application/json" };
+    if (authToken) {
+      headers.Authorization = `Bearer ${authToken}`;
+    }
+
     const response = await fetch(`${this.config.tokenServerUrl}/token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ roomName, userName }),
     });
 

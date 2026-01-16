@@ -26,6 +26,7 @@ import { WebsocketProvider } from "y-websocket";
 
 import clientConfig from "@Core/config/clientConfig.js";
 import { sessionManager } from "@Core/session/sessionManager";
+import { authService } from "@Services/authService.js";
 import { sync as log } from "@Utils/logger.js";
 
 // ============================================================================
@@ -65,11 +66,49 @@ export const yText = ydoc.getArray("chatMessages");
 
 let _provider = null;
 
+async function waitForAccessToken(timeoutMs = 15000) {
+  const existingToken = await authService.getAccessToken().catch(() => null);
+  if (existingToken) {
+    return existingToken;
+  }
+
+  if (clientConfig.devBypassAuth) {
+    return null;
+  }
+
+  return new Promise((resolve, reject) => {
+    let resolved = false;
+    const timeoutId = setTimeout(() => {
+      if (resolved) return;
+      resolved = true;
+      reject(new Error("Timed out waiting for access token"));
+    }, timeoutMs);
+
+    const unsubscribe = authService.onAuthStateChange(async (event) => {
+      if (resolved) return;
+      if (event === "authenticated") {
+        const token = await authService.getAccessToken().catch(() => null);
+        if (token) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          unsubscribe();
+          resolve(token);
+        }
+      } else if (event === "logout" || event === "session_expired") {
+        resolved = true;
+        clearTimeout(timeoutId);
+        unsubscribe();
+        reject(new Error("Authentication required"));
+      }
+    });
+  });
+}
+
 /**
  * Initialize the Y.js WebSocket provider
  * This must be called after sessionManager.initializeFromURL()
  */
-export function initializeYjsProvider() {
+export async function initializeYjsProvider() {
   if (_provider) {
     log.warn("Y.js provider already initialized");
     return _provider;
@@ -77,8 +116,34 @@ export function initializeYjsProvider() {
 
   const roomId = sessionManager.getRoomId();
   const wsUrl = clientConfig.yjsWebSocketUrl;
+  let token = null;
 
-  _provider = new WebsocketProvider(wsUrl, roomId, ydoc, { awareness });
+  try {
+    token = await waitForAccessToken();
+  } catch (error) {
+    log.warn("Failed to get access token for Y.js:", error.message);
+  }
+
+  if (!token && !clientConfig.devBypassAuth) {
+    throw new Error("Missing access token for Y.js connection");
+  }
+
+  const params = {};
+  if (token) {
+    params.token = token;
+  }
+  if (clientConfig.devBypassAuth) {
+    const user = authService.getUser?.();
+    if (user?.id) {
+      params.userId = user.id;
+      params.username = user.name;
+    }
+  }
+
+  _provider = new WebsocketProvider(wsUrl, roomId, ydoc, {
+    awareness,
+    params,
+  });
 
   log.info(`Y.js connecting to ${wsUrl} room: ${roomId}`);
 

@@ -44,6 +44,11 @@ MINIO_SECURE = os.environ.get("MINIO_SECURE", "false").lower() == "true"
 API_CALLBACK_URL = os.environ.get(
     "API_CALLBACK_URL", "http://localhost:3001/api/compute/internal"
 )
+INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN")
+
+INTERNAL_HEADERS = (
+    {"x-internal-token": INTERNAL_API_TOKEN} if INTERNAL_API_TOKEN else {}
+)
 
 # =============================================================================
 # LOGGING
@@ -349,6 +354,7 @@ def report_progress(job_id: str, progress: int, message: str = None):
     try:
         requests.post(
             f"{API_CALLBACK_URL}/job-progress",
+            headers=INTERNAL_HEADERS,
             json={
                 "jobId": job_id,
                 "progress": progress,
@@ -372,6 +378,7 @@ def report_complete(
     try:
         requests.post(
             f"{API_CALLBACK_URL}/job-complete",
+            headers=INTERNAL_HEADERS,
             json={
                 "jobId": job_id,
                 "cacheKey": cache_key,
@@ -391,6 +398,7 @@ def report_failed(job_id: str, error: str):
     try:
         requests.post(
             f"{API_CALLBACK_URL}/job-failed",
+            headers=INTERNAL_HEADERS,
             json={
                 "jobId": job_id,
                 "error": error,

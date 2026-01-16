@@ -18,6 +18,29 @@ function isValidUUID(str) {
   return typeof str === "string" && UUID_REGEX.test(str);
 }
 
+async function getWorkspaceAccess(pool, workspaceId, userId) {
+  const result = await pool.query(
+    `SELECT w.id, w.project_id
+     FROM workspaces w
+     LEFT JOIN workspace_members wm ON w.id = wm.workspace_id
+     WHERE w.id = $1 AND (w.owner_id = $2 OR wm.user_id = $2)`,
+    [workspaceId, userId]
+  );
+  return result.rows[0] || null;
+}
+
+async function getCanvasAccess(pool, canvasId, userId) {
+  const result = await pool.query(
+    `SELECT c.id, c.project_id, c.workspace_id
+     FROM canvases c
+     JOIN workspaces w ON c.workspace_id = w.id
+     LEFT JOIN workspace_members wm ON w.id = wm.workspace_id
+     WHERE c.id = $1 AND (w.owner_id = $2 OR wm.user_id = $2)`,
+    [canvasId, userId]
+  );
+  return result.rows[0] || null;
+}
+
 // ============================================================================
 // CANVAS ENDPOINTS
 // ============================================================================
@@ -136,6 +159,15 @@ router.post("/", async (req, res, next) => {
       return res.status(400).json({ error: "workspace_id is required" });
     }
 
+    const workspaceAccess = await getWorkspaceAccess(
+      pool,
+      workspace_id,
+      userId
+    );
+    if (!workspaceAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
     // Handle both old and new schema
     let result;
     try {
@@ -222,6 +254,11 @@ router.put("/:id", async (req, res, next) => {
       homepoint,
     } = req.body;
 
+    const canvasAccess = await getCanvasAccess(pool, id, userId);
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
     const result = await pool.query(
       `UPDATE canvases
        SET name = COALESCE($1, name),
@@ -283,6 +320,11 @@ router.delete("/:id", async (req, res, next) => {
     const { id } = req.params;
     const userId = getUserId(req);
     const { pool, wsManager } = req.app.locals;
+
+    const canvasAccess = await getCanvasAccess(pool, id, userId);
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     // First get canvas to find project_id for broadcast
     const canvasResult = await pool.query(
@@ -386,6 +428,11 @@ router.post("/:id/placements", async (req, res, next) => {
     // Client may send 'notes' but DB expects 'note'
     if (resolvedContentType === "notes") {
       resolvedContentType = "note";
+    }
+
+    const canvasAccess = await getCanvasAccess(pool, canvas_id, userId);
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
     }
 
     // =========================================================================
@@ -514,6 +561,23 @@ router.put("/placements/:id", async (req, res, next) => {
       content_id,
     } = req.body;
 
+    const placementCheck = await pool.query(
+      `SELECT canvas_id FROM placements WHERE id = $1`,
+      [id]
+    );
+    if (placementCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Placement not found" });
+    }
+
+    const canvasAccess = await getCanvasAccess(
+      pool,
+      placementCheck.rows[0].canvas_id,
+      userId
+    );
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
     const result = await pool.query(
       `UPDATE placements
        SET row_index = COALESCE($1, row_index),
@@ -578,6 +642,11 @@ router.delete("/placements/:id", async (req, res, next) => {
     }
 
     const canvasId = placementResult.rows[0].canvas_id;
+
+    const canvasAccess = await getCanvasAccess(pool, canvasId, userId);
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     // Get project_id from canvas for broadcast
     const canvasResult = await pool.query(
@@ -658,12 +727,12 @@ router.post("/:id/subsets", async (req, res, next) => {
       shared_with,
     } = req.body;
 
-    // Get project_id from canvas
-    const canvasResult = await pool.query(
-      `SELECT project_id FROM canvases WHERE id = $1`,
-      [canvas_id]
-    );
-    const projectId = canvasResult.rows[0]?.project_id;
+    const canvasAccess = await getCanvasAccess(pool, canvas_id, userId);
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const projectId = canvasAccess.project_id;
 
     const result = await pool.query(
       `INSERT INTO subsets (
@@ -723,6 +792,23 @@ router.put("/subsets/:id", async (req, res, next) => {
       visibility,
       shared_with,
     } = req.body;
+
+    const subsetCheck = await pool.query(
+      `SELECT canvas_id FROM subsets WHERE id = $1`,
+      [id]
+    );
+    if (subsetCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Subset not found" });
+    }
+
+    const canvasAccess = await getCanvasAccess(
+      pool,
+      subsetCheck.rows[0].canvas_id,
+      userId
+    );
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     const result = await pool.query(
       `UPDATE subsets
@@ -798,6 +884,11 @@ router.delete("/subsets/:id", async (req, res, next) => {
     }
 
     const canvasId = subsetResult.rows[0].canvas_id;
+
+    const canvasAccess = await getCanvasAccess(pool, canvasId, userId);
+    if (!canvasAccess) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     // Get project_id from canvas for broadcast
     const canvasResult = await pool.query(

@@ -2,6 +2,7 @@ const express = require("express");
 const { AccessToken } = require("livekit-server-sdk");
 const cors = require("cors");
 const { createLogger } = require("./server/src/utils/logger");
+const { DEV_BYPASS_AUTH, verifyJwtToken } = require("./server/src/middleware/auth");
 
 const log = createLogger("server");
 
@@ -16,6 +17,31 @@ app.use(
 
 app.use(express.json());
 
+async function requireAuth(req, res, next) {
+  if (DEV_BYPASS_AUTH) {
+    req.user = {
+      id: req.body?.userId || "00000000-0000-0000-0000-000000000001",
+      name: req.body?.userName || "Development User",
+      email: req.body?.userEmail || "developer@localhost",
+    };
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing Authorization header" });
+  }
+
+  try {
+    const token = authHeader.substring(7);
+    req.user = await verifyJwtToken(token);
+    return next();
+  } catch (error) {
+    log.warn("Token server auth failed:", error.message);
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
 // ⚠️ WARNING: These are development-only credentials!
 // "devkey" and "secret" are LiveKit's default dev mode keys.
 // For production, use environment variables with real credentials:
@@ -24,18 +50,22 @@ app.use(express.json());
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "devkey";
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "secret";
 
-app.post("/token", async (req, res) => {
+app.post("/token", requireAuth, async (req, res) => {
   try {
     const { roomName, userName } = req.body;
+    const tokenUserName = req.user?.name || req.user?.email || req.user?.id;
 
     // Ensure we have a valid user name (fallback to "User" with timestamp if empty)
-    const effectiveName = userName || `User-${Date.now().toString(36).slice(-4)}`;
+    const effectiveName =
+      tokenUserName ||
+      userName ||
+      `User-${Date.now().toString(36).slice(-4)}`;
 
     log.info("Generating token for user:", effectiveName, "in room:", roomName);
     log.debug("Using API Key:", LIVEKIT_API_KEY);
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: effectiveName,
+      identity: req.user?.id || effectiveName,
       name: effectiveName, // Also set display name
     });
 

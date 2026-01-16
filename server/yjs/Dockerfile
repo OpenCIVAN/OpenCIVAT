@@ -10,6 +10,7 @@ COPY server.js ./server.js
 # server.js requires("./server/src/services/yjsPersistence")
 COPY server/src/utils/logger.js ./server/src/utils/logger.js
 COPY server/src/services/yjsPersistence.js ./server/src/services/yjsPersistence.js
+COPY server/src/middleware/auth.js ./server/src/middleware/auth.js
 
 # Install dependencies:
 # - ws: WebSocket server
@@ -17,7 +18,8 @@ COPY server/src/services/yjsPersistence.js ./server/src/services/yjsPersistence.
 # - y-protocols: Y.js sync and awareness protocols
 # - lib0: Y.js utility library (encoding/decoding)
 # - pg: PostgreSQL client for persistence
-RUN npm init -y && npm install ws yjs y-protocols lib0 pg
+# - jsonwebtoken + jwks-rsa: Keycloak JWT validation
+RUN npm init -y && npm install ws yjs y-protocols lib0 pg jsonwebtoken jwks-rsa
 
 # Health check support
 RUN apk add --no-cache netcat-openbsd

@@ -15,6 +15,7 @@ const { encoding, decoding } = require("lib0");
 const syncProtocol = require("y-protocols/sync");
 const awarenessProtocol = require("y-protocols/awareness");
 const { createLogger } = require("./server/src/utils/logger");
+const { DEV_BYPASS_AUTH, verifyJwtToken } = require("./server/src/middleware/auth");
 const {
   YjsPersistenceService,
 } = require("./server/src/services/yjsPersistence");
@@ -764,6 +765,63 @@ function detectUpdateOrigin(doc, update) {
 }
 
 /**
+ * Authenticate a socket using Keycloak JWT
+ */
+async function authenticateSocket(socket, url) {
+  if (DEV_BYPASS_AUTH) {
+    socket.userId =
+      url.searchParams.get("userId") || "00000000-0000-0000-0000-000000000001";
+    socket.username =
+      url.searchParams.get("username") || "Development User";
+    return true;
+  }
+
+  const token =
+    url.searchParams.get("token") || url.searchParams.get("access_token");
+  if (!token) {
+    wsLog.warn("Missing access token for Y.js connection");
+    socket.close(1008, "Missing access token");
+    return false;
+  }
+
+  try {
+    const user = await verifyJwtToken(token);
+    socket.userId = user.id;
+    socket.username = user.name || user.email || "User";
+    return true;
+  } catch (error) {
+    wsLog.warn("Y.js authentication failed:", error.message);
+    socket.close(1008, "Authentication failed");
+    return false;
+  }
+}
+
+/**
+ * Check if user can access a project
+ */
+async function checkProjectAccess(projectId, userId) {
+  if (!persistence?.pool) {
+    wsLog.warn("Project access check skipped (no DB pool configured)");
+    return false;
+  }
+
+  try {
+    const result = await persistence.pool.query(
+      `
+      SELECT 1
+      FROM project_members
+      WHERE project_id = $1 AND user_id = $2
+    `,
+      [projectId, userId]
+    );
+    return result.rows.length > 0;
+  } catch (error) {
+    wsLog.error("Failed to check project access:", error.message);
+    return false;
+  }
+}
+
+/**
  * Handle new WebSocket connection
  */
 wss.on("connection", async (socket, req) => {
@@ -771,6 +829,12 @@ wss.on("connection", async (socket, req) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const roomName =
     url.searchParams.get("room") || url.pathname.slice(1) || "default";
+
+  // Authenticate connection
+  const isAuthenticated = await authenticateSocket(socket, url);
+  if (!isAuthenticated) {
+    return;
+  }
 
   // Extract projectId if present in room name or URL
   // Convention: room name format is "project:{projectId}" or just projectId
@@ -782,9 +846,15 @@ wss.on("connection", async (socket, req) => {
     projectId = roomName;
   }
 
-  // Parse user info from query params
-  socket.userId = url.searchParams.get("userId") || null;
-  socket.username = url.searchParams.get("username") || "Anonymous";
+  if (projectId) {
+    const hasAccess = await checkProjectAccess(projectId, socket.userId);
+    if (!hasAccess) {
+      wsLog.warn("Access denied for user to project:", socket.userId, projectId);
+      socket.close(1008, "Access denied");
+      return;
+    }
+  }
+
   socket.clientId = null; // Will be set from awareness
 
   wsLog.info("Client connected to room:", roomName, "user:", socket.username);

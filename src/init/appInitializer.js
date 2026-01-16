@@ -276,18 +276,8 @@ export async function initializePhase1() {
       log.debug("Continuing without TensorFlow support");
     }
 
-    // STEP 6: Y.js provider
-    // Required for real-time presence (cursors, avatars)
-    // NOTE v2.0: Y.js is now for presence only, not state sync
-    log.debug("Initializing Y.js provider (presence only)...");
-    if (typeof initializeYjsProvider === "function") {
-      initializeYjsProvider();
-      log.debug("Y.js provider connected (presence layer)");
-    } else {
-      throw new Error("Y.js provider is required for presence");
-    }
-
-    // STEP 7: Initialize ViewConfigurationManager AFTER Y.js is ready
+    // STEP 6: Initialize ViewConfigurationManager
+    // NOTE: Y.js provider is initialized in Phase 2 after auth is ready
     log.debug("Initializing view configuration manager...");
     viewConfigurationManager.initialize();
     log.debug("View configuration manager ready");
@@ -316,7 +306,7 @@ export async function initializePhase1() {
       }
     }
 
-    // STEP 8: Initialize Canvas system managers
+    // STEP 7: Initialize Canvas system managers
     log.debug("Initializing canvas managers...");
     canvasManager.initialize({
       apiBaseUrl: config.apiBaseUrl,
@@ -339,7 +329,7 @@ export async function initializePhase1() {
       log.warn("Failed to wire CanvasManager to server sync:", error.message);
     }
 
-    // STEP 9: Debug helpers
+    // STEP 8: Debug helpers
     setupDebugHelpers();
     log.debug("Debug helpers available");
 
@@ -368,8 +358,15 @@ export async function initializePhase2() {
   logInfo("Initializing user services...");
 
   try {
-    // STEP 1: Wait for Y.js to sync
+    // STEP 1: Initialize Y.js provider and wait for sync
     emitProgress('yjs-sync', 'active', 0);
+    log.debug("Initializing Y.js provider (presence only)...");
+    if (typeof initializeYjsProvider === "function") {
+      await initializeYjsProvider();
+      log.debug("Y.js provider connected (presence layer)");
+    } else {
+      throw new Error("Y.js provider is required for presence");
+    }
     log.debug("Checking Y.js sync status...");
     const synced = await waitForYjsSync();
     if (synced) {
@@ -548,30 +545,35 @@ function waitForYjsSync(timeoutMs = 2000) {
   return new Promise((resolve) => {
     // Import provider dynamically to avoid circular dependency
     import("@Collaboration/yjs/yjsSetup.js").then(({ provider }) => {
-      // Check if already synced
-      if (provider.synced) {
-        resolve(true);
-        return;
-      }
-
-      log.debug("Waiting for Y.js sync before Phase 2...");
-
-      // Set up sync listener
-      const handleSync = (synced) => {
-        if (synced) {
-          provider.off("sync", handleSync);
-          clearTimeout(timeout);
+      try {
+        // Check if already synced
+        if (provider.synced) {
           resolve(true);
+          return;
         }
-      };
 
-      provider.on("sync", handleSync);
+        log.debug("Waiting for Y.js sync before Phase 2...");
 
-      // Timeout fallback
-      const timeout = setTimeout(() => {
-        provider.off("sync", handleSync);
+        // Set up sync listener
+        const handleSync = (synced) => {
+          if (synced) {
+            provider.off("sync", handleSync);
+            clearTimeout(timeout);
+            resolve(true);
+          }
+        };
+
+        provider.on("sync", handleSync);
+
+        // Timeout fallback
+        const timeout = setTimeout(() => {
+          provider.off("sync", handleSync);
+          resolve(false);
+        }, timeoutMs);
+      } catch (error) {
+        log.warn("Y.js provider unavailable:", error.message);
         resolve(false);
-      }, timeoutMs);
+      }
     });
   });
 }

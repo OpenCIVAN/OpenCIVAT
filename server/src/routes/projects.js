@@ -7,7 +7,7 @@ const multer = require("multer");
 const crypto = require("crypto");
 const { Readable } = require("stream");
 const { createLogger } = require("../utils/logger");
-const { getUserId } = require("../middleware/auth");
+const { getUserId, checkProjectMembership } = require("../middleware/auth");
 
 const log = createLogger("files");
 
@@ -215,9 +215,10 @@ router.post("/:id/canvases", async (req, res, next) => {
 
     // Verify user has access to project
     const projectCheck = await client.query(
-      `SELECT p.organization_id FROM projects p
-       LEFT JOIN project_members pm ON p.id = pm.project_id
-       WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id = $2)`,
+      `SELECT p.organization_id, pm.role
+       FROM projects p
+       JOIN project_members pm ON p.id = pm.project_id
+       WHERE p.id = $1 AND pm.user_id = $2`,
       [projectId, userId]
     );
 
@@ -377,6 +378,15 @@ router.patch("/:id/files/:fileId", async (req, res, next) => {
     const { folderId } = req.body;
     const userId = getUserId(req);
     const { pool } = req.app.locals;
+
+    const membershipRole = await checkProjectMembership(
+      pool,
+      projectId,
+      userId
+    );
+    if (!membershipRole || !["owner", "admin", "editor"].includes(membershipRole)) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     if (folderId) {
       const folderCheck = await pool.query(
@@ -565,49 +575,6 @@ router.post("/:id/files", upload.single("file"), async (req, res, next) => {
     next(error);
   } finally {
     client.release();
-  }
-});
-
-/**
- * GET /api/files/:id/download
- * Download a file
- */
-router.get("/files/:id/download", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { pool, minioClient, bucketName } = req.app.locals;
-
-    // Get file metadata
-    const result = await pool.query("SELECT * FROM datasets WHERE id = $1", [
-      id,
-    ]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "File not found" });
-    }
-
-    const file = result.rows[0];
-
-    // If it's a public sample file, serve from public directory
-    if (file.public_path) {
-      return res.sendFile(file.public_path, { root: process.cwd() });
-    }
-
-    // Otherwise, fetch from MinIO
-    const dataStream = await minioClient.getObject(
-      bucketName,
-      file.storage_key
-    );
-
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${file.filename}"`
-    );
-
-    dataStream.pipe(res);
-  } catch (error) {
-    next(error);
   }
 });
 

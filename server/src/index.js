@@ -7,7 +7,7 @@ const http = require("http");
 const cors = require("cors");
 const { Pool } = require("pg");
 const Minio = require("minio");
-const { authenticate, optionalAuth } = require("./middleware/auth");
+const { authenticate, optionalAuth, requireWriteAuth } = require("./middleware/auth");
 const authRouter = require("./routes/auth");
 const wsManager = require("./services/websocket");
 const { auditLogger, auditMiddleware } = require("./services/audit");
@@ -77,7 +77,7 @@ const BUCKET_NAME = process.env.MINIO_BUCKET || "cia-files";
 // ============================================================================
 
 // Initialize WebSocket manager
-wsManager.initialize(server);
+wsManager.initialize(server, pool);
 
 // Initialize audit logger
 auditLogger.initialize(pool);
@@ -161,6 +161,7 @@ const corsOptions = {
     "x-user-name",
     "x-organization-id",
     "x-project-id",
+    "x-internal-token",
   ],
 };
 
@@ -193,6 +194,9 @@ app.locals.matrixUserResolver = matrixUserResolver;
 
 // Auth routes (no auth required for these)
 app.use("/api/auth", authRouter);
+
+// Require auth or internal token for all write operations
+app.use("/api", optionalAuth, requireWriteAuth);
 
 // ============================================================================
 // ROUTES

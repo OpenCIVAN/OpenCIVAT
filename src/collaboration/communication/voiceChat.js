@@ -4,6 +4,7 @@
 
 import { Room } from "livekit-client";
 import { ws as log } from "@Utils/logger.js";
+import { authService } from "@Services/authService.js";
 
 class VoiceChat {
   constructor() {
@@ -19,9 +20,15 @@ class VoiceChat {
     log.debug("Fetching token from:", TOKEN_SERVER);
 
     try {
+      const authToken = await authService.getAccessToken();
+      const headers = { "Content-Type": "application/json" };
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
+
       const response = await fetch(`${TOKEN_SERVER}/token`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ roomName, userName }),
       });
 

@@ -7,6 +7,14 @@ const { createLogger } = require("../utils/logger");
 
 const log = createLogger("auth");
 
+const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || null;
+const INTERNAL_PATH_PREFIXES = [
+  "/api/compute/internal",
+  "/api/compute/workers",
+  "/api/vr/preprocessing/internal",
+  "/api/thumbnails/callback",
+];
+
 // Keycloak configuration
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL || "http://localhost:8080";
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM || "cia-web";
@@ -67,6 +75,18 @@ async function checkProjectAccess(pool, projectId, userId) {
     `SELECT pm.role FROM projects p
      LEFT JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = $2
      WHERE p.id = $1 AND (p.visibility = 'public' OR pm.user_id IS NOT NULL)`,
+    [projectId, userId]
+  );
+  return result.rows.length > 0 ? result.rows[0].role : null;
+}
+
+/**
+ * Check if user is a member of a project (ignores public visibility)
+ * @returns {string|null} User's role or null if no membership
+ */
+async function checkProjectMembership(pool, projectId, userId) {
+  const result = await pool.query(
+    `SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2`,
     [projectId, userId]
   );
   return result.rows.length > 0 ? result.rows[0].role : null;
@@ -165,30 +185,7 @@ async function authenticate(req, res, next) {
   const token = authHeader.substring(7);
 
   try {
-    const decoded = await new Promise((resolve, reject) => {
-      jwt.verify(
-        token,
-        getKey,
-        {
-          issuer: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
-          algorithms: ["RS256"],
-        },
-        (err, decoded) => {
-          if (err) reject(err);
-          else resolve(decoded);
-        }
-      );
-    });
-
-    // Attach user info to request
-    req.user = {
-      id: decoded.sub,
-      externalId: decoded.sub,
-      email: decoded.email,
-      name: decoded.name || decoded.preferred_username,
-      roles: decoded.realm_access?.roles || [],
-    };
-
+    req.user = await verifyJwtToken(token);
     next();
   } catch (error) {
     log.error("Authentication failed:", error.message);
@@ -198,6 +195,68 @@ async function authenticate(req, res, next) {
         process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
+}
+
+/**
+ * Verify a JWT access token and return normalized user info
+ */
+async function verifyJwtToken(token) {
+  if (!token) {
+    throw new Error("Missing access token");
+  }
+
+  const decoded = await new Promise((resolve, reject) => {
+    jwt.verify(
+      token,
+      getKey,
+      {
+        issuer: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
+        algorithms: ["RS256"],
+      },
+      (err, verified) => {
+        if (err) reject(err);
+        else resolve(verified);
+      }
+    );
+  });
+
+  return {
+    id: decoded.sub,
+    externalId: decoded.sub,
+    email: decoded.email,
+    name: decoded.name || decoded.preferred_username,
+    roles: decoded.realm_access?.roles || [],
+    token,
+  };
+}
+
+/**
+ * Require auth (or internal token) for write methods
+ */
+function requireWriteAuth(req, res, next) {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    return next();
+  }
+
+  if (req.user) {
+    return next();
+  }
+
+  if (INTERNAL_API_TOKEN) {
+    const internalToken = req.get("x-internal-token");
+    if (
+      internalToken &&
+      internalToken === INTERNAL_API_TOKEN &&
+      INTERNAL_PATH_PREFIXES.some((prefix) =>
+        req.originalUrl.startsWith(prefix)
+      )
+    ) {
+      req.isInternalRequest = true;
+      return next();
+    }
+  }
+
+  return res.status(401).json({ error: "Authentication required" });
 }
 
 /**
@@ -277,6 +336,9 @@ module.exports = {
   getUserId,
   getUser,
   checkProjectAccess,
+  checkProjectMembership,
   getUserWorkspaceIds,
   DEV_BYPASS_AUTH,
+  verifyJwtToken,
+  requireWriteAuth,
 };

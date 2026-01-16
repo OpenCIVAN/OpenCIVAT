@@ -2,6 +2,7 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const fs = require("fs");
 const webpack = require("webpack");
+require("dotenv").config();
 
 // Allow HTTP mode for local voice chat testing (LiveKit without TLS)
 const useHttps = process.env.USE_HTTP !== "true";
@@ -142,6 +143,27 @@ module.exports = {
       ),
       "process.env.NODE_ENV": JSON.stringify(
         process.env.NODE_ENV || "development"
+      ),
+      __API_BASE_URL__: JSON.stringify(
+        process.env.API_BASE_URL || "http://localhost:3001/api"
+      ),
+      __YJS_WS_URL__: JSON.stringify(
+        process.env.YJS_WEBSOCKET_URL || "ws://localhost:9001"
+      ),
+      __KEYCLOAK_URL__: JSON.stringify(
+        process.env.KEYCLOAK_URL || "http://localhost:8080"
+      ),
+      __KEYCLOAK_REALM__: JSON.stringify(
+        process.env.KEYCLOAK_REALM || "cia-web"
+      ),
+      __KEYCLOAK_CLIENT_ID__: JSON.stringify(
+        process.env.KEYCLOAK_CLIENT_ID || "cia-web-app"
+      ),
+      __LIVEKIT_URL__: JSON.stringify(
+        process.env.LIVEKIT_URL || "ws://localhost:7880"
+      ),
+      __LIVEKIT_TOKEN_URL__: JSON.stringify(
+        process.env.LIVEKIT_TOKEN_URL || "http://localhost:3002"
       ),
       __DEV_BYPASS_AUTH__: JSON.stringify(
         process.env.DEV_BYPASS_AUTH === "true"

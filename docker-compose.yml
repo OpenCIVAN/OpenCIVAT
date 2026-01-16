@@ -88,6 +88,8 @@ services:
       API_URL: http://api:3001
       # Development bypass
       DEV_BYPASS_AUTH: ${DEV_BYPASS_AUTH:-false}
+      # Internal auth for worker callbacks
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
       # Matrix Federation
       MATRIX_FEDERATION_ENABLED: ${MATRIX_FEDERATION_ENABLED:-true}
       MATRIX_BASE_URL: ${MATRIX_BASE_URL:-http://synapse:8008}
@@ -116,12 +118,17 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 9001
+      NODE_ENV: ${NODE_ENV:-development}
       # Database connection for Y.js persistence (Phase 2E)
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-cia_analytics}
       DB_USER: ${POSTGRES_USER:-ciauser}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-ciadevpassword}
+      # Keycloak Auth (for WebSocket JWT validation)
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-cia-web}
+      DEV_BYPASS_AUTH: ${DEV_BYPASS_AUTH:-false}
     ports:
       - "9001:9001"
     depends_on:
@@ -175,6 +182,7 @@ services:
       MINIO_BUCKET: cia-files
       MINIO_SECURE: "false"
       API_CALLBACK_URL: http://api:3001/api/compute/internal
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
     depends_on:
       redis:
         condition: service_healthy
@@ -204,6 +212,7 @@ services:
       APP_BASE_URL: ${APP_BASE_URL:-https://host.docker.internal:8081}
       # API URL for worker callbacks (internal Docker network)
       API_URL: http://api:3001
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
     depends_on:
       redis:
         condition: service_healthy

@@ -106,7 +106,7 @@ export const config = Object.freeze({
   keycloakClientId: resolveValue(
     "keycloakClientId",
     "__KEYCLOAK_CLIENT_ID__",
-    "cia-web-client"
+    "cia-web-app"
   ),
 
   /** Dev bypass auth (skip Keycloak in development) */
