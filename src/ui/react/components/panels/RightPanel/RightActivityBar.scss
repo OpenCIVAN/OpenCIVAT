@@ -24,35 +24,43 @@
   // Colored indicator line on LEFT edge (mirrors left activity bar which has it on the RIGHT edge)
   // Both indicators face TOWARD the workspace/content in the center
   &[data-color="blue"] {
-    border-left: 2px solid rgba($color-accent-blue, 0.4);
+    border-left: 1px solid rgba($color-accent-blue, 0.4);
   }
 
   &[data-color="teal"] {
-    border-left: 2px solid rgba($color-accent-teal, 0.4);
+    border-left: 1px solid rgba($color-accent-teal, 0.4);
   }
 
   &[data-color="green"] {
-    border-left: 2px solid rgba($color-accent-green, 0.4);
+    border-left: 1px solid rgba($color-accent-green, 0.4);
   }
 
   &[data-color="pink"] {
-    border-left: 2px solid rgba($color-accent-pink, 0.4);
+    border-left: 1px solid rgba($color-accent-pink, 0.4);
   }
 
   &[data-color="amber"] {
-    border-left: 2px solid rgba($color-accent-amber, 0.4);
+    border-left: 1px solid rgba($color-accent-amber, 0.4);
   }
 
   &[data-color="indigo"] {
-    border-left: 2px solid rgba($color-accent-indigo, 0.4);
+    border-left: 1px solid rgba($color-accent-indigo, 0.4);
   }
 
   &[data-color="purple"] {
-    border-left: 2px solid rgba($color-accent-purple, 0.4);
+    border-left: 1px solid rgba($color-accent-purple, 0.4);
   }
 
   &[data-color="red"] {
-    border-left: 2px solid rgba($color-accent-red, 0.4);
+    border-left: 1px solid rgba($color-accent-red, 0.4);
+  }
+
+  &[data-color="cyan"] {
+    border-left: 1px solid rgba($color-accent-cyan, 0.4);
+  }
+
+  &[data-color="gray"] {
+    border-left: 1px solid rgba(150, 160, 180, 0.5);
   }
 }
 

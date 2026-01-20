@@ -123,7 +123,7 @@
     min-width: $panel-activity-bar-width; // NEVER shrink below this
     flex-shrink: 0; // Prevent flexbox from shrinking this
     background: $color-bg-secondary;
-    border-right: 1px solid $color-border-subtle;
+    // NOTE: Colored indicator border is on the inner activity-bar element (faces workspace)
     display: flex;
     flex-direction: column;
     overflow: hidden; // Prevent content from overflowing
@@ -136,7 +136,7 @@
     min-width: $panel-activity-bar-width; // NEVER shrink below this
     flex-shrink: 0; // Prevent flexbox from shrinking this
     background: $color-bg-secondary;
-    // NOTE: No border-left here - colored indicator faces toward workspace (on left edge)
+    // NOTE: Colored indicator border is on the inner activity-bar element (faces workspace)
     display: flex;
     flex-direction: column;
     overflow: hidden; // Prevent content from overflowing

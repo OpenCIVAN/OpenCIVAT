@@ -100,9 +100,10 @@ export function RoomsTab({ workspaceId }) {
     return (
         <div className="rooms-panel">
             {/* Panel Header */}
-            <div className="panel-header">
-                <Icon name="doorOpen" size={14} className="panel-header__icon file-icon--purple" />
+            <div className="panel-header panel-header--purple">
+                <Icon name="doorOpen" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Rooms</span>
+                <div className="panel-header__spacer" />
                 <span className="panel-header__count">{rooms.length} rooms</span>
             </div>
 

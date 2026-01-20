@@ -159,9 +159,10 @@ export function VoiceTab({ workspaceId, channels: propChannels }) {
     return (
         <div className="voice-panel">
             {/* Panel Header */}
-            <div className="panel-header">
-                <Icon name="mic" size={14} className="panel-header__icon file-icon--green" />
+            <div className="panel-header panel-header--green">
+                <Icon name="mic" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Voice</span>
+                <div className="panel-header__spacer" />
                 <span className="panel-header__count">
                     {isConnected ? `${participants.length} in call` : 'Not connected'}
                 </span>

@@ -12,35 +12,7 @@
   background: $color-glass-panel;
   backdrop-filter: $blur-strong saturate(200%);
   overflow: hidden;
-
-  // Left accent border based on active tab color
-  &[data-color="pink"] {
-    border-left: 2px solid rgba($color-accent-pink, 0.4);
-  }
-
-  &[data-color="purple"] {
-    border-left: 2px solid rgba($color-accent-purple, 0.4);
-  }
-
-  &[data-color="blue"] {
-    border-left: 2px solid rgba($color-accent-blue, 0.4);
-  }
-
-  &[data-color="green"] {
-    border-left: 2px solid rgba($color-accent-green, 0.4);
-  }
-
-  &[data-color="teal"] {
-    border-left: 2px solid rgba($color-accent-teal, 0.4);
-  }
-
-  &[data-color="red"] {
-    border-left: 2px solid rgba($color-accent-red, 0.4);
-  }
-
-  &[data-color="amber"] {
-    border-left: 2px solid rgba($color-accent-amber, 0.4);
-  }
+  // NOTE: Colored indicator border is on the activity bar, not here (avoids double stripe)
 }
 
 // =============================================================================

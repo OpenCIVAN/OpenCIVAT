@@ -12,16 +12,10 @@
   overflow: hidden;
   position: relative;
 
-  .panel-header {
+  // Status badge styling - keep same size as other header counts
+  .panel-header__status {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm $spacing-md;
-    border-bottom: 1px solid $color-border-subtle;
-  }
-
-  .panel-header__status {
-    margin-left: auto;
   }
 }
 

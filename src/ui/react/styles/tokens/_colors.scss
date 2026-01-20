@@ -101,11 +101,13 @@ $color-accent-amber-glow: rgba(251, 191, 36, 0.18);
 $color-accent-green: #34d399;
 $color-accent-green-glow: rgba(52, 211, 153, 0.18);
 
-// Teal/Sky - Light cyan (datasets, secondary nav)
+// Teal/Sky/Cyan - Light cyan (datasets, secondary nav, cursors)
 $color-accent-teal: #7dd3fc;
 $color-accent-teal-glow: rgba(125, 211, 252, 0.18);
 $color-accent-sky: $color-accent-teal;
 $color-accent-sky-glow: $color-accent-teal-glow;
+$color-accent-cyan: #22d3ee; // Slightly more vibrant cyan for cursors
+$color-accent-cyan-glow: rgba(34, 211, 238, 0.18);
 
 // Indigo/Violet - Deep purple (annotations, special tools)
 $color-accent-indigo: #a78bfa;

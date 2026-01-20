@@ -141,9 +141,10 @@ export function ChatTab({ workspaceId, roomId, projectId, availableRooms: roomsF
     return (
         <div className="chat-tab">
             {/* Header */}
-            <div className="panel-header">
-                <Icon name="messageSquare" size={14} className="panel-header__icon file-icon--blue" />
+            <div className="panel-header panel-header--blue">
+                <Icon name="messageSquare" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Chat</span>
+                <div className="panel-header__spacer" />
                 <div className="panel-header__status">
                     {/* Y.js connection status */}
                     {isLoading ? (

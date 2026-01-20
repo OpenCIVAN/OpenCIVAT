@@ -23,7 +23,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { Icon, IconButton } from '@UI/react/components/atoms';
+import { Icon, IconButton, Tooltip } from '@UI/react/components/atoms';
 import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import {
@@ -174,16 +174,19 @@ export function FilesPanelContent({
     return (
         <div className="files-tab">
             {/* Header */}
-            <div className="panel-header panel-header--orange">
+            <div className="panel-header panel-header--blue">
                 <Icon name="folderOpen" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Files</span>
+                <div className="panel-header__spacer" />
                 <div className="panel-header__actions">
-                    <IconButton
-                        icon="folderPlus"
-                        tooltip="New Folder"
-                        size="sm"
-                        variant="ghost"
-                    />
+                    <Tooltip content="New Folder" placement="bottom">
+                        <IconButton
+                            icon="folderPlus"
+                            label="New Folder"
+                            size="xs"
+                            variant="ghost"
+                        />
+                    </Tooltip>
                 </div>
             </div>
 

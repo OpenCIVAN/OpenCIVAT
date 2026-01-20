@@ -41,35 +41,39 @@
 
   // Colored indicator line on right edge (based on active tab color)
   &[data-color="blue"] {
-    border-right: 2px solid rgba($color-accent-blue, 0.4);
+    border-right: 1px solid rgba($color-accent-blue, 0.4);
   }
 
   &[data-color="teal"] {
-    border-right: 2px solid rgba($color-accent-teal, 0.4);
+    border-right: 1px solid rgba($color-accent-teal, 0.4);
   }
 
   &[data-color="green"] {
-    border-right: 2px solid rgba($color-accent-green, 0.4);
+    border-right: 1px solid rgba($color-accent-green, 0.4);
   }
 
   &[data-color="pink"] {
-    border-right: 2px solid rgba($color-accent-pink, 0.4);
+    border-right: 1px solid rgba($color-accent-pink, 0.4);
   }
 
   &[data-color="amber"] {
-    border-right: 2px solid rgba($color-accent-amber, 0.4);
+    border-right: 1px solid rgba($color-accent-amber, 0.4);
   }
 
   &[data-color="indigo"] {
-    border-right: 2px solid rgba($color-accent-indigo, 0.4);
+    border-right: 1px solid rgba($color-accent-indigo, 0.4);
   }
 
   &[data-color="purple"] {
-    border-right: 2px solid rgba($color-accent-purple, 0.4);
+    border-right: 1px solid rgba($color-accent-purple, 0.4);
   }
 
   &[data-color="red"] {
-    border-right: 2px solid rgba($color-accent-red, 0.4);
+    border-right: 1px solid rgba($color-accent-red, 0.4);
+  }
+
+  &[data-color="cyan"] {
+    border-right: 1px solid rgba($color-accent-cyan, 0.4);
   }
 }
 
@@ -170,6 +174,13 @@
       background: rgba($color-accent-red, 0.15);
       border: 1px solid rgba($color-accent-red, 0.4);
       color: $color-accent-red;
+    }
+
+    &[data-color="cyan"] {
+      --glow-color: #{rgba($color-accent-cyan, 0.2)};
+      background: rgba($color-accent-cyan, 0.15);
+      border: 1px solid rgba($color-accent-cyan, 0.4);
+      color: $color-accent-cyan;
     }
   }
 }
@@ -286,6 +297,9 @@
   &[data-color="red"] {
     color: $color-accent-red;
   }
+  &[data-color="cyan"] {
+    color: $color-accent-cyan;
+  }
 }
 
 .left-panel__placeholder-title {
@@ -324,6 +338,38 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: $color-text-secondary;
+  }
+
+  // Color modifiers for icon coloring
+  &--blue .panel-header__icon {
+    color: $color-accent-blue;
+  }
+  &--teal .panel-header__icon {
+    color: $color-accent-teal;
+  }
+  &--green .panel-header__icon {
+    color: $color-accent-green;
+  }
+  &--purple .panel-header__icon {
+    color: $color-accent-purple;
+  }
+  &--pink .panel-header__icon {
+    color: $color-accent-pink;
+  }
+  &--amber .panel-header__icon {
+    color: $color-accent-amber;
+  }
+  &--indigo .panel-header__icon {
+    color: $color-accent-indigo;
+  }
+  &--cyan .panel-header__icon {
+    color: $color-accent-cyan;
+  }
+  &--red .panel-header__icon {
+    color: $color-accent-red;
+  }
+  &--orange .panel-header__icon {
+    color: $color-accent-amber; // Using amber for orange
   }
 
   &__spacer {

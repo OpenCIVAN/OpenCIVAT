@@ -123,9 +123,10 @@ export function ActivityTab({
     return (
         <div className="activity-panel">
             {/* Panel Header */}
-            <div className="panel-header">
-                <Icon name="browse_activity" size={14} className="panel-header__icon file-icon--amber" />
+            <div className="panel-header panel-header--amber">
+                <Icon name="browse_activity" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Activity</span>
+                <div className="panel-header__spacer" />
                 <span className="panel-header__count">{activities.length} events</span>
             </div>
 

@@ -64,9 +64,10 @@ export function PeopleTab({ workspaceId, roomId }) {
     return (
         <div className="people-tab">
             {/* Header */}
-            <div className="panel-header">
-                <Icon name="users" size={14} className="panel-header__icon file-icon--pink" />
+            <div className="panel-header panel-header--pink">
+                <Icon name="users" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">People</span>
+                <div className="panel-header__spacer" />
                 <span className="panel-header__count">{onlineCount} online</span>
             </div>
 

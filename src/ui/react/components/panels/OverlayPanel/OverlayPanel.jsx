@@ -61,7 +61,7 @@ export function OverlayPanel({
             })}
             style={{
                 width: panelWidth,
-                [side]: tokens.activityBarWidth,
+                // Panel positioned at edge of workspace - activity bar is in separate grid column
             }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}

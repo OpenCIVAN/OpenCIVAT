@@ -201,9 +201,10 @@ export function RecordingsTab({ workspaceId }) {
     return (
         <div className="recordings-panel">
             {/* Panel Header */}
-            <div className="panel-header">
-                <Icon name="video" size={14} className="panel-header__icon file-icon--red" />
+            <div className="panel-header panel-header--red">
+                <Icon name="video" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Recording</span>
+                <div className="panel-header__spacer" />
                 <span className="panel-header__count">
                     {isRecording ? 'Recording...' : `${recordings.length} saved`}
                 </span>

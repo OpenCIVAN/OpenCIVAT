@@ -81,6 +81,118 @@
   max-width: 200px;
 }
 
+// Placeholder icon color variants
+.right-panel__placeholder-icon {
+  &[data-color="blue"] {
+    color: $color-accent-blue;
+  }
+  &[data-color="teal"] {
+    color: $color-accent-teal;
+  }
+  &[data-color="green"] {
+    color: $color-accent-green;
+  }
+  &[data-color="pink"] {
+    color: $color-accent-pink;
+  }
+  &[data-color="amber"] {
+    color: $color-accent-amber;
+  }
+  &[data-color="indigo"] {
+    color: $color-accent-indigo;
+  }
+  &[data-color="purple"] {
+    color: $color-accent-purple;
+  }
+  &[data-color="red"] {
+    color: $color-accent-red;
+  }
+  &[data-color="cyan"] {
+    color: $color-accent-cyan;
+  }
+  &[data-color="gray"] {
+    color: rgba(150, 160, 180, 0.8);
+  }
+}
+
+// =============================================================================
+// SHARED PANEL HEADER (mirrors LeftPanel.scss panel-header)
+// =============================================================================
+
+.panel-header {
+  @include etched-bar;
+  padding: $spacing-xs $spacing-sm;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+  min-height: 28px;
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: $color-text-secondary;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__count {
+    font-size: 10px;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: $radius-xs;
+    white-space: nowrap;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  // Color modifiers for icon coloring
+  &--blue .panel-header__icon {
+    color: $color-accent-blue;
+  }
+  &--teal .panel-header__icon {
+    color: $color-accent-teal;
+  }
+  &--green .panel-header__icon {
+    color: $color-accent-green;
+  }
+  &--purple .panel-header__icon {
+    color: $color-accent-purple;
+  }
+  &--pink .panel-header__icon {
+    color: $color-accent-pink;
+  }
+  &--amber .panel-header__icon {
+    color: $color-accent-amber;
+  }
+  &--indigo .panel-header__icon {
+    color: $color-accent-indigo;
+  }
+  &--cyan .panel-header__icon {
+    color: $color-accent-cyan;
+  }
+  &--red .panel-header__icon {
+    color: $color-accent-red;
+  }
+  &--gray .panel-header__icon {
+    color: rgba(150, 160, 180, 0.8);
+  }
+}
+
 // =============================================================================
 // PEOPLE TAB STYLES
 // =============================================================================

@@ -309,7 +309,7 @@ export function BookmarksFiltersPanelContent({
     return (
         <div className="bookmarks-filters-tab">
             {/* Header with pop-out/close buttons */}
-            <PanelHeader icon="bookmark" color="indigo" />
+            <PanelHeader icon="bookmark" color="indigo" title="Bookmarks" />
 
             {/* Sub-tabs */}
             <SubTabs activeTab={activeSubTab} onTabChange={setActiveSubTab} />

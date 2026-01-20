@@ -14,7 +14,7 @@
  * 6. Notes (teal) - DOCUMENTATION
  * 7. Recording (red) - DOCUMENTATION
  * --- divider ---
- * 8. Settings (gray)
+ * 8. Settings (indigo)
  *
  * @see Right_Panel_Design_Specification.md
  */
@@ -97,7 +97,7 @@ export const RIGHT_PANEL_TABS = [
         id: 'settings',
         icon: 'settings',
         label: 'Settings',
-        color: 'gray',
+        color: 'indigo',
         group: 'settings',
         contentComponent: 'SettingsPanelContent',
     },

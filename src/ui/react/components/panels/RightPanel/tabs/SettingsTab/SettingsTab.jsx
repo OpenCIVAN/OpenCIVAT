@@ -83,8 +83,8 @@ export function SettingsTab({
     if (loading) {
         return (
             <div className="settings-tab settings-tab--loading">
-                <div className="panel-header">
-                    <Icon name="settings" size={14} className="panel-header__icon file-icon--gray" />
+                <div className="panel-header panel-header--indigo">
+                    <Icon name="settings" size={14} className="panel-header__icon" />
                     <span className="panel-header__title">Settings</span>
                 </div>
                 <div className="settings-tab__loader">
@@ -97,9 +97,10 @@ export function SettingsTab({
     return (
         <div className="settings-tab">
             {/* Panel Header */}
-            <div className="panel-header">
-                <Icon name="settings" size={14} className="panel-header__icon file-icon--gray" />
+            <div className="panel-header panel-header--indigo">
+                <Icon name="settings" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Settings</span>
+                <div className="panel-header__spacer" />
                 <span className="panel-header__count">{userRole}</span>
             </div>
 

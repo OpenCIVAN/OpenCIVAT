@@ -73,8 +73,8 @@ export function NotesTab({ workspaceId }) {
     if (editingNote) {
         return (
             <div className="notes-tab">
-                <div className="panel-header">
-                    <Icon name="file" size={14} className="panel-header__icon file-icon--teal" />
+                <div className="panel-header panel-header--teal">
+                    <Icon name="file" size={14} className="panel-header__icon" />
                     <span className="panel-header__title">Notes</span>
                 </div>
                 <NoteEditor
@@ -90,8 +90,8 @@ export function NotesTab({ workspaceId }) {
     if (showNewNote) {
         return (
             <div className="notes-tab">
-                <div className="panel-header">
-                    <Icon name="file" size={14} className="panel-header__icon file-icon--teal" />
+                <div className="panel-header panel-header--teal">
+                    <Icon name="file" size={14} className="panel-header__icon" />
                     <span className="panel-header__title">Notes</span>
                 </div>
                 <NoteEditor
@@ -106,9 +106,10 @@ export function NotesTab({ workspaceId }) {
     return (
         <div className="notes-tab">
             {/* Header */}
-            <div className="panel-header">
-                <Icon name="file" size={14} className="panel-header__icon file-icon--teal" />
+            <div className="panel-header panel-header--teal">
+                <Icon name="file" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Notes</span>
+                <div className="panel-header__spacer" />
                 <span className="panel-header__count">{notes.length} notes</span>
             </div>
 
