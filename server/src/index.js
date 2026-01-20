@@ -7,7 +7,7 @@ const http = require("http");
 const cors = require("cors");
 const { Pool } = require("pg");
 const Minio = require("minio");
-const { authenticate, optionalAuth, requireWriteAuth } = require("./middleware/auth");
+const { authenticate, optionalAuth, requireWriteAuth, setPool: setAuthPool } = require("./middleware/auth");
 const authRouter = require("./routes/auth");
 const wsManager = require("./services/websocket");
 const { auditLogger, auditMiddleware } = require("./services/audit");
@@ -81,6 +81,9 @@ wsManager.initialize(server, pool);
 
 // Initialize audit logger
 auditLogger.initialize(pool);
+
+// Initialize auth middleware with database pool (for user ID mapping)
+setAuthPool(pool);
 
 // Initialize Matrix bridge (if enabled)
 const matrixBridge = createMatrixBridge({
@@ -172,6 +175,10 @@ app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 // Request logging (only in debug mode via http category)
 app.use((req, res, next) => {
   httpLog.debug(`${req.method} ${req.path}`);
+  // Temporary: log all non-GET requests to debug auth issues
+  if (req.method !== 'GET') {
+    console.log(`[REQUEST] ${req.method} ${req.path} - Auth: ${req.headers.authorization ? 'Present' : 'MISSING'}`);
+  }
   next();
 });
 

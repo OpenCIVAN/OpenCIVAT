@@ -217,67 +217,67 @@ ensure_client
 ensure_role "user"
 ensure_role "admin"
 
+# Users with FIXED database UUIDs (must match mockUsers.js)
+# Format: username|email|display_name|role|password|db_uuid
 USERS=(
-  "cia-admin|admin@cia-web.local|CIA Admin|admin|Admin123!"
-  "alice|alice@cia-web.local|Alice Analyst|user|Password123!"
-  "bob|bob@cia-web.local|Bob Researcher|user|Password123!"
-  "viewer|viewer@cia-web.local|Viewer User|user|Password123!"
+  "cia-admin|admin@cia-web.local|CIA Admin|admin|Admin123!|00000000-0000-0000-0000-000000000001"
+  "alice|alice@cia-web.local|Alice Analyst|user|Password123!|00000000-0000-0000-0000-000000000002"
+  "bob|bob@cia-web.local|Bob Builder|user|Password123!|00000000-0000-0000-0000-000000000003"
+  "viewer|viewer@cia-web.local|View Only|user|Password123!|00000000-0000-0000-0000-000000000004"
 )
 
 USER_RECORDS=()
-ADMIN_KC_ID=""
 
 for entry in "${USERS[@]}"; do
-  IFS="|" read -r username email display_name role password <<< "${entry}"
+  IFS="|" read -r username email display_name role password db_uuid <<< "${entry}"
 
-  user_id="$(create_or_get_user "${username}" "${email}" "${display_name}")"
-  if [ -z "${user_id}" ]; then
+  # Create user in Keycloak (returns Keycloak's UUID)
+  kc_user_id="$(create_or_get_user "${username}" "${email}" "${display_name}")"
+  if [ -z "${kc_user_id}" ]; then
     echo "Failed to create or fetch user ${username}" >&2
     exit 1
   fi
 
-  set_user_password "${user_id}" "${password}"
+  set_user_password "${kc_user_id}" "${password}"
 
   if [ "${role}" = "admin" ]; then
-    assign_realm_roles "${user_id}" "user" "admin"
+    assign_realm_roles "${kc_user_id}" "user" "admin"
   else
-    assign_realm_roles "${user_id}" "user"
+    assign_realm_roles "${kc_user_id}" "user"
   fi
 
-  USER_RECORDS+=("${username}|${email}|${display_name}|${role}|${user_id}")
-  if [ "${username}" = "cia-admin" ]; then
-    ADMIN_KC_ID="${user_id}"
-  fi
+  # Store: username|email|display_name|role|keycloak_id|database_uuid
+  USER_RECORDS+=("${username}|${email}|${display_name}|${role}|${kc_user_id}|${db_uuid}")
 done
 
-if [ -z "${ADMIN_KC_ID}" ]; then
-  echo "Admin user ID not found; check user creation." >&2
-  exit 1
-fi
-
 log "Seeding database mappings (users + memberships)"
+
+# Use the fixed admin UUID for project creation
+ADMIN_DB_UUID="00000000-0000-0000-0000-000000000001"
 
 sql="BEGIN;"
 sql+="\nINSERT INTO organizations (id, name, slug, storage_quota_bytes)"
 sql+="\nVALUES ('${CIA_ORG_ID}', 'System', 'system', 1099511627776)"
 sql+="\nON CONFLICT (id) DO NOTHING;"
-sql+="\nINSERT INTO projects (id, organization_id, name, slug, visibility, created_by)"
-sql+="\nVALUES ('${CIA_PROJECT_ID}', '${CIA_ORG_ID}', 'Sample Files', 'sample-files', 'public', '${ADMIN_KC_ID}')"
+sql+="\nINSERT INTO projects (id, organization_id, name, slug, description, visibility, created_by)"
+sql+="\nVALUES ('${CIA_PROJECT_ID}', '${CIA_ORG_ID}', 'Demo Project', 'sample-files', 'Default demo project for development and testing', 'public', '${ADMIN_DB_UUID}')"
 sql+="\nON CONFLICT (id) DO NOTHING;"
 
 for record in "${USER_RECORDS[@]}"; do
-  IFS="|" read -r username email display_name role user_id <<< "${record}"
+  # Parse: username|email|display_name|role|keycloak_id|database_uuid
+  IFS="|" read -r username email display_name role kc_user_id db_uuid <<< "${record}"
 
   email_escaped="$(sql_escape "${email}")"
   name_escaped="$(sql_escape "${display_name}")"
 
+  # Use fixed DB UUID, store Keycloak ID in external_id
   sql+="\nINSERT INTO users (id, external_id, email, display_name)"
-  sql+="\nVALUES ('${user_id}', '${user_id}', '${email_escaped}', '${name_escaped}')"
-  sql+="\nON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.display_name;"
+  sql+="\nVALUES ('${db_uuid}', '${kc_user_id}', '${email_escaped}', '${name_escaped}')"
+  sql+="\nON CONFLICT (id) DO UPDATE SET external_id = EXCLUDED.external_id, email = EXCLUDED.email, display_name = EXCLUDED.display_name;"
 
   sql+="\nINSERT INTO organization_members (organization_id, user_id, role)"
-  sql+="\nVALUES ('${CIA_ORG_ID}', '${user_id}', '${role}')"
-  sql+="\nON CONFLICT (organization_id, user_id) DO NOTHING;"
+  sql+="\nVALUES ('${CIA_ORG_ID}', '${db_uuid}', '${role}')"
+  sql+="\nON CONFLICT (organization_id, user_id) DO UPDATE SET role = EXCLUDED.role;"
 
   project_role="member"
   if [ "${role}" = "admin" ]; then
@@ -285,8 +285,8 @@ for record in "${USER_RECORDS[@]}"; do
   fi
 
   sql+="\nINSERT INTO project_members (project_id, user_id, role)"
-  sql+="\nVALUES ('${CIA_PROJECT_ID}', '${user_id}', '${project_role}')"
-  sql+="\nON CONFLICT (project_id, user_id) DO NOTHING;"
+  sql+="\nVALUES ('${CIA_PROJECT_ID}', '${db_uuid}', '${project_role}')"
+  sql+="\nON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role;"
 done
 
 sql+="\nCOMMIT;"
@@ -295,8 +295,15 @@ printf "%b\n" "${sql}" | docker exec -i "${DB_CONTAINER}" psql -U "${DB_USER}" -
 
 log "Done. Test users created in Keycloak and mapped in Postgres."
 log "Default project: ${CIA_PROJECT_ID}"
-log "Users:"
+echo ""
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║                    Mock Users for Testing                      ║"
+echo "╠════════════════════════════════════════════════════════════════╣"
+echo ""
+printf "        %-18s | %-20s | %s\n" "Name" "Email" "Password"
+echo "--------------------+----------------------+---------------"
 for entry in "${USERS[@]}"; do
-  IFS="|" read -r username email _display_name _role password <<< "${entry}"
-  log "  - ${username} (${email}) / ${password}"
+  IFS="|" read -r username email display_name _role password _db_uuid <<< "${entry}"
+  printf " %-18s | %-20s | %s\n" "${display_name}" "${email}" "${password}"
 done
+echo ""

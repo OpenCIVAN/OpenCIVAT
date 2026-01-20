@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { sync as log } from '@Utils/logger.js';
+import { apiClient } from '@Services/apiClient.js';
 import './DMUserList.scss';
 
 /**
@@ -33,28 +34,26 @@ export function DMUserList({ projectId, currentUserId, onUserSelected }) {
                 setIsLoading(true);
                 setError(null);
 
-                // Fetch project members
-                const usersResponse = await fetch(`/api/projects/${projectId}/members`);
-                if (!usersResponse.ok) {
-                    throw new Error('Failed to fetch project members');
-                }
-                const membersData = await usersResponse.json();
+                // Fetch project members using apiClient (handles auth headers)
+                const membersData = await apiClient.get(`/projects/${projectId}/members`);
 
                 // Filter out current user
                 const otherUsers = membersData.filter(user => user.id !== currentUserId);
                 setUsers(otherUsers);
 
                 // Fetch existing DM rooms
-                const dmsResponse = await fetch(`/api/projects/${projectId}/rooms?type=dm`);
-                if (dmsResponse.ok) {
-                    const dmsData = await dmsResponse.json();
+                try {
+                    const dmsData = await apiClient.get(`/projects/${projectId}/rooms?type=dm`);
                     setExistingDMs(dmsData);
+                } catch (dmError) {
+                    // DM rooms fetch is optional, don't fail the whole component
+                    log.debug('Could not fetch existing DMs:', dmError.message);
                 }
 
                 log.debug('Loaded users for DM:', otherUsers.length);
             } catch (err) {
                 log.error('Failed to fetch users:', err);
-                setError(err.message);
+                setError(err.message || 'Failed to load project members');
             } finally {
                 setIsLoading(false);
             }
@@ -95,26 +94,13 @@ export function DMUserList({ projectId, currentUserId, onUserSelected }) {
             const userIds = [currentUserId, user.id].sort();
             const dmName = `dm_${userIds[0]}_${userIds[1]}`;
 
-            const response = await fetch(`/api/projects/${projectId}/rooms`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: dmName,
-                    description: `Direct message with ${user.name || user.email}`,
-                    isPublic: false,
-                    roomType: 'dm',
-                    participants: [currentUserId, user.id],
-                }),
+            const newDMRoom = await apiClient.post(`/projects/${projectId}/rooms`, {
+                name: dmName,
+                description: `Direct message with ${user.name || user.email}`,
+                isPublic: false,
+                roomType: 'dm',
+                participants: [currentUserId, user.id],
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create DM room');
-            }
-
-            const newDMRoom = await response.json();
             log.info('DM room created:', newDMRoom.id);
 
             // Add to existing DMs list

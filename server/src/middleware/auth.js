@@ -7,6 +7,77 @@ const { createLogger } = require("../utils/logger");
 
 const log = createLogger("auth");
 
+// Database pool for user lookups (injected from index.js)
+let dbPool = null;
+
+/**
+ * Set the database pool for user lookups
+ * Called from index.js after pool is created
+ */
+function setPool(pool) {
+  dbPool = pool;
+  log.debug("Database pool set for auth middleware");
+}
+
+/**
+ * Look up user in database by external_id (Keycloak UUID)
+ * Returns the database user with proper internal ID
+ */
+async function lookupUserByExternalId(externalId, email, name) {
+  if (!dbPool) {
+    log.warn("Database pool not set, skipping user lookup");
+    return null;
+  }
+
+  try {
+    // First try to find by external_id
+    let result = await dbPool.query(
+      "SELECT id, external_id, email, display_name FROM users WHERE external_id = $1",
+      [externalId]
+    );
+
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      log.debug(`Found user by external_id: ${user.id} (${user.email})`);
+      return user;
+    }
+
+    // Try by email as fallback
+    result = await dbPool.query(
+      "SELECT id, external_id, email, display_name FROM users WHERE email = $1",
+      [email]
+    );
+
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      // Update external_id if it was missing
+      if (!user.external_id) {
+        await dbPool.query(
+          "UPDATE users SET external_id = $1 WHERE id = $2",
+          [externalId, user.id]
+        );
+        log.info(`Updated external_id for user ${user.email}`);
+      }
+      log.debug(`Found user by email: ${user.id} (${user.email})`);
+      return user;
+    }
+
+    // User doesn't exist - create them
+    log.info(`Creating new user: ${email} (external_id: ${externalId})`);
+    result = await dbPool.query(
+      `INSERT INTO users (external_id, email, display_name)
+       VALUES ($1, $2, $3)
+       RETURNING id, external_id, email, display_name`,
+      [externalId, email, name || email.split("@")[0]]
+    );
+
+    return result.rows[0];
+  } catch (err) {
+    log.error("Failed to lookup/create user:", err.message);
+    return null;
+  }
+}
+
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN || null;
 const INTERNAL_PATH_PREFIXES = [
   "/api/compute/internal",
@@ -18,6 +89,15 @@ const INTERNAL_PATH_PREFIXES = [
 // Keycloak configuration
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL || "http://localhost:8080";
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM || "cia-web";
+
+// Allow tokens from both Docker internal hostname and localhost (browser)
+// This is needed because browser gets tokens from localhost:8080 but server
+// runs inside Docker where Keycloak is accessed via the service name
+const ALLOWED_ISSUERS = [
+  `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
+  `http://localhost:8080/realms/${KEYCLOAK_REALM}`,
+  `http://keycloak:8080/realms/${KEYCLOAK_REALM}`,
+].filter((v, i, a) => a.indexOf(v) === i); // dedupe
 
 // Development bypass - allows testing without Keycloak
 const DEV_BYPASS_AUTH =
@@ -206,11 +286,12 @@ async function verifyJwtToken(token) {
   }
 
   const decoded = await new Promise((resolve, reject) => {
+    // Don't validate issuer in jwt.verify - we'll check it manually
+    // This allows tokens from both localhost:8080 (browser) and keycloak:8080 (docker)
     jwt.verify(
       token,
       getKey,
       {
-        issuer: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
         algorithms: ["RS256"],
       },
       (err, verified) => {
@@ -220,12 +301,39 @@ async function verifyJwtToken(token) {
     );
   });
 
+  // Manually validate issuer against allowed list
+  if (!decoded.iss || !ALLOWED_ISSUERS.includes(decoded.iss)) {
+    throw new Error(`jwt issuer invalid. expected: ${ALLOWED_ISSUERS.join(' or ')}`);
+  }
+
+  const externalId = decoded.sub;
+  const email = decoded.email;
+  const name = decoded.name || decoded.preferred_username;
+  const roles = decoded.realm_access?.roles || [];
+
+  // Look up user in database to get internal ID
+  const dbUser = await lookupUserByExternalId(externalId, email, name);
+
+  if (dbUser) {
+    log.debug(`Mapped Keycloak user ${externalId} to database user ${dbUser.id}`);
+    return {
+      id: dbUser.id,           // Use database ID for authorization
+      externalId: externalId,  // Keep Keycloak ID for reference
+      email: dbUser.email,
+      name: dbUser.display_name,
+      roles,
+      token,
+    };
+  }
+
+  // Fallback if database lookup fails (shouldn't happen normally)
+  log.warn(`Database lookup failed for user ${externalId}, using Keycloak ID`);
   return {
-    id: decoded.sub,
-    externalId: decoded.sub,
-    email: decoded.email,
-    name: decoded.name || decoded.preferred_username,
-    roles: decoded.realm_access?.roles || [],
+    id: externalId,
+    externalId: externalId,
+    email,
+    name,
+    roles,
     token,
   };
 }
@@ -256,6 +364,7 @@ function requireWriteAuth(req, res, next) {
     }
   }
 
+  log.debug(`requireWriteAuth: Rejecting ${req.method} ${req.path} - no user`);
   return res.status(401).json({ error: "Authentication required" });
 }
 
@@ -263,7 +372,7 @@ function requireWriteAuth(req, res, next) {
  * Optional authentication - populates req.user if token present
  * Useful for endpoints that work both authenticated and anonymously
  */
-function optionalAuth(req, res, next) {
+async function optionalAuth(req, res, next) {
   // In dev bypass, always set user (from headers if provided)
   if (DEV_BYPASS_AUTH) {
     const userId = req.get("x-user-id");
@@ -287,17 +396,21 @@ function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    log.debug(`Optional auth: No auth header for ${req.method} ${req.path}`);
     req.user = null;
     return next();
   }
 
-  // Try to authenticate, but don't fail if it doesn't work
-  authenticate(req, res, (err) => {
-    if (err) {
-      req.user = null;
-    }
-    next();
-  });
+  // Try to verify token directly (don't use authenticate which sends 401 on failure)
+  const token = authHeader.substring(7);
+  try {
+    req.user = await verifyJwtToken(token);
+    log.debug(`Optional auth succeeded for user ${req.user.id}`);
+  } catch (error) {
+    log.debug(`Optional auth failed (continuing without user): ${error.message}`);
+    req.user = null;
+  }
+  next();
 }
 
 /**
@@ -341,4 +454,5 @@ module.exports = {
   DEV_BYPASS_AUTH,
   verifyJwtToken,
   requireWriteAuth,
+  setPool,
 };

@@ -5,6 +5,7 @@
 import {
   getUserId,
   getUserName,
+  getUserEmail,
   getUserColor,
 } from "@Collaboration/presence/userManagement.js";
 import { ydoc } from "@Collaboration/yjs/yjsSetup.js";
@@ -100,6 +101,7 @@ class TextChat {
     const message = {
       id: generateTextChatId(),
       userId: getUserId(),
+      userEmail: getUserEmail(), // Store email for more robust ownership checks
       userName: getUserName(),
       userColor: getUserColor(getUserId()),
       text: text.trim(),
@@ -128,7 +130,7 @@ class TextChat {
   }
 
   deleteMessage(messageId) {
-    if (!this.messages) return;
+    if (!this.messages) return false;
 
     const messages = this.messages.toArray();
     const index = messages.findIndex((msg) => msg.id === messageId);
@@ -136,6 +138,31 @@ class TextChat {
     if (index !== -1) {
       this.messages.delete(index, 1);
       log.debug("Message deleted:", messageId);
+      return true;
+    }
+    return false;
+  }
+
+  editMessage(messageId, newText) {
+    if (!this.messages || !newText?.trim()) return false;
+
+    const messages = this.messages.toArray();
+    const index = messages.findIndex((msg) => msg.id === messageId);
+
+    if (index !== -1) {
+      const originalMessage = messages[index];
+      const updatedMessage = {
+        ...originalMessage,
+        text: newText.trim(),
+        editedAt: Date.now(),
+        isEdited: true,
+      };
+
+      // Y.js arrays don't have a direct update method, so we delete and re-insert
+      this.messages.delete(index, 1);
+      this.messages.insert(index, [updatedMessage]);
+
+      log.debug("Message edited:", messageId);
       return true;
     }
     return false;

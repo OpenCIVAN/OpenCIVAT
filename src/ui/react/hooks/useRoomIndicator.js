@@ -11,6 +11,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { config } from "@Core/config/clientConfig.js";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import { authService } from "@Services/authService.js";
+import { useAuth } from "@UI/react/hooks/useAuth.js";
 import {
   useRoomPresence,
   useRoomActions,
@@ -56,6 +57,7 @@ export function useRoomIndicator({
   onRoomChange,
 } = {}) {
   const apiBase = config.apiBaseUrl || "http://localhost:3001/api";
+  const { isAuthenticated } = useAuth();
 
   // ===========================================================================
   // CURRENT ROOM STATE
@@ -109,7 +111,7 @@ export function useRoomIndicator({
         throw error;
       }
     },
-    [apiBase, projectId, userId]
+    [apiBase, projectId]
   );
 
   const {
@@ -117,9 +119,9 @@ export function useRoomIndicator({
     isLoading: isLoadingRooms,
     error: roomsError,
     refetch: refetchRooms,
-  } = useAsyncData(fetchRooms, [projectId], {
+  } = useAsyncData(fetchRooms, [projectId, isAuthenticated], {
     initialData: [],
-    enabled: !!projectId,
+    enabled: !!projectId && isAuthenticated,
   });
 
   // ===========================================================================
@@ -250,7 +252,7 @@ export function useRoomIndicator({
       const data = await response.json();
       return data.room;
     },
-    [apiBase, projectId, userId]
+    [apiBase, projectId]
   );
 
   const {
@@ -302,7 +304,7 @@ export function useRoomIndicator({
 
       return { id: roomId };
     },
-    [apiBase, projectId, userId]
+    [apiBase, projectId]
   );
 
   const { mutate: deleteRoom, isLoading: isDeleting } = useAsyncMutation(

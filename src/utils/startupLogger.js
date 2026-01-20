@@ -21,6 +21,20 @@ const phases = [];
 let startTime = null;
 let isComplete = false;
 
+function readStartupProfilingFlag() {
+  try {
+    return localStorage.getItem("CIA_STARTUP_PROFILING") === "true";
+  } catch (error) {
+    return false;
+  }
+}
+
+export function isStartupProfilingEnabled() {
+  if (typeof window === "undefined") return false;
+  if (window.CIA_STARTUP_PROFILING === true) return true;
+  return readStartupProfilingFlag();
+}
+
 /**
  * Startup Logger
  *

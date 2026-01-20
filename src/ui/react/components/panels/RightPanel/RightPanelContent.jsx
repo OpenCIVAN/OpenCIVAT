@@ -38,10 +38,12 @@ import './RightPanel.scss';
  *
  * @param {Object} props
  * @param {string} [props.workspaceId='default'] - Current workspace ID
+ * @param {string} [props.projectId] - Current project ID (for chat, DMs, etc.)
  * @param {string} [props.roomId] - Current room ID (for filtering presence)
  * @param {string} [props.roomName] - Current room name (for voice chat display)
+ * @param {Array} [props.availableRooms] - Available rooms from useRoomIndicator
  */
-export function RightPanelContent({ workspaceId = 'default', roomId, roomName }) {
+export function RightPanelContent({ workspaceId = 'default', projectId, roomId, roomName, availableRooms = [] }) {
     const { activeTab } = useRightPanelContext();
 
     // Get current tab config from the single source of truth
@@ -62,7 +64,8 @@ export function RightPanelContent({ workspaceId = 'default', roomId, roomName })
                 workspaceId,
                 roomId,
                 roomName,
-                projectId: workspaceId, // For SettingsTab
+                projectId, // Pass actual project ID for ChatTab, DMUserList, etc.
+                availableRooms, // Pass rooms from useRoomIndicator for ChatTab
             })}
         </div>
     );

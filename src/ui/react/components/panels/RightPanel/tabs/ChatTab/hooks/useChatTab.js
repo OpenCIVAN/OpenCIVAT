@@ -18,7 +18,7 @@ import { useState, useCallback, useEffect } from "react";
 
 import { sync as log } from "@Utils/logger.js";
 import { textChat } from "@Collaboration/communication/textChat.js";
-import { getUserId } from "@Collaboration/presence/userManagement.js";
+import { getUserId, getUserEmail } from "@Collaboration/presence/userManagement.js";
 import { provider } from "@Collaboration/yjs/yjsSetup.js";
 
 /**
@@ -40,7 +40,11 @@ export const CHAT_SUBTABS = [
  * @returns {Object} Chat state and handlers
  */
 export function useChatTab(options = {}) {
-  const { workspaceId, roomId: initialRoomId, projectId, defaultSubtab = "room" } = options;
+  const { workspaceId, roomId: initialRoomId, projectId, defaultSubtab = "room", roomsFromProps } = options;
+
+  // Determine if rooms are being provided from parent (even if empty array)
+  // This prevents duplicate fetches when parent is still loading rooms
+  const roomsProvidedFromParent = Array.isArray(roomsFromProps);
 
   // State
   const [messages, setMessages] = useState([]);
@@ -48,11 +52,14 @@ export function useChatTab(options = {}) {
   const [isSynced, setIsSynced] = useState(false);
   const [activeSubtab, setActiveSubtab] = useState(defaultSubtab);
   const [currentRoomId, setCurrentRoomId] = useState(initialRoomId || 'global');
-  const [availableRooms, setAvailableRooms] = useState([]);
+  // Use rooms from props if provided (even if empty), otherwise use fetched rooms
+  const [fetchedRooms, setFetchedRooms] = useState([]);
   const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+  const availableRooms = roomsProvidedFromParent ? roomsFromProps : fetchedRooms;
 
-  // Current user
+  // Current user - both ID and email for robust ownership checks
   const currentUserId = getUserId();
+  const currentUserEmail = getUserEmail();
 
   // Refresh messages from textChat
   const refreshMessages = useCallback(() => {
@@ -61,8 +68,14 @@ export function useChatTab(options = {}) {
     setMessages([...allMessages]);
   }, []);
 
-  // Fetch available rooms for the project
+  // Fetch available rooms for the project (only if not provided via props)
   const fetchRooms = useCallback(async () => {
+    // Skip if rooms are being managed by parent component
+    if (roomsProvidedFromParent) {
+      log.debug("Rooms provided from parent, skipping fetch");
+      return;
+    }
+
     if (!projectId) return;
 
     setIsLoadingRooms(true);
@@ -70,7 +83,7 @@ export function useChatTab(options = {}) {
       const response = await fetch(`/api/projects/${projectId}/rooms`);
       if (response.ok) {
         const rooms = await response.json();
-        setAvailableRooms(rooms);
+        setFetchedRooms(rooms);
         log.debug("Loaded rooms:", rooms.length);
       }
     } catch (error) {
@@ -78,7 +91,7 @@ export function useChatTab(options = {}) {
     } finally {
       setIsLoadingRooms(false);
     }
-  }, [projectId]);
+  }, [projectId, roomsProvidedFromParent]);
 
   // Switch to a different room
   const switchRoom = useCallback((roomId) => {
@@ -172,12 +185,24 @@ export function useChatTab(options = {}) {
       }
     } catch (e) {
       log.warn("Chat: Provider not ready yet, will wait for sync");
+      // Provider not ready - set a shorter fallback to check again
+      setTimeout(() => {
+        try {
+          if (provider.synced) {
+            handleSync(true);
+          }
+        } catch {
+          // Still not ready, continue with fallback
+        }
+      }, 1000);
     }
 
-    // Fallback timeout
+    // Fallback timeout - load messages even if Y.js sync isn't confirmed
+    // This handles the case where provider initialized but sync event was missed
     syncTimeout = setTimeout(() => {
       log.debug("Chat: Sync timeout, loading messages anyway");
       refreshMessages();
+      setIsSynced(true); // Assume connected if we got this far
       setIsLoading(false);
     }, 3000);
 
@@ -212,12 +237,22 @@ export function useChatTab(options = {}) {
     }
   }, []);
 
+  // Handle editing a message
+  const handleEdit = useCallback((messageId, newText) => {
+    const success = textChat.editMessage(messageId, newText);
+    if (success) {
+      refreshMessages(); // Refresh to show updated message
+    }
+    return success;
+  }, [refreshMessages]);
+
   return {
     // State
     messages,
     isLoading,
     isSynced,
     currentUserId,
+    currentUserEmail, // For robust ownership checks (email is more stable than ID)
 
     // Room state
     currentRoomId,
@@ -231,6 +266,7 @@ export function useChatTab(options = {}) {
 
     // Handlers
     handleSend,
+    handleEdit,
     handleDelete,
     switchRoom,
 

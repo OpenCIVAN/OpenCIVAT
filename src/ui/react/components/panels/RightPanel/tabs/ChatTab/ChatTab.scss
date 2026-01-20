@@ -401,6 +401,40 @@
   padding: 0 $spacing-xs;
 }
 
+// Message actions container (edit + delete)
+.message__actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  align-self: center;
+  transition: opacity $transition-fast;
+}
+
+.message:hover .message__actions {
+  opacity: 1;
+}
+
+.message__action-btn {
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    color: $color-accent-blue;
+    background: rgba($color-accent-blue, 0.1);
+  }
+
+  &--delete:hover {
+    color: $color-accent-red;
+    background: rgba($color-accent-red, 0.1);
+  }
+}
+
+// Legacy delete button (keep for backwards compatibility)
 .message__delete {
   opacity: 0;
   background: none;
@@ -420,6 +454,87 @@
 
 .message:hover .message__delete {
   opacity: 1;
+}
+
+// Edit mode styles
+.message--editing {
+  background: rgba($color-accent-blue, 0.05);
+  border-radius: $radius-md;
+
+  .message__content {
+    max-width: 100%;
+  }
+}
+
+.message__edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  width: 100%;
+}
+
+.message__edit-input {
+  width: 100%;
+  min-height: 36px;
+  padding: $spacing-sm;
+  background: $color-glass-light;
+  border: 1px solid $color-accent-blue;
+  border-radius: $radius-md;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+
+  &:focus {
+    border-color: $color-accent-blue;
+    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+  }
+}
+
+.message__edit-actions {
+  display: flex;
+  gap: $spacing-xs;
+  justify-content: flex-end;
+}
+
+.message__edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border: none;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all $transition-fast;
+  font-size: $font-size-xs;
+
+  &--save {
+    background: $color-accent-green;
+    color: white;
+
+    &:hover {
+      background: color.adjust($color-accent-green, $lightness: 5%);
+    }
+  }
+
+  &--cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: $color-text-muted;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: $color-text-secondary;
+    }
+  }
+}
+
+// Edited indicator
+.message__edited {
+  font-size: 10px;
+  color: $color-text-tertiary;
+  font-style: italic;
+  margin-left: $spacing-xs;
 }
 
 // =============================================================================

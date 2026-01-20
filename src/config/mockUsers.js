@@ -1,69 +1,59 @@
 // src/config/mockUsers.js
 // Mock users for development and testing collaboration features
 //
-// These users match the seed-test-users.sql database entries.
+// These users match the Keycloak test users and seed-test-users.sql database entries.
 // When DEV_BYPASS_AUTH is enabled, the user switcher allows
 // switching between these identities.
 
 /**
  * Mock users available in development mode
+ * These MUST match the Keycloak users in docker/keycloak/realm-export.json
  * @type {Array<MockUser>}
  */
 export const MOCK_USERS = [
   {
     id: "00000000-0000-0000-0000-000000000001",
-    externalId: "dev-user-001",
-    email: "developer@localhost",
-    name: "Development User",
-    shortName: "Dev",
+    externalId: "cia-admin",
+    email: "admin@cia-web.local",
+    name: "CIA Admin",
+    shortName: "Admin",
     avatar: null,
     color: "#6366f1", // Indigo
     roles: ["user", "admin"],
-    department: null,
+    department: "Administration",
   },
   {
     id: "00000000-0000-0000-0000-000000000002",
-    externalId: "alice-001",
-    email: "alice@research.lab",
-    name: "Alice Chen",
+    externalId: "alice",
+    email: "alice@cia-web.local",
+    name: "Alice Analyst",
     shortName: "Alice",
     avatar: null,
     color: "#ec4899", // Pink
     roles: ["user"],
-    department: "Neuroscience",
+    department: "Research",
   },
   {
     id: "00000000-0000-0000-0000-000000000003",
-    externalId: "bob-001",
-    email: "bob@research.lab",
-    name: "Bob Martinez",
+    externalId: "bob",
+    email: "bob@cia-web.local",
+    name: "Bob Builder",
     shortName: "Bob",
     avatar: null,
     color: "#14b8a6", // Teal
     roles: ["user"],
-    department: "Data Science",
+    department: "Engineering",
   },
   {
     id: "00000000-0000-0000-0000-000000000004",
-    externalId: "carol-001",
-    email: "carol@research.lab",
-    name: "Dr. Carol Williams",
-    shortName: "Carol",
+    externalId: "viewer",
+    email: "viewer@cia-web.local",
+    name: "View Only",
+    shortName: "Viewer",
     avatar: null,
     color: "#f59e0b", // Amber
-    roles: ["user", "admin"],
-    department: "Cardiology",
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000005",
-    externalId: "dave-001",
-    email: "dave@university.edu",
-    name: "Dave Kim",
-    shortName: "Dave",
-    avatar: null,
-    color: "#8b5cf6", // Violet
-    roles: ["user"],
-    department: "Biomedical Engineering",
+    roles: ["viewer"],
+    department: null,
   },
 ];
 
@@ -74,6 +64,15 @@ export const MOCK_USERS = [
  */
 export function getMockUser(userId) {
   return MOCK_USERS.find((u) => u.id === userId);
+}
+
+/**
+ * Get a mock user by email
+ * @param {string} email - User email
+ * @returns {MockUser|undefined}
+ */
+export function getMockUserByEmail(email) {
+  return MOCK_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase());
 }
 
 /**

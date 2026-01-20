@@ -47,7 +47,7 @@ import './ChatTab.scss';
  * @param {ChatTabProps} props - Component props
  * @returns {React.ReactElement} The rendered tab
  */
-export function ChatTab({ workspaceId, roomId, projectId }) {
+export function ChatTab({ workspaceId, roomId, projectId, availableRooms: roomsFromProps }) {
     const messagesEndRef = useRef(null);
     const [showRoomDirectory, setShowRoomDirectory] = React.useState(false);
     const [showRoomSelector, setShowRoomSelector] = React.useState(false);
@@ -60,6 +60,7 @@ export function ChatTab({ workspaceId, roomId, projectId }) {
         isLoading,
         isSynced,
         currentUserId,
+        currentUserEmail,
         currentRoomId,
         availableRooms,
         isLoadingRooms,
@@ -67,11 +68,12 @@ export function ChatTab({ workspaceId, roomId, projectId }) {
         setActiveSubtab,
         subtabs,
         handleSend,
+        handleEdit,
         handleDelete,
         refreshMessages,
         switchRoom,
         fetchRooms,
-    } = useChatTab({ workspaceId, roomId, projectId });
+    } = useChatTab({ workspaceId, roomId, projectId, roomsFromProps });
 
     // Matrix federation status (Phase 6)
     const {
@@ -163,30 +165,10 @@ export function ChatTab({ workspaceId, roomId, projectId }) {
                 </div>
             </div>
 
-            {/* Matrix Federation Row */}
-            {isFederationEnabled && isFederationConnected && (
-                <div className="chat-tab__federation-bar">
-                    <span
-                        className="chat-status chat-status--federation"
-                        title={`Matrix federation enabled${federatedUserCount > 0 ? ` · ${federatedUserCount} federated user${federatedUserCount > 1 ? 's' : ''}` : ''}`}
-                    >
-                        <Icon name="globe" size={12} />
-                        Matrix
-                        {federatedUserCount > 0 && (
-                            <span className="chat-status__badge">{federatedUserCount}</span>
-                        )}
-                    </span>
-                    {/* Room Directory Button */}
-                    <button
-                        className="chat-status chat-status--directory-btn"
-                        onClick={() => setShowRoomDirectory(!showRoomDirectory)}
-                        title="Browse Matrix room directory"
-                    >
-                        <Icon name="search" size={12} />
-                        Browse Rooms
-                    </button>
-                </div>
-            )}
+            {/* Matrix Federation Row - Hidden until federation is fully implemented
+                TODO: Re-enable when Phase 7 federation is complete
+                This would show: Matrix connection status, federated user count, Browse Rooms button
+            */}
 
             {/* Subtab Bar */}
             <SubtabBar
@@ -273,6 +255,8 @@ export function ChatTab({ workspaceId, roomId, projectId }) {
                             key={msg.id}
                             message={msg}
                             currentUserId={currentUserId}
+                            currentUserEmail={currentUserEmail}
+                            onEdit={handleEdit}
                             onDelete={handleDelete}
                         />
                     ))
@@ -283,7 +267,7 @@ export function ChatTab({ workspaceId, roomId, projectId }) {
             {/* Message Input */}
             <MessageInput onSend={handleSend} disabled={isLoading || (activeSubtab === 'dm' && !activeDMRoom)} />
 
-            {/* Room Directory Overlay (Phase 7) */}
+            {/* Room Directory Overlay - Hidden until Phase 7 federation is complete
             {showRoomDirectory && (
                 <div className="chat-tab__overlay">
                     <RoomDirectory
@@ -293,6 +277,7 @@ export function ChatTab({ workspaceId, roomId, projectId }) {
                     />
                 </div>
             )}
+            */}
 
             {/* Create Room Modal */}
             <CreateRoomModal

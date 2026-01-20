@@ -964,7 +964,15 @@ export function CIAWebApp({ username, userId, projectId }) {
               // RIGHT PANEL (Activity Bar + Content)
               // ─────────────────────────────────────────────────────────────
               rightActivityBar={<RightActivityBar />}
-              rightPanelContent={<RightPanelContent />}
+              rightPanelContent={
+                <RightPanelContent
+                  workspaceId={workspaceId}
+                  projectId={projectId}
+                  roomId={currentRoomId}
+                  roomName={currentRoomName}
+                  availableRooms={availableRooms}
+                />
+              }
               // ─────────────────────────────────────────────────────────────
               // BOTTOM BAR (28px Status Bar)
               // ─────────────────────────────────────────────────────────────

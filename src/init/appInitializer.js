@@ -33,6 +33,53 @@ import {
 } from "@Services/syncService.js";
 import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
 import { viewLinkingService } from "@Services/ViewLinkingService.js";
+import {
+  startupLogger,
+  isStartupProfilingEnabled,
+} from "@Utils/startupLogger.js";
+
+const STARTUP_PROFILING_ENABLED = isStartupProfilingEnabled();
+
+function updateLoadingStatus(message) {
+  if (typeof window === "undefined") return;
+  if (typeof window.updateLoadingStatus === "function") {
+    window.updateLoadingStatus(message);
+  }
+}
+
+function startStartupPhase(name, description, loadingMessage) {
+  if (loadingMessage) updateLoadingStatus(loadingMessage);
+  if (STARTUP_PROFILING_ENABLED) {
+    startupLogger.phase(name, description);
+  }
+}
+
+function completeStartupPhase(status = "success") {
+  if (STARTUP_PROFILING_ENABLED) {
+    startupLogger.phaseComplete(status);
+  }
+}
+
+async function timeStartupStep(label, fn, errorStatus = "error") {
+  if (!STARTUP_PROFILING_ENABLED) {
+    return fn();
+  }
+
+  const start = performance.now();
+  try {
+    const result = await fn();
+    const duration = performance.now() - start;
+    startupLogger.step(`${label} (${duration.toFixed(0)}ms)`);
+    return result;
+  } catch (error) {
+    const duration = performance.now() - start;
+    startupLogger.step(
+      `${label} failed (${duration.toFixed(0)}ms)`,
+      errorStatus
+    );
+    throw error;
+  }
+}
 
 // =============================================================================
 // INITIALIZATION PROGRESS TRACKING
@@ -118,14 +165,25 @@ export function getCanvasManager() {
  * @returns {Promise<{canContinue: boolean, serverStatus: object}>}
  */
 export async function initializePhase0() {
+  startStartupPhase("Phase 0", "Server sync check", "Checking server sync...");
   log.info("Phase 0: Server Sync Check\n=====================================");
 
+  let phaseStatus = "success";
+  let result = null;
+
   try {
-    const syncStatus = await checkSyncStatus();
+    const syncStatus = await timeStartupStep(
+      "Server sync status",
+      () => checkSyncStatus(),
+      "warn"
+    );
 
     if (syncStatus.divergence === DivergenceLevel.OFFLINE) {
       log.warn("Server unreachable - continuing with local state");
-      return { canContinue: true, serverStatus: null, offline: true };
+      phaseStatus = "partial";
+      result = { canContinue: true, serverStatus: null, offline: true };
+      completeStartupPhase(phaseStatus);
+      return result;
     }
 
     if (
@@ -134,23 +192,29 @@ export async function initializePhase0() {
     ) {
       log.warn("Server database reset detected!");
       clearSyncState();
-      return {
+      result = {
         canContinue: true,
         serverStatus: syncStatus.serverStatus,
         serverReset: true,
       };
+      completeStartupPhase(phaseStatus);
+      return result;
     }
 
     log.debug("Sync check passed");
-    return {
+    result = {
       canContinue: true,
       serverStatus: syncStatus.serverStatus,
       firstSync: syncStatus.firstSync,
     };
   } catch (error) {
     log.error("Phase 0 sync check failed:", error);
-    return { canContinue: true, serverStatus: null, error };
+    phaseStatus = "partial";
+    result = { canContinue: true, serverStatus: null, error };
   }
+
+  completeStartupPhase(phaseStatus);
+  return result;
 }
 
 /**
@@ -160,6 +224,7 @@ export async function initializePhase0() {
  * No user authentication required yet.
  */
 export async function initializePhase1() {
+  startStartupPhase("Phase 1", "Core services", "Initializing core services...");
   log.info(
     "Phase 1: Core Services Initialization\n====================================="
   );
@@ -169,13 +234,15 @@ export async function initializePhase1() {
     // STEP 1: Register instance types
     // This MUST happen first so handlers are available when needed
     log.debug("Registering instance types...");
-    registerInstanceTypes();
+    await timeStartupStep("Register instance types", () => registerInstanceTypes());
     logInfo("Instance types registered");
 
     // STEP 2: Session management
     // Sets up room ID from URL for collaboration
     log.debug("Initializing session...");
-    sessionManager.initializeFromURL();
+    await timeStartupStep("Session initialization", () =>
+      sessionManager.initializeFromURL()
+    );
     log.debug(`Session initialized - Room: ${sessionManager.getRoomId()}`);
 
     // STEP 3: Data storage layer (Layer 1)
@@ -183,19 +250,29 @@ export async function initializePhase1() {
 
     // Initialize storage provider (with automatic fallback)
     const { provider: storageProvider, mode: storageMode } =
-      await initializeStorageProvider();
+      await timeStartupStep("Storage provider init", () =>
+        initializeStorageProvider()
+      );
 
     // Create dataset manager WITH the storage provider
     log.debug("Creating dataset manager (Layer 1)...");
     datasetManager = new DatasetManager(storageProvider);
-    await datasetManager.initialize();
+    await timeStartupStep("Dataset manager init", () =>
+      datasetManager.initialize()
+    );
     log.debug("Dataset manager ready");
     logInfo("Data storage initialized");
 
     // Initialize server sync (WebSocket for real-time updates)
     try {
-      const { serverSync } = await import("@Services/serverSync.js");
-      serverSync.initialize(datasetManager);
+      await timeStartupStep(
+        "Server sync connect",
+        async () => {
+          const { serverSync } = await import("@Services/serverSync.js");
+          serverSync.initialize(datasetManager);
+        },
+        "warn"
+      );
       log.debug("Server sync connected");
       logInfo("Server sync connected");
     } catch (syncError) {
@@ -207,14 +284,22 @@ export async function initializePhase1() {
     if (storageMode === "server" || config.useServerStorage) {
       try {
         log.debug("Fetching datasets from server API...");
-        await fetchDatasetsFromServer();
+        await timeStartupStep(
+          "Fetch datasets from server",
+          () => fetchDatasetsFromServer(),
+          "warn"
+        );
         log.debug("Synced datasets from server");
       } catch (error) {
         log.warn("Failed to fetch from server:", error.message);
         log.warn("Continuing with local datasets only...");
         // Fallback to legacy sync method
         try {
-          await datasetManager.syncDatasetsFromServer();
+          await timeStartupStep(
+            "Legacy dataset sync",
+            () => datasetManager.syncDatasetsFromServer(),
+            "warn"
+          );
         } catch (legacyError) {
           log.warn("Legacy sync also failed:", legacyError.message);
         }
@@ -229,10 +314,15 @@ export async function initializePhase1() {
     try {
       const phase0Result = window.__CIA_PHASE0_RESULT || {};
 
-      const reconcileResult = await performReconciliation(
-        datasetManager,
-        viewConfigurationManager,
-        phase0Result.serverStatus
+      const reconcileResult = await timeStartupStep(
+        "Reconcile local state",
+        () =>
+          performReconciliation(
+            datasetManager,
+            viewConfigurationManager,
+            phase0Result.serverStatus
+          ),
+        "warn"
       );
 
       const { divergence, totalOrphansRemoved } = reconcileResult;
@@ -266,7 +356,9 @@ export async function initializePhase1() {
     log.debug("Setting up TensorFlow...");
     try {
       if (initializeTensorFlow && typeof initializeTensorFlow === "function") {
-        await initializeTensorFlow();
+        await timeStartupStep("TensorFlow init", () =>
+          initializeTensorFlow()
+        );
         log.debug("TensorFlow ready");
       } else {
         log.warn("TensorFlow setup not available");
@@ -279,7 +371,9 @@ export async function initializePhase1() {
     // STEP 6: Initialize ViewConfigurationManager
     // NOTE: Y.js provider is initialized in Phase 2 after auth is ready
     log.debug("Initializing view configuration manager...");
-    viewConfigurationManager.initialize();
+    await timeStartupStep("View config manager init", () =>
+      viewConfigurationManager.initialize()
+    );
     log.debug("View configuration manager ready");
 
     // Wire up ViewConfigurationManager to receive WebSocket broadcasts
@@ -298,7 +392,11 @@ export async function initializePhase1() {
     if (storageMode === "server" || config.useServerStorage) {
       try {
         log.debug("Fetching views from server API...");
-        await viewConfigurationManager.loadFromServer();
+        await timeStartupStep(
+          "Fetch views from server",
+          () => viewConfigurationManager.loadFromServer(),
+          "warn"
+        );
         log.debug("Synced views from server");
       } catch (error) {
         log.warn("Failed to fetch views from server:", error.message);
@@ -308,14 +406,16 @@ export async function initializePhase1() {
 
     // STEP 7: Initialize Canvas system managers
     log.debug("Initializing canvas managers...");
-    canvasManager.initialize({
-      apiBaseUrl: config.apiBaseUrl,
-      sessionManager: sessionManager,
-    });
-    subsetManager.initialize({
-      apiBaseUrl: config.apiBaseUrl,
-      sessionManager: sessionManager,
-      canvasManager: canvasManager,
+    await timeStartupStep("Canvas managers init", () => {
+      canvasManager.initialize({
+        apiBaseUrl: config.apiBaseUrl,
+        sessionManager: sessionManager,
+      });
+      subsetManager.initialize({
+        apiBaseUrl: config.apiBaseUrl,
+        sessionManager: sessionManager,
+        canvasManager: canvasManager,
+      });
     });
     log.debug("Canvas managers initialized");
 
@@ -330,14 +430,16 @@ export async function initializePhase1() {
     }
 
     // STEP 8: Debug helpers
-    setupDebugHelpers();
+    await timeStartupStep("Debug helpers setup", () => setupDebugHelpers());
     log.debug("Debug helpers available");
 
     log.info("Phase 1 complete - Core services ready");
     logSuccess("Core services ready");
+    completeStartupPhase("success");
   } catch (error) {
     log.error("Phase 1 initialization failed:", error);
     logError("Core initialization failed: " + error.message);
+    completeStartupPhase("failed");
     throw error;
   }
 
@@ -352,6 +454,7 @@ export async function initializePhase1() {
  * User must be authenticated before this phase runs.
  */
 export async function initializePhase2() {
+  startStartupPhase("Phase 2", "User services", "Initializing user services...");
   log.info(
     "Phase 2: User Services Initialization\n====================================="
   );
@@ -362,13 +465,19 @@ export async function initializePhase2() {
     emitProgress('yjs-sync', 'active', 0);
     log.debug("Initializing Y.js provider (presence only)...");
     if (typeof initializeYjsProvider === "function") {
-      await initializeYjsProvider();
+      await timeStartupStep("Y.js provider init", () =>
+        initializeYjsProvider()
+      );
       log.debug("Y.js provider connected (presence layer)");
     } else {
       throw new Error("Y.js provider is required for presence");
     }
     log.debug("Checking Y.js sync status...");
-    const synced = await waitForYjsSync();
+    const synced = await timeStartupStep(
+      "Y.js sync wait",
+      () => waitForYjsSync(),
+      "warn"
+    );
     if (synced) {
       log.debug("Y.js already synced");
     } else {
@@ -381,7 +490,9 @@ export async function initializePhase2() {
     emitProgress('presence', 'active', 17);
     log.debug("Initializing presence system...");
     if (presenceSystem && typeof presenceSystem.initialize === "function") {
-      presenceSystem.initialize();
+      await timeStartupStep("Presence system init", () =>
+        presenceSystem.initialize()
+      );
       log.debug("Presence system ready");
       logInfo("Presence system ready");
       // Note: Presence system logs its own status, we don't need to query it here
@@ -389,7 +500,9 @@ export async function initializePhase2() {
       presenceSystem &&
       typeof presenceSystem.initializePresence === "function"
     ) {
-      presenceSystem.initializePresence();
+      await timeStartupStep("Presence system init", () =>
+        presenceSystem.initializePresence()
+      );
       log.debug("Presence system ready");
       logInfo("Presence system ready");
     } else {
@@ -411,7 +524,11 @@ export async function initializePhase2() {
       const { initializeAnnotationManager } = await import(
         "@Core/data/managers/AnnotationManager.js"
       );
-      annotationManager = initializeAnnotationManager(datasetManager);
+      annotationManager = await timeStartupStep(
+        "Annotation manager init",
+        () => initializeAnnotationManager(datasetManager),
+        "warn"
+      );
       log.debug("Annotation system ready");
     } catch (annotError) {
       log.warn("Annotation system failed to initialize:", annotError);
@@ -427,12 +544,14 @@ export async function initializePhase2() {
     emitProgress('observers', 'active', 50);
     log.debug("Setting up Y.js observers...");
     try {
-      if (typeof initializeAllObservers === "function") {
-        initializeAllObservers();
-      }
-      if (typeof markSystemReady === "function") {
-        markSystemReady();
-      }
+      await timeStartupStep("Y.js observers init", () => {
+        if (typeof initializeAllObservers === "function") {
+          initializeAllObservers();
+        }
+        if (typeof markSystemReady === "function") {
+          markSystemReady();
+        }
+      });
       log.debug("Y.js observers active");
     } catch (observerError) {
       log.warn("Y.js observers setup incomplete:", observerError.message);
@@ -445,10 +564,16 @@ export async function initializePhase2() {
     // Cursor system
     log.debug("Initializing cursor system...");
     try {
-      const { initializeCursorTracking } = await import(
-        "@Collaboration/presence/cursors.js"
+      await timeStartupStep(
+        "Cursor tracking init",
+        async () => {
+          const { initializeCursorTracking } = await import(
+            "@Collaboration/presence/cursors.js"
+          );
+          initializeCursorTracking();
+        },
+        "warn"
       );
-      initializeCursorTracking();
       log.debug("Cursor tracking active");
     } catch (cursorError) {
       log.warn("Cursor system failed to initialize:", cursorError);
@@ -458,7 +583,11 @@ export async function initializePhase2() {
     log.debug("Initializing text chat...");
     if (textChat && typeof textChat.initialize === "function") {
       try {
-        textChat.initialize();
+        await timeStartupStep(
+          "Text chat init",
+          () => textChat.initialize(),
+          "warn"
+        );
         log.debug("Text chat ready");
       } catch (chatError) {
         log.warn("Text chat failed:", chatError.message);
@@ -470,10 +599,16 @@ export async function initializePhase2() {
     // Voice command handlers
     log.debug("Initializing voice command handlers...");
     try {
-      const { initializeVoiceCommandHandlers } = await import(
-        "@Services/voice/voiceCommandHandlers.js"
+      await timeStartupStep(
+        "Voice command handlers init",
+        async () => {
+          const { initializeVoiceCommandHandlers } = await import(
+            "@Services/voice/voiceCommandHandlers.js"
+          );
+          initializeVoiceCommandHandlers();
+        },
+        "warn"
       );
-      initializeVoiceCommandHandlers();
       log.debug("Voice command handlers ready");
     } catch (voiceError) {
       log.warn("Voice command handlers failed to initialize:", voiceError);
@@ -485,25 +620,36 @@ export async function initializePhase2() {
     emitProgress('workspace', 'active', 83);
     log.debug("Initializing workspace manager...");
     if (workspaceManager && typeof workspaceManager.initialize === "function") {
-      workspaceManager.initialize();
+      await timeStartupStep("Workspace manager init", () =>
+        workspaceManager.initialize()
+      );
       log.debug("Workspace manager ready");
     }
 
-    viewLifecycleService.initialize();
+    await timeStartupStep("View lifecycle init", () =>
+      viewLifecycleService.initialize()
+    );
     log.info("ViewLifecycleService initialized");
 
     // Initialize view linking service
     log.debug("Initializing view linking service...");
-    viewLinkingService.initialize();
+    await timeStartupStep("View linking init", () =>
+      viewLinkingService.initialize()
+    );
     log.info("ViewLinkingService initialized");
 
     emitProgress('workspace', 'complete', 100);
 
     log.info("Phase 2 complete - User services ready");
     logSuccess("Application ready");
+    completeStartupPhase("success");
+    if (STARTUP_PROFILING_ENABLED) {
+      startupLogger.complete();
+    }
   } catch (error) {
     log.error("Phase 2 initialization failed:", error);
     logError("User services initialization failed: " + error.message);
+    completeStartupPhase("failed");
     throw error;
   }
 }

@@ -14,6 +14,7 @@
 
 import { config } from "@Core/config/clientConfig.js";
 import { auth as log } from "@Utils/logger.js";
+import { sessionManager } from "@Core/session/sessionManager.js";
 
 // =============================================================================
 // CONSTANTS
@@ -127,6 +128,7 @@ class AuthService {
       this.#user = DEV_USER;
       this.#accessToken = "dev-bypass-token";
       this.#tokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+      sessionManager.setToken("dev-bypass-token");
       this.#initialized = true;
       this._notifyListeners("authenticated");
       return;
@@ -455,6 +457,9 @@ class AuthService {
     this.#isDevMode = true;
     this.#initialized = true;
 
+    // Cache token in sessionManager for sync access
+    sessionManager.setToken("dev-bypass-token");
+
     this._notifyListeners("authenticated");
     log.info("Logged in as development user:", this.#user.name);
   }
@@ -628,6 +633,9 @@ class AuthService {
     // Parse user info from ID token or access token
     this.#user = this._parseUserFromToken(tokenData.access_token);
 
+    // Cache token in sessionManager for sync access by other services
+    sessionManager.setToken(tokenData.access_token);
+
     // Set up automatic refresh
     this._scheduleTokenRefresh(expiresIn);
   }
@@ -641,6 +649,9 @@ class AuthService {
     this.#idToken = null;
     this.#user = null;
     this.#tokenExpiry = null;
+
+    // Clear cached token in sessionManager
+    sessionManager.setToken(null);
 
     if (this.#refreshTimer) {
       clearTimeout(this.#refreshTimer);

@@ -55,6 +55,24 @@ export function getUserName() {
   return userName;
 }
 
+export function getUserEmail() {
+  const isDevMode =
+    config.devBypassAuth === true || config.devBypassAuth === "true";
+  if (isDevMode) {
+    const mockUserId = getStoredMockUserId();
+    if (mockUserId) {
+      const mockUser = getMockUser(mockUserId);
+      if (mockUser) return mockUser.email;
+    }
+    return getDefaultMockUser().email;
+  }
+  const authUser = authService.getUser?.();
+  if (authUser?.email) {
+    return authUser.email;
+  }
+  return null;
+}
+
 // Check if username is set
 export function hasUserName() {
   // return false; // Always return false to ensure modal prompt for now during tab testing

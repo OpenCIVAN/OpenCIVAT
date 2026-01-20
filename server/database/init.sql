@@ -546,8 +546,7 @@ CREATE TABLE vr_session_snapshots (
 CREATE INDEX idx_vr_snapshots_session ON vr_session_snapshots(session_id);
 CREATE INDEX idx_vr_snapshots_timestamp ON vr_session_snapshots(timestamp DESC);
 
--- Trigger for updating vr_exploration_sessions.updated_at
-CREATE TRIGGER update_vr_sessions_updated_at BEFORE UPDATE ON vr_exploration_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- NOTE: Trigger for vr_exploration_sessions is in the TRIGGERS section below
 
 -- VR Preprocessing - tracks preprocessing jobs for VR optimization
 CREATE TABLE vr_preprocessing (
@@ -1121,6 +1120,7 @@ CREATE TRIGGER update_saved_filters_updated_at BEFORE UPDATE ON saved_filters FO
 CREATE TRIGGER update_bookmarks_updated_at BEFORE UPDATE ON bookmarks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_folders_updated_at BEFORE UPDATE ON folders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_rooms_updated_at BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_vr_sessions_updated_at BEFORE UPDATE ON vr_exploration_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Auto-create main room when project is created
 CREATE OR REPLACE FUNCTION create_main_room_for_project() RETURNS TRIGGER AS $$
@@ -1171,9 +1171,17 @@ INSERT INTO organizations (id, name, slug, storage_quota_bytes)
 VALUES ('00000000-0000-0000-0000-000000000000', 'System', 'system', 1099511627776)
 ON CONFLICT (id) DO NOTHING;
 
+-- Seed users matching Keycloak test users
 INSERT INTO users (id, external_id, email, display_name)
-VALUES ('00000000-0000-0000-0000-000000000001', 'demo-user', 'demo@cia-web.local', 'Demo User')
-ON CONFLICT (id) DO NOTHING;
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'cia-admin', 'admin@cia-web.local', 'CIA Admin'),
+    ('00000000-0000-0000-0000-000000000002', 'alice', 'alice@cia-web.local', 'Alice Analyst'),
+    ('00000000-0000-0000-0000-000000000003', 'bob', 'bob@cia-web.local', 'Bob Builder'),
+    ('00000000-0000-0000-0000-000000000004', 'viewer', 'viewer@cia-web.local', 'View Only')
+ON CONFLICT (id) DO UPDATE SET
+    external_id = EXCLUDED.external_id,
+    email = EXCLUDED.email,
+    display_name = EXCLUDED.display_name;
 
 INSERT INTO projects (id, organization_id, name, slug, description, visibility, created_by)
 VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'Sample Files', 'sample-files', 'Demo project with sample VTK files', 'public', '00000000-0000-0000-0000-000000000001')
@@ -1183,13 +1191,23 @@ INSERT INTO project_branches (project_id, name, description, status)
 VALUES ('00000000-0000-0000-0000-000000000001', 'main', 'Default branch', 'active')
 ON CONFLICT (project_id, name) DO NOTHING;
 
+-- Add all test users as project members
 INSERT INTO project_members (project_id, user_id, role)
-VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'admin')
-ON CONFLICT (project_id, user_id) DO NOTHING;
+VALUES
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'admin'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'member'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'member'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004', 'viewer')
+ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role;
 
+-- Add all test users as organization members
 INSERT INTO organization_members (organization_id, user_id, role)
-VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', 'admin')
-ON CONFLICT (organization_id, user_id) DO NOTHING;
+VALUES
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', 'admin'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000002', 'member'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000003', 'member'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000004', 'member')
+ON CONFLICT (organization_id, user_id) DO UPDATE SET role = EXCLUDED.role;
 
 -- Note: Main room and workspaces are auto-created by triggers when project is inserted
 

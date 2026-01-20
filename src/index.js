@@ -6,6 +6,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { initializePhase0, initializePhase1 } from "@Init/appInitializer.js";
 import { app as log } from "@Utils/logger.js";
+import { startupLogger, isStartupProfilingEnabled } from "@Utils/startupLogger.js";
 import { Bootstrap } from "@UI/react/components/auth/Bootstrap";
 
 // Import global styles
@@ -81,6 +82,14 @@ function showFatalError(message) {
 async function initializeApp() {
   log.info("CIA Web - Collaborative Immersive Analytics starting...");
 
+  const startupProfilingEnabled = isStartupProfilingEnabled();
+  if (startupProfilingEnabled) {
+    startupLogger.begin();
+  }
+  if (window.updateLoadingStatus) {
+    window.updateLoadingStatus("Checking browser compatibility...");
+  }
+
   // Check browser compatibility first
   if (!checkBrowserCompatibility()) {
     showFatalError(
@@ -93,6 +102,9 @@ async function initializeApp() {
   try {
     // Run Phase 0: Server Sync Check (detects database resets)
     log.info("Foundation: Checking server sync status...");
+    if (window.updateLoadingStatus) {
+      window.updateLoadingStatus("Checking server sync status...");
+    }
     const phase0Result = await initializePhase0();
     window.__CIA_PHASE0_RESULT = phase0Result;
 
@@ -105,6 +117,9 @@ async function initializeApp() {
     // Run Phase 1: Core Services (before React)
     // This initializes services that don't depend on user context
     log.info("Foundation: Initializing core services...");
+    if (window.updateLoadingStatus) {
+      window.updateLoadingStatus("Initializing core services...");
+    }
     await initializePhase1();
     log.info("Foundation: Core services ready");
 
@@ -127,6 +142,9 @@ async function initializeApp() {
     // - Username collection
     // - Phase 2 initialization
     // - Then render CIAWebApp
+    if (window.updateLoadingStatus) {
+      window.updateLoadingStatus("Starting UI...");
+    }
     const root = ReactDOM.createRoot(rootElement);
     root.render(
       <React.StrictMode>

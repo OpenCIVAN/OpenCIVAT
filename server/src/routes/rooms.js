@@ -33,6 +33,22 @@ router.get("/", async (req, res, next) => {
     const userId = getUserId(req);
     const { pool } = req.app.locals;
 
+    // Check if main room exists, create if not (ensures every project has a main room)
+    const mainRoomCheck = await pool.query(
+      `SELECT id FROM rooms WHERE project_id = $1 AND room_type = 'main' LIMIT 1`,
+      [projectId]
+    );
+
+    if (mainRoomCheck.rows.length === 0) {
+      log.info(`Creating missing main room for project ${projectId}`);
+      await pool.query(
+        `INSERT INTO rooms (project_id, name, room_type, is_main, is_public, created_by)
+         VALUES ($1, 'Main Room', 'main', true, true, $2)
+         ON CONFLICT DO NOTHING`,
+        [projectId, userId]
+      );
+    }
+
     // Build query with optional type filter
     let query = `
       SELECT

@@ -139,6 +139,21 @@ class SessionManager {
   }
 
   /**
+   * Set the cached auth token (called by authService on auth success/refresh)
+   */
+  setToken(token) {
+    this._cachedToken = token;
+  }
+
+  /**
+   * Get the current auth token (cached for sync access)
+   * This is used by CanvasManager and other services for authenticated API calls
+   */
+  getToken() {
+    return this._cachedToken || null;
+  }
+
+  /**
    * Clear session (useful for logout or switching contexts)
    */
   clearSession() {
@@ -146,6 +161,7 @@ class SessionManager {
     this.roomName = null;
     this.userId = null;
     this.userEmail = null;
+    this._cachedToken = null;
     localStorage.removeItem("cia_last_room");
   }
 
