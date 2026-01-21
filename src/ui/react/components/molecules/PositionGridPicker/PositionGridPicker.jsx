@@ -26,10 +26,10 @@ export function PositionGridPicker({
 
     // Map icon strings to icon names
     const iconMap = {
-        'corner-up-left': 'cornerUpLeft',
-        'corner-up-right': 'cornerUpRight',
-        'corner-down-left': 'cornerDownLeft',
-        'corner-down-right': 'cornerDownRight',
+        'corner-up-left': 'arrowUpLeft',
+        'corner-up-right': 'arrowUpRight',
+        'corner-down-left': 'arrowDownLeft',
+        'corner-down-right': 'arrowDownRight',
     };
 
     // Build map for easy lookup

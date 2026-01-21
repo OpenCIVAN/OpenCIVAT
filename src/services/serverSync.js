@@ -102,6 +102,9 @@ class ServerSyncService {
     this.on("connected", () => log.debug("Server hello received"));
     this.on("auth:success", (msg) => {
       log.info(`Authenticated as ${msg.userId}`);
+      // Store the database userId in sessionManager for use by CanvasManager
+      // This is the database ID, not the Keycloak external ID
+      sessionManager.setUserInfo(msg.userId, msg.email || null);
       if (this.pendingProjectId) {
         this._send({ type: "join:project", projectId: this.pendingProjectId });
       }

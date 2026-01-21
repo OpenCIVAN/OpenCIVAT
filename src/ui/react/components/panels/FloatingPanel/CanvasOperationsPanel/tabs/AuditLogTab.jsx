@@ -253,7 +253,7 @@ export function AuditLogTab({
       <div className="cop-toolbar">
         <ToggleGroup
           options={[
-            { value: AUDIT_VIEW.GROUPED, icon: 'grid3x3', label: 'Grouped' },
+            { value: AUDIT_VIEW.GROUPED, icon: 'grid_3x3', label: 'Grouped' },
             { value: AUDIT_VIEW.TIMELINE, icon: 'list', label: 'Timeline' },
           ]}
           value={viewMode}

@@ -8,7 +8,7 @@ const TOOL_CONFIG = {
     region: { icon: 'square', label: 'Region' },
     measure: { icon: 'ruler', label: 'Measure' },
     ruler: { icon: 'ruler', label: 'Ruler' },
-    angle: { icon: 'cornerUpRight', label: 'Angle' },
+    angle: { icon: 'arrowUpRight', label: 'Angle' },
     text: { icon: 'type', label: 'Text' },
     eraser: { icon: 'eraser', label: 'Eraser' },
     arrow: { icon: 'arrowRight', label: 'Arrow' },

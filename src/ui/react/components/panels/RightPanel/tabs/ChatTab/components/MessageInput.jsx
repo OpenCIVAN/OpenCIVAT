@@ -84,7 +84,7 @@ export function MessageInput({ onSend, disabled }) {
 
                     <Tooltip content="Mention user" placement="top">
                         <IconButton
-                            icon="atSign"
+                            icon="at_sign"
                             disabled={disabled}
                             size="xs"
                             variant="ghost"

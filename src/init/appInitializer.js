@@ -388,21 +388,9 @@ export async function initializePhase1() {
       );
     }
 
-    // v2.0: Load views from server API (primary source of truth)
-    if (storageMode === "server" || config.useServerStorage) {
-      try {
-        log.debug("Fetching views from server API...");
-        await timeStartupStep(
-          "Fetch views from server",
-          () => viewConfigurationManager.loadFromServer(),
-          "warn"
-        );
-        log.debug("Synced views from server");
-      } catch (error) {
-        log.warn("Failed to fetch views from server:", error.message);
-        log.warn("Views will be created as needed");
-      }
-    }
+    // NOTE: Views are loaded in Phase 2 AFTER authentication
+    // This is because the views API requires a valid auth token
+    // See initializePhase2() for view loading
 
     // STEP 7: Initialize Canvas system managers
     log.debug("Initializing canvas managers...");
@@ -535,6 +523,23 @@ export async function initializePhase2() {
     }
 
     log.debug("Data managers ready");
+
+    // v2.0: Load views from server API (primary source of truth)
+    // This must happen AFTER authentication (Phase 2) because the views API requires auth
+    if (config.useServerStorage) {
+      try {
+        log.debug("Fetching views from server API...");
+        await timeStartupStep(
+          "Fetch views from server",
+          () => viewConfigurationManager.loadFromServer(),
+          "warn"
+        );
+        log.debug("Synced views from server");
+      } catch (error) {
+        log.warn("Failed to fetch views from server:", error.message);
+        log.warn("Views will be created as needed");
+      }
+    }
 
     useDatasetStore.getState().initialize(datasetManager);
     emitProgress('data-managers', 'complete', 50);

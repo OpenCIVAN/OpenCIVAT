@@ -8,6 +8,7 @@ import { hasUserName, getUserName, setUserName, getUserId } from "@Collaboration
 import { initializePhase2, PHASE2_STEPS } from "@Init/appInitializer.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { authService } from "@Services/authService.js";
+import { apiClient } from "@Services/apiClient.js";
 import { config } from "@Core/config/clientConfig.js";
 import { CIAWebApp } from "@UI/react/CIAWebApp.jsx";
 import { toast } from "@UI/react/store/toastStore.js";
@@ -112,6 +113,23 @@ export function Bootstrap() {
                     log.info(`Bootstrap: Using authenticated username: ${authName}`);
                     setUserName(authName);
                     setUsername(authName);
+
+                    // CRITICAL: Fetch database user ID from server BEFORE Phase 2
+                    // This ensures CanvasManager has the correct userId for ownership queries
+                    try {
+                        log.debug("Bootstrap: Fetching database user info...");
+                        const userInfo = await apiClient.get('/auth/me');
+                        if (userInfo?.id) {
+                            sessionManager.setUserInfo(userInfo.id, userInfo.email);
+                            log.info(`Bootstrap: Database userId set: ${userInfo.id}`);
+                        } else {
+                            log.warn("Bootstrap: No database userId returned from /auth/me");
+                        }
+                    } catch (userInfoError) {
+                        log.error("Bootstrap: Failed to fetch database user info:", userInfoError.message);
+                        // Continue anyway - WebSocket auth will eventually set the userId
+                    }
+
                     setBootstrapState('initializing');
                     await runPhase2Initialization(authName);
                     return;

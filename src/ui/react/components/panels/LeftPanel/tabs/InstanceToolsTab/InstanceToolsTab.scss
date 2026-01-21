@@ -212,24 +212,36 @@
 .tools-list {
   display: flex;
   flex-direction: column;
-  gap: $spacing-xs;
   width: 100%;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
+
+  // Override SectionNavGroup section content padding for tools
+  .section-nav-group__section-content {
+    padding: $spacing-sm;
+  }
 
   &__empty {
     display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: $spacing-sm;
-    padding: $spacing-sm;
+    padding: $spacing-lg;
     color: $color-text-muted;
     font-size: 11px;
+    text-align: center;
+    flex: 1;
 
     svg {
       opacity: 0.5;
       flex-shrink: 0;
+    }
+
+    p {
+      font-size: 10px;
+      color: $color-text-tertiary;
     }
   }
 
@@ -273,27 +285,40 @@
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
   width: 100%;
-  background: rgba(0, 0, 0, 0.2);
+  background: $color-bg-tertiary;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-sm;
-  color: $color-text-secondary;
+  color: $color-text-primary;
   font-size: 11px;
   cursor: pointer;
   transition: all $transition-fast;
   text-align: left;
 
+  svg {
+    flex-shrink: 0;
+    color: $color-text-muted;
+  }
+
   &:hover:not(&--active):not(&--disabled) {
-    background: rgba(0, 0, 0, 0.3);
+    background: $color-bg-elevated;
     color: $color-text-primary;
     border-color: $color-border-default;
+
+    svg {
+      color: $color-text-secondary;
+    }
   }
 
   &--active {
     background: rgba($color-accent-amber, 0.2);
     border-color: rgba($color-accent-amber, 0.4);
     color: $color-accent-amber;
+
+    svg {
+      color: $color-accent-amber;
+    }
   }
 
   &--disabled {
@@ -318,7 +343,7 @@
   display: flex;
   align-items: center;
   gap: $spacing-sm;
-  padding: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
   background: transparent;
   border: none;
   width: 100%;
@@ -326,14 +351,24 @@
   cursor: pointer;
   transition: all $transition-fast;
   border-radius: $radius-sm;
-  color: $color-text-secondary;
+  color: $color-text-primary;
+
+  svg {
+    flex-shrink: 0;
+    color: $color-text-muted;
+  }
 
   &:hover:not(&--disabled) {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   &--active {
     color: $color-accent-amber;
+    background: rgba($color-accent-amber, 0.1);
+
+    svg {
+      color: $color-accent-amber;
+    }
   }
 
   &--disabled {
@@ -349,6 +384,7 @@
   &__label {
     display: block;
     font-size: 11px;
+    color: $color-text-primary;
   }
 
   &__desc {
@@ -429,7 +465,7 @@
 // =============================================================================
 
 .tool-menu {
-  background: rgba(0, 0, 0, 0.2);
+  background: $color-bg-tertiary;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-md;
   overflow: hidden;
@@ -449,21 +485,30 @@
     display: flex;
     align-items: center;
     gap: $spacing-sm;
-    padding: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
     background: transparent;
     border: none;
     width: 100%;
     text-align: left;
     cursor: pointer;
     transition: all $transition-fast;
-    color: $color-text-secondary;
+    color: $color-text-primary;
+
+    svg {
+      flex-shrink: 0;
+      color: $color-text-muted;
+    }
 
     &:hover {
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.05);
     }
 
     &--has-active {
       color: $color-accent-amber;
+
+      svg {
+        color: $color-accent-amber;
+      }
     }
   }
 
@@ -488,8 +533,8 @@
 
   &__options {
     border-top: 1px solid $color-border-subtle;
-    padding: $spacing-xs;
-    background: rgba(0, 0, 0, 0.1);
+    padding: $spacing-sm;
+    background: $color-bg-secondary;
     max-height: 300px;
     overflow-y: auto;
   }
@@ -861,16 +906,19 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
+  height: 100%;
+  min-height: 0;
 
   &__info {
     display: flex;
     align-items: center;
     gap: $spacing-sm;
     font-size: 10px;
-    color: $color-text-muted;
+    color: $color-text-secondary;
     padding: $spacing-sm;
-    background: rgba(0, 0, 0, 0.15);
+    background: $color-bg-tertiary;
     border-radius: $radius-sm;
+    flex-shrink: 0;
 
     svg {
       flex-shrink: 0;
@@ -878,10 +926,21 @@
     }
   }
 
+  &__sections {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+
+    // Override SectionNavGroup section content padding for layers
+    .section-nav-group__section-content {
+      padding: $spacing-sm;
+    }
+  }
+
   &__list {
     display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
+    gap: $spacing-sm;
   }
 }
 
@@ -894,14 +953,16 @@
   align-items: center;
   justify-content: space-between;
   gap: $spacing-sm;
-  padding: $spacing-sm;
-  background: rgba(0, 0, 0, 0.15);
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-tertiary;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-sm;
+  flex-shrink: 0;
 
   &__label {
     font-size: 10px;
-    color: $color-text-muted;
+    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
   }
 
   &__actions {
@@ -913,18 +974,18 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 8px;
-    background: rgba(255, 255, 255, 0.04);
+    padding: 4px 10px;
+    background: $color-bg-secondary;
     border: 1px solid $color-border-subtle;
     border-radius: $radius-xs;
-    color: $color-text-muted;
+    color: $color-text-secondary;
     font-size: 9px;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: $color-text-secondary;
+      background: $color-bg-elevated;
+      color: $color-text-primary;
     }
 
     &--active {
@@ -940,7 +1001,7 @@
 // =============================================================================
 
 .layer-item {
-  background: rgba(0, 0, 0, 0.2);
+  background: $color-bg-tertiary;
   border: 1px solid $color-border-subtle;
   border-radius: $radius-sm;
   overflow: hidden;
@@ -954,7 +1015,7 @@
     display: flex;
     align-items: center;
     gap: $spacing-sm;
-    padding: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
   }
 
   &__info {
@@ -974,6 +1035,7 @@
   &__label {
     font-size: 11px;
     color: $color-text-primary;
+    font-weight: $font-weight-medium;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

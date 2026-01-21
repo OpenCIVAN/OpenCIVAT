@@ -10,6 +10,12 @@
 import { Subset } from "@Core/data/models/Subset.js";
 import { workspace as log } from "@Utils/logger.js";
 import { BaseManager } from "@Core/data/managers/BaseManager.js";
+import { config } from "@Core/config/clientConfig.js";
+import {
+  getStoredMockUserId,
+  getMockUser,
+  getDefaultMockUser,
+} from "@Config/mockUsers.js";
 
 /**
  * SubsetManager - Manages subsets and focus mode
@@ -606,13 +612,45 @@ export class SubsetManager extends BaseManager {
     return null;
   }
 
+  /**
+   * Check if running in dev bypass mode
+   */
+  _isDevMode() {
+    return config.devBypassAuth === true || config.devBypassAuth === "true";
+  }
+
+  /**
+   * Get dev user headers for API requests (matching apiClient behavior)
+   */
+  _getDevUserHeaders() {
+    if (!this._isDevMode()) {
+      return {};
+    }
+
+    // Get current mock user from storage
+    const storedId = getStoredMockUserId();
+    const user = storedId ? getMockUser(storedId) : getDefaultMockUser();
+
+    if (!user) {
+      return {};
+    }
+
+    return {
+      "x-user-id": user.id,
+      "x-user-email": user.email,
+      "x-user-name": user.name,
+    };
+  }
+
   async _fetch(endpoint, options = {}) {
     const url = `${this._apiBaseUrl}${endpoint}`;
     const token = this._getToken();
 
+    // Build headers with auth token and dev user headers
     const headers = {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...this._getDevUserHeaders(), // Add dev user headers in dev mode
       ...options.headers,
     };
 

@@ -41,7 +41,7 @@ export const OPERATION_TYPES = {
   RESIZE: { icon: 'aspectRatio', color: 'purple', label: 'Resize' },
   MERGE: { icon: 'merge', color: 'purple', label: 'Merge' },
   UNMERGE: { icon: 'layers', color: 'amber', label: 'Unmerge' },
-  CANVAS_RESIZE: { icon: 'grid3x3', color: 'blue', label: 'Canvas Resize' },
+  CANVAS_RESIZE: { icon: 'grid_3x3', color: 'blue', label: 'Canvas Resize' },
   BATCH: { icon: 'layers', color: 'teal', label: 'Batch' },
 };
 

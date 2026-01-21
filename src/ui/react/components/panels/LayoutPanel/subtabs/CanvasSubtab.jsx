@@ -10,7 +10,7 @@ import './CanvasSubtab.scss';
 
 // Layout mode options for ToggleGroup
 const LAYOUT_MODE_OPTIONS = [
-    { value: LAYOUT_MODES.GRID, icon: 'grid3X3', label: 'Grid' },
+    { value: LAYOUT_MODES.GRID, icon: 'grid_3X3', label: 'Grid' },
     { value: LAYOUT_MODES.FLOW, icon: 'rows', label: 'Flow' },
 ];
 
@@ -76,7 +76,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* Layout Mode */}
             <div className="canvas-subtab__card" data-color="blue">
                 <div className="canvas-subtab__card-header">
-                    <Icon name='grid3X3' size={10} />
+                    <Icon name='grid_3X3' size={10} />
                     <span>Layout Mode</span>
                 </div>
 

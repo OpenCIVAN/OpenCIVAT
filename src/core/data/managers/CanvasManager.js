@@ -11,6 +11,12 @@ import { WorkspaceCanvas } from "@Core/data/models/WorkspaceCanvas.js";
 import { CanvasPlacement } from "@Core/data/models/CanvasPlacement.js";
 import { workspace as log } from "@Utils/logger.js";
 import { BaseManager } from "@Core/data/managers/BaseManager.js";
+import { config } from "@Core/config/clientConfig.js";
+import {
+  getStoredMockUserId,
+  getMockUser,
+  getDefaultMockUser,
+} from "@Config/mockUsers.js";
 
 /**
  * CanvasManager - Manages workspace canvases with server sync
@@ -1118,11 +1124,13 @@ export class CanvasManager extends BaseManager {
    * Get current user ID from session manager
    */
   _getUserId() {
-    if (this._sessionManager?.getUserId) {
-      return this._sessionManager.getUserId();
+    const userId = this._sessionManager?.getUserId?.();
+    if (userId) {
+      return userId;
     }
-    // Fallback for dev
-    return "dev-user-001";
+    // Log warning if no userId available - this shouldn't happen after auth
+    log.warn("No userId available from sessionManager");
+    return null;
   }
 
   /**
@@ -1136,15 +1144,47 @@ export class CanvasManager extends BaseManager {
   }
 
   /**
+   * Check if running in dev bypass mode
+   */
+  _isDevMode() {
+    return config.devBypassAuth === true || config.devBypassAuth === "true";
+  }
+
+  /**
+   * Get dev user headers for API requests (matching apiClient behavior)
+   */
+  _getDevUserHeaders() {
+    if (!this._isDevMode()) {
+      return {};
+    }
+
+    // Get current mock user from storage
+    const storedId = getStoredMockUserId();
+    const user = storedId ? getMockUser(storedId) : getDefaultMockUser();
+
+    if (!user) {
+      return {};
+    }
+
+    return {
+      "x-user-id": user.id,
+      "x-user-email": user.email,
+      "x-user-name": user.name,
+    };
+  }
+
+  /**
    * Make authenticated API request with connection state tracking
    */
   async _fetch(endpoint, options = {}) {
     const url = `${this._apiBaseUrl}${endpoint}`;
     const token = this._getToken();
 
+    // Build headers with auth token and dev user headers
     const headers = {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...this._getDevUserHeaders(), // Add dev user headers in dev mode
       ...options.headers,
     };
 

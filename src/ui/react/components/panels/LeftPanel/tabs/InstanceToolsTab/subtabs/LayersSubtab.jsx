@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Icon, IconButton, Toggle, Slider } from '@UI/react/components/atoms';
-import { Section } from '@UI/react/components/molecules/Section';
+import { SectionNavGroup } from '@UI/react/components/organisms';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 
 // =============================================================================
@@ -274,25 +274,14 @@ export function LayersSubtab({ activeInstance }) {
         }
     }, [instanceId, layers]);
 
-    return (
-        <div className="layers-subtab">
-            {/* Info text */}
-            <div className="layers-subtab__info">
-                <Icon name="info" size={12} />
-                <span>Control visibility and opacity for each layer in this view.</span>
-            </div>
-
-            {/* Quick visibility toggles */}
-            <QuickVisibilityRow layers={layers} onToggleAll={handleToggleAll} />
-
-            {/* Primary Layers Section */}
-            <Section
-                title="Data Layers"
-                icon="database"
-                iconColorClass="icon-blue"
-                collapsible
-                defaultExpanded={true}
-            >
+    // Build sections for SectionNavGroup
+    const layerSections = useMemo(() => [
+        {
+            id: 'data',
+            icon: 'database',
+            label: 'Data Layers',
+            color: '#60a5fa', // blue
+            content: (
                 <div className="layers-subtab__list">
                     <LayerItem
                         layer="geometry"
@@ -307,16 +296,14 @@ export function LayersSubtab({ activeInstance }) {
                         onOpacityChange={handleOpacityChange}
                     />
                 </div>
-            </Section>
-
-            {/* Interactive Layers Section */}
-            <Section
-                title="Interactive"
-                icon="hand"
-                iconColorClass="icon-amber"
-                collapsible
-                defaultExpanded={true}
-            >
+            ),
+        },
+        {
+            id: 'interactive',
+            icon: 'hand',
+            label: 'Interactive',
+            color: '#fbbf24', // amber
+            content: (
                 <div className="layers-subtab__list">
                     <LayerItem
                         layer="widgets"
@@ -329,16 +316,14 @@ export function LayersSubtab({ activeInstance }) {
                         onToggle={handleToggleLayer}
                     />
                 </div>
-            </Section>
-
-            {/* Display Layers Section */}
-            <Section
-                title="Display"
-                icon="monitor"
-                iconColorClass="icon-purple"
-                collapsible
-                defaultExpanded={false}
-            >
+            ),
+        },
+        {
+            id: 'display',
+            icon: 'monitor',
+            label: 'Display',
+            color: '#c084fc', // purple
+            content: (
                 <div className="layers-subtab__list">
                     <LayerItem
                         layer="axes"
@@ -352,7 +337,29 @@ export function LayersSubtab({ activeInstance }) {
                         onOpacityChange={handleOpacityChange}
                     />
                 </div>
-            </Section>
+            ),
+        },
+    ], [layers, handleToggleLayer, handleOpacityChange]);
+
+    return (
+        <div className="layers-subtab">
+            {/* Info text */}
+            <div className="layers-subtab__info">
+                <Icon name="info" size={12} />
+                <span>Control visibility and opacity for each layer in this view.</span>
+            </div>
+
+            {/* Quick visibility toggles */}
+            <QuickVisibilityRow layers={layers} onToggleAll={handleToggleAll} />
+
+            {/* Sections with nav */}
+            <div className="layers-subtab__sections">
+                <SectionNavGroup
+                    sections={layerSections}
+                    defaultSectionId="data"
+                    size="sm"
+                />
+            </div>
         </div>
     );
 }

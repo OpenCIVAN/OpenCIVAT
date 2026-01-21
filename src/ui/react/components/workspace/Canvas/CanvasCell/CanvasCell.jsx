@@ -132,10 +132,10 @@ function ColdViewHeader({ viewId, viewColor, onClose, onActivate, onVRMode, onFo
 
 // Content type options for the radial menu - positioned in cross pattern
 const CONTENT_OPTIONS = [
-    { type: 'view', icon: 'box', label: 'Add View', color: 'blue' },
-    { type: 'notes', icon: 'fileText', label: 'Add Notes', color: 'amber' },
-    { type: 'image', icon: 'fileImage', label: 'Add Image', color: 'teal' },
-    { type: 'grid', icon: 'layoutGrid', label: 'Add Grid', color: 'purple' },
+    { type: 'view', icon: 'cube', label: 'Add View', color: 'blue' },
+    { type: 'notes', icon: 'note_add', label: 'Add Notes', color: 'amber' },
+    { type: 'image', icon: 'image', label: 'Add Image', color: 'teal' },
+    { type: 'grid', icon: 'grid_view', label: 'Add Grid', color: 'purple' },
 ];
 
 // =============================================================================

@@ -65,7 +65,7 @@ export const STATUS_CONFIG = {
   },
   dnd: {
     id: "dnd",
-    icon: "xCircle", // X in circle for do not disturb
+    icon: "cancel", // X in circle for do not disturb
     label: "Do Not Disturb",
     description: "Mute notifications",
     color: "var(--status-dnd)",
@@ -74,7 +74,7 @@ export const STATUS_CONFIG = {
   },
   busy: {
     id: "busy",
-    icon: "xCircle",
+    icon: "cancel",
     label: "Do Not Disturb",
     description: "Mute notifications",
     color: "var(--status-dnd)",

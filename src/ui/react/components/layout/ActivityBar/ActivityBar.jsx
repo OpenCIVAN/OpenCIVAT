@@ -147,9 +147,9 @@ export function ActivityBar({
                 title={isPanelOpen ? 'Collapse panel' : 'Expand panel'}
             >
                 {isLeft ? (
-                    isPanelOpen ? <Icon name="panelLeftClose" size={18} /> : <Icon name="chevronRight" size={18} />
+                    isPanelOpen ? <Icon name="left_panel_close" size={18} /> : <Icon name="chevronRight" size={18} />
                 ) : (
-                    isPanelOpen ? <Icon name="panelRightClose" size={18} /> : <Icon name="chevronLeft" size={18} />
+                    isPanelOpen ? <Icon name="right_panel_close" size={18} /> : <Icon name="chevronLeft" size={18} />
                 )}
             </button>
         </div>

@@ -133,7 +133,7 @@ export function RecordingCard({
                         </span>
                         {isExported && (
                             <span className="recording-card__exported" title="Exported to storage">
-                                <Icon name="checkCircle" size={10} />
+                                <Icon name="check_circle" size={10} />
                             </span>
                         )}
                     </div>

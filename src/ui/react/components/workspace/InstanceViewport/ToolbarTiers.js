@@ -43,7 +43,7 @@ export const TOOL_GROUPS = {
     tools: [
       { id: "colormap", label: "Colormap", icon: 'palette' },
       { id: "layers", label: "Layers", icon: 'layers' },
-      { id: "grid", label: "Grid", icon: 'grid3x3' },
+      { id: "grid", label: "Grid", icon: 'grid_3x3' },
       { id: "bounds", label: "Bounds", icon: 'box' },
     ],
   },

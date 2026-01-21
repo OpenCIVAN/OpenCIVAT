@@ -53,7 +53,7 @@ const OWNERSHIP_FILTERS = [
 // Status states per spec
 const ANNOTATION_STATUS = {
     OPEN: { id: 'open', icon: 'circle', label: 'Open', color: 'blue', description: 'Active, needs attention' },
-    RESOLVED: { id: 'resolved', icon: 'checkCircle2', label: 'Resolved', color: 'green', description: 'Addressed, still visible' },
+    RESOLVED: { id: 'resolved', icon: 'check_circle', label: 'Resolved', color: 'green', description: 'Addressed, still visible' },
     ARCHIVED: { id: 'archived', icon: 'archive', label: 'Archived', color: 'gray', description: 'Completed, hidden by default' },
 };
 
@@ -62,11 +62,11 @@ const INSTANCE_TOOLS = [
     { id: 'select', icon: 'mousePointer2', label: 'Select', color: 'blue' },
     { id: 'point', icon: 'mapPin', label: 'Point', color: 'pink' },
     { id: 'ruler', icon: 'ruler', label: 'Ruler', color: 'amber' },
-    { id: 'angle', icon: 'cornerUpRight', label: 'Angle', color: 'purple' },
+    { id: 'angle', icon: 'arrowUpRight', label: 'Angle', color: 'purple' },
     { id: 'region', icon: 'box', label: 'Region', color: 'green' },
     { id: 'text', icon: 'type', label: 'Text', color: 'teal' },
     { id: 'draw', icon: 'penTool', label: 'Draw', color: 'pink' },
-    { id: 'highlight', icon: 'highlighter', label: 'Highlight', color: 'amber' },
+    { id: 'highlight', icon: 'ink_highlighter', label: 'Highlight', color: 'amber' },
 ];
 
 // Workspace context tools per spec
@@ -85,7 +85,7 @@ const ANNOTATION_TYPES = {
     point: { icon: 'mapPin', label: 'Point', color: 'pink' },
     region: { icon: 'box', label: 'Region', color: 'green' },
     measurement: { icon: 'ruler', label: 'Measure', color: 'amber' },
-    angle: { icon: 'cornerUpRight', label: 'Angle', color: 'purple' },
+    angle: { icon: 'arrowUpRight', label: 'Angle', color: 'purple' },
     text: { icon: 'type', label: 'Text', color: 'teal' },
     draw: { icon: 'penTool', label: 'Drawing', color: 'pink' },
     arrow: { icon: 'arrowUpRight', label: 'Arrow', color: 'amber' },
@@ -353,7 +353,7 @@ function AnnotationItem({ annotation, onToggleVisibility, onStatusChange, onRepl
                             onClick={() => onReply?.(annotation)}
                             data-color="blue"
                         >
-                            <Icon name="messageSquare" size={12} />
+                            <Icon name="chat_bubble" size={12} />
                             <span>Reply</span>
                         </button>
                         <button
@@ -361,7 +361,7 @@ function AnnotationItem({ annotation, onToggleVisibility, onStatusChange, onRepl
                             onClick={() => onStatusChange?.(annotation, 'resolved')}
                             data-color="green"
                         >
-                            <Icon name="checkCircle2" size={12} />
+                            <Icon name="check_circle" size={12} />
                             <span>Resolve</span>
                         </button>
                         <button

@@ -40,7 +40,7 @@ export function EdgeTrigger({
             <div className="edge-trigger__indicator">
                 {hovering && (
                     <Icon
-                        name={isLeft ? 'panelLeft' : 'panelRight'}
+                        name={isLeft ? 'dock_to_right' : 'dock_to_left'}
                         size={14}
                         className="edge-trigger__icon"
                     />

@@ -211,6 +211,14 @@ router.post("/:id/canvases", async (req, res, next) => {
       userId
     );
 
+    // Ensure ownership has the correct ownerId for personal canvases
+    // Client may send undefined ownerId, so we use the authenticated user's ID
+    let finalOwnership = ownership || { type: "personal" };
+    if (finalOwnership.type === "personal" && !finalOwnership.ownerId) {
+      finalOwnership = { ...finalOwnership, ownerId: userId };
+      console.log("[DEBUG] Set ownerId to authenticated user:", userId);
+    }
+
     await client.query("BEGIN");
 
     // Verify user has access to project
@@ -271,7 +279,7 @@ router.post("/:id/canvases", async (req, res, next) => {
           projectId,
           name || "Untitled Canvas",
           JSON.stringify(dimensions || { rows: 3, cols: 3 }),
-          JSON.stringify(ownership || { type: "personal", ownerId: userId }),
+          JSON.stringify(finalOwnership),
           layout_mode || "grid",
           flow_direction || "row",
           userId,
@@ -296,7 +304,7 @@ router.post("/:id/canvases", async (req, res, next) => {
             projectId,
             name || "Untitled Canvas",
             JSON.stringify(dimensions || { rows: 3, cols: 3 }),
-            JSON.stringify(ownership || { type: "personal", ownerId: userId }),
+            JSON.stringify(finalOwnership),
             userId,
           ]
         );

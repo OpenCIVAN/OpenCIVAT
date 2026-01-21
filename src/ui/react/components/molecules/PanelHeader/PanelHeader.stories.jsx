@@ -146,7 +146,7 @@ const MockPanelHeader = ({
                         marginLeft: '4px',
                     }}
                 >
-                    <Icon name="panelRight" size={14} />
+                    <Icon name="dock_to_left" size={14} />
                 </button>
             )}
 

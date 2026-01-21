@@ -40,12 +40,12 @@ const SPAWN_SIZES = [
 
 // Per spec: Single, Side-by-Side, Stacked, 2×2 Grid, 3-up, 1+2, Custom
 const QUICK_LAYOUTS = [
-    { id: 'single', label: 'Single', icon: 'maximize2', rows: 1, cols: 1 },
-    { id: 'side-by-side', label: 'Side by Side', icon: 'columns3', rows: 1, cols: 2 },
-    { id: 'stacked', label: 'Stacked', icon: 'rows3', rows: 2, cols: 1 },
-    { id: '2x2', label: '2×2 Grid', icon: 'grid3X3', rows: 2, cols: 2 },
+    { id: 'single', label: 'Single', icon: 'open_in_full', rows: 1, cols: 1 },
+    { id: 'side-by-side', label: 'Side by Side', icon: 'view_column', rows: 1, cols: 2 },
+    { id: 'stacked', label: 'Stacked', icon: 'table_rows', rows: 2, cols: 1 },
+    { id: '2x2', label: '2×2 Grid', icon: 'grid_3X3', rows: 2, cols: 2 },
     { id: '3-up', label: '3-up', icon: 'layout', rows: 1, cols: 3 },
-    { id: '1+2', label: '1+2', icon: 'layoutDashboard', rows: 2, cols: 2, merged: true },
+    { id: '1+2', label: '1+2', icon: 'dashboard', rows: 2, cols: 2, merged: true },
 ];
 
 // Layout modes per spec
@@ -91,7 +91,7 @@ function LayoutModeToggle({ mode, onChange }) {
                 onClick={() => onChange?.(LAYOUT_MODES.GRID)}
                 title="Grid - Manual placement, drop views where you want"
             >
-                <Icon name="grid3x3" size={14} />
+                <Icon name="grid_3x3" size={14} />
                 <div className="layout-tab__mode-content">
                     <span className="layout-tab__mode-label">Grid</span>
                     <span className="layout-tab__mode-desc">Manual placement</span>
@@ -727,7 +727,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
         },
         {
             id: 'canvas-size',
-            icon: 'grid3x3',
+            icon: 'grid_3x3',
             label: 'Canvas Size',
             color: '#60a5fa', // blue
             content: (
@@ -762,7 +762,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
         },
         {
             id: 'quick-layouts',
-            icon: 'layoutDashboard',
+            icon: 'dashboard',
             label: 'Quick Layouts',
             color: '#fbbf24', // amber
             content: (

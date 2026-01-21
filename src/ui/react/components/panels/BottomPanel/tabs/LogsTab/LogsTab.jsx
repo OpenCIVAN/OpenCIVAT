@@ -17,9 +17,9 @@ import "./LogsTab.scss";
 // Icon mapping for log types
 const LOG_ICONS = {
     [LogType.INFO]: "info",
-    [LogType.SUCCESS]: "checkCircle",
-    [LogType.WARNING]: "alertTriangle",
-    [LogType.ERROR]: "xCircle",
+    [LogType.SUCCESS]: "check_circle",
+    [LogType.WARNING]: "warning",
+    [LogType.ERROR]: "cancel",
     [LogType.PROGRESS]: "clock",
 };
 

@@ -1540,7 +1540,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             {
               id: "reset",
               label: "Reset",
-              icon: "maximize-2",
+              icon: "open_in_full",
               special: true, // Special styling for reset
             },
             {
@@ -2095,7 +2095,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
               {
                 type: "slider-with-presets",
                 id: "orientation-size-slider",
-                icon: "maximize-2",
+                icon: "open_in_full",
                 label: "Widget Size",
                 value: currentSizePercent,
                 min: 5,

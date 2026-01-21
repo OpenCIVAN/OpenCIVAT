@@ -24,7 +24,7 @@ const ANNOTATION_TYPES = {
     point: { icon: 'mapPin', label: 'Point', color: 'blue' },
     region: { icon: 'box', label: 'Region', color: 'green' },
     measurement: { icon: 'ruler', label: 'Measure', color: 'amber' },
-    angle: { icon: 'cornerUpRight', label: 'Angle', color: 'purple' },
+    angle: { icon: 'arrowUpRight', label: 'Angle', color: 'purple' },
     text: { icon: 'textCursor', label: 'Text', color: 'pink' },
 };
 

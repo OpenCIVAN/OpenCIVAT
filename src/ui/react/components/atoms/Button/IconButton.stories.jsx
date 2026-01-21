@@ -84,7 +84,7 @@ export default {
     argTypes: {
         icon: {
             control: 'select',
-            options: ['settings', 'plus', 'trash2', 'edit', 'save', 'download', 'upload', 'play', 'pause', 'eye', 'eyeOff', 'grid3x3', 'list', 'chevronLeft', 'chevronRight', 'x', 'check', 'search', 'filter', 'share2'],
+            options: ['settings', 'plus', 'trash2', 'edit', 'save', 'download', 'upload', 'play', 'pause', 'eye', 'eyeOff', 'grid_3x3', 'list', 'chevronLeft', 'chevronRight', 'x', 'check', 'search', 'filter', 'share2'],
         },
         variant: {
             control: 'select',

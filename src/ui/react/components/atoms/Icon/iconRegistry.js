@@ -53,6 +53,7 @@ export const ICON_REGISTRY = {
   check: "check",
   done: "done",
   edit: "edit",
+  edit2: "edit",
   delete: "delete",
   trash: "delete",
   trash2: "delete",
@@ -66,6 +67,7 @@ export const ICON_REGISTRY = {
   redo: "redo",
   redo2: "redo",
   refresh: "refresh",
+  refreshCw: "sync", // Clockwise refresh/sync
   rotateCcw: "rotate_left",
   rotateCw: "rotate_right",
   restore: "history",
@@ -95,6 +97,7 @@ export const ICON_REGISTRY = {
   expand: "open_in_full",
   collapse: "close_fullscreen",
   canvasSize: "photo_size_select_small",
+  windowRestore: "pip_exit", // Restore window from maximized/pip
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 3D & SPATIAL
@@ -136,6 +139,7 @@ export const ICON_REGISTRY = {
   colorize: "colorize",
   sliders: "tune",
   settings: "settings",
+  settings2: "settings",
   wrench: "build",
   tools: "build",
   handyman: "handyman",
@@ -143,6 +147,7 @@ export const ICON_REGISTRY = {
   crosshair: "gps_fixed",
   scan: "center_focus_strong",
   wand: "auto_fix_high",
+  boxSelect: "select_all", // Box selection tool
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DATA & FILES
@@ -215,7 +220,9 @@ export const ICON_REGISTRY = {
   moreVertical: "more_vert",
   grid: "grid_view",
   grid3x3: "grid_3x3",
+  grid_3x3: "grid_3x3", // Alias with underscore
   layoutGrid: "view_module",
+  layoutList: "view_list",
   aspectRatio: "aspect_ratio",
   list: "list",
   layout: "dashboard",
@@ -382,6 +389,7 @@ export const ICON_REGISTRY = {
   // ═══════════════════════════════════════════════════════════════════════════
   scrollText: "article", // For logs tab
   article: "article",
+  type: "text_fields", // Text/typography
   stickyNote: "sticky_note_2",
   note: "note",
   notes: "notes",

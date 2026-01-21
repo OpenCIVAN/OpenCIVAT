@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
-import { Section } from '@UI/react/components/molecules/Section';
+import { SectionNavGroup } from '@UI/react/components/organisms';
 import { Toggle } from '@UI/react/components/atoms/Toggle';
 import { Slider } from '@UI/react/components/atoms/Slider';
 
@@ -63,7 +63,9 @@ function categorizeTools(tools) {
     };
 
     for (const tool of tools) {
+        // Skip separators and tools without labels
         if (tool.type === 'separator') continue;
+        if (!tool.label && !tool.id) continue;
 
         let assigned = false;
         for (const [catId, catConfig] of Object.entries(TOOL_CATEGORIES)) {
@@ -376,45 +378,35 @@ function ToolButton({ tool, onClick }) {
 }
 
 // =============================================================================
-// TOOL CATEGORY SECTION COMPONENT
+// TOOL CATEGORY CONTENT COMPONENT
 // =============================================================================
 
-function ToolCategorySection({ category, tools, expandedMenus, onToggleMenu }) {
-    const [collapsed, setCollapsed] = useState(false);
-
+function ToolCategoryContent({ tools, expandedMenus, onToggleMenu }) {
     if (!tools || tools.length === 0) return null;
 
     return (
-        <Section
-            title={category.label}
-            icon={category.icon}
-            iconColorClass={`icon-${category.color}`}
-            collapsible
-            defaultExpanded={true}
-        >
-            <div className="tool-category__list">
-                {tools.map((tool, index) => {
-                    if (tool.type === 'menu') {
-                        return (
-                            <ToolMenu
-                                key={tool.id}
-                                tool={tool}
-                                expanded={expandedMenus[tool.id]}
-                                onToggle={() => onToggleMenu(tool.id)}
-                            />
-                        );
-                    }
-
+        <div className="tool-category__list">
+            {tools.map((tool, index) => {
+                if (tool.type === 'menu') {
                     return (
-                        <ToolButton
-                            key={tool.id || index}
+                        <ToolMenu
+                            key={tool.id}
                             tool={tool}
-                            onClick={() => tool.onClick?.()}
+                            expanded={expandedMenus[tool.id]}
+                            onToggle={() => onToggleMenu(tool.id)}
                         />
                     );
-                })}
-            </div>
-        </Section>
+                }
+
+                return (
+                    <ToolButton
+                        key={tool.id || index}
+                        tool={tool}
+                        onClick={() => tool.onClick?.()}
+                    />
+                );
+            })}
+        </div>
     );
 }
 
@@ -422,9 +414,115 @@ function ToolCategorySection({ category, tools, expandedMenus, onToggleMenu }) {
 // MAIN TOOLS LIST COMPONENT
 // =============================================================================
 
+// Color map for categories
+const CATEGORY_COLORS = {
+    navigation: '#60a5fa', // blue
+    representation: '#c084fc', // purple
+    widgets: '#fbbf24', // amber
+    appearance: '#f472b6', // pink
+    advanced: '#9ca3af', // gray
+};
+
 export function ToolsList({ tools, expandedMenus, onToggleMenu }) {
     // Categorize tools
     const categorized = useMemo(() => categorizeTools(tools || []), [tools]);
+
+    // Build sections for SectionNavGroup
+    const toolSections = useMemo(() => {
+        const sections = [];
+
+        // Navigation Category
+        if (categorized.navigation.length > 0) {
+            sections.push({
+                id: 'navigation',
+                icon: TOOL_CATEGORIES.navigation.icon,
+                label: TOOL_CATEGORIES.navigation.label,
+                color: CATEGORY_COLORS.navigation,
+                itemCount: categorized.navigation.length,
+                content: (
+                    <ToolCategoryContent
+                        tools={categorized.navigation}
+                        expandedMenus={expandedMenus}
+                        onToggleMenu={onToggleMenu}
+                    />
+                ),
+            });
+        }
+
+        // Representation Category
+        if (categorized.representation.length > 0) {
+            sections.push({
+                id: 'representation',
+                icon: TOOL_CATEGORIES.representation.icon,
+                label: TOOL_CATEGORIES.representation.label,
+                color: CATEGORY_COLORS.representation,
+                itemCount: categorized.representation.length,
+                content: (
+                    <ToolCategoryContent
+                        tools={categorized.representation}
+                        expandedMenus={expandedMenus}
+                        onToggleMenu={onToggleMenu}
+                    />
+                ),
+            });
+        }
+
+        // Widgets Category
+        if (categorized.widgets.length > 0) {
+            sections.push({
+                id: 'widgets',
+                icon: TOOL_CATEGORIES.widgets.icon,
+                label: TOOL_CATEGORIES.widgets.label,
+                color: CATEGORY_COLORS.widgets,
+                itemCount: categorized.widgets.length,
+                content: (
+                    <ToolCategoryContent
+                        tools={categorized.widgets}
+                        expandedMenus={expandedMenus}
+                        onToggleMenu={onToggleMenu}
+                    />
+                ),
+            });
+        }
+
+        // Appearance Category
+        if (categorized.appearance.length > 0) {
+            sections.push({
+                id: 'appearance',
+                icon: TOOL_CATEGORIES.appearance.icon,
+                label: TOOL_CATEGORIES.appearance.label,
+                color: CATEGORY_COLORS.appearance,
+                itemCount: categorized.appearance.length,
+                content: (
+                    <ToolCategoryContent
+                        tools={categorized.appearance}
+                        expandedMenus={expandedMenus}
+                        onToggleMenu={onToggleMenu}
+                    />
+                ),
+            });
+        }
+
+        // Uncategorized (Advanced)
+        if (categorized.uncategorized.length > 0) {
+            sections.push({
+                id: 'advanced',
+                icon: 'settings',
+                label: 'Advanced',
+                color: CATEGORY_COLORS.advanced,
+                itemCount: categorized.uncategorized.length,
+                content: (
+                    <ToolCategoryContent
+                        tools={categorized.uncategorized}
+                        expandedMenus={expandedMenus}
+                        onToggleMenu={onToggleMenu}
+                    />
+                ),
+            });
+        }
+
+        return sections;
+    }, [categorized, expandedMenus, onToggleMenu]);
 
     if (!tools || tools.length === 0) {
         return (
@@ -438,70 +536,11 @@ export function ToolsList({ tools, expandedMenus, onToggleMenu }) {
 
     return (
         <div className="tools-list">
-            {/* Navigation Category */}
-            <ToolCategorySection
-                category={TOOL_CATEGORIES.navigation}
-                tools={categorized.navigation}
-                expandedMenus={expandedMenus}
-                onToggleMenu={onToggleMenu}
+            <SectionNavGroup
+                sections={toolSections}
+                defaultSectionId="navigation"
+                size="sm"
             />
-
-            {/* Representation Category */}
-            <ToolCategorySection
-                category={TOOL_CATEGORIES.representation}
-                tools={categorized.representation}
-                expandedMenus={expandedMenus}
-                onToggleMenu={onToggleMenu}
-            />
-
-            {/* Widgets Category */}
-            <ToolCategorySection
-                category={TOOL_CATEGORIES.widgets}
-                tools={categorized.widgets}
-                expandedMenus={expandedMenus}
-                onToggleMenu={onToggleMenu}
-            />
-
-            {/* Appearance Category */}
-            <ToolCategorySection
-                category={TOOL_CATEGORIES.appearance}
-                tools={categorized.appearance}
-                expandedMenus={expandedMenus}
-                onToggleMenu={onToggleMenu}
-            />
-
-            {/* Uncategorized (advanced/extension tools) */}
-            {categorized.uncategorized.length > 0 && (
-                <Section
-                    title="Advanced"
-                    icon="settings"
-                    iconColorClass="icon-gray"
-                    collapsible
-                    defaultExpanded={false}
-                >
-                    <div className="tool-category__list">
-                        {categorized.uncategorized.map((tool, index) => {
-                            if (tool.type === 'menu') {
-                                return (
-                                    <ToolMenu
-                                        key={tool.id}
-                                        tool={tool}
-                                        expanded={expandedMenus[tool.id]}
-                                        onToggle={() => onToggleMenu(tool.id)}
-                                    />
-                                );
-                            }
-                            return (
-                                <ToolButton
-                                    key={tool.id || index}
-                                    tool={tool}
-                                    onClick={() => tool.onClick?.()}
-                                />
-                            );
-                        })}
-                    </div>
-                </Section>
-            )}
         </div>
     );
 }

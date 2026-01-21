@@ -194,7 +194,7 @@ export function LeftActivityBar() {
 
             {/* Toggle panel button at bottom */}
             <TabButton
-                icon={isOpen ? 'panelLeftClose' : 'chevronRight'}
+                icon={isOpen ? 'left_panel_close' : 'chevronRight'}
                 label={isOpen ? 'Collapse Panel' : 'Expand Panel'}
                 variant="etched"
                 iconOnly

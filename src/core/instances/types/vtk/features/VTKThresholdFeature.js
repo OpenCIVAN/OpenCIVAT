@@ -544,7 +544,7 @@ export class VTKThresholdFeature extends FeatureInterface {
         // Quick range presets
         {
           id: 'threshold-range',
-          icon: 'maximize-2',
+          icon: 'open_in_full',
           label: 'Range',
           description: `${state.minValue.toFixed(2)} - ${state.maxValue.toFixed(2)}`,
           type: 'menu',

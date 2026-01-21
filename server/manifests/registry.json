@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-01-21T00:33:07.179Z",
+  "generatedAt": "2026-01-21T06:07:11.048Z",
   "contractVersion": "1.0.0",
   "buildInfo": {
     "nodeVersion": "v22.19.0",
@@ -35,7 +35,7 @@
           "extension": "vti",
           "mimeType": "application/vnd.vtk.imagedata+xml",
           "displayName": "VTK Image Data (XML)",
-          "icon": "grid3x3",
+          "icon": "grid_3x3",
           "color": "#60a5fa",
           "priority": 10,
           "magicBytes": "3c3f786d6c",
@@ -538,7 +538,7 @@
       "handlerType": "vtk",
       "priority": 10,
       "displayName": "VTK Image Data (XML)",
-      "icon": "grid3x3",
+      "icon": "grid_3x3",
       "color": "#60a5fa"
     },
     "vtu": {

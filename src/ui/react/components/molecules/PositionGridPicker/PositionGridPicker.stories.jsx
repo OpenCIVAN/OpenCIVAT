@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 
 const defaultPositions = [
-    { id: 'TOP_LEFT', icon: 'cornerUpLeft', label: 'Top Left' },
-    { id: 'TOP_RIGHT', icon: 'cornerUpRight', label: 'Top Right' },
-    { id: 'BOTTOM_LEFT', icon: 'cornerDownLeft', label: 'Bottom Left' },
-    { id: 'BOTTOM_RIGHT', icon: 'cornerDownRight', label: 'Bottom Right' },
+    { id: 'TOP_LEFT', icon: 'arrowUpLeft', label: 'Top Left' },
+    { id: 'TOP_RIGHT', icon: 'arrowUpRight', label: 'Top Right' },
+    { id: 'BOTTOM_LEFT', icon: 'arrowDownLeft', label: 'Bottom Left' },
+    { id: 'BOTTOM_RIGHT', icon: 'arrowDownRight', label: 'Bottom Right' },
 ];
 
 // Mock component for Storybook

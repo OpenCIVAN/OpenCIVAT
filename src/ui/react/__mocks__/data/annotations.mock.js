@@ -215,7 +215,7 @@ export const ANNOTATION_TYPE_CONFIG = {
   },
   angle: {
     name: "Angle",
-    icon: "cornerUpRight",
+    icon: "arrowUpRight",
     color: "#c084fc",
     description: "Angle measurement",
   },

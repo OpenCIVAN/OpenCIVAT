@@ -22,11 +22,7 @@ import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { PanelHeader } from '../../components/PanelHeader';
-import {
-    ResizableSectionsContainer,
-    ResizableSection,
-    useSectionStates,
-} from '@UI/react/components/organisms/ResizableSections';
+import { SectionNavGroup } from '@UI/react/components/organisms';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { ViewItem, InactiveViewItem, TrashedViewItem } from '@UI/react/components/molecules/ViewItem';
@@ -61,16 +57,6 @@ const VIEW_MODE_OPTIONS = [
     { id: VIEW_MODES.GRID, icon: 'layoutGrid', label: 'Grid' },
 ];
 
-// =============================================================================
-// DEFAULT SECTION STATES
-// =============================================================================
-
-const DEFAULT_SECTIONS = {
-    navigator: { expanded: true, flexGrow: 0 },
-    onCanvas: { expanded: true, flexGrow: 2 },
-    notPlaced: { expanded: true, flexGrow: 1 },
-    deleted: { expanded: false, flexGrow: 1 },
-};
 
 // =============================================================================
 // ACTIVE VIEW ITEM WRAPPER
@@ -214,8 +200,6 @@ export function ViewsPanelContent({ workspaceId }) {
             .map(v => ({ id: v.id, name: v.name }));
     }, [allViews]);
 
-    const { states: sectionStates, toggleSection, resizeSection } = useSectionStates(DEFAULT_SECTIONS);
-
     // Bundle handlers for passing to child components
     const handlers = useMemo(() => ({
         handlePlaceView,
@@ -261,118 +245,122 @@ export function ViewsPanelContent({ workspaceId }) {
     ]);
 
     // =========================================================================
+    // SECTION CONFIGURATIONS
+    // =========================================================================
+
+    // Build sections for SectionNavGroup (BY_STATUS view mode)
+    const viewStatusSections = useMemo(() => [
+        {
+            id: 'navigator',
+            icon: 'grid_3x3',
+            label: 'Canvas Navigator',
+            color: '#c084fc', // purple
+            content: (
+                <CanvasNavigator
+                    isDocked={true}
+                    logic={layoutLogic}
+                />
+            ),
+        },
+        {
+            id: 'onCanvas',
+            icon: 'eye',
+            label: 'On Canvas',
+            color: '#4ade80', // green
+            itemCount: onCanvasViews.length,
+            content: onCanvasViews.length === 0 ? (
+                <EmptyState
+                    icon="eye"
+                    title="No views on canvas"
+                    description="Drag views here or click to place"
+                    size="sm"
+                />
+            ) : (
+                <div className="views-tab__list">
+                    {onCanvasViews.map(view => (
+                        <ActiveViewItemWrapper
+                            key={view.id}
+                            view={view}
+                            handlers={handlers}
+                        />
+                    ))}
+                </div>
+            ),
+        },
+        {
+            id: 'notPlaced',
+            icon: 'eyeOff',
+            label: 'Not Placed',
+            color: '#9ca3af', // gray
+            itemCount: notPlacedViews.length,
+            content: notPlacedViews.length === 0 ? (
+                <EmptyState
+                    icon="layers"
+                    title="All views are placed"
+                    description="Create new views from Datasets tab"
+                    size="sm"
+                />
+            ) : (
+                <div className="views-tab__list">
+                    {notPlacedViews.map(view => (
+                        <InactiveViewItem
+                            key={view.id}
+                            view={view}
+                            onPlace={handlePlaceView}
+                            onTrash={handleTrashView}
+                        />
+                    ))}
+                </div>
+            ),
+        },
+        {
+            id: 'deleted',
+            icon: 'trash2',
+            label: 'Recently Deleted',
+            color: '#f87171', // red
+            itemCount: recentlyDeletedViews.length,
+            content: recentlyDeletedViews.length === 0 ? (
+                <EmptyState
+                    icon="clock"
+                    title="No deleted views"
+                    description="Deleted views appear here for 30 days"
+                    size="sm"
+                />
+            ) : (
+                <div className="views-tab__list">
+                    {recentlyDeletedViews.map(view => (
+                        <TrashedViewItem
+                            key={view.id}
+                            view={view}
+                            onRestore={handleRestoreView}
+                            onPermanentDelete={handlePermanentDelete}
+                        />
+                    ))}
+                </div>
+            ),
+        },
+    ], [
+        layoutLogic,
+        onCanvasViews,
+        notPlacedViews,
+        recentlyDeletedViews,
+        handlers,
+        handlePlaceView,
+        handleTrashView,
+        handleRestoreView,
+        handlePermanentDelete,
+    ]);
+
+    // =========================================================================
     // RENDER HELPERS
     // =========================================================================
 
     const renderByStatusContent = () => (
-        <ResizableSectionsContainer
-            className="views-tab__sections"
-            sectionStates={sectionStates}
-            onSectionToggle={toggleSection}
-            onSectionResize={resizeSection}
-        >
-            {/* Canvas Navigator */}
-            <ResizableSection
-                id="navigator"
-                icon="grid3X3"
-                iconColorClass="icon-purple"
-                label="Canvas Navigator"
-                collapsible
-            >
-                <CanvasNavigator
-                    isDocked={true}
-                    logic={layoutLogic}
-
-                />
-            </ResizableSection>
-
-            {/* On Canvas Section */}
-            <ResizableSection
-                id="onCanvas"
-                icon="eye"
-                iconColorClass="icon-green"
-                label="On Canvas"
-                count={onCanvasViews.length}
-            >
-                {onCanvasViews.length === 0 ? (
-                    <EmptyState
-                        icon="eye"
-                        title="No views on canvas"
-                        description="Drag views here or click to place"
-                        size="sm"
-                    />
-                ) : (
-                    <div className="views-tab__list">
-                        {onCanvasViews.map(view => (
-                            <ActiveViewItemWrapper
-                                key={view.id}
-                                view={view}
-                                handlers={handlers}
-                            />
-                        ))}
-                    </div>
-                )}
-            </ResizableSection>
-
-            {/* Not Placed Section */}
-            <ResizableSection
-                id="notPlaced"
-                icon="eyeOff"
-                iconColorClass="icon-gray"
-                label="Not Placed"
-                count={notPlacedViews.length}
-            >
-                {notPlacedViews.length === 0 ? (
-                    <EmptyState
-                        icon="layers"
-                        title="All views are placed"
-                        description="Create new views from Datasets tab"
-                        size="sm"
-                    />
-                ) : (
-                    <div className="views-tab__list">
-                        {notPlacedViews.map(view => (
-                            <InactiveViewItem
-                                key={view.id}
-                                view={view}
-                                onPlace={handlePlaceView}
-                                onTrash={handleTrashView}
-                            />
-                        ))}
-                    </div>
-                )}
-            </ResizableSection>
-
-            {/* Recently Deleted Section */}
-            <ResizableSection
-                id="deleted"
-                icon="trash2"
-                iconColorClass="icon-red"
-                label="Recently Deleted"
-                count={recentlyDeletedViews.length}
-                badge={recentlyDeletedViews.length > 0 ? '!' : undefined}
-            >
-                {recentlyDeletedViews.length === 0 ? (
-                    <EmptyState
-                        icon="clock"
-                        title="No deleted views"
-                        description="Deleted views appear here for 30 days"
-                        size="sm"
-                    />
-                ) : (
-                    <div className="views-tab__list">
-                        {recentlyDeletedViews.map(view => (
-                            <TrashedViewItem
-                                key={view.id}
-                                view={view}
-                                onRestore={handleRestoreView}
-                                onPermanentDelete={handlePermanentDelete}
-                            />
-                        ))}
-                    </div>
-                )}
-            </ResizableSection>
-        </ResizableSectionsContainer>
+        <SectionNavGroup
+            sections={viewStatusSections}
+            defaultSectionId="navigator"
+            size="sm"
+        />
     );
 
     const renderByDatasetContent = () => (

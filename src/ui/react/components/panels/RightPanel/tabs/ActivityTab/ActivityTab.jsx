@@ -33,7 +33,7 @@ import './ActivityTab.scss';
 
 const ACTIVITY_SUBTABS = [
     { id: 'all', label: 'All', icon: 'activity' },
-    { id: 'mentions', label: 'Mentions', icon: 'at' },
+    { id: 'mentions', label: 'Mentions', icon: 'at_sign' },
     { id: 'following', label: 'Following', icon: 'heart' },
 ];
 
@@ -207,7 +207,7 @@ export function ActivityTab({
                 <div className="activity-feed">
                     {subtabFilteredActivities.length === 0 ? (
                         <div className="activity-feed__empty">
-                            <Icon name={activeSubtab === 'mentions' ? 'at' : activeSubtab === 'following' ? 'heart' : 'activity'} size={24} />
+                            <Icon name={activeSubtab === 'mentions' ? 'at_sign' : activeSubtab === 'following' ? 'heart' : 'activity'} size={24} />
                             <span>
                                 {activeSubtab === 'mentions' ? 'No mentions yet' :
                                  activeSubtab === 'following' ? 'No activity from followed people' :
