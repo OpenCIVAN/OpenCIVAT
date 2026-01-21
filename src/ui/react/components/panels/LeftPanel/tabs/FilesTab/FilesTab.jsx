@@ -22,14 +22,11 @@
  * <FilesTab workspaceId="ws-1" />
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Icon, IconButton, Tooltip } from '@UI/react/components/atoms';
 import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
-import {
-    ResizableSectionsContainer,
-    ResizableSection,
-} from '@UI/react/components/organisms/ResizableSections';
+import { SectionNavGroup } from '@UI/react/components/organisms';
 import { useFilesTab } from './hooks/useFilesTab';
 import { FileItemList, FileItemGrid } from './components/FileItem';
 import { FileContextMenu } from './components/FileContextMenu';
@@ -119,7 +116,7 @@ export function FilesPanelContent({
         mockError,
     });
 
-    // Render file items based on view mode
+    // Render file items based on view mode (for starred and loaded sections)
     const renderFileItems = useCallback(
         (items) => {
             if (viewMode === 'grid') {
@@ -170,6 +167,95 @@ export function FilesPanelContent({
             toggleFolder,
         ]
     );
+
+    // Build sections for SectionNavGroup
+    const fileSections = useMemo(() => [
+        {
+            id: 'starred',
+            icon: 'star',
+            label: 'Starred',
+            color: '#fbbf24', // amber
+            itemCount: starredFiles.length,
+            content: starredFiles.length > 0 ? (
+                renderFileItems(starredFiles)
+            ) : (
+                <div className="section-empty">No starred items</div>
+            ),
+        },
+        {
+            id: 'loaded',
+            icon: 'database',
+            label: 'Loaded Datasets',
+            color: '#7dd3fc', // teal
+            itemCount: loadedDatasetsFormatted.length,
+            content: loadedDatasetsFormatted.length > 0 ? (
+                renderFileItems(loadedDatasetsFormatted)
+            ) : (
+                <div className="section-empty">No datasets loaded</div>
+            ),
+        },
+        {
+            id: 'all',
+            icon: 'folder',
+            label: 'All Files',
+            color: '#60a5fa', // blue
+            itemCount: files.length,
+            content: files.length > 0 ? (
+                viewMode === 'grid' ? (
+                    <div className="files-grid">
+                        {files
+                            .filter((f) => f.type !== 'folder')
+                            .map((file) => (
+                                <FileItemGrid
+                                    key={file.id}
+                                    file={file}
+                                    isSelected={selectedFileId === file.id}
+                                    onSelect={setSelectedFileId}
+                                    onStar={handleStar}
+                                    onDragStart={handleDragStart}
+                                    onContextMenu={handleContextMenu}
+                                    onMenuClick={handleMenuClick}
+                                    onDoubleClick={handleDoubleClick}
+                                />
+                            ))}
+                    </div>
+                ) : (
+                    files.map((file) => (
+                        <FileItemList
+                            key={file.id}
+                            file={file}
+                            isSelected={selectedFileId === file.id}
+                            onSelect={setSelectedFileId}
+                            onStar={handleStar}
+                            onDragStart={handleDragStart}
+                            onContextMenu={handleContextMenu}
+                            onMenuClick={handleMenuClick}
+                            onDoubleClick={handleDoubleClick}
+                            expandedFolders={expandedFolders}
+                            onToggleFolder={toggleFolder}
+                        />
+                    ))
+                )
+            ) : (
+                <div className="section-empty">No files uploaded</div>
+            ),
+        },
+    ], [
+        starredFiles,
+        loadedDatasetsFormatted,
+        files,
+        viewMode,
+        selectedFileId,
+        expandedFolders,
+        handleStar,
+        handleDragStart,
+        handleContextMenu,
+        handleMenuClick,
+        handleDoubleClick,
+        setSelectedFileId,
+        toggleFolder,
+        renderFileItems,
+    ]);
 
     return (
         <div className="files-tab">
@@ -279,88 +365,14 @@ export function FilesPanelContent({
                 </div>
             )}
 
-            {/* Resizable Sections */}
-            <ResizableSectionsContainer
-                sectionStates={sectionStates}
-                onSectionToggle={toggleSection}
-                onSectionResize={resizeSection}
-            >
-                <ResizableSection
-                    id="starred"
-                    icon="star"
-                    iconColorClass="icon-amber"
-                    label="Starred"
-                    count={starredFiles.length}
-                >
-                    {starredFiles.length > 0 ? (
-                        renderFileItems(starredFiles)
-                    ) : (
-                        <div className="resizable-section__empty">No starred items</div>
-                    )}
-                </ResizableSection>
-
-                <ResizableSection
-                    id="loaded"
-                    icon="database"
-                    iconColorClass="icon-teal"
-                    label="Loaded Datasets"
-                    count={loadedDatasetsFormatted.length}
-                >
-                    {loadedDatasetsFormatted.length > 0 ? (
-                        renderFileItems(loadedDatasetsFormatted)
-                    ) : (
-                        <div className="resizable-section__empty">No datasets loaded</div>
-                    )}
-                </ResizableSection>
-
-                <ResizableSection
-                    id="all"
-                    icon="folder"
-                    iconColorClass="icon-blue"
-                    label="All Files"
-                    count={files.length}
-                >
-                    {files.length > 0 ? (
-                        viewMode === 'grid' ? (
-                            <div className="files-grid">
-                                {files
-                                    .filter((f) => f.type !== 'folder')
-                                    .map((file) => (
-                                        <FileItemGrid
-                                            key={file.id}
-                                            file={file}
-                                            isSelected={selectedFileId === file.id}
-                                            onSelect={setSelectedFileId}
-                                            onStar={handleStar}
-                                            onDragStart={handleDragStart}
-                                            onContextMenu={handleContextMenu}
-                                            onMenuClick={handleMenuClick}
-                                            onDoubleClick={handleDoubleClick}
-                                        />
-                                    ))}
-                            </div>
-                        ) : (
-                            files.map((file) => (
-                                <FileItemList
-                                    key={file.id}
-                                    file={file}
-                                    isSelected={selectedFileId === file.id}
-                                    onSelect={setSelectedFileId}
-                                    onStar={handleStar}
-                                    onDragStart={handleDragStart}
-                                    onContextMenu={handleContextMenu}
-                                    onMenuClick={handleMenuClick}
-                                    onDoubleClick={handleDoubleClick}
-                                    expandedFolders={expandedFolders}
-                                    onToggleFolder={toggleFolder}
-                                />
-                            ))
-                        )
-                    ) : (
-                        <div className="resizable-section__empty">No files uploaded</div>
-                    )}
-                </ResizableSection>
-            </ResizableSectionsContainer>
+            {/* Section Navigation */}
+            <div className="files-tab__sections">
+                <SectionNavGroup
+                    sections={fileSections}
+                    defaultSectionId="starred"
+                    size="sm"
+                />
+            </div>
 
             {/* Footer with upload */}
             <UploadDropzone

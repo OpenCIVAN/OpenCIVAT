@@ -154,3 +154,13 @@ export { PreviewHintBanner } from './PreviewHintBanner';
 
 // OverlayPanelHeader - Panel header with context-aware buttons
 export { OverlayPanelHeader } from './OverlayPanelHeader';
+
+// =============================================================================
+// SECTION NAVIGATION MOLECULES
+// =============================================================================
+
+// NavDotBar - Row of navigation dots for section navigation
+export { NavDotBar } from './NavDotBar';
+
+// SectionNavHeader - Header with current section display and navigation dots
+export { SectionNavHeader } from './SectionNavHeader';

@@ -7,13 +7,9 @@
  * <SettingsTab workspaceId="ws-1" projectId="project-1" />
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import {
-    ResizableSection,
-    ResizableSectionsContainer,
-    useSectionStates,
-} from '@UI/react/components/organisms/ResizableSections';
+import { SectionNavGroup } from '@UI/react/components/organisms';
 import { useSettingsTab } from './hooks/useSettingsTab';
 import { YourPreferences } from './sections/YourPreferences';
 import { VRSettings } from './sections/VRSettings';
@@ -71,14 +67,64 @@ export function SettingsTab({
     updatePreferences,
     loading,
 }) {
-    // Section states for resizable sections
-    const { states: sectionStates, toggleSection, resizeSection } = useSectionStates({
-        preferences: { expanded: true, flexGrow: 2 },
-        vr: { expanded: true, flexGrow: 1 },
-        project: { expanded: true, flexGrow: 1 },
-        admin: { expanded: true, flexGrow: 1 },
-        danger: { expanded: false, flexGrow: 1 },
-    });
+    // Build sections array with conditional admin/danger sections
+    const settingsSections = useMemo(() => {
+        const sections = [
+            {
+                id: 'preferences',
+                icon: 'user',
+                label: 'Your Preferences',
+                color: '#60a5fa', // blue
+                content: (
+                    <YourPreferences
+                        preferences={preferences}
+                        onChange={updatePreferences}
+                    />
+                ),
+            },
+            {
+                id: 'vr',
+                icon: 'glasses',
+                label: 'VR Settings',
+                color: '#c084fc', // purple
+                content: <VRSettings />,
+            },
+            {
+                id: 'project',
+                icon: 'building',
+                label: 'Project Info',
+                color: '#7dd3fc', // teal
+                content: <ProjectInfo project={project} />,
+            },
+        ];
+
+        if (isAdmin) {
+            sections.push({
+                id: 'admin',
+                icon: 'settings',
+                label: 'Admin Settings',
+                color: '#fbbf24', // amber
+                content: (
+                    <AdminSettings
+                        project={project}
+                        roleConfig={roleConfig}
+                    />
+                ),
+            });
+        }
+
+        if (isOwner) {
+            sections.push({
+                id: 'danger',
+                icon: 'alertTriangle',
+                label: 'Danger Zone',
+                color: '#f87171', // red
+                content: <DangerZone project={project} />,
+            });
+        }
+
+        return sections;
+    }, [preferences, updatePreferences, project, roleConfig, isAdmin, isOwner]);
 
     if (loading) {
         return (
@@ -104,67 +150,14 @@ export function SettingsTab({
                 <span className="panel-header__count">{userRole}</span>
             </div>
 
-            <ResizableSectionsContainer
-                className="settings-tab__sections"
-                sectionStates={sectionStates}
-                onSectionToggle={toggleSection}
-                onSectionResize={resizeSection}
-            >
-                <ResizableSection
-                    id="preferences"
-                    icon="user"
-                    label="Your Preferences"
-                    color="blue"
-                >
-                    <YourPreferences
-                        preferences={preferences}
-                        onChange={updatePreferences}
-                    />
-                </ResizableSection>
-
-                <ResizableSection
-                    id="vr"
-                    icon="glasses"
-                    label="VR Settings"
-                    color="purple"
-                >
-                    <VRSettings />
-                </ResizableSection>
-
-                <ResizableSection
-                    id="project"
-                    icon="building"
-                    label="Project Info"
-                    color="teal"
-                >
-                    <ProjectInfo project={project} />
-                </ResizableSection>
-
-                {isAdmin && (
-                    <ResizableSection
-                        id="admin"
-                        icon="settings"
-                        label="Admin Settings"
-                        color="amber"
-                    >
-                        <AdminSettings
-                            project={project}
-                            roleConfig={roleConfig}
-                        />
-                    </ResizableSection>
-                )}
-
-                {isOwner && (
-                    <ResizableSection
-                        id="danger"
-                        icon="alertTriangle"
-                        label="Danger Zone"
-                        color="red"
-                    >
-                        <DangerZone project={project} />
-                    </ResizableSection>
-                )}
-            </ResizableSectionsContainer>
+            {/* Section Navigation */}
+            <div className="settings-tab__sections">
+                <SectionNavGroup
+                    sections={settingsSections}
+                    defaultSectionId="preferences"
+                    size="sm"
+                />
+            </div>
         </div>
     );
 }

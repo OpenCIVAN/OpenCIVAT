@@ -18,7 +18,13 @@
 
   &__sections {
     flex: 1;
-    overflow-y: auto;
+    min-height: 0;
+    overflow: hidden;
+
+    // SectionNavGroup fills the container
+    .section-nav-group {
+      height: 100%;
+    }
   }
 
   // Section styles

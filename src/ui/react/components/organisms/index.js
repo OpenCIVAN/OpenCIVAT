@@ -18,6 +18,9 @@ export { WorkspaceOverlay } from './WorkspaceOverlay';
 // ResizableSections - Resizable panel sections
 export { ResizableSections } from './ResizableSections';
 
+// SectionNavGroup - Section group with dot navigation and scroll detection
+export { SectionNavGroup, useSectionNavSections } from './SectionNavGroup';
+
 // PropertyPanel - Property inspector/editor panel
 export { PropertyPanel } from './PropertyPanel';
 

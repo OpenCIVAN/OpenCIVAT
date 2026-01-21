@@ -11,6 +11,7 @@
 import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
 import { Icon, IconButton } from '@UI/react/components/atoms';
 import { Section } from '@UI/react/components/molecules/Section';
+import { SectionNavGroup } from '@UI/react/components/organisms';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { loadCanvasSize, saveCanvasSize } from '@UI/react/hooks/canvasState.js';
 import {
@@ -688,30 +689,18 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
     }
 
     // =========================================================================
-    // RENDER - MAIN
+    // SECTION NAV CONFIGURATION
     // =========================================================================
 
-    return (
-        <div className={`layout-tab ${className}`}>
-            {/* Header */}
-            <div className="panel-header panel-header--green">
-                <Icon name="layoutGrid" size={14} className="panel-header__icon" />
-                <span className="panel-header__title">Layout</span>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="layout-tab__content">
-                {/* Layout Mode Section - Grid vs Flow per spec */}
-                <Section
-                    title="Layout Mode"
-                    icon="layout"
-                    iconColorClass="icon-purple"
-                    collapsible
-                    defaultExpanded={true}
-                >
+    const layoutSections = useMemo(() => [
+        {
+            id: 'mode',
+            icon: 'layout',
+            label: 'Layout Mode',
+            color: '#c084fc', // purple
+            content: (
+                <>
                     <LayoutModeToggle mode={layoutMode} onChange={handleLayoutModeChange} />
-
-                    {/* Flow direction only shown in Flow mode */}
                     {layoutMode === LAYOUT_MODES.FLOW && (
                         <div className="layout-tab__flow-options">
                             <span className="layout-tab__flow-label">Fill Direction:</span>
@@ -733,34 +722,32 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                             </div>
                         </div>
                     )}
-                </Section>
-
-                {/* Canvas Size Section */}
-                <Section
-                    title="Canvas Size"
-                    icon="grid3x3"
-                    iconColorClass="icon-blue"
-                    collapsible
-                    defaultExpanded={true}
-                >
-                    <CanvasSizeControl
-                        rows={canvasSize.rows}
-                        cols={canvasSize.cols}
-                        onChangeRows={handleRowsChange}
-                        onChangeCols={handleColsChange}
-                        viewsAtRisk={viewsAtRisk}
-                        onCompactLayout={handleCompactLayout}
-                    />
-                </Section>
-
-                {/* New View Size Section */}
-                <Section
-                    title="New View Size"
-                    icon="plus"
-                    iconColorClass="icon-green"
-                    collapsible
-                    defaultExpanded={true}
-                >
+                </>
+            ),
+        },
+        {
+            id: 'canvas-size',
+            icon: 'grid3x3',
+            label: 'Canvas Size',
+            color: '#60a5fa', // blue
+            content: (
+                <CanvasSizeControl
+                    rows={canvasSize.rows}
+                    cols={canvasSize.cols}
+                    onChangeRows={handleRowsChange}
+                    onChangeCols={handleColsChange}
+                    viewsAtRisk={viewsAtRisk}
+                    onCompactLayout={handleCompactLayout}
+                />
+            ),
+        },
+        {
+            id: 'spawn-size',
+            icon: 'add',
+            label: 'New View Size',
+            color: '#34d399', // green
+            content: (
+                <>
                     <SpawnSizePicker
                         value={spawnSize}
                         onChange={setSpawnSize}
@@ -770,60 +757,81 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
                     <p className="layout-tab__hint">
                         Default size when creating new views
                     </p>
-                </Section>
+                </>
+            ),
+        },
+        {
+            id: 'quick-layouts',
+            icon: 'layoutDashboard',
+            label: 'Quick Layouts',
+            color: '#fbbf24', // amber
+            content: (
+                <div className="layout-tab__quick-layouts">
+                    {QUICK_LAYOUTS.map(layout => (
+                        <button
+                            key={layout.id}
+                            className="layout-tab__quick-btn"
+                            onClick={() => handleQuickLayout(layout)}
+                            title={layout.label}
+                        >
+                            <Icon name={layout.icon} size={14} />
+                            <span>{layout.label}</span>
+                        </button>
+                    ))}
+                </div>
+            ),
+        },
+        {
+            id: 'tools',
+            icon: 'mousePointer2',
+            label: 'Canvas Tools',
+            color: '#7dd3fc', // teal
+            content: <CanvasTools tool={tool} setTool={setTool} />,
+        },
+        {
+            id: 'templates',
+            icon: 'bookmark',
+            label: 'Saved Templates',
+            color: '#fb7185', // pink
+            itemCount: layoutTemplates.length || undefined,
+            content: (
+                <LayoutTemplates
+                    templates={layoutTemplates}
+                    onApply={handleApplyTemplate}
+                    onSave={handleSaveTemplate}
+                    onDelete={handleDeleteTemplate}
+                    onExport={handleExportTemplate}
+                    onImport={handleImportTemplate}
+                />
+            ),
+        },
+    ], [
+        layoutMode, handleLayoutModeChange, flowDirection, handleFlowDirectionChange,
+        canvasSize, handleRowsChange, handleColsChange, viewsAtRisk, handleCompactLayout,
+        spawnSize, customSpawnSize, handleQuickLayout, tool, layoutTemplates,
+        handleApplyTemplate, handleSaveTemplate, handleDeleteTemplate,
+        handleExportTemplate, handleImportTemplate,
+    ]);
 
-                {/* Quick Layouts Section */}
-                <Section
-                    title="Quick Layouts"
-                    icon="layoutDashboard"
-                    iconColorClass="icon-amber"
-                    collapsible
-                    defaultExpanded={true}
-                >
-                    <div className="layout-tab__quick-layouts">
-                        {QUICK_LAYOUTS.map(layout => (
-                            <button
-                                key={layout.id}
-                                className="layout-tab__quick-btn"
-                                onClick={() => handleQuickLayout(layout)}
-                                title={layout.label}
-                            >
-                                <Icon name={layout.icon} size={14} />
-                                <span>{layout.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </Section>
+    // =========================================================================
+    // RENDER - MAIN
+    // =========================================================================
 
-                {/* Canvas Tools Section */}
-                <Section
-                    title="Canvas Tools"
-                    icon="mousePointer2"
-                    iconColorClass="icon-teal"
-                    collapsible
-                    defaultExpanded={true}
-                >
-                    <CanvasTools tool={tool} setTool={setTool} />
-                </Section>
+    return (
+        <div className={`layout-tab ${className}`}>
+            {/* Header */}
+            <div className="panel-header panel-header--green">
+                <Icon name="layoutGrid" size={14} className="panel-header__icon" />
+                <span className="panel-header__title">Layout</span>
+            </div>
 
-                {/* Layout Templates Section */}
-                <Section
-                    title="Saved Templates"
-                    icon="bookmark"
-                    iconColorClass="icon-pink"
-                    collapsible
-                    defaultExpanded={false}
-                    badge={layoutTemplates.length > 0 ? layoutTemplates.length : undefined}
-                >
-                    <LayoutTemplates
-                        templates={layoutTemplates}
-                        onApply={handleApplyTemplate}
-                        onSave={handleSaveTemplate}
-                        onDelete={handleDeleteTemplate}
-                        onExport={handleExportTemplate}
-                        onImport={handleImportTemplate}
-                    />
-                </Section>
+            {/* Scrollable Content with Section Navigation */}
+            <div className="layout-tab__content">
+                <SectionNavGroup
+                    sections={layoutSections}
+                    defaultSectionId="mode"
+                    size="sm"
+                />
             </div>
 
             {/* Permanently Docked Canvas Navigator */}

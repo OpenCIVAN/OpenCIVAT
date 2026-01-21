@@ -70,3 +70,6 @@ export { DwellIndicator } from './DwellIndicator';
 
 // Slider - Range input control
 export { Slider } from './Slider';
+
+// NavDot - Navigation dot for section navigation
+export { NavDot } from './NavDot';

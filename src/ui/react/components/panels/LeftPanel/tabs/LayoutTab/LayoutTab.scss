@@ -35,25 +35,15 @@
 
 .layout-tab__content {
   flex: 1;
-  overflow-y: auto;
-  padding: $spacing-sm;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: $spacing-sm;
+  min-height: 0; // Important for nested flex scroll
 
-  // Custom scrollbar
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: $color-border-subtle;
-    border-radius: 3px;
-    &:hover {
-      background: $color-border-default;
-    }
+  // SectionNavGroup fills the content area
+  .section-nav-group {
+    flex: 1;
+    min-height: 0;
   }
 }
 
