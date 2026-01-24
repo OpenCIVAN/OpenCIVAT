@@ -67,6 +67,12 @@
         border-radius: 4px;
     }
 
+    // Sort dropdown in header
+    &__sort {
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
     // Empty state hint
     &__empty-hint {
         display: flex;

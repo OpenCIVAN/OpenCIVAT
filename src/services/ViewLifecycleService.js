@@ -352,10 +352,10 @@ class ViewLifecycleService {
     let dataset = datasetManager?.getDataset(datasetId);
     if (!dataset) {
       log.info(
-        `Dataset ${datasetId} not found locally, syncing from server...`
+        `Dataset ${datasetId} not found locally, fetching from server...`
       );
-      await datasetManager?.syncDatasetsFromServer?.();
-      dataset = datasetManager?.getDataset(datasetId);
+      // Fetch only this specific dataset, not all datasets
+      dataset = await datasetManager?.fetchDatasetById?.(datasetId);
     }
 
     if (!dataset) {

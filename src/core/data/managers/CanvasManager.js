@@ -745,42 +745,48 @@ export class CanvasManager extends BaseManager {
    * @returns {Promise<void>}
    */
   async removePlacement(placementId) {
+    // OPTIMISTIC UPDATE: Remove from local cache FIRST before API call
+    // This prevents race conditions where React re-renders while
+    // the placement still exists in the array
+    let removedPlacement = null;
+    let sourceCanvasId = null;
+
+    for (const canvas of this._canvases.values()) {
+      const idx = canvas.placements.findIndex((p) => p.id === placementId);
+      if (idx !== -1) {
+        removedPlacement = canvas.placements.splice(idx, 1)[0];
+        sourceCanvasId = canvas.id;
+        // Emit immediately so React updates right away
+        this._emit("placementRemoved", {
+          canvasId: canvas.id,
+          placement: removedPlacement,
+        });
+        break;
+      }
+    }
+
+    // If placement wasn't found locally, nothing to do
+    if (!removedPlacement) {
+      log.debug(`Placement ${placementId} not found locally, skipping removal`);
+      return;
+    }
+
+    // Now make the API call in the background
     try {
       await this._fetch(`/canvases/placements/${placementId}`, {
         method: "DELETE",
       });
-
-      // Update local cache
-      for (const canvas of this._canvases.values()) {
-        const idx = canvas.placements.findIndex((p) => p.id === placementId);
-        if (idx !== -1) {
-          const removed = canvas.placements.splice(idx, 1)[0];
-          this._emit("placementRemoved", {
-            canvasId: canvas.id,
-            placement: removed,
-          });
-          break;
-        }
-      }
     } catch (error) {
-      // 404 means placement is already gone - that's fine, just update local cache
+      // 404 means placement is already gone on server - that's fine
       if (error.message?.includes("404")) {
-        // Still try to remove from local cache in case it's out of sync
-        for (const canvas of this._canvases.values()) {
-          const idx = canvas.placements.findIndex((p) => p.id === placementId);
-          if (idx !== -1) {
-            const removed = canvas.placements.splice(idx, 1)[0];
-            this._emit("placementRemoved", {
-              canvasId: canvas.id,
-              placement: removed,
-            });
-            break;
-          }
-        }
-        return; // Don't throw - placement is gone which is what we wanted
+        log.debug(`Placement ${placementId} already removed from server`);
+        return;
       }
+
+      // For other errors, log but don't try to restore (optimistic update stands)
+      // This avoids complex rollback logic and the server will eventually sync
+      log.error(`Failed to delete placement ${placementId} from server:`, error);
       this._emit("error", { operation: "removePlacement", error });
-      throw error;
     }
   }
 

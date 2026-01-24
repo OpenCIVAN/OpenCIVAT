@@ -29,6 +29,17 @@ const STATUS_CONFIG = {
     trashed: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', label: 'Trashed', glow: false },
 };
 
+/**
+ * Format grid position as letter+number (e.g., A1, B2, C3)
+ * @param {number} col - Column index (0-based)
+ * @param {number} row - Row index (0-based)
+ * @returns {string} Formatted position like "A1"
+ */
+function formatPosition(col, row) {
+    const letter = String.fromCharCode(65 + col); // A=0, B=1, C=2...
+    return `${letter}${row + 1}`;
+}
+
 // =============================================================================
 // TOOL BUTTON COMPONENT
 // =============================================================================
@@ -453,7 +464,7 @@ export const ViewItem = memo(function ViewItem({
                         {view.position && (
                             <div className="view-item__position-badge">
                                 <Icon name="grid" size={isVR ? 12 : 8} />
-                                <span>{view.position.col},{view.position.row}</span>
+                                <span>{formatPosition(view.position.col, view.position.row)}</span>
                             </div>
                         )}
 

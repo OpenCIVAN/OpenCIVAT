@@ -19,6 +19,7 @@ import './PanelFooter.scss';
 /**
  * @typedef {Object} PanelFooterProps
  * @property {() => void} [onHelp] - Help button click handler
+ * @property {() => void} [onNewFolder] - New folder button click handler
  * @property {() => void} [onUpload] - Upload button click handler
  * @property {() => void} [onRefresh] - Refresh button click handler
  * @property {boolean} [isUploading=false] - Whether upload is in progress
@@ -35,6 +36,7 @@ import './PanelFooter.scss';
  */
 export const PanelFooter = memo(function PanelFooter({
     onHelp,
+    onNewFolder,
     onUpload,
     onRefresh,
     isUploading = false,
@@ -62,6 +64,20 @@ export const PanelFooter = memo(function PanelFooter({
                         aria-label="Help"
                     >
                         <Icon name="helpCircle" size={isVR ? 20 : 16} />
+                    </button>
+                </Tooltip>
+            )}
+
+            {/* New Folder button */}
+            {onNewFolder && (
+                <Tooltip content="New Folder">
+                    <button
+                        type="button"
+                        className="panel-footer__action panel-footer__action--folder"
+                        onClick={onNewFolder}
+                        aria-label="New Folder"
+                    >
+                        <Icon name="folderPlus" size={isVR ? 20 : 16} />
                     </button>
                 </Tooltip>
             )}

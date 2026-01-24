@@ -35,18 +35,33 @@
  * <FilesTabV2 workspaceId="ws-1" />
  */
 
-import React, { useCallback, useRef, useState, useMemo } from 'react';
-import { Icon, IconButton, Tooltip } from '@UI/react/components/atoms';
+import React, { useCallback, useRef, useState, useMemo, useEffect } from 'react';
+import { Icon } from '@UI/react/components/atoms';
 import { PanelFooter } from '@UI/react/components/molecules/PanelFooter';
 import { StarredSection, TabbedFilesBrowser, CompactFilesPanel } from './sections';
 import { FileContextMenu } from './components/FileContextMenu';
 import { UploadDropzone } from './components/UploadDropzone';
 import { GlobalFiltersBar } from './components/GlobalFiltersBar';
+import { HelpPanel } from './components/HelpPanel';
+import { NewFolderDialog } from './components/NewFolderDialog';
+import { FileDetailsModal } from '@UI/react/components/modals/FileDetailsModal';
 import { useFilesTab } from './hooks/useFilesTab';
 import { useResponsiveMode } from '@UI/react/hooks/useResponsiveMode';
 import { useGlobalFilters } from '@UI/react/hooks/useGlobalFilters';
+import { useTagAnalysis, DEFAULT_TAG_CATEGORIES } from '@UI/react/hooks/useTagAnalysis';
 import { useAdaptive } from '@UI/react/context';
 import './FilesTab.scss';
+
+// Sample tags for development (would come from API in production)
+const SAMPLE_TAGS = [
+    { id: 'pre-op', name: 'Pre-op', categoryId: 'phase' },
+    { id: 'post-op', name: 'Post-op', categoryId: 'phase' },
+    { id: 'baseline', name: 'Baseline', categoryId: 'phase' },
+    { id: 'pending', name: 'Pending Review', categoryId: 'status' },
+    { id: 'approved', name: 'Approved', categoryId: 'status' },
+    { id: 'control', name: 'Control', categoryId: 'cohort' },
+    { id: 'treatment', name: 'Treatment', categoryId: 'cohort' },
+];
 
 /**
  * @typedef {Object} FilesTabV2Props
@@ -76,14 +91,19 @@ export function FilesTabV2({
     // Responsive mode detection
     const { dimensions, isCompact, showLabels } = useResponsiveMode(containerRef);
 
-    // Global filters state
+    // Tag state - would come from API in production
+    const [projectTags, setProjectTags] = useState(SAMPLE_TAGS);
+    const allowTagCreation = true; // From project settings
+
+    // Global filters state (with tag support)
     const {
         filters,
         setFilters,
         applyFilters,
         hasActiveFilters,
+        activeFilterCount,
         clearFilters,
-    } = useGlobalFilters();
+    } = useGlobalFilters({ tags: projectTags });
 
     // Core files tab logic
     const {
@@ -96,12 +116,24 @@ export function FilesTabV2({
         isLoading,
         error,
 
+        // Workspace files
+        workspaceFiles,
+        availableFiles,
+        workspaceFileCount,
+        isInWorkspace,
+
+        // Folders
+        folders,
+        createFolder,
+
         // Actions
         handleStar,
         handleDragStart,
         handleDoubleClick,
         handleUpload,
         refetch,
+        addToWorkspace,
+        removeFromWorkspace,
 
         // Context menu
         contextMenu,
@@ -121,12 +153,33 @@ export function FilesTabV2({
         mockError,
     });
 
+    // Tag analysis for the dropdown and file display (after allFiles is available)
+    const {
+        tagsByCategory,
+        getCategoryForTag,
+    } = useTagAnalysis(allFiles, projectTags, DEFAULT_TAG_CATEGORIES);
+
+    // Handle tag creation
+    const handleCreateTag = useCallback(({ name, categoryId }) => {
+        const newTag = {
+            id: `tag-${Date.now()}`,
+            name,
+            categoryId,
+        };
+        setProjectTags(prev => [...prev, newTag]);
+        // In production, this would call the API
+    }, []);
+
     // Section states
     const [starredExpanded, setStarredExpanded] = useState(true);
     const [starredHeight, setStarredHeight] = useState(140);
-    const [activeTab, setActiveTab] = useState('all');
+    const [activeTab, setActiveTab] = useState('workspace');
     const [isResizing, setIsResizing] = useState(false);
     const [selectedFileId, setSelectedFileId] = useState(null);
+    const [showHelpPanel, setShowHelpPanel] = useState(false);
+    const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+    const [showFileDetails, setShowFileDetails] = useState(false);
+    const [fileDetailsTarget, setFileDetailsTarget] = useState(null);
 
     // Starred section resize handler
     const handleResizeStart = useCallback((e) => {
@@ -162,8 +215,32 @@ export function FilesTabV2({
 
     // Help click handler
     const handleHelp = useCallback(() => {
-        // Show help panel
+        setShowHelpPanel(prev => !prev);
     }, []);
+
+    // New folder handler
+    const handleNewFolder = useCallback(() => {
+        setShowNewFolderDialog(true);
+    }, []);
+
+    // Create folder handler
+    const handleCreateFolder = useCallback(async ({ name, parentId, color }) => {
+        try {
+            await createFolder({ name, parentId, color });
+        } catch (err) {
+            console.error('Failed to create folder:', err);
+        }
+    }, [createFolder]);
+
+    // Wrap context action to intercept "info" for file details
+    const wrappedContextAction = useCallback((action, file, operation) => {
+        if (action === 'info') {
+            setFileDetailsTarget(file);
+            setShowFileDetails(true);
+            return;
+        }
+        handleContextAction(action, file, operation);
+    }, [handleContextAction]);
 
     // Format loaded datasets with views for display
     const loadedDatasetsWithViews = useMemo(() => {
@@ -172,11 +249,6 @@ export function FilesTabV2({
             views: ds.views || [], // Add views array if not present
         }));
     }, [loadedDatasetsFormatted]);
-
-    // Folders (placeholder - would come from server)
-    const folders = useMemo(() => {
-        return []; // TODO: Implement folder support
-    }, []);
 
     const classList = [
         'files-tab',
@@ -208,6 +280,86 @@ export function FilesTabV2({
         }
     }, [setIsDragOver]);
 
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Don't trigger shortcuts when typing in inputs
+            const target = e.target;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                // Allow Escape to blur and clear filters
+                if (e.key === 'Escape') {
+                    target.blur();
+                    clearFilters();
+                }
+                return;
+            }
+
+            // Don't trigger if any modal is open
+            if (showHelpPanel || showNewFolderDialog) {
+                if (e.key === 'Escape') {
+                    setShowHelpPanel(false);
+                    setShowNewFolderDialog(false);
+                }
+                return;
+            }
+
+            switch (e.key) {
+                case '/':
+                    // Focus search input
+                    e.preventDefault();
+                    const searchInput = containerRef.current?.querySelector('.global-filters-bar__search-input');
+                    searchInput?.focus();
+                    break;
+                case 'Escape':
+                    // Clear filters
+                    clearFilters();
+                    break;
+                case 's':
+                case 'S':
+                    // Toggle starred section
+                    if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        setStarredExpanded(prev => !prev);
+                    }
+                    break;
+                case 'n':
+                case 'N':
+                    // New folder
+                    if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        setShowNewFolderDialog(true);
+                    }
+                    break;
+                case 'u':
+                case 'U':
+                    // Upload files
+                    if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        document.getElementById('file-upload-input')?.click();
+                    }
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        // Only add listener if container is present
+        const container = containerRef.current;
+        if (container) {
+            container.addEventListener('keydown', handleKeyDown);
+            // Make container focusable
+            if (!container.hasAttribute('tabindex')) {
+                container.setAttribute('tabindex', '-1');
+            }
+        }
+
+        return () => {
+            if (container) {
+                container.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+    }, [clearFilters, showHelpPanel, showNewFolderDialog]);
+
     return (
         <div
             className={classList}
@@ -221,26 +373,8 @@ export function FilesTabV2({
                 <Icon name="folderOpen" size={14} className="panel-header__icon" />
                 <span className="panel-header__title">Files</span>
                 <div className="panel-header__spacer" />
-                <span className="panel-header__info">{allFiles.length} total</span>
-                <div className="panel-header__actions">
-                    <Tooltip content="New Folder" placement="bottom">
-                        <IconButton
-                            icon="folderPlus"
-                            label="New Folder"
-                            size="xs"
-                            variant="ghost"
-                        />
-                    </Tooltip>
-                </div>
+                <span className="panel-header__count">{allFiles.length} files</span>
             </div>
-
-            {/* Loading indicator */}
-            {isLoading && (
-                <div className="panel-loading">
-                    <Icon name="loader" size={16} className="spin" />
-                    <span>Loading files...</span>
-                </div>
-            )}
 
             {/* Error message */}
             {error && (
@@ -258,7 +392,12 @@ export function FilesTabV2({
                     filters={filters}
                     onFiltersChange={setFilters}
                     hasActiveFilters={hasActiveFilters}
+                    activeFilterCount={activeFilterCount}
                     onClearFilters={clearFilters}
+                    tags={projectTags}
+                    tagsByCategory={tagsByCategory}
+                    allowTagCreation={allowTagCreation}
+                    onCreateTag={handleCreateTag}
                 />
             )}
 
@@ -268,13 +407,14 @@ export function FilesTabV2({
                     /* Compact Mode: 3-tab layout */
                     <CompactFilesPanel
                         starredFiles={starredFiles}
-                        loadedDatasets={loadedDatasetsWithViews}
-                        allFiles={allFiles}
+                        workspaceFiles={workspaceFiles}
+                        availableFiles={availableFiles}
                         containerWidth={dimensions.width}
                         onToggleStar={handleStar}
                         onFileClick={handleFileClick}
                         onFileDoubleClick={handleDoubleClick}
-                        onViewClick={handleViewClick}
+                        onAddToWorkspace={addToWorkspace}
+                        onRemoveFromWorkspace={removeFromWorkspace}
                     />
                 ) : (
                     /* Full Mode: Starred + Tabbed Browser */
@@ -294,10 +434,13 @@ export function FilesTabV2({
                             onDragStart={handleDragStart}
                             onContextMenu={handleContextMenu}
                             onMenuClick={handleMenuClick}
+                            tags={projectTags}
+                            getCategoryForTag={getCategoryForTag}
                         />
 
                         <TabbedFilesBrowser
-                            loadedDatasets={loadedDatasetsWithViews}
+                            workspaceFiles={workspaceFiles}
+                            availableFiles={availableFiles}
                             allFiles={allFiles}
                             folders={folders}
                             filters={filters}
@@ -311,7 +454,9 @@ export function FilesTabV2({
                             onDragStart={handleDragStart}
                             onContextMenu={handleContextMenu}
                             onMenuClick={handleMenuClick}
-                            onViewClick={handleViewClick}
+                            onAddToWorkspace={addToWorkspace}
+                            tags={projectTags}
+                            getCategoryForTag={getCategoryForTag}
                         />
                     </>
                 )}
@@ -320,6 +465,7 @@ export function FilesTabV2({
             {/* Footer - sticks to bottom */}
             <PanelFooter
                 onHelp={handleHelp}
+                onNewFolder={handleNewFolder}
                 onUpload={() => document.getElementById('file-upload-input')?.click()}
                 onRefresh={refetch}
             />
@@ -344,6 +490,30 @@ export function FilesTabV2({
                 setIsDragOver={setIsDragOver}
             />
 
+            {/* Loading overlay */}
+            {isLoading && (
+                <div className="panel-loading-overlay">
+                    <div className="panel-loading-overlay__content">
+                        <Icon name="loader" size={24} className="spin" />
+                        <span>Loading files...</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Help panel */}
+            <HelpPanel
+                isOpen={showHelpPanel}
+                onClose={() => setShowHelpPanel(false)}
+            />
+
+            {/* New folder dialog */}
+            <NewFolderDialog
+                isOpen={showNewFolderDialog}
+                onClose={() => setShowNewFolderDialog(false)}
+                onSubmit={handleCreateFolder}
+                folders={folders}
+            />
+
             {/* Context menu */}
             {contextMenu && (
                 <FileContextMenu
@@ -351,9 +521,29 @@ export function FilesTabV2({
                     y={contextMenu.y}
                     file={contextMenu.file}
                     onClose={closeContextMenu}
-                    onAction={handleContextAction}
+                    onAction={wrappedContextAction}
+                    isInWorkspace={isInWorkspace(contextMenu.file?.id)}
                 />
             )}
+
+            {/* File details modal */}
+            <FileDetailsModal
+                isOpen={showFileDetails}
+                file={fileDetailsTarget}
+                onClose={() => {
+                    setShowFileDetails(false);
+                    setFileDetailsTarget(null);
+                }}
+                onOpen={(file) => handleDoubleClick(file)}
+                onDownload={(file) => {
+                    // TODO: Implement file download
+                    console.log('Download file:', file);
+                }}
+                onDelete={(file) => {
+                    // TODO: Implement file deletion
+                    console.log('Delete file:', file);
+                }}
+            />
         </div>
     );
 }

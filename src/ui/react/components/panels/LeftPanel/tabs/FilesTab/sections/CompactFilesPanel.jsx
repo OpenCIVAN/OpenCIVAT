@@ -1,13 +1,18 @@
 /**
  * @file CompactFilesPanel.jsx
- * @description Compact mode panel with 3 tabs (Starred/Loaded/All).
+ * @description Compact mode panel with 3 tabs (Starred/Workspace/Available).
  * Used when container height is below threshold.
+ *
+ * Tabs:
+ * - Starred: User's starred files (filter bypass enabled)
+ * - Workspace: Files added to current workspace
+ * - Available: All project files not yet in workspace
  *
  * @example
  * <CompactFilesPanel
  *   starredFiles={starredFiles}
- *   loadedDatasets={loadedDatasets}
- *   allFiles={allFiles}
+ *   workspaceFiles={workspaceFiles}
+ *   availableFiles={availableFiles}
  *   containerWidth={containerWidth}
  * />
  */
@@ -18,7 +23,6 @@ import { TabButton } from '@UI/react/components/molecules/TabButton';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { FileItemList } from '../components/FileItem';
-import { DatasetTreeItem } from '../components/DatasetTreeItem';
 import { useAdaptive } from '@UI/react/context';
 import { LABEL_WIDTH_THRESHOLD } from '@UI/react/constants/filesTabConfig.js';
 import './CompactFilesPanel.scss';
@@ -26,14 +30,15 @@ import './CompactFilesPanel.scss';
 /**
  * @typedef {Object} CompactFilesPanelProps
  * @property {Array} starredFiles - Starred files
- * @property {Array} loadedDatasets - Loaded datasets with views
- * @property {Array} allFiles - All files in project
+ * @property {Array} workspaceFiles - Files added to current workspace
+ * @property {Array} availableFiles - Files not yet in workspace
  * @property {number} containerWidth - Container width in pixels
  * @property {(fileId: string) => void} [onFileLoad] - File load handler
  * @property {(fileId: string) => void} [onToggleStar] - Toggle star handler
  * @property {(file: Object) => void} [onFileClick] - File click handler
  * @property {(file: Object) => void} [onFileDoubleClick] - File double-click handler
- * @property {(viewId: string) => void} [onViewClick] - View click handler
+ * @property {(fileId: string) => void} [onAddToWorkspace] - Add file to workspace handler
+ * @property {(fileId: string) => void} [onRemoveFromWorkspace] - Remove file from workspace handler
  * @property {string} [className] - Additional CSS classes
  */
 
@@ -45,48 +50,37 @@ import './CompactFilesPanel.scss';
  */
 export const CompactFilesPanel = memo(function CompactFilesPanel({
     starredFiles = [],
-    loadedDatasets = [],
-    allFiles = [],
+    workspaceFiles = [],
+    availableFiles = [],
     containerWidth = 320,
     onFileLoad,
     onToggleStar,
     onFileClick,
     onFileDoubleClick,
-    onViewClick,
+    onAddToWorkspace,
+    onRemoveFromWorkspace,
     className = '',
 }) {
     const { isVR } = useAdaptive();
 
     // Determine initial tab
-    const initialTab = starredFiles.length > 0 ? 'starred' : 'loaded';
+    const initialTab = starredFiles.length > 0 ? 'starred' : 'workspace';
     const [activeTab, setActiveTab] = useState(initialTab);
 
-    // Expanded datasets (for Loaded tab)
-    const [expandedDatasets, setExpandedDatasets] = useState(new Set());
-
-    // Search query (for All tab)
+    // Search query (for available tab)
     const [searchQuery, setSearchQuery] = useState('');
-
-    // Toggle dataset expansion
-    const toggleDataset = useCallback((id) => {
-        setExpandedDatasets(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-    }, []);
 
     // Show labels based on width
     const showLabels = containerWidth > LABEL_WIDTH_THRESHOLD;
 
     // Filtered files for search
-    const filteredFiles = useMemo(() => {
-        if (!searchQuery.trim()) return allFiles;
+    const filteredAvailableFiles = useMemo(() => {
+        if (!searchQuery.trim()) return availableFiles;
         const q = searchQuery.toLowerCase();
-        return allFiles.filter(f =>
+        return availableFiles.filter(f =>
             (f.name || f.filename || '').toLowerCase().includes(q)
         );
-    }, [allFiles, searchQuery]);
+    }, [availableFiles, searchQuery]);
 
     const classList = [
         'compact-files-panel',
@@ -108,31 +102,31 @@ export const CompactFilesPanel = memo(function CompactFilesPanel({
                     iconOnly={!showLabels}
                 />
                 <TabButton
-                    icon="database"
-                    label={showLabels ? 'Loaded' : ''}
-                    active={activeTab === 'loaded'}
-                    badge={loadedDatasets.length}
+                    icon="briefcase"
+                    label={showLabels ? 'Workspace' : ''}
+                    active={activeTab === 'workspace'}
+                    badge={workspaceFiles.length}
                     color="teal"
-                    onClick={() => setActiveTab('loaded')}
+                    onClick={() => setActiveTab('workspace')}
                     iconOnly={!showLabels}
                 />
                 <TabButton
                     icon="folder"
-                    label={showLabels ? 'All' : ''}
-                    active={activeTab === 'all'}
-                    badge={allFiles.length}
+                    label={showLabels ? 'Available' : ''}
+                    active={activeTab === 'available'}
+                    badge={availableFiles.length}
                     color="blue"
-                    onClick={() => setActiveTab('all')}
+                    onClick={() => setActiveTab('available')}
                     iconOnly={!showLabels}
                 />
             </div>
 
-            {/* Search (for All tab) */}
-            {activeTab === 'all' && (
+            {/* Search (for available tab) */}
+            {activeTab === 'available' && (
                 <SearchBar
                     value={searchQuery}
                     onChange={setSearchQuery}
-                    placeholder="Search..."
+                    placeholder="Search available files..."
                 />
             )}
 
@@ -158,42 +152,47 @@ export const CompactFilesPanel = memo(function CompactFilesPanel({
                     )
                 )}
 
-                {/* Loaded Tab */}
-                {activeTab === 'loaded' && (
-                    loadedDatasets.length > 0 ? (
-                        loadedDatasets.map(dataset => (
-                            <DatasetTreeItem
-                                key={dataset.id}
-                                dataset={dataset}
-                                expanded={expandedDatasets.has(dataset.id)}
-                                onToggle={() => toggleDataset(dataset.id)}
-                                onViewClick={onViewClick}
-                            />
-                        ))
-                    ) : (
-                        <EmptyState
-                            icon="database"
-                            title="No datasets loaded"
-                        />
-                    )
-                )}
-
-                {/* All Files Tab */}
-                {activeTab === 'all' && (
-                    filteredFiles.length > 0 ? (
-                        filteredFiles.map(file => (
+                {/* Workspace Tab */}
+                {activeTab === 'workspace' && (
+                    workspaceFiles.length > 0 ? (
+                        workspaceFiles.map(file => (
                             <FileItemList
                                 key={file.id}
                                 file={file}
                                 onSelect={onFileClick}
                                 onDoubleClick={onFileDoubleClick}
                                 onStar={onToggleStar}
+                                showRemoveFromWorkspace
+                                onRemoveFromWorkspace={onRemoveFromWorkspace}
+                            />
+                        ))
+                    ) : (
+                        <EmptyState
+                            icon="briefcase"
+                            title="No files in workspace"
+                            subtitle="Add files from Available tab"
+                        />
+                    )
+                )}
+
+                {/* Available Files Tab */}
+                {activeTab === 'available' && (
+                    filteredAvailableFiles.length > 0 ? (
+                        filteredAvailableFiles.map(file => (
+                            <FileItemList
+                                key={file.id}
+                                file={file}
+                                onSelect={onFileClick}
+                                onDoubleClick={onFileDoubleClick}
+                                onStar={onToggleStar}
+                                showAddToWorkspace
+                                onAddToWorkspace={onAddToWorkspace}
                             />
                         ))
                     ) : (
                         <EmptyState
                             icon="folder"
-                            title="No files found"
+                            title={searchQuery ? 'No files found' : 'No available files'}
                         />
                     )
                 )}

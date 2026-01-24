@@ -1,6 +1,10 @@
 /**
  * @file TabbedFilesBrowser.stories.jsx
- * @description Storybook stories for the TabbedFilesBrowser component
+ * @description Storybook stories for the TabbedFilesBrowser component.
+ *
+ * TabbedFilesBrowser has two tabs:
+ * - Workspace: Files added to the current workspace
+ * - Available: Project files not yet added to workspace
  */
 
 import React, { useState } from 'react';
@@ -18,36 +22,24 @@ export default {
     ],
 };
 
-const mockLoadedDatasets = [
-    {
-        id: 'ds1',
-        name: 'brain_scan.nii.gz',
-        type: 'nifti',
-        size: '256 MB',
-        views: [
-            { id: 'v1', name: 'Main View', color: '#3b82f6', active: true, scope: 'personal' },
-            { id: 'v2', name: 'Sagittal', color: '#10b981', active: false, scope: 'shared' },
-        ],
-    },
-    {
-        id: 'ds2',
-        name: 'ct_chest.dcm',
-        type: 'dicom',
-        size: '512 MB',
-        views: [
-            { id: 'v3', name: 'Lung View', color: '#f59e0b', active: false, scope: 'workspace' },
-        ],
-    },
+// Mock data for workspace files (files user has added to their workspace)
+const mockWorkspaceFiles = [
+    { id: 'f1', name: 'brain_scan.nii.gz', fileType: 'nifti', size: '256 MB', starred: true, folderId: null, loaded: true, loadState: 'loaded' },
+    { id: 'f2', name: 'ct_chest.dcm', fileType: 'dicom', size: '512 MB', starred: false, folderId: null, loaded: false, loadState: 'stored' },
+    { id: 'f3', name: 'analysis_data.csv', fileType: 'csv', size: '1.2 MB', starred: false, folderId: null, loaded: false, loadState: 'stored' },
 ];
 
-const mockAllFiles = [
-    { id: 'f1', name: 'brain_scan.nii.gz', fileType: 'nifti', size: '256 MB', folderId: null, modifiedAt: '2024-01-15' },
-    { id: 'f2', name: 'ct_chest.dcm', fileType: 'dicom', size: '512 MB', folderId: null, modifiedAt: '2024-01-14' },
-    { id: 'f3', name: 'analysis_data.csv', fileType: 'csv', size: '1.2 MB', folderId: null, modifiedAt: '2024-01-13' },
-    { id: 'f4', name: 'report.pdf', fileType: 'pdf', size: '2.4 MB', folderId: 'folder1', modifiedAt: '2024-01-12' },
-    { id: 'f5', name: 'screenshot.png', fileType: 'png', size: '340 KB', folderId: 'folder1', modifiedAt: '2024-01-11' },
-    { id: 'f6', name: 'spine_model.vtp', fileType: 'vtp', size: '64 MB', folderId: 'folder2', modifiedAt: '2024-01-10' },
+// Mock data for available files (files not yet in workspace)
+const mockAvailableFiles = [
+    { id: 'f4', name: 'report.pdf', fileType: 'pdf', size: '2.4 MB', starred: false, folderId: 'folder1' },
+    { id: 'f5', name: 'screenshot.png', fileType: 'png', size: '340 KB', starred: false, folderId: 'folder1' },
+    { id: 'f6', name: 'spine_model.vtp', fileType: 'vtp', size: '64 MB', starred: false, folderId: 'folder2' },
+    { id: 'f7', name: 'heart_data.nii.gz', fileType: 'nifti', size: '384 MB', starred: false, folderId: null },
+    { id: 'f8', name: 'results.csv', fileType: 'csv', size: '856 KB', starred: false, folderId: null },
 ];
+
+// All files combined (for folder navigation context)
+const mockAllFiles = [...mockWorkspaceFiles, ...mockAvailableFiles];
 
 const mockFolders = [
     { id: 'folder1', name: 'Raw Scans', parentId: null },
@@ -55,138 +47,211 @@ const mockFolders = [
     { id: 'folder3', name: 'Session 1', parentId: 'folder1' },
 ];
 
+// Sample tags for tag display
+const mockTags = [
+    { id: 'pre-op', name: 'Pre-op', categoryId: 'phase' },
+    { id: 'baseline', name: 'Baseline', categoryId: 'phase' },
+    { id: 'approved', name: 'Approved', categoryId: 'status' },
+];
+
+const mockTagCategories = {
+    phase: { id: 'phase', name: 'Phase', color: '#3b82f6' },
+    status: { id: 'status', name: 'Status', color: '#10b981' },
+};
+
+const getCategoryForTag = (tag) => mockTagCategories[tag?.categoryId] || null;
+
 const Template = (args) => {
-    const [activeTab, setActiveTab] = useState(args.activeTab || 'all');
+    const [activeTab, setActiveTab] = useState(args.activeTab || 'workspace');
+    const [selectedFileId, setSelectedFileId] = useState(null);
 
     return (
         <TabbedFilesBrowser
             {...args}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            onFileClick={(file) => console.log('File clicked:', file.name)}
-            onFileDoubleClick={(file) => console.log('File double-clicked:', file.name)}
+            selectedFileId={selectedFileId}
+            onSelect={setSelectedFileId}
+            onDoubleClick={(file) => console.log('Double-click:', file.name)}
             onToggleStar={(fileId) => console.log('Toggle star:', fileId)}
-            onViewClick={(viewId) => console.log('View clicked:', viewId)}
+            onDragStart={(e, file) => console.log('Drag start:', file.name)}
+            onContextMenu={(e, file) => console.log('Context menu:', file.name)}
+            onMenuClick={(e, file) => console.log('Menu click:', file.name)}
+            onAddToWorkspace={(fileId) => console.log('Add to workspace:', fileId)}
+            tags={mockTags}
+            getCategoryForTag={getCategoryForTag}
         />
     );
 };
 
-export const AllFilesTab = Template.bind({});
-AllFilesTab.args = {
-    loadedDatasets: mockLoadedDatasets,
+export const WorkspaceTab = Template.bind({});
+WorkspaceTab.args = {
+    workspaceFiles: mockWorkspaceFiles,
+    availableFiles: mockAvailableFiles,
     allFiles: mockAllFiles,
     folders: mockFolders,
-    activeTab: 'all',
+    activeTab: 'workspace',
 };
 
-export const LoadedTab = Template.bind({});
-LoadedTab.args = {
-    loadedDatasets: mockLoadedDatasets,
+export const AvailableTab = Template.bind({});
+AvailableTab.args = {
+    workspaceFiles: mockWorkspaceFiles,
+    availableFiles: mockAvailableFiles,
     allFiles: mockAllFiles,
     folders: mockFolders,
-    activeTab: 'loaded',
+    activeTab: 'available',
 };
 
-export const EmptyLoadedTab = Template.bind({});
-EmptyLoadedTab.args = {
-    loadedDatasets: [],
+export const EmptyWorkspace = Template.bind({});
+EmptyWorkspace.args = {
+    workspaceFiles: [],
+    availableFiles: mockAvailableFiles,
+    allFiles: mockAvailableFiles,
+    folders: mockFolders,
+    activeTab: 'workspace',
+};
+
+export const AllFilesInWorkspace = Template.bind({});
+AllFilesInWorkspace.args = {
+    workspaceFiles: mockAllFiles,
+    availableFiles: [],
     allFiles: mockAllFiles,
     folders: mockFolders,
-    activeTab: 'loaded',
-};
-
-export const EmptyAllFiles = Template.bind({});
-EmptyAllFiles.args = {
-    loadedDatasets: mockLoadedDatasets,
-    allFiles: [],
-    folders: [],
-    activeTab: 'all',
+    activeTab: 'available',
 };
 
 export const WithFolders = Template.bind({});
 WithFolders.args = {
-    loadedDatasets: mockLoadedDatasets,
+    workspaceFiles: mockWorkspaceFiles,
+    availableFiles: mockAvailableFiles,
     allFiles: mockAllFiles,
     folders: mockFolders,
-    activeTab: 'all',
+    activeTab: 'workspace',
 };
 
-export const ManyLoadedDatasets = Template.bind({});
-ManyLoadedDatasets.args = {
-    loadedDatasets: [
-        ...mockLoadedDatasets,
-        {
-            id: 'ds3',
-            name: 'spine_model.vtp',
-            type: 'vtp',
-            size: '64 MB',
-            views: [
-                { id: 'v4', name: '3D Render', color: '#ef4444', active: false, scope: 'project' },
-            ],
-        },
-        {
-            id: 'ds4',
-            name: 'heart_scan.nii.gz',
-            type: 'nifti',
-            size: '384 MB',
-            views: [
-                { id: 'v5', name: 'Cardiac View', color: '#8b5cf6', active: true, scope: 'personal' },
-                { id: 'v6', name: 'Flow Analysis', color: '#ec4899', active: false, scope: 'shared' },
-            ],
-        },
+export const NoFolders = Template.bind({});
+NoFolders.args = {
+    workspaceFiles: mockWorkspaceFiles.map(f => ({ ...f, folderId: null })),
+    availableFiles: mockAvailableFiles.map(f => ({ ...f, folderId: null })),
+    allFiles: mockAllFiles.map(f => ({ ...f, folderId: null })),
+    folders: [],
+    activeTab: 'workspace',
+};
+
+export const ManyWorkspaceFiles = Template.bind({});
+ManyWorkspaceFiles.args = {
+    workspaceFiles: [
+        ...mockWorkspaceFiles,
+        { id: 'f9', name: 'patient_notes.md', fileType: 'md', size: '12 KB', starred: false, loaded: false },
+        { id: 'f10', name: 'scan_2023.nii.gz', fileType: 'nifti', size: '384 MB', starred: true, loaded: true, loadState: 'loaded' },
+        { id: 'f11', name: 'volume_data.vti', fileType: 'vti', size: '128 MB', starred: false, loaded: false },
+        { id: 'f12', name: 'documentation.pdf', fileType: 'pdf', size: '4.2 MB', starred: false, loaded: false },
     ],
+    availableFiles: mockAvailableFiles,
     allFiles: mockAllFiles,
     folders: mockFolders,
-    activeTab: 'loaded',
+    activeTab: 'workspace',
 };
 
-export const ManyFiles = Template.bind({});
-ManyFiles.args = {
-    loadedDatasets: mockLoadedDatasets,
-    allFiles: [
-        ...mockAllFiles,
-        { id: 'f7', name: 'patient_notes.md', fileType: 'md', size: '12 KB', folderId: null, modifiedAt: '2024-01-09' },
-        { id: 'f8', name: 'scan_2023.nii.gz', fileType: 'nifti', size: '384 MB', folderId: null, modifiedAt: '2024-01-08' },
-        { id: 'f9', name: 'results.csv', fileType: 'csv', size: '856 KB', folderId: null, modifiedAt: '2024-01-07' },
-        { id: 'f10', name: 'volume_data.vti', fileType: 'vti', size: '128 MB', folderId: null, modifiedAt: '2024-01-06' },
-        { id: 'f11', name: 'documentation.pdf', fileType: 'pdf', size: '4.2 MB', folderId: null, modifiedAt: '2024-01-05' },
+export const WithLoadingFile = Template.bind({});
+WithLoadingFile.args = {
+    workspaceFiles: [
+        { id: 'f1', name: 'brain_scan.nii.gz', fileType: 'nifti', size: '256 MB', starred: true, loaded: false, loadState: 'loading' },
+        { id: 'f2', name: 'ct_chest.dcm', fileType: 'dicom', size: '512 MB', starred: false, loaded: true, loadState: 'loaded' },
+        { id: 'f3', name: 'analysis_data.csv', fileType: 'csv', size: '1.2 MB', starred: false, loaded: false, loadState: 'stored' },
     ],
+    availableFiles: mockAvailableFiles,
+    allFiles: mockAllFiles,
     folders: mockFolders,
-    activeTab: 'all',
+    activeTab: 'workspace',
 };
 
-export const Interactive = () => {
-    const [activeTab, setActiveTab] = useState('all');
-    const [starredIds, setStarredIds] = useState(new Set(['f1', 'f3']));
+export const WithProcessingFile = Template.bind({});
+WithProcessingFile.args = {
+    workspaceFiles: [
+        { id: 'f1', name: 'brain_scan.nii.gz', fileType: 'nifti', size: '256 MB', starred: true, loaded: true, loadState: 'processing' },
+        { id: 'f2', name: 'ct_chest.dcm', fileType: 'dicom', size: '512 MB', starred: false, loaded: true, loadState: 'loaded' },
+    ],
+    availableFiles: mockAvailableFiles,
+    allFiles: mockAllFiles,
+    folders: mockFolders,
+    activeTab: 'workspace',
+};
 
-    const handleToggleStar = (fileId) => {
-        setStarredIds(prev => {
-            const next = new Set(prev);
-            next.has(fileId) ? next.delete(fileId) : next.add(fileId);
-            return next;
-        });
+export const WithFilters = () => {
+    const [activeTab, setActiveTab] = useState('workspace');
+
+    const filters = {
+        searchQuery: 'brain',
+        typeFilters: ['nifti'],
+        tagFilters: [],
     };
 
-    const filesWithStarred = mockAllFiles.map(f => ({
-        ...f,
-        starred: starredIds.has(f.id),
-    }));
+    const applyFilters = (items) => {
+        return items.filter(item => {
+            const matchesSearch = (item.name || '').toLowerCase().includes(filters.searchQuery.toLowerCase());
+            const matchesType = filters.typeFilters.length === 0 || filters.typeFilters.includes(item.fileType);
+            return matchesSearch && matchesType;
+        });
+    };
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <p style={{ fontSize: '11px', color: '#888', padding: '8px', flexShrink: 0 }}>
-                Switch tabs, search, filter, and sort. Click star icons to toggle.
+                Global filter active: searching "brain" in NIfTI files.
             </p>
             <div style={{ flex: 1, minHeight: 0 }}>
                 <TabbedFilesBrowser
-                    loadedDatasets={mockLoadedDatasets}
-                    allFiles={filesWithStarred}
+                    workspaceFiles={mockWorkspaceFiles}
+                    availableFiles={mockAvailableFiles}
+                    allFiles={mockAllFiles}
+                    folders={mockFolders}
+                    filters={filters}
+                    applyFilters={applyFilters}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    onAddToWorkspace={(id) => console.log('Add:', id)}
+                    tags={mockTags}
+                    getCategoryForTag={getCategoryForTag}
+                />
+            </div>
+        </div>
+    );
+};
+
+export const Interactive = () => {
+    const [activeTab, setActiveTab] = useState('workspace');
+    const [workspaceFileIds, setWorkspaceFileIds] = useState(new Set(['f1', 'f2', 'f3']));
+    const [selectedFileId, setSelectedFileId] = useState(null);
+
+    const allFiles = mockAllFiles;
+    const workspaceFiles = allFiles.filter(f => workspaceFileIds.has(f.id));
+    const availableFiles = allFiles.filter(f => !workspaceFileIds.has(f.id));
+
+    const handleAddToWorkspace = (fileId) => {
+        setWorkspaceFileIds(prev => new Set([...prev, fileId]));
+        console.log('Added to workspace:', fileId);
+    };
+
+    return (
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <p style={{ fontSize: '11px', color: '#888', padding: '8px', flexShrink: 0 }}>
+                Switch between Workspace and Available tabs. Click + to add files to workspace.
+            </p>
+            <div style={{ flex: 1, minHeight: 0 }}>
+                <TabbedFilesBrowser
+                    workspaceFiles={workspaceFiles}
+                    availableFiles={availableFiles}
+                    allFiles={allFiles}
                     folders={mockFolders}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
-                    onToggleStar={handleToggleStar}
-                    onFileClick={(file) => console.log('Selected:', file.name)}
-                    onViewClick={(viewId) => console.log('View:', viewId)}
+                    selectedFileId={selectedFileId}
+                    onSelect={setSelectedFileId}
+                    onAddToWorkspace={handleAddToWorkspace}
+                    onToggleStar={(id) => console.log('Star:', id)}
+                    tags={mockTags}
+                    getCategoryForTag={getCategoryForTag}
                 />
             </div>
         </div>

@@ -62,13 +62,29 @@ export const LEFT_PANEL_TABS = [
         contentComponent: 'DatasetsPanelContent',
     },
     // VISUALIZATION
+    // {
+    //     id: 'views',
+    //     icon: 'eye',
+    //     label: 'Views',
+    //     color: 'purple',
+    //     group: 'visualization',
+    //     contentComponent: 'ViewsPanelContent',
+    // },
     {
-        id: 'views',
-        icon: 'eye',
-        label: 'Views',
-        color: 'purple',
+        id: 'layout',
+        icon: 'layoutGrid',
+        label: 'Layout',
+        color: 'green',
         group: 'visualization',
-        contentComponent: 'ViewsPanelContent',
+        contentComponent: 'LayoutPanelContent',
+    },
+    {
+        id: 'navigator',
+        icon: 'compass',
+        label: 'Navigator',
+        color: 'teal',
+        group: 'visualization',
+        contentComponent: 'NavigatorPanelContent',
     },
     {
         id: 'tools',
@@ -77,14 +93,6 @@ export const LEFT_PANEL_TABS = [
         color: 'amber',
         group: 'visualization',
         contentComponent: 'InstanceToolsPanelContent',
-    },
-    {
-        id: 'layout',
-        icon: 'layoutGrid',
-        label: 'Layout',
-        color: 'green',
-        group: 'visualization',
-        contentComponent: 'LayoutPanelContent',
     },
     // SPATIAL & STATE
     {
@@ -117,7 +125,7 @@ export const LEFT_PANEL_TABS = [
 /**
  * Dividers appear after these tabs (per spec Section 2)
  */
-export const LEFT_PANEL_DIVIDERS_AFTER = ['datasets', 'layout', 'bookmarks'];
+export const LEFT_PANEL_DIVIDERS_AFTER = ['datasets', 'navigator', 'bookmarks'];
 
 /**
  * Keyboard shortcuts for tabs (per spec Section 13)
@@ -128,6 +136,7 @@ export const LEFT_PANEL_SHORTCUTS = {
     v: 'views',
     i: 'tools',
     l: 'layout',
+    n: 'navigator',
     a: 'annotations',
     'shift+b': 'bookmarks',
     c: 'cursors',

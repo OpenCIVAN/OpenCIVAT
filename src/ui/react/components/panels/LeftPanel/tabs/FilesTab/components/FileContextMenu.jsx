@@ -14,6 +14,39 @@ import { ui as log } from '@Utils/logger.js';
 import { config } from '@Core/config/clientConfig.js';
 import { getHandlerForFileType } from '@Core/instances/types/instanceTypesInit.js';
 
+// Default/fallback processing operations when server doesn't provide any
+const DEFAULT_OPERATIONS = {
+    volumetric: [
+        { id: 'threshold', name: 'Threshold Filter', icon: 'sliders', description: 'Apply intensity threshold' },
+        { id: 'gaussian', name: 'Gaussian Smooth', icon: 'blur', description: 'Apply Gaussian smoothing' },
+        { id: 'extract_surface', name: 'Extract Surface', icon: 'box', description: 'Generate surface mesh' },
+        { id: 'resample', name: 'Resample', icon: 'grid', description: 'Change resolution' },
+    ],
+    mesh: [
+        { id: 'decimate', name: 'Decimate', icon: 'minimize', description: 'Reduce polygon count' },
+        { id: 'smooth', name: 'Smooth Surface', icon: 'blur', description: 'Smooth mesh surface' },
+        { id: 'normals', name: 'Compute Normals', icon: 'arrowUp', description: 'Recalculate normals' },
+    ],
+    default: [
+        { id: 'convert', name: 'Convert Format', icon: 'refresh', description: 'Convert to different format' },
+        { id: 'compress', name: 'Compress', icon: 'archive', description: 'Compress file' },
+    ],
+};
+
+// Get default operations based on file type
+function getDefaultOperations(fileType) {
+    const volumetricTypes = ['nifti', 'dicom', 'nrrd', 'vti'];
+    const meshTypes = ['vtp', 'stl', 'obj', 'ply', 'gltf'];
+
+    if (volumetricTypes.includes(fileType?.toLowerCase())) {
+        return DEFAULT_OPERATIONS.volumetric;
+    }
+    if (meshTypes.includes(fileType?.toLowerCase())) {
+        return DEFAULT_OPERATIONS.mesh;
+    }
+    return DEFAULT_OPERATIONS.default;
+}
+
 /**
  * @typedef {Object} FileContextMenuProps
  * @property {number} x - X position
@@ -21,6 +54,7 @@ import { getHandlerForFileType } from '@Core/instances/types/instanceTypesInit.j
  * @property {Object} file - File object
  * @property {Function} onClose - Close handler
  * @property {Function} onAction - Action handler
+ * @property {boolean} [isInWorkspace] - Whether file is in current workspace
  */
 
 /**
@@ -29,7 +63,7 @@ import { getHandlerForFileType } from '@Core/instances/types/instanceTypesInit.j
  * @param {FileContextMenuProps} props - Component props
  * @returns {React.ReactElement} The rendered context menu
  */
-export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, onAction, file }) {
+export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, onAction, file, isInWorkspace = false }) {
     const [activeSubmenu, setActiveSubmenu] = useState(null);
     const [operations, setOperations] = useState([]);
     const [loadingOps, setLoadingOps] = useState(false);
@@ -43,7 +77,8 @@ export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, on
             try {
                 const handler = getHandlerForFileType(file.fileType);
                 if (!handler) {
-                    setOperations([]);
+                    // Use default operations as fallback
+                    setOperations(getDefaultOperations(file.fileType));
                     return;
                 }
 
@@ -55,13 +90,17 @@ export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, on
                 const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
-                    setOperations(data.operations || []);
+                    const serverOps = data.operations || [];
+                    // Use server operations if available, otherwise use defaults
+                    setOperations(serverOps.length > 0 ? serverOps : getDefaultOperations(file.fileType));
                 } else {
-                    setOperations([]);
+                    // Use default operations as fallback
+                    setOperations(getDefaultOperations(file.fileType));
                 }
             } catch (err) {
                 log.error('Failed to fetch operations:', err);
-                setOperations([]);
+                // Use default operations as fallback
+                setOperations(getDefaultOperations(file.fileType));
             } finally {
                 setLoadingOps(false);
             }
@@ -70,14 +109,41 @@ export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, on
         fetchOperations();
     }, [activeSubmenu, file]);
 
+    // Build menu items based on file state
+    const isLoaded = file?.loaded;
+    const isLoading = file?.loadState === 'loading';
+    const isProcessing = file?.loadState === 'processing';
+
+    // Determine the load/unload action based on state
+    const getLoadAction = () => {
+        if (isLoading) {
+            return { id: 'cancelLoad', icon: 'x', label: 'Cancel Loading' };
+        }
+        if (isProcessing) {
+            return { id: 'cancelProcess', icon: 'x', label: 'Cancel Processing' };
+        }
+        if (isLoaded) {
+            return { id: 'unload', icon: 'x', label: 'Unload from Memory' };
+        }
+        return { id: 'open', icon: 'eye', label: 'Load in Instance' };
+    };
+
     const menuItems = [
-        { id: 'open', icon: 'eye', label: 'Load in Instance' },
+        // Show Load, Cancel, or Unload based on current state
+        getLoadAction(),
         { id: 'info', icon: 'info', label: 'File Details...' },
         { divider: true },
-        { id: 'process', icon: 'cpu', label: 'Process', hasSubmenu: true },
+        // Workspace actions
+        isInWorkspace
+            ? { id: 'removeFromWorkspace', icon: 'folderMinus', label: 'Remove from Workspace' }
+            : { id: 'addToWorkspace', icon: 'folderPlus', label: 'Add to Workspace' },
+        { divider: true },
+        { id: 'process', icon: 'zap', label: 'Process', hasSubmenu: true },
         { divider: true },
         { id: 'rename', icon: 'edit', label: 'Rename...' },
-        { id: 'star', icon: 'star', label: file?.starred ? 'Unstar' : 'Star' },
+        { id: 'star', icon: file?.starred ? 'star' : 'starOutline', label: file?.starred ? 'Unstar' : 'Star' },
+        { divider: true },
+        { id: 'delete', icon: 'trash', label: 'Delete...', danger: true },
     ];
 
     const handleMouseEnter = (itemId) => {
@@ -106,7 +172,7 @@ export const FileContextMenu = memo(function FileContextMenu({ x, y, onClose, on
                             onMouseEnter={() => handleMouseEnter(item.id)}
                         >
                             <button
-                                className={`context-menu__item ${item.hasSubmenu ? 'has-submenu' : ''}`}
+                                className={`context-menu__item ${item.hasSubmenu ? 'has-submenu' : ''} ${item.danger ? 'context-menu__item--danger' : ''}`}
                                 onClick={() => {
                                     if (!item.hasSubmenu) {
                                         onAction(item.id, file);

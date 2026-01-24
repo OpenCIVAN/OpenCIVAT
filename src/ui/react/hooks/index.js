@@ -127,6 +127,8 @@ export { useDatasetManager } from "./useDatasetManager.js";
 export { useFilters } from "./useFilters.js";
 export { useBookmarks } from "./useBookmarks.js";
 export { useAnnotations } from "./useAnnotations.js";
+export { useGlobalFilters } from "./useGlobalFilters.js";
+export { useTagAnalysis, DEFAULT_TAG_CATEGORIES } from "./useTagAnalysis.js";
 
 export {
   useThumbnail,

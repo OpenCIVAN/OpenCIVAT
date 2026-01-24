@@ -1329,18 +1329,22 @@ export function InstanceViewport({
 
     // Close handler - deactivates view but doesn't delete
     const handleClose = useCallback(() => {
+        // IMPORTANT: Notify parent to remove from canvas FIRST
+        // This starts the async placement removal before any state updates
+        // that could cause re-renders while placement still exists
+        onClose?.();
+
         // Clean up the instance
         if (instanceIdRef.current) {
             workspaceManager.deleteInstance(instanceIdRef.current);
         }
 
         // Deactivate the view (marks as inactive, keeps in Datasets list)
+        // This is done after onClose to avoid race conditions where
+        // viewUpdated events cause re-renders before placement is removed
         if (viewConfigId) {
             getViewConfigurationManager()?.deactivateView(viewConfigId);
         }
-
-        // Notify parent to remove from canvas
-        onClose?.();
     }, [viewConfigId, onClose]);
 
     // Trash handler - moves to Recently Deleted

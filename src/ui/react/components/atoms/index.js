@@ -48,6 +48,12 @@ export { Text } from './Text';
 // Chip - Interactive tag/pill component
 export { Chip } from './Chip';
 
+// TagChip - Tag chip with category color support
+export { TagChip, TagChipList } from './TagChip';
+
+// TagCheckbox - Checkbox for tag selection in dropdowns
+export { TagCheckbox } from './TagCheckbox';
+
 // Thumbnail - Image thumbnail with loading states
 export { Thumbnail } from './Thumbnail';
 

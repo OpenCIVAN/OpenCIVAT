@@ -142,16 +142,85 @@ export const FILE_TYPES = {
 };
 
 /**
- * Filter chip options for file type filtering
+ * Broad file type categories for filtering (matching artifact design)
+ */
+export const FILE_TYPE_CATEGORIES = {
+    volumetric: {
+        id: 'volumetric',
+        label: 'Volumetric',
+        shortLabel: 'Vol',
+        icon: 'database',
+        color: '#2dd4bf', // teal
+        types: ['nifti', 'dicom', 'nrrd', 'stl', 'vtp', 'vti'],
+    },
+    models: {
+        id: 'models',
+        label: '3D Models',
+        shortLabel: '3D',
+        icon: 'box',
+        color: '#34d399', // green
+        types: ['obj', 'ply', 'gltf', 'glb'],
+    },
+    documents: {
+        id: 'documents',
+        label: 'Documents',
+        shortLabel: 'Docs',
+        icon: 'fileText',
+        color: '#3b82f6', // blue
+        types: ['pdf', 'markdown', 'document', 'md', 'txt', 'doc', 'docx'],
+    },
+    images: {
+        id: 'images',
+        label: 'Images',
+        shortLabel: 'Img',
+        icon: 'image',
+        color: '#a855f7', // purple
+        types: ['image', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'],
+    },
+    data: {
+        id: 'data',
+        label: 'Data',
+        shortLabel: 'Data',
+        icon: 'barChart',
+        color: '#f97316', // orange
+        types: ['csv', 'json', 'spreadsheet', 'xlsx', 'xls'],
+    },
+    code: {
+        id: 'code',
+        label: 'Code',
+        shortLabel: 'Code',
+        icon: 'terminal',
+        color: '#22d3ee', // cyan
+        types: ['python', 'notebook', 'ipynb', 'py', 'js'],
+    },
+};
+
+/**
+ * Filter chip options for file type filtering (broad categories)
  */
 export const FILE_TYPE_FILTER_OPTIONS = [
-    { id: 'nifti', label: 'NIfTI', color: '#2dd4bf', icon: 'box' },
-    { id: 'dicom', label: 'DICOM', color: '#2dd4bf', icon: 'box' },
-    { id: 'vtp', label: 'VTP', color: '#2dd4bf', icon: 'box' },
-    { id: 'csv', label: 'CSV', color: '#34d399', icon: 'table' },
-    { id: 'document', label: 'Docs', color: '#3b82f6', icon: 'fileText' },
-    { id: 'image', label: 'Images', color: '#a855f7', icon: 'fileImage' },
+    { id: 'volumetric', label: 'Vol', color: '#2dd4bf', icon: 'database' },
+    { id: 'models', label: '3D', color: '#34d399', icon: 'box' },
+    { id: 'documents', label: 'Docs', color: '#3b82f6', icon: 'fileText' },
+    { id: 'images', label: 'Img', color: '#a855f7', icon: 'image' },
+    { id: 'data', label: 'Data', color: '#f97316', icon: 'barChart' },
+    { id: 'code', label: 'Code', color: '#22d3ee', icon: 'terminal' },
 ];
+
+/**
+ * Get category ID for a file type
+ * @param {string} type - File type string
+ * @returns {string|null} Category ID or null
+ */
+export function getCategoryForType(type) {
+    const lowerType = type?.toLowerCase();
+    for (const [catId, cat] of Object.entries(FILE_TYPE_CATEGORIES)) {
+        if (cat.types.includes(lowerType)) {
+            return catId;
+        }
+    }
+    return null;
+}
 
 /**
  * Get file type config by extension

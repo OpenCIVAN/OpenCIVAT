@@ -26,6 +26,9 @@ export function useDatasets() {
     const transformed = allDatasets.map((dataset) => ({
       id: dataset.id,
       name: dataset.filename,
+      fileType: dataset.fileType,
+      fileId: dataset.id, // For cross-referencing with server files
+      sourceFileId: dataset.serverId,
       hash: dataset.metadata?.hash,
       pointCount: dataset.metadata?.pointCount || 0,
       cellCount: dataset.metadata?.cellCount || 0,
@@ -37,6 +40,10 @@ export function useDatasets() {
       annotations: dataset.annotations || [],
       hasPolydata: !!dataset.polydata,
       isAnalyzed: dataset.isAnalyzed(),
+      // Data state properties
+      dataState: dataset.getDataState(),
+      isDataLoaded: dataset.isDataLoaded(),
+      isDataLoading: dataset.isDataLoading(),
     }));
 
     setDatasets(transformed);

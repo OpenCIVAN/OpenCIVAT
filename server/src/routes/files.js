@@ -47,7 +47,7 @@ router.get("/", async (req, res, next) => {
     const { projectId, orgId, type, limit = 50, offset = 0 } = req.query;
 
     let query = `
-      SELECT DISTINCT d.*, fv.version_number as current_version
+      SELECT DISTINCT d.*, d.file_size as size, fv.version_number as current_version
       FROM datasets d
       LEFT JOIN file_versions fv ON d.current_version_id = fv.id
       LEFT JOIN file_project_access fpa ON d.id = fpa.file_id
@@ -121,6 +121,7 @@ router.get("/:id", async (req, res, next) => {
     const result = await pool.query(
       `
       SELECT d.*,
+             d.file_size as size,
              fv.version_number as current_version,
              fv.hash as current_hash,
              fv.uploaded_at as version_uploaded_at
@@ -297,7 +298,7 @@ router.post("/", upload.single("file"), async (req, res, next) => {
     // Fetch complete file record
     const newFile = await pool.query(
       `
-      SELECT d.*, fv.version_number as current_version
+      SELECT d.*, d.file_size as size, fv.version_number as current_version
       FROM datasets d
       LEFT JOIN file_versions fv ON d.current_version_id = fv.id
       WHERE d.id = $1

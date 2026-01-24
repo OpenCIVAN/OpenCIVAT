@@ -16,6 +16,10 @@ const SORT_OPTIONS = [
 export default {
     title: 'Molecules/SortDropdown',
     component: SortDropdown,
+    parameters: {
+        layout: 'centered',
+        backgrounds: { default: 'dark' },
+    },
     argTypes: {
         showLabel: {
             control: 'boolean',
@@ -26,7 +30,7 @@ export default {
     },
     decorators: [
         (Story) => (
-            <div style={{ padding: '20px', minHeight: '200px' }}>
+            <div style={{ padding: '24px', background: '#0f0f0f', borderRadius: '8px', minWidth: '300px', minHeight: '200px' }}>
                 <Story />
             </div>
         ),
@@ -81,11 +85,12 @@ export const InToolbar = () => {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '8px 12px',
-                background: 'var(--color-bg-secondary, #12121a)',
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
                 borderRadius: '6px',
             }}
         >
-            <span style={{ flex: 1, fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+            <span style={{ flex: 1, fontSize: '11px', color: '#9ca3af' }}>
                 8 files
             </span>
             <SortDropdown

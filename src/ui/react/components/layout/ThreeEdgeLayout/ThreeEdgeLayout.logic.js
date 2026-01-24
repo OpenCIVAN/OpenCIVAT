@@ -11,15 +11,15 @@ import { ui as log } from "@Utils/logger.js";
  */
 export const PANEL_CONSTRAINTS = {
   left: {
-    min: 300, // Increased from 240 for better button visibility
+    min: 400, // Wide enough for adaptive/VR controls
     max: 600,
-    default: 340, // Slightly wider default
+    default: 400, // Match minimum for consistent experience
     collapsed: 48,
   },
   right: {
-    min: 320, // Increased from 280 for better button visibility
+    min: 400, // Wide enough for adaptive/VR controls
     max: 600,
-    default: 360, // Slightly wider default
+    default: 400, // Match minimum for consistent experience
     collapsed: 48,
   },
 };

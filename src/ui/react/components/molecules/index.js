@@ -164,3 +164,10 @@ export { NavDotBar } from './NavDotBar';
 
 // SectionNavHeader - Header with current section display and navigation dots
 export { SectionNavHeader } from './SectionNavHeader';
+
+// =============================================================================
+// TAG SYSTEM MOLECULES
+// =============================================================================
+
+// TagsDropdown - Categorized tag selector dropdown
+export { TagsDropdown } from './TagsDropdown';

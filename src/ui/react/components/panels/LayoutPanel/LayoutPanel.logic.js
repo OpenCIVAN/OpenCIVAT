@@ -819,6 +819,106 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   const [expandedViewId, setExpandedViewId] = useState(null);
 
   // ===========================================================================
+  // MERGE / UNMERGE / DELETE OPERATIONS
+  // (Defined before SELECTION STATE because keyboard shortcuts depend on deleteCells)
+  // ===========================================================================
+
+  /**
+   * Merge multiple placements into one spanning placement
+   * Takes the first placement's position and expands to cover all selected
+   */
+  const mergeCells = useCallback(
+    async (placementIds) => {
+      if (!canvas?.id || placementIds.length < 2) return;
+
+      // Get all placements
+      const placements = placementIds
+        .map((id) => rawPlacements.find((p) => p.id === id))
+        .filter(Boolean);
+
+      if (placements.length < 2) return;
+
+      // Calculate bounding box
+      let minRow = Infinity,
+        minCol = Infinity;
+      let maxRow = -Infinity,
+        maxCol = -Infinity;
+
+      placements.forEach((p) => {
+        minRow = Math.min(minRow, p.row);
+        minCol = Math.min(minCol, p.col);
+        maxRow = Math.max(maxRow, p.row + (p.rowSpan || 1));
+        maxCol = Math.max(maxCol, p.col + (p.colSpan || 1));
+      });
+
+      const rowSpan = maxRow - minRow;
+      const colSpan = maxCol - minCol;
+
+      // Keep the first placement, resize it to span all
+      const keepPlacement = placements[0];
+      const removePlacements = placements.slice(1);
+
+      try {
+        // Remove other placements first
+        await Promise.all(removePlacements.map((p) => removePlacement(p.id)));
+
+        // Resize the kept placement
+        await resizePlacement(keepPlacement.id, rowSpan, colSpan);
+
+        // Move to top-left if needed
+        if (keepPlacement.row !== minRow || keepPlacement.col !== minCol) {
+          await movePlacement(keepPlacement.id, minRow, minCol);
+        }
+
+        log.info(`Merged ${placements.length} cells into one`);
+      } catch (error) {
+        log.error("Failed to merge cells:", error);
+      }
+    },
+    [canvas, rawPlacements, removePlacement, resizePlacement, movePlacement]
+  );
+
+  /**
+   * Unmerge a spanning placement back to 1x1
+   */
+  const unmergeCells = useCallback(
+    async (placementId) => {
+      const placement = rawPlacements.find((p) => p.id === placementId);
+      if (!placement) return;
+
+      const { rowSpan = 1, colSpan = 1 } = placement;
+      if (rowSpan === 1 && colSpan === 1) {
+        log.warn("Cell is not merged");
+        return;
+      }
+
+      try {
+        // Just resize back to 1x1
+        await resizePlacement(placementId, 1, 1);
+        log.info(`Unmerged cell ${placementId}`);
+      } catch (error) {
+        log.error("Failed to unmerge cell:", error);
+      }
+    },
+    [rawPlacements, resizePlacement]
+  );
+
+  /**
+   * Delete a placement (remove from canvas)
+   */
+  const deleteCells = useCallback(
+    async (placementId) => {
+      try {
+        await removePlacement(placementId);
+        log.info(`Deleted placement ${placementId}`);
+      } catch (error) {
+        log.error("Failed to delete placement:", error);
+      }
+    },
+    [removePlacement]
+  );
+
+  // ===========================================================================
   // SELECTION STATE
   // ===========================================================================
 
@@ -1093,105 +1193,6 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   const exitEditMode = useCallback(() => {
     setEditMode(false);
   }, []);
-
-  // ===========================================================================
-  // MERGE / UNMERGE / DELETE OPERATIONS
-  // ===========================================================================
-
-  /**
-   * Merge multiple placements into one spanning placement
-   * Takes the first placement's position and expands to cover all selected
-   */
-  const mergeCells = useCallback(
-    async (placementIds) => {
-      if (!canvas?.id || placementIds.length < 2) return;
-
-      // Get all placements
-      const placements = placementIds
-        .map((id) => rawPlacements.find((p) => p.id === id))
-        .filter(Boolean);
-
-      if (placements.length < 2) return;
-
-      // Calculate bounding box
-      let minRow = Infinity,
-        minCol = Infinity;
-      let maxRow = -Infinity,
-        maxCol = -Infinity;
-
-      placements.forEach((p) => {
-        minRow = Math.min(minRow, p.row);
-        minCol = Math.min(minCol, p.col);
-        maxRow = Math.max(maxRow, p.row + (p.rowSpan || 1));
-        maxCol = Math.max(maxCol, p.col + (p.colSpan || 1));
-      });
-
-      const rowSpan = maxRow - minRow;
-      const colSpan = maxCol - minCol;
-
-      // Keep the first placement, resize it to span all
-      const keepPlacement = placements[0];
-      const removePlacements = placements.slice(1);
-
-      try {
-        // Remove other placements first
-        await Promise.all(removePlacements.map((p) => removePlacement(p.id)));
-
-        // Resize the kept placement
-        await resizePlacement(keepPlacement.id, rowSpan, colSpan);
-
-        // Move to top-left if needed
-        if (keepPlacement.row !== minRow || keepPlacement.col !== minCol) {
-          await movePlacement(keepPlacement.id, minRow, minCol);
-        }
-
-        log.info(`Merged ${placements.length} cells into one`);
-      } catch (error) {
-        log.error("Failed to merge cells:", error);
-      }
-    },
-    [canvas, rawPlacements, removePlacement, resizePlacement, movePlacement]
-  );
-
-  /**
-   * Unmerge a spanning placement back to 1x1
-   */
-  const unmergeCells = useCallback(
-    async (placementId) => {
-      const placement = rawPlacements.find((p) => p.id === placementId);
-      if (!placement) return;
-
-      const { rowSpan = 1, colSpan = 1 } = placement;
-      if (rowSpan === 1 && colSpan === 1) {
-        log.warn("Cell is not merged");
-        return;
-      }
-
-      try {
-        // Just resize back to 1x1
-        await resizePlacement(placementId, 1, 1);
-        log.info(`Unmerged cell ${placementId}`);
-      } catch (error) {
-        log.error("Failed to unmerge cell:", error);
-      }
-    },
-    [rawPlacements, resizePlacement]
-  );
-
-  /**
-   * Delete a placement (remove from canvas)
-   */
-  const deleteCells = useCallback(
-    async (placementId) => {
-      try {
-        await removePlacement(placementId);
-        log.info(`Deleted placement ${placementId}`);
-      } catch (error) {
-        log.error("Failed to delete placement:", error);
-      }
-    },
-    [removePlacement]
-  );
 
   // ===========================================================================
   // RETURN API

@@ -341,6 +341,8 @@ export const ICON_REGISTRY = {
   starBorder: "star_border",
   pin: "push_pin",
   pinOff: "push_pin",
+  tag: "label",
+  label: "label",
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LINKS & EXTERNAL

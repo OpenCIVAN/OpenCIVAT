@@ -12,10 +12,14 @@ import { ui as log } from "@Utils/logger.js";
 import { useProjectFiles } from "@UI/react/hooks/useProjectFiles.js";
 import { useComputeJobs } from "@UI/react/hooks/useComputeJobs.js";
 import { useDatasets } from "@UI/react/hooks/useDatasets.js";
+import { useDatasetManager } from "@UI/react/hooks/useDatasetManager.js";
 import { useSectionStates } from "@UI/react/components/organisms/ResizableSections";
 import { formatFileSize } from "@Utils/formatters.js";
 import { getHandlerForFileType } from "@Core/instances/types/instanceTypesInit.js";
 import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
+import { getViewConfigurationManager } from "@Init/appInitializer.js";
+import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { useWorkspaceFiles } from "./useWorkspaceFiles.js";
 
 /**
  * Check if a file type can be visualized
@@ -68,25 +72,30 @@ export function useFilesTab({
   // Optimistic star updates (for immediate UI feedback)
   const [optimisticStars, setOptimisticStars] = useState({});
 
-  // Section states (VS Code-style)
+  // Section states (VS Code-style) - persisted to localStorage
   const {
     states: sectionStates,
     toggleSection,
     resizeSection,
-  } = useSectionStates({
-    starred: { expanded: true, flexGrow: 1 },
-    loaded: { expanded: true, flexGrow: 1 },
-    all: { expanded: true, flexGrow: 2 },
-  });
+  } = useSectionStates(
+    {
+      starred: { expanded: true, flexGrow: 1 },
+      workspace: { expanded: true, flexGrow: 2 }, // Workspace files section
+      available: { expanded: true, flexGrow: 2 }, // Available files (expanded by default so users can add files)
+    },
+    { storageKey: "files_tab_sections_v2" } // v2: workspace/available structure
+  );
 
   // Fetch files from server
   const {
     files: hookFiles,
+    folders: hookFolders,
     isLoading: hookLoading,
     error: hookError,
     refetch,
     uploadFile,
     toggleStar,
+    createFolder,
   } = useProjectFiles();
 
   // Compute jobs hook
@@ -95,10 +104,31 @@ export function useFilesTab({
   // Loaded datasets from DatasetManager
   const loadedDatasets = useDatasets();
 
+  // DatasetManager for unloading
+  const datasetManager = useDatasetManager();
+
   // Use mock data if provided
   const serverFiles = mockFiles ?? hookFiles;
   const isLoading = mockIsLoading ?? hookLoading;
   const error = mockError ?? hookError;
+
+  // Create a Map of file IDs to their data state for checking loaded status
+  // Only files with isDataLoaded=true are considered "loaded" (data in memory)
+  const fileDataStates = useMemo(() => {
+    const states = new Map();
+    loadedDatasets.forEach((ds) => {
+      const state = {
+        isDataLoaded: ds.isDataLoaded,
+        isDataLoading: ds.isDataLoading,
+        dataState: ds.dataState,
+      };
+      // Map by all possible IDs
+      if (ds.fileId) states.set(ds.fileId, state);
+      if (ds.sourceFileId) states.set(ds.sourceFileId, state);
+      states.set(ds.id, state);
+    });
+    return states;
+  }, [loadedDatasets]);
 
   // Transform server files to UI format (with optimistic star updates)
   const files = useMemo(() => {
@@ -113,6 +143,22 @@ export function useFilesTab({
           ? mockStarredIds.has(file.id)
           : file.starred ?? false;
 
+      // Get the data state for this file
+      const dataStateInfo = fileDataStates.get(file.id);
+
+      // File is "loaded" only if its data is actually in memory
+      const isLoaded = dataStateInfo?.isDataLoaded ?? false;
+
+      // Determine the load state for UI display
+      // 'stored' = on server, not in memory
+      // 'loading' = currently loading
+      // 'loaded' = data in memory
+      // 'processing' = running compute operation
+      let loadState = 'stored';
+      if (dataStateInfo) {
+        loadState = dataStateInfo.dataState || 'stored';
+      }
+
       return {
         id: file.id,
         name: file.name || file.filename,
@@ -124,33 +170,52 @@ export function useFilesTab({
             : file.size) ||
           "",
         starred: starredState,
-        loaded: file.loaded ?? false,
+        loaded: isLoaded,
+        loadState: loadState, // For LoadStateIndicator
         thumbnail: file.thumbnail ?? canVisualize(file.fileType),
         date: file.uploadedAt,
         isFolder: false,
       };
     });
-  }, [serverFiles, mockStarredIds, optimisticStars]);
+  }, [serverFiles, mockStarredIds, optimisticStars, fileDataStates]);
 
-  // Starred files
+  // Workspace files management
+  const {
+    workspaceFileIds,
+    workspaceFiles,
+    availableFiles,
+    workspaceFileCount,
+    addToWorkspace,
+    addMultipleToWorkspace,
+    removeFromWorkspace,
+    isInWorkspace,
+  } = useWorkspaceFiles({
+    workspaceId,
+    allFiles: files,
+  });
+
+  // Starred files (can be from workspace or available)
   const starredFiles = useMemo(() => {
     return files.filter((f) => f.starred);
   }, [files]);
 
-  // Loaded datasets formatted for display
+  // Loaded datasets formatted for display - ONLY datasets with data actually in memory
   const loadedDatasetsFormatted = useMemo(() => {
-    return loadedDatasets.map((ds) => ({
-      id: ds.id,
-      name: ds.name,
-      fileType: ds.fileType,
-      size: ds.pointCount ? `${ds.pointCount.toLocaleString()} pts` : "",
-      starred: false,
-      loaded: true,
-      thumbnail: true,
-      date: ds.uploadedAt,
-      isFolder: false,
-      isDataset: true,
-    }));
+    return loadedDatasets
+      .filter((ds) => ds.isDataLoaded) // Only include datasets with data in memory
+      .map((ds) => ({
+        id: ds.id,
+        name: ds.name,
+        fileType: ds.fileType,
+        size: ds.pointCount ? `${ds.pointCount.toLocaleString()} pts` : "",
+        starred: false,
+        loaded: true, // These are all loaded by definition (filtered above)
+        loadState: ds.dataState,
+        thumbnail: true,
+        date: ds.uploadedAt,
+        isFolder: false,
+        isDataset: true,
+      }));
   }, [loadedDatasets]);
 
   // Loaded count
@@ -290,6 +355,66 @@ export function useFilesTab({
           );
           break;
 
+        case "cancelLoad":
+        case "cancelProcess":
+          log.info(`Canceling load/process for file: ${file.name}`);
+          try {
+            // Find the dataset ID associated with this file
+            const cancelDataset = loadedDatasets.find(
+              (ds) => ds.fileId === file.id || ds.sourceFileId === file.id || ds.id === file.id
+            );
+            if (cancelDataset) {
+              const cancelled = await datasetManager.cancelLoadDataset(cancelDataset.id);
+              if (cancelled) {
+                log.info(`Successfully cancelled operation for: ${cancelDataset.id}`);
+              } else {
+                log.warn(`Could not cancel operation for: ${cancelDataset.id}`);
+              }
+            } else {
+              log.warn(`No dataset found for file: ${file.id}`);
+            }
+          } catch (err) {
+            log.error("Failed to cancel operation:", err);
+          }
+          break;
+
+        case "unload":
+          log.info(`Unloading file from memory: ${file.name}`);
+          try {
+            // Find the dataset ID associated with this file
+            const dataset = loadedDatasets.find(
+              (ds) => ds.fileId === file.id || ds.sourceFileId === file.id || ds.id === file.id
+            );
+            if (dataset) {
+              // Check if any views using this dataset are on the canvas
+              const viewManager = getViewConfigurationManager();
+              const viewsForDataset = viewManager?.getViewsForDataset?.(dataset.id) || [];
+              const viewsOnCanvas = viewsForDataset.filter(view =>
+                canvasManager?.isViewOnCanvas?.(view.id)
+              );
+
+              if (viewsOnCanvas.length > 0) {
+                log.warn(`Cannot unload: ${viewsOnCanvas.length} view(s) on canvas use this dataset`);
+                // TODO: Show a toast/notification to the user
+                // For now, just log and don't unload
+                break;
+              }
+
+              // Release data from memory but keep the dataset reference
+              const released = await datasetManager.releaseDatasetData(dataset.id);
+              if (released) {
+                log.info(`Successfully released data for dataset: ${dataset.id}`);
+              } else {
+                log.warn(`Dataset ${dataset.id} had no data to release`);
+              }
+            } else {
+              log.warn(`No loaded dataset found for file: ${file.id}`);
+            }
+          } catch (err) {
+            log.error("Failed to release dataset data:", err);
+          }
+          break;
+
         case "info":
           log.info(`Show details for: ${file.name}`);
           break;
@@ -300,6 +425,11 @@ export function useFilesTab({
 
         case "star":
           await handleStar(file.id);
+          break;
+
+        case "delete":
+          log.info(`Delete file: ${file.name}`);
+          // TODO: Implement file deletion with confirmation dialog
           break;
 
         case "process":
@@ -320,11 +450,21 @@ export function useFilesTab({
           }
           break;
 
+        case "addToWorkspace":
+          log.info(`Adding file to workspace: ${file.name}`);
+          addToWorkspace(file.id);
+          break;
+
+        case "removeFromWorkspace":
+          log.info(`Removing file from workspace: ${file.name}`);
+          removeFromWorkspace(file.id);
+          break;
+
         default:
           log.warn(`Unknown context action: ${action}`);
       }
     },
-    [submitJob, handleStar]
+    [submitJob, handleStar, loadedDatasets, datasetManager, addToWorkspace, removeFromWorkspace]
   );
 
   const toggleTypeFilter = useCallback((type) => {
@@ -397,11 +537,27 @@ export function useFilesTab({
     isLoading,
     error,
 
+    // Workspace files
+    workspaceFiles,
+    availableFiles,
+    workspaceFileCount,
+    workspaceFileIds,
+    isInWorkspace,
+
     // Actions
     handleStar,
     handleDragStart,
     handleDoubleClick,
     refetch,
+
+    // Workspace actions
+    addToWorkspace,
+    addMultipleToWorkspace,
+    removeFromWorkspace,
+
+    // Folder actions
+    folders: hookFolders || [],
+    createFolder,
   };
 }
 

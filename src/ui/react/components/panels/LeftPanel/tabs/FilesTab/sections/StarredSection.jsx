@@ -17,9 +17,17 @@
 import React, { memo, useMemo, useState, useCallback } from 'react';
 import { Icon, ColorDot } from '@UI/react/components/atoms';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
+import { SortDropdown } from '@UI/react/components/molecules/SortDropdown';
 import { FileItemList } from '../components/FileItem';
 import { useAdaptive } from '@UI/react/context';
 import './StarredSection.scss';
+
+// Sort options for starred section
+const STARRED_SORT_OPTIONS = [
+    { id: 'recent', label: 'Recently Starred', icon: 'clock' },
+    { id: 'name', label: 'Name', icon: 'arrowDown' },
+    { id: 'modified', label: 'Modified', icon: 'calendar' },
+];
 
 /**
  * @typedef {Object} StarredSectionProps
@@ -68,15 +76,20 @@ export const StarredSection = memo(function StarredSection({
     onDragStart,
     onContextMenu,
     onMenuClick,
+    // V7: Tag display props
+    tags,
+    getCategoryForTag,
     className = '',
 }) {
     const { isVR } = useAdaptive();
     const [localFilter, setLocalFilter] = useState('all');
     const [showAllBypassFilter, setShowAllBypassFilter] = useState(false);
+    const [sortBy, setSortBy] = useState('recent');
 
     // Check if global filters are active
     const hasGlobalFilters = filters?.searchQuery?.trim() ||
-        (filters?.typeFilters?.length > 0);
+        (filters?.typeFilters?.length > 0) ||
+        (filters?.tagFilters?.length > 0);
 
     // Apply local filter to items
     const localFilteredItems = useMemo(() => {
@@ -97,19 +110,51 @@ export const StarredSection = memo(function StarredSection({
     }, [items, localFilter]);
 
     // Apply global filters (unless bypassed)
-    const displayedItems = useMemo(() => {
+    const filteredItems = useMemo(() => {
         if (showAllBypassFilter || !hasGlobalFilters || !applyFilters) {
             return localFilteredItems;
         }
         return applyFilters(localFilteredItems);
     }, [localFilteredItems, showAllBypassFilter, hasGlobalFilters, applyFilters]);
 
+    // Sort the filtered items
+    const displayedItems = useMemo(() => {
+        const sorted = [...filteredItems];
+        switch (sortBy) {
+            case 'name':
+                sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                break;
+            case 'modified':
+                sorted.sort((a, b) => {
+                    const dateA = a.modifiedAt ? new Date(a.modifiedAt) : new Date(0);
+                    const dateB = b.modifiedAt ? new Date(b.modifiedAt) : new Date(0);
+                    return dateB - dateA; // Most recent first
+                });
+                break;
+            case 'recent':
+            default:
+                // Sort by starred timestamp (most recent first)
+                sorted.sort((a, b) => {
+                    const dateA = a.starredAt ? new Date(a.starredAt) : new Date(0);
+                    const dateB = b.starredAt ? new Date(b.starredAt) : new Date(0);
+                    return dateB - dateA;
+                });
+                break;
+        }
+        return sorted;
+    }, [filteredItems, sortBy]);
+
     // Count hidden items due to global filters
-    const hiddenCount = localFilteredItems.length - displayedItems.length;
+    const hiddenCount = localFilteredItems.length - filteredItems.length;
 
     // Handle local filter toggle
     const handleLocalFilter = useCallback((filterId) => {
         setLocalFilter(filterId);
+    }, []);
+
+    // Handle sort change
+    const handleSortChange = useCallback((newSortBy) => {
+        setSortBy(newSortBy);
     }, []);
 
     // Toggle show all (bypass global filters)
@@ -173,7 +218,7 @@ export const StarredSection = memo(function StarredSection({
                 <span className="starred-section__label">Starred</span>
                 <span className="starred-section__count">
                     {hasGlobalFilters && !showAllBypassFilter
-                        ? `${displayedItems.length} of ${items.length}`
+                        ? `${filteredItems.length} of ${items.length}`
                         : items.length}
                 </span>
                 {/* Bypass indicator */}
@@ -181,6 +226,19 @@ export const StarredSection = memo(function StarredSection({
                     <span className="starred-section__bypass-badge">
                         Showing all
                     </span>
+                )}
+                {/* Sort dropdown */}
+                {expanded && !isEmpty && (
+                    <div
+                        className="starred-section__sort"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <SortDropdown
+                            value={sortBy}
+                            onChange={handleSortChange}
+                            options={STARRED_SORT_OPTIONS}
+                        />
+                    </div>
                 )}
             </div>
 
@@ -219,6 +277,8 @@ export const StarredSection = memo(function StarredSection({
                                 onDragStart={onDragStart}
                                 onContextMenu={onContextMenu}
                                 onMenuClick={onMenuClick}
+                                tags={tags}
+                                getCategoryForTag={getCategoryForTag}
                             />
                         ))}
                     </div>

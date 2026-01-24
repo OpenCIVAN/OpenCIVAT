@@ -17,10 +17,11 @@ import { registerLeftPanelTab } from "./LeftPanelContext";
 
 // Import all tab content components
 import { FilesTabV2 } from "./tabs/FilesTab";
-import { DatasetsPanelContent } from "./tabs/DatasetsTab";
+import { DatasetsTabV2 } from "./tabs/DatasetsTab";
 import { ViewsPanelContent } from "./tabs/ViewsTab";
 import { InstanceToolsPanelContent } from "./tabs/InstanceToolsTab";
 import { LayoutPanelContent } from "./tabs/LayoutTab";
+import { NavigatorTab as NavigatorPanelContent } from "./tabs/NavigatorTab";
 import { AnnotationsPanelContent } from "./tabs/AnnotationsTab";
 import { BookmarksFiltersPanelContent } from "./tabs/BookmarksFiltersTab";
 import { CursorsPanelContent } from "./tabs/CursorsTab";
@@ -31,12 +32,13 @@ import { CursorsPanelContent } from "./tabs/CursorsTab";
 
 // DATA SOURCES
 registerLeftPanelTab("files", FilesTabV2);
-registerLeftPanelTab("datasets", DatasetsPanelContent);
+registerLeftPanelTab("datasets", DatasetsTabV2);
 
 // VISUALIZATION
 registerLeftPanelTab("views", ViewsPanelContent);
 registerLeftPanelTab("tools", InstanceToolsPanelContent);
 registerLeftPanelTab("layout", LayoutPanelContent);
+registerLeftPanelTab("navigator", NavigatorPanelContent);
 
 // SPATIAL & STATE
 registerLeftPanelTab("annotations", AnnotationsPanelContent);
@@ -47,5 +49,5 @@ registerLeftPanelTab("cursors", CursorsPanelContent);
 
 // Log registration status in development
 if (process.env.NODE_ENV === "development") {
-  console.log("[LeftPanel] All 8 tab components registered");
+  console.log("[LeftPanel] All 9 tab components registered");
 }

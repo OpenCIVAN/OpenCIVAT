@@ -3,9 +3,11 @@
  * @description Public exports for FilesTab.
  */
 
-// Main FilesTab exports
-export { FilesPanelContent, default } from './FilesTab';
-export { FilesTabV2 } from './FilesTabV2';
+// Main FilesTab exports - V2 is now the standard
+export { FilesTabV2 as default, FilesTabV2, FilesTabV2 as FilesPanelContent } from './FilesTabV2';
+
+// Legacy export (deprecated, use FilesTabV2 instead)
+export { FilesPanelContent as FilesTabLegacy } from './FilesTab';
 
 // Hooks
 export { useFilesTab, canVisualize } from './hooks/useFilesTab';

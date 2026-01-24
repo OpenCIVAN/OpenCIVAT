@@ -1,41 +1,46 @@
 /**
  * @file TabbedFilesBrowser.jsx
- * @description Bottom section with Loaded/All Files tabs.
+ * @description Bottom section with Workspace/Available Files tabs.
  * Uses global filters from parent. Includes breadcrumb navigation and folder browsing.
+ *
+ * Tabs:
+ * - Workspace: Files added to current workspace
+ * - Available: All project files not yet in workspace
  *
  * @example
  * <TabbedFilesBrowser
- *   loadedDatasets={loadedDatasets}
- *   allFiles={allFiles}
+ *   workspaceFiles={workspaceFiles}
+ *   availableFiles={availableFiles}
  *   folders={folders}
  *   filters={filters}
  *   applyFilters={applyFilters}
  *   activeTab={activeTab}
  *   onTabChange={setActiveTab}
+ *   onAddToWorkspace={addToWorkspace}
  * />
  */
 
 import React, { memo, useState, useMemo, useCallback } from 'react';
-import { Icon } from '@UI/react/components/atoms';
+import { Icon, IconButton } from '@UI/react/components/atoms';
 import { TabButton } from '@UI/react/components/molecules/TabButton';
 import { ToggleGroup } from '@UI/react/components/molecules/ToggleGroup';
 import { Breadcrumb, buildBreadcrumbPath } from '@UI/react/components/molecules/Breadcrumb';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { FileItemList, FileItemGrid } from '../components/FileItem';
-import { DatasetTreeItem } from '../components/DatasetTreeItem';
 import { FolderNode } from '../components/FolderNode';
 import { useAdaptive } from '@UI/react/context';
 import './TabbedFilesBrowser.scss';
 
 /**
  * @typedef {Object} TabbedFilesBrowserProps
- * @property {Array} loadedDatasets - Loaded datasets with views
- * @property {Array} allFiles - All files in project
+ * @property {Array} workspaceFiles - Files added to current workspace
+ * @property {Array} availableFiles - Files not yet in workspace
+ * @property {Array} allFiles - All files in project (for folder navigation)
  * @property {Array} folders - Folder hierarchy
  * @property {Object} [filters] - Global filter state from parent
  * @property {(items: Array) => Array} [applyFilters] - Global filter function from parent
- * @property {'loaded'|'all'} activeTab - Currently active tab
- * @property {(tab: 'loaded'|'all') => void} onTabChange - Tab change handler
+ * @property {'workspace'|'available'} activeTab - Currently active tab
+ * @property {(tab: 'workspace'|'available') => void} onTabChange - Tab change handler
  * @property {string} [selectedFileId] - Currently selected file ID
  * @property {(fileId: string) => void} [onSelect] - File selection handler
  * @property {(fileId: string) => void} [onToggleStar] - Toggle star handler
@@ -43,23 +48,24 @@ import './TabbedFilesBrowser.scss';
  * @property {(e: DragEvent, file: Object) => void} [onDragStart] - Drag start handler
  * @property {(e: MouseEvent, file: Object) => void} [onContextMenu] - Context menu handler
  * @property {(e: MouseEvent, file: Object) => void} [onMenuClick] - Menu button click handler
- * @property {(viewId: string) => void} [onViewClick] - View click handler
+ * @property {(fileId: string) => void} [onAddToWorkspace] - Add file to workspace handler
  * @property {string} [className] - Additional CSS classes
  */
 
 /**
- * TabbedFilesBrowser - Bottom section with Loaded/All tabs
+ * TabbedFilesBrowser - Bottom section with Workspace/Available tabs
  *
  * @param {TabbedFilesBrowserProps} props - Component props
  * @returns {React.ReactElement} The rendered component
  */
 export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
-    loadedDatasets = [],
+    workspaceFiles = [],
+    availableFiles = [],
     allFiles = [],
     folders = [],
     filters = null,
     applyFilters = null,
-    activeTab = 'all',
+    activeTab = 'workspace',
     onTabChange,
     selectedFileId,
     onSelect,
@@ -68,27 +74,18 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
     onDragStart,
     onContextMenu,
     onMenuClick,
-    onViewClick,
+    onAddToWorkspace,
+    // V7: Tag display props
+    tags,
+    getCategoryForTag,
     className = '',
 }) {
     const { isVR } = useAdaptive();
-
-    // Expanded datasets state (for Loaded tab)
-    const [expandedDatasets, setExpandedDatasets] = useState(new Set());
 
     // Local view state (not filtered globally)
     const [viewMode, setViewMode] = useState('list');
     const [currentFolderId, setCurrentFolderId] = useState(null);
     const [expandedFolders, setExpandedFolders] = useState(new Set());
-
-    // Toggle dataset expansion
-    const toggleDataset = useCallback((id) => {
-        setExpandedDatasets(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-    }, []);
 
     // Toggle folder expansion
     const toggleFolder = useCallback((id) => {
@@ -106,21 +103,32 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
 
     // Get root folders and files for current location
     const { rootFolders, rootFiles } = useMemo(() => {
+        // Use workspace files for 'workspace' tab, available files for 'available' tab
+        const currentFiles = activeTab === 'workspace' ? workspaceFiles :
+                            activeTab === 'available' ? availableFiles : allFiles;
         return {
             rootFolders: folders.filter(f => (f.parentId ?? null) === currentFolderId),
             // At root (null), show files without a folder assignment
-            rootFiles: allFiles.filter(f => (f.folderId ?? null) === currentFolderId),
+            rootFiles: currentFiles.filter(f => (f.folderId ?? null) === currentFolderId),
         };
-    }, [folders, allFiles, currentFolderId]);
+    }, [folders, workspaceFiles, availableFiles, allFiles, currentFolderId, activeTab]);
 
     // Check if global filters are active
     const hasGlobalSearch = filters?.searchQuery?.trim();
-    const hasGlobalFilters = hasGlobalSearch || (filters?.typeFilters?.length > 0);
+    const hasGlobalFilters = hasGlobalSearch ||
+        (filters?.typeFilters?.length > 0) ||
+        (filters?.tagFilters?.length > 0);
+
+    // Get current tab's base files
+    const currentTabFiles = useMemo(() => {
+        return activeTab === 'workspace' ? workspaceFiles :
+               activeTab === 'available' ? availableFiles : allFiles;
+    }, [activeTab, workspaceFiles, availableFiles, allFiles]);
 
     // Filter and sort files using global filters
     const filteredFiles = useMemo(() => {
         // When searching globally, search all files; otherwise show current folder contents
-        const baseFiles = hasGlobalSearch ? allFiles : rootFiles;
+        const baseFiles = hasGlobalSearch ? currentTabFiles : rootFiles;
 
         // Apply global filters if available
         if (applyFilters) {
@@ -131,15 +139,7 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
         return [...baseFiles].sort((a, b) =>
             (a.name || '').localeCompare(b.name || '')
         );
-    }, [rootFiles, allFiles, hasGlobalSearch, applyFilters]);
-
-    // Filter loaded datasets using global filters
-    const filteredDatasets = useMemo(() => {
-        if (!applyFilters || !hasGlobalFilters) {
-            return loadedDatasets;
-        }
-        return applyFilters(loadedDatasets);
-    }, [loadedDatasets, applyFilters, hasGlobalFilters]);
+    }, [rootFiles, currentTabFiles, hasGlobalSearch, applyFilters]);
 
     const classList = [
         'tabbed-files-browser',
@@ -147,30 +147,37 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
         className,
     ].filter(Boolean).join(' ');
 
+    // Handle double-click for available files (add to workspace)
+    const handleAvailableDoubleClick = useCallback((file) => {
+        if (onAddToWorkspace) {
+            onAddToWorkspace(file.id);
+        }
+    }, [onAddToWorkspace]);
+
     return (
         <div className={classList}>
             {/* Tab bar */}
             <div className="tabbed-files-browser__tabs">
                 <TabButton
-                    icon="database"
-                    label="Loaded"
-                    active={activeTab === 'loaded'}
-                    badge={hasGlobalFilters ? filteredDatasets.length : loadedDatasets.length}
-                    color="teal"
-                    onClick={() => onTabChange('loaded')}
+                    icon="folder"
+                    label="Workspace"
+                    active={activeTab === 'workspace'}
+                    badge={hasGlobalFilters && activeTab === 'workspace' ? filteredFiles.length : workspaceFiles.length}
+                    color="blue"
+                    onClick={() => onTabChange('workspace')}
                 />
                 <TabButton
-                    icon="folder"
-                    label="All Files"
-                    active={activeTab === 'all'}
-                    badge={hasGlobalFilters ? filteredFiles.length : allFiles.length}
-                    color="blue"
-                    onClick={() => onTabChange('all')}
+                    icon="folderOpen"
+                    label="Available"
+                    active={activeTab === 'available'}
+                    badge={hasGlobalFilters && activeTab === 'available' ? filteredFiles.length : availableFiles.length}
+                    color="gray"
+                    onClick={() => onTabChange('available')}
                 />
             </div>
 
-            {/* All Files Tab Content */}
-            {activeTab === 'all' && (
+            {/* Workspace Files Tab Content */}
+            {activeTab === 'workspace' && (
                 <>
                     {/* Toolbar: Breadcrumb + View Toggle */}
                     <div className="tabbed-files-browser__toolbar">
@@ -221,6 +228,8 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
                                         onDragStart={onDragStart}
                                         onContextMenu={onContextMenu}
                                         onMenuClick={onMenuClick}
+                                        tags={tags}
+                                        getCategoryForTag={getCategoryForTag}
                                     />
                                 ))}
                             </div>
@@ -241,11 +250,20 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
                                     onMenuClick={onMenuClick}
                                     expandedFolders={expandedFolders}
                                     onToggleFolder={toggleFolder}
+                                    tags={tags}
+                                    getCategoryForTag={getCategoryForTag}
                                 />
                             ))
                         )}
 
-                        {/* Empty state */}
+                        {/* Empty state for workspace */}
+                        {filteredFiles.length === 0 && !hasGlobalSearch && (
+                            <EmptyState
+                                icon="folder"
+                                title="No files in workspace"
+                                subtitle="Add files from the Available tab"
+                            />
+                        )}
                         {filteredFiles.length === 0 && hasGlobalSearch && (
                             <EmptyState
                                 icon="search"
@@ -257,34 +275,93 @@ export const TabbedFilesBrowser = memo(function TabbedFilesBrowser({
                 </>
             )}
 
-            {/* Loaded Datasets Tab Content */}
-            {activeTab === 'loaded' && (
-                <div className="tabbed-files-browser__content">
-                    {filteredDatasets.length > 0 ? (
-                        filteredDatasets.map(dataset => (
-                            <DatasetTreeItem
-                                key={dataset.id}
-                                dataset={dataset}
-                                expanded={expandedDatasets.has(dataset.id)}
-                                onToggle={() => toggleDataset(dataset.id)}
-                                onViewClick={onViewClick}
+            {/* Available Files Tab Content */}
+            {activeTab === 'available' && (
+                <>
+                    {/* Toolbar: Breadcrumb + View Toggle */}
+                    <div className="tabbed-files-browser__toolbar">
+                        <Breadcrumb
+                            path={breadcrumbPath}
+                            onNavigate={setCurrentFolderId}
+                        />
+                        <div className="tabbed-files-browser__toolbar-right">
+                            <ToggleGroup
+                                options={[
+                                    { value: 'list', icon: 'list' },
+                                    { value: 'grid', icon: 'grid_3x3' },
+                                ]}
+                                value={viewMode}
+                                onChange={setViewMode}
+                                size="xs"
                             />
-                        ))
-                    ) : loadedDatasets.length > 0 ? (
-                        <EmptyState
-                            icon="search"
-                            title="No matching datasets"
-                            subtitle={`No results for "${filters?.searchQuery || 'current filters'}"`}
-                        />
-                    ) : (
-                        <EmptyState
-                            icon="database"
-                            title="No datasets loaded"
-                            subtitle="Load a file to create views"
-                        />
-                    )}
-                </div>
+                        </div>
+                    </div>
+
+                    {/* File list/grid */}
+                    <div className={`tabbed-files-browser__content ${viewMode === 'grid' ? 'tabbed-files-browser__content--grid' : ''}`}>
+                        {/* Files - Grid View */}
+                        {viewMode === 'grid' && filteredFiles.length > 0 && (
+                            <div className="files-grid">
+                                {filteredFiles.filter(f => !f.isFolder).map(file => (
+                                    <FileItemGrid
+                                        key={file.id}
+                                        file={file}
+                                        isSelected={selectedFileId === file.id}
+                                        onSelect={() => onSelect?.(file.id)}
+                                        onDoubleClick={handleAvailableDoubleClick}
+                                        onStar={onToggleStar}
+                                        onDragStart={onDragStart}
+                                        onContextMenu={onContextMenu}
+                                        onMenuClick={onMenuClick}
+                                        tags={tags}
+                                        getCategoryForTag={getCategoryForTag}
+                                        onAdd={onAddToWorkspace}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Files - List View */}
+                        {viewMode === 'list' && filteredFiles.length > 0 && (
+                            filteredFiles.map(file => (
+                                <FileItemList
+                                    key={file.id}
+                                    file={file}
+                                    isSelected={selectedFileId === file.id}
+                                    onSelect={() => onSelect?.(file.id)}
+                                    onDoubleClick={handleAvailableDoubleClick}
+                                    onStar={onToggleStar}
+                                    onDragStart={onDragStart}
+                                    onContextMenu={onContextMenu}
+                                    onMenuClick={onMenuClick}
+                                    expandedFolders={expandedFolders}
+                                    onToggleFolder={toggleFolder}
+                                    tags={tags}
+                                    getCategoryForTag={getCategoryForTag}
+                                    onAdd={onAddToWorkspace}
+                                />
+                            ))
+                        )}
+
+                        {/* Empty state for available */}
+                        {filteredFiles.length === 0 && !hasGlobalSearch && (
+                            <EmptyState
+                                icon="check"
+                                title="All files in workspace"
+                                subtitle="All project files have been added"
+                            />
+                        )}
+                        {filteredFiles.length === 0 && hasGlobalSearch && (
+                            <EmptyState
+                                icon="search"
+                                title="No files found"
+                                subtitle={`No results for "${filters?.searchQuery}"`}
+                            />
+                        )}
+                    </div>
+                </>
             )}
+
         </div>
     );
 });

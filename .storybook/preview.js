@@ -4,6 +4,29 @@ import React from "react";
 import { AdaptiveProvider } from "../src/ui/react/context/AdaptiveContext";
 import { MockDataProvider } from "../src/ui/react/__mocks__/MockDataProvider";
 
+// Mock window.CIA for Storybook (prevents "DatasetManager not initialized" errors)
+if (typeof window !== "undefined" && !window.CIA) {
+  window.CIA = {
+    datasetManager: {
+      getAllDatasets: () => [],
+      getDataset: () => null,
+      on: () => ({ off: () => {} }),
+      off: () => {},
+      emit: () => {},
+    },
+    annotationManager: {
+      getAnnotationsForDataset: () => [],
+      on: () => ({ off: () => {} }),
+      off: () => {},
+    },
+    instanceManager: {
+      getAllInstances: () => [],
+      on: () => ({ off: () => {} }),
+      off: () => {},
+    },
+  };
+}
+
 // Initialize session manager for Storybook (prevents "Session not initialized" errors)
 try {
   const { sessionManager } = require("../src/core/session/sessionManager.js");

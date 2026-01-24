@@ -1,14 +1,59 @@
 /**
  * @file FileItem.jsx
  * @description File item component for list and grid views.
- * 
+ * V7: Added tag display support - shows up to 2 tags under filename with overflow.
+ * V7.1: Added animated loading/processing indicator and improved size display.
+ *
  * CLEAN MIGRATION: Uses <Icon name={...} /> directly with semantic names.
  */
 
 import React, { useState, memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { TagChipList } from '@UI/react/components/atoms/TagChip';
 import { getFileTypeDisplayInfo } from '@Core/instances/types/instanceTypesInit.js';
 import { FileThumbnail } from './FileThumbnail';
+import { STATE_COLORS } from '@UI/react/constants/filesTabConfig.js';
+
+/**
+ * LoadStateIndicator - Shows animated spinner for loading/processing, dot for loaded
+ * @param {Object} props - Component props
+ * @param {string} [props.state] - Load state: 'stored' | 'loading' | 'loaded' | 'processing'
+ * @param {boolean} [props.loaded] - Alternative: simple loaded boolean
+ * @param {number} props.size - Icon size in pixels
+ */
+const LoadStateIndicator = memo(function LoadStateIndicator({ state, loaded, size = 8 }) {
+    // Derive state from loaded boolean if no explicit state provided
+    const effectiveState = state || (loaded ? 'loaded' : 'stored');
+    const color = STATE_COLORS[effectiveState] || 'transparent';
+    const isAnimated = effectiveState === 'loading' || effectiveState === 'processing';
+
+    // Don't show anything for stored state
+    if (effectiveState === 'stored') return null;
+
+    if (isAnimated) {
+        return (
+            <span className="load-state-indicator load-state-indicator--animated" title={effectiveState === 'loading' ? 'Loading...' : 'Processing...'}>
+                <Icon name="loader" size={size} style={{ color }} className="spin" />
+            </span>
+        );
+    }
+
+    // Loaded state - solid dot
+    return (
+        <span
+            className="load-state-indicator"
+            title="Loaded"
+            style={{
+                width: size,
+                height: size,
+                borderRadius: '50%',
+                backgroundColor: color,
+                boxShadow: `0 0 ${size}px ${color}40`,
+                flexShrink: 0,
+            }}
+        />
+    );
+});
 
 /**
  * Get icon config for a file - returns STRING icon names (not components!)
@@ -47,6 +92,12 @@ export const FileItemList = memo(function FileItemList({
     onDoubleClick,
     expandedFolders,
     onToggleFolder,
+    // V7: Tag display props
+    tags,
+    getCategoryForTag,
+    showTags = true,
+    // Optional: Add to workspace button
+    onAdd,
 }) {
     const [isHovered, setIsHovered] = useState(false);
     const { icon, colorClass, color } = getFileTypeConfig(file);
@@ -81,21 +132,51 @@ export const FileItemList = memo(function FileItemList({
                     <Icon name={icon} size={14} />
                 </span>
 
-                {/* File name */}
-                <span className="tree-item__name" title={file.name}>
-                    {file.name}
-                </span>
-
-                {/* Status indicators */}
-                {file.loaded && (
-                    <span className="tree-item__loaded-indicator" title="Loaded in workspace">
-                        <Icon name="check" size={10} />
+                {/* File name and tags */}
+                <div className="tree-item__info">
+                    <span className="tree-item__name" title={file.name}>
+                        {file.name}
                     </span>
+                    {/* V7: Tag display */}
+                    {showTags && file.tagIds && file.tagIds.length > 0 && tags && (
+                        <TagChipList
+                            tags={file.tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean)}
+                            getCategoryForTag={getCategoryForTag}
+                            maxVisible={2}
+                            size="xs"
+                            className="tree-item__tags"
+                        />
+                    )}
+                </div>
+
+                {/* Load state indicator (animated for loading/processing) */}
+                {!isFolder && (
+                    <LoadStateIndicator state={file.loadState} loaded={file.loaded} size={8} />
+                )}
+
+                {/* Star indicator (always visible when starred) */}
+                {file.starred && !isHovered && !isFolder && (
+                    <div className="tree-item__star-indicator">
+                        <Icon name="star" size={12} />
+                    </div>
                 )}
 
                 {/* Hover actions */}
                 {isHovered && !isFolder && (
                     <div className="tree-item__actions">
+                        {/* Add to workspace button (shown in Available tab) */}
+                        {onAdd && (
+                            <button
+                                className="tree-item__action tree-item__action--add"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAdd?.(file.id);
+                                }}
+                                title="Add to workspace"
+                            >
+                                <Icon name="plus" size={12} />
+                            </button>
+                        )}
                         <button
                             className={`tree-item__action ${file.starred ? 'starred' : ''}`}
                             onClick={(e) => {
@@ -119,11 +200,9 @@ export const FileItemList = memo(function FileItemList({
                     </div>
                 )}
 
-                {file.loaded && (
-                    <Icon name="circle" size={6} className="status-indicator__dot--active" />
-                )}
-                <span className="item-meta">
-                    {isFolder ? `${file.children?.length || 0}` : file.size}
+                {/* File size or folder item count */}
+                <span className="tree-item__size">
+                    {isFolder ? `${file.children?.length || 0}` : (file.size || '—')}
                 </span>
             </div>
 
@@ -142,6 +221,10 @@ export const FileItemList = memo(function FileItemList({
                     onDoubleClick={onDoubleClick}
                     expandedFolders={expandedFolders}
                     onToggleFolder={onToggleFolder}
+                    tags={tags}
+                    getCategoryForTag={getCategoryForTag}
+                    showTags={showTags}
+                    onAdd={onAdd}
                 />
             ))}
         </>
@@ -160,6 +243,12 @@ export const FileItemGrid = memo(function FileItemGrid({
     onContextMenu,
     onMenuClick,
     onDoubleClick,
+    // V7: Tag display props
+    tags,
+    getCategoryForTag,
+    showTags = true,
+    // Optional: Add to workspace button
+    onAdd,
 }) {
     const [isHovered, setIsHovered] = useState(false);
     const { icon, colorClass, color } = getFileTypeConfig(file);
@@ -189,15 +278,35 @@ export const FileItemGrid = memo(function FileItemGrid({
                         colorClass={colorClass}
                     />
                 </div>
+                {/* Star indicator (always visible when starred) */}
+                {file.starred && !isHovered && (
+                    <div className="thumbnail-star-indicator">
+                        <Icon name="star" size={10} />
+                    </div>
+                )}
                 <div className="thumbnail-actions" style={{ opacity: isHovered ? 1 : 0 }}>
+                    {/* Add to workspace button (shown in Available tab) */}
+                    {onAdd && (
+                        <button
+                            className="thumbnail-action thumbnail-action--add"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onAdd?.(file.id);
+                            }}
+                            title="Add to workspace"
+                        >
+                            <Icon name="plus" size={10} />
+                        </button>
+                    )}
                     <button
-                        className="thumbnail-action"
+                        className={`thumbnail-action ${file.starred ? 'starred' : ''}`}
                         onClick={(e) => {
                             e.stopPropagation();
                             onStar(file.id);
                         }}
+                        title={file.starred ? 'Remove star' : 'Add star'}
                     >
-                        <Icon name="star" size={10} />
+                        <Icon name={file.starred ? "star" : "starOutline"} size={10} />
                     </button>
                     <button
                         className="thumbnail-action"
@@ -208,8 +317,22 @@ export const FileItemGrid = memo(function FileItemGrid({
                     </button>
                 </div>
             </div>
-            <div className="file-name">{file.name}</div>
-            <div className="file-size">{file.size}</div>
+            <div className="file-card__name-row">
+                <div className="file-name">{file.name}</div>
+                {/* Load state indicator */}
+                <LoadStateIndicator state={file.loadState} loaded={file.loaded} size={8} />
+            </div>
+            {/* V7: Tag display for grid view */}
+            {showTags && file.tagIds && file.tagIds.length > 0 && tags && (
+                <TagChipList
+                    tags={file.tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean)}
+                    getCategoryForTag={getCategoryForTag}
+                    maxVisible={2}
+                    size="xs"
+                    className="file-card__tags"
+                />
+            )}
+            <div className="file-size">{file.size || '—'}</div>
         </div>
     );
 });

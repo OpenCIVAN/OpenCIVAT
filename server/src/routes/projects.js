@@ -362,7 +362,8 @@ router.get("/:id/files", async (req, res, next) => {
     }
 
     const result = await pool.query(
-      `SELECT d.*, 
+      `SELECT d.*,
+              d.file_size as size,
               fpa.access_level, fpa.added_at, fpa.folder_id,
               COALESCE(get_folder_path(fpa.folder_id), '/') as folder_path,
               f.name as folder_name

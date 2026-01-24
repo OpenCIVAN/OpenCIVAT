@@ -17,6 +17,19 @@ export const VR_READINESS_STATUS = Object.freeze({
   NOT_APPLICABLE: "n-a", // File type doesn't support VR
 });
 
+// =============================================================================
+// DATA STATE - Tracks whether actual file data is in memory
+// =============================================================================
+// This is separate from fileStatus which tracks file *availability*.
+// dataState tracks whether we've actually loaded data into memory.
+
+export const DATA_STATE = Object.freeze({
+  STORED: "stored", // Metadata exists, data not in memory (default)
+  LOADING: "loading", // Currently fetching/parsing data
+  LOADED: "loaded", // Data is in memory, ready for visualization
+  PROCESSING: "processing", // Running a compute operation on the data
+});
+
 /**
  * Dataset - Represents a raw data file with associated metadata and annotations
  *
@@ -56,6 +69,10 @@ export class Dataset {
     // Track file availability status
     // This is runtime state that helps UI show appropriate actions
     this.fileStatus = config.fileStatus || this._determineInitialFileStatus();
+
+    // Track data state - whether actual data is loaded in memory
+    // This is separate from fileStatus which tracks file availability
+    this.dataState = config.dataState || this._determineInitialDataState();
 
     this.annotations = config.annotations || [];
 
@@ -114,6 +131,18 @@ export class Dataset {
   }
 
   /**
+   * Determine initial data state based on whether we have data in memory
+   * @private
+   */
+  _determineInitialDataState() {
+    // If we have raw file or parsed data, we're loaded
+    if (this.rawFile || Object.keys(this.parsedDataCache || {}).length > 0) {
+      return DATA_STATE.LOADED;
+    }
+    return DATA_STATE.STORED;
+  }
+
+  /**
    * Check if we currently have the file data in memory
    *
    * This is a quick check that doesn't hit IndexedDB or make network requests.
@@ -155,10 +184,94 @@ export class Dataset {
 
     if (file) {
       this.rawFile = file;
+      // Also update data state when we receive a file
+      this.dataState = DATA_STATE.LOADED;
     }
 
     // Log status changes for debugging
     log.debug(`Dataset ${this.filename} status: ${status}`);
+  }
+
+  // ===========================================================================
+  // DATA STATE METHODS - For resource management
+  // ===========================================================================
+
+  /**
+   * Check if data is currently loaded in memory
+   * @returns {boolean} True if data (rawFile or parsedData) is in memory
+   */
+  isDataLoaded() {
+    return this.dataState === DATA_STATE.LOADED;
+  }
+
+  /**
+   * Check if data is currently being loaded
+   * @returns {boolean} True if currently loading
+   */
+  isDataLoading() {
+    return this.dataState === DATA_STATE.LOADING;
+  }
+
+  /**
+   * Set data state to loading
+   */
+  setDataLoading() {
+    this.dataState = DATA_STATE.LOADING;
+    log.debug(`Dataset ${this.filename} dataState: loading`);
+  }
+
+  /**
+   * Set data state to loaded
+   */
+  setDataLoaded() {
+    this.dataState = DATA_STATE.LOADED;
+    log.debug(`Dataset ${this.filename} dataState: loaded`);
+  }
+
+  /**
+   * Set data state to processing
+   */
+  setDataProcessing() {
+    this.dataState = DATA_STATE.PROCESSING;
+    log.debug(`Dataset ${this.filename} dataState: processing`);
+  }
+
+  /**
+   * Release data from memory but keep metadata
+   * This frees memory while keeping the dataset reference
+   *
+   * @returns {boolean} True if data was released, false if wasn't loaded
+   */
+  releaseData() {
+    if (this.dataState === DATA_STATE.STORED) {
+      log.debug(`Dataset ${this.filename}: No data to release`);
+      return false;
+    }
+
+    log.info(`Dataset ${this.filename}: Releasing data from memory`);
+
+    // Clear the raw file
+    this.rawFile = null;
+
+    // Clear all parsed data caches
+    this.parsedDataCache = {};
+
+    // Update state
+    this.dataState = DATA_STATE.STORED;
+
+    // File is still fetchable if we have a publicPath
+    this.fileStatus = this.publicPath ? "fetchable" : "needs-upload";
+
+    log.debug(`Dataset ${this.filename} dataState: stored (data released)`);
+    return true;
+  }
+
+  /**
+   * Get the current data state
+   * @returns {string} Current data state
+   */
+  getDataState() {
+    return this.dataState;
   }
 
   /**

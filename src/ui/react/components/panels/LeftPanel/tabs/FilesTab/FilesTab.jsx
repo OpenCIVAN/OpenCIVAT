@@ -5,7 +5,7 @@
  *
  * Features:
  * - Grid and list view modes with thumbnails
- * - Starred, Recent, and All Files sections (resizable)
+ * - Starred, Workspace Files, and Available Files sections (resizable)
  * - Nested folder support with drag-and-drop
  * - Context menu for file actions
  * - Upload dropzone with progress
@@ -22,11 +22,14 @@
  * <FilesTab workspaceId="ws-1" />
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { Icon, IconButton, Tooltip } from '@UI/react/components/atoms';
 import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
 import { SearchBar } from '@UI/react/components/molecules/SearchBar';
-import { SectionNavGroup } from '@UI/react/components/organisms';
+import {
+    ResizableSectionsContainer,
+    ResizableSection,
+} from '@UI/react/components/organisms/ResizableSections';
 import { useFilesTab } from './hooks/useFilesTab';
 import { FileItemList, FileItemGrid } from './components/FileItem';
 import { FileContextMenu } from './components/FileContextMenu';
@@ -77,7 +80,7 @@ export function FilesPanelContent({
         expandedFolders,
         toggleFolder,
 
-        // Section states
+        // Section states (persisted)
         sectionStates,
         toggleSection,
         resizeSection,
@@ -95,9 +98,10 @@ export function FilesPanelContent({
         handleUpload,
 
         // Files data
-        files,
         starredFiles,
-        loadedDatasetsFormatted,
+        workspaceFiles,
+        availableFiles,
+        workspaceFileCount,
         loadedCount,
         supportedFileTypes,
         isLoading,
@@ -108,6 +112,8 @@ export function FilesPanelContent({
         handleDragStart,
         handleDoubleClick,
         refetch,
+        addToWorkspace,
+        isInWorkspace,
     } = useFilesTab({
         workspaceId,
         mockFiles,
@@ -116,9 +122,11 @@ export function FilesPanelContent({
         mockError,
     });
 
-    // Render file items based on view mode (for starred and loaded sections)
+    // Render file items based on view mode
     const renderFileItems = useCallback(
-        (items) => {
+        (items, options = {}) => {
+            const { showAddToWorkspace = false } = options;
+
             if (viewMode === 'grid') {
                 return (
                     <div className="files-grid">
@@ -132,7 +140,10 @@ export function FilesPanelContent({
                                 onDragStart={handleDragStart}
                                 onContextMenu={handleContextMenu}
                                 onMenuClick={handleMenuClick}
-                                onDoubleClick={handleDoubleClick}
+                                onDoubleClick={showAddToWorkspace
+                                    ? () => addToWorkspace(file.id)
+                                    : handleDoubleClick
+                                }
                             />
                         ))}
                     </div>
@@ -148,7 +159,10 @@ export function FilesPanelContent({
                     onDragStart={handleDragStart}
                     onContextMenu={handleContextMenu}
                     onMenuClick={handleMenuClick}
-                    onDoubleClick={handleDoubleClick}
+                    onDoubleClick={showAddToWorkspace
+                        ? () => addToWorkspace(file.id)
+                        : handleDoubleClick
+                    }
                     expandedFolders={expandedFolders}
                     onToggleFolder={toggleFolder}
                 />
@@ -165,97 +179,9 @@ export function FilesPanelContent({
             handleDoubleClick,
             setSelectedFileId,
             toggleFolder,
+            addToWorkspace,
         ]
     );
-
-    // Build sections for SectionNavGroup
-    const fileSections = useMemo(() => [
-        {
-            id: 'starred',
-            icon: 'star',
-            label: 'Starred',
-            color: '#fbbf24', // amber
-            itemCount: starredFiles.length,
-            content: starredFiles.length > 0 ? (
-                renderFileItems(starredFiles)
-            ) : (
-                <div className="section-empty">No starred items</div>
-            ),
-        },
-        {
-            id: 'loaded',
-            icon: 'database',
-            label: 'Loaded Datasets',
-            color: '#7dd3fc', // teal
-            itemCount: loadedDatasetsFormatted.length,
-            content: loadedDatasetsFormatted.length > 0 ? (
-                renderFileItems(loadedDatasetsFormatted)
-            ) : (
-                <div className="section-empty">No datasets loaded</div>
-            ),
-        },
-        {
-            id: 'all',
-            icon: 'folder',
-            label: 'All Files',
-            color: '#60a5fa', // blue
-            itemCount: files.length,
-            content: files.length > 0 ? (
-                viewMode === 'grid' ? (
-                    <div className="files-grid">
-                        {files
-                            .filter((f) => f.type !== 'folder')
-                            .map((file) => (
-                                <FileItemGrid
-                                    key={file.id}
-                                    file={file}
-                                    isSelected={selectedFileId === file.id}
-                                    onSelect={setSelectedFileId}
-                                    onStar={handleStar}
-                                    onDragStart={handleDragStart}
-                                    onContextMenu={handleContextMenu}
-                                    onMenuClick={handleMenuClick}
-                                    onDoubleClick={handleDoubleClick}
-                                />
-                            ))}
-                    </div>
-                ) : (
-                    files.map((file) => (
-                        <FileItemList
-                            key={file.id}
-                            file={file}
-                            isSelected={selectedFileId === file.id}
-                            onSelect={setSelectedFileId}
-                            onStar={handleStar}
-                            onDragStart={handleDragStart}
-                            onContextMenu={handleContextMenu}
-                            onMenuClick={handleMenuClick}
-                            onDoubleClick={handleDoubleClick}
-                            expandedFolders={expandedFolders}
-                            onToggleFolder={toggleFolder}
-                        />
-                    ))
-                )
-            ) : (
-                <div className="section-empty">No files uploaded</div>
-            ),
-        },
-    ], [
-        starredFiles,
-        loadedDatasetsFormatted,
-        files,
-        viewMode,
-        selectedFileId,
-        expandedFolders,
-        handleStar,
-        handleDragStart,
-        handleContextMenu,
-        handleMenuClick,
-        handleDoubleClick,
-        setSelectedFileId,
-        toggleFolder,
-        renderFileItems,
-    ]);
 
     return (
         <div className="files-tab">
@@ -312,7 +238,8 @@ export function FilesPanelContent({
                     className="filter-toggle"
                 />
                 <span className="panel-toolbar__info">
-                    <strong>{loadedCount}</strong> loaded
+                    <strong>{workspaceFileCount}</strong> in workspace
+                    {loadedCount > 0 && <> · <strong>{loadedCount}</strong> loaded</>}
                 </span>
             </div>
 
@@ -365,13 +292,71 @@ export function FilesPanelContent({
                 </div>
             )}
 
-            {/* Section Navigation */}
+            {/* Resizable Sections */}
             <div className="files-tab__sections">
-                <SectionNavGroup
-                    sections={fileSections}
-                    defaultSectionId="starred"
-                    size="sm"
-                />
+                <ResizableSectionsContainer
+                    sectionStates={sectionStates}
+                    onSectionToggle={toggleSection}
+                    onSectionResize={resizeSection}
+                >
+                    {/* Starred Files Section */}
+                    <ResizableSection
+                        id="starred"
+                        icon="star"
+                        iconColorClass="icon--amber"
+                        label="Starred"
+                        count={starredFiles.length}
+                        color="amber"
+                        minHeight={60}
+                    >
+                        {starredFiles.length > 0 ? (
+                            renderFileItems(starredFiles)
+                        ) : (
+                            <div className="section-empty">No starred files</div>
+                        )}
+                    </ResizableSection>
+
+                    {/* Workspace Files Section */}
+                    <ResizableSection
+                        id="workspace"
+                        icon="folder"
+                        iconColorClass="icon--blue"
+                        label="Workspace Files"
+                        count={workspaceFileCount}
+                        color="blue"
+                        minHeight={80}
+                    >
+                        {workspaceFiles.length > 0 ? (
+                            renderFileItems(workspaceFiles)
+                        ) : (
+                            <div className="section-empty">
+                                <p>No files added to workspace</p>
+                                <p className="section-empty__hint">
+                                    Expand "Available Files" below to add files
+                                </p>
+                            </div>
+                        )}
+                    </ResizableSection>
+
+                    {/* Available Files Section */}
+                    <ResizableSection
+                        id="available"
+                        icon="folderOpen"
+                        iconColorClass="icon--gray"
+                        label="Available Files"
+                        count={availableFiles.length}
+                        color="default"
+                        minHeight={60}
+                    >
+                        {availableFiles.length > 0 ? (
+                            renderFileItems(availableFiles, { showAddToWorkspace: true })
+                        ) : (
+                            <div className="section-empty">
+                                All files are in workspace
+                            </div>
+                        )}
+                    </ResizableSection>
+                </ResizableSectionsContainer>
             </div>
 
             {/* Footer with upload */}
@@ -390,6 +375,7 @@ export function FilesPanelContent({
                     file={contextMenu.file}
                     onClose={closeContextMenu}
                     onAction={handleContextAction}
+                    isInWorkspace={isInWorkspace(contextMenu.file?.id)}
                 />
             )}
         </div>

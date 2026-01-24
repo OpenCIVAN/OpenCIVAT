@@ -227,6 +227,40 @@ export class DatasetManager extends BaseManager {
   }
 
   /**
+   * Fetch a single dataset from the server by ID
+   * Used when we need a specific dataset but don't want to sync all datasets
+   *
+   * @param {string} datasetId - The dataset ID to fetch
+   * @returns {Promise<Dataset|null>} The dataset, or null if not found
+   */
+  async fetchDatasetById(datasetId) {
+    log.debug(`DatasetManager: Fetching single dataset ${datasetId} from server...`);
+
+    // Check if we already have it locally
+    if (this._datasets.has(datasetId)) {
+      log.debug(`Dataset ${datasetId} already exists locally`);
+      return this._datasets.get(datasetId);
+    }
+
+    try {
+      // Fetch from server API
+      const response = await apiClient.get(`/files/${datasetId}`);
+
+      if (!response || !response.file) {
+        log.warn(`Dataset ${datasetId} not found on server`);
+        return null;
+      }
+
+      // Add it locally
+      const dataset = await this._addDatasetFromServer(response.file);
+      return dataset;
+    } catch (error) {
+      log.error(`Failed to fetch dataset ${datasetId}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Add a dataset from server sync (v2.0)
    * Called when fetching existing datasets from server API
    * Does NOT upload - the file already exists on server
@@ -461,6 +495,105 @@ export class DatasetManager extends BaseManager {
       log.error("DatasetManager: Failed to remove dataset:", error);
       throw error;
     }
+  }
+
+  /**
+   * Release dataset data from memory but keep metadata
+   *
+   * This frees up memory (rawFile, parsedDataCache) while keeping
+   * the dataset reference in IndexedDB. The file can be reloaded
+   * when needed.
+   *
+   * Use this for "unload from memory" - when you want to free resources
+   * but keep the dataset in the file list.
+   *
+   * @param {string} datasetId - Dataset to release data for
+   * @returns {Promise<boolean>} True if data was released
+   */
+  async releaseDatasetData(datasetId) {
+    log.debug(`DatasetManager: Releasing data for dataset ${datasetId}`);
+
+    const dataset = this.getDataset(datasetId);
+    if (!dataset) {
+      log.warn(`DatasetManager: Dataset ${datasetId} not found`);
+      return false;
+    }
+
+    // Release the data
+    const wasReleased = dataset.releaseData();
+
+    if (wasReleased) {
+      // Clear from parsed data cache as well
+      this.parsedDataCache.delete(datasetId);
+
+      // Emit update so UI refreshes
+      this._emit("datasetUpdated", dataset);
+
+      log.info(`DatasetManager: Data released for ${dataset.filename}`);
+    }
+
+    return wasReleased;
+  }
+
+  /**
+   * Cancel a loading/processing operation for a dataset
+   * This resets the state back to STORED and clears any partial data.
+   *
+   * @param {string} datasetId - Dataset to cancel
+   * @returns {boolean} True if operation was cancelled
+   */
+  async cancelLoadDataset(datasetId) {
+    log.debug(`DatasetManager: Canceling load for dataset ${datasetId}`);
+
+    const dataset = this.getDataset(datasetId);
+    if (!dataset) {
+      log.warn(`DatasetManager: Dataset ${datasetId} not found`);
+      return false;
+    }
+
+    // Only cancel if actually loading or processing
+    if (!dataset.isDataLoading() && dataset.dataState !== 'processing') {
+      log.debug(`DatasetManager: Dataset ${datasetId} is not loading/processing`);
+      return false;
+    }
+
+    // Reset the state - releaseData() sets state back to STORED
+    const wasReleased = dataset.releaseData();
+
+    if (wasReleased) {
+      // Clear from parsed data cache as well
+      this.parsedDataCache.delete(datasetId);
+
+      // Reset file status if it was in fetching state
+      if (dataset.fileStatus === 'fetching') {
+        dataset.setFileStatus('available');
+      }
+
+      // Emit update so UI refreshes
+      this._emit("datasetUpdated", dataset);
+
+      log.info(`DatasetManager: Load cancelled for ${dataset.filename}`);
+    }
+
+    return wasReleased;
+  }
+
+  /**
+   * Check if a dataset has data loaded in memory
+   * @param {string} datasetId - Dataset to check
+   * @returns {boolean} True if data is loaded
+   */
+  isDatasetDataLoaded(datasetId) {
+    const dataset = this.getDataset(datasetId);
+    return dataset?.isDataLoaded() ?? false;
+  }
+
+  /**
+   * Get all datasets that have data loaded in memory
+   * @returns {Dataset[]} Array of datasets with loaded data
+   */
+  getLoadedDatasets() {
+    return this.getAllDatasets().filter((d) => d.isDataLoaded());
   }
 
   async updateMetadata(datasetId, metadata) {
@@ -726,6 +859,12 @@ export class DatasetManager extends BaseManager {
     // Check if we already have the file in memory
     let rawFile = dataset.rawFile;
 
+    // If data is already loaded, just return it
+    if (rawFile && dataset.isDataLoaded()) {
+      log.debug(`Data already loaded for ${dataset.filename}`);
+      return rawFile;
+    }
+
     // If we don't have it, try to fetch it
     if (!rawFile) {
       log.debug(
@@ -737,8 +876,9 @@ export class DatasetManager extends BaseManager {
         log.debug(`Fetching from: ${dataset.publicPath}`);
 
         try {
-          // Update status to show we're fetching
+          // Update status to show we're fetching/loading
           dataset.setFileStatus("fetching");
+          dataset.setDataLoading();
           this._emit("datasetUpdated", dataset);
 
           const response = await fetch(dataset.publicPath);
@@ -756,6 +896,7 @@ export class DatasetManager extends BaseManager {
 
           // Store it back in the dataset for future use
           dataset.setFileStatus("available", rawFile);
+          dataset.setDataLoaded();
 
           // Only cache if this file doesn't already have a cacheKey from the server
           // Files loaded from the database already have a cacheKey and don't need re-uploading
@@ -784,6 +925,7 @@ export class DatasetManager extends BaseManager {
           this._emit("datasetUpdated", dataset);
         } catch (fetchError) {
           dataset.setFileStatus("fetch-failed");
+          dataset.releaseData(); // Reset to stored state on failure
           this._emit("datasetUpdated", dataset);
 
           throw new Error(
@@ -793,6 +935,7 @@ export class DatasetManager extends BaseManager {
       } else {
         // No public path - mark as needing upload
         dataset.setFileStatus("needs-upload");
+        dataset.releaseData(); // Ensure we're in stored state
         this._emit("datasetUpdated", dataset);
 
         throw new Error(

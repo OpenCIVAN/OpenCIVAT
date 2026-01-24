@@ -312,8 +312,61 @@ export function ResizableSections({ sections }) {
 // HOOK FOR MANAGING SECTION STATE
 // =============================================================================
 
-export function useSectionStates(initialStates) {
-    const [states, setStates] = useState(initialStates);
+const SECTION_STATE_PREFIX = 'cia_section_state_';
+
+/**
+ * Load section states from localStorage
+ * @param {string} storageKey - Storage key
+ * @param {Object} initialStates - Default states
+ * @returns {Object} Stored states or initial states
+ */
+function loadSectionStates(storageKey, initialStates) {
+    if (!storageKey) return initialStates;
+    try {
+        const stored = localStorage.getItem(`${SECTION_STATE_PREFIX}${storageKey}`);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            // Merge with initialStates to ensure new sections have defaults
+            return { ...initialStates, ...parsed };
+        }
+    } catch (err) {
+        console.warn('Failed to load section states:', err);
+    }
+    return initialStates;
+}
+
+/**
+ * Save section states to localStorage
+ * @param {string} storageKey - Storage key
+ * @param {Object} states - States to save
+ */
+function saveSectionStates(storageKey, states) {
+    if (!storageKey) return;
+    try {
+        localStorage.setItem(`${SECTION_STATE_PREFIX}${storageKey}`, JSON.stringify(states));
+    } catch (err) {
+        console.warn('Failed to save section states:', err);
+    }
+}
+
+/**
+ * Hook for managing section expand/collapse and flex-grow states
+ * @param {Object} initialStates - Default states for each section
+ * @param {Object} options - Options
+ * @param {string} [options.storageKey] - If provided, states persist to localStorage
+ * @returns {Object} State management functions
+ */
+export function useSectionStates(initialStates, options = {}) {
+    const { storageKey } = options;
+
+    const [states, setStates] = useState(() =>
+        loadSectionStates(storageKey, initialStates)
+    );
+
+    // Save to localStorage when states change
+    useEffect(() => {
+        saveSectionStates(storageKey, states);
+    }, [storageKey, states]);
 
     const toggleSection = useCallback((id) => {
         setStates(prev => ({

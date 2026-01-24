@@ -1,10 +1,15 @@
 /**
  * @file useGlobalFilters.js
  * @description Hook for managing global file filtering state in the Files Tab.
- * Provides search, type filtering, and sorting functionality.
+ * Provides search, type filtering, tag filtering (with hybrid AND/OR logic), and sorting.
+ *
+ * Tag Filter Logic (V7):
+ * - OR within same tag category (Pre-op OR Post-op)
+ * - AND between different tag categories (Pre-op AND Control)
+ * - AND with file type categories (Volumetric AND Pre-op)
  *
  * @example
- * const { filters, setFilters, applyFilters, hasActiveFilters } = useGlobalFilters();
+ * const { filters, setFilters, applyFilters, hasActiveFilters } = useGlobalFilters({ tags });
  */
 
 import { useState, useMemo, useCallback } from 'react';
@@ -13,20 +18,32 @@ import { getFileTypeByExtension } from '@UI/react/constants/filesTabConfig.js';
 /**
  * @typedef {Object} FilterState
  * @property {string} searchQuery - Search query string
- * @property {string[]} typeFilters - Active file type filters
+ * @property {string[]} categoryFilters - Active file category filters (volumetric, documents, etc.)
+ * @property {string[]} typeFilters - Active specific file type filters (nifti, dicom, etc.)
+ * @property {string[]} tagFilters - Active tag ID filters
  * @property {string} sortBy - Sort field (name, date, size, type)
  * @property {'asc'|'desc'} sortOrder - Sort direction
+ */
+
+/**
+ * @typedef {Object} Tag
+ * @property {string} id - Tag ID
+ * @property {string} name - Tag display name
+ * @property {string} categoryId - Parent category ID
  */
 
 /**
  * @typedef {Object} UseGlobalFiltersReturn
  * @property {FilterState} filters - Current filter state
  * @property {(updates: Partial<FilterState>) => void} setFilters - Update filter state
- * @property {(items: Array) => Array} applyFilters - Apply filters to items
+ * @property {(items: Array, tags?: Tag[]) => Array} applyFilters - Apply filters to items
  * @property {boolean} hasActiveFilters - Whether any filters are active
+ * @property {number} activeFilterCount - Count of active filters
  * @property {() => void} clearFilters - Clear all filters
  * @property {(query: string) => void} setSearchQuery - Set search query
+ * @property {(category: string) => void} toggleCategoryFilter - Toggle a category filter
  * @property {(type: string) => void} toggleTypeFilter - Toggle a type filter
+ * @property {(tagId: string) => void} toggleTagFilter - Toggle a tag filter
  * @property {(sortBy: string) => void} setSortBy - Set sort field
  * @property {(order: 'asc'|'desc') => void} setSortOrder - Set sort order
  */
@@ -36,16 +53,20 @@ import { getFileTypeByExtension } from '@UI/react/constants/filesTabConfig.js';
  *
  * @param {Object} options - Hook options
  * @param {FilterState} [options.initialFilters] - Initial filter state
+ * @param {Tag[]} [options.tags] - Available tags for hybrid AND/OR filtering
  * @returns {UseGlobalFiltersReturn} Filter state and methods
  */
 export function useGlobalFilters(options = {}) {
     const {
         initialFilters = {
             searchQuery: '',
+            categoryFilters: [],
             typeFilters: [],
+            tagFilters: [],
             sortBy: 'name',
             sortOrder: 'asc',
         },
+        tags = [],
     } = options;
 
     const [filters, setFiltersState] = useState(initialFilters);
@@ -65,7 +86,19 @@ export function useGlobalFilters(options = {}) {
     }, []);
 
     /**
-     * Toggle a type filter
+     * Toggle a category filter (e.g., 'volumetric', 'documents')
+     */
+    const toggleCategoryFilter = useCallback((category) => {
+        setFiltersState(prev => ({
+            ...prev,
+            categoryFilters: prev.categoryFilters.includes(category)
+                ? prev.categoryFilters.filter(c => c !== category)
+                : [...prev.categoryFilters, category],
+        }));
+    }, []);
+
+    /**
+     * Toggle a type filter (e.g., 'nifti', 'dicom')
      */
     const toggleTypeFilter = useCallback((type) => {
         setFiltersState(prev => ({
@@ -73,6 +106,18 @@ export function useGlobalFilters(options = {}) {
             typeFilters: prev.typeFilters.includes(type)
                 ? prev.typeFilters.filter(t => t !== type)
                 : [...prev.typeFilters, type],
+        }));
+    }, []);
+
+    /**
+     * Toggle a tag filter
+     */
+    const toggleTagFilter = useCallback((tagId) => {
+        setFiltersState(prev => ({
+            ...prev,
+            tagFilters: prev.tagFilters.includes(tagId)
+                ? prev.tagFilters.filter(t => t !== tagId)
+                : [...prev.tagFilters, tagId],
         }));
     }, []);
 
@@ -96,7 +141,9 @@ export function useGlobalFilters(options = {}) {
     const clearFilters = useCallback(() => {
         setFiltersState({
             searchQuery: '',
+            categoryFilters: [],
             typeFilters: [],
+            tagFilters: [],
             sortBy: filters.sortBy, // Keep sort preference
             sortOrder: filters.sortOrder,
         });
@@ -106,15 +153,35 @@ export function useGlobalFilters(options = {}) {
      * Check if any filters are active
      */
     const hasActiveFilters = useMemo(() => {
-        return filters.searchQuery.trim().length > 0 || filters.typeFilters.length > 0;
-    }, [filters.searchQuery, filters.typeFilters]);
+        return (
+            filters.searchQuery.trim().length > 0 ||
+            filters.categoryFilters.length > 0 ||
+            filters.typeFilters.length > 0 ||
+            filters.tagFilters.length > 0
+        );
+    }, [filters.searchQuery, filters.categoryFilters, filters.typeFilters, filters.tagFilters]);
+
+    /**
+     * Count of active filters
+     */
+    const activeFilterCount = useMemo(() => {
+        return (
+            (filters.searchQuery.trim() ? 1 : 0) +
+            filters.categoryFilters.length +
+            filters.typeFilters.length +
+            filters.tagFilters.length
+        );
+    }, [filters.searchQuery, filters.categoryFilters, filters.typeFilters, filters.tagFilters]);
 
     /**
      * Apply filters to an array of items
+     * @param {Array} items - Items to filter
+     * @param {Tag[]} [tagsOverride] - Optional tags override for hybrid filter logic
      */
-    const applyFilters = useCallback((items) => {
+    const applyFilters = useCallback((items, tagsOverride) => {
         if (!items || items.length === 0) return [];
 
+        const activeTags = tagsOverride || tags;
         let result = [...items];
 
         // Search filter
@@ -126,7 +193,15 @@ export function useGlobalFilters(options = {}) {
             });
         }
 
-        // Type filter
+        // Category filter (OR within - e.g., volumetric OR documents)
+        if (filters.categoryFilters.length > 0) {
+            result = result.filter(item => {
+                const category = item.category || getCategoryForType(item.fileType || item.type);
+                return filters.categoryFilters.includes(category);
+            });
+        }
+
+        // Type filter (OR within - specific types like nifti, dicom)
         if (filters.typeFilters.length > 0) {
             result = result.filter(item => {
                 // Try multiple ways to determine file type
@@ -167,6 +242,34 @@ export function useGlobalFilters(options = {}) {
             });
         }
 
+        // Tag filter - Hybrid AND/OR logic
+        // - OR within same tag category (Pre-op OR Post-op)
+        // - AND between different tag categories (Pre-op AND Control)
+        if (filters.tagFilters.length > 0 && activeTags.length > 0) {
+            // Group selected tags by their category
+            const selectedByCategory = {};
+            filters.tagFilters.forEach(tagId => {
+                const tag = activeTags.find(t => t.id === tagId);
+                if (tag) {
+                    if (!selectedByCategory[tag.categoryId]) {
+                        selectedByCategory[tag.categoryId] = [];
+                    }
+                    selectedByCategory[tag.categoryId].push(tagId);
+                }
+            });
+
+            // Filter: file must match ALL categories (AND)
+            // Within each category, file must match ANY selected tag (OR)
+            result = result.filter(item => {
+                const fileTags = item.tagIds || [];
+
+                return Object.entries(selectedByCategory).every(([categoryId, categoryTagIds]) => {
+                    // OR within category: file must have at least one of these tags
+                    return categoryTagIds.some(tagId => fileTags.includes(tagId));
+                });
+            });
+        }
+
         // Sort
         result.sort((a, b) => {
             let comparison = 0;
@@ -203,19 +306,51 @@ export function useGlobalFilters(options = {}) {
         });
 
         return result;
-    }, [filters]);
+    }, [filters, tags]);
 
     return {
         filters,
         setFilters,
         applyFilters,
         hasActiveFilters,
+        activeFilterCount,
         clearFilters,
         setSearchQuery,
+        toggleCategoryFilter,
         toggleTypeFilter,
+        toggleTagFilter,
         setSortBy,
         setSortOrder,
     };
+}
+
+/**
+ * File type to category mapping
+ */
+const FILE_TYPE_CATEGORIES = {
+    volumetric: ['nifti', 'dicom', 'nrrd', 'stl'],
+    models: ['obj', 'ply', 'gltf', 'glb'],
+    documents: ['pdf', 'markdown', 'md', 'document', 'doc', 'docx', 'txt'],
+    images: ['image', 'png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'],
+    data: ['csv', 'json', 'spreadsheet', 'xlsx', 'xls'],
+    code: ['python', 'py', 'notebook', 'ipynb', 'js', 'jsx', 'ts', 'tsx'],
+};
+
+/**
+ * Get category for a file type
+ * @param {string} type - File type
+ * @returns {string} Category ID
+ */
+function getCategoryForType(type) {
+    if (!type) return 'other';
+    const lowerType = type.toLowerCase();
+
+    for (const [categoryId, types] of Object.entries(FILE_TYPE_CATEGORIES)) {
+        if (types.includes(lowerType)) {
+            return categoryId;
+        }
+    }
+    return 'other';
 }
 
 /**
