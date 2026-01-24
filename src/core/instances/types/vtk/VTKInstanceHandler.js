@@ -4742,6 +4742,22 @@ console.log('Tools:', tools);
             "local"
           );
         }
+        // Emit camera-changed event for UI sync (throttled)
+        if (!this._cameraChangeThrottled) {
+          this._cameraChangeThrottled = true;
+          setTimeout(() => {
+            this._cameraChangeThrottled = false;
+            window.dispatchEvent(new CustomEvent('cia:camera-changed', {
+              detail: {
+                instanceId: instanceData.instanceId,
+                position: camera.getPosition(),
+                focalPoint: camera.getFocalPoint(),
+                viewUp: camera.getViewUp(),
+                viewAngle: camera.getViewAngle(),
+              },
+            }));
+          }, 100); // Throttle to 10fps for UI updates
+        }
       } catch (error) {
         // Silently catch camera update errors to prevent error spam
         // These can happen during rapid camera movements or cleanup

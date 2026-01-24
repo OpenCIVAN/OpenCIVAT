@@ -309,6 +309,410 @@ class InstanceToolsManager {
    and will automatically trigger state synchronization.
    ============================================================================ */
 
+  // ==========================================================================
+  // TRANSFORM CONTROLS
+  // ==========================================================================
+
+  /**
+   * Set actor position
+   * @param {string} instanceId - Instance identifier
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} z - Z position
+   */
+  setPosition(instanceId, x, y, z) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) return;
+
+    tools.sceneObjects.actor.setPosition(x, y, z);
+    tools.sceneObjects.renderWindow.render();
+
+    // Emit transform change event
+    this._emitTransformChange(instanceId);
+
+    log.trace(`Position set to (${x}, ${y}, ${z}) for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get current actor position
+   * @param {string} instanceId - Instance identifier
+   * @returns {Array} [x, y, z] position
+   */
+  getPosition(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) return [0, 0, 0];
+
+    return tools.sceneObjects.actor.getPosition();
+  }
+
+  /**
+   * Set actor rotation (orientation in degrees)
+   * @param {string} instanceId - Instance identifier
+   * @param {number} x - X rotation in degrees
+   * @param {number} y - Y rotation in degrees
+   * @param {number} z - Z rotation in degrees
+   */
+  setRotation(instanceId, x, y, z) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) return;
+
+    tools.sceneObjects.actor.setOrientation(x, y, z);
+    tools.sceneObjects.renderWindow.render();
+
+    // Emit transform change event
+    this._emitTransformChange(instanceId);
+
+    log.trace(`Rotation set to (${x}°, ${y}°, ${z}°) for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get current actor rotation (orientation in degrees)
+   * @param {string} instanceId - Instance identifier
+   * @returns {Array} [x, y, z] rotation in degrees
+   */
+  getRotation(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) return [0, 0, 0];
+
+    return tools.sceneObjects.actor.getOrientation();
+  }
+
+  /**
+   * Set actor scale
+   * @param {string} instanceId - Instance identifier
+   * @param {number} x - X scale (1.0 = 100%)
+   * @param {number} y - Y scale (1.0 = 100%)
+   * @param {number} z - Z scale (1.0 = 100%)
+   */
+  setScale(instanceId, x, y, z) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) return;
+
+    tools.sceneObjects.actor.setScale(x, y, z);
+    tools.sceneObjects.renderWindow.render();
+
+    // Emit transform change event
+    this._emitTransformChange(instanceId);
+
+    log.trace(`Scale set to (${x}, ${y}, ${z}) for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get current actor scale
+   * @param {string} instanceId - Instance identifier
+   * @returns {Array} [x, y, z] scale
+   */
+  getScale(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) return [1, 1, 1];
+
+    return tools.sceneObjects.actor.getScale();
+  }
+
+  /**
+   * Reset actor transform to default (origin, no rotation, 100% scale)
+   * @param {string} instanceId - Instance identifier
+   */
+  resetTransform(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) return;
+
+    const actor = tools.sceneObjects.actor;
+    actor.setPosition(0, 0, 0);
+    actor.setOrientation(0, 0, 0);
+    actor.setScale(1, 1, 1);
+    tools.sceneObjects.renderWindow.render();
+
+    // Emit transform change event
+    this._emitTransformChange(instanceId);
+
+    log.trace(`Transform reset for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get full transform state for an instance
+   * @param {string} instanceId - Instance identifier
+   * @returns {Object} Transform state {position, rotation, scale}
+   */
+  getTransformState(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) {
+      return {
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+      };
+    }
+
+    const actor = tools.sceneObjects.actor;
+    return {
+      position: actor.getPosition(),
+      rotation: actor.getOrientation(),
+      scale: actor.getScale(),
+    };
+  }
+
+  /**
+   * Emit transform change event for UI sync
+   * @private
+   */
+  _emitTransformChange(instanceId) {
+    const state = this.getTransformState(instanceId);
+    window.dispatchEvent(new CustomEvent('cia:transform-changed', {
+      detail: {
+        instanceId,
+        ...state,
+      },
+    }));
+  }
+
+  // ==========================================================================
+  // SLICE CONTROLS
+  // ==========================================================================
+
+  /**
+   * Set slice orientation
+   * @param {string} instanceId - Instance identifier
+   * @param {string} orientation - 'axial', 'sagittal', or 'coronal'
+   */
+  setSliceOrientation(instanceId, orientation) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    // Store orientation for reference
+    tools.sliceOrientation = orientation;
+
+    // Get data bounds for slice calculation
+    const { renderer, renderWindow } = tools.sceneObjects;
+    const bounds = renderer.computeVisiblePropBounds();
+
+    // Calculate slice normal and origin based on orientation
+    const center = [
+      (bounds[0] + bounds[1]) / 2,
+      (bounds[2] + bounds[3]) / 2,
+      (bounds[4] + bounds[5]) / 2,
+    ];
+
+    let normal;
+    let extent;
+
+    switch (orientation) {
+      case 'axial':
+        normal = [0, 0, 1];
+        extent = bounds[5] - bounds[4]; // Z extent
+        break;
+      case 'sagittal':
+        normal = [1, 0, 0];
+        extent = bounds[1] - bounds[0]; // X extent
+        break;
+      case 'coronal':
+        normal = [0, 1, 0];
+        extent = bounds[3] - bounds[2]; // Y extent
+        break;
+      default:
+        log.warn(`Unknown slice orientation: ${orientation}`);
+        return;
+    }
+
+    // Store extent for slice position calculations
+    tools.sliceExtent = extent;
+    tools.sliceNormal = normal;
+    tools.sliceCenter = center;
+
+    renderWindow.render();
+    log.trace(`Slice orientation set to ${orientation} for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get slice orientation
+   * @param {string} instanceId - Instance identifier
+   * @returns {string} Current orientation
+   */
+  getSliceOrientation(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return tools?.sliceOrientation || 'axial';
+  }
+
+  /**
+   * Set slice position as percentage (0-100)
+   * @param {string} instanceId - Instance identifier
+   * @param {number} position - Slice position (0-100 percentage through volume)
+   */
+  setSlicePosition(instanceId, position) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.mapper) return;
+
+    tools.slicePosition = position;
+
+    // If we have clipping planes set up, update them
+    const { mapper, renderWindow } = tools.sceneObjects;
+
+    // Use implicit function clipping for slice visualization
+    // This creates a cross-section effect
+    if (tools.sliceNormal && tools.sliceExtent && tools.sliceCenter) {
+      const { sliceNormal, sliceExtent, sliceCenter } = tools;
+
+      // Calculate actual position along the slice axis
+      const offset = (position / 100 - 0.5) * sliceExtent;
+
+      // Remove existing clipping planes
+      mapper.removeAllClippingPlanes();
+
+      // For a thin slice, we'd need two planes
+      // For now, just store the position
+      tools.calculatedSliceOffset = offset;
+    }
+
+    renderWindow.render();
+    log.trace(`Slice position set to ${position}% for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get slice position
+   * @param {string} instanceId - Instance identifier
+   * @returns {number} Current slice position (0-100)
+   */
+  getSlicePosition(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return tools?.slicePosition || 50;
+  }
+
+  /**
+   * Get data dimensions for slice max calculation
+   * @param {string} instanceId - Instance identifier
+   * @returns {Object} Dimensions {x, y, z}
+   */
+  getDataDimensions(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.renderer) return { x: 256, y: 256, z: 256 };
+
+    const bounds = tools.sceneObjects.renderer.computeVisiblePropBounds();
+    return {
+      x: Math.round(bounds[1] - bounds[0]),
+      y: Math.round(bounds[3] - bounds[2]),
+      z: Math.round(bounds[5] - bounds[4]),
+    };
+  }
+
+  // ==========================================================================
+  // WINDOW/LEVEL CONTROLS (for medical imaging)
+  // ==========================================================================
+
+  /**
+   * Set window/level values for display range mapping
+   * Window = contrast (range width), Level = brightness (center value)
+   * @param {string} instanceId - Instance identifier
+   * @param {number} windowWidth - Window width (contrast)
+   * @param {number} windowLevel - Window level/center (brightness)
+   */
+  setWindowLevel(instanceId, windowWidth, windowLevel) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.sceneObjects?.actor) return;
+
+    // Store values
+    tools.windowValue = windowWidth;
+    tools.levelValue = windowLevel;
+
+    // Calculate the display range from window/level
+    const lower = windowLevel - windowWidth / 2;
+    const upper = windowLevel + windowWidth / 2;
+
+    // Update the lookup table / color transfer function
+    const mapper = tools.sceneObjects.actor.getMapper();
+    if (mapper) {
+      // For scalar mapping, set the scalar range
+      mapper.setScalarRange(lower, upper);
+
+      // If there's a color transfer function, update it
+      if (tools.colorMap) {
+        // Rebuild color map with new range
+        this.rebuildColorMapForRange(instanceId, lower, upper);
+      }
+    }
+
+    tools.sceneObjects.renderWindow.render();
+    log.trace(`Window/Level set to ${windowWidth}/${windowLevel} for instance: ${instanceId}`);
+  }
+
+  /**
+   * Rebuild color map for a new data range
+   * @private
+   */
+  rebuildColorMapForRange(instanceId, lower, upper) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools?.colorMap) return;
+
+    const ctf = tools.colorMap;
+    const currentPreset = tools.currentColormap || 'grayscale';
+
+    // Define presets
+    const presets = {
+      rainbow: [
+        [0.0, 0, 0, 1],
+        [0.33, 0, 1, 1],
+        [0.66, 1, 1, 0],
+        [1.0, 1, 0, 0],
+      ],
+      grayscale: [
+        [0.0, 0, 0, 0],
+        [1.0, 1, 1, 1],
+      ],
+      hot: [
+        [0.0, 0, 0, 0],
+        [0.33, 1, 0, 0],
+        [0.66, 1, 1, 0],
+        [1.0, 1, 1, 1],
+      ],
+      cool: [
+        [0.0, 0, 0, 1],
+        [0.5, 0, 1, 1],
+        [1.0, 0, 1, 0],
+      ],
+    };
+
+    const colors = presets[currentPreset] || presets.grayscale;
+
+    // Clear and rebuild
+    ctf.removeAllPoints();
+    colors.forEach(([pos, r, g, b]) => {
+      const value = lower + pos * (upper - lower);
+      ctf.addRGBPoint(value, r, g, b);
+    });
+  }
+
+  /**
+   * Get current window/level values
+   * @param {string} instanceId - Instance identifier
+   * @returns {Object} {window, level}
+   */
+  getWindowLevel(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return {
+      window: tools?.windowValue || 400,
+      level: tools?.levelValue || 40,
+    };
+  }
+
+  /**
+   * Apply a window/level preset
+   * @param {string} instanceId - Instance identifier
+   * @param {string} presetId - Preset identifier
+   * @param {number} windowWidth - Window width
+   * @param {number} windowLevel - Window level
+   */
+  applyWindowLevelPreset(instanceId, presetId, windowWidth, windowLevel) {
+    const tools = this.instanceTools.get(instanceId);
+    if (tools) {
+      tools.windowLevelPreset = presetId;
+    }
+    this.setWindowLevel(instanceId, windowWidth, windowLevel);
+    log.trace(`Window/Level preset '${presetId}' applied for instance: ${instanceId}`);
+  }
+
+  // ==========================================================================
+  // OPACITY & REPRESENTATION
+  // ==========================================================================
+
   /**
    * Set opacity (0.0 = transparent, 1.0 = opaque)
    */

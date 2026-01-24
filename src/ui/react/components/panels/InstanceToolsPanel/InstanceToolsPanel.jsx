@@ -107,12 +107,28 @@ const ToolsTabContent = memo(function ToolsTabContent({
     levelValue,
     setLevelValue,
     activeWindowLevelPreset,
-    setActiveWindowLevelPreset,
+    handleWindowLevelPreset,
     // Appearance
     opacity,
     setOpacity,
     representation,
     setRepresentation,
+    pointSize,
+    setPointSize,
+    lineWidth,
+    setLineWidth,
+    // Camera
+    handleCameraPreset,
+    cameraState,
+    cameraTransformExpanded,
+    handleToggleCameraTransform,
+    handleCameraPositionChange,
+    handleCameraFocalPointChange,
+    handleCameraViewAngleChange,
+    savedCameraStates,
+    handleSaveCameraState,
+    handleRestoreCameraState,
+    handleDeleteCameraState,
   } = logic;
 
   return (
@@ -136,7 +152,19 @@ const ToolsTabContent = memo(function ToolsTabContent({
           />
           {expandedSections.camera && (
             <div className="tools-tab-content__section-content">
-              <CameraSection onPresetClick={(id) => console.log('Camera preset:', id)} />
+              <CameraSection
+                onPresetClick={handleCameraPreset}
+                cameraState={cameraState}
+                cameraTransformExpanded={cameraTransformExpanded}
+                onToggleCameraTransform={handleToggleCameraTransform}
+                onCameraPositionChange={handleCameraPositionChange}
+                onCameraFocalPointChange={handleCameraFocalPointChange}
+                onCameraViewAngleChange={handleCameraViewAngleChange}
+                savedCameraStates={savedCameraStates}
+                onSaveCameraState={handleSaveCameraState}
+                onRestoreCameraState={handleRestoreCameraState}
+                onDeleteCameraState={handleDeleteCameraState}
+              />
             </div>
           )}
         </div>
@@ -203,11 +231,7 @@ const ToolsTabContent = memo(function ToolsTabContent({
                 activePreset={activeWindowLevelPreset}
                 onWindowChange={setWindowValue}
                 onLevelChange={setLevelValue}
-                onPresetSelect={(id, w, l) => {
-                  setActiveWindowLevelPreset(id);
-                  setWindowValue(w);
-                  setLevelValue(l);
-                }}
+                onPresetSelect={handleWindowLevelPreset}
               />
             </div>
           )}
@@ -226,8 +250,12 @@ const ToolsTabContent = memo(function ToolsTabContent({
               <AppearanceSection
                 opacity={opacity}
                 representation={representation}
+                pointSize={pointSize}
+                lineWidth={lineWidth}
                 onOpacityChange={setOpacity}
                 onRepresentationChange={setRepresentation}
+                onPointSizeChange={setPointSize}
+                onLineWidthChange={setLineWidth}
               />
             </div>
           )}

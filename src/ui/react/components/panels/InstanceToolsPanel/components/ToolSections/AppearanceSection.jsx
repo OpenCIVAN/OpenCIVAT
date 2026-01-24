@@ -1,6 +1,6 @@
 /**
  * @file AppearanceSection.jsx
- * @description Appearance controls - opacity and representation
+ * @description Appearance controls - opacity, representation, point size, line width
  */
 
 import React, { memo } from 'react';
@@ -12,17 +12,21 @@ import { REPRESENTATIONS } from '../../constants';
 export const AppearanceSection = memo(function AppearanceSection({
   opacity,
   representation,
+  pointSize = 5,
+  lineWidth = 2,
   onOpacityChange,
   onRepresentationChange,
+  onPointSizeChange,
+  onLineWidthChange,
   disabled = false,
 }) {
   return (
     <div className="appearance-section">
       {/* Opacity Slider */}
-      <div className="appearance-section__opacity">
-        <div className="appearance-section__opacity-header">
-          <span className="appearance-section__opacity-label">Opacity</span>
-          <span className="appearance-section__opacity-value">{opacity}%</span>
+      <div className="appearance-section__slider-row">
+        <div className="appearance-section__slider-header">
+          <span className="appearance-section__slider-label">Opacity</span>
+          <span className="appearance-section__slider-value">{opacity}%</span>
         </div>
         <input
           type="range"
@@ -49,6 +53,46 @@ export const AppearanceSection = memo(function AppearanceSection({
           </button>
         ))}
       </div>
+
+      {/* Point Size Slider - shown when representation is 'points' */}
+      {representation === 'points' && (
+        <div className="appearance-section__slider-row">
+          <div className="appearance-section__slider-header">
+            <span className="appearance-section__slider-label">Point Size</span>
+            <span className="appearance-section__slider-value">{pointSize}px</span>
+          </div>
+          <input
+            type="range"
+            className="appearance-section__slider"
+            min={1}
+            max={20}
+            value={pointSize}
+            onChange={(e) => onPointSizeChange?.(parseInt(e.target.value))}
+            disabled={disabled}
+            style={{ '--slider-percent': `${((pointSize - 1) / 19) * 100}%` }}
+          />
+        </div>
+      )}
+
+      {/* Line Width Slider - shown when representation is 'wireframe' */}
+      {representation === 'wireframe' && (
+        <div className="appearance-section__slider-row">
+          <div className="appearance-section__slider-header">
+            <span className="appearance-section__slider-label">Line Width</span>
+            <span className="appearance-section__slider-value">{lineWidth}px</span>
+          </div>
+          <input
+            type="range"
+            className="appearance-section__slider"
+            min={1}
+            max={10}
+            value={lineWidth}
+            onChange={(e) => onLineWidthChange?.(parseInt(e.target.value))}
+            disabled={disabled}
+            style={{ '--slider-percent': `${((lineWidth - 1) / 9) * 100}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 });

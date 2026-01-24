@@ -8,6 +8,7 @@ import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
+import { instanceTools } from '@Core/instances/types/vtk/vtkInstanceTools.js';
 import { TOOL_SECTIONS, TRANSFORM_LIMITS } from './constants';
 
 /**
@@ -28,18 +29,36 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   });
 
   // -------------------------------------------------------------------------
+  // Tools State - Real tools from workspaceManager
+  // -------------------------------------------------------------------------
+  const [tools, setTools] = useState([]);
+  const [expandedMenus, setExpandedMenus] = useState({});
+
+  // -------------------------------------------------------------------------
   // Instance State
   // -------------------------------------------------------------------------
   const [activeInstance, setActiveInstance] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // -------------------------------------------------------------------------
-  // Transform State
+  // Transform State (Actor)
   // -------------------------------------------------------------------------
   const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
   const [rotation, setRotation] = useState({ x: 0, y: 0, z: 0 });
   const [scale, setScale] = useState({ x: 100, y: 100, z: 100 });
   const [uniformScale, setUniformScale] = useState(true);
+
+  // -------------------------------------------------------------------------
+  // Camera State
+  // -------------------------------------------------------------------------
+  const [cameraState, setCameraState] = useState({
+    position: [0, 0, 100],
+    focalPoint: [0, 0, 0],
+    viewUp: [0, 1, 0],
+    viewAngle: 30,
+  });
+  const [cameraTransformExpanded, setCameraTransformExpanded] = useState(false);
+  const [savedCameraStates, setSavedCameraStates] = useState([]); // Max 5 saved states
 
   // -------------------------------------------------------------------------
   // Slice State
@@ -60,6 +79,8 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   // -------------------------------------------------------------------------
   const [opacity, setOpacity] = useState(100);
   const [representation, setRepresentation] = useState('surface');
+  const [pointSize, setPointSize] = useState(5);
+  const [lineWidth, setLineWidth] = useState(2);
 
   // -------------------------------------------------------------------------
   // Layers & Widgets State
@@ -115,6 +136,168 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
         viewManager.off('viewRenamed', handleNameChange);
       }
     };
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Load Tools from WorkspaceManager
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!activeInstance?.instanceId) {
+      setTools([]);
+      return;
+    }
+
+    const loadTools = () => {
+      try {
+        const toolsList = workspaceManager.getInstanceTools(activeInstance.instanceId);
+        // Transform to consistent format
+        const formattedTools = toolsList.map(tool => ({
+          id: tool.id,
+          icon: tool.icon,
+          label: tool.label,
+          description: tool.tooltip || tool.description,
+          type: tool.items || tool.options ? 'menu' : 'button',
+          active: tool.active,
+          disabled: tool.disabled,
+          options: tool.items || tool.options,
+          onClick: tool.onClick,
+        }));
+        setTools(formattedTools);
+      } catch (err) {
+        console.warn('Failed to load tools:', err);
+        setTools([]);
+      }
+    };
+
+    loadTools();
+
+    // Listen for tool updates
+    const handleToolsUpdate = (event) => {
+      if (event.detail?.instanceId === activeInstance.instanceId) {
+        loadTools();
+      }
+    };
+
+    window.addEventListener('cia:tools-updated', handleToolsUpdate);
+    return () => window.removeEventListener('cia:tools-updated', handleToolsUpdate);
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
+  // Sync Transform State from VTK Instance
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!activeInstance?.instanceId) return;
+
+    // Sync current transform state when instance becomes active
+    const syncTransformFromInstance = () => {
+      const state = instanceTools.getTransformState(activeInstance.instanceId);
+      if (state) {
+        setPosition({
+          x: state.position[0],
+          y: state.position[1],
+          z: state.position[2],
+        });
+        setRotation({
+          x: state.rotation[0],
+          y: state.rotation[1],
+          z: state.rotation[2],
+        });
+        // VTK scale is 0-N, UI is percentage (0-200)
+        setScale({
+          x: state.scale[0] * 100,
+          y: state.scale[1] * 100,
+          z: state.scale[2] * 100,
+        });
+      }
+    };
+
+    // Initial sync
+    syncTransformFromInstance();
+
+    // Listen for transform changes from other sources
+    const handleTransformChange = (event) => {
+      if (event.detail?.instanceId === activeInstance.instanceId) {
+        setPosition({
+          x: event.detail.position[0],
+          y: event.detail.position[1],
+          z: event.detail.position[2],
+        });
+        setRotation({
+          x: event.detail.rotation[0],
+          y: event.detail.rotation[1],
+          z: event.detail.rotation[2],
+        });
+        setScale({
+          x: event.detail.scale[0] * 100,
+          y: event.detail.scale[1] * 100,
+          z: event.detail.scale[2] * 100,
+        });
+      }
+    };
+
+    window.addEventListener('cia:transform-changed', handleTransformChange);
+    return () => window.removeEventListener('cia:transform-changed', handleTransformChange);
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
+  // Sync Appearance State from VTK Instance
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!activeInstance?.instanceId) return;
+
+    // Sync current appearance state when instance becomes active
+    const currentOpacity = instanceTools.getOpacity(activeInstance.instanceId);
+    const currentRep = instanceTools.getRepresentation(activeInstance.instanceId);
+    const currentPointSize = instanceTools.getPointSize(activeInstance.instanceId);
+    const currentLineWidth = instanceTools.getLineWidth(activeInstance.instanceId);
+
+    setOpacity(Math.round(currentOpacity * 100));
+    setRepresentation(currentRep);
+    setPointSize(currentPointSize);
+    setLineWidth(currentLineWidth);
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
+  // Sync Camera State from VTK Instance
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (!activeInstance?.instanceId) return;
+
+    // Sync current camera state when instance becomes active
+    const syncCameraFromInstance = () => {
+      const state = instanceTools.getCameraState(activeInstance.instanceId);
+      if (state) {
+        setCameraState({
+          position: state.position || [0, 0, 100],
+          focalPoint: state.focalPoint || [0, 0, 0],
+          viewUp: state.viewUp || [0, 1, 0],
+          viewAngle: state.viewAngle || 30,
+        });
+      }
+    };
+
+    // Initial sync
+    syncCameraFromInstance();
+
+    // Listen for camera changes from viewport interaction
+    const handleCameraChange = (event) => {
+      if (event.detail?.instanceId === activeInstance.instanceId) {
+        syncCameraFromInstance();
+      }
+    };
+
+    window.addEventListener('cia:camera-changed', handleCameraChange);
+    return () => window.removeEventListener('cia:camera-changed', handleCameraChange);
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
+  // Toggle Menu Handler
+  // -------------------------------------------------------------------------
+  const handleToggleMenu = useCallback((menuId) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuId]: !prev[menuId]
+    }));
   }, []);
 
   // -------------------------------------------------------------------------
@@ -199,33 +382,249 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   }, []);
 
   // -------------------------------------------------------------------------
-  // Transform Handlers
+  // Transform Handlers (wired to VTK)
   // -------------------------------------------------------------------------
   const handlePositionChange = useCallback((axis, value) => {
-    setPosition(prev => ({ ...prev, [axis]: value }));
-    // TODO: Apply to instance
-  }, []);
+    const newPosition = { ...position, [axis]: value };
+    setPosition(newPosition);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setPosition(activeInstance.instanceId, newPosition.x, newPosition.y, newPosition.z);
+  }, [activeInstance?.instanceId, position]);
 
   const handleRotationChange = useCallback((axis, value) => {
-    setRotation(prev => ({ ...prev, [axis]: value }));
-    // TODO: Apply to instance
-  }, []);
+    const newRotation = { ...rotation, [axis]: value };
+    setRotation(newRotation);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setRotation(activeInstance.instanceId, newRotation.x, newRotation.y, newRotation.z);
+  }, [activeInstance?.instanceId, rotation]);
 
   const handleScaleChange = useCallback((axis, value) => {
+    let newScale;
     if (uniformScale) {
-      setScale({ x: value, y: value, z: value });
+      newScale = { x: value, y: value, z: value };
     } else {
-      setScale(prev => ({ ...prev, [axis]: value }));
+      newScale = { ...scale, [axis]: value };
     }
-    // TODO: Apply to instance
-  }, [uniformScale]);
+    setScale(newScale);
+    if (!activeInstance?.instanceId) return;
+    // UI uses percentage (10-200%), VTK uses multiplier (0.1-2.0)
+    instanceTools.setScale(
+      activeInstance.instanceId,
+      newScale.x / 100,
+      newScale.y / 100,
+      newScale.z / 100
+    );
+  }, [activeInstance?.instanceId, scale, uniformScale]);
 
   const handleResetTransform = useCallback(() => {
     setPosition({ x: 0, y: 0, z: 0 });
     setRotation({ x: 0, y: 0, z: 0 });
     setScale({ x: 100, y: 100, z: 100 });
-    // TODO: Apply to instance
+    if (!activeInstance?.instanceId) return;
+    instanceTools.resetTransform(activeInstance.instanceId);
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
+  // Camera Handlers
+  // -------------------------------------------------------------------------
+  const handleCameraPreset = useCallback((preset) => {
+    if (!activeInstance?.instanceId) return;
+
+    if (preset === 'reset') {
+      instanceTools.resetCamera(activeInstance.instanceId);
+    } else {
+      // Map UI preset IDs to VTK view names
+      const viewMap = {
+        iso: 'isometric',
+        top: 'top',
+        bottom: 'bottom',
+        left: 'left',
+        right: 'right',
+        front: 'front',
+        back: 'back',
+      };
+      const view = viewMap[preset] || preset;
+      instanceTools.setCameraView(activeInstance.instanceId, view);
+    }
+  }, [activeInstance?.instanceId]);
+
+  // Camera position change handler
+  const handleCameraPositionChange = useCallback((axis, value) => {
+    if (!activeInstance?.instanceId) return;
+    const newPosition = [...cameraState.position];
+    const axisIndex = { x: 0, y: 1, z: 2 }[axis];
+    newPosition[axisIndex] = value;
+
+    setCameraState(prev => ({ ...prev, position: newPosition }));
+
+    // Apply to VTK camera
+    const state = {
+      ...cameraState,
+      position: newPosition,
+    };
+    instanceTools.setCameraState(activeInstance.instanceId, state);
+  }, [activeInstance?.instanceId, cameraState]);
+
+  // Camera focal point change handler
+  const handleCameraFocalPointChange = useCallback((axis, value) => {
+    if (!activeInstance?.instanceId) return;
+    const newFocalPoint = [...cameraState.focalPoint];
+    const axisIndex = { x: 0, y: 1, z: 2 }[axis];
+    newFocalPoint[axisIndex] = value;
+
+    setCameraState(prev => ({ ...prev, focalPoint: newFocalPoint }));
+
+    // Apply to VTK camera
+    const state = {
+      ...cameraState,
+      focalPoint: newFocalPoint,
+    };
+    instanceTools.setCameraState(activeInstance.instanceId, state);
+  }, [activeInstance?.instanceId, cameraState]);
+
+  // Camera view angle change handler
+  const handleCameraViewAngleChange = useCallback((value) => {
+    if (!activeInstance?.instanceId) return;
+
+    setCameraState(prev => ({ ...prev, viewAngle: value }));
+
+    // Apply to VTK camera
+    const state = {
+      ...cameraState,
+      viewAngle: value,
+    };
+    instanceTools.setCameraState(activeInstance.instanceId, state);
+  }, [activeInstance?.instanceId, cameraState]);
+
+  // Toggle camera transform subsection
+  const handleToggleCameraTransform = useCallback(() => {
+    setCameraTransformExpanded(prev => !prev);
   }, []);
+
+  // Save current camera state
+  const handleSaveCameraState = useCallback(() => {
+    if (!activeInstance?.instanceId) return;
+
+    const state = instanceTools.getCameraState(activeInstance.instanceId);
+    if (!state) return;
+
+    const savedState = {
+      id: Date.now(),
+      name: `View ${savedCameraStates.length + 1}`,
+      timestamp: new Date().toLocaleTimeString(),
+      ...state,
+    };
+
+    // Keep only the last 5 states
+    setSavedCameraStates(prev => [savedState, ...prev].slice(0, 5));
+  }, [activeInstance?.instanceId, savedCameraStates.length]);
+
+  // Restore a saved camera state
+  const handleRestoreCameraState = useCallback((savedState) => {
+    if (!activeInstance?.instanceId || !savedState) return;
+
+    const { position, focalPoint, viewUp, viewAngle, parallelScale, clippingRange } = savedState;
+
+    // Update local state
+    setCameraState({
+      position: position || [0, 0, 100],
+      focalPoint: focalPoint || [0, 0, 0],
+      viewUp: viewUp || [0, 1, 0],
+      viewAngle: viewAngle || 30,
+    });
+
+    // Apply to VTK
+    instanceTools.setCameraState(activeInstance.instanceId, {
+      position,
+      focalPoint,
+      viewUp,
+      viewAngle,
+      parallelScale,
+      clippingRange,
+    });
+  }, [activeInstance?.instanceId]);
+
+  // Delete a saved camera state
+  const handleDeleteCameraState = useCallback((stateId) => {
+    setSavedCameraStates(prev => prev.filter(s => s.id !== stateId));
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Slice Handlers (wired to VTK)
+  // -------------------------------------------------------------------------
+  const handleSliceOrientationChange = useCallback((orientation) => {
+    setSliceOrientation(orientation);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setSliceOrientation(activeInstance.instanceId, orientation);
+
+    // Update slice max based on data dimensions
+    const dimensions = instanceTools.getDataDimensions(activeInstance.instanceId);
+    const maxMap = {
+      axial: dimensions.z,
+      sagittal: dimensions.x,
+      coronal: dimensions.y,
+    };
+    setSliceMax(maxMap[orientation] || 256);
+  }, [activeInstance?.instanceId]);
+
+  const handleSlicePositionChange = useCallback((position) => {
+    setSlicePosition(position);
+    if (!activeInstance?.instanceId) return;
+    // Convert absolute position to percentage for VTK
+    const percentage = (position / sliceMax) * 100;
+    instanceTools.setSlicePosition(activeInstance.instanceId, percentage);
+  }, [activeInstance?.instanceId, sliceMax]);
+
+  // -------------------------------------------------------------------------
+  // Window/Level Handlers (wired to VTK)
+  // -------------------------------------------------------------------------
+  const handleWindowChange = useCallback((value) => {
+    setWindowValue(value);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setWindowLevel(activeInstance.instanceId, value, levelValue);
+  }, [activeInstance?.instanceId, levelValue]);
+
+  const handleLevelChange = useCallback((value) => {
+    setLevelValue(value);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setWindowLevel(activeInstance.instanceId, windowValue, value);
+  }, [activeInstance?.instanceId, windowValue]);
+
+  const handleWindowLevelPreset = useCallback((presetId, windowWidth, windowLevel) => {
+    setActiveWindowLevelPreset(presetId);
+    setWindowValue(windowWidth);
+    setLevelValue(windowLevel);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.applyWindowLevelPreset(activeInstance.instanceId, presetId, windowWidth, windowLevel);
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
+  // Appearance Handlers (wired to VTK)
+  // -------------------------------------------------------------------------
+  const handleOpacityChange = useCallback((value) => {
+    setOpacity(value);
+    if (!activeInstance?.instanceId) return;
+    // VTK uses 0-1 scale, UI uses 0-100
+    instanceTools.setOpacity(activeInstance.instanceId, value / 100);
+  }, [activeInstance?.instanceId]);
+
+  const handleRepresentationChange = useCallback((mode) => {
+    setRepresentation(mode);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setRepresentation(activeInstance.instanceId, mode);
+  }, [activeInstance?.instanceId]);
+
+  const handlePointSizeChange = useCallback((size) => {
+    setPointSize(size);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setPointSize(activeInstance.instanceId, size);
+  }, [activeInstance?.instanceId]);
+
+  const handleLineWidthChange = useCallback((width) => {
+    setLineWidth(width);
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setLineWidth(activeInstance.instanceId, width);
+  }, [activeInstance?.instanceId]);
 
   // -------------------------------------------------------------------------
   // Layers Handlers
@@ -262,6 +661,12 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     ));
   }, []);
 
+  const handleWidgetOpacityChange = useCallback((widgetId, opacity) => {
+    setWidgets(prev => prev.map(widget =>
+      widget.id === widgetId ? { ...widget, opacity } : widget
+    ));
+  }, []);
+
   const handleWidgetDelete = useCallback((widgetId) => {
     setWidgets(prev => prev.filter(widget => widget.id !== widgetId));
   }, []);
@@ -274,6 +679,11 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     activeInstance,
     instanceInfo,
     hasInstance: !!activeInstance,
+
+    // Real Tools from workspaceManager
+    tools,
+    expandedMenus,
+    handleToggleMenu,
 
     // Tab State
     activeTab,
@@ -299,26 +709,44 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     handleScaleChange,
     handleResetTransform,
 
-    // Slice
+    // Slice (wired to VTK)
     sliceOrientation,
-    setSliceOrientation,
+    setSliceOrientation: handleSliceOrientationChange,
     slicePosition,
-    setSlicePosition,
+    setSlicePosition: handleSlicePositionChange,
     sliceMax,
 
-    // Window/Level
+    // Window/Level (wired to VTK)
     windowValue,
-    setWindowValue,
+    setWindowValue: handleWindowChange,
     levelValue,
-    setLevelValue,
+    setLevelValue: handleLevelChange,
     activeWindowLevelPreset,
     setActiveWindowLevelPreset,
+    handleWindowLevelPreset,
 
-    // Appearance
+    // Appearance (wired to VTK)
     opacity,
-    setOpacity,
+    setOpacity: handleOpacityChange,
     representation,
-    setRepresentation,
+    setRepresentation: handleRepresentationChange,
+    pointSize,
+    setPointSize: handlePointSizeChange,
+    lineWidth,
+    setLineWidth: handleLineWidthChange,
+
+    // Camera
+    handleCameraPreset,
+    cameraState,
+    cameraTransformExpanded,
+    handleToggleCameraTransform,
+    handleCameraPositionChange,
+    handleCameraFocalPointChange,
+    handleCameraViewAngleChange,
+    savedCameraStates,
+    handleSaveCameraState,
+    handleRestoreCameraState,
+    handleDeleteCameraState,
 
     // Layers & Widgets
     layers,
@@ -329,6 +757,7 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     handleLayerOpacityChange,
     handleLayerReorder,
     handleWidgetVisibilityToggle,
+    handleWidgetOpacityChange,
     handleWidgetDelete,
   };
 }
