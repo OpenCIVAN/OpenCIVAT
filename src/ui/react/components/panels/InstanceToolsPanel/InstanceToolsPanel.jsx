@@ -22,10 +22,15 @@ import { InstanceHeader } from './components/InstanceHeader/InstanceHeader';
 import { DotNavigation } from './components/DotNavigation/DotNavigation';
 import { CameraSection } from './components/ToolSections/CameraSection';
 import { TransformSection } from './components/ToolSections/TransformSection';
+import { WidgetsSection } from './components/ToolSections/WidgetsSection';
+import { AppearanceSection } from './components/ToolSections/AppearanceSection';
+import { ColormapSection } from './components/ToolSections/ColormapSection';
+import { SceneSection } from './components/ToolSections/SceneSection';
 import { SliceSection } from './components/ToolSections/SliceSection';
 import { WindowLevelSection } from './components/ToolSections/WindowLevelSection';
-import { AppearanceSection } from './components/ToolSections/AppearanceSection';
 import { LayersAndWidgets } from './components/LayersAndWidgets/LayersAndWidgets';
+import { AnnotationsTab } from './components/ToolSections/AnnotationsTab';
+import { DisplayTab } from './components/ToolSections/DisplayTab';
 
 import './InstanceToolsPanel.scss';
 
@@ -95,6 +100,33 @@ const ToolsTabContent = memo(function ToolsTabContent({
     handleRotationChange,
     handleScaleChange,
     handleResetTransform,
+    // Measurement Widgets
+    lineWidgetActive,
+    angleWidgetActive,
+    planeWidgetActive,
+    handleToggleLineWidget,
+    handleToggleAngleWidget,
+    handleTogglePlaneWidget,
+    handleClearAllWidgets,
+    // Appearance
+    opacity,
+    setOpacity,
+    representation,
+    setRepresentation,
+    pointSize,
+    setPointSize,
+    lineWidth,
+    setLineWidth,
+    // Colormap
+    currentColormap,
+    handleColormapChange,
+    // Scene
+    backgroundPreset,
+    handleBackgroundChange,
+    handleGridPlaneChange,
+    overlayState,
+    handleToggleOverlay,
+    overlayConfigs,
     // Slice
     sliceOrientation,
     setSliceOrientation,
@@ -108,15 +140,6 @@ const ToolsTabContent = memo(function ToolsTabContent({
     setLevelValue,
     activeWindowLevelPreset,
     handleWindowLevelPreset,
-    // Appearance
-    opacity,
-    setOpacity,
-    representation,
-    setRepresentation,
-    pointSize,
-    setPointSize,
-    lineWidth,
-    setLineWidth,
     // Camera
     handleCameraPreset,
     cameraState,
@@ -130,6 +153,9 @@ const ToolsTabContent = memo(function ToolsTabContent({
     handleRestoreCameraState,
     handleDeleteCameraState,
   } = logic;
+
+  // Helper to get section by id
+  const getSectionById = (id) => TOOL_SECTIONS.find(s => s.id === id);
 
   return (
     <div className="tools-tab-content">
@@ -145,7 +171,7 @@ const ToolsTabContent = memo(function ToolsTabContent({
         {/* Camera Section */}
         <div className="tools-tab-content__section">
           <SectionHeader
-            section={TOOL_SECTIONS[0]}
+            section={getSectionById('camera')}
             isExpanded={expandedSections.camera}
             onToggle={() => toggleSection('camera')}
             sectionRef={(el) => { sectionRefs.current.camera = el; }}
@@ -172,7 +198,7 @@ const ToolsTabContent = memo(function ToolsTabContent({
         {/* Transform Section */}
         <div className="tools-tab-content__section">
           <SectionHeader
-            section={TOOL_SECTIONS[1]}
+            section={getSectionById('transform')}
             isExpanded={expandedSections.transform}
             onToggle={() => toggleSection('transform')}
             sectionRef={(el) => { sectionRefs.current.transform = el; }}
@@ -194,44 +220,24 @@ const ToolsTabContent = memo(function ToolsTabContent({
           )}
         </div>
 
-        {/* Slice Section */}
+        {/* Widgets Section */}
         <div className="tools-tab-content__section">
           <SectionHeader
-            section={TOOL_SECTIONS[2]}
-            isExpanded={expandedSections.slice}
-            onToggle={() => toggleSection('slice')}
-            sectionRef={(el) => { sectionRefs.current.slice = el; }}
+            section={getSectionById('widgets')}
+            isExpanded={expandedSections.widgets}
+            onToggle={() => toggleSection('widgets')}
+            sectionRef={(el) => { sectionRefs.current.widgets = el; }}
           />
-          {expandedSections.slice && (
+          {expandedSections.widgets && (
             <div className="tools-tab-content__section-content">
-              <SliceSection
-                orientation={sliceOrientation}
-                position={slicePosition}
-                maxPosition={sliceMax}
-                onOrientationChange={setSliceOrientation}
-                onPositionChange={setSlicePosition}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Window/Level Section */}
-        <div className="tools-tab-content__section">
-          <SectionHeader
-            section={TOOL_SECTIONS[3]}
-            isExpanded={expandedSections.windowLevel}
-            onToggle={() => toggleSection('windowLevel')}
-            sectionRef={(el) => { sectionRefs.current.windowLevel = el; }}
-          />
-          {expandedSections.windowLevel && (
-            <div className="tools-tab-content__section-content">
-              <WindowLevelSection
-                windowValue={windowValue}
-                levelValue={levelValue}
-                activePreset={activeWindowLevelPreset}
-                onWindowChange={setWindowValue}
-                onLevelChange={setLevelValue}
-                onPresetSelect={handleWindowLevelPreset}
+              <WidgetsSection
+                lineActive={lineWidgetActive}
+                angleActive={angleWidgetActive}
+                planeActive={planeWidgetActive}
+                onToggleLine={handleToggleLineWidget}
+                onToggleAngle={handleToggleAngleWidget}
+                onTogglePlane={handleTogglePlaneWidget}
+                onClearAll={handleClearAllWidgets}
               />
             </div>
           )}
@@ -240,7 +246,7 @@ const ToolsTabContent = memo(function ToolsTabContent({
         {/* Appearance Section */}
         <div className="tools-tab-content__section">
           <SectionHeader
-            section={TOOL_SECTIONS[4]}
+            section={getSectionById('appearance')}
             isExpanded={expandedSections.appearance}
             onToggle={() => toggleSection('appearance')}
             sectionRef={(el) => { sectionRefs.current.appearance = el; }}
@@ -261,6 +267,93 @@ const ToolsTabContent = memo(function ToolsTabContent({
           )}
         </div>
 
+        {/* Colormap Section */}
+        <div className="tools-tab-content__section">
+          <SectionHeader
+            section={getSectionById('colormap')}
+            isExpanded={expandedSections.colormap}
+            onToggle={() => toggleSection('colormap')}
+            sectionRef={(el) => { sectionRefs.current.colormap = el; }}
+          />
+          {expandedSections.colormap && (
+            <div className="tools-tab-content__section-content">
+              <ColormapSection
+                currentColormap={currentColormap}
+                onColormapChange={handleColormapChange}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Scene Section */}
+        <div className="tools-tab-content__section">
+          <SectionHeader
+            section={getSectionById('scene')}
+            isExpanded={expandedSections.scene}
+            onToggle={() => toggleSection('scene')}
+            sectionRef={(el) => { sectionRefs.current.scene = el; }}
+          />
+          {expandedSections.scene && (
+            <div className="tools-tab-content__section-content">
+              <SceneSection
+                backgroundPreset={backgroundPreset}
+                onBackgroundChange={handleBackgroundChange}
+                showGrid={overlayState?.grid}
+                gridPlane={overlayConfigs?.grid?.plane}
+                onToggleGrid={() => handleToggleOverlay?.('grid')}
+                onGridPlaneChange={handleGridPlaneChange}
+                showAxes={overlayState?.axes}
+                onToggleAxes={() => handleToggleOverlay?.('axes')}
+                showOrientation={overlayState?.orientation}
+                onToggleOrientation={() => handleToggleOverlay?.('orientation')}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Slice Section */}
+        <div className="tools-tab-content__section">
+          <SectionHeader
+            section={getSectionById('slice')}
+            isExpanded={expandedSections.slice}
+            onToggle={() => toggleSection('slice')}
+            sectionRef={(el) => { sectionRefs.current.slice = el; }}
+          />
+          {expandedSections.slice && (
+            <div className="tools-tab-content__section-content">
+              <SliceSection
+                orientation={sliceOrientation}
+                position={slicePosition}
+                maxPosition={sliceMax}
+                onOrientationChange={setSliceOrientation}
+                onPositionChange={setSlicePosition}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Window/Level Section */}
+        <div className="tools-tab-content__section">
+          <SectionHeader
+            section={getSectionById('windowLevel')}
+            isExpanded={expandedSections.windowLevel}
+            onToggle={() => toggleSection('windowLevel')}
+            sectionRef={(el) => { sectionRefs.current.windowLevel = el; }}
+          />
+          {expandedSections.windowLevel && (
+            <div className="tools-tab-content__section-content">
+              <WindowLevelSection
+                windowValue={windowValue}
+                levelValue={levelValue}
+                activePreset={activeWindowLevelPreset}
+                onWindowChange={setWindowValue}
+                onLevelChange={setLevelValue}
+                onPresetSelect={handleWindowLevelPreset}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Bottom Spacer */}
         <div className="tools-tab-content__spacer" />
       </div>
@@ -269,15 +362,95 @@ const ToolsTabContent = memo(function ToolsTabContent({
 });
 
 /**
- * AnnotationsTabContent - Placeholder for annotations
+ * AnnotationsTabContent - Wrapper for AnnotationsTab with state management
  */
-const AnnotationsTabContent = memo(function AnnotationsTabContent() {
+const AnnotationsTabContent = memo(function AnnotationsTabContent({ logic }) {
+  const {
+    annotations = [],
+    handleCreateAnnotation,
+    handleUpdateAnnotation,
+    handleDeleteAnnotation,
+    handleBulkUpdateAnnotations,
+    handleBulkDeleteAnnotations,
+  } = logic;
+
+  // Mock data for demonstration (remove when real annotation service is connected)
+  const [mockAnnotations, setMockAnnotations] = React.useState([
+    {
+      id: 'a-1',
+      type: 'text',
+      text: 'Suspicious lesion - needs follow-up',
+      color: '#ef4444',
+      scope: 'workspace',
+      visible: true,
+      locked: false,
+      author: 'Dr. Smith',
+      authorId: 'user-2',
+      timestamp: '2 hours ago',
+    },
+    {
+      id: 'a-2',
+      type: 'marker',
+      text: 'Injection site',
+      color: '#22c55e',
+      scope: 'instance',
+      visible: true,
+      locked: false,
+      author: 'You',
+      authorId: 'user-1',
+      timestamp: '1 hour ago',
+    },
+    {
+      id: 'a-3',
+      type: 'arrow',
+      text: 'Main blood vessel',
+      color: '#3b82f6',
+      scope: 'workspace',
+      visible: true,
+      locked: true,
+      author: 'Dr. Jones',
+      authorId: 'user-3',
+      timestamp: 'Yesterday',
+    },
+  ]);
+
+  const handleMockUpdate = React.useCallback((id, updates) => {
+    setMockAnnotations((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updates } : a))
+    );
+  }, []);
+
+  const handleMockDelete = React.useCallback((id) => {
+    setMockAnnotations((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  const handleMockBulkUpdate = React.useCallback((ids, updates) => {
+    setMockAnnotations((prev) =>
+      prev.map((a) => (ids.includes(a.id) ? { ...a, ...updates } : a))
+    );
+  }, []);
+
+  const handleMockBulkDelete = React.useCallback((ids) => {
+    setMockAnnotations((prev) => prev.filter((a) => !ids.includes(a.id)));
+  }, []);
+
+  // Use real handlers if available, otherwise use mock
+  const actualAnnotations = annotations.length > 0 ? annotations : mockAnnotations;
+  const actualUpdate = handleUpdateAnnotation || handleMockUpdate;
+  const actualDelete = handleDeleteAnnotation || handleMockDelete;
+  const actualBulkUpdate = handleBulkUpdateAnnotations || handleMockBulkUpdate;
+  const actualBulkDelete = handleBulkDeleteAnnotations || handleMockBulkDelete;
+
   return (
-    <div className="annotations-tab-content">
-      <Icon name="mapPin" size={24} />
-      <div className="annotations-tab-content__title">Instance Annotations</div>
-      <div className="annotations-tab-content__hint">Coming soon</div>
-    </div>
+    <AnnotationsTab
+      annotations={actualAnnotations}
+      onCreateAnnotation={handleCreateAnnotation}
+      onUpdateAnnotation={actualUpdate}
+      onDeleteAnnotation={actualDelete}
+      onBulkUpdate={actualBulkUpdate}
+      onBulkDelete={actualBulkDelete}
+      currentUserId="user-1"
+    />
   );
 });
 
@@ -351,7 +524,8 @@ export const InstanceToolsPanel = memo(function InstanceToolsPanel({
           {/* Tab Content (scrollable middle) */}
           <div className="instance-tools-panel__content">
             {activeTab === 'tools' && <ToolsTabContent logic={logic} />}
-            {activeTab === 'annotations' && <AnnotationsTabContent />}
+            {activeTab === 'display' && <DisplayTab logic={logic} />}
+            {activeTab === 'annotations' && <AnnotationsTabContent logic={logic} />}
           </div>
 
           {/* Layers & Widgets (stationary bottom) */}

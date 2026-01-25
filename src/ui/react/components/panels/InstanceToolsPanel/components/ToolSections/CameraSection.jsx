@@ -1,15 +1,260 @@
 /**
  * @file CameraSection.jsx
- * @description Camera preset grid and camera transform controls
+ * @description Enhanced camera section with animated transitions, reset point, and animation presets
  */
 
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { CAMERA_PRESETS } from '../../constants';
+import {
+  CAMERA_PRESETS,
+  EASING_OPTIONS,
+  ANIMATION_PRESETS,
+  CAMERA_ANIMATION_DEFAULTS,
+} from '../../constants';
 
-/**
- * CameraSlider - Individual camera axis slider
- */
+// =============================================================================
+// TOGGLE SWITCH
+// =============================================================================
+
+const ToggleSwitch = memo(function ToggleSwitch({ checked, onChange, size = 'sm' }) {
+  const sizes = {
+    sm: { width: 32, height: 16, knob: 12 },
+    md: { width: 40, height: 20, knob: 16 },
+  };
+  const s = sizes[size];
+
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`camera-section__toggle ${checked ? 'camera-section__toggle--active' : ''}`}
+      style={{
+        width: s.width,
+        height: s.height,
+        '--knob-size': `${s.knob}px`,
+        '--knob-offset': checked ? `${s.width - s.knob - 2}px` : '2px',
+      }}
+    >
+      <div className="camera-section__toggle-knob" />
+    </button>
+  );
+});
+
+// =============================================================================
+// STANDARD VIEWS GRID
+// =============================================================================
+
+const StandardViewsGrid = memo(function StandardViewsGrid({
+  onSelectView,
+  isAnimating,
+  disabled = false,
+}) {
+  return (
+    <div className="camera-section__grid">
+      {CAMERA_PRESETS.map((preset, index) => {
+        if (!preset) {
+          return <div key={index} className="camera-section__cell camera-section__cell--empty" />;
+        }
+
+        return (
+          <button
+            key={preset.id}
+            className={`camera-section__cell ${preset.special ? 'camera-section__cell--special' : ''}`}
+            onClick={() => onSelectView?.(preset.id)}
+            disabled={disabled || isAnimating}
+            title={preset.label}
+          >
+            <Icon name={preset.icon} size={14} />
+            <span>{preset.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+});
+
+// =============================================================================
+// ANIMATION SETTINGS
+// =============================================================================
+
+const AnimationSettings = memo(function AnimationSettings({
+  animateTransitions,
+  setAnimateTransitions,
+  duration,
+  setDuration,
+  easing,
+  setEasing,
+  expanded,
+  setExpanded,
+}) {
+  const durationPercent = ((duration - 100) / (2000 - 100)) * 100;
+
+  return (
+    <div className="camera-section__animation-settings">
+      {/* Toggle Row */}
+      <div className="camera-section__animation-toggle-row">
+        <div className="camera-section__animation-toggle-left">
+          <ToggleSwitch checked={animateTransitions} onChange={setAnimateTransitions} />
+          <span className="camera-section__animation-label">Animate</span>
+        </div>
+
+        {animateTransitions && (
+          <button
+            className={`camera-section__expand-btn ${expanded ? 'camera-section__expand-btn--active' : ''}`}
+            onClick={() => setExpanded(!expanded)}
+          >
+            <Icon name={expanded ? 'chevronUp' : 'chevronDown'} size={10} />
+            <span>{expanded ? 'Less' : 'More'}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Expanded Settings */}
+      {animateTransitions && expanded && (
+        <div className="camera-section__animation-expanded">
+          {/* Duration */}
+          <div className="camera-section__animation-duration">
+            <div className="camera-section__animation-duration-header">
+              <span className="camera-section__animation-duration-label">Duration</span>
+              <span className="camera-section__animation-duration-value">{duration}ms</span>
+            </div>
+            <input
+              type="range"
+              className="camera-section__animation-slider"
+              min={100}
+              max={2000}
+              step={100}
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              style={{ '--slider-percent': `${durationPercent}%` }}
+            />
+          </div>
+
+          {/* Easing */}
+          <div className="camera-section__animation-easing">
+            <span className="camera-section__animation-easing-label">Easing</span>
+            <div className="camera-section__easing-options">
+              {EASING_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`camera-section__easing-btn ${easing === opt.id ? 'camera-section__easing-btn--active' : ''}`}
+                  onClick={() => setEasing(opt.id)}
+                  title={opt.label}
+                >
+                  <Icon name={opt.icon} size={10} />
+                  <span>{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// =============================================================================
+// SET RESET POINT BUTTON
+// =============================================================================
+
+const SetResetPointButton = memo(function SetResetPointButton({
+  onSetResetPoint,
+  hasCustomResetPoint,
+  onClearResetPoint,
+}) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  if (!showConfirm) {
+    return (
+      <button
+        className={`camera-section__reset-point-btn ${hasCustomResetPoint ? 'camera-section__reset-point-btn--set' : ''}`}
+        onClick={() => setShowConfirm(true)}
+      >
+        <Icon name="mapPin" size={12} />
+        <span>
+          {hasCustomResetPoint ? 'Reset Point Set (click to change)' : 'Set Current as Reset Point'}
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="camera-section__reset-point-confirm">
+      <div className="camera-section__reset-point-message">
+        Set current camera position as the new reset point?
+      </div>
+      <div className="camera-section__reset-point-actions">
+        <button
+          className="camera-section__reset-point-confirm-btn"
+          onClick={() => {
+            onSetResetPoint();
+            setShowConfirm(false);
+          }}
+        >
+          <Icon name="check" size={12} />
+          Set Reset Point
+        </button>
+        <button
+          className="camera-section__reset-point-cancel-btn"
+          onClick={() => setShowConfirm(false)}
+        >
+          Cancel
+        </button>
+        {hasCustomResetPoint && (
+          <button
+            className="camera-section__reset-point-clear-btn"
+            onClick={() => {
+              onClearResetPoint?.();
+              setShowConfirm(false);
+            }}
+            title="Clear custom reset point"
+          >
+            <Icon name="x" size={12} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// =============================================================================
+// ANIMATION PRESETS
+// =============================================================================
+
+const AnimationPresetsSection = memo(function AnimationPresetsSection({
+  activeAnimation,
+  onStartAnimation,
+  onStopAnimation,
+  disabled = false,
+}) {
+  return (
+    <div className="camera-section__presets">
+      <div className="camera-section__presets-label">ANIMATION PRESETS</div>
+      <div className="camera-section__presets-grid">
+        {ANIMATION_PRESETS.map((preset) => {
+          const isActive = activeAnimation === preset.id;
+          return (
+            <button
+              key={preset.id}
+              className={`camera-section__preset-btn ${isActive ? 'camera-section__preset-btn--active' : ''}`}
+              onClick={() => (isActive ? onStopAnimation() : onStartAnimation(preset.id))}
+              disabled={disabled || (activeAnimation && !isActive)}
+              title={preset.description}
+            >
+              <Icon name={isActive ? 'square' : preset.icon} size={14} />
+              <span>{isActive ? 'Stop' : preset.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+// =============================================================================
+// CAMERA SLIDER (unchanged from before)
+// =============================================================================
+
 const CameraSlider = memo(function CameraSlider({
   label,
   value,
@@ -45,9 +290,10 @@ const CameraSlider = memo(function CameraSlider({
   );
 });
 
-/**
- * CameraTransformSubsection - Collapsible camera position/orientation controls
- */
+// =============================================================================
+// CAMERA TRANSFORM SUBSECTION
+// =============================================================================
+
 const CameraTransformSubsection = memo(function CameraTransformSubsection({
   cameraState,
   onCameraPositionChange,
@@ -177,9 +423,10 @@ const CameraTransformSubsection = memo(function CameraTransformSubsection({
   );
 });
 
-/**
- * SavedCameraStates - Collapsible list of saved camera states
- */
+// =============================================================================
+// SAVED CAMERA STATES
+// =============================================================================
+
 const SavedCameraStates = memo(function SavedCameraStates({
   savedStates = [],
   onSave,
@@ -248,52 +495,124 @@ const SavedCameraStates = memo(function SavedCameraStates({
   );
 });
 
+// =============================================================================
+// CAMERA SECTION (MAIN COMPONENT)
+// =============================================================================
+
 /**
- * CameraSection - Grid of camera preset buttons + camera transform controls
+ * CameraSection - Enhanced camera controls with animations
  */
 export const CameraSection = memo(function CameraSection({
+  // View selection
   onPresetClick,
+  onAnimatedPresetClick, // New: animated version
+
+  // Camera transform
   cameraState,
   cameraTransformExpanded,
   onToggleCameraTransform,
   onCameraPositionChange,
   onCameraFocalPointChange,
   onCameraViewAngleChange,
+
+  // Saved views
   savedCameraStates = [],
   savedStatesExpanded,
   onToggleSavedStates,
   onSaveCameraState,
   onRestoreCameraState,
   onDeleteCameraState,
+
+  // Animation
+  animationSettings,
+  onAnimationSettingsChange,
+  isAnimating = false,
+  activeAnimation = null,
+  onStartAnimation,
+  onStopAnimation,
+
+  // Reset point
+  hasCustomResetPoint = false,
+  onSetResetPoint,
+  onClearResetPoint,
+
+  // General
   disabled = false,
 }) {
+  // Local animation settings state (if not controlled externally)
+  const [localAnimSettings, setLocalAnimSettings] = useState({
+    enabled: CAMERA_ANIMATION_DEFAULTS.enabled,
+    duration: CAMERA_ANIMATION_DEFAULTS.duration,
+    easing: CAMERA_ANIMATION_DEFAULTS.easing,
+    expanded: false,
+  });
+
+  // Use external or local animation settings
+  const animSettings = animationSettings || localAnimSettings;
+  const setAnimSettings = onAnimationSettingsChange || setLocalAnimSettings;
+
+  // Local saved states expanded state
   const [localSavedExpanded, setLocalSavedExpanded] = useState(false);
-  const handleToggleSavedStates = onToggleSavedStates || (() => setLocalSavedExpanded(prev => !prev));
+  const handleToggleSavedStates = onToggleSavedStates || (() => setLocalSavedExpanded((prev) => !prev));
   const isSavedExpanded = savedStatesExpanded !== undefined ? savedStatesExpanded : localSavedExpanded;
+
+  // Handle view selection (with or without animation)
+  const handleSelectView = useCallback(
+    (viewId) => {
+      if (animSettings.enabled && onAnimatedPresetClick) {
+        onAnimatedPresetClick(viewId, {
+          duration: animSettings.duration,
+          easing: animSettings.easing,
+        });
+      } else if (onPresetClick) {
+        onPresetClick(viewId);
+      }
+    },
+    [animSettings, onAnimatedPresetClick, onPresetClick]
+  );
 
   return (
     <div className="camera-section">
-      {/* Preset Grid */}
-      <div className="camera-section__grid">
-        {CAMERA_PRESETS.map((preset, index) => {
-          if (!preset) {
-            return <div key={index} className="camera-section__cell camera-section__cell--empty" />;
-          }
+      {/* Section Label */}
+      <div className="camera-section__section-label">STANDARD VIEWS</div>
 
-          return (
-            <button
-              key={preset.id}
-              className={`camera-section__cell ${preset.special ? 'camera-section__cell--special' : ''}`}
-              onClick={() => onPresetClick?.(preset.id)}
-              disabled={disabled}
-              title={preset.label}
-            >
-              <Icon name={preset.icon} size={14} />
-              <span>{preset.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Standard Views Grid */}
+      <StandardViewsGrid
+        onSelectView={handleSelectView}
+        isAnimating={isAnimating}
+        disabled={disabled}
+      />
+
+      {/* Animation Settings */}
+      <AnimationSettings
+        animateTransitions={animSettings.enabled}
+        setAnimateTransitions={(enabled) => setAnimSettings({ ...animSettings, enabled })}
+        duration={animSettings.duration}
+        setDuration={(duration) => setAnimSettings({ ...animSettings, duration })}
+        easing={animSettings.easing}
+        setEasing={(easing) => setAnimSettings({ ...animSettings, easing })}
+        expanded={animSettings.expanded}
+        setExpanded={(expanded) => setAnimSettings({ ...animSettings, expanded })}
+      />
+
+      {/* Set Reset Point */}
+      {onSetResetPoint && (
+        <SetResetPointButton
+          onSetResetPoint={onSetResetPoint}
+          hasCustomResetPoint={hasCustomResetPoint}
+          onClearResetPoint={onClearResetPoint}
+        />
+      )}
+
+      {/* Animation Presets */}
+      {(onStartAnimation || onStopAnimation) && (
+        <AnimationPresetsSection
+          activeAnimation={activeAnimation}
+          onStartAnimation={onStartAnimation}
+          onStopAnimation={onStopAnimation}
+          disabled={disabled}
+        />
+      )}
 
       {/* Saved Camera States */}
       <SavedCameraStates
@@ -312,7 +631,7 @@ export const CameraSection = memo(function CameraSection({
         onCameraPositionChange={onCameraPositionChange}
         onCameraFocalPointChange={onCameraFocalPointChange}
         onCameraViewAngleChange={onCameraViewAngleChange}
-        onReset={() => onPresetClick?.('reset')}
+        onReset={() => handleSelectView('reset')}
         expanded={cameraTransformExpanded}
         onToggleExpanded={onToggleCameraTransform}
         disabled={disabled}

@@ -16,7 +16,8 @@
  * @module AdaptiveContext
  */
 
-import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
+import { vrManager } from '@Core/vr/VRManager.js';
 
 // =============================================================================
 // DESIGN TOKENS
@@ -54,6 +55,10 @@ export const ADAPTIVE_TOKENS = {
             iconSize: 16,
             iconSizeSm: 12,
             iconSizeLg: 20,
+            iconStrokeWeight: 2,    // Thicker strokes for desktop
+
+            // Button sizes (for AdaptiveButton sm/md/lg)
+            buttonSizes: { sm: 24, md: 32, lg: 40 },
 
             // Border radius
             borderRadius: 6,
@@ -100,6 +105,10 @@ export const ADAPTIVE_TOKENS = {
             iconSize: 14,
             iconSizeSm: 10,
             iconSizeLg: 16,
+            iconStrokeWeight: 2,    // Thicker strokes for desktop
+
+            // Button sizes (for AdaptiveButton sm/md/lg)
+            buttonSizes: { sm: 20, md: 24, lg: 32 },
 
             borderRadius: 4,
             borderRadiusSm: 3,
@@ -150,6 +159,10 @@ export const ADAPTIVE_TOKENS = {
             iconSize: 24,
             iconSizeSm: 20,
             iconSizeLg: 28,
+            iconStrokeWeight: 1.5,  // Thinner strokes for VR (larger icons)
+
+            // Button sizes (for AdaptiveButton sm/md/lg) - larger for VR
+            buttonSizes: { sm: 44, md: 56, lg: 72 },
 
             // Border radius
             borderRadius: 12,
@@ -196,6 +209,10 @@ export const ADAPTIVE_TOKENS = {
             iconSize: 20,
             iconSizeSm: 16,
             iconSizeLg: 24,
+            iconStrokeWeight: 1.5,  // Thinner strokes for VR (larger icons)
+
+            // Button sizes (for AdaptiveButton sm/md/lg) - larger for VR
+            buttonSizes: { sm: 36, md: 44, lg: 52 },
 
             borderRadius: 10,
             borderRadiusSm: 6,
@@ -234,9 +251,36 @@ const AdaptiveContext = createContext({
 // PROVIDER
 // =============================================================================
 
-export function AdaptiveProvider({ children, initialMode = 'desktop', initialDensity = 'comfortable' }) {
+export function AdaptiveProvider({ children, initialMode = 'desktop', initialDensity = 'comfortable', autoSyncVR = true }) {
     const [mode, setMode] = useState(initialMode);
     const [density, setDensity] = useState(initialDensity);
+
+    // Auto-sync with VRManager when entering/exiting VR
+    useEffect(() => {
+        if (!autoSyncVR || !vrManager) return;
+
+        const handleVREnter = () => {
+            setMode('vr');
+        };
+
+        const handleVRExit = () => {
+            setMode('desktop');
+        };
+
+        // Subscribe to VRManager events
+        vrManager.on('vrEntered', handleVREnter);
+        vrManager.on('vrExited', handleVRExit);
+
+        // Check initial state - if already in VR, set mode
+        if (vrManager.isInVR?.()) {
+            setMode('vr');
+        }
+
+        return () => {
+            vrManager.off('vrEntered', handleVREnter);
+            vrManager.off('vrExited', handleVRExit);
+        };
+    }, [autoSyncVR]);
 
     const tokens = useMemo(() => {
         return ADAPTIVE_TOKENS[mode]?.[density] || ADAPTIVE_TOKENS.desktop.comfortable;

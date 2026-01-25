@@ -1,0 +1,376 @@
+/**
+ * @file RoomHeader.scss
+ * @description Styles for RoomHeader component
+ */
+
+@use "theme" as *;
+
+// =============================================================================
+// ROOM HEADER CONTAINER
+// =============================================================================
+
+.room-header {
+    display: flex;
+    align-items: center;
+    height: 44px;
+    padding: 0 $spacing-md;
+    background: $color-bg-secondary;
+    border-bottom: 1px solid $color-border-default;
+    gap: $spacing-sm;
+}
+
+// =============================================================================
+// ROOM TABS
+// =============================================================================
+
+.room-header__tabs {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+}
+
+.room-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px $spacing-md;
+    border-radius: $radius-md;
+    border: 1px solid transparent;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font-size: $font-size-xs;
+    font-weight: 400;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: $color-hover-bg;
+        color: $color-text-primary;
+    }
+
+    &--active {
+        border-color: color-mix(in srgb, var(--room-color, $color-accent-blue) 50%, transparent);
+        background: color-mix(in srgb, var(--room-color, $color-accent-blue) 15%, transparent);
+        color: $color-text-primary;
+        font-weight: 500;
+    }
+
+    &__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    &__name {
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__icon {
+        flex-shrink: 0;
+
+        &--viewing {
+            color: $color-accent-cyan;
+        }
+
+        &--voice {
+            color: $color-accent-green;
+        }
+    }
+}
+
+// =============================================================================
+// OVERFLOW DROPDOWN
+// =============================================================================
+
+.room-header__overflow {
+    position: relative;
+}
+
+.room-header__overflow-trigger {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: 6px 10px;
+    border-radius: $radius-md;
+    border: none;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    font-size: $font-size-xs;
+    transition: all 0.15s ease;
+
+    &:hover {
+        color: $color-text-secondary;
+        background: $color-hover-bg;
+    }
+}
+
+.room-header__overflow-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: $spacing-xs;
+    min-width: 180px;
+    padding: $spacing-xs;
+    background: $color-bg-elevated;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-xl;
+    z-index: $z-dropdown;
+}
+
+.room-header__overflow-item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm 10px;
+    background: transparent;
+    border: none;
+    border-radius: $radius-md;
+    cursor: pointer;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    text-align: left;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: $color-hover-bg;
+        color: $color-text-primary;
+    }
+}
+
+.room-header__overflow-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+// =============================================================================
+// CREATE BUTTON
+// =============================================================================
+
+.room-header__create-btn {
+    color: $color-text-muted;
+
+    &:hover {
+        color: $color-text-secondary;
+    }
+}
+
+// =============================================================================
+// SPACER & SEPARATOR
+// =============================================================================
+
+.room-header__spacer {
+    flex: 1;
+}
+
+.room-header__separator {
+    width: 1px;
+    height: 20px;
+    background: $color-border-subtle;
+    margin: 0 $spacing-sm;
+    flex-shrink: 0;
+}
+
+// =============================================================================
+// PRESENCE
+// =============================================================================
+
+.room-header__presence {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+
+    svg {
+        color: $color-text-muted;
+    }
+}
+
+// =============================================================================
+// VOICE CONTROLS
+// =============================================================================
+
+.room-header__voice {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    position: relative;
+}
+
+.room-header__voice-active {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px $spacing-md;
+    border-radius: $radius-md;
+    border: 1px solid color-mix(in srgb, $color-accent-green 40%, transparent);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
+    color: $color-accent-green;
+    cursor: pointer;
+    font-size: $font-size-xs;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: color-mix(in srgb, $color-accent-green 20%, transparent);
+    }
+}
+
+.room-header__voice-join {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px $spacing-md;
+    border-radius: $radius-md;
+    border: 1px solid $color-border-subtle;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    font-size: $font-size-xs;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: $color-hover-bg;
+        border-color: $color-border-default;
+        color: $color-text-primary;
+    }
+}
+
+.room-header__mute {
+    &--muted {
+        color: $color-accent-red;
+    }
+}
+
+// =============================================================================
+// VOICE DROPDOWN
+// =============================================================================
+
+.voice-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: $spacing-xs;
+    min-width: 220px;
+    background: $color-bg-elevated;
+    border: 1px solid $color-border-default;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-xl;
+    z-index: $z-dropdown;
+    overflow: hidden;
+}
+
+.voice-dropdown__header {
+    padding: $spacing-sm $spacing-md;
+    font-size: 10px;
+    font-weight: 600;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.voice-dropdown__list {
+    padding: 0 $spacing-xs;
+}
+
+.voice-dropdown__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    padding: $spacing-sm;
+    background: transparent;
+    border: none;
+    border-radius: $radius-md;
+    cursor: pointer;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    text-align: left;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: $color-hover-bg;
+        color: $color-text-primary;
+    }
+}
+
+.voice-dropdown__item-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.voice-dropdown__item-name {
+    flex: 1;
+}
+
+.voice-dropdown__divider {
+    height: 1px;
+    background: $color-border-subtle;
+    margin: $spacing-sm 0;
+}
+
+.voice-dropdown__leave {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: calc(100% - #{$spacing-xs * 2});
+    margin: 0 $spacing-xs $spacing-sm;
+    padding: $spacing-sm;
+    background: transparent;
+    border: none;
+    border-radius: $radius-md;
+    cursor: pointer;
+    color: $color-accent-red;
+    font-size: $font-size-xs;
+    text-align: left;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: color-mix(in srgb, $color-accent-red 15%, transparent);
+    }
+}
+
+// =============================================================================
+// CHAT
+// =============================================================================
+
+.room-header__chat {
+    position: relative;
+}
+
+.room-header__chat-btn {
+    color: $color-text-secondary;
+
+    &:hover {
+        color: $color-text-primary;
+    }
+}
+
+.room-header__chat-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 $spacing-xs;
+    background: $color-accent-pink;
+    border: 2px solid $color-bg-secondary;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}

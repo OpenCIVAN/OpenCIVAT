@@ -9,6 +9,8 @@ import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitial
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
 import { instanceTools } from '@Core/instances/types/vtk/vtkInstanceTools.js';
+import { vtkOrientationWidget } from '@Core/instances/types/vtk/widgets/orientation/VTKOrientationWidget.js';
+import vtkSceneFeature from '@Core/instances/types/vtk/features/VTKSceneFeature.js';
 import { TOOL_SECTIONS, TRANSFORM_LIMITS } from './constants';
 
 /**
@@ -23,9 +25,12 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   const [expandedSections, setExpandedSections] = useState({
     camera: true,
     transform: true,
-    slice: true,
-    windowLevel: true,
+    widgets: true,
     appearance: true,
+    colormap: true,
+    scene: true,
+    slice: false,
+    windowLevel: false,
   });
 
   // -------------------------------------------------------------------------
@@ -83,11 +88,47 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   const [lineWidth, setLineWidth] = useState(2);
 
   // -------------------------------------------------------------------------
+  // Measurement Widgets State
+  // -------------------------------------------------------------------------
+  const [lineWidgetActive, setLineWidgetActive] = useState(false);
+  const [angleWidgetActive, setAngleWidgetActive] = useState(false);
+  const [planeWidgetActive, setPlaneWidgetActive] = useState(false);
+
+  // -------------------------------------------------------------------------
+  // Colormap State
+  // -------------------------------------------------------------------------
+  const [currentColormap, setCurrentColormap] = useState('viridis');
+
+  // -------------------------------------------------------------------------
+  // Scene State
+  // -------------------------------------------------------------------------
+  const [backgroundPreset, setBackgroundPreset] = useState('dark');
+
+  // -------------------------------------------------------------------------
   // Layers & Widgets State
   // -------------------------------------------------------------------------
   const [layers, setLayers] = useState([]);
   const [widgets, setWidgets] = useState([]);
   const [layersExpanded, setLayersExpanded] = useState(true);
+
+  // -------------------------------------------------------------------------
+  // Display Tab - Scene Overlays State
+  // -------------------------------------------------------------------------
+  const [overlayState, setOverlayState] = useState({
+    orientation: true,
+    grid: false,
+    axes: false,
+    scalebar: false,
+    coordinates: false,
+    fps: false,
+  });
+  const [overlayConfigs, setOverlayConfigs] = useState({
+    orientation: { style: 'cube', position: 'BOTTOM_RIGHT', sizePreset: 'md', sizePercent: 12, sizePixels: 80 },
+    grid: { plane: 'xz', divisions: 10, opacity: 50 },
+    axes: { showLabels: true, showTicks: true },
+    scalebar: { style: 'ticked', position: 'BOTTOM_RIGHT', orientation: 'horizontal', behavior: 'auto', units: 'auto' },
+    coordinates: { position: 'BOTTOM_LEFT', precision: 2 },
+  });
 
   // -------------------------------------------------------------------------
   // Scroll Tracking for Dot Navigation
@@ -550,6 +591,105 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
   }, []);
 
   // -------------------------------------------------------------------------
+  // Scene Overlay Handlers (wired to VTK)
+  // -------------------------------------------------------------------------
+
+  // Sync overlay state from VTK when instance changes
+  useEffect(() => {
+    if (!activeInstance?.instanceId) return;
+
+    const instanceId = activeInstance.instanceId;
+
+    // Sync orientation widget state
+    const orientationEnabled = instanceTools.isWidgetActive(instanceId, 'orientation');
+
+    // Sync scene feature states (grid, axes)
+    const sceneState = vtkSceneFeature.getState?.(instanceId) || {};
+    const gridEnabled = sceneState.showGrid || false;
+    const axesEnabled = sceneState.showAxes || false;
+
+    setOverlayState(prev => ({
+      ...prev,
+      orientation: orientationEnabled,
+      grid: gridEnabled,
+      axes: axesEnabled,
+    }));
+  }, [activeInstance?.instanceId]);
+
+  // Toggle scene overlay
+  const handleToggleOverlay = useCallback((overlayId) => {
+    if (!activeInstance?.instanceId) return;
+
+    const instanceId = activeInstance.instanceId;
+    const newState = !overlayState[overlayId];
+
+    // Apply to VTK based on overlay type
+    switch (overlayId) {
+      case 'orientation':
+        instanceTools.toggleOrientation(instanceId);
+        break;
+      case 'grid':
+        vtkSceneFeature.toggleGrid(instanceId);
+        break;
+      case 'axes':
+        vtkSceneFeature.toggleAxes(instanceId);
+        break;
+      // Future: Add handlers for scalebar, coordinates, fps
+      default:
+        break;
+    }
+
+    // Update local state
+    setOverlayState(prev => ({
+      ...prev,
+      [overlayId]: newState,
+    }));
+  }, [activeInstance?.instanceId, overlayState]);
+
+  // Update overlay configuration
+  const handleUpdateOverlayConfig = useCallback((overlayId, newConfig) => {
+    if (!activeInstance?.instanceId) return;
+
+    const instanceId = activeInstance.instanceId;
+
+    // Apply config to VTK based on overlay type
+    switch (overlayId) {
+      case 'orientation':
+        // Update orientation widget configuration
+        vtkOrientationWidget.updateConfig(instanceId, {
+          viewportSize: newConfig.sizePercent / 100,
+          corner: newConfig.position,
+        });
+        instanceTools.forceRender(instanceId);
+        break;
+      case 'grid':
+        // Update grid plane if changed
+        if (newConfig.plane) {
+          vtkSceneFeature.setGridPlane?.(instanceId, newConfig.plane);
+        }
+        // Update grid divisions if changed
+        if (newConfig.divisions) {
+          vtkSceneFeature.setGridDivisions?.(instanceId, newConfig.divisions);
+        }
+        // Update grid opacity if changed
+        if (newConfig.opacity !== undefined) {
+          vtkSceneFeature.setGridOpacity?.(instanceId, newConfig.opacity / 100);
+        }
+        instanceTools.forceRender(instanceId);
+        break;
+      // Future: Add config handlers for axes, scalebar, coordinates
+      default:
+        break;
+    }
+
+    // Update local state
+    setOverlayConfigs(prev => ({
+      ...prev,
+      [overlayId]: newConfig,
+    }));
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
   // Slice Handlers (wired to VTK)
   // -------------------------------------------------------------------------
   const handleSliceOrientationChange = useCallback((orientation) => {
@@ -624,6 +764,94 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     setLineWidth(width);
     if (!activeInstance?.instanceId) return;
     instanceTools.setLineWidth(activeInstance.instanceId, width);
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
+  // Measurement Widgets Handlers (wired to VTK)
+  // -------------------------------------------------------------------------
+  // Sync widget state from VTK when instance changes
+  useEffect(() => {
+    if (!activeInstance?.instanceId) return;
+    const instanceId = activeInstance.instanceId;
+
+    // Sync measurement widget states
+    setLineWidgetActive(instanceTools.isWidgetActive?.(instanceId, 'line') || false);
+    setAngleWidgetActive(instanceTools.isWidgetActive?.(instanceId, 'angle') || false);
+    setPlaneWidgetActive(instanceTools.isWidgetActive?.(instanceId, 'plane') || false);
+  }, [activeInstance?.instanceId]);
+
+  const handleToggleLineWidget = useCallback(() => {
+    if (!activeInstance?.instanceId) return;
+    instanceTools.toggleRulerMeasurement?.(activeInstance.instanceId);
+    setLineWidgetActive(prev => !prev);
+  }, [activeInstance?.instanceId]);
+
+  const handleToggleAngleWidget = useCallback(() => {
+    if (!activeInstance?.instanceId) return;
+    instanceTools.toggleAngleMeasurement?.(activeInstance.instanceId);
+    setAngleWidgetActive(prev => !prev);
+  }, [activeInstance?.instanceId]);
+
+  const handleTogglePlaneWidget = useCallback(() => {
+    if (!activeInstance?.instanceId) return;
+    instanceTools.toggleClippingPlane?.(activeInstance.instanceId);
+    setPlaneWidgetActive(prev => !prev);
+  }, [activeInstance?.instanceId]);
+
+  const handleClearAllWidgets = useCallback(() => {
+    if (!activeInstance?.instanceId) return;
+    const instanceId = activeInstance.instanceId;
+
+    if (lineWidgetActive) instanceTools.toggleRulerMeasurement?.(instanceId);
+    if (angleWidgetActive) instanceTools.toggleAngleMeasurement?.(instanceId);
+    if (planeWidgetActive) instanceTools.toggleClippingPlane?.(instanceId);
+
+    setLineWidgetActive(false);
+    setAngleWidgetActive(false);
+    setPlaneWidgetActive(false);
+  }, [activeInstance?.instanceId, lineWidgetActive, angleWidgetActive, planeWidgetActive]);
+
+  // -------------------------------------------------------------------------
+  // Colormap Handlers (wired to VTK)
+  // -------------------------------------------------------------------------
+  // Sync colormap state from VTK when instance changes
+  useEffect(() => {
+    if (!activeInstance?.instanceId) return;
+    const colormap = instanceTools.getCurrentColormap?.(activeInstance.instanceId);
+    if (colormap) setCurrentColormap(colormap);
+  }, [activeInstance?.instanceId]);
+
+  const handleColormapChange = useCallback((colormapId) => {
+    if (!activeInstance?.instanceId) return;
+    instanceTools.setColorMap?.(activeInstance.instanceId, colormapId);
+    setCurrentColormap(colormapId);
+  }, [activeInstance?.instanceId]);
+
+  // -------------------------------------------------------------------------
+  // Scene Handlers (wired to VTK)
+  // -------------------------------------------------------------------------
+  // Sync scene state from VTK when instance changes
+  useEffect(() => {
+    if (!activeInstance?.instanceId) return;
+    const sceneState = vtkSceneFeature.getState?.(activeInstance.instanceId);
+    if (sceneState?.backgroundPreset) {
+      setBackgroundPreset(sceneState.backgroundPreset);
+    }
+  }, [activeInstance?.instanceId]);
+
+  const handleBackgroundChange = useCallback((presetId) => {
+    if (!activeInstance?.instanceId) return;
+    vtkSceneFeature.setBackgroundPreset?.(activeInstance.instanceId, presetId);
+    setBackgroundPreset(presetId);
+  }, [activeInstance?.instanceId]);
+
+  const handleGridPlaneChange = useCallback((plane) => {
+    if (!activeInstance?.instanceId) return;
+    vtkSceneFeature.setGridPlane?.(activeInstance.instanceId, plane);
+    setOverlayConfigs(prev => ({
+      ...prev,
+      grid: { ...prev.grid, plane },
+    }));
   }, [activeInstance?.instanceId]);
 
   // -------------------------------------------------------------------------
@@ -735,6 +963,24 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     lineWidth,
     setLineWidth: handleLineWidthChange,
 
+    // Measurement Widgets (wired to VTK)
+    lineWidgetActive,
+    angleWidgetActive,
+    planeWidgetActive,
+    handleToggleLineWidget,
+    handleToggleAngleWidget,
+    handleTogglePlaneWidget,
+    handleClearAllWidgets,
+
+    // Colormap (wired to VTK)
+    currentColormap,
+    handleColormapChange,
+
+    // Scene (wired to VTK)
+    backgroundPreset,
+    handleBackgroundChange,
+    handleGridPlaneChange,
+
     // Camera
     handleCameraPreset,
     cameraState,
@@ -759,6 +1005,12 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     handleWidgetVisibilityToggle,
     handleWidgetOpacityChange,
     handleWidgetDelete,
+
+    // Scene Overlays (wired to VTK)
+    overlayState,
+    overlayConfigs,
+    handleToggleOverlay,
+    handleUpdateOverlayConfig,
   };
 }
 

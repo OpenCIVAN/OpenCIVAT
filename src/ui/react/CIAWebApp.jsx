@@ -72,6 +72,9 @@ import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/Lay
 import { FloatingCanvasNavigator, useNavigatorButton } from "@UI/react/components/panels/LayoutPanel";
 import { CanvasOperationsPanel } from "@UI/react/components/panels/FloatingPanel/CanvasOperationsPanel";
 import { VRAccessibilityProvider } from "@UI/react/context/VRAccessibilityContext";
+import { AdaptiveProvider, useAdaptive } from "@UI/react/context/AdaptiveContext";
+import { VRWristMenuProvider } from "@UI/react/components/organisms/VRWristMenu";
+import { VRWristMenu } from "@UI/react/components/organisms/VRWristMenu";
 
 // =============================================================================
 // MODALS
@@ -909,11 +912,13 @@ export function CIAWebApp({ username, userId, projectId }) {
   // RENDER
   // ===========================================================================
   return (
-    <VRAccessibilityProvider>
-      <FloatingPanelProvider>
-        <LeftPanelProvider>
-          <RightPanelProvider>
-            <LayoutPanelProvider canvasId={canvasId}>
+    <AdaptiveProvider autoSyncVR>
+      <VRWristMenuProvider>
+        <VRAccessibilityProvider>
+          <FloatingPanelProvider>
+            <LeftPanelProvider>
+              <RightPanelProvider>
+                <LayoutPanelProvider canvasId={canvasId}>
             <ThreeEdgeLayout
               // ─────────────────────────────────────────────────────────────
               // TOP BAR (48px Header)
@@ -1131,11 +1136,16 @@ export function CIAWebApp({ username, userId, projectId }) {
 
             {/* Toast Notifications */}
             <ToastContainer />
+
+            {/* VR Wrist Menu - renders only in VR mode */}
+            <VRWristMenu showInDesktop={false} />
             </LayoutPanelProvider>
-          </RightPanelProvider>
-        </LeftPanelProvider>
-      </FloatingPanelProvider>
-    </VRAccessibilityProvider>
+              </RightPanelProvider>
+            </LeftPanelProvider>
+          </FloatingPanelProvider>
+        </VRAccessibilityProvider>
+      </VRWristMenuProvider>
+    </AdaptiveProvider>
   );
 }
 

@@ -41,3 +41,6 @@ export { UsernameModal } from './UsernameModal';
 export { ViewSettingsModal } from './ViewSettingsModal';
 export { VoiceCommandHelp } from './VoiceCommandHelp';
 export { WorkspacePickerModal } from './WorkspacePickerModal';
+
+// ViewGroup modals
+export { DuplicationDialog } from './DuplicationDialog';

@@ -175,9 +175,231 @@ export function camerasEqual(stateA, stateB, tolerance = 0.001) {
   );
 }
 
+// =============================================================================
+// EASING FUNCTIONS
+// =============================================================================
+
+/**
+ * Collection of easing functions for smooth camera animations
+ */
+export const EASING_FUNCTIONS = {
+  linear: (t) => t,
+  easeInOut: (t) =>
+    t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+  easeOut: (t) => 1 - Math.pow(1 - t, 3),
+  easeIn: (t) => t * t * t,
+  bounce: (t) => {
+    const n1 = 7.5625;
+    const d1 = 2.75;
+    if (t < 1 / d1) return n1 * t * t;
+    if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+    if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+    return n1 * (t -= 2.625 / d1) * t + 0.984375;
+  },
+};
+
+// =============================================================================
+// ANIMATED CAMERA TRANSITIONS
+// =============================================================================
+
+/**
+ * Animate camera to a target state with easing
+ *
+ * @param {Object} renderer - VTK renderer instance
+ * @param {Object} renderWindow - VTK renderWindow instance
+ * @param {Object} targetState - Target camera state
+ * @param {Object} options - Animation options
+ * @param {number} options.duration - Animation duration in ms (default: 500)
+ * @param {string} options.easing - Easing function name (default: 'easeInOut')
+ * @param {Function} options.onProgress - Called each frame with progress (0-1)
+ * @param {Function} options.onComplete - Called when animation completes
+ * @returns {Function} Cancel function to stop the animation
+ *
+ * @example
+ * const cancel = flyTo(renderer, renderWindow, targetCameraState, {
+ *   duration: 500,
+ *   easing: 'easeOut',
+ *   onComplete: () => console.log('Animation done'),
+ * });
+ * // To cancel mid-animation:
+ * cancel();
+ */
+export function flyTo(renderer, renderWindow, targetState, options = {}) {
+  const {
+    duration = 500,
+    easing = "easeInOut",
+    onProgress = null,
+    onComplete = null,
+  } = options;
+
+  if (!renderer || !renderWindow || !targetState) {
+    log.warn("flyTo: Missing required parameters");
+    return () => {};
+  }
+
+  const camera = renderer.getActiveCamera?.();
+  if (!camera) {
+    log.warn("flyTo: No active camera found");
+    return () => {};
+  }
+
+  // Capture starting state
+  const fromState = captureCameraState(renderer);
+  if (!fromState) {
+    log.warn("flyTo: Could not capture starting camera state");
+    return () => {};
+  }
+
+  // Get easing function
+  const easingFn = EASING_FUNCTIONS[easing] || EASING_FUNCTIONS.easeInOut;
+
+  // Animation state
+  let startTime = null;
+  let animationId = null;
+  let cancelled = false;
+
+  const animate = (timestamp) => {
+    if (cancelled) return;
+
+    if (!startTime) startTime = timestamp;
+
+    const elapsed = timestamp - startTime;
+    const rawT = Math.min(elapsed / duration, 1);
+    const t = easingFn(rawT);
+
+    // Interpolate camera state
+    const currentState = interpolateCameraState(fromState, targetState, t);
+
+    // Apply to camera
+    camera.setPosition(...currentState.position);
+    camera.setFocalPoint(...currentState.focalPoint);
+    camera.setViewUp(...currentState.viewUp);
+    if (currentState.viewAngle !== undefined) {
+      camera.setViewAngle(currentState.viewAngle);
+    }
+    if (currentState.parallelScale !== undefined) {
+      camera.setParallelScale(currentState.parallelScale);
+    }
+
+    // Reset clipping range for proper rendering
+    renderer.resetCameraClippingRange();
+    renderWindow.render();
+
+    // Progress callback
+    if (onProgress) {
+      onProgress(rawT);
+    }
+
+    // Continue or complete
+    if (rawT < 1) {
+      animationId = requestAnimationFrame(animate);
+    } else {
+      if (onComplete) {
+        onComplete();
+      }
+    }
+  };
+
+  // Start animation
+  animationId = requestAnimationFrame(animate);
+
+  // Return cancel function
+  return () => {
+    cancelled = true;
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+    }
+  };
+}
+
+/**
+ * Standard view camera configurations
+ * Returns target camera state for a given standard view
+ *
+ * @param {Object} renderer - VTK renderer to get bounds from
+ * @param {string} view - View name: 'front', 'back', 'top', 'bottom', 'left', 'right', 'isometric'
+ * @returns {Object|null} Target camera state or null if view is unknown
+ */
+export function getStandardViewState(renderer, view) {
+  if (!renderer) return null;
+
+  // Get bounds of the data for proper positioning
+  const bounds = renderer.computeVisiblePropBounds();
+  const center = [
+    (bounds[0] + bounds[1]) / 2,
+    (bounds[2] + bounds[3]) / 2,
+    (bounds[4] + bounds[5]) / 2,
+  ];
+
+  // Calculate distance from center (for camera position)
+  const diagonal = Math.sqrt(
+    Math.pow(bounds[1] - bounds[0], 2) +
+      Math.pow(bounds[3] - bounds[2], 2) +
+      Math.pow(bounds[5] - bounds[4], 2)
+  );
+  const distance = diagonal * 1.5;
+
+  // Camera configurations for each standard view
+  const views = {
+    front: {
+      position: [center[0], center[1], center[2] + distance],
+      focalPoint: center,
+      viewUp: [0, 1, 0],
+    },
+    back: {
+      position: [center[0], center[1], center[2] - distance],
+      focalPoint: center,
+      viewUp: [0, 1, 0],
+    },
+    top: {
+      position: [center[0], center[1] + distance, center[2]],
+      focalPoint: center,
+      viewUp: [0, 0, -1],
+    },
+    bottom: {
+      position: [center[0], center[1] - distance, center[2]],
+      focalPoint: center,
+      viewUp: [0, 0, 1],
+    },
+    left: {
+      position: [center[0] - distance, center[1], center[2]],
+      focalPoint: center,
+      viewUp: [0, 1, 0],
+    },
+    right: {
+      position: [center[0] + distance, center[1], center[2]],
+      focalPoint: center,
+      viewUp: [0, 1, 0],
+    },
+    isometric: {
+      position: [
+        center[0] + distance * 0.7,
+        center[1] + distance * 0.7,
+        center[2] + distance * 0.7,
+      ],
+      focalPoint: center,
+      viewUp: [0, 1, 0],
+    },
+    iso: {
+      position: [
+        center[0] + distance * 0.7,
+        center[1] + distance * 0.7,
+        center[2] + distance * 0.7,
+      ],
+      focalPoint: center,
+      viewUp: [0, 1, 0],
+    },
+  };
+
+  return views[view] || null;
+}
+
 export default {
   captureCameraState,
   applyCameraState,
   interpolateCameraState,
   camerasEqual,
+  flyTo,
+  getStandardViewState,
+  EASING_FUNCTIONS,
 };

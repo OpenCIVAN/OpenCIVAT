@@ -5,6 +5,14 @@ import { instance as log } from "@Utils/logger.js";
 import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
 import vtkWidgetManager from "@kitware/vtk.js/Widgets/Core/WidgetManager";
 
+// Import camera utilities for animated transitions
+import {
+  flyTo,
+  getStandardViewState,
+  captureCameraState,
+  EASING_FUNCTIONS,
+} from "@VTK/utils/cameraUtils.js";
+
 // Import widget modules (already created!)
 import { vtkPlaneWidget } from "@VTK/widgets/plane/VTKPlaneWidget.js";
 import { vtkLineWidget } from "@VTK/widgets/line/VTKLineWidget.js";
@@ -294,20 +302,338 @@ class InstanceToolsManager {
     log.trace(`Camera state applied for instance: ${instanceId}`);
   }
 
-  /* ============================================================================
-   USAGE IN VTKInstanceHandler:
-   
-   The methods are now available:
-   - instanceTools.setCameraView(instanceId, 'front')
-   - instanceTools.setCameraView(instanceId, 'top')
-   - instanceTools.setCameraView(instanceId, 'isometric')
-   - instanceTools.resetCamera(instanceId)
-   - instanceTools.getCameraState(instanceId)
-   - instanceTools.setCameraState(instanceId, state)
-   
-   These integrate with the existing camera modification listeners
-   and will automatically trigger state synchronization.
-   ============================================================================ */
+  // ==========================================================================
+  // ANIMATED CAMERA TRANSITIONS
+  // ==========================================================================
+
+  /**
+   * Animate camera to a standard view with easing
+   * @param {string} instanceId - Instance identifier
+   * @param {string} view - View name: 'front', 'back', 'top', 'bottom', 'left', 'right', 'isometric'
+   * @param {Object} options - Animation options
+   * @param {number} options.duration - Animation duration in ms (default: 500)
+   * @param {string} options.easing - Easing function name (default: 'easeInOut')
+   * @param {Function} options.onComplete - Called when animation completes
+   * @returns {Function} Cancel function to stop the animation
+   */
+  flyToView(instanceId, view, options = {}) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return () => {};
+
+    const { renderer, renderWindow } = tools.sceneObjects;
+
+    // Get target state for the view
+    const targetState = getStandardViewState(renderer, view);
+    if (!targetState) {
+      log.warn(`Unknown camera view: ${view}`);
+      return () => {};
+    }
+
+    log.debug(`Flying to ${view} view for instance: ${instanceId}`);
+
+    return flyTo(renderer, renderWindow, targetState, {
+      duration: options.duration ?? 500,
+      easing: options.easing ?? "easeInOut",
+      onProgress: options.onProgress,
+      onComplete: () => {
+        log.trace(`Camera animation to ${view} complete for: ${instanceId}`);
+        options.onComplete?.();
+      },
+    });
+  }
+
+  /**
+   * Animate camera to a specific camera state with easing
+   * @param {string} instanceId - Instance identifier
+   * @param {Object} targetState - Target camera state
+   * @param {Object} options - Animation options
+   * @returns {Function} Cancel function to stop the animation
+   */
+  flyToState(instanceId, targetState, options = {}) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return () => {};
+
+    const { renderer, renderWindow } = tools.sceneObjects;
+
+    log.debug(`Flying to custom camera state for instance: ${instanceId}`);
+
+    return flyTo(renderer, renderWindow, targetState, {
+      duration: options.duration ?? 500,
+      easing: options.easing ?? "easeInOut",
+      onProgress: options.onProgress,
+      onComplete: () => {
+        log.trace(`Camera animation complete for: ${instanceId}`);
+        options.onComplete?.();
+      },
+    });
+  }
+
+  /**
+   * Set the current camera position as the reset point
+   * @param {string} instanceId - Instance identifier
+   * @returns {Object|null} The captured camera state, or null on failure
+   */
+  setResetPoint(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return null;
+
+    const { renderer } = tools.sceneObjects;
+    const cameraState = captureCameraState(renderer);
+
+    if (cameraState) {
+      tools.customResetPoint = cameraState;
+      log.debug(`Reset point set for instance: ${instanceId}`);
+
+      // Emit event for UI sync
+      window.dispatchEvent(
+        new CustomEvent("cia:reset-point-changed", {
+          detail: { instanceId, cameraState },
+        })
+      );
+    }
+
+    return cameraState;
+  }
+
+  /**
+   * Get the custom reset point if set
+   * @param {string} instanceId - Instance identifier
+   * @returns {Object|null} The custom reset point camera state, or null if not set
+   */
+  getResetPoint(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return tools?.customResetPoint || null;
+  }
+
+  /**
+   * Check if a custom reset point is set
+   * @param {string} instanceId - Instance identifier
+   * @returns {boolean} True if a custom reset point is set
+   */
+  hasCustomResetPoint(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return !!tools?.customResetPoint;
+  }
+
+  /**
+   * Clear the custom reset point
+   * @param {string} instanceId - Instance identifier
+   */
+  clearResetPoint(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    if (tools) {
+      tools.customResetPoint = null;
+      log.debug(`Reset point cleared for instance: ${instanceId}`);
+
+      // Emit event for UI sync
+      window.dispatchEvent(
+        new CustomEvent("cia:reset-point-changed", {
+          detail: { instanceId, cameraState: null },
+        })
+      );
+    }
+  }
+
+  // ==========================================================================
+  // ANIMATION PRESETS
+  // ==========================================================================
+
+  /**
+   * Start an orbit animation around the current focal point
+   * @param {string} instanceId - Instance identifier
+   * @param {Object} options - Animation options
+   * @param {number} options.duration - Full orbit duration in ms (default: 8000)
+   * @param {boolean} options.clockwise - Orbit direction (default: true)
+   * @returns {Function} Stop function
+   */
+  startOrbitAnimation(instanceId, options = {}) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return () => {};
+
+    const { camera, renderer, renderWindow } = tools.sceneObjects;
+    const duration = options.duration ?? 8000;
+    const clockwise = options.clockwise ?? true;
+
+    // Capture initial state
+    const initialPosition = camera.getPosition();
+    const focalPoint = camera.getFocalPoint();
+
+    // Calculate orbit radius and initial angle
+    const dx = initialPosition[0] - focalPoint[0];
+    const dz = initialPosition[2] - focalPoint[2];
+    const radius = Math.sqrt(dx * dx + dz * dz);
+    const initialAngle = Math.atan2(dz, dx);
+    const y = initialPosition[1];
+
+    let startTime = null;
+    let animationId = null;
+    let stopped = false;
+
+    const animate = (timestamp) => {
+      if (stopped) return;
+
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = (elapsed % duration) / duration;
+      const angle = initialAngle + (clockwise ? -1 : 1) * progress * Math.PI * 2;
+
+      // Calculate new position
+      const newX = focalPoint[0] + radius * Math.cos(angle);
+      const newZ = focalPoint[2] + radius * Math.sin(angle);
+
+      camera.setPosition(newX, y, newZ);
+      renderer.resetCameraClippingRange();
+      renderWindow.render();
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    tools.activeAnimation = "orbit";
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      stopped = true;
+      tools.activeAnimation = null;
+      if (animationId) cancelAnimationFrame(animationId);
+    };
+  }
+
+  /**
+   * Start a rock animation (oscillating left/right)
+   * @param {string} instanceId - Instance identifier
+   * @param {Object} options - Animation options
+   * @param {number} options.duration - Full cycle duration in ms (default: 4000)
+   * @param {number} options.amplitude - Rotation amplitude in degrees (default: 30)
+   * @returns {Function} Stop function
+   */
+  startRockAnimation(instanceId, options = {}) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return () => {};
+
+    const { camera, renderer, renderWindow } = tools.sceneObjects;
+    const duration = options.duration ?? 4000;
+    const amplitude = ((options.amplitude ?? 30) * Math.PI) / 180; // Convert to radians
+
+    // Capture initial state
+    const initialPosition = camera.getPosition();
+    const focalPoint = camera.getFocalPoint();
+
+    // Calculate orbit parameters
+    const dx = initialPosition[0] - focalPoint[0];
+    const dz = initialPosition[2] - focalPoint[2];
+    const radius = Math.sqrt(dx * dx + dz * dz);
+    const centerAngle = Math.atan2(dz, dx);
+    const y = initialPosition[1];
+
+    let startTime = null;
+    let animationId = null;
+    let stopped = false;
+
+    const animate = (timestamp) => {
+      if (stopped) return;
+
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = (elapsed % duration) / duration;
+      const angle = centerAngle + amplitude * Math.sin(progress * Math.PI * 2);
+
+      const newX = focalPoint[0] + radius * Math.cos(angle);
+      const newZ = focalPoint[2] + radius * Math.sin(angle);
+
+      camera.setPosition(newX, y, newZ);
+      renderer.resetCameraClippingRange();
+      renderWindow.render();
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    tools.activeAnimation = "rock";
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      stopped = true;
+      tools.activeAnimation = null;
+      if (animationId) cancelAnimationFrame(animationId);
+    };
+  }
+
+  /**
+   * Start a tumble animation (gentle random-like rotation)
+   * @param {string} instanceId - Instance identifier
+   * @param {Object} options - Animation options
+   * @param {number} options.duration - Animation cycle in ms (default: 10000)
+   * @returns {Function} Stop function
+   */
+  startTumbleAnimation(instanceId, options = {}) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return () => {};
+
+    const { camera, renderer, renderWindow } = tools.sceneObjects;
+    const duration = options.duration ?? 10000;
+
+    const initialPosition = camera.getPosition();
+    const focalPoint = camera.getFocalPoint();
+
+    // Calculate orbit parameters
+    const dx = initialPosition[0] - focalPoint[0];
+    const dy = initialPosition[1] - focalPoint[1];
+    const dz = initialPosition[2] - focalPoint[2];
+    const radius = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    // Initial angles (spherical coordinates)
+    const initialTheta = Math.atan2(Math.sqrt(dx * dx + dz * dz), dy);
+    const initialPhi = Math.atan2(dz, dx);
+
+    let startTime = null;
+    let animationId = null;
+    let stopped = false;
+
+    const animate = (timestamp) => {
+      if (stopped) return;
+
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = (elapsed % duration) / duration;
+
+      // Lissajous-like pattern for tumble effect
+      const theta = initialTheta + Math.sin(progress * Math.PI * 2) * 0.3;
+      const phi = initialPhi + progress * Math.PI * 2 * 0.7;
+
+      const sinTheta = Math.sin(theta);
+      const cosTheta = Math.cos(theta);
+      const sinPhi = Math.sin(phi);
+      const cosPhi = Math.cos(phi);
+
+      const newX = focalPoint[0] + radius * sinTheta * cosPhi;
+      const newY = focalPoint[1] + radius * cosTheta;
+      const newZ = focalPoint[2] + radius * sinTheta * sinPhi;
+
+      camera.setPosition(newX, newY, newZ);
+      renderer.resetCameraClippingRange();
+      renderWindow.render();
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    tools.activeAnimation = "tumble";
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      stopped = true;
+      tools.activeAnimation = null;
+      if (animationId) cancelAnimationFrame(animationId);
+    };
+  }
+
+  /**
+   * Get the currently active animation type
+   * @param {string} instanceId - Instance identifier
+   * @returns {string|null} Active animation type or null
+   */
+  getActiveAnimation(instanceId) {
+    const tools = this.instanceTools.get(instanceId);
+    return tools?.activeAnimation || null;
+  }
 
   // ==========================================================================
   // TRANSFORM CONTROLS

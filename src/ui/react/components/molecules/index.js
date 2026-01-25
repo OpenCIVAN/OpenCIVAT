@@ -171,3 +171,23 @@ export { SectionNavHeader } from './SectionNavHeader';
 
 // TagsDropdown - Categorized tag selector dropdown
 export { TagsDropdown } from './TagsDropdown';
+
+// =============================================================================
+// POPOUT/BREAKOUT MOLECULES
+// =============================================================================
+
+// PopoutWindow - Draggable floating window for focused view examination
+export {
+    PopoutWindow,
+    SNAP_CONFIG,
+    VIEW_TYPE_ICONS,
+    useSnapCalculation,
+    useDrag,
+    useResize,
+} from './PopoutWindow';
+
+// PopoutManager - Manager dropdown for active popout windows
+export { PopoutManager } from './PopoutManager';
+
+// BreakoutManager - Manager dropdown for workspace voice breakouts
+export { BreakoutManager } from './BreakoutManager';

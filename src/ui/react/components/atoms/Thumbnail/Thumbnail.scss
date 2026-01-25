@@ -15,6 +15,14 @@
   background: $color-bg-tertiary;
   flex-shrink: 0;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  // Prevent layout shift during image load
+  contain: strict;
+
+  // Ensure all children are constrained to thumbnail bounds
+  > * {
+    max-width: 100%;
+    max-height: 100%;
+  }
 
   // Interactive states (when clickable)
   &[role="button"] {
@@ -100,6 +108,8 @@
     height: 100%;
     // No aspect-ratio - let the container define dimensions
     // This ensures thumbnails match the final viewport size
+    // Force size containment to prevent layout shift
+    contain: size layout;
 
     .thumbnail__icon {
       width: 32px;
@@ -175,8 +185,13 @@
     background: transparent;
 
     .thumbnail__image {
+      // Force image to fill container - prevent intrinsic size flash
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
+      max-width: 100%;
+      max-height: 100%;
       object-fit: cover;
       transition: opacity 0.2s ease;
     }

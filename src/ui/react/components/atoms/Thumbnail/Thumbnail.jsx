@@ -124,6 +124,10 @@ export const Thumbnail = memo(function Thumbnail({
                     className="thumbnail__image"
                     loading="lazy"
                     draggable={false}
+                    // Prevent layout shift - let CSS handle actual sizing
+                    width="100%"
+                    height="100%"
+                    style={{ maxWidth: '100%', maxHeight: '100%' }}
                 />
             </div>
         );

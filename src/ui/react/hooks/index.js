@@ -175,6 +175,10 @@ export {
   useVRPreprocessing,
   PreprocessingStatus,
 } from "./useVRPreprocessing.js";
+export {
+  useVRManagerEvents,
+  useDoubleTapButton,
+} from "./useVRManagerEvents.js";
 
 // =============================================================================
 // PANEL OVERLAY SYSTEM

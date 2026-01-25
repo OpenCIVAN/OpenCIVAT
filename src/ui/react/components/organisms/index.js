@@ -82,3 +82,81 @@ export {
     getModeById,
     getModeIconChar,
 } from './LinkManagerPanels';
+
+// =============================================================================
+// CANVAS CHROME ORGANISMS
+// =============================================================================
+
+// RoomHeader - Room-level navigation with voice, presence, chat
+export {
+    RoomHeader,
+    RoomTab,
+    VoiceDropdown,
+    useRoomPrioritization,
+    useVoiceState,
+    useDropdowns,
+    useRoomStatus,
+    ROOM_HEADER_CONFIG,
+} from './RoomHeader';
+
+// Footer2 - Canvas toolbar footer with ViewGroup selector and links
+export {
+    Footer2,
+    useFooterLayout,
+    useViewGroupSelector,
+    useLinkStats,
+    useLinkReminderToast,
+    useDuplicationDialog,
+    FOOTER_BREAKPOINTS,
+    TOOLBAR_SECTIONS,
+    LINK_PROPERTIES as FOOTER_LINK_PROPERTIES,
+    TYPE_SPECIFIC_LINK_PROPERTIES,
+    QUICK_CREATE_TEMPLATES,
+    ViewGroupSelector,
+    ViewGroupRow,
+    CreateViewGroupPopover,
+    ViewGroupSettingsPopover,
+    LinksSection,
+    ExpandedLinks,
+    CollapsedLinksIndicator,
+    LinksPopover,
+    LinkPropertyPopover,
+    LinkPropertyIndicator,
+} from './Footer2';
+
+// VRWristMenu - VR wrist-mounted radial menu
+export { VRWristMenu } from './VRWristMenu';
+
+// CanvasTabsBar - Workspace tabs with mode toggle and popout/breakout managers
+export {
+    CanvasTabsBar,
+    CanvasTab,
+    ModeToggle,
+    CreateOpenPopover,
+    WORKSPACE_TYPES,
+    CREATE_OPTIONS,
+    useWorkspaceTabs,
+    useTabDragDrop,
+    useCloseConfirmation,
+    usePopoverState,
+    useWorkspaceSearch,
+} from './CanvasTabsBar';
+
+// TiledCanvasView - Multi-canvas grid with resizable dividers
+export {
+    TiledCanvasView,
+    CanvasPanel,
+    MiniCanvasHeader,
+    ResizableDivider,
+    CANVAS_SIZING,
+    WORKSPACE_TYPE_CONFIG,
+    useSplitRatio,
+    useOpenWorkspaces,
+    getLayoutConfig,
+} from './TiledCanvasView';
+
+// TabbedCanvasView - Single canvas full-size display
+export {
+    TabbedCanvasView,
+    FullCanvasHeader,
+} from './TabbedCanvasView';

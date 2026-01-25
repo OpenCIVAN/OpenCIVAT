@@ -893,6 +893,12 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             camera.setClippingRange(...savedCamera.clippingRange);
           if (savedCamera.viewAngle) camera.setViewAngle(savedCamera.viewAngle);
 
+          // CRITICAL: Reset clipping range after applying saved camera state
+          // This ensures objects aren't clipped incorrectly when camera is at
+          // a different position than the default resetCamera() would put it.
+          // Without this, the view may look different from the thumbnail.
+          renderer.resetCameraClippingRange();
+
           log.debug(`Camera state restored`);
         }
       }
@@ -3226,6 +3232,10 @@ console.log('Tools:', tools);
           if (savedCamera.clippingRange)
             camera.setClippingRange(...savedCamera.clippingRange);
           if (savedCamera.viewAngle) camera.setViewAngle(savedCamera.viewAngle);
+
+          // CRITICAL: Reset clipping range after applying saved camera state
+          // This ensures consistent rendering between thumbnail and main viewport
+          renderer.resetCameraClippingRange();
         } else {
           // Default: reset camera to fit data
           renderer.resetCamera();
