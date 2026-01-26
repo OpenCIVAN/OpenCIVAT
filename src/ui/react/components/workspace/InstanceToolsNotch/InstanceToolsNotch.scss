@@ -276,8 +276,8 @@
   justify-content: center;
   height: 14px;
   padding: 0 $spacing-sm;
-  background: $color-bg-secondary; // Opaque - prevents gradient bleed-through
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: $color-bg-canvas; // Match CanvasHeaderBar label darkness
+  border-bottom: 1px solid $color-border-subtle;
   font-size: 8px;
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
@@ -316,7 +316,7 @@
 
 .notch-divider__label {
   height: 14px;
-  background: $color-bg-secondary;
+  background: $color-border-subtle;
 }
 
 .notch-divider__content {
@@ -337,8 +337,8 @@
 
 .notch-spacer__label {
   height: 14px;
-  background: $color-bg-secondary;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: $color-bg-canvas;
+  border-bottom: 1px solid $color-border-subtle;
 }
 
 .notch-spacer__content {

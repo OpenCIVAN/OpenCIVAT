@@ -87,17 +87,32 @@ export {
 // CANVAS CHROME ORGANISMS
 // =============================================================================
 
-// RoomHeader - Room-level navigation with voice, presence, chat
+// RoomHeader - Room-level navigation with section-based layout
+// Layout: ROOM (viewing + presence) | PINNED | VOICE | CHAT
 export {
     RoomHeader,
-    RoomTab,
-    VoiceDropdown,
-    useRoomPrioritization,
+    RoomSection,
+    PinnedSection,
+    VoiceSection,
+    ChatSection,
+    useRoomSection,
+    usePinnedSection,
     useVoiceState,
     useDropdowns,
-    useRoomStatus,
     ROOM_HEADER_CONFIG,
 } from './RoomHeader';
+
+// WorkspaceBar - Workspace tabs, mode toggle, popout/breakout managers
+// Layout: WORKSPACE | MODE | POPOUTS | BREAKOUTS
+// Note: ModeToggle not re-exported here to avoid conflict with CanvasTabsBar ModeToggle
+export {
+    WorkspaceBar,
+    WorkspaceTab,
+    PopoutManager,
+    BreakoutManager,
+    useWorkspaceBar,
+    useManagerDropdowns,
+} from './WorkspaceBar';
 
 // Footer2 - Canvas toolbar footer with ViewGroup selector and links
 export {

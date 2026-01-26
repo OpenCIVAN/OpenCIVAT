@@ -1,16 +1,35 @@
 // src/core/instances/types/vtk/widgets/orientation/VTKOrientationWidget.js
-// Orientation marker widget showing XYZ axes in corner
-// Each instance gets its own orientation widget that tracks that instance's camera
+// Orientation marker widget showing XYZ orientation in corner
+// Supports multiple marker styles: cube (labeled faces) and axes (colored arrows)
 
 import { render as log } from "@Utils/logger.js";
 import vtkOrientationMarkerWidget from "@kitware/vtk.js/Interaction/Widgets/OrientationMarkerWidget";
 import vtkAnnotatedCubeActor from "@kitware/vtk.js/Rendering/Core/AnnotatedCubeActor";
+import vtkAxesActor from "@kitware/vtk.js/Rendering/Core/AxesActor";
+
+/**
+ * Supported orientation marker styles
+ */
+export const ORIENTATION_STYLES = {
+  cube: {
+    id: 'cube',
+    label: 'Annotated Cube',
+    description: 'Labeled cube showing face directions (+X, -X, etc.)',
+    icon: 'cube',
+  },
+  axes: {
+    id: 'axes',
+    label: 'Axes Arrows',
+    description: 'Colored XYZ arrow axes (R=X, G=Y, B=Z)',
+    icon: 'axis3d',
+  },
+};
 
 /**
  * VTKOrientationWidget
  *
- * Provides a 3D orientation marker (cube with labeled faces) in the corner
- * of the viewport. The cube rotates with the camera to show current orientation.
+ * Provides a 3D orientation marker in the corner of the viewport.
+ * Supports multiple visual styles that rotate with the camera.
  *
  * CONTRIBUTOR PATTERN:
  * - Each instance has its own widget (no global state)
@@ -21,15 +40,12 @@ import vtkAnnotatedCubeActor from "@kitware/vtk.js/Rendering/Core/AnnotatedCubeA
 export class VTKOrientationWidget {
   constructor() {
     // Per-instance widget storage
-    // Maps instanceId → { widget, actor, config }
+    // Maps instanceId -> { widget, actor, config, interactor }
     this.instances = new Map();
   }
 
   /**
    * Initialize widget for a specific instance
-   *
-   * This is called by VTKInstanceHandler when the instance is created
-   * or when the user enables the orientation widget.
    *
    * @param {string} instanceId - Unique instance identifier
    * @param {Object} sceneObjects - VTK scene components from the instance
@@ -51,25 +67,25 @@ export class VTKOrientationWidget {
       return;
     }
 
-    // Create the cube actor with labeled faces
-    const cubeActor = this._createCubeActor(config);
+    // Build full config with defaults
+    const cfg = {
+      enabled: true,
+      style: 'cube',
+      corner: "BOTTOM_RIGHT",
+      viewportSize: 0.12,
+      minPixelSize: 40,
+      maxPixelSize: 100,
+      ...config,
+    };
+
+    // Create the actor based on chosen style
+    const actor = this._createActorForStyle(cfg.style, cfg);
 
     // Create the orientation marker widget
     const widget = vtkOrientationMarkerWidget.newInstance({
-      actor: cubeActor,
+      actor: actor,
       interactor: interactor,
     });
-
-    // Apply configuration
-    // Use smaller sizes to scale proportionally with viewport
-    const cfg = {
-      enabled: true,
-      corner: config.corner || "BOTTOM_RIGHT",
-      viewportSize: config.viewportSize || 0.12, // 12% of viewport
-      minPixelSize: config.minPixelSize || 40, // Smaller min for tight layouts
-      maxPixelSize: config.maxPixelSize || 100, // Cap max to avoid being too large
-      ...config,
-    };
 
     widget.setEnabled(cfg.enabled);
     widget.setViewportCorner(vtkOrientationMarkerWidget.Corners[cfg.corner]);
@@ -80,16 +96,33 @@ export class VTKOrientationWidget {
     // Store widget data for this instance
     this.instances.set(instanceId, {
       widget,
-      actor: cubeActor,
+      actor,
       config: cfg,
       interactor,
     });
 
-    log.debug(`Orientation widget created for ${instanceId}`);
+    log.debug(`Orientation widget created for ${instanceId} (style: ${cfg.style})`);
   }
 
   /**
-   * Create and configure the cube actor
+   * Create the appropriate actor for the given style
+   *
+   * @param {string} style - 'cube' or 'axes'
+   * @param {Object} config - Style configuration
+   * @returns {vtkActor} The created actor
+   */
+  _createActorForStyle(style, config) {
+    switch (style) {
+      case 'axes':
+        return this._createAxesActor(config);
+      case 'cube':
+      default:
+        return this._createCubeActor(config);
+    }
+  }
+
+  /**
+   * Create and configure the annotated cube actor
    *
    * @param {Object} config - Face styling configuration
    * @returns {vtkAnnotatedCubeActor} Configured cube actor
@@ -104,7 +137,7 @@ export class VTKOrientationWidget {
       fontFamily: "Arial",
       fontColor: "black",
       fontSizeScale: (res) => res / 2,
-      faceColor: "#60a5fa", // Bright blue
+      faceColor: "#60a5fa",
       faceRotation: 0,
       edgeThickness: 0.1,
       edgeColor: "black",
@@ -112,13 +145,11 @@ export class VTKOrientationWidget {
     });
 
     // Customize individual faces
-    // +X (right) - Blue
     cube.setXPlusFaceProperty({
       text: "+X",
       faceColor: config.xPlusColor || "#60a5fa",
     });
 
-    // -X (left) - Yellow
     cube.setXMinusFaceProperty({
       text: "-X",
       faceColor: config.xMinusColor || "#fbbf24",
@@ -126,28 +157,24 @@ export class VTKOrientationWidget {
       fontStyle: "italic",
     });
 
-    // +Y (top) - Green
     cube.setYPlusFaceProperty({
       text: "+Y",
       faceColor: config.yPlusColor || "#34d399",
       fontSizeScale: (res) => res / 4,
     });
 
-    // -Y (bottom) - Cyan
     cube.setYMinusFaceProperty({
       text: "-Y",
       faceColor: config.yMinusColor || "#7dd3fc",
       fontColor: "white",
     });
 
-    // +Z (front) - Red
     cube.setZPlusFaceProperty({
       text: "+Z",
       faceColor: config.zPlusColor || "#f87171",
       edgeColor: "yellow",
     });
 
-    // -Z (back) - Magenta
     cube.setZMinusFaceProperty({
       text: "-Z",
       faceColor: config.zMinusColor || "#a78bfa",
@@ -156,6 +183,98 @@ export class VTKOrientationWidget {
     });
 
     return cube;
+  }
+
+  /**
+   * Create and configure the axes arrow actor
+   *
+   * @param {Object} config - Axes styling configuration
+   * @returns {vtkAxesActor} Configured axes actor
+   */
+  _createAxesActor(config) {
+    const axes = vtkAxesActor.newInstance();
+
+    // Configure axis colors (R=X, G=Y, B=Z convention)
+    axes.setXAxisColor(config.xAxisColor || [255, 80, 80]);
+    axes.setYAxisColor(config.yAxisColor || [80, 220, 80]);
+    axes.setZAxisColor(config.zAxisColor || [80, 130, 255]);
+
+    axes.update();
+
+    return axes;
+  }
+
+  /**
+   * Switch the marker style for an instance
+   * Recreates the actor and swaps it into the existing widget
+   *
+   * @param {string} instanceId - Instance to update
+   * @param {string} newStyle - 'cube' or 'axes'
+   */
+  setStyle(instanceId, newStyle) {
+    const widgetData = this.instances.get(instanceId);
+
+    if (!widgetData) {
+      log.warn(`No orientation widget found for ${instanceId}`);
+      return;
+    }
+
+    if (!ORIENTATION_STYLES[newStyle]) {
+      log.warn(`Unknown orientation style: ${newStyle}`);
+      return;
+    }
+
+    if (widgetData.config.style === newStyle) {
+      return; // Already this style
+    }
+
+    const { widget, actor, config, interactor } = widgetData;
+    const wasEnabled = config.enabled;
+
+    // Disable current widget before swapping
+    widget.setEnabled(false);
+
+    // Delete old actor
+    if (actor) {
+      actor.delete();
+    }
+
+    // Delete old widget
+    widget.delete();
+
+    // Create new actor with the new style
+    const newActor = this._createActorForStyle(newStyle, config);
+
+    // Create new widget with the new actor
+    const newWidget = vtkOrientationMarkerWidget.newInstance({
+      actor: newActor,
+      interactor: interactor,
+    });
+
+    // Re-apply all configuration
+    newWidget.setViewportCorner(vtkOrientationMarkerWidget.Corners[config.corner]);
+    newWidget.setViewportSize(config.viewportSize);
+    newWidget.setMinPixelSize(config.minPixelSize);
+    newWidget.setMaxPixelSize(config.maxPixelSize);
+    newWidget.setEnabled(wasEnabled);
+
+    // Update stored data
+    config.style = newStyle;
+    widgetData.widget = newWidget;
+    widgetData.actor = newActor;
+
+    log.debug(`Orientation widget style changed to '${newStyle}' for ${instanceId}`);
+  }
+
+  /**
+   * Get the current style for an instance
+   *
+   * @param {string} instanceId - Instance to query
+   * @returns {string} Current style name ('cube', 'axes')
+   */
+  getStyle(instanceId) {
+    const widgetData = this.instances.get(instanceId);
+    return widgetData ? widgetData.config.style || 'cube' : 'cube';
   }
 
   /**
@@ -195,6 +314,13 @@ export class VTKOrientationWidget {
     }
 
     const { widget, config } = widgetData;
+
+    // Handle style change via setStyle (requires actor swap)
+    if (newConfig.style && newConfig.style !== config.style) {
+      this.setStyle(instanceId, newConfig.style);
+      // Re-read widgetData after style change
+      return;
+    }
 
     // Update corner position if changed
     if (newConfig.corner && newConfig.corner !== config.corner) {
@@ -248,33 +374,28 @@ export class VTKOrientationWidget {
   /**
    * Clean up widget for a specific instance
    *
-   * This is called by VTKInstanceHandler when the instance is destroyed
-   *
    * @param {string} instanceId - Instance to clean up
    */
   cleanup(instanceId) {
     const widgetData = this.instances.get(instanceId);
 
     if (!widgetData) {
-      return; // Already cleaned up or never created
+      return;
     }
 
     log.debug(`Cleaning up orientation widget for ${instanceId}`);
 
     const { widget, actor } = widgetData;
 
-    // Disable and delete the widget
     if (widget) {
       widget.setEnabled(false);
       widget.delete();
     }
 
-    // Delete the actor
     if (actor) {
       actor.delete();
     }
 
-    // Remove from storage
     this.instances.delete(instanceId);
 
     log.debug(`Orientation widget cleaned up for ${instanceId}`);

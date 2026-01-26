@@ -5,12 +5,14 @@
  * Modes:
  * - Full (≥900px): All link property indicators expanded
  * - Compact (600-899px): Collapsed with colored dots
- * - Minimal (450-599px): Just link icon + count
+ * - Minimal (overflow): Single link icon + count → opens LinksDropdown (sync panel)
  */
 
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Button, Icon, Tooltip, LinkBadge } from '@UI/react/components/atoms';
+import { LinksDropdown } from '@UI/react/components/organisms/ViewContextBlock';
+import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { LINK_PROPERTIES, TYPE_SPECIFIC_LINK_PROPERTIES } from '../../Footer2.logic';
 
 /**
@@ -136,7 +138,7 @@ CollapsedLinksIndicator.propTypes = {
 };
 
 /**
- * Links Popover
+ * LinksPopover
  */
 const LinksPopover = memo(function LinksPopover({
     isOpen,
@@ -332,6 +334,10 @@ LinkPropertyPopover.propTypes = {
 
 /**
  * LinksSection - Main component
+ *
+ * In 'full' mode: shows individual link property indicators
+ * In 'compact' mode: shows colored dots
+ * In 'minimal' mode: shows single link icon + count, opens LinksDropdown on click
  */
 const LinksSection = memo(function LinksSection({
     mode,
@@ -342,7 +348,30 @@ const LinksSection = memo(function LinksSection({
     hideLabel = false,
 }) {
     const [showPopover, setShowPopover] = useState(false);
+    const [showSyncPanel, setShowSyncPanel] = useState(false);
     const [selectedProperty, setSelectedProperty] = useState(null);
+
+    // Get view context data for LinksDropdown (sync panel)
+    const {
+        activeView: contextActiveView,
+        onCanvasViews,
+        availableViews: contextAvailableViews,
+        onSelectView: contextSelectView,
+        onUpdateLink,
+    } = useViewContextLogic();
+
+    // Combine on-canvas and available views for LinksDropdown
+    const allViews = useMemo(() => {
+        const views = [...(onCanvasViews || [])];
+        // Add available views that aren't already on canvas
+        const onCanvasIds = new Set(views.map(v => v.id));
+        for (const v of (contextAvailableViews || [])) {
+            if (!onCanvasIds.has(v.id)) {
+                views.push(v);
+            }
+        }
+        return views;
+    }, [onCanvasViews, contextAvailableViews]);
 
     const handlePropertyClick = useCallback((property) => {
         setSelectedProperty(property);
@@ -362,6 +391,14 @@ const LinksSection = memo(function LinksSection({
         onOpenLinkManager?.(propertyId);
     }, [onOpenLinkManager]);
 
+    const handleMinimalClick = useCallback(() => {
+        setShowSyncPanel(true);
+    }, []);
+
+    const handleCloseSyncPanel = useCallback(() => {
+        setShowSyncPanel(false);
+    }, []);
+
     return (
         <div className="links-section">
             {/* Links Label - only show if not hidden by parent zone header */}
@@ -375,6 +412,13 @@ const LinksSection = memo(function LinksSection({
                     activeViewType={activeViewType}
                     onPropertyClick={handlePropertyClick}
                 />
+            ) : mode === 'minimal' ? (
+                <CollapsedLinksIndicator
+                    linkStats={linkStats}
+                    mode="minimal"
+                    totalActiveLinks={totalActiveLinks}
+                    onClick={handleMinimalClick}
+                />
             ) : (
                 <CollapsedLinksIndicator
                     linkStats={linkStats}
@@ -384,7 +428,7 @@ const LinksSection = memo(function LinksSection({
                 />
             )}
 
-            {/* Links Popover (for collapsed modes) */}
+            {/* Links Popover (for compact mode) */}
             <LinksPopover
                 isOpen={showPopover}
                 onClose={() => setShowPopover(false)}
@@ -393,6 +437,17 @@ const LinksSection = memo(function LinksSection({
                 onPropertyClick={handlePropertyClick}
                 onOpenLinkManager={onOpenLinkManager}
             />
+
+            {/* LinksDropdown / Sync Panel (for minimal/condensed mode) */}
+            {showSyncPanel && contextActiveView && (
+                <LinksDropdown
+                    activeView={contextActiveView}
+                    allViews={allViews}
+                    onUpdateLink={onUpdateLink}
+                    onClose={handleCloseSyncPanel}
+                    onSelectView={contextSelectView}
+                />
+            )}
 
             {/* Property Detail Popover */}
             <LinkPropertyPopover

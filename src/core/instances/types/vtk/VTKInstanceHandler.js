@@ -32,7 +32,7 @@ import { vtkMeasurementWidgetsFeature } from "@VTK/features/VTKMeasurementWidget
 import { vtkImplicitPlaneFeature } from "@VTK/features/VTKImplicitPlaneFeature";
 import { vtkImageCroppingFeature } from "@VTK/features/VTKImageCroppingFeature";
 import { vtkCleanPolyDataFeature } from "@VTK/features/VTKCleanPolyDataFeature";
-import { vtkOrientationWidget } from "@VTK/widgets/orientation/VTKOrientationWidget";
+import { vtkOrientationWidget, ORIENTATION_STYLES } from "@VTK/widgets/orientation/VTKOrientationWidget";
 import { vtkInstanceCursors } from "@VTK/collaboration/VTKInstanceCursors.js";
 import { getViewConfigurationManager } from "@Init/appInitializer.js";
 import { syncCameraToYjs } from "@Collaboration/yjs/yjsSetup.js";
@@ -2242,17 +2242,20 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     const currentConfig = vtkOrientationWidget.getConfig?.(instanceId) || {
       viewportSize: 0.1,
       corner: "BOTTOM_RIGHT",
+      style: "cube",
     };
 
     // Calculate current size percentage (convert viewportSize to 0-100)
     const currentSizePercent = currentConfig.viewportSize * 100;
+    const currentStyle = currentConfig.style || 'cube';
+    const styleLabel = currentStyle === 'axes' ? 'Axes' : 'Cube';
 
     tools.push({
       id: "orientation",
       type: "menu",
       icon: "compass",
       label: "Orientation",
-      description: "Orientation cube controls",
+      description: "Orientation marker controls",
       active: orientationEnabled,
       options: [
         // ========================================================================
@@ -2261,10 +2264,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         {
           id: "orientation-toggle",
           icon: orientationEnabled ? "eye" : "eye-off",
-          label: orientationEnabled ? "Hide Cube" : "Show Cube",
+          label: orientationEnabled ? `Hide ${styleLabel}` : `Show ${styleLabel}`,
           description: orientationEnabled
-            ? "Hide orientation cube"
-            : "Show orientation cube",
+            ? "Hide orientation marker"
+            : "Show orientation marker",
           active: orientationEnabled,
           onClick: () => {
             instanceTools.toggleOrientation?.(instanceId);
@@ -2275,10 +2278,34 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         { type: "separator" },
 
         // ========================================================================
+        // Marker Style Selector (always visible)
+        // ========================================================================
+        {
+          type: "header",
+          label: "MARKER STYLE",
+        },
+        ...Object.values(ORIENTATION_STYLES).map((styleDef) => ({
+          id: `orientation-style-${styleDef.id}`,
+          icon: styleDef.icon,
+          label: styleDef.label,
+          description: styleDef.description,
+          active: currentStyle === styleDef.id,
+          onClick: () => {
+            instanceTools.setOrientationStyle?.(instanceId, styleDef.id);
+            this._emitToolsUpdate(instanceId);
+          },
+        })),
+
+        // ========================================================================
         // Size Slider with Presets (only show when enabled)
         // ========================================================================
         ...(orientationEnabled
           ? [
+              { type: "separator" },
+              {
+                type: "header",
+                label: "SIZE",
+              },
               {
                 type: "slider-with-presets",
                 id: "orientation-size-slider",
@@ -2286,18 +2313,18 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
                 label: "Widget Size",
                 value: currentSizePercent,
                 min: 5,
-                max: 20,
+                max: 25,
                 step: 1,
                 formatValue: (val) => `${Math.round(val)}%`,
-                presets: [6, 8, 10, 12, 15],
+                presets: [6, 8, 10, 12, 15, 20],
                 disabled: false,
                 onChange: (value) => {
                   // Convert percentage to decimal
                   const viewportSize = value / 100;
 
                   // Calculate pixel bounds based on percentage
-                  const minPixelSize = value * 8; // 8px per percent
-                  const maxPixelSize = value * 25; // 25px per percent
+                  const minPixelSize = value * 8;
+                  const maxPixelSize = value * 25;
 
                   vtkOrientationWidget.updateConfig?.(instanceId, {
                     viewportSize: viewportSize,

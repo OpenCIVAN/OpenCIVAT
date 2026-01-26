@@ -15,7 +15,7 @@
     flex-direction: row;
     align-items: stretch;
     position: relative;
-    z-index: 1000;
+    z-index: 10; // Below overlay panels (z-index: 40) but above canvas viewports
     flex-shrink: 0;
     overflow: visible; // Don't clip dropdowns
 
@@ -67,8 +67,8 @@
     justify-content: center;
     height: 14px;
     padding: 0 $spacing-sm;
-    background: $color-bg-secondary; // Opaque so gradient doesn't bleed through labels
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    background: $color-bg-canvas; // Match CanvasHeaderBar label darkness
+    border-bottom: 1px solid $color-border-subtle;
     font-size: 8px;
     font-weight: $font-weight-semibold;
     text-transform: uppercase;
@@ -127,7 +127,7 @@
 
 .footer2-divider__label {
     height: 14px;
-    background: $color-bg-secondary;
+    background: $color-border-subtle;
 }
 
 .footer2-divider__content {
@@ -148,8 +148,8 @@
 
 .footer2-spacer__label {
     height: 14px;
-    background: $color-bg-secondary;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    background: $color-bg-canvas;
+    border-bottom: 1px solid $color-border-subtle;
 }
 
 .footer2-spacer__content {
@@ -233,6 +233,201 @@
     to {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
+    }
+}
+
+// =============================================================================
+// FOOTER TOOL MENU (portal-based dropdown for menu-type tools)
+// =============================================================================
+
+.footer2-tool-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 180px;
+    max-width: 260px;
+    padding: $spacing-xs;
+
+    // Glass panel matching notch aesthetic
+    background: $color-glass-panel;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid $color-border-default;
+    border-radius: $radius-lg;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 1px rgba(0, 0, 0, 0.5);
+
+    &__divider {
+        height: 1px;
+        background: $color-border-subtle;
+        margin: $spacing-xs 0;
+    }
+
+    &__header {
+        padding: $spacing-xs $spacing-sm;
+        font-size: 10px;
+        font-weight: $font-weight-semibold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: $color-text-muted;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 6px 10px;
+        border: none;
+        border-radius: $radius-sm;
+        background: transparent;
+        color: $color-text-secondary;
+        font-size: 12px;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.08);
+            color: $color-text-primary;
+        }
+
+        &.active {
+            background: rgba($color-accent-blue, 0.15);
+            color: $color-accent-blue;
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        svg {
+            flex-shrink: 0;
+        }
+    }
+
+    &__item-label {
+        flex: 1;
+    }
+
+    &__item-check {
+        color: $color-accent-green;
+        flex-shrink: 0;
+    }
+
+    // Slider inside menu
+    &__slider {
+        padding: $spacing-xs $spacing-sm;
+    }
+
+    &__slider-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+        font-size: 11px;
+        color: $color-text-secondary;
+
+        span:first-of-type {
+            flex: 1;
+        }
+    }
+
+    &__slider-value {
+        font-family: $font-family-mono;
+        font-size: 10px;
+        color: $color-text-muted;
+    }
+
+    &__slider-input {
+        width: 100%;
+        height: 4px;
+        appearance: none;
+        background: $color-bg-tertiary;
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+
+        &::-webkit-slider-thumb {
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: $color-accent-blue;
+            border: 2px solid $color-bg-secondary;
+            cursor: pointer;
+        }
+
+        &::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: $color-accent-blue;
+            border: 2px solid $color-bg-secondary;
+            cursor: pointer;
+        }
+    }
+
+    &__slider-presets {
+        display: flex;
+        gap: 4px;
+        margin-top: 6px;
+    }
+
+    &__slider-preset {
+        flex: 1;
+        padding: 2px 4px;
+        background: $color-bg-tertiary;
+        border: 1px solid transparent;
+        border-radius: $radius-sm;
+        color: $color-text-muted;
+        font-size: 10px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: $color-text-primary;
+        }
+
+        &.active {
+            border-color: $color-accent-blue;
+            color: $color-accent-blue;
+        }
+    }
+
+    // Position grid (2x2 corner picker)
+    &__position-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        padding: $spacing-xs $spacing-sm;
+    }
+
+    &__position-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px;
+        background: $color-bg-tertiary;
+        border: 1px solid transparent;
+        border-radius: $radius-sm;
+        color: $color-text-muted;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: $color-text-primary;
+        }
+
+        &.active {
+            border-color: $color-accent-blue;
+            color: $color-accent-blue;
+            background: rgba($color-accent-blue, 0.15);
+        }
     }
 }
 

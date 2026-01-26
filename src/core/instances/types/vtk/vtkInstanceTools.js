@@ -1330,6 +1330,41 @@ class InstanceToolsManager {
     log.trace(`Orientation widget tracked for instance: ${instanceId}`);
   }
 
+  /**
+   * Set orientation widget style (cube, axes)
+   * THIN WRAPPER - Delegates to VTKOrientationWidget module
+   */
+  setOrientationStyle(instanceId, style) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    vtkOrientationWidget.setStyle(instanceId, style);
+    tools.sceneObjects.renderWindow.render();
+
+    log.debug(`Orientation style set to '${style}' for instance: ${instanceId}`);
+  }
+
+  /**
+   * Update orientation widget configuration (corner, size, etc.)
+   * THIN WRAPPER - Delegates to VTKOrientationWidget module
+   */
+  updateOrientationConfig(instanceId, config) {
+    const tools = this.instanceTools.get(instanceId);
+    if (!tools) return;
+
+    vtkOrientationWidget.updateConfig(instanceId, config);
+    tools.sceneObjects.renderWindow.render();
+
+    log.debug(`Orientation config updated for instance: ${instanceId}`);
+  }
+
+  /**
+   * Get full orientation widget configuration
+   */
+  getOrientationConfig(instanceId) {
+    return vtkOrientationWidget.getConfig(instanceId);
+  }
+
   // ==========================================================================
   // CLIPPING STATE HELPERS (For slider support)
   // ==========================================================================

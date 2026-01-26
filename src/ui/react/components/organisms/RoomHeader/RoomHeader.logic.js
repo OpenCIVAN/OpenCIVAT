@@ -1,105 +1,139 @@
 /**
  * @file RoomHeader.logic.js
- * @description Business logic hooks for RoomHeader component
+ * @description Business logic hooks for the new RoomHeader component.
+ *
+ * Manages viewing room, pinned rooms, voice/breakout state, and dropdown visibility.
+ * Key architectural concept: viewing room and voice room are INDEPENDENT.
  */
 
 import { useState, useMemo, useCallback } from 'react';
 
 /**
- * Constants for room header configuration
+ * Configuration constants
  */
 export const ROOM_HEADER_CONFIG = {
-    maxVisibleTabs: 3,
-    tabMaxWidth: 120,
+    maxPinnedRooms: 4,
+    pinnedPillMaxWidth: 50,
 };
 
 /**
- * Hook to manage room prioritization
- * Viewing room is always first, then voice room, then others
+ * Hook to manage the Room section (viewing dropdown + presence).
+ * Returns viewing room data and room categorization.
  */
-export function useRoomPrioritization(rooms, viewingRoomId, voiceRoomId) {
-    const prioritizedRooms = useMemo(() => {
-        return [...rooms].sort((a, b) => {
-            if (a.id === viewingRoomId) return -1;
-            if (b.id === viewingRoomId) return 1;
-            if (a.id === voiceRoomId) return -1;
-            if (b.id === voiceRoomId) return 1;
-            return 0;
-        });
-    }, [rooms, viewingRoomId, voiceRoomId]);
-
-    const visibleRooms = useMemo(() =>
-        prioritizedRooms.slice(0, ROOM_HEADER_CONFIG.maxVisibleTabs),
-        [prioritizedRooms]
+export function useRoomSection(rooms, viewingRoomId, voiceRoomId, pinnedRoomIds) {
+    const viewingRoom = useMemo(() =>
+        rooms.find(r => r.id === viewingRoomId) || null,
+        [rooms, viewingRoomId]
     );
 
-    const overflowRooms = useMemo(() =>
-        prioritizedRooms.slice(ROOM_HEADER_CONFIG.maxVisibleTabs),
-        [prioritizedRooms]
+    const mainRooms = useMemo(() =>
+        rooms.filter(r => r.type === 'main'),
+        [rooms]
     );
 
-    return { prioritizedRooms, visibleRooms, overflowRooms };
+    const personalRooms = useMemo(() =>
+        rooms.filter(r => r.type === 'personal'),
+        [rooms]
+    );
+
+    return { viewingRoom, mainRooms, personalRooms };
 }
 
 /**
- * Hook to manage voice state
+ * Hook to manage the Pinned section.
+ * Pinned rooms exclude the currently viewing room.
  */
-export function useVoiceState(rooms, voiceRoomId) {
+export function usePinnedSection(rooms, viewingRoomId, pinnedRoomIds) {
+    const pinnedRooms = useMemo(() =>
+        rooms.filter(r => pinnedRoomIds.includes(r.id) && r.id !== viewingRoomId),
+        [rooms, pinnedRoomIds, viewingRoomId]
+    );
+
+    return { pinnedRooms };
+}
+
+/**
+ * Hook to manage voice state including breakouts.
+ * Voice room and breakout are mutually exclusive.
+ */
+export function useVoiceState(rooms, voiceRoomId, activeBreakoutId, breakouts) {
     const voiceRoom = useMemo(() =>
         rooms.find(r => r.id === voiceRoomId) || null,
         [rooms, voiceRoomId]
     );
 
-    const isInVoice = !!voiceRoomId;
+    const activeBreakout = useMemo(() =>
+        (breakouts || []).find(b => b.id === activeBreakoutId) || null,
+        [breakouts, activeBreakoutId]
+    );
+
+    const isInVoice = !!voiceRoomId || !!activeBreakoutId;
+    const isInBreakout = !!activeBreakoutId;
+
+    const currentVoiceName = isInBreakout
+        ? activeBreakout?.name
+        : voiceRoom?.name;
+
+    const currentVoiceUsers = isInBreakout
+        ? activeBreakout?.usersInVoice
+        : voiceRoom?.usersInVoice;
 
     const availableVoiceRooms = useMemo(() =>
-        rooms.filter(r => r.id !== voiceRoomId),
+        rooms.filter(r => r.id !== voiceRoomId && r.type !== 'personal'),
         [rooms, voiceRoomId]
     );
 
-    return { voiceRoom, isInVoice, availableVoiceRooms };
-}
-
-/**
- * Hook to manage dropdown visibility
- */
-export function useDropdowns() {
-    const [showMoreRooms, setShowMoreRooms] = useState(false);
-    const [showVoiceDropdown, setShowVoiceDropdown] = useState(false);
-
-    const toggleMoreRooms = useCallback(() => {
-        setShowMoreRooms(prev => !prev);
-        setShowVoiceDropdown(false);
-    }, []);
-
-    const toggleVoiceDropdown = useCallback(() => {
-        setShowVoiceDropdown(prev => !prev);
-        setShowMoreRooms(false);
-    }, []);
-
-    const closeAllDropdowns = useCallback(() => {
-        setShowMoreRooms(false);
-        setShowVoiceDropdown(false);
-    }, []);
-
     return {
-        showMoreRooms,
-        showVoiceDropdown,
-        setShowMoreRooms,
-        setShowVoiceDropdown,
-        toggleMoreRooms,
-        toggleVoiceDropdown,
-        closeAllDropdowns,
+        voiceRoom,
+        activeBreakout,
+        isInVoice,
+        isInBreakout,
+        currentVoiceName,
+        currentVoiceUsers,
+        availableVoiceRooms,
     };
 }
 
 /**
- * Hook to get room status indicators
+ * Hook to manage all dropdown visibility states.
+ * Only one dropdown open at a time.
  */
-export function useRoomStatus(roomId, viewingRoomId, voiceRoomId) {
-    const isViewing = roomId === viewingRoomId;
-    const isVoiceRoom = roomId === voiceRoomId;
-    const isBothViewingAndVoice = isViewing && isVoiceRoom;
+export function useDropdowns() {
+    const [showViewingDropdown, setShowViewingDropdown] = useState(false);
+    const [showVoiceDropdown, setShowVoiceDropdown] = useState(false);
+    const [showJoinDropdown, setShowJoinDropdown] = useState(false);
 
-    return { isViewing, isVoiceRoom, isBothViewingAndVoice };
+    const closeAll = useCallback(() => {
+        setShowViewingDropdown(false);
+        setShowVoiceDropdown(false);
+        setShowJoinDropdown(false);
+    }, []);
+
+    const toggleViewing = useCallback(() => {
+        setShowViewingDropdown(prev => !prev);
+        setShowVoiceDropdown(false);
+        setShowJoinDropdown(false);
+    }, []);
+
+    const toggleVoice = useCallback(() => {
+        setShowVoiceDropdown(prev => !prev);
+        setShowViewingDropdown(false);
+        setShowJoinDropdown(false);
+    }, []);
+
+    const toggleJoin = useCallback(() => {
+        setShowJoinDropdown(prev => !prev);
+        setShowViewingDropdown(false);
+        setShowVoiceDropdown(false);
+    }, []);
+
+    return {
+        showViewingDropdown,
+        showVoiceDropdown,
+        showJoinDropdown,
+        toggleViewing,
+        toggleVoice,
+        toggleJoin,
+        closeAll,
+    };
 }

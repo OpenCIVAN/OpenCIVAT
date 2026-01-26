@@ -1,1 +1,1 @@
-export { ViewContextBlock, ViewHubFlyout, VIEW_TYPE_ICONS, default } from './ViewContextBlock';
+export { ViewContextBlock, ViewHubFlyout, VIEW_TYPE_ICONS, LinksDropdown, default } from './ViewContextBlock';

@@ -31,6 +31,8 @@ import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
 // HEADER COMPONENTS (48px - Global App Controls)
 // =============================================================================
 import { Header } from "@UI/react/components/layout/Header";
+import { RoomHeader } from "@UI/react/components/organisms/RoomHeader";
+import { WorkspaceBar } from "@UI/react/components/organisms/WorkspaceBar";
 
 // =============================================================================
 // SECONDARY BARS - DEPRECATED
@@ -294,6 +296,48 @@ export function CIAWebApp({ username, userId, projectId }) {
       }));
   }, [availableRooms]);
 
+  // Map rooms for RoomHeader (needs color, type, usersOnline, usersInVoice fields)
+  const ROOM_COLORS = ['#60a5fa', '#f472b6', '#34d399', '#fbbf24', '#a78bfa', '#fb923c', '#22d3ee', '#e879f9'];
+  const roomHeaderRooms = useMemo(() => {
+    return (availableRooms || []).map((room, index) => ({
+      id: room.id,
+      name: room.name,
+      color: ROOM_COLORS[index % ROOM_COLORS.length],
+      type: room.type || 'main',
+      usersOnline: room.memberCount || 0,
+      usersInVoice: room.voiceParticipants?.length || 0,
+    }));
+  }, [availableRooms]);
+
+  // Room Header state: pinned rooms, breakouts
+  const [pinnedRoomIds, setPinnedRoomIds] = useState([]);
+  const [activeBreakoutId, setActiveBreakoutId] = useState(null);
+  const [breakouts, setBreakouts] = useState([]);
+
+  // Workspace Bar state: canvas mode, popouts
+  // workspaces, workspaceId, and handleCreateWorkspace come from useWorkspaces hook above
+  const [canvasMode, setCanvasMode] = useState('tile');
+  const [popouts, setPopouts] = useState([]);
+
+  // Map workspaces for WorkspaceBar (needs usersViewing, hasChanges, etc.)
+  const workspaceBarItems = useMemo(() => {
+    return (workspaces || []).map(ws => ({
+      id: ws.id,
+      name: ws.name || 'Untitled',
+      usersViewing: 0,
+      hasChanges: false,
+      hasBreakout: false,
+      breakoutUsers: 0,
+    }));
+  }, [workspaces]);
+
+  // Derive voice room ID (voice.currentRoom is a name; match to room ID)
+  const voiceRoomId = useMemo(() => {
+    if (!voice.inVoice) return null;
+    // If voice is connected but no explicit channel, assume current room
+    return currentRoomId || null;
+  }, [voice.inVoice, currentRoomId]);
+
   // ===========================================================================
   // CALLBACKS - HEADER
   // ===========================================================================
@@ -411,6 +455,22 @@ export function CIAWebApp({ username, userId, projectId }) {
 
   const handleCreateRoom = useCallback(() => {
     setShowCreateRoomModal(true);
+  }, []);
+
+  const handleTogglePin = useCallback((roomId) => {
+    setPinnedRoomIds(prev => {
+      if (prev.includes(roomId)) {
+        return prev.filter(id => id !== roomId);
+      }
+      if (prev.length < 4) {
+        return [...prev, roomId];
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleJoinBreakout = useCallback((breakoutId) => {
+    setActiveBreakoutId(breakoutId);
   }, []);
 
   // ===========================================================================
@@ -952,10 +1012,51 @@ export function CIAWebApp({ username, userId, projectId }) {
                 />
               }
               // ─────────────────────────────────────────────────────────────
-              // SECONDARY BARS REMOVED - Now handled by CanvasWorkspace
+              // SECONDARY TOP BAR (Room Header + Workspace Bar)
               // ─────────────────────────────────────────────────────────────
-              // Canvas chrome (CanvasHeader, CanvasToolbar, CanvasStatusBar)
-              // is now rendered inside CanvasWorkspace, not in ThreeEdgeLayout
+              secondaryTopBar={
+                <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                  <RoomHeader
+                    rooms={roomHeaderRooms}
+                    viewingRoomId={currentRoomId}
+                    voiceRoomId={voiceRoomId}
+                    activeBreakoutId={activeBreakoutId}
+                    breakouts={breakouts}
+                    pinnedRoomIds={pinnedRoomIds}
+                    onSelectRoom={handleRoomSelect}
+                    onJoinVoice={(roomId) => {
+                      if (roomId) handleChangeVoiceChannel(roomId);
+                      else voice.joinVoice?.();
+                    }}
+                    onJoinBreakout={handleJoinBreakout}
+                    onLeaveVoice={() => {
+                      voice.leaveVoice?.();
+                      setActiveBreakoutId(null);
+                    }}
+                    onTogglePin={handleTogglePin}
+                    isMuted={voice.muted}
+                    isDeafened={voice.deafened}
+                    onToggleMute={() => voice.toggleMute?.()}
+                    onToggleDeafen={() => voice.toggleDeafen?.()}
+                    unreadMessages={0}
+                    onOpenChat={() => {
+                      window.dispatchEvent(new CustomEvent('navigate:right-panel', { detail: { tab: 'chat' } }));
+                    }}
+                    onCreateRoom={handleCreateRoom}
+                  />
+                  <WorkspaceBar
+                    workspaces={workspaceBarItems}
+                    activeWorkspaceId={workspaceId}
+                    onSelectWorkspace={handleWorkspaceChange}
+                    onCreateWorkspace={handleCreateWorkspace}
+                    popouts={popouts}
+                    breakouts={breakouts}
+                    canvasMode={canvasMode}
+                    onModeChange={setCanvasMode}
+                    onJoinBreakout={handleJoinBreakout}
+                  />
+                </div>
+              }
               // ─────────────────────────────────────────────────────────────
               // LEFT PANEL (Activity Bar + Content)
               // ─────────────────────────────────────────────────────────────

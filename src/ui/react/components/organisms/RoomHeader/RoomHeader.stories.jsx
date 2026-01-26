@@ -1,10 +1,11 @@
 /**
  * @file RoomHeader.stories.jsx
- * @description Storybook stories for RoomHeader component
+ * @description Storybook stories for the section-based RoomHeader component
  */
 
 import React, { useState } from 'react';
 import { RoomHeader } from './RoomHeader';
+import { WorkspaceBar } from '../WorkspaceBar';
 
 export default {
     title: 'Organisms/RoomHeader',
@@ -20,11 +21,25 @@ export default {
 // =============================================================================
 
 const MOCK_ROOMS = [
-    { id: 'r1', name: 'Lab Meeting', color: '#a855f7', usersOnline: 5 },
-    { id: 'r2', name: 'Analysis Session', color: '#3b82f6', usersOnline: 2 },
-    { id: 'r3', name: 'Personal', color: '#22c55e', usersOnline: 1 },
-    { id: 'r4', name: 'Tumor Review', color: '#f59e0b', usersOnline: 3 },
-    { id: 'r5', name: 'Research Group', color: '#ec4899', usersOnline: 8 },
+    { id: 'r1', name: 'Lab Meeting', color: '#a855f7', type: 'main', usersOnline: 5, usersInVoice: 3 },
+    { id: 'r2', name: 'Analysis Session', color: '#3b82f6', type: 'main', usersOnline: 2, usersInVoice: 2 },
+    { id: 'r3', name: 'Personal', color: '#22c55e', type: 'personal', usersOnline: 1, usersInVoice: 0 },
+    { id: 'r4', name: 'Tumor Review', color: '#f59e0b', type: 'main', usersOnline: 3, usersInVoice: 1 },
+];
+
+const MOCK_BREAKOUTS = [
+    { id: 'b1', name: 'Main Analysis', workspaceId: 'ws1', usersInVoice: 2 },
+];
+
+const MOCK_WORKSPACES = [
+    { id: 'ws1', name: 'Main Analysis', usersViewing: 3, hasChanges: false, hasBreakout: true, breakoutUsers: 2 },
+    { id: 'ws2', name: 'Tumor Regions', usersViewing: 1, hasChanges: true, hasBreakout: false, breakoutUsers: 0 },
+    { id: 'ws3', name: 'Comparison', usersViewing: 0, hasChanges: false, hasBreakout: false, breakoutUsers: 0 },
+];
+
+const MOCK_POPOUTS = [
+    { id: 'p1', name: 'Axial View', color: '#22d3ee' },
+    { id: 'p2', name: '3D Volume', color: '#22c55e' },
 ];
 
 // =============================================================================
@@ -32,30 +47,29 @@ const MOCK_ROOMS = [
 // =============================================================================
 
 /**
- * Default state - viewing room, not in voice
+ * Default state - viewing room, not in voice, no pinned rooms
  */
 export const Default = {
     render: () => {
         const [viewingRoomId, setViewingRoomId] = useState('r1');
-        const [voiceRoomId, setVoiceRoomId] = useState(null);
-        const [isMuted, setIsMuted] = useState(false);
+        const [pinnedRoomIds, setPinnedRoomIds] = useState([]);
+
+        const handleTogglePin = (roomId) => {
+            setPinnedRoomIds(prev =>
+                prev.includes(roomId) ? prev.filter(id => id !== roomId) : [...prev, roomId]
+            );
+        };
 
         return (
             <div style={{ background: '#0a0a0f' }}>
                 <RoomHeader
                     rooms={MOCK_ROOMS}
                     viewingRoomId={viewingRoomId}
-                    voiceRoomId={voiceRoomId}
+                    pinnedRoomIds={pinnedRoomIds}
                     onSelectRoom={setViewingRoomId}
-                    onJoinVoice={(roomId) => setVoiceRoomId(roomId)}
-                    onLeaveVoice={() => setVoiceRoomId(null)}
-                    onSwitchVoice={(roomId) => {
-                        setVoiceRoomId(roomId);
-                        setViewingRoomId(roomId);
-                    }}
-                    isMuted={isMuted}
-                    onToggleMute={() => setIsMuted(!isMuted)}
-                    unreadMessages={3}
+                    onJoinVoice={(roomId) => console.log('Join voice:', roomId)}
+                    onLeaveVoice={() => console.log('Leave voice')}
+                    onTogglePin={handleTogglePin}
                     onOpenChat={() => console.log('Open chat')}
                     onCreateRoom={() => console.log('Create room')}
                 />
@@ -65,13 +79,20 @@ export const Default = {
 };
 
 /**
- * In voice - viewing same room as voice
+ * In voice - with pinned rooms and breakouts
  */
-export const InVoiceSameRoom = {
+export const InVoiceWithPins = {
     render: () => {
         const [viewingRoomId, setViewingRoomId] = useState('r1');
         const [voiceRoomId, setVoiceRoomId] = useState('r1');
+        const [pinnedRoomIds, setPinnedRoomIds] = useState(['r2', 'r4']);
         const [isMuted, setIsMuted] = useState(false);
+
+        const handleTogglePin = (roomId) => {
+            setPinnedRoomIds(prev =>
+                prev.includes(roomId) ? prev.filter(id => id !== roomId) : [...prev, roomId]
+            );
+        };
 
         return (
             <div style={{ background: '#0a0a0f' }}>
@@ -79,12 +100,48 @@ export const InVoiceSameRoom = {
                     rooms={MOCK_ROOMS}
                     viewingRoomId={viewingRoomId}
                     voiceRoomId={voiceRoomId}
+                    breakouts={MOCK_BREAKOUTS}
+                    pinnedRoomIds={pinnedRoomIds}
                     onSelectRoom={setViewingRoomId}
                     onJoinVoice={(roomId) => setVoiceRoomId(roomId)}
                     onLeaveVoice={() => setVoiceRoomId(null)}
-                    onSwitchVoice={(roomId) => {
-                        setVoiceRoomId(roomId);
-                        setViewingRoomId(roomId);
+                    onTogglePin={handleTogglePin}
+                    isMuted={isMuted}
+                    onToggleMute={() => setIsMuted(!isMuted)}
+                    unreadMessages={3}
+                    onOpenChat={() => console.log('Open chat')}
+                />
+            </div>
+        );
+    },
+};
+
+/**
+ * In breakout voice (purple theme)
+ */
+export const InBreakout = {
+    render: () => {
+        const [viewingRoomId, setViewingRoomId] = useState('r1');
+        const [activeBreakoutId, setActiveBreakoutId] = useState('b1');
+        const [pinnedRoomIds, setPinnedRoomIds] = useState(['r2']);
+        const [isMuted, setIsMuted] = useState(false);
+
+        return (
+            <div style={{ background: '#0a0a0f' }}>
+                <RoomHeader
+                    rooms={MOCK_ROOMS}
+                    viewingRoomId={viewingRoomId}
+                    activeBreakoutId={activeBreakoutId}
+                    breakouts={MOCK_BREAKOUTS}
+                    pinnedRoomIds={pinnedRoomIds}
+                    onSelectRoom={setViewingRoomId}
+                    onJoinVoice={(roomId) => { setActiveBreakoutId(null); }}
+                    onJoinBreakout={setActiveBreakoutId}
+                    onLeaveVoice={() => setActiveBreakoutId(null)}
+                    onTogglePin={(roomId) => {
+                        setPinnedRoomIds(prev =>
+                            prev.includes(roomId) ? prev.filter(id => id !== roomId) : [...prev, roomId]
+                        );
                     }}
                     isMuted={isMuted}
                     onToggleMute={() => setIsMuted(!isMuted)}
@@ -97,112 +154,40 @@ export const InVoiceSameRoom = {
 };
 
 /**
- * In voice - viewing different room than voice
+ * Full interactive demo with both RoomHeader and WorkspaceBar
  */
-export const InVoiceDifferentRoom = {
-    render: () => {
-        const [viewingRoomId, setViewingRoomId] = useState('r2');
-        const [voiceRoomId, setVoiceRoomId] = useState('r1');
-        const [isMuted, setIsMuted] = useState(false);
-
-        return (
-            <div style={{ background: '#0a0a0f' }}>
-                <RoomHeader
-                    rooms={MOCK_ROOMS}
-                    viewingRoomId={viewingRoomId}
-                    voiceRoomId={voiceRoomId}
-                    onSelectRoom={setViewingRoomId}
-                    onJoinVoice={(roomId) => setVoiceRoomId(roomId)}
-                    onLeaveVoice={() => setVoiceRoomId(null)}
-                    onSwitchVoice={(roomId) => {
-                        setVoiceRoomId(roomId);
-                        setViewingRoomId(roomId);
-                    }}
-                    isMuted={isMuted}
-                    onToggleMute={() => setIsMuted(!isMuted)}
-                    unreadMessages={12}
-                    onOpenChat={() => console.log('Open chat')}
-                />
-            </div>
-        );
-    },
-};
-
-/**
- * Muted state
- */
-export const Muted = {
+export const FullDemo = {
     render: () => {
         const [viewingRoomId, setViewingRoomId] = useState('r1');
         const [voiceRoomId, setVoiceRoomId] = useState('r1');
-        const [isMuted, setIsMuted] = useState(true);
-
-        return (
-            <div style={{ background: '#0a0a0f' }}>
-                <RoomHeader
-                    rooms={MOCK_ROOMS}
-                    viewingRoomId={viewingRoomId}
-                    voiceRoomId={voiceRoomId}
-                    onSelectRoom={setViewingRoomId}
-                    onJoinVoice={(roomId) => setVoiceRoomId(roomId)}
-                    onLeaveVoice={() => setVoiceRoomId(null)}
-                    onSwitchVoice={(roomId) => {
-                        setVoiceRoomId(roomId);
-                        setViewingRoomId(roomId);
-                    }}
-                    isMuted={isMuted}
-                    onToggleMute={() => setIsMuted(!isMuted)}
-                    unreadMessages={0}
-                    onOpenChat={() => console.log('Open chat')}
-                />
-            </div>
-        );
-    },
-};
-
-/**
- * With overflow rooms (more than 3)
- */
-export const WithOverflow = {
-    render: () => {
-        const [viewingRoomId, setViewingRoomId] = useState('r1');
-        const [voiceRoomId, setVoiceRoomId] = useState(null);
-
-        return (
-            <div style={{ background: '#0a0a0f' }}>
-                <RoomHeader
-                    rooms={MOCK_ROOMS}
-                    viewingRoomId={viewingRoomId}
-                    voiceRoomId={voiceRoomId}
-                    onSelectRoom={setViewingRoomId}
-                    onJoinVoice={(roomId) => setVoiceRoomId(roomId)}
-                    onLeaveVoice={() => setVoiceRoomId(null)}
-                    onSwitchVoice={(roomId) => {
-                        setVoiceRoomId(roomId);
-                        setViewingRoomId(roomId);
-                    }}
-                    isMuted={false}
-                    onToggleMute={() => {}}
-                    unreadMessages={99}
-                    onOpenChat={() => console.log('Open chat')}
-                />
-                <div style={{ padding: 16, color: '#666', fontSize: 12 }}>
-                    Click "+2 more" to see overflow dropdown
-                </div>
-            </div>
-        );
-    },
-};
-
-/**
- * Interactive demo
- */
-export const Interactive = {
-    render: () => {
-        const [viewingRoomId, setViewingRoomId] = useState('r1');
-        const [voiceRoomId, setVoiceRoomId] = useState(null);
+        const [activeBreakoutId, setActiveBreakoutId] = useState(null);
+        const [breakouts, setBreakouts] = useState(MOCK_BREAKOUTS);
+        const [pinnedRoomIds, setPinnedRoomIds] = useState(['r2', 'r4']);
         const [isMuted, setIsMuted] = useState(false);
-        const [unreadMessages, setUnreadMessages] = useState(5);
+        const [activeWorkspaceId, setActiveWorkspaceId] = useState('ws1');
+        const [canvasMode, setCanvasMode] = useState('tile');
+        const [popouts, setPopouts] = useState(MOCK_POPOUTS);
+
+        const handleTogglePin = (roomId) => {
+            setPinnedRoomIds(prev =>
+                prev.includes(roomId) ? prev.filter(id => id !== roomId) : [...prev, roomId]
+            );
+        };
+
+        const handleJoinVoice = (roomId) => {
+            setVoiceRoomId(roomId);
+            setActiveBreakoutId(null);
+        };
+
+        const handleJoinBreakout = (breakoutId) => {
+            setActiveBreakoutId(breakoutId);
+            setVoiceRoomId(null);
+        };
+
+        const handleLeaveVoice = () => {
+            setVoiceRoomId(null);
+            setActiveBreakoutId(null);
+        };
 
         return (
             <div style={{ background: '#0a0a0f', minHeight: '100vh' }}>
@@ -210,27 +195,73 @@ export const Interactive = {
                     rooms={MOCK_ROOMS}
                     viewingRoomId={viewingRoomId}
                     voiceRoomId={voiceRoomId}
+                    activeBreakoutId={activeBreakoutId}
+                    breakouts={breakouts}
+                    pinnedRoomIds={pinnedRoomIds}
                     onSelectRoom={setViewingRoomId}
-                    onJoinVoice={(roomId) => setVoiceRoomId(roomId)}
-                    onLeaveVoice={() => setVoiceRoomId(null)}
-                    onSwitchVoice={(roomId) => {
-                        setVoiceRoomId(roomId);
-                        setViewingRoomId(roomId);
-                    }}
+                    onJoinVoice={handleJoinVoice}
+                    onJoinBreakout={handleJoinBreakout}
+                    onLeaveVoice={handleLeaveVoice}
+                    onTogglePin={handleTogglePin}
                     isMuted={isMuted}
                     onToggleMute={() => setIsMuted(!isMuted)}
-                    unreadMessages={unreadMessages}
-                    onOpenChat={() => setUnreadMessages(0)}
-                    onCreateRoom={() => alert('Create room clicked')}
+                    unreadMessages={5}
+                    onOpenChat={() => console.log('Open chat')}
+                    onCreateRoom={() => console.log('Create room')}
                 />
+
+                <WorkspaceBar
+                    workspaces={MOCK_WORKSPACES}
+                    activeWorkspaceId={activeWorkspaceId}
+                    onSelectWorkspace={setActiveWorkspaceId}
+                    onCreateWorkspace={() => console.log('Create workspace')}
+                    popouts={popouts}
+                    breakouts={breakouts}
+                    canvasMode={canvasMode}
+                    onModeChange={setCanvasMode}
+                    onJoinBreakout={handleJoinBreakout}
+                />
+
+                {/* Canvas placeholder */}
+                <div style={{
+                    height: 300,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#666',
+                    fontSize: 14,
+                }}>
+                    Canvas Area ({canvasMode} mode)
+                </div>
 
                 {/* State display */}
                 <div style={{ padding: 24, color: '#888', fontSize: 12 }}>
                     <h3 style={{ color: '#fff', marginBottom: 12 }}>Current State:</h3>
-                    <p>Viewing Room: <strong style={{ color: '#22d3ee' }}>{viewingRoomId}</strong></p>
-                    <p>Voice Room: <strong style={{ color: '#22c55e' }}>{voiceRoomId || 'None'}</strong></p>
-                    <p>Muted: <strong style={{ color: isMuted ? '#ef4444' : '#22c55e' }}>{isMuted ? 'Yes' : 'No'}</strong></p>
-                    <p>Unread: <strong style={{ color: '#ec4899' }}>{unreadMessages}</strong></p>
+                    <p>Viewing: <strong style={{ color: '#22d3ee' }}>{viewingRoomId}</strong></p>
+                    <p>Voice: <strong style={{ color: '#22c55e' }}>{voiceRoomId || 'None'}</strong></p>
+                    <p>Breakout: <strong style={{ color: '#a855f7' }}>{activeBreakoutId || 'None'}</strong></p>
+                    <p>Pinned: <strong>{pinnedRoomIds.join(', ') || 'None'}</strong></p>
+                    <p>Workspace: <strong>{activeWorkspaceId}</strong></p>
+                    <p>Mode: <strong>{canvasMode}</strong></p>
+
+                    <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={popouts.length > 0}
+                                onChange={() => setPopouts(popouts.length > 0 ? [] : MOCK_POPOUTS)}
+                            />
+                            Show Popouts
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={breakouts.length > 0}
+                                onChange={() => setBreakouts(breakouts.length > 0 ? [] : MOCK_BREAKOUTS)}
+                            />
+                            Show Breakouts
+                        </label>
+                    </div>
                 </div>
             </div>
         );

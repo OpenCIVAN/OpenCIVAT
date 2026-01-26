@@ -627,20 +627,20 @@ export const InstanceToolsNotch = memo(function InstanceToolsNotch({
                     </React.Fragment>
                 ))}
 
-                {/* Spacer + More button */}
+                {/* Spacer - always present to extend label row across full width */}
+                <NotchSpacer />
+
+                {/* More button (only when active) */}
                 {isActive && onOpenFullTools && (
-                    <>
-                        <NotchSpacer />
-                        <NotchZone label="" labelColor="">
-                            <button
-                                className="instance-tools-notch__more-btn"
-                                onClick={onOpenFullTools}
-                                title="Open full Instance Tools panel"
-                            >
-                                <Icon name="moreHorizontal" size={16} />
-                            </button>
-                        </NotchZone>
-                    </>
+                    <NotchZone label="" labelColor="">
+                        <button
+                            className="instance-tools-notch__more-btn"
+                            onClick={onOpenFullTools}
+                            title="Open full Instance Tools panel"
+                        >
+                            <Icon name="moreHorizontal" size={16} />
+                        </button>
+                    </NotchZone>
                 )}
             </div>
         </div>

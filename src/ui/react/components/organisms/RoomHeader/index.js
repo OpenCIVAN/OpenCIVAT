@@ -1,20 +1,23 @@
 /**
  * RoomHeader
- * Room-level navigation bar with voice controls, presence, and chat access.
+ * Room-level header bar with section-based layout.
+ * Layout: ROOM (viewing + presence) | PINNED | VOICE | CHAT
  */
 
 export { RoomHeader } from './RoomHeader';
 export { default } from './RoomHeader';
 
 // Sub-components
-export { RoomTab } from './RoomTab';
-export { VoiceDropdown } from './VoiceDropdown';
+export { RoomSection } from './RoomSection';
+export { PinnedSection } from './PinnedSection';
+export { VoiceSection } from './VoiceSection';
+export { ChatSection } from './ChatSection';
 
 // Logic exports
 export {
-    useRoomPrioritization,
+    useRoomSection,
+    usePinnedSection,
     useVoiceState,
     useDropdowns,
-    useRoomStatus,
     ROOM_HEADER_CONFIG,
 } from './RoomHeader.logic';
