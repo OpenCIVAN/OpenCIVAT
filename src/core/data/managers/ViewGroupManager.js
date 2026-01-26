@@ -88,6 +88,9 @@ export class ViewGroupManager extends BaseManager {
     // INITIALIZATION
     // ===========================================================================
 
+    /** UUID v4 pattern for validating workspace IDs before API calls */
+    static _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     initialize(workspaceId = null) {
         this._log.info('Initializing ViewGroupManager...');
 
@@ -104,9 +107,18 @@ export class ViewGroupManager extends BaseManager {
         const wsId = workspaceId || this._workspaceId;
         this._log.info(`Loading ViewGroups from server for workspace: ${wsId}`);
 
+        // Skip server calls if workspace ID is not a valid UUID (pending workspace)
+        if (wsId && !ViewGroupManager._UUID_RE.test(wsId)) {
+            this._log.warn(`Workspace ID "${wsId}" is not a UUID — skipping server load`);
+            this._isReady = true;
+            this._emit('ready', { count: 0 });
+            return 0;
+        }
+
         try {
+            // Use query param — matches the GET / route in viewgroups router
             const endpoint = wsId
-                ? `/workspaces/${wsId}/viewgroups`
+                ? `/viewgroups?workspaceId=${wsId}`
                 : `/viewgroups?projectId=${this._projectId}`;
 
             const data = await apiClient.get(endpoint);
@@ -184,6 +196,11 @@ export class ViewGroupManager extends BaseManager {
             workspaceId = this._workspaceId,
             canvasPosition = { row: 0, col: 0, rowSpan: 1, colSpan: 1 },
         } = options;
+
+        // Guard: workspace must be a valid UUID for server persistence
+        if (!workspaceId || !ViewGroupManager._UUID_RE.test(workspaceId)) {
+            throw new Error(`Cannot create ViewGroup: workspace ID "${workspaceId}" is not a valid UUID (workspace may still be syncing)`);
+        }
 
         this._log.info(`Creating ViewGroup: ${name}`);
 

@@ -4,9 +4,9 @@
  * Uses useViewGroups hook to provide data and actions to the presentational Footer2 component
  */
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { useViewGroups, useViewGroupLinks } from '@UI/react/hooks';
+import { useViewGroups, useViewGroupLinks, useViewLinks } from '@UI/react/hooks';
 import { Footer2 } from './Footer2';
 
 /**
@@ -14,11 +14,14 @@ import { Footer2 } from './Footer2';
  *
  * This container component:
  * 1. Uses useViewGroups hook to get ViewGroup data and actions
- * 2. Uses useViewGroupLinks hook for link stats
- * 3. Passes everything to the presentational Footer2 component
+ * 2. Uses useViewGroupLinks hook for VG-level link stats
+ * 3. Uses useViewLinks hook for per-view link data (fed to Footer2 via linkingService adapter)
+ * 4. Passes everything to the presentational Footer2 component
  */
 const Footer2Container = memo(function Footer2Container({
     workspaceId,
+    // Active view identification
+    activeViewId = null,
     // View data
     activeViewType = 'vtk-volume',
     activeViewColor = null,
@@ -60,6 +63,36 @@ const Footer2Container = memo(function Footer2Container({
 
     // Get link data for active ViewGroup
     const { vgLinks, isLinked } = useViewGroupLinks(activeViewGroupId);
+
+    // Get per-view link data for the active view
+    const { links: viewLinks } = useViewLinks(activeViewId);
+
+    // Create a linkingService adapter that bridges useViewLinks data
+    // to what Footer2's internal useLinkStats expects
+    const linkingServiceAdapter = useMemo(() => {
+        if (!viewLinks || viewLinks.length === 0) return null;
+
+        // Index links by property for fast lookup
+        const linksByProperty = {};
+        for (const link of viewLinks) {
+            if (!linksByProperty[link.property]) {
+                linksByProperty[link.property] = [];
+            }
+            const otherId = link.sourceViewId === activeViewId
+                ? link.targetViewId
+                : link.sourceViewId;
+            linksByProperty[link.property].push({
+                ...link,
+                targetId: otherId,
+            });
+        }
+
+        return {
+            getLinksForProperty: (viewGroupId, propertyId) => {
+                return linksByProperty[propertyId] || [];
+            },
+        };
+    }, [viewLinks, activeViewId]);
 
     // Handlers that map to ViewGroupManager operations
     const handleSelectViewGroup = useCallback((viewGroupId) => {
@@ -156,16 +189,18 @@ const Footer2Container = memo(function Footer2Container({
             isVRAvailable={isVRAvailable}
             isInVR={isInVR}
             onToggleVR={onToggleVR}
+            // Linking - adapter bridges useViewLinks data to Footer2's useLinkStats
+            linkingService={linkingServiceAdapter}
             // Sizing
             containerWidth={containerWidth}
-            // Note: linkingService is now managed internally by the hooks
-            // Legacy linkStats will be computed from useViewGroupLinks
         />
     );
 });
 
 Footer2Container.propTypes = {
     workspaceId: PropTypes.string.isRequired,
+    // Active view identification
+    activeViewId: PropTypes.string,
     // View data
     activeViewType: PropTypes.string,
     activeViewColor: PropTypes.string,

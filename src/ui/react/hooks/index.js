@@ -198,3 +198,5 @@ export {
   useViewGroupLinks,
   useReconciliation,
 } from "./useViewGroups.js";
+
+export { useViewGroupManagerSync } from "./useViewGroupManagerSync.js";

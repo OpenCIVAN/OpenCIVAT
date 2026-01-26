@@ -25,6 +25,7 @@ import { Footer2Container } from '@UI/react/components/organisms/Footer2';
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
+import { useViewGroupManagerSync } from '@UI/react/hooks/useViewGroupManagerSync.js';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { useWorkspaces } from '@UI/react/hooks/useWorkspaces.js';
 import { useRoomPresence, useRoomActions } from '@UI/react/hooks/useRoomPresence.js';
@@ -346,6 +347,24 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
     // Get active view from view context (source of truth for what's currently selected)
     const { activeView: contextActiveView } = useViewContextLogic();
+
+    // Connect WebSocket broadcasts to ViewGroupManager
+    useViewGroupManagerSync();
+
+    // Dynamic footer width measurement
+    const footerRef = useRef(null);
+    const [footerWidth, setFooterWidth] = useState(1200);
+
+    useEffect(() => {
+        if (!footerRef.current) return;
+        const observer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                setFooterWidth(entry.contentRect.width);
+            }
+        });
+        observer.observe(footerRef.current);
+        return () => observer.disconnect();
+    }, []);
 
     // Get layout context for panel focus mode (collapse panels when entering focus view)
     // Renamed to avoid collision with useSubsets's enterFocusMode/exitFocusMode
@@ -1044,54 +1063,57 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                Focus/Subset/Links/Actions now in Footer2 */}
 
             {/* ViewGroup Footer - ViewGroup selector, links, actions */}
-            <Footer2Container
-                workspaceId={currentWorkspaceId || projectId}
-                activeViewType={contextActiveView?.type || 'vtk-volume'}
-                activeViewColor={contextActiveView?.color || null}
-                isFocused={isFocusView}
-                instanceTools={footerTools}
-                toolSections={toolSections}
-                onSelectTool={handleNotchToolSelect}
-                onToggleFocus={() => {
-                    if (isFocusView) {
-                        goHome();
-                    } else {
-                        handleToolbarModeChange('focus');
-                    }
-                }}
-                activeSubset={focusedSubset}
-                onOpenSubsetDropdown={() => setShowSubsetSelector(true)}
-                onSnapshot={() => {
-                    log.debug('Snapshot requested from Footer2');
-                    // Dispatch snapshot event for active view
-                    if (contextActiveView?.id) {
-                        window.dispatchEvent(new CustomEvent('cia:snapshot-view', {
-                            detail: { viewId: contextActiveView.id }
-                        }));
-                    }
-                }}
-                onResetView={() => {
-                    log.debug('Reset view requested from Footer2');
-                    handleResetCamera();
-                }}
-                onDuplicateView={handleDuplicateView}
-                onViewSettings={handleViewSettings}
-                onOpenLayoutTab={() => {
-                    // Open layout panel
-                    setLeftDockedOpen(true);
-                }}
-                onOpenLinkManager={() => {
-                    // Open link manager panel
-                    log.debug('Link manager requested');
-                }}
-                isVRAvailable={true}
-                isInVR={false}
-                onToggleVR={() => {
-                    log.debug('VR toggle requested');
-                    // TODO: Connect to VR manager
-                }}
-                containerWidth={1200}
-            />
+            <div ref={footerRef}>
+                <Footer2Container
+                    workspaceId={currentWorkspaceId || projectId}
+                    activeViewId={contextActiveView?.id || null}
+                    activeViewType={contextActiveView?.type || 'vtk-volume'}
+                    activeViewColor={contextActiveView?.color || null}
+                    isFocused={isFocusView}
+                    instanceTools={footerTools}
+                    toolSections={toolSections}
+                    onSelectTool={handleNotchToolSelect}
+                    onToggleFocus={() => {
+                        if (isFocusView) {
+                            goHome();
+                        } else {
+                            handleToolbarModeChange('focus');
+                        }
+                    }}
+                    activeSubset={focusedSubset}
+                    onOpenSubsetDropdown={() => setShowSubsetSelector(true)}
+                    onSnapshot={() => {
+                        log.debug('Snapshot requested from Footer2');
+                        // Dispatch snapshot event for active view
+                        if (contextActiveView?.id) {
+                            window.dispatchEvent(new CustomEvent('cia:snapshot-view', {
+                                detail: { viewId: contextActiveView.id }
+                            }));
+                        }
+                    }}
+                    onResetView={() => {
+                        log.debug('Reset view requested from Footer2');
+                        handleResetCamera();
+                    }}
+                    onDuplicateView={handleDuplicateView}
+                    onViewSettings={handleViewSettings}
+                    onOpenLayoutTab={() => {
+                        // Open layout panel
+                        setLeftDockedOpen(true);
+                    }}
+                    onOpenLinkManager={() => {
+                        // Open link manager panel
+                        log.debug('Link manager requested');
+                    }}
+                    isVRAvailable={true}
+                    isInVR={false}
+                    onToggleVR={() => {
+                        log.debug('VR toggle requested');
+                        // TODO: Connect to VR manager
+                    }}
+                    containerWidth={footerWidth}
+                />
+            </div>
 
             {/* Canvas Info Footer - Canvas/Viewport/Cell size + Sync status */}
             <CanvasInfoFooter

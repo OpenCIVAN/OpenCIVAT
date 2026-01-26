@@ -44,6 +44,7 @@ import {
   getDatasetManager,
 } from "@Init/appInitializer.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
+import { viewGroupManager } from "@Core/data/managers/ViewGroupManager.js";
 import { eventBus, BUS_EVENTS } from "@Core/events/EventBus.js";
 import { DOM_EVENTS } from "@Core/events/eventConstants.js";
 import { view as log } from "@Utils/logger.js";
@@ -564,6 +565,9 @@ class ViewLifecycleService {
       viewId,
     });
 
+    // Auto-create implicit solo ViewGroup if the view doesn't already belong to one
+    this._ensureImplicitViewGroup(viewId, view, { row, col });
+
     // Smart viewport navigation - only moves if cell is outside current view
     this._smartNavigateToPlacement({ row, col, rowSpan, colSpan });
 
@@ -752,6 +756,41 @@ class ViewLifecycleService {
   // =========================================================================
   // HELPERS
   // =========================================================================
+
+  /**
+   * Ensure a view has an implicit solo ViewGroup.
+   * Creates one if the view doesn't already belong to a ViewGroup.
+   * Non-critical: view still works without a ViewGroup.
+   * @private
+   */
+  async _ensureImplicitViewGroup(viewId, view, position) {
+    try {
+      const existingGroup = viewGroupManager.findGroupContainingView(viewId);
+      if (existingGroup) return;
+
+      const viewGroup = await viewGroupManager.createViewGroup({
+        name: null, // null name = implicit solo (hidden in UI)
+        layoutId: 'single',
+        canvasPosition: {
+          row: position.row,
+          col: position.col,
+          rowSpan: 1,
+          colSpan: 1,
+        },
+      });
+
+      await viewGroupManager.addViewToGroup(
+        viewGroup.id,
+        viewId,
+        view.name || 'View',
+        view.instanceType || view.type || 'vtk',
+        view.datasetId || null
+      );
+    } catch (err) {
+      log.warn('Failed to create implicit ViewGroup:', err);
+      // Non-critical - view still works without a ViewGroup
+    }
+  }
 
   /**
    * Find next empty cell on a canvas using flow-aware search.
