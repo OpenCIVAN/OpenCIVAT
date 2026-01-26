@@ -34,7 +34,7 @@ export function FlowDirectionToggle({ direction = 'row', onChange }) {
                     aria-pressed={direction === 'row'}
                     type="button"
                 >
-                    <Icon name="arrow_forward" size={16} />
+                    <Icon name="arrowRight" size={16} />
                 </button>
             </Tooltip>
             <Tooltip content="Column-first placement (↓)">
@@ -45,7 +45,7 @@ export function FlowDirectionToggle({ direction = 'row', onChange }) {
                     aria-pressed={direction === 'column'}
                     type="button"
                 >
-                    <Icon name="arrow_downward" size={16} />
+                    <Icon name="arrowDown" size={16} />
                 </button>
             </Tooltip>
         </div>

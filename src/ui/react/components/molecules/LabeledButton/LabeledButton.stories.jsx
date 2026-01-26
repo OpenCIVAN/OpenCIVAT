@@ -100,7 +100,7 @@ export const FooterActions = {
             <LabeledButton icon="save" label="Save" />
             <LabeledButton icon="share" label="Share" />
             <LabeledButton icon="download" label="Export" />
-            <LabeledButton icon="trash2" label="Delete" accent="#ef4444" />
+            <LabeledButton icon="trash" label="Delete" accent="#ef4444" />
         </div>
     ),
 };

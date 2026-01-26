@@ -87,7 +87,7 @@ export function UserItem({
             type="button"
             aria-label="Go to user cursor"
           >
-            <Icon name="gps_fixed" size={12} />
+            <Icon name="crosshair" size={12} />
           </button>
           <button
             className={`user-item__action-btn ${isFollowing ? 'user-item__action-btn--following' : ''}`}
@@ -99,7 +99,7 @@ export function UserItem({
               '--user-color': `var(--color-accent-${userColor})`,
             } : undefined}
           >
-            <Icon name="visibility" size={12} />
+            <Icon name="eye" size={12} />
           </button>
         </div>
       )}

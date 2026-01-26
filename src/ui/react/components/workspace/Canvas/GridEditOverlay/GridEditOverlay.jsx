@@ -57,7 +57,7 @@ export function GridEditOverlay({
                 onClick={onToggleEditMode}
                 title={editMode ? 'Exit edit mode' : 'Edit grid layout'}
             >
-                <Icon name="grid_3x3" size={16} />
+                <Icon name="grid3x3" size={16} />
             </button>
 
             {/* Edit Mode Controls */}
@@ -144,7 +144,7 @@ export function GridEditOverlay({
                     {/* Grid Info Panel */}
                     <div className="grid-edit-overlay__info-panel">
                         <div className="grid-edit-overlay__grid-size">
-                            <Icon name="grid_3x3" size={12} />
+                            <Icon name="grid3x3" size={12} />
                             <span>{cols} × {rows}</span>
                         </div>
                         <div className="grid-edit-overlay__viewport-info">

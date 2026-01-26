@@ -13,8 +13,8 @@
  * @example
  * <SegmentedToggle
  *   options={[
- *     { value: 'row', icon: 'arrow_forward', label: 'Row Flow', accent: 'var(--color-accent-blue)' },
- *     { value: 'column', icon: 'arrow_downward', label: 'Column Flow', accent: 'var(--color-accent-blue)' },
+ *     { value: 'row', icon: 'arrowRight', label: 'Row Flow', accent: 'var(--color-accent-blue)' },
+ *     { value: 'column', icon: 'arrowDown', label: 'Column Flow', accent: 'var(--color-accent-blue)' },
  *   ]}
  *   value="row"
  *   onChange={(value) => setFlowDirection(value)}

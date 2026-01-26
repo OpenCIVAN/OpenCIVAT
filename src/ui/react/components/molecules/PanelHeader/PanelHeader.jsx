@@ -112,7 +112,7 @@ export const PanelHeader = memo(function PanelHeader({
                     {/* Standard controls */}
                     {onMinimize && (
                         <IconButton
-                            icon={minimized ? 'maximize2' : 'minus'}
+                            icon={minimized ? 'maximize' : 'minus'}
                             size="sm"
                             variant="ghost"
                             onClick={onMinimize}

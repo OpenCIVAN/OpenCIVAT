@@ -84,7 +84,7 @@ export default {
     argTypes: {
         icon: {
             control: 'select',
-            options: ['settings', 'plus', 'trash2', 'edit', 'save', 'download', 'upload', 'play', 'pause', 'eye', 'eyeOff', 'grid_3x3', 'list', 'chevronLeft', 'chevronRight', 'x', 'check', 'search', 'filter', 'share2'],
+            options: ['settings', 'plus', 'trash', 'edit', 'save', 'download', 'upload', 'play', 'pause', 'eye', 'eyeOff', 'grid3x3', 'list', 'chevronLeft', 'chevronRight', 'x', 'check', 'search', 'filter', 'share2'],
         },
         variant: {
             control: 'select',
@@ -128,7 +128,7 @@ export const Primary = {
 
 export const Danger = {
     args: {
-        icon: 'trash2',
+        icon: 'trash',
         label: 'Delete',
         variant: 'danger',
         size: 'md',
@@ -200,7 +200,7 @@ export const AllVariants = {
             <MockIconButton icon="settings" label="Ghost" variant="ghost" />
             <MockIconButton icon="plus" label="Primary" variant="primary" />
             <MockIconButton icon="edit" label="Secondary" variant="secondary" />
-            <MockIconButton icon="trash2" label="Danger" variant="danger" />
+            <MockIconButton icon="trash" label="Danger" variant="danger" />
         </div>
     ),
 };
@@ -211,7 +211,7 @@ export const VariantsActive = {
             <MockIconButton icon="settings" label="Ghost Active" variant="ghost" active />
             <MockIconButton icon="plus" label="Primary Active" variant="primary" active />
             <MockIconButton icon="edit" label="Secondary Active" variant="secondary" active />
-            <MockIconButton icon="trash2" label="Danger Active" variant="danger" active />
+            <MockIconButton icon="trash" label="Danger Active" variant="danger" active />
         </div>
     ),
 };
@@ -237,7 +237,7 @@ export const CommonIcons = {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             <MockIconButton icon="plus" label="Add" />
             <MockIconButton icon="edit" label="Edit" />
-            <MockIconButton icon="trash2" label="Delete" />
+            <MockIconButton icon="trash" label="Delete" />
             <MockIconButton icon="save" label="Save" />
             <MockIconButton icon="download" label="Download" />
             <MockIconButton icon="upload" label="Upload" />
@@ -269,8 +269,8 @@ export const NavigationIcons = {
             <MockIconButton icon="chevronUp" label="Up" />
             <MockIconButton icon="chevronDown" label="Down" />
             <MockIconButton icon="home" label="Home" />
-            <MockIconButton icon="maximize2" label="Maximize" />
-            <MockIconButton icon="minimize2" label="Minimize" />
+            <MockIconButton icon="maximize" label="Maximize" />
+            <MockIconButton icon="minimize" label="Minimize" />
             <MockIconButton icon="x" label="Close" />
         </div>
     ),
@@ -322,7 +322,7 @@ export const LoadingStates = {
             <MockIconButton icon="upload" label="Uploading" loading />
             <MockIconButton icon="download" label="Downloading" loading variant="primary" />
             <MockIconButton icon="save" label="Saving" loading variant="secondary" />
-            <MockIconButton icon="trash2" label="Deleting" loading variant="danger" />
+            <MockIconButton icon="trash" label="Deleting" loading variant="danger" />
         </div>
     ),
 };
@@ -337,7 +337,7 @@ export const ToolbarExample = {
             borderRadius: '8px',
             border: '1px solid rgba(255,255,255,0.1)'
         }}>
-            <MockIconButton icon="mousePointer2" label="Select" active />
+            <MockIconButton icon="mousePointer" label="Select" active />
             <MockIconButton icon="move" label="Pan" />
             <MockIconButton icon="zoomIn" label="Zoom In" />
             <MockIconButton icon="zoomOut" label="Zoom Out" />
@@ -345,7 +345,7 @@ export const ToolbarExample = {
             <MockIconButton icon="undo" label="Undo" />
             <MockIconButton icon="redo" label="Redo" />
             <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 8px' }} />
-            <MockIconButton icon="maximize2" label="Fullscreen" />
+            <MockIconButton icon="maximize" label="Fullscreen" />
             <MockIconButton icon="settings" label="Settings" />
         </div>
     ),

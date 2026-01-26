@@ -276,7 +276,7 @@ export function FloatingCanvasWrapper({
             <div className="floating-canvas floating-canvas--fullscreen">
                 <div className="floating-canvas__exit-fullscreen">
                     <IconButton
-                        icon="minimize2"
+                        icon="minimize"
                         label="Exit Fullscreen (Esc)"
                         size="sm"
                         onClick={() => onModeChange?.(CANVAS_MODES.DOCKED)}

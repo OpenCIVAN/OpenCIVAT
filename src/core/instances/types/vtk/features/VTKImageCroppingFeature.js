@@ -409,7 +409,7 @@ export class VTKImageCroppingFeature extends FeatureInterface {
         {
           id: 'crop-reset',
           type: 'action',
-          icon: 'open_in_full',
+          icon: 'expand',
           label: 'Reset',
           description: 'Show full volume',
           onClick: () => this.resetCropping(instanceId),

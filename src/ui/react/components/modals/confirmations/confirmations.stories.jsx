@@ -174,12 +174,12 @@ export const AllDialogs = {
             dialogs={[
                 {
                     name: 'Delete View',
-                    icon: 'trash2',
+                    icon: 'trash',
                     color: '#ef4444',
                     props: {
                         title: 'Delete View?',
                         description: '"Axial Slice" will be moved to Recently Deleted and can be restored for 30 days.',
-                        icon: 'trash2',
+                        icon: 'trash',
                         severity: 'danger',
                         buttons: [
                             { label: 'Cancel' },
@@ -307,12 +307,12 @@ export const AllDialogs = {
                 },
                 {
                     name: 'Delete Project',
-                    icon: 'trash2',
+                    icon: 'trash',
                     color: '#ef4444',
                     props: {
                         title: 'Delete Project?',
                         description: 'This will PERMANENTLY delete "Brain Study" and ALL its data.',
-                        icon: 'trash2',
+                        icon: 'trash',
                         severity: 'danger',
                         children: (
                             <div style={{ marginTop: '16px' }}>
@@ -355,7 +355,7 @@ export const DeleteView = {
                     onClose={() => setIsOpen(false)}
                     title="Delete View?"
                     description='"Axial Slice" will be moved to Recently Deleted and can be restored for 30 days.'
-                    icon="trash2"
+                    icon="trash"
                     severity="danger"
                     buttons={[
                         { label: 'Cancel' },

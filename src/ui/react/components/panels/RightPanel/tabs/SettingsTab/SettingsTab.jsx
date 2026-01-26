@@ -84,7 +84,7 @@ export function SettingsTab({
             },
             {
                 id: 'vr',
-                icon: 'glasses',
+                icon: 'vrPano',
                 label: 'VR Settings',
                 color: '#c084fc', // purple
                 content: <VRSettings />,

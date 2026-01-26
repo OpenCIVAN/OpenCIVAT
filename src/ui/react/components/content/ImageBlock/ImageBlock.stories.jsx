@@ -120,7 +120,7 @@ const MockImageBlock = ({
                         color: '#ef4444',
                         cursor: 'pointer',
                     }}>
-                        <Icon name="trash2" size={14} />
+                        <Icon name="trash" size={14} />
                     </button>
                 </div>
             )}

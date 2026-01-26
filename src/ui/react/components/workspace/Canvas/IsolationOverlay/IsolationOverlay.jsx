@@ -143,7 +143,7 @@ export function IsolationOverlay({
                                 onClick={onFullscreen}
                                 title="Enter fullscreen"
                             >
-                                <Icon name="maximize2" size={14} />
+                                <Icon name="maximize" size={14} />
                             </button>
                         )}
                         <button

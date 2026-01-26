@@ -139,7 +139,7 @@ function ViewHeaderMenu({
                         onClick={() => handleItemClick(onOpenInstanceTools)}
                     />
                     <MenuItem
-                        icon="maximize2"
+                        icon="maximize"
                         label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                         onClick={() => handleItemClick(onFullscreen)}
                     />
@@ -170,7 +170,7 @@ function ViewHeaderMenu({
 
             {onOpenInIsolation && (
                 <MenuItem
-                    icon="maximize2"
+                    icon="maximize"
                     label="Open in Focus"
                     onClick={() => handleItemClick(onOpenInIsolation)}
                 />

@@ -1546,7 +1546,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
             {
               id: "reset",
               label: "Reset",
-              icon: "open_in_full",
+              icon: "expand",
               special: true, // Special styling for reset
             },
             {
@@ -1738,7 +1738,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     tools.push({
       id: "transform-scale",
       type: "action",
-      icon: "maximize2",
+      icon: "maximize",
       label: "Scale",
       description: "Scale — click for sliders",
       active: currentTransformMode === 'scale',
@@ -2050,7 +2050,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
         // Representation mode buttons with active state
         {
           id: "rep-surface",
-          icon: "deployed_code",
+          icon: "cube",
           label: "Surface",
           description: "Solid surface rendering",
           active: currentRepresentation === "surface", // ← FIX: Show active
@@ -2152,7 +2152,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
     tools.push({
       id: "colormap",
       type: "menu",
-      icon: "water_drop",
+      icon: "waterDrop",
       label: "Colormap",
       description: caps.canUseColormap
         ? "Color transfer functions"
@@ -2309,7 +2309,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
               {
                 type: "slider-with-presets",
                 id: "orientation-size-slider",
-                icon: "open_in_full",
+                icon: "expand",
                 label: "Widget Size",
                 value: currentSizePercent,
                 min: 5,
@@ -2616,7 +2616,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       tools.push({
         id: "glyph-menu",
         type: "menu",
-        icon: "arrow-up-right",
+        icon: "arrowUpRight",
         label: glyphEnabled ? `Glyphs: ${glyphState.glyphType}` : "Glyphs",
         description: "Vector/tensor glyph visualization",
         disabled: !caps.hasData,

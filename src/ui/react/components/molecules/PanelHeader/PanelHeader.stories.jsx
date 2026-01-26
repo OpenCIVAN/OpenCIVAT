@@ -125,7 +125,7 @@ const MockPanelHeader = ({
                         marginLeft: '4px',
                     }}
                 >
-                    <Icon name="maximize2" size={14} />
+                    <Icon name="maximize" size={14} />
                 </button>
             )}
 
@@ -261,7 +261,7 @@ export const WithCustomActions = {
         actions: [
             { icon: 'plus', onClick: () => {}, tooltip: 'Add item' },
             { icon: 'refresh', onClick: () => {}, tooltip: 'Refresh' },
-            { icon: 'trash2', onClick: () => {}, tooltip: 'Delete', danger: true },
+            { icon: 'trash', onClick: () => {}, tooltip: 'Delete', danger: true },
         ],
         onClose: () => {},
     },

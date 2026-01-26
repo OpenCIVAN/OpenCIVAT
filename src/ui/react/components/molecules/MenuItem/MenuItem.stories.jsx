@@ -59,7 +59,7 @@ export const Selected = {
 
 export const Danger = {
     args: {
-        icon: 'trash2',
+        icon: 'trash',
         label: 'Delete',
         danger: true,
     },
@@ -89,7 +89,7 @@ export const DropdownMenu = {
             <MenuItem icon="download" label="Download" />
             <MenuItem icon="share" label="Share" shortcut="⌘⇧S" />
             <div style={{ height: '1px', background: '#374151', margin: '4px 0' }} />
-            <MenuItem icon="trash2" label="Delete" danger />
+            <MenuItem icon="trash" label="Delete" danger />
         </div>
     ),
 };
@@ -139,7 +139,7 @@ export const ContextMenu = {
             <MenuItem icon="clipboard" label="Paste" shortcut="⌘V" />
             <div style={{ height: '1px', background: '#374151', margin: '4px 0' }} />
             <MenuItem icon="edit" label="Rename" />
-            <MenuItem icon="trash2" label="Delete" danger shortcut="⌫" />
+            <MenuItem icon="trash" label="Delete" danger shortcut="⌫" />
         </div>
     ),
 };

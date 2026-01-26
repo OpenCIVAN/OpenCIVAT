@@ -69,7 +69,7 @@ export const Danger = {
         children: "Delete",
         variant: "danger",
         size: "md",
-        icon: "trash2",
+        icon: "trash",
     },
 };
 

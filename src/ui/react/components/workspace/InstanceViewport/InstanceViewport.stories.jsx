@@ -139,13 +139,13 @@ function MockInstanceViewport({
                         className="instance-viewport__header-button"
                         title="Fullscreen"
                     >
-                        <Icon name="maximize2" size={14} />
+                        <Icon name="maximize" size={14} />
                     </button>
                     <button
                         className="instance-viewport__header-button instance-viewport__header-button--danger"
                         title="Delete"
                     >
-                        <Icon name="trash2" size={14} />
+                        <Icon name="trash" size={14} />
                     </button>
                 </div>
             </div>

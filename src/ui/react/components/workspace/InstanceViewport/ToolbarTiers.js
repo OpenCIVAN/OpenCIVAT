@@ -32,7 +32,7 @@ export const TOOL_GROUPS = {
       { id: "zoom", label: "Zoom", icon: 'zoomIn' },
       { id: "reset-view", label: "Reset View", icon: 'rotateCcw', shortcut: "R" },
       { id: "focus", label: "Focus Selection", icon: 'focus' },
-      { id: "fullscreen", label: "Fullscreen", icon: 'maximize2', shortcut: "F" },
+      { id: "fullscreen", label: "Fullscreen", icon: 'maximize', shortcut: "F" },
     ],
   },
   visual: {
@@ -43,7 +43,7 @@ export const TOOL_GROUPS = {
     tools: [
       { id: "colormap", label: "Colormap", icon: 'palette' },
       { id: "layers", label: "Layers", icon: 'layers' },
-      { id: "grid", label: "Grid", icon: 'grid_3x3' },
+      { id: "grid", label: "Grid", icon: 'grid3x3' },
       { id: "bounds", label: "Bounds", icon: 'box' },
     ],
   },
@@ -89,13 +89,13 @@ export const HISTORY_TOOLS = {
   undo: {
     id: "undo",
     label: "Undo",
-    icon: 'undo2',
+    icon: 'undo',
     shortcut: "Ctrl+Z",
   },
   redo: {
     id: "redo",
     label: "Redo",
-    icon: 'redo2',
+    icon: 'redo',
     shortcut: "Ctrl+Shift+Z",
   },
 };
@@ -125,7 +125,7 @@ export const CORNER_TOOLS = {
   vrMode: {
     id: "corner-vr",
     label: "VR Mode",
-    icon: 'glasses',
+    icon: 'vrHeadset',
   },
   settings: {
     id: "corner-settings",
@@ -145,8 +145,8 @@ export const GEAR_DROPDOWN_ITEMS = [
     icon: 'wrench',
     primary: true,
   },
-  { id: "gear-vr", label: "VR Mode", icon: 'glasses' },
-  { id: "gear-maximize", label: "Maximize", icon: 'maximize2' },
+  { id: "gear-vr", label: "VR Mode", icon: 'vrHeadset' },
+  { id: "gear-maximize", label: "Maximize", icon: 'maximize' },
   { id: "gear-duplicate", label: "Duplicate", icon: null },
   { id: "gear-close", label: "Close", icon: null },
 ];

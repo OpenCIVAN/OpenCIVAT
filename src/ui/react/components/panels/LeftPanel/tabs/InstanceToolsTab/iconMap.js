@@ -11,7 +11,7 @@ export const ICON_MAP = {
   "circle-dot": "circleDot",
   sliders: "sliders",
   scissors: "scissors",
-  "grid-3x3": "grid_3x3",
+  "grid-3x3": "grid3x3",
   ruler: "ruler",
   compass: "compass",
   crosshair: "crosshair",

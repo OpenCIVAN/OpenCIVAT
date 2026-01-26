@@ -232,7 +232,7 @@ export const ViewGroupListItem = memo(function ViewGroupListItem({
                                 onClick={(e) => handleActionClick(e, onDelete)}
                                 title="Delete"
                             >
-                                <Icon name="trash2" size={12} />
+                                <Icon name="trash" size={12} />
                             </button>
                         </div>
                     )}

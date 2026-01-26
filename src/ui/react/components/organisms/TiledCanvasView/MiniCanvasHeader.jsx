@@ -85,7 +85,7 @@ const MiniCanvasHeader = memo(function MiniCanvasHeader({
                     <Button
                         variant="ghost"
                         size="xs"
-                        icon="maximize2"
+                        icon="maximize"
                         onClick={handleMaximize}
                         title="Maximize"
                     />

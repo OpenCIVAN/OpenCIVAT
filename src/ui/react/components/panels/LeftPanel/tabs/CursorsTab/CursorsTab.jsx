@@ -39,7 +39,7 @@ const CAMERA_SYNC_MODES = {
 
 // Cursor tracking modes
 const TRACKING_MODES = {
-    POINTER: { id: 'pointer', icon: 'mousePointer2', label: '3D Pointer' },
+    POINTER: { id: 'pointer', icon: 'mousePointer', label: '3D Pointer' },
     ANNOTATION: { id: 'annotation', icon: 'penTool', label: 'Annotation' },
     SELECTION: { id: 'selection', icon: 'boxSelect', label: 'Selection' },
 };

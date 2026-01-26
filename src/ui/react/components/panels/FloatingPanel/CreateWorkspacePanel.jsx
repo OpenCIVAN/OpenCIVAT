@@ -193,7 +193,7 @@ export function CreateWorkspacePanel({
             isOpen={isOpen}
             onClose={onClose}
             title="Create New Workspace"
-            icon="grid_3x3"
+            icon="grid3x3"
             severity="info"
             size="md"
             footer={footer}

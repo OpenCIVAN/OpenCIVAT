@@ -28,18 +28,14 @@ export const ICON_REGISTRY = {
   arrowLeftRight: "swap_horiz",
   skipBack: "skip_previous",
   skipForward: "skip_next",
-  "arrow-up-right": "north_east",
   arrowUpRight: "north_east",
-  "arrow-up-left": "north_west",
   arrowUpLeft: "north_west",
-  "arrow-down-right": "south_east",
   arrowDownRight: "south_east",
-  "arrow-down-left": "south_west",
   arrowDownLeft: "south_west",
-  "corner-up-left": "north_west",
-  "corner-up-right": "north_east",
-  "corner-down-left": "south_west",
-  "corner-down-right": "south_east",
+  cornerUpLeft: "north_west",
+  cornerUpRight: "north_east",
+  cornerDownLeft: "south_west",
+  cornerDownRight: "south_east",
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ACTIONS
@@ -53,19 +49,15 @@ export const ICON_REGISTRY = {
   check: "check",
   done: "done",
   edit: "edit",
-  edit2: "edit",
   delete: "delete",
   trash: "delete",
-  trash2: "delete",
   deletePermanent: "delete_forever",
   save: "save",
   copy: "content_copy",
   paste: "content_paste",
   cut: "content_cut",
   undo: "undo",
-  undo2: "undo",
   redo: "redo",
-  redo2: "redo",
   refresh: "refresh",
   refreshCw: "sync", // Clockwise refresh/sync
   rotateCcw: "rotate_left",
@@ -73,17 +65,18 @@ export const ICON_REGISTRY = {
   restore: "history",
   search: "search",
   filter: "filter_alt",
-  filterAlt: "filter_alt",
   filterList: "filter_list",
   sort: "sort",
+  sync: "sync",
   cancel: "cancel",
+  rightClick: "right_click",
 
   // ═══════════════════════════════════════════════════════════════════════════
   // VIEW & DISPLAY
   // ═══════════════════════════════════════════════════════════════════════════
   eye: "visibility",
   eyeOff: "visibility_off",
-  preview: "visibility",
+  preview: "preview",
   zoomIn: "zoom_in",
   zoomOut: "zoom_out",
   fitView: "fit_screen",
@@ -91,9 +84,7 @@ export const ICON_REGISTRY = {
   fullscreen: "fullscreen",
   fullscreenExit: "fullscreen_exit",
   maximize: "open_in_full",
-  maximize2: "open_in_full",
   minimize: "close_fullscreen",
-  minimize2: "close_fullscreen",
   expand: "open_in_full",
   collapse: "close_fullscreen",
   canvasSize: "photo_size_select_small",
@@ -102,7 +93,7 @@ export const ICON_REGISTRY = {
   // ═══════════════════════════════════════════════════════════════════════════
   // 3D & SPATIAL
   // ═══════════════════════════════════════════════════════════════════════════
-  box: "deployed_code",
+  box: "square",
   cube: "deployed_code",
   rotate3d: "rotation_3d",
   pan: "pan_tool",
@@ -116,8 +107,8 @@ export const ICON_REGISTRY = {
   // VR & IMMERSIVE
   // ═══════════════════════════════════════════════════════════════════════════
   vr: "view_in_ar",
-  vrHeadset: "head_mounted_device", // VR panorama headset view
-  glasses: "vrpano", // VR glasses - using vrpano
+  vrPano: "vrpano", // VR panorama view
+  vrHeadset: "head_mounted_device", // VR headset view
   spatialAudio: "spatial_audio",
   gesture: "gesture",
   controller: "sports_esports",
@@ -138,8 +129,8 @@ export const ICON_REGISTRY = {
   palette: "palette",
   colorize: "colorize",
   sliders: "tune",
+  tune: "tune",
   settings: "settings",
-  settings2: "settings",
   wrench: "build",
   tools: "build",
   handyman: "handyman",
@@ -220,7 +211,6 @@ export const ICON_REGISTRY = {
   moreVertical: "more_vert",
   grid: "grid_view",
   grid3x3: "grid_3x3",
-  grid_3x3: "grid_3x3", // Alias with underscore
   layoutGrid: "view_module",
   layoutList: "view_list",
   aspectRatio: "aspect_ratio",
@@ -264,10 +254,8 @@ export const ICON_REGISTRY = {
   analytics: "analytics",
   chart: "bar_chart",
   barChart: "bar_chart",
-  barChart3: "bar_chart",
   graph: "show_chart",
   scatterChart: "scatter_plot",
-  "scatter-chart": "scatter_plot",
   activity: "monitoring",
   trend: "trending_up",
   trendUp: "trending_up",
@@ -285,9 +273,9 @@ export const ICON_REGISTRY = {
   flask: "science",
   thermometer: "thermostat",
   axis3d: "3d_rotation",
-  "3d": "3d_rotation",
+  "3d": "3d",
+  "2d": "2d",
   presentation: "slideshow",
-  water_drop: "water_drop",
   waterDrop: "water_drop",
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -338,17 +326,16 @@ export const ICON_REGISTRY = {
   bookmarkBorder: "bookmark_border",
   star: "star",
   starOutline: "star_border",
-  starBorder: "star_border",
-  pin: "push_pin",
-  pinOff: "push_pin",
-  tag: "label",
+  pin: "keep",
+  pinOff: "keep_off",
+  tag: "sell", //"label",
   label: "label",
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LINKS & EXTERNAL
   // ═══════════════════════════════════════════════════════════════════════════
   link: "link",
-  link2: "add_link",
+  addLink: "add_link",
   linkOff: "link_off",
   externalLink: "open_in_new",
   doorOpen: "meeting_room",
@@ -381,9 +368,7 @@ export const ICON_REGISTRY = {
   // ═══════════════════════════════════════════════════════════════════════════
   sun: "light_mode",
   moon: "dark_mode",
-  toggle_on: "toggle_on",
   toggleOn: "toggle_on",
-  toggle_off: "toggle_off",
   toggleOff: "toggle_off",
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -391,7 +376,7 @@ export const ICON_REGISTRY = {
   // ═══════════════════════════════════════════════════════════════════════════
   scrollText: "article", // For logs tab
   article: "article",
-  type: "text_fields", // Text/typography
+  type: "text_fields_alt", // Text/typography
   stickyNote: "sticky_note_2",
   note: "note",
   notes: "notes",
@@ -406,7 +391,6 @@ export const ICON_REGISTRY = {
   building2: "apartment",
   merge: "merge",
   mousePointer: "mouse",
-  mousePointer2: "mouse",
   atSign: "alternate_email",
   flipHorizontal: "flip",
   transform: "transform",
@@ -414,7 +398,8 @@ export const ICON_REGISTRY = {
   // ═══════════════════════════════════════════════════════════════════════════
   // FALLBACK
   // ═══════════════════════════════════════════════════════════════════════════
-  default: "help_outline",
+  //default: "help_outline", // Fallback icon for unknown semantic names
+  default: "frame_bug", // More distinct fallback to catch icon problems in development
 };
 
 // =============================================================================

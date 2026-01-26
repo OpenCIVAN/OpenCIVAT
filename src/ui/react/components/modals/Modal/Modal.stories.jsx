@@ -239,7 +239,7 @@ export const DangerSeverity = {
     render: () => (
         <InteractiveModal
             title="Delete Item?"
-            icon="trash2"
+            icon="trash"
             severity="danger"
             footer={
                 <>

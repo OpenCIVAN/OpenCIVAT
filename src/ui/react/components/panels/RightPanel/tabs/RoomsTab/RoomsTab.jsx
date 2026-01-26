@@ -133,7 +133,7 @@ export function RoomsTab({ workspaceId }) {
                             </span>
                         </div>
                         <div className="location-status__detail location-status__detail--subtle">
-                            <Icon name="grid_3x3" size={12} />
+                            <Icon name="grid3x3" size={12} />
                             <span className="location-status__label">Workspace</span>
                             <span className="location-status__value">
                                 {currentWorkspace?.name || 'Default'}

@@ -13,13 +13,13 @@ import { useLayoutModeToggle, LAYOUT_MODES, LAYOUT_MODE_INFO } from './LayoutMod
 const MODE_OPTIONS = [
     {
         value: LAYOUT_MODES.NORMAL,
-        icon: 'grid_3x3',
+        icon: 'grid3x3',
         label: 'Normal - Standard grid layout',
         accent: 'var(--color-accent-blue)',
     },
     {
         value: LAYOUT_MODES.ISOLATION,
-        icon: 'maximize2',
+        icon: 'maximize',
         label: 'Isolation - Focus on single cell',
         accent: 'var(--color-accent-purple)',
     },

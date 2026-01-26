@@ -252,7 +252,7 @@ export function ViewsPanelContent({ workspaceId }) {
     const viewStatusSections = useMemo(() => [
         {
             id: 'navigator',
-            icon: 'grid_3x3',
+            icon: 'grid3x3',
             label: 'Canvas Navigator',
             color: '#c084fc', // purple
             content: (
@@ -315,7 +315,7 @@ export function ViewsPanelContent({ workspaceId }) {
         },
         {
             id: 'deleted',
-            icon: 'trash2',
+            icon: 'trash',
             label: 'Recently Deleted',
             color: '#f87171', // red
             itemCount: recentlyDeletedViews.length,

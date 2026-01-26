@@ -39,7 +39,7 @@ export function OverlayPanelHeader({
                 {/* Pop-out button (always visible if handler provided) */}
                 {onPopOut && (
                     <IconButton
-                        icon="open_in_new"
+                        icon="externalLink"
                         size="sm"
                         variant="ghost"
                         title="Undock panel"

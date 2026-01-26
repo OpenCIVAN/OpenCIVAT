@@ -214,7 +214,7 @@ export function FilesPanelContent({
                 <ToggleGroup
                     options={[
                         { value: 'list', icon: 'list' },
-                        { value: 'grid', icon: 'grid_3x3' },
+                        { value: 'grid', icon: 'grid3x3' },
                     ]}
                     value={viewMode}
                     onChange={setViewMode}

@@ -81,7 +81,7 @@ export function FloatingResizePopover({
 
             {/* Size display */}
             <div className="floating-resize-popover__size-display">
-                <Icon name="maximize2" size={12} />
+                <Icon name="maximize" size={12} />
                 <span>{colSpan}×{rowSpan}</span>
             </div>
 

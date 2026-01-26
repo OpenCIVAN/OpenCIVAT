@@ -30,7 +30,7 @@ export function TimeSegmentHeader({
       type="button"
     >
       <Icon
-        name={isExpanded ? 'expand_more' : 'chevron_right'}
+        name={isExpanded ? 'chevronDown' : 'chevronRight'}
         size={12}
         className="time-segment-header__chevron"
       />

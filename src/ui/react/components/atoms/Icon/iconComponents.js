@@ -36,7 +36,7 @@ export const ICON_SIZES = {
  */
 function createIconComponent(iconName) {
   const symbolName = hasIcon(iconName) ? getSymbolName(iconName) : iconName;
-  const path = ICON_PATHS[symbolName] || ICON_PATHS.help_outline;
+  const path = ICON_PATHS[symbolName] || ICON_PATHS.frame_bug; //ICON_PATHS.help_outline;
 
   const IconComponent = memo(function IconComponent({
     size = "sm",
@@ -158,7 +158,6 @@ export const IconLayers = createIconComponent("layers");
 // VR & Immersive
 export const IconVR = createIconComponent("vr");
 export const IconVRHeadset = createIconComponent("vrHeadset");
-export const IconGlasses = createIconComponent("glasses");
 export const IconSpatialAudio = createIconComponent("spatialAudio");
 export const IconGesture = createIconComponent("gesture");
 export const IconController = createIconComponent("controller");

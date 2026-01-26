@@ -105,7 +105,7 @@ const TemplateCard = memo(function TemplateCard({
                         onClick={() => onDelete(template)}
                         title="Delete template"
                     >
-                        <Icon name="trash2" size={14} />
+                        <Icon name="trash" size={14} />
                     </button>
                 </div>
             )}

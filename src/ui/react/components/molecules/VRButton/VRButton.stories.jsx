@@ -99,7 +99,7 @@ export const Primary = {
 
 export const Danger = {
     args: {
-        icon: 'trash2',
+        icon: 'trash',
         label: 'Delete',
         variant: 'danger',
     },

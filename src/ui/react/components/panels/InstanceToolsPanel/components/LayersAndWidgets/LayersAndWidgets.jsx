@@ -129,7 +129,7 @@ const WidgetItem = memo(function WidgetItem({
         onClick={() => onDelete(widget.id)}
         title="Delete"
       >
-        <Icon name="trash2" size={10} />
+        <Icon name="trash" size={10} />
       </button>
     </div>
   );

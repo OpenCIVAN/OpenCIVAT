@@ -27,7 +27,7 @@ function MultiSelectDropdown({ label, options, selected, onChange }) {
         {selectedCount > 0 && !allSelected && (
           <span className="cop-multi-select__badge">{selectedCount}</span>
         )}
-        <Icon name="expand_more" size={12} />
+        <Icon name="chevronDown" size={12} />
       </button>
 
       {isOpen && (

@@ -139,7 +139,7 @@ export const ViewModeToggle = {
                 options={[
                     { value: '2d', icon: 'square', label: '2D View', accent: '#3b82f6' },
                     { value: '3d', icon: 'box', label: '3D View', accent: '#8b5cf6' },
-                    { value: 'vr', icon: 'glasses', label: 'VR View', accent: '#22c55e' },
+                    { value: 'vr', icon: 'vrPano', label: 'VR View', accent: '#22c55e' },
                 ]}
             />
         );

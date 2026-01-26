@@ -75,7 +75,7 @@ export function VRSettings() {
     return (
         <div className="settings-tab__section">
             {/* VR Accessibility */}
-            <SettingsGroup icon="glasses" title="VR Experience">
+            <SettingsGroup icon="vrHeadset" title="VR Experience">
                 <SettingsButton
                     icon="accessibility"
                     label="VR Accessibility"

@@ -22,7 +22,7 @@ const FLOW_DIRECTION_OPTIONS = [
 
 // Tool options
 const TOOL_OPTIONS = [
-    { value: TOOLS.SELECT, icon: 'mousePointer2', tooltip: 'Select', color: 'blue' },
+    { value: TOOLS.SELECT, icon: 'mousePointer', tooltip: 'Select', color: 'blue' },
     { value: TOOLS.PAN, icon: 'hand', tooltip: 'Pan', color: 'teal' },
     { value: TOOLS.MERGE, icon: 'combine', tooltip: 'Merge', color: 'purple' },
 ];
@@ -137,7 +137,7 @@ export const CanvasSubtab = memo(function CanvasSubtab({ logic }) {
             {/* Tools */}
             <div className="canvas-subtab__card" data-color="blue">
                 <div className="canvas-subtab__card-header">
-                    <Icon name="mousePointer2" size={10} />
+                    <Icon name="mousePointer" size={10} />
                     <span>Tools</span>
                 </div>
 

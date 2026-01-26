@@ -109,7 +109,7 @@ const VRDesktopToggle = () => {
                 className={`secondary-bar-toggle ${mode === 'vr' ? 'secondary-bar-toggle--active' : ''}`}
                 onClick={() => setMode('vr')}
             >
-                <Icon name="glasses" size={12} />
+                <Icon name="vrPano" size={12} />
                 <span>VR</span>
             </button>
         </div>

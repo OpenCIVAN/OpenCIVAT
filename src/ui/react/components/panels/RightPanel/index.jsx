@@ -99,7 +99,7 @@ function ActivityBar({
                 title={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
                 aria-label={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
             >
-                {isPanelOpen ? <Icon name="right_panel_close" size={18} /> : <Icon name="chevronLeft" size={18} />}
+                {isPanelOpen ? <Icon name="panelRightClose" size={18} /> : <Icon name="chevronLeft" size={18} />}
             </button>
         </div>
     );

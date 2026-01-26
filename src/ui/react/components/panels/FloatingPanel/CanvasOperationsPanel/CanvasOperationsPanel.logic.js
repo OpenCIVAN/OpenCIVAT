@@ -53,7 +53,7 @@ export const TABS = {
 
 export const TAB_CONFIG = [
   { id: TABS.TRANSACTION, icon: 'layers', label: 'Transaction', badgeKey: 'pendingCount' },
-  { id: TABS.AUDIT, icon: 'schedule', label: 'Audit Log', badgeKey: null },
+  { id: TABS.AUDIT, icon: 'clock', label: 'Audit Log', badgeKey: null },
   { id: TABS.USERS, icon: 'group', label: 'Users', badgeKey: 'onlineCount' },
   { id: TABS.SAVEPOINTS, icon: 'save', label: 'Save Points', badgeKey: null },
 ];

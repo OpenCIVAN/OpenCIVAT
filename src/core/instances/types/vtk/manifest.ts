@@ -51,7 +51,7 @@ const vtiCapability: FileTypeCapability = {
   extension: "vti",
   mimeType: "application/vnd.vtk.imagedata+xml",
   displayName: "VTK Image Data (XML)",
-  icon: "grid_3x3",
+  icon: "grid3x3",
   color: "#60a5fa", // Blue for image data
   priority: 10,
   magicBytes: "3c3f786d6c", // <?xml

@@ -65,7 +65,7 @@ export const VRInteractionOverlay = memo(function VRInteractionOverlay() {
             {selection?.type === 'resize' && (
                 <div className="vr-interaction-overlay__content">
                     <div className="vr-interaction-overlay__icon">
-                        <Icon name="maximize2" size={20} />
+                        <Icon name="maximize" size={20} />
                     </div>
                     <div className="vr-interaction-overlay__title">
                         Resizing ({selection.data?.edge})

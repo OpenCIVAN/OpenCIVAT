@@ -268,7 +268,7 @@ export const ViewExpandedPanel = memo(function ViewExpandedPanel({
             {/* Size Picker Section */}
             <div className="view-expanded__section">
                 <div className="view-expanded__section-header">
-                    <Icon name="maximize2" size={12} />
+                    <Icon name="maximize" size={12} />
                     <span>Canvas Size</span>
                     <button
                         className="view-expanded__size-current"
@@ -337,7 +337,7 @@ export const ViewExpandedPanel = memo(function ViewExpandedPanel({
                 <ActionButton icon="share" label="Share" color="blue" onClick={onShare} />
                 <div className="view-expanded__actions-divider" />
                 <ActionButton icon="x" label="Close" color="gray" onClick={onClose} />
-                <ActionButton icon="trash2" label="Delete" color="danger" variant="danger" onClick={onDelete} />
+                <ActionButton icon="trash" label="Delete" color="danger" variant="danger" onClick={onDelete} />
             </div>
         </div>
     );

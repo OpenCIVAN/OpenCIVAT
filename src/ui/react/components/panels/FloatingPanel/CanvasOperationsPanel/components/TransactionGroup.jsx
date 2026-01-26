@@ -39,7 +39,7 @@ export function TransactionGroup({
         type="button"
       >
         <Icon
-          name={expanded ? 'expand_more' : 'chevron_right'}
+          name={expanded ? 'chevronDown' : 'chevronRight'}
           size={14}
           className="transaction-group__chevron"
         />

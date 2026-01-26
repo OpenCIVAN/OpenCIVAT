@@ -294,7 +294,7 @@ export function ViewSettingsModal({
                         onClick={onSaveState}
                     />
                     <QuickToggle
-                        icon="refreshCw"
+                        icon="sync"
                         label="Load State"
                         onClick={onLoadState}
                     />
@@ -415,7 +415,7 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Canvas Size */}
-                    <ModalSection icon="maximize2" title="Canvas Size">
+                    <ModalSection icon="maximize" title="Canvas Size">
                         <div className="view-settings-modal__size-grid">
                             {[1, 2, 3].map(row =>
                                 [1, 2, 3].map(col => (
@@ -655,7 +655,7 @@ export function ViewSettingsModal({
                     <ModalSection icon="bolt" title="Advanced" badge="Stub">
                         <div className="view-settings-modal__advanced">
                             <div className="view-settings-modal__advanced-row">
-                                <Icon name="mousePointer2" size={12} />
+                                <Icon name="mousePointer" size={12} />
                                 <span>Cursor Style</span>
                                 <select disabled>
                                     <option>Crosshair</option>
@@ -679,9 +679,9 @@ export function ViewSettingsModal({
                     </ModalSection>
 
                     {/* Danger Zone */}
-                    <ModalSection icon="trash2" title="Danger Zone">
+                    <ModalSection icon="trash" title="Danger Zone">
                         <LabeledButton
-                            icon="trash2"
+                            icon="trash"
                             label="Delete View Permanently"
                             onClick={onTrash}
                             variant="primary"

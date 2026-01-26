@@ -260,7 +260,7 @@ const LinkPropertyPopover = memo(function LinkPropertyPopover({
                 {isLinked ? (
                     <div className="link-property-popover__content">
                         <div className="link-property-popover__mode">
-                            <Icon name={stats.mode === 'sync' ? 'refreshCw' : stats.mode === 'follow' ? 'arrowLeft' : 'arrowRight'} size={14} />
+                            <Icon name={stats.mode === 'sync' ? 'sync' : stats.mode === 'follow' ? 'arrowLeft' : 'arrowRight'} size={14} />
                             <span>
                                 {stats.mode === 'sync' && 'Two-way sync'}
                                 {stats.mode === 'follow' && 'Following'}

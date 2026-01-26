@@ -62,7 +62,7 @@ const LinkGroupCard = memo(function LinkGroupCard({
                         onExpandGroup(group);
                     }}
                 >
-                    <Icon name="maximize2" size={12} />
+                    <Icon name="maximize" size={12} />
                 </button>
             )}
         </div>

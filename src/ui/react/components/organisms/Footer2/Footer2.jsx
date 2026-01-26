@@ -93,7 +93,7 @@ const FocusSubsetContent = memo(function FocusSubsetContent({
                 <Button
                     variant={isFocused ? 'primary' : 'ghost'}
                     size="sm"
-                    icon="maximize2"
+                    icon="maximize"
                     onClick={onToggleFocus}
                     aria-pressed={isFocused}
                 />
@@ -478,7 +478,7 @@ const VRContent = memo(function VRContent({ isVRAvailable, isInVR, onToggleVR })
             <Button
                 variant={isInVR ? 'primary' : 'ghost'}
                 size="sm"
-                icon="glasses"
+                icon="vrHeadset"
                 onClick={onToggleVR}
                 className="footer2__vr-button"
                 aria-label={isInVR ? 'Exit VR' : 'Enter VR'}

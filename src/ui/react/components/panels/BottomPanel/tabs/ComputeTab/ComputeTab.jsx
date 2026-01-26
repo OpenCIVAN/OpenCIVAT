@@ -25,7 +25,7 @@ const JOB_TYPES = {
 const STATUS_CONFIG = {
     pending: { icon: "clock", color: "#FFA726", label: "Pending" },
     running: { icon: "loader", color: "#2196F3", label: "Running", animate: true },
-    completed: { icon: "check_circle", color: "#4CAF50", label: "Completed" },
+    completed: { icon: "success", color: "#4CAF50", label: "Completed" },
     failed: { icon: "cancel", color: "#f44336", label: "Failed" },
     paused: { icon: "pause", color: "#9E9E9E", label: "Paused" },
 };

@@ -104,7 +104,7 @@ const FullCanvasHeader = memo(function FullCanvasHeader({
                 <Button
                     variant="ghost"
                     size="sm"
-                    icon="maximize2"
+                    icon="maximize"
                     title="Fullscreen"
                     onClick={onFullscreen}
                 />

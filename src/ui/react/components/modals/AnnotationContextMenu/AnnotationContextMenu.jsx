@@ -165,7 +165,7 @@ export function AnnotationContextMenu({
                     className="annotation-context-menu__item annotation-context-menu__item--danger"
                     onClick={() => handleAction(onDelete)}
                 >
-                    <Icon name="trash2" size={14} />
+                    <Icon name="trash" size={14} />
                     <span>Delete</span>
                 </button>
             </div>

@@ -251,7 +251,7 @@ function GearOnlyDropdown({
                         <VRButton instanceId={instanceId} size="sm" showLabel />
                     </div>
                     <MenuItem
-                        icon="maximize2"
+                        icon="maximize"
                         label="Maximize"
                         onClick={(e) => handleItemClick(e, onMaximize)}
                     />
@@ -288,7 +288,7 @@ function VRModeIndicator({ onExit }) {
     return (
         <div className="vr-mode-indicator">
             <span className="vr-mode-indicator__icon">
-                <Icon name="glasses" size={12} />
+                <Icon name="vrHeadset" size={12} />
             </span>
             <span className="vr-mode-indicator__text">VR Mode</span>
             <button

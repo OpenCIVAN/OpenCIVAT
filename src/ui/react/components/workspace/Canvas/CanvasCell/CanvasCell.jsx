@@ -135,7 +135,7 @@ const CONTENT_OPTIONS = [
     { type: 'view', icon: 'cube', label: 'Add View', color: 'blue' },
     { type: 'notes', icon: 'note_add', label: 'Add Notes', color: 'amber' },
     { type: 'image', icon: 'image', label: 'Add Image', color: 'teal' },
-    { type: 'grid', icon: 'grid_view', label: 'Add Grid', color: 'purple' },
+    { type: 'grid', icon: 'grid', label: 'Add Grid', color: 'purple' },
 ];
 
 // =============================================================================

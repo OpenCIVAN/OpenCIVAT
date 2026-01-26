@@ -86,7 +86,7 @@ export const FloatingActionBar = memo(function FloatingActionBar({
                 onClick={onRemove}
                 title="Remove selected cells/views"
             >
-                <Icon name="trash2" size={14} />
+                <Icon name="trash" size={14} />
             </button>
         </div>
     );

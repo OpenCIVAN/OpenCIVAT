@@ -110,7 +110,7 @@ const TOOL_ICON_MAP = {
   // =========================================================================
   grid: getIconComponent("grid"),
   "grid-off": SlashedGrid,
-  "grid-3x3": getIconComponent("grid_3x3"),
+  "grid-3x3": getIconComponent("grid3x3"),
   layout: getIconComponent("layout"),
   "layout-grid": getIconComponent("layoutGrid"),
 

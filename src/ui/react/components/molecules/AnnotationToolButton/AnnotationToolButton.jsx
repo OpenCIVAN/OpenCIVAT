@@ -13,7 +13,7 @@ import './AnnotationToolButton.scss';
  */
 const TOOL_CONFIG = {
     // Selection tools
-    select: { icon: 'mousePointer2', label: 'Select', color: '#60a5fa' },
+    select: { icon: 'mousePointer', label: 'Select', color: '#60a5fa' },
 
     // Point tools
     point: { icon: 'mapPin', label: 'Point', color: '#f472b6' },

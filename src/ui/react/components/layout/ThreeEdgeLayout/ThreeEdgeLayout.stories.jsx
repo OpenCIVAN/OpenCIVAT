@@ -245,7 +245,7 @@ const MockSecondaryBottomBar = ({ leftPanelWidth, rightPanelWidth, leftPanelOpen
                             gap: "4px",
                         }}
                     >
-                        <Icon name="glasses" size={10} />
+                        <Icon name="vrPano" size={10} />
                         VR
                     </button>
                 </div>

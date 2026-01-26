@@ -55,7 +55,8 @@ const Icon = memo(function Icon({
         const iconPath = getIconPath(name);
         if (!iconPath) {
             console.warn(`[Icon] Unknown icon: "${name}"`);
-            return ICON_PATHS.help_outline;
+            //return ICON_PATHS.help_outline;
+            return ICON_PATHS.frame_bug;
         }
         return iconPath;
     }, [name]);

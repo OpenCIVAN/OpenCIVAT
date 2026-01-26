@@ -91,7 +91,7 @@ const FLOW_OPTIONS = [
 
 const EDIT_TOOLS = [
     { id: 'select', icon: 'select', label: 'Select', accent: 'var(--color-accent-blue)' },
-    { id: 'pan', icon: 'pan_tool', label: 'Pan', accent: 'var(--color-accent-teal)' },
+    { id: 'pan', icon: 'pan', label: 'Pan', accent: 'var(--color-accent-teal)' },
     { id: 'merge', icon: 'merge', label: 'Merge Cells', accent: 'var(--color-accent-purple)' },
 ];
 

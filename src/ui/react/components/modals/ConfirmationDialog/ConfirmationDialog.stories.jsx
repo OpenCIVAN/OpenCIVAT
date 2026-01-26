@@ -82,7 +82,7 @@ const MockConfirmationDialog = ({
                     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                 }}>
                     <div style={{ color: severityColors[severity] }}>
-                        <Icon name={icon || (severity === 'danger' ? 'trash2' : severity === 'warning' ? 'warning' : 'info')} size={20} />
+                        <Icon name={icon || (severity === 'danger' ? 'trash' : severity === 'warning' ? 'warning' : 'info')} size={20} />
                     </div>
                     <h2 style={{
                         flex: 1,

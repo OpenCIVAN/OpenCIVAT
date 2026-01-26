@@ -19,7 +19,7 @@ const MODE_OPTIONS = [
     },
     {
         value: VIEW_MODES.VR,
-        icon: 'glasses',
+        icon: 'vrPano',
         label: 'VR - Immersive 3D experience',
         accent: 'var(--color-accent-purple)',
     },

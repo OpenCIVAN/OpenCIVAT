@@ -54,7 +54,7 @@ const COMMAND_CATEGORIES = {
     },
     vr: {
         label: 'VR Controls',
-        icon: 'glasses',
+        icon: 'vrHeadset',
         description: 'Virtual reality mode',
     },
     'voice-room': {

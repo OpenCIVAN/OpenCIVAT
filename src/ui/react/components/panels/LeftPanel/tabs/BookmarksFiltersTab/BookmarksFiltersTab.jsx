@@ -349,7 +349,7 @@ export function BookmarksFiltersPanelContent({
                             Export
                         </button>
                         <button onClick={handleBatchDelete} className="batch-action batch-action--danger">
-                            <Icon name="trash2" size={12} />
+                            <Icon name="trash" size={12} />
                             Delete
                         </button>
                         <button onClick={() => { setBatchMode(false); setSelectedItems([]); }} className="batch-action">

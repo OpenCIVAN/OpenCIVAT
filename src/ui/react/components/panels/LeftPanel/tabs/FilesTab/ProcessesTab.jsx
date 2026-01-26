@@ -13,7 +13,7 @@ function ProcessStatusIcon({ status }) {
         case 'running':
             return <Icon name="loader" size={14} className="spin icon-amber" />;
         case 'completed':
-            return <Icon name="check_circle" size={14} className="icon-green" />;
+            return <Icon name="success" size={14} className="icon-green" />;
         case 'failed':
             return <Icon name="cancel" size={14} className="icon-red" />;
         case 'queued':

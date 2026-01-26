@@ -40,7 +40,7 @@ const SPAWN_SIZES = [
 
 // Per spec: Single, Side-by-Side, Stacked, 2×2 Grid, 3-up, 1+2, Custom
 const QUICK_LAYOUTS = [
-    { id: 'single', label: 'Single', icon: 'open_in_full', rows: 1, cols: 1 },
+    { id: 'single', label: 'Single', icon: 'expand', rows: 1, cols: 1 },
     { id: 'side-by-side', label: 'Side by Side', icon: 'view_column', rows: 1, cols: 2 },
     { id: 'stacked', label: 'Stacked', icon: 'table_rows', rows: 2, cols: 1 },
     { id: '2x2', label: '2×2 Grid', icon: 'grid_3X3', rows: 2, cols: 2 },
@@ -91,7 +91,7 @@ function LayoutModeToggle({ mode, onChange }) {
                 onClick={() => onChange?.(LAYOUT_MODES.GRID)}
                 title="Grid - Manual placement, drop views where you want"
             >
-                <Icon name="grid_3x3" size={14} />
+                <Icon name="grid3x3" size={14} />
                 <div className="layout-tab__mode-content">
                     <span className="layout-tab__mode-label">Grid</span>
                     <span className="layout-tab__mode-desc">Manual placement</span>
@@ -154,7 +154,7 @@ function SpawnSizePicker({ value, onChange, customSize, onCustomChange }) {
                 onClick={() => setShowCustom(!showCustom)}
                 title="Custom size"
             >
-                <Icon name="settings2" size={16} />
+                <Icon name="settings" size={16} />
                 <span>Custom</span>
             </button>
 
@@ -263,7 +263,7 @@ function CanvasTools({ tool, setTool }) {
                 title="Select - Click to select views, drag to move"
                 data-color="blue"
             >
-                <Icon name="mousePointer2" size={14} />
+                <Icon name="mousePointer" size={14} />
                 <span>Select</span>
             </button>
             <button
@@ -290,7 +290,7 @@ function CanvasTools({ tool, setTool }) {
                 title="Edit - Enable resize handles, show drop zones"
                 data-color="amber"
             >
-                <Icon name="edit2" size={14} />
+                <Icon name="edit" size={14} />
                 <span>Edit</span>
             </button>
         </div>
@@ -420,7 +420,7 @@ function LayoutTemplates({ templates, onApply, onSave, onDelete, onExport, onImp
                                         onClick={() => onDelete?.(template.id)}
                                         title="Delete template"
                                     >
-                                        <Icon name="trash2" size={10} />
+                                        <Icon name="trash" size={10} />
                                     </button>
                                 </div>
                             </div>
@@ -727,7 +727,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
         },
         {
             id: 'canvas-size',
-            icon: 'grid_3x3',
+            icon: 'grid3x3',
             label: 'Canvas Size',
             color: '#60a5fa', // blue
             content: (
@@ -783,7 +783,7 @@ export const LayoutPanelContent = memo(function LayoutPanelContent({
         },
         {
             id: 'tools',
-            icon: 'mousePointer2',
+            icon: 'mousePointer',
             label: 'Canvas Tools',
             color: '#7dd3fc', // teal
             content: <CanvasTools tool={tool} setTool={setTool} />,

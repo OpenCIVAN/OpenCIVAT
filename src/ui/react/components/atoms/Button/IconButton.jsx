@@ -41,7 +41,7 @@
  * @example
  * // Toggle button with active state
  * <IconButton
- *   icon="grid_3x3"
+ *   icon="grid3x3"
  *   label="Grid view"
  *   active={viewMode === 'grid'}
  *   onClick={() => setViewMode('grid')}

@@ -133,7 +133,7 @@ const ViewGroupMultiSelectBar = memo(function ViewGroupMultiSelectBar({
                     onClick={onDelete}
                     className="layout-tab-v2__multiselect-action layout-tab-v2__multiselect-action--delete"
                 >
-                    <Icon name="trash2" size={13} />
+                    <Icon name="trash" size={13} />
                 </button>
             </div>
             <button
