@@ -6,9 +6,11 @@
  * Uses DropdownPortal for simpler portal rendering.
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
+import { ViewHubFlyout } from '@UI/react/components/organisms/ViewContextBlock';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 
 import './ActiveViewSelector.scss';
 
@@ -50,8 +52,13 @@ const getViewColor = (viewId, index = 0) => {
  * @param {Object} [props.activeView] - Currently active view { id, name, type, position }
  * @param {Array} [props.onCanvasViews] - Views currently placed on canvas
  * @param {Array} [props.availableViews] - Views available but not placed
- * @param {Function} [props.onSelect] - Callback when a view is selected (viewId)
+ * @param {Function} [props.onSelect] - Callback when a view is selected (viewId or null to clear)
  * @param {Function} [props.onPlace] - Callback to place an available view
+ * @param {Function} [props.onRemove] - Callback to remove a view from canvas
+ * @param {Function} [props.onCreate] - Callback to create a new view
+ * @param {Function} [props.onAction] - Optional action handler (action, view)
+ * @param {boolean} [props.isSubset] - Whether selector is in subset mode
+ * @param {boolean} [props.useViewHub] - Use full ViewHubFlyout UI
  * @param {string} [props.className] - Additional CSS class
  */
 export function ActiveViewSelector({
@@ -60,6 +67,11 @@ export function ActiveViewSelector({
     availableViews = [],
     onSelect,
     onPlace,
+    onRemove,
+    onCreate,
+    onAction,
+    isSubset = false,
+    useViewHub = true,
     className = '',
 }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -67,19 +79,35 @@ export function ActiveViewSelector({
     const triggerRef = useRef(null);
 
     // Get color for active view
-    const activeViewColor = activeView ? getViewColor(activeView.id) : VIEW_COLORS[0];
+    const activeViewColor = activeView?.color || (activeView ? getViewColor(activeView.id) : VIEW_COLORS[0]);
     const hasActiveView = !!activeView;
     const displayName = activeView?.name || 'No active view';
 
-    // Filter views by search query
+    // Filter views by search query (fallback list)
     const filterViews = useCallback((views) => {
         if (!searchQuery.trim()) return views;
         const query = searchQuery.toLowerCase();
-        return views.filter((v) => v.name.toLowerCase().includes(query));
+        return views.filter((v) => (v?.name || '').toLowerCase().includes(query));
     }, [searchQuery]);
 
-    const filteredOnCanvas = filterViews(onCanvasViews);
-    const filteredAvailable = filterViews(availableViews);
+    const decoratedOnCanvasViews = useMemo(
+        () => onCanvasViews.map((view, index) => ({
+            ...view,
+            color: view?.color || getViewColor(view?.id, index),
+        })),
+        [onCanvasViews]
+    );
+
+    const decoratedAvailableViews = useMemo(
+        () => availableViews.map((view, index) => ({
+            ...view,
+            color: view?.color || getViewColor(view?.id, index + onCanvasViews.length),
+        })),
+        [availableViews, onCanvasViews.length]
+    );
+
+    const filteredOnCanvas = filterViews(decoratedOnCanvasViews);
+    const filteredAvailable = filterViews(decoratedAvailableViews);
 
     // Toggle dropdown
     const handleToggle = useCallback(() => {
@@ -97,15 +125,35 @@ export function ActiveViewSelector({
 
     // Handle view selection
     const handleSelect = useCallback((view) => {
-        onSelect?.(view.id);
+        onSelect?.(view?.id);
         handleClose();
     }, [onSelect, handleClose]);
 
-    // Handle placing an available view
+    const handleClearSelection = useCallback(() => {
+        onSelect?.(null);
+        handleClose();
+    }, [onSelect, handleClose]);
+
+    // Handle placing an available view (fallback list)
     const handlePlace = useCallback((view) => {
         onPlace?.(view.id);
         handleClose();
     }, [onPlace, handleClose]);
+
+    const handleAction = useCallback((action, view) => {
+        if (onAction) {
+            onAction(action, view);
+            return;
+        }
+
+        if (action === 'place') {
+            onPlace?.(view?.id);
+        } else if (action === 'remove') {
+            onRemove?.(view?.id);
+        } else if (action === 'create') {
+            onCreate?.();
+        }
+    }, [onAction, onPlace, onRemove, onCreate]);
 
     return (
         <div className={`active-view-selector ${className}`}>
@@ -144,101 +192,137 @@ export function ActiveViewSelector({
                 position="bottom"
                 className="active-view-selector__dropdown"
             >
-                <div className="active-view-selector__content-wrapper">
-                    {/* Search input - fixed at top */}
-                    {(onCanvasViews.length > 3 || availableViews.length > 0) && (
-                        <div className="active-view-selector__search">
-                            <input
-                                type="text"
-                                placeholder="Search views..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="active-view-selector__search-input"
-                                autoFocus
-                            />
-                        </div>
-                    )}
-
-                    {/* Scrollable content area */}
-                    <div className="active-view-selector__content">
-                        {/* On Canvas section */}
-                        {filteredOnCanvas.length > 0 && (
-                            <div className="active-view-selector__section">
-                                <div className="active-view-selector__section-header">
-                                    <Icon name="mapPin" size={12} />
-                                    <span>On Canvas</span>
-                                </div>
-                                {filteredOnCanvas.map((view, index) => {
-                                    const isActive = activeView?.id === view.id;
-                                    const viewColor = getViewColor(view.id, index);
-
-                                    return (
-                                        <button
-                                            key={view.id}
-                                            type="button"
-                                            className={`active-view-selector__item ${isActive ? 'active-view-selector__item--active' : ''}`}
-                                            onClick={() => handleSelect(view)}
-                                            role="option"
-                                            aria-selected={isActive}
-                                            style={{ '--view-color': viewColor }}
-                                        >
-                                            <span
-                                                className="active-view-selector__item-dot"
-                                                style={{ background: viewColor }}
-                                            />
-                                            <span className="active-view-selector__item-name">{view.name}</span>
-                                            {view.position && (
-                                                <span className="active-view-selector__item-position">
-                                                    {view.position.col}, {view.position.row}
-                                                </span>
-                                            )}
-                                            {isActive && <Icon name="check" size={12} className="active-view-selector__item-check" />}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                {useViewHub ? (
+                    <div className="active-view-selector__viewhub-wrapper">
+                        {hasActiveView && (
+                            <button
+                                type="button"
+                                className="active-view-selector__clear-btn"
+                                onClick={handleClearSelection}
+                            >
+                                <Icon name="close" size={12} />
+                                Clear active view
+                            </button>
                         )}
-
-                        {/* Available Views section */}
-                        {filteredAvailable.length > 0 && (
-                            <div className="active-view-selector__section">
-                                <div className="active-view-selector__section-header">
-                                    <Icon name="eye" size={10} />
-                                    <span>Available to Place</span>
-                                </div>
-                                {filteredAvailable.map((view, index) => {
-                                    const viewColor = getViewColor(view.id, index + onCanvasViews.length);
-
-                                    return (
-                                        <button
-                                            key={view.id}
-                                            type="button"
-                                            className="active-view-selector__item active-view-selector__item--available"
-                                            onClick={() => handlePlace(view)}
-                                            role="option"
-                                            aria-selected={false}
-                                            style={{ '--view-color': viewColor }}
-                                        >
-                                            <span
-                                                className="active-view-selector__item-dot"
-                                                style={{ background: viewColor, opacity: 0.6 }}
-                                            />
-                                            <span className="active-view-selector__item-name">{view.name}</span>
-                                            <Icon name="add" size={10} className="active-view-selector__item-add" />
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {/* Empty state */}
-                        {filteredOnCanvas.length === 0 && filteredAvailable.length === 0 && (
-                            <div className="active-view-selector__empty">
-                                {searchQuery ? 'No matching views' : 'No views available'}
-                            </div>
-                        )}
+                        <ViewHubFlyout
+                            views={decoratedOnCanvasViews}
+                            available={isSubset ? [] : decoratedAvailableViews}
+                            activeView={activeView}
+                            isSubset={isSubset}
+                            onSelect={handleSelect}
+                            onAction={handleAction}
+                            onClose={handleClose}
+                        />
                     </div>
-                </div>
+                ) : (
+                    <div className="active-view-selector__content-wrapper">
+                        {/* Search input - fixed at top */}
+                        {(onCanvasViews.length > 3 || availableViews.length > 0) && (
+                            <div className="active-view-selector__search">
+                                <input
+                                    type="text"
+                                    placeholder="Search views..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="active-view-selector__search-input"
+                                    autoFocus
+                                />
+                            </div>
+                        )}
+
+                        {/* Scrollable content area */}
+                        <div className="active-view-selector__content">
+                            {hasActiveView && (
+                                <button
+                                    type="button"
+                                    className="active-view-selector__item active-view-selector__item--clear"
+                                    onClick={handleClearSelection}
+                                    role="option"
+                                    aria-selected={false}
+                                >
+                                    <Icon name="close" size={12} />
+                                    <span className="active-view-selector__item-name">Clear selection</span>
+                                </button>
+                            )}
+                            {/* On Canvas section */}
+                            {filteredOnCanvas.length > 0 && (
+                                <div className="active-view-selector__section">
+                                    <div className="active-view-selector__section-header">
+                                        <Icon name="mapPin" size={12} />
+                                        <span>On Canvas</span>
+                                    </div>
+                                    {filteredOnCanvas.map((view, index) => {
+                                        const isActive = activeView?.id === view.id;
+                                        const viewColor = view?.color || getViewColor(view.id, index);
+
+                                        return (
+                                            <button
+                                                key={view.id}
+                                                type="button"
+                                                className={`active-view-selector__item ${isActive ? 'active-view-selector__item--active' : ''}`}
+                                                onClick={() => handleSelect(view)}
+                                                role="option"
+                                                aria-selected={isActive}
+                                                style={{ '--view-color': viewColor }}
+                                            >
+                                                <span
+                                                    className="active-view-selector__item-dot"
+                                                    style={{ background: viewColor }}
+                                                />
+                                                <span className="active-view-selector__item-name">{view.name}</span>
+                                                {view.position && (
+                                                    <span className="active-view-selector__item-position">
+                                                        {formatGridPosition(view.position.col, view.position.row)}
+                                                    </span>
+                                                )}
+                                                {isActive && <Icon name="check" size={12} className="active-view-selector__item-check" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Available Views section */}
+                            {filteredAvailable.length > 0 && (
+                                <div className="active-view-selector__section">
+                                    <div className="active-view-selector__section-header">
+                                        <Icon name="eye" size={10} />
+                                        <span>Available to Place</span>
+                                    </div>
+                                    {filteredAvailable.map((view, index) => {
+                                        const viewColor = view?.color || getViewColor(view.id, index + onCanvasViews.length);
+
+                                        return (
+                                            <button
+                                                key={view.id}
+                                                type="button"
+                                                className="active-view-selector__item active-view-selector__item--available"
+                                                onClick={() => handlePlace(view)}
+                                                role="option"
+                                                aria-selected={false}
+                                                style={{ '--view-color': viewColor }}
+                                            >
+                                                <span
+                                                    className="active-view-selector__item-dot"
+                                                    style={{ background: viewColor, opacity: 0.6 }}
+                                                />
+                                                <span className="active-view-selector__item-name">{view.name}</span>
+                                                <Icon name="add" size={10} className="active-view-selector__item-add" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Empty state */}
+                            {filteredOnCanvas.length === 0 && filteredAvailable.length === 0 && (
+                                <div className="active-view-selector__empty">
+                                    {searchQuery ? 'No matching views' : 'No views available'}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </DropdownPortal>
         </div>
     );

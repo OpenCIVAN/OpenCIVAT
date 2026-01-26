@@ -78,6 +78,13 @@ export { ThumbnailPreview } from './ThumbnailPreview';
 // HeaderSection - Section with header and content
 export { CollapsibleHeaderSection, DismissibleCard, SectionHeader } from './HeaderSection';
 
+// InstanceToolOptions - Shared option renderer for instance tool menus
+export {
+    ToolOptionItem,
+    CameraGridMenu,
+    ColormapGrid,
+} from './InstanceToolOptions';
+
 // VRButton - VR-optimized button
 export { VRButton } from './VRButton';
 

@@ -11,6 +11,7 @@ import { ViewContextBlock } from '@UI/react/components/organisms';
 import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 import {
     ToolbarZone,
     ToolbarDivider,
@@ -143,7 +144,7 @@ const NavigationContent = memo(function NavigationContent() {
             </div>
 
             <span className="canvas-toolbar__position">
-                {canvasPosition.col},{canvasPosition.row}
+                {formatGridPosition(canvasPosition.col, canvasPosition.row)}
             </span>
         </div>
     );

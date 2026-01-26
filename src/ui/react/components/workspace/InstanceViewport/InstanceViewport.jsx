@@ -24,6 +24,7 @@ import { getViewConfigurationManager, getDatasetManager } from "@Init/appInitial
 import { getFileTypeDisplayInfo } from "@Core/instances/types/instanceTypesInit.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { viewLifecycleService } from "@Services/ViewLifecycleService.js";
+import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
 
 import { useInstanceSize, getConstraintMessage } from './useInstanceSize';
 import { TOOL_GROUPS, GLOBAL_TOOLS, HISTORY_TOOLS, NAV_TOOLS, CORNER_TOOLS, GEAR_DROPDOWN_ITEMS, getTierConfig } from './ToolbarTiers';
@@ -698,8 +699,9 @@ export function InstanceViewport({
         const loadTools = () => {
             try {
                 const toolsList = workspaceManager.getInstanceTools(actualInstanceId);
-                log.debug(`Loaded ${toolsList.length} tools for ${instanceType} instance`);
-                setTools(toolsList);
+                const normalized = normalizeInstanceToolsResult(toolsList);
+                log.debug(`Loaded ${normalized.tools.length} tools for ${instanceType} instance`);
+                setTools(normalized.tools);
 
                 const updatedHeader = workspaceManager.getInstanceHeaderInfo(actualInstanceId);
                 setHeaderInfo(updatedHeader);
@@ -714,7 +716,8 @@ export function InstanceViewport({
             if (event.detail?.instanceId === actualInstanceId) {
                 log.debug(`Tools updated for ${actualInstanceId}, refreshing toolbar`);
                 const updatedTools = workspaceManager.getInstanceTools(actualInstanceId);
-                setTools(updatedTools);
+                const normalized = normalizeInstanceToolsResult(updatedTools);
+                setTools(normalized.tools);
             }
         };
 

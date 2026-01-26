@@ -41,6 +41,34 @@ try {
 
 /** @type { import('@storybook/react-webpack5').Preview } */
 const preview = {
+  globalTypes: {
+    adaptiveMode: {
+      name: "Adaptive Mode",
+      description: "Adaptive mode for VR/desktop sizing",
+      defaultValue: "desktop",
+      toolbar: {
+        icon: "circlehollow",
+        items: [
+          { value: "desktop", title: "Desktop" },
+          { value: "vr", title: "VR" },
+        ],
+        dynamicTitle: true,
+      },
+    },
+    adaptiveDensity: {
+      name: "Density",
+      description: "Adaptive density",
+      defaultValue: "comfortable",
+      toolbar: {
+        icon: "switchalt",
+        items: [
+          { value: "comfortable", title: "Comfortable" },
+          { value: "compact", title: "Compact" },
+        ],
+        dynamicTitle: true,
+      },
+    },
+  },
   parameters: {
     controls: {
       matchers: {
@@ -59,8 +87,13 @@ const preview = {
     layout: "centered",
   },
   decorators: [
-    (Story) => (
-      <AdaptiveProvider initialMode="desktop" initialDensity="comfortable">
+    (Story, context) => (
+      <AdaptiveProvider
+        key={`${context.globals.adaptiveMode}-${context.globals.adaptiveDensity}`}
+        initialMode={context.globals.adaptiveMode}
+        initialDensity={context.globals.adaptiveDensity}
+        autoSyncVR={false}
+      >
         <MockDataProvider workspaceId="storybook-ws">
           <Story />
         </MockDataProvider>

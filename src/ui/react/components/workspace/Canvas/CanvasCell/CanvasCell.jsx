@@ -26,6 +26,7 @@ import {
     hexToRgbString,
     getCellColorByPosition,
 } from '@UI/react/utils/canvasColors.js';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 
 // =============================================================================
 // DROP ZONE CONSTANTS
@@ -197,6 +198,7 @@ export const CanvasCell = memo(function CanvasCell({
 
     // Use position-based color (hex string for CSS)
     const instanceColor = positionColor.hex;
+    const positionLabel = formatGridPosition(col, row);
 
     // Determine which UI elements to show based on render mode
     const uiConfig = useMemo(() => {
@@ -742,7 +744,7 @@ export const CanvasCell = memo(function CanvasCell({
                             e.stopPropagation();
                             onSelect?.(e);
                         }}
-                        aria-label={`Select empty cell at ${row}, ${col}`}
+                        aria-label={`Select empty cell at ${positionLabel || `${row}, ${col}`}`}
                     />
                 </div>
             )}
@@ -760,7 +762,7 @@ export const CanvasCell = memo(function CanvasCell({
             {/* Coordinates badge (only in full mode) */}
             {uiConfig.showCoords && (
                 <div className="canvas-cell__coords">
-                    [{row}, {col}]
+                    {positionLabel || `${row}, ${col}`}
                 </div>
             )}
         </div>
@@ -946,7 +948,7 @@ function EmptyPlaceholder({ row, col, renderMode, inEditMode, onAddClick }) {
 
             {/* Position indicator - bottom right corner */}
             <div className="canvas-cell__position-badge">
-                [{row}, {col}]
+                {formatGridPosition(col, row) || '--'}
             </div>
         </div>
     );

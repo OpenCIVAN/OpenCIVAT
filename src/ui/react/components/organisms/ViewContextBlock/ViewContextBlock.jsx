@@ -22,6 +22,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from '
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { IconButton } from '@UI/react/components/atoms/Button';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 import './ViewContextBlock.scss';
 
 // =============================================================================
@@ -351,7 +352,7 @@ const ViewHubFlyout = memo(function ViewHubFlyout({
                                                 <span>{v.type}</span>
                                                 {v.position && (
                                                     <span className="view-hub-flyout__item-position">
-                                                        {v.position.col},{v.position.row}
+                                                        {formatGridPosition(v.position.col, v.position.row)}
                                                     </span>
                                                 )}
                                             </div>
@@ -511,7 +512,7 @@ const SubsetPickerDropdown = memo(function SubsetPickerDropdown({
                                         <span>{view.type}</span>
                                         {view.position && (
                                             <span className="subset-picker-dropdown__position">
-                                                {view.position.col},{view.position.row}
+                                                {formatGridPosition(view.position.col, view.position.row)}
                                             </span>
                                         )}
                                     </div>
@@ -1300,7 +1301,7 @@ function ViewContextBlock({
                         <div className="view-context-block__normal-info">
                             {activeView?.position && (
                                 <span className="view-context-block__position">
-                                    {activeView.position.col},{activeView.position.row}
+                                    {formatGridPosition(activeView.position.col, activeView.position.row)}
                                 </span>
                             )}
                             <span className="view-context-block__view-count">

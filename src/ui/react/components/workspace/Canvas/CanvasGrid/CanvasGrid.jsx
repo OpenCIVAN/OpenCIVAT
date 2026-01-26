@@ -39,12 +39,7 @@ import './CanvasGrid.scss';
 
 // 8px gap per canvas-theme-explorer-v2 prototype specification
 const GAP = 8; // Gap between cells in pixels
-const PADDING = {
-    top: 8,
-    right: 16,    // Extra for scrollbar
-    bottom: 16,   // Extra for scrollbar
-    left: 8,
-};
+const VIEWPORT_PADDING = { top: 12, left: 12 };
 
 // =============================================================================
 // LOADING STATE COMPONENT
@@ -101,6 +96,7 @@ export function CanvasGrid({
     onLayoutModeChange,
     onFlowDirectionChange,
     onOpenSubsetSelector,
+    showCoordinates = false,
 }) {
     const gridRef = useRef(null);
 
@@ -1484,7 +1480,6 @@ export function CanvasGrid({
                 // This ensures cells always fill the visible container
                 // ============================================
                 // Add padding offset so cells don't touch edges
-                const VIEWPORT_PADDING = { top: 12, left: 12 };
                 const left = VIEWPORT_PADDING.left + viewCol * (cellSize.width + GAP);
                 const top = VIEWPORT_PADDING.top + viewRow * (cellSize.height + GAP);
 
@@ -1877,6 +1872,19 @@ export function CanvasGrid({
                             </div>
                         ) : (
                             renderCells
+                        )}
+
+                        {showCoordinates && isGridMode && !isFocusView && !isSubsetView && measurementsReady && (
+                            <div
+                                className="canvas-grid__grid-overlay"
+                                style={{
+                                    '--grid-cell-width': `${cellSize.width}px`,
+                                    '--grid-cell-height': `${cellSize.height}px`,
+                                    '--grid-gap': `${GAP}px`,
+                                    '--grid-pad-top': `${VIEWPORT_PADDING.top}px`,
+                                    '--grid-pad-left': `${VIEWPORT_PADDING.left}px`,
+                                }}
+                            />
                         )}
 
                         {/* Edge Drop Zones - show at canvas edges during drag (hidden in focus/subset mode) */}

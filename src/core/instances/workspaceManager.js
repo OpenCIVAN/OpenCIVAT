@@ -575,6 +575,11 @@ class WorkspaceManager {
    * Set the active instance
    */
   setActiveInstance(instanceId) {
+    if (instanceId == null) {
+      this.activeInstanceId = null;
+      this._notifyListeners();
+      return;
+    }
     if (!this.instances.has(instanceId)) {
       log.warn(`Cannot set non-existent instance as active: ${instanceId}`);
       return;

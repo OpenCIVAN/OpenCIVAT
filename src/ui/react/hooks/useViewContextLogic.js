@@ -443,7 +443,16 @@ export function useViewContextLogic() {
     (viewOrId) => {
       // Support both view object and view ID
       const viewId = typeof viewOrId === "string" ? viewOrId : viewOrId?.id;
-      if (!viewId) return;
+      if (!viewId) {
+        log.debug("ViewContext: Clear active view");
+        workspaceManager?.setActiveInstance?.(null);
+        window.dispatchEvent(
+          new CustomEvent("cia:active-instance-changed", {
+            detail: { viewId: null, instanceId: null },
+          })
+        );
+        return;
+      }
 
       log.debug("ViewContext: Select view", viewId);
 

@@ -131,12 +131,17 @@
 
 .active-view-selector__dropdown {
   // Styles for the dropdown panel
-  min-width: 220px;
-  max-width: 320px;
-  background: $color-bg-elevated;
+  min-width: 320px;
+  max-width: min(420px, 92vw);
+  max-height: min(640px, 80vh);
+  background: $color-glass-panel;
   border: 1px solid $color-border-default;
-  border-radius: $radius-md;
-  box-shadow: $shadow-lg;
+  border-radius: $radius-lg;
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.5),
+    0 0 1px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   overflow: hidden;
 
   // Smooth entrance animation
@@ -164,6 +169,71 @@
   max-height: 320px;
 }
 
+.active-view-selector__viewhub-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: $spacing-xs;
+
+  // Match dropdown scrollbar style
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $color-glass-medium;
+    border-radius: 3px;
+
+    &:hover {
+      background: $color-glass-strong;
+    }
+  }
+
+  .view-hub-flyout {
+    position: static;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+.active-view-selector__clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  border: 1px solid $color-border-subtle;
+  background: $color-glass-light;
+  color: $color-text-secondary;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    color: $color-text-primary;
+    border-color: $color-border-default;
+    background: $color-glass-medium;
+  }
+
+  svg {
+    color: $color-text-muted;
+  }
+}
+
 // =============================================================================
 // SEARCH (fixed at top)
 // =============================================================================
@@ -172,7 +242,7 @@
   flex-shrink: 0;
   padding: $spacing-sm;
   border-bottom: 1px solid $color-border-subtle;
-  background: $color-bg-elevated;
+  background: $color-glass-light;
 }
 
 .active-view-selector__search-input {
@@ -281,6 +351,17 @@
 
     &:hover {
       opacity: 1;
+    }
+  }
+
+  &--clear {
+    border-bottom: 1px solid $color-border-subtle;
+    margin-bottom: $spacing-xs;
+    padding-top: $spacing-sm;
+    padding-bottom: $spacing-sm;
+
+    svg {
+      color: $color-text-muted;
     }
   }
 }

@@ -9,6 +9,7 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 import './ViewItemContextMenu.scss';
 
 // =============================================================================
@@ -153,7 +154,7 @@ export function ViewItemContextMenu({
                 <MenuItem
                     icon="navigation"
                     label="Go to Location"
-                    shortcut={view?.position ? `[${view.position.row + 1},${view.position.col + 1}]` : null}
+                    shortcut={view?.position ? formatGridPosition(view.position.col, view.position.row) : null}
                     onClick={onNavigate}
                 />
             ) : (

@@ -14,6 +14,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager } from '@Init/appInitializer.js';
 import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
+import { formatGridPosition, parseGridPosition } from '@UI/react/utils/gridPosition.js';
 
 // ============================================================================
 // CONSTANTS
@@ -53,20 +54,14 @@ const STORAGE_KEYS = {
  * Format position as letter+number (A1, B2, etc.)
  */
 export function formatPosition(row, col) {
-  return String.fromCharCode(65 + col) + (row + 1);
+  return formatGridPosition(col, row);
 }
 
 /**
  * Parse position string back to row/col
  */
 export function parsePosition(position) {
-  if (!position || typeof position !== 'string') return null;
-  const match = position.match(/^([A-Z])(\d+)$/i);
-  if (!match) return null;
-  return {
-    col: match[1].toUpperCase().charCodeAt(0) - 65,
-    row: parseInt(match[2], 10) - 1,
-  };
+  return parseGridPosition(position);
 }
 
 /**

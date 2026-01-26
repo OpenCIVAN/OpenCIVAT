@@ -26,6 +26,7 @@ import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitial
 // Import color utilities for position-based coloring
 import { getCellColorHex } from '@UI/react/utils/canvasColors.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
+import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
 
 import './InstanceToolsTab.scss';
 
@@ -46,6 +47,7 @@ const SUBTABS = [
 function ToolsSubtab({ activeInstance }) {
     const [expandedMenus, setExpandedMenus] = useState({});
     const [tools, setTools] = useState([]);
+    const [toolSections, setToolSections] = useState([]);
 
     // Get tools from workspaceManager - same method as InstanceViewport uses
     useEffect(() => {
@@ -58,24 +60,13 @@ function ToolsSubtab({ activeInstance }) {
             try {
                 // Use the same method as InstanceViewport for consistency
                 const toolsList = workspaceManager.getInstanceTools(activeInstance.instanceId);
-
-                // Transform to the format expected by ToolsList component
-                const formattedTools = toolsList.map(tool => ({
-                    id: tool.id,
-                    icon: tool.icon,
-                    label: tool.label,
-                    description: tool.tooltip || tool.description,
-                    type: tool.items || tool.options ? 'menu' : 'button',
-                    active: tool.active,
-                    disabled: tool.disabled,
-                    options: tool.items || tool.options,
-                    onClick: tool.onClick,
-                }));
-
-                setTools(formattedTools);
+                const normalized = normalizeInstanceToolsResult(toolsList);
+                setTools(normalized.tools || []);
+                setToolSections(normalized.sections || []);
             } catch (err) {
                 console.warn('Failed to load tools:', err);
                 setTools([]);
+                setToolSections([]);
             }
         };
 
@@ -102,6 +93,7 @@ function ToolsSubtab({ activeInstance }) {
     return (
         <ToolsList
             tools={tools}
+            toolSections={toolSections}
             expandedMenus={expandedMenus}
             onToggleMenu={handleToggleMenu}
         />

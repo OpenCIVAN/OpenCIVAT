@@ -6,6 +6,7 @@
 import React from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Tooltip } from '@UI/react/components/atoms/Tooltip';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 
 import './CanvasNavigation.scss';
 
@@ -29,7 +30,7 @@ export function CanvasNavigation({
     return (
         <div className="canvas-navigation" role="group" aria-label="Canvas navigation">
             {/* Home button */}
-            <Tooltip content="Go to origin (0,0)">
+            <Tooltip content="Go to origin (A1)">
                 <button
                     className={`canvas-navigation__btn ${isAtOrigin ? 'at-origin' : ''
                         }`}
@@ -98,7 +99,7 @@ export function CanvasNavigation({
 
             {/* Position display */}
             <span className="canvas-navigation__position">
-                {position.col}, {position.row}
+                {formatGridPosition(position.col, position.row)}
             </span>
         </div>
     );

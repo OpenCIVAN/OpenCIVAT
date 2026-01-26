@@ -17,6 +17,7 @@ import { ViewItemContextMenu } from './components/ViewItemContextMenu';
 import { ViewExpandedPanel } from './components/ViewExpandedPanel';
 import { ViewSettingsModal } from '@UI/react/components/modals/ViewSettingsModal';
 import { Thumbnail } from '@UI/react/components/atoms/Thumbnail';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 import './ViewItem.scss';
 
 // =============================================================================
@@ -29,16 +30,7 @@ const STATUS_CONFIG = {
     trashed: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', label: 'Trashed', glow: false },
 };
 
-/**
- * Format grid position as letter+number (e.g., A1, B2, C3)
- * @param {number} col - Column index (0-based)
- * @param {number} row - Row index (0-based)
- * @returns {string} Formatted position like "A1"
- */
-function formatPosition(col, row) {
-    const letter = String.fromCharCode(65 + col); // A=0, B=1, C=2...
-    return `${letter}${row + 1}`;
-}
+const formatPosition = (col, row) => formatGridPosition(col, row);
 
 // =============================================================================
 // TOOL BUTTON COMPONENT

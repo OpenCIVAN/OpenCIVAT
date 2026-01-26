@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 import { useVRNavigator } from './VRNavigatorContext';
 import './VRCanvasNavigator.scss';
 
@@ -68,7 +69,7 @@ export const VRNavigationControls = memo(function VRNavigationControls({
             <div className="vr-navigation-controls__dpad">
                 {/* Center display */}
                 <div className="vr-navigation-controls__center">
-                    {currentPosition.row},{currentPosition.col}
+                    {formatGridPosition(currentPosition.col, currentPosition.row)}
                 </div>
 
                 {/* Direction buttons */}

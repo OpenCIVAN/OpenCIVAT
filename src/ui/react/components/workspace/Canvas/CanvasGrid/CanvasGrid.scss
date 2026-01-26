@@ -179,6 +179,33 @@
 }
 
 // =============================================================================
+// GRID OVERLAY (optional coordinates)
+// =============================================================================
+
+.canvas-grid__grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0.45;
+  background-image:
+    linear-gradient(
+      to right,
+      rgba($color-border-subtle, 0.6) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba($color-border-subtle, 0.6) 1px,
+      transparent 1px
+    );
+  background-size:
+    calc(var(--grid-cell-width, 120px) + var(--grid-gap, 8px))
+    calc(var(--grid-cell-height, 90px) + var(--grid-gap, 8px));
+  background-position: var(--grid-pad-left, 12px) var(--grid-pad-top, 12px);
+}
+
+// =============================================================================
 // LOADING OVERLAY - Shows over grid without unmounting it
 // =============================================================================
 

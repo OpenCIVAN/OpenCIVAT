@@ -22,6 +22,7 @@
 
 import React, { useState, useCallback, memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { formatGridPosition } from '@UI/react/utils/gridPosition.js';
 
 import './StackedNavBlock.scss';
 
@@ -98,7 +99,7 @@ function StackedNavBlock({
     className = '',
 }) {
     // Format position for display
-    const positionText = `${position.col}, ${position.row}`;
+    const positionText = formatGridPosition(position.col, position.row);
 
     // Handle D-pad navigation
     const handleNavigate = useCallback((direction) => {
@@ -112,7 +113,7 @@ function StackedNavBlock({
                 <NavButton
                     id="home"
                     icon="home"
-                    label="Go to Origin (0, 0)"
+                    label="Go to Origin (A1)"
                     active={isAtOrigin}
                     accent="var(--color-accent-amber)"
                     onClick={onHome}

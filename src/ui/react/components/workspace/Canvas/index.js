@@ -8,6 +8,10 @@ export { CanvasCell } from "./CanvasCell/CanvasCell.jsx";
 // Canvas chrome components (new architecture)
 export { CanvasHeader } from "./CanvasHeader/CanvasHeader.jsx";
 export { CanvasHeaderBar } from "./CanvasHeaderBar/CanvasHeaderBar.jsx";
+export { CanvasChrome } from "./CanvasChrome/CanvasChrome.jsx";
+export { CanvasChromeHeader } from "./CanvasChrome/CanvasChromeHeader.jsx";
+export { CanvasChromeEditBar } from "./CanvasChrome/CanvasChromeEditBar.jsx";
+export { Footer1InstanceTools } from "./CanvasChrome/Footer1InstanceTools.jsx";
 // CanvasToolbar now integrates canvas controls + status info
 export { CanvasToolbar } from "./CanvasToolbar/CanvasToolbar.jsx";
 // CanvasInfoFooter - compact info bar (canvas size, viewport, cell size, sync status)

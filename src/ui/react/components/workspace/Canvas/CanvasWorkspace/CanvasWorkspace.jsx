@@ -13,28 +13,28 @@ import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay';
 import { SubsetSelectorModal } from '@UI/react/components/modals/SubsetSelectorModal';
 
 // New canvas chrome components
-import { CanvasHeaderBar } from '../CanvasHeaderBar/CanvasHeaderBar.jsx';
-// CanvasToolbar removed - functionality moved to InstanceToolsNotch + Footer2
+import { CanvasChrome } from '../CanvasChrome/CanvasChrome.jsx';
 import { CanvasInfoFooter } from '../CanvasInfoFooter/CanvasInfoFooter.jsx';
 import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
 import { FloatingCanvasWrapper, CANVAS_MODES, ASPECT_RATIOS } from '../FloatingCanvas';
-import { InstanceToolsNotch } from '@UI/react/components/workspace/InstanceToolsNotch';
+import { Footer2 } from '@UI/react/components/organisms/Footer2';
 import { CreateWorkspacePanel } from '@UI/react/components/panels/FloatingPanel';
-import { Footer2Container } from '@UI/react/components/organisms/Footer2';
 
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { useViewGroupManagerSync } from '@UI/react/hooks/useViewGroupManagerSync.js';
+import { useViewGroups, useViewGroupLinks, useViewLinks } from '@UI/react/hooks';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { useWorkspaces } from '@UI/react/hooks/useWorkspaces.js';
-import { useRoomPresence, useRoomActions } from '@UI/react/hooks/useRoomPresence.js';
+import { useRoomActions } from '@UI/react/hooks/useRoomPresence.js';
 import { useRoomsTab } from '@UI/react/components/panels/RightPanel/tabs/RoomsTab/hooks/useRoomsTab.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { workspace as log } from '@Utils/logger.js';
+import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
 // Viewport sync handled by CanvasGrid - no need to import here
 
 import './CanvasWorkspace.scss';
@@ -77,26 +77,13 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     const [activeTool, setActiveTool] = useState('select');
     const [mergeMode, setMergeMode] = useState(false);
     const [flowDirection, setFlowDirection] = useState('row');
+    const [showCoordinates, setShowCoordinates] = useState(false);
+    const [showViewGroupBorders, setShowViewGroupBorders] = useState(false);
 
     // Rooms and workspaces hooks
-    const {
-        rooms,
-        currentRoom,
-        handleJoinRoom,
-        handleCreateRoom: handleCreateRoomAPI,
-    } = useRoomsTab({ projectId });
+    const { currentRoom } = useRoomsTab({ projectId });
 
-    const { users: roomMembers } = useRoomPresence(currentRoom?.id);
-    const roomMembersForIndicator = useMemo(() => {
-        return (roomMembers || []).map((member, index) => ({
-            id: member.id || member.userId || `member-${index}`,
-            name: member.name || member.userName || member.username || "User",
-            color: member.color || member.userColor,
-            avatar: member.avatar,
-            status: member.status,
-        }));
-    }, [roomMembers]);
-    const { setRoom, setWorkspace: setWorkspacePresence } = useRoomActions();
+    const { setWorkspace: setWorkspacePresence } = useRoomActions();
 
     const {
         workspaces: allWorkspaces,
@@ -120,6 +107,13 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         selectWorkspace(workspaceId);
         setWorkspacePresence(workspaceId);
     }, [selectWorkspace, setWorkspacePresence]);
+
+    const handleWorkspaceSelect = useCallback((workspaceItem) => {
+        const workspaceId = workspaceItem?.id || workspaceItem;
+        if (workspaceId) {
+            handleWorkspaceChange(workspaceId);
+        }
+    }, [handleWorkspaceChange]);
 
     // Handle workspace creation - open the panel
     const handleOpenCreateWorkspace = useCallback(() => {
@@ -147,12 +141,6 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             throw error; // Re-throw so the panel can handle it
         }
     }, [createProjectWorkspace, createBreakout, selectWorkspace, setWorkspacePresence, currentRoom]);
-
-    // Handle room change
-    const handleRoomChange = useCallback((roomId) => {
-        handleJoinRoom(roomId);
-        setRoom(roomId);
-    }, [handleJoinRoom, setRoom]);
 
     // Dispatch edit mode changes to CanvasGrid
     const handleEditModeChange = useCallback((newEditMode) => {
@@ -186,9 +174,37 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         }));
     }, [handleEditModeChange]);
 
-    // Links state
-    const [viewLinks, setViewLinks] = useState({});
-    const [recentUnlinks, setRecentUnlinks] = useState([]);
+    const handleEditBarGridAction = useCallback((action) => {
+        switch (action) {
+            case 'merge':
+                handleMergeModeChange(!mergeMode);
+                break;
+            case 'split':
+            case 'swap':
+            default:
+                log.debug(`Canvas edit action not yet implemented: ${action}`);
+                break;
+        }
+    }, [handleMergeModeChange, mergeMode]);
+
+    const handleEditBarRowAction = useCallback((action) => {
+        if (action === 'add') {
+            if (flowDirection === 'row') {
+                addColumn();
+            } else {
+                addRow();
+            }
+            return;
+        }
+
+        if (action === 'remove') {
+            if (flowDirection === 'row') {
+                removeColumn();
+            } else {
+                removeRow();
+            }
+        }
+    }, [addColumn, addRow, removeColumn, removeRow, flowDirection]);
 
     // Canvas hook for the active canvas
     const {
@@ -296,6 +312,28 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         });
     }, [activeCanvasId]);
 
+    const removeRow = useCallback(async () => {
+        const cachedCanvas = canvasManager.getCanvas(activeCanvasId);
+        if (!cachedCanvas) return;
+
+        const nextRows = Math.max(1, cachedCanvas.dimensions.rows - 1);
+        log.debug('Removing row from canvas');
+        await canvasManager.updateCanvas(activeCanvasId, {
+            dimensions: { ...cachedCanvas.dimensions, rows: nextRows }
+        });
+    }, [activeCanvasId]);
+
+    const removeColumn = useCallback(async () => {
+        const cachedCanvas = canvasManager.getCanvas(activeCanvasId);
+        if (!cachedCanvas) return;
+
+        const nextCols = Math.max(1, cachedCanvas.dimensions.cols - 1);
+        log.debug('Removing column from canvas');
+        await canvasManager.updateCanvas(activeCanvasId, {
+            dimensions: { ...cachedCanvas.dimensions, cols: nextCols }
+        });
+    }, [activeCanvasId]);
+
     // Remove placement (server-authoritative)
     const removePlacement = useCallback(async (placementId) => {
         if (!placementId) return;
@@ -342,14 +380,126 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         isFocusView,
         isSubsetView,
         goHome,
+        goBack,
+        canGoBack,
         currentView,
     } = useViewStack();
 
     // Get active view from view context (source of truth for what's currently selected)
-    const { activeView: contextActiveView } = useViewContextLogic();
+    const {
+        activeView: contextActiveView,
+        onCanvasViews,
+        availableViews,
+        onSelectView: contextSelectView,
+        onPlaceView: contextPlaceView,
+        onViewAction: contextViewAction,
+    } = useViewContextLogic();
 
     // Connect WebSocket broadcasts to ViewGroupManager
     useViewGroupManagerSync();
+
+    // ViewGroup data for header and footer (shared source of truth)
+    const {
+        visibleViewGroups,
+        activeViewGroupId,
+        createViewGroup,
+        updateViewGroup,
+        deleteViewGroup,
+        duplicateViewGroup,
+        selectViewGroup,
+        goToViewGroup,
+    } = useViewGroups(currentWorkspaceId || projectId);
+
+    const { isLinked: isViewGroupLinked } = useViewGroupLinks(activeViewGroupId);
+    const { links: activeViewLinks } = useViewLinks(contextActiveView?.id);
+
+    const formattedViewGroups = useMemo(() => (
+        visibleViewGroups.map(vg => ({
+            id: vg.id,
+            name: vg.name || 'Untitled Group',
+            color: vg.color,
+            layoutId: vg.layoutId,
+            views: vg.getViewIds?.() || [],
+            linkedTo: vg.link?.targetGroupId || null,
+            linkedToName: vg.link?.targetGroupName || null,
+        }))
+    ), [visibleViewGroups]);
+
+    const activeHeaderViewGroup = useMemo(() => (
+        formattedViewGroups.find(vg => vg.id === activeViewGroupId) || null
+    ), [formattedViewGroups, activeViewGroupId]);
+
+    const linkingServiceAdapter = useMemo(() => {
+        if (!activeViewLinks || activeViewLinks.length === 0) return null;
+
+        const linksByProperty = {};
+        for (const link of activeViewLinks) {
+            if (!linksByProperty[link.property]) {
+                linksByProperty[link.property] = [];
+            }
+            const otherId = link.sourceViewId === contextActiveView?.id
+                ? link.targetViewId
+                : link.sourceViewId;
+            linksByProperty[link.property].push({
+                ...link,
+                targetId: otherId,
+            });
+        }
+
+        return {
+            getLinksForProperty: (viewGroupId, propertyId) => {
+                return linksByProperty[propertyId] || [];
+            },
+        };
+    }, [activeViewLinks, contextActiveView?.id]);
+
+    const handleSelectViewGroup = useCallback((viewGroupId) => {
+        selectViewGroup(viewGroupId);
+    }, [selectViewGroup]);
+
+    const handleCreateViewGroup = useCallback(async (layoutId, templateId) => {
+        try {
+            await createViewGroup(layoutId, templateId);
+        } catch (error) {
+            log.error('Failed to create ViewGroup:', error);
+        }
+    }, [createViewGroup]);
+
+    const handleUpdateViewGroup = useCallback(async (viewGroupId, updates) => {
+        try {
+            await updateViewGroup(viewGroupId, updates);
+        } catch (error) {
+            log.error('Failed to update ViewGroup:', error);
+        }
+    }, [updateViewGroup]);
+
+    const handleDeleteViewGroup = useCallback(async (viewGroupId) => {
+        try {
+            await deleteViewGroup(viewGroupId);
+        } catch (error) {
+            log.error('Failed to delete ViewGroup:', error);
+        }
+    }, [deleteViewGroup]);
+
+    const handleDuplicateViewGroup = useCallback(async (viewGroupId, linkOption) => {
+        try {
+            const linkOptionMap = {
+                keepIndividual: 'keep_individual',
+                linkToOriginal: 'link_to_original',
+                noLinks: 'no_links',
+            };
+
+            await duplicateViewGroup(viewGroupId, {
+                linkOption: linkOptionMap[linkOption] || 'no_links',
+            });
+        } catch (error) {
+            log.error('Failed to duplicate ViewGroup:', error);
+        }
+    }, [duplicateViewGroup]);
+
+    const handleGoToViewGroup = useCallback((viewGroupId) => {
+        goToViewGroup(viewGroupId);
+    }, [goToViewGroup]);
 
     // Dynamic footer width measurement
     const footerRef = useRef(null);
@@ -386,25 +536,19 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     }, [isFocusView, exitPanelFocusMode]);
 
     // ==========================================================================
-    // INSTANCE TOOLS NOTCH STATE
+    // INSTANCE TOOLS STATE (from handler)
     // ==========================================================================
 
     const [instanceToolsData, setInstanceToolsData] = useState({ sections: [], tools: [] });
-    const [zoomLevel, setZoomLevel] = useState(100);
-
-    // Get active instance from workspaceManager for tools
-    const activeInstance = useMemo(() => {
-        return workspaceManager?.getActiveInstance?.();
-    }, [contextActiveView]);
 
     // Load tools when active instance changes
     useEffect(() => {
         const loadInstanceTools = () => {
             const instance = workspaceManager?.getActiveInstance?.();
-            log.debug('InstanceToolsNotch: Active instance:', instance?.instanceId);
+            log.debug('InstanceTools: Active instance:', instance?.instanceId);
 
             if (!instance?.instanceId) {
-                log.debug('InstanceToolsNotch: No active instance, clearing tools');
+                log.debug('InstanceTools: No active instance, clearing tools');
                 setInstanceToolsData({ sections: [], tools: [] });
                 return;
             }
@@ -412,8 +556,9 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             try {
                 // Get structured tools from the instance handler
                 const result = workspaceManager.getInstanceTools(instance.instanceId);
-                log.debug('InstanceToolsNotch: Loaded tools:', result?.tools?.length, result?.tools?.map(t => t.id));
-                setInstanceToolsData(result || { sections: [], tools: [] });
+                const normalized = normalizeInstanceToolsResult(result);
+                log.debug('InstanceTools: Loaded tools:', normalized.tools?.length, normalized.tools?.map(t => t.id));
+                setInstanceToolsData(normalized);
             } catch (err) {
                 log.warn('Failed to load instance tools:', err);
                 setInstanceToolsData({ sections: [], tools: [] });
@@ -424,7 +569,7 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
         // Listen for instance focus changes
         const handleInstanceFocus = () => {
-            log.debug('InstanceToolsNotch: Instance focus event received');
+            log.debug('InstanceTools: Instance focus event received');
             loadInstanceTools();
         };
         window.addEventListener('cia:instance-focused', handleInstanceFocus);
@@ -476,63 +621,6 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     }, []);
 
     // Handle opening full Instance Tools panel
-    const handleOpenFullInstanceTools = useCallback(() => {
-        const instance = workspaceManager?.getActiveInstance?.();
-        if (instance?.instanceId) {
-            window.dispatchEvent(new CustomEvent('cia:open-instance-tools', {
-                detail: { instanceId: instance.instanceId }
-            }));
-        }
-    }, []);
-
-    // ==========================================================================
-    // NAVIGATION CONTROLS (Zoom, Fit, Reset)
-    // ==========================================================================
-
-    // Subscribe to camera changes to track zoom level
-    useEffect(() => {
-        const instance = workspaceManager?.getActiveInstance?.();
-        if (!instance?.instanceId) {
-            setZoomLevel(100);
-            return;
-        }
-
-        // Subscribe to camera changes for this instance
-        const unsubscribe = workspaceManager.onCameraChange?.(instance.instanceId, ({ zoomLevel: newZoom }) => {
-            if (typeof newZoom === 'number' && !isNaN(newZoom)) {
-                setZoomLevel(Math.round(newZoom));
-            }
-        });
-
-        return () => {
-            if (unsubscribe) unsubscribe();
-        };
-    }, [contextActiveView]); // Re-subscribe when active view changes
-
-    const handleZoomIn = useCallback(() => {
-        const instance = workspaceManager?.getActiveInstance?.();
-        if (instance?.instanceId) {
-            // Zoom in with factor > 1 (1.25 = 25% zoom in)
-            workspaceManager.zoom?.(instance.instanceId, 1.25);
-        }
-    }, []);
-
-    const handleZoomOut = useCallback(() => {
-        const instance = workspaceManager?.getActiveInstance?.();
-        if (instance?.instanceId) {
-            // Zoom out with factor < 1 (0.8 = 20% zoom out)
-            workspaceManager.zoom?.(instance.instanceId, 0.8);
-        }
-    }, []);
-
-    const handleFit = useCallback(() => {
-        const instance = workspaceManager?.getActiveInstance?.();
-        if (instance?.instanceId) {
-            workspaceManager.fitView?.(instance.instanceId);
-            // Zoom level will be updated via onCameraChange subscription
-        }
-    }, []);
-
     const handleResetCamera = useCallback(() => {
         const instance = workspaceManager?.getActiveInstance?.();
         if (instance?.instanceId) {
@@ -849,47 +937,26 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         setRightPanelOpen(prev => !prev);
     }, []);
 
-    // Link management handlers
-    const handleUpdateLink = useCallback((typeId, targetId, direction) => {
-        setViewLinks(prev => {
-            const newLinks = { ...prev };
-            if (targetId === null) {
-                // Unlink - save to recent unlinks first
-                if (prev[typeId]?.targetId) {
-                    setRecentUnlinks(recent => [
-                        { typeId, targetId: prev[typeId].targetId, direction: prev[typeId].direction },
-                        ...recent.slice(0, 4)
-                    ]);
-                }
-                delete newLinks[typeId];
-            } else {
-                newLinks[typeId] = { targetId, direction };
-            }
-            return newLinks;
-        });
-    }, []);
+    const handleCanvasSizeChange = useCallback(async (newSize) => {
+        // Update canvas dimensions on server
+        if (!activeCanvasId) return;
+        const currentCanvas = canvasManager.getCanvas(activeCanvasId);
+        if (!currentCanvas) return;
 
-    const handleRestoreLink = useCallback((typeId, targetId, direction) => {
-        setViewLinks(prev => ({
-            ...prev,
-            [typeId]: { targetId, direction }
-        }));
-        setRecentUnlinks(recent => recent.filter(u => !(u.typeId === typeId && u.targetId === targetId)));
-    }, []);
-
-    // Get current active view for links
-    const activeViewForLinks = useMemo(() => {
-        if (!highlightedPlacementId) return null;
-        const placement = visiblePlacements.find(p => p.id === highlightedPlacementId);
-        if (!placement) return null;
-        return {
-            id: placement.id,
-            name: placement.content?.name || `View ${placement.row},${placement.col}`,
-            type: placement.content?.type || 'vtk',
-            color: placement.content?.color || '#60a5fa',
-            position: { row: placement.row, col: placement.col },
+        const newDimensions = {
+            ...currentCanvas.dimensions,
+            rows: newSize.rows,
+            cols: newSize.cols,
         };
-    }, [highlightedPlacementId, visiblePlacements]);
+        await canvasManager.updateCanvas(activeCanvasId, { dimensions: newDimensions });
+    }, [activeCanvasId, canvasManager]);
+
+    const handleViewportSizeChange = useCallback((newSize) => {
+        // Update viewport size in useCanvas hook (this is the actual viewport used by CanvasGrid)
+        setViewportSize(newSize.rows, newSize.cols);
+        // Also update local gridSize state for UI display consistency
+        setGridSize({ rows: newSize.rows, cols: newSize.cols });
+    }, [setViewportSize, setGridSize]);
 
     return (
         <FloatingCanvasWrapper
@@ -901,231 +968,220 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             onSizeChange={setFloatingSize}
             onModeChange={setCanvasMode}
         >
-            <div className="canvas-workspace">
-                {/* Canvas Header Bar - Room/Workspace/Edit/Flow/Size/CanvasMode */}
-                <CanvasHeaderBar
-                    // Room props (uses RoomPresenceIndicator)
-                    room={currentRoom || { id: 'main', name: 'Main Room', type: 'main' }}
-                    roomMembers={roomMembersForIndicator}
-                    availableRooms={rooms || []}
-                    onRoomChange={handleRoomChange}
-                    onOpenRoomsPanel={() => setRightDockedOpen(true)}
-                    onCreateRoom={handleCreateRoomAPI}
-                    // Workspace props (uses WorkspaceSelector)
-                    workspace={currentWorkspace || { id: projectId, name: 'Workspace', type: 'project' }}
-                    workspaces={workspacesForSelector}
-                    onWorkspaceChange={handleWorkspaceChange}
-                    onCreateWorkspace={handleOpenCreateWorkspace}
-                    // Edit tools
-                    activeTool={activeTool}
-                    onToolChange={handleToolChange}
-                    mergeMode={mergeMode}
-                    onMergeModeChange={handleMergeModeChange}
-                    editMode={editMode}
-                    onEditModeChange={handleEditModeChange}
-                    // Flow (uses FlowDirectionToggle)
-                    flowDirection={flowDirection}
-                    onFlowDirectionChange={setFlowDirection}
-                    // Size (uses CanvasSizeDisplay and ViewportSizeDisplay from bars)
-                    canvasSize={canvasSize}
-                    viewportSize={gridSize}
-                    canvasPlacements={visiblePlacements}
-                    onCanvasSizeChange={async (newSize) => {
-                        // Update canvas dimensions on server
-                        if (!activeCanvasId) return;
-                        const currentCanvas = canvasManager.getCanvas(activeCanvasId);
-                        if (!currentCanvas) return;
-
-                        const newDimensions = {
-                            ...currentCanvas.dimensions,
-                            rows: newSize.rows,
-                            cols: newSize.cols,
-                        };
-                        await canvasManager.updateCanvas(activeCanvasId, { dimensions: newDimensions });
-                    }}
-                    onViewportSizeChange={(newSize) => {
-                        // Update viewport size in useCanvas hook (this is the actual viewport used by CanvasGrid)
-                        setViewportSize(newSize.rows, newSize.cols);
-                        // Also update local gridSize state for UI display consistency
-                        setGridSize({ rows: newSize.rows, cols: newSize.cols });
-                    }}
-                    // Canvas mode
-                    canvasMode={canvasMode}
-                    onCanvasModeChange={setCanvasMode}
-                />
-
-                {/* Main content area */}
-                <div className="canvas-workspace__content">
-                {/* Left Edge Trigger */}
-                <EdgeTrigger
-                    side="left"
-                    onClick={toggleLeftPanel}
-                    active={leftPanelOpen}
-                />
-
-                {/* Canvas grid */}
-                <div className="canvas-workspace__canvas">
-                    {isLoading && !canvas ? (
-                        <div className="canvas-workspace__loading">Loading canvas...</div>
-                    ) : showError ? (
-                        <div className="canvas-workspace__error">
-                            {(canvasError || loadError)?.message || 'Failed to load canvas'}
-                        </div>
-                    ) : canvas ? (
-                        <CanvasGrid
-                            canvasId={activeCanvasId}
-                            viewport={viewport}
-                            placements={visiblePlacements}
-                            focusedSubset={focusedSubset}
-                            highlightedPlacementId={highlightedPlacementId}
-                            onPlacementClick={handlePlacementClick}
-                            onPlacementDoubleClick={handlePlacementDoubleClick}
-                            onCellDoubleClick={handleCellDoubleClick}
-                            onViewportChange={moveViewport}
-                            onRemovePlacement={removePlacement}
-                            onAddRow={addRow}
-                            onAddColumn={addColumn}
-                            onAddContent={handleAddContent}
-                            onOpenSubsetSelector={() => setShowSubsetSelector(true)}
-                        />
-                    ) : (
-                        <div className="canvas-workspace__empty">
-                            <p>No canvas selected</p>
-                            <button onClick={() => {/* TODO: Create canvas */ }}>
-                                Create Canvas
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Right Edge Trigger */}
-                <EdgeTrigger
-                    side="right"
-                    onClick={toggleRightPanel}
-                    active={rightPanelOpen}
-                />
-
-                {/* Subset panel (right sidebar) - legacy, will be replaced by FloatingPanel */}
-                {showSubsetPanel && (
-                    <div className="canvas-workspace__subset-panel">
-                        <SubsetPanel
-                            canvasId={activeCanvasId}
-                            subsets={subsets}
-                            focusedSubset={focusedSubset}
-                            onEnterFocus={enterFocusMode}
-                            onExitFocus={exitFocusMode}
+            <CanvasChrome
+                className="canvas-workspace"
+                headerProps={{
+                    canGoBack,
+                    onGoBack: goBack,
+                    onGoHome: goHome,
+                    workspace: currentWorkspace || { id: projectId, name: 'Workspace', type: 'project' },
+                    workspaces: workspacesForSelector,
+                    onWorkspaceChange: handleWorkspaceSelect,
+                    viewGroup: activeHeaderViewGroup,
+                    viewGroups: formattedViewGroups,
+                    onViewGroupChange: (viewGroup) => handleSelectViewGroup(viewGroup?.id ?? null),
+                    isViewGroupLinked,
+                    isEditMode: editMode,
+                    onToggleEditMode: handleEditModeChange,
+                    flowDirection: flowDirection === 'row' ? 'right' : 'down',
+                    onFlowDirectionChange: (direction) => {
+                        setFlowDirection(direction === 'right' ? 'row' : 'column');
+                    },
+                    showCoordinates,
+                    showViewGroupBorders,
+                    onToggleCoordinates: setShowCoordinates,
+                    onToggleViewGroupBorders: setShowViewGroupBorders,
+                    windowMode: canvasMode === CANVAS_MODES.FULLSCREEN ? 'full' : canvasMode,
+                    onWindowModeChange: (mode) => {
+                        setCanvasMode(mode === 'full' ? CANVAS_MODES.FULLSCREEN : mode);
+                    },
+                    isFullscreen: canvasMode === CANVAS_MODES.FULLSCREEN,
+                    onToggleFullscreen: (next) => {
+                        setCanvasMode(next ? CANVAS_MODES.FULLSCREEN : CANVAS_MODES.DOCKED);
+                    },
+                }}
+                editBarProps={{
+                    activeTool,
+                    onToolChange: handleToolChange,
+                    onGridAction: handleEditBarGridAction,
+                    onRowAction: handleEditBarRowAction,
+                    onDone: () => handleEditModeChange(false),
+                }}
+                footer1Props={{
+                    canUndo: false,
+                    canRedo: false,
+                    activeView: contextActiveView,
+                    onCanvasViews,
+                    availableViews,
+                    onSelectView: contextSelectView,
+                    onPlaceView: contextPlaceView,
+                    onViewAction: contextViewAction,
+                    tools: notchTools,
+                    toolSections,
+                    onSelectTool: handleNotchToolSelect,
+                }}
+                footer2={(
+                    <div ref={footerRef}>
+                        <Footer2
+                            viewGroups={formattedViewGroups}
+                            activeViewGroupId={activeViewGroupId}
+                            onSelectViewGroup={handleSelectViewGroup}
+                            onCreateViewGroup={handleCreateViewGroup}
+                            onUpdateViewGroup={handleUpdateViewGroup}
+                            onDeleteViewGroup={handleDeleteViewGroup}
+                            onDuplicateViewGroup={handleDuplicateViewGroup}
+                            onGoToViewGroup={handleGoToViewGroup}
+                            activeViewType={contextActiveView?.type || 'vtk-volume'}
+                            activeViewColor={contextActiveView?.color || null}
+                            isFocused={isFocusView}
+                            instanceTools={footerTools}
+                            toolSections={toolSections}
+                            onSelectTool={handleNotchToolSelect}
+                            onToggleFocus={() => {
+                                if (isFocusView) {
+                                    goHome();
+                                } else {
+                                    handleToolbarModeChange('focus');
+                                }
+                            }}
+                            activeSubset={focusedSubset}
+                            onOpenSubsetDropdown={() => setShowSubsetSelector(true)}
+                            onSnapshot={() => {
+                                log.debug('Snapshot requested from Footer2');
+                                if (contextActiveView?.id) {
+                                    window.dispatchEvent(new CustomEvent('cia:snapshot-view', {
+                                        detail: { viewId: contextActiveView.id }
+                                    }));
+                                }
+                            }}
+                            onResetView={() => {
+                                log.debug('Reset view requested from Footer2');
+                                handleResetCamera();
+                            }}
+                            onDuplicateView={handleDuplicateView}
+                            onViewSettings={handleViewSettings}
+                            onOpenLayoutTab={() => {
+                                setLeftDockedOpen(true);
+                            }}
+                            onOpenLinkManager={() => {
+                                log.debug('Link manager requested');
+                            }}
+                            isVRAvailable={true}
+                            isInVR={false}
+                            onToggleVR={() => {
+                                log.debug('VR toggle requested');
+                            }}
+                            linkingService={linkingServiceAdapter}
+                            containerWidth={footerWidth}
                         />
                     </div>
                 )}
+                infoBar={(
+                    <CanvasInfoFooter
+                        canvasSize={canvasSize}
+                        viewportSize={gridSize}
+                        cellSize={cellSize}
+                        collaboratorCount={3}
+                        syncStatus="synced"
+                        onCanvasSizeChange={handleCanvasSizeChange}
+                        onViewportSizeChange={handleViewportSizeChange}
+                        onOpenNavigator={() => {
+                            // TODO: Open canvas navigator
+                        }}
+                    />
+                )}
+                isEditMode={editMode}
+            >
+                {/* Main content area */}
+                <div className="canvas-workspace__content">
+                    {/* Left Edge Trigger */}
+                    <EdgeTrigger
+                        side="left"
+                        onClick={toggleLeftPanel}
+                        active={leftPanelOpen}
+                    />
 
-                {/* Left Floating Panel */}
-                <FloatingPanel
-                    side="left"
-                    visible={leftPanelOpen}
-                    onClose={() => setLeftPanelOpen(false)}
-                    onDock={handleDockLeftPanel}
-                    title="Files"
-                    width={280}
-                >
-                    {leftPanelContent}
-                </FloatingPanel>
+                    {/* Canvas grid */}
+                    <div className="canvas-workspace__canvas">
+                        {isLoading && !canvas ? (
+                            <div className="canvas-workspace__loading">Loading canvas...</div>
+                        ) : showError ? (
+                            <div className="canvas-workspace__error">
+                                {(canvasError || loadError)?.message || 'Failed to load canvas'}
+                            </div>
+                        ) : canvas ? (
+                            <CanvasGrid
+                                canvasId={activeCanvasId}
+                                viewport={viewport}
+                                placements={visiblePlacements}
+                                focusedSubset={focusedSubset}
+                                highlightedPlacementId={highlightedPlacementId}
+                                showCoordinates={showCoordinates}
+                                onPlacementClick={handlePlacementClick}
+                                onPlacementDoubleClick={handlePlacementDoubleClick}
+                                onCellDoubleClick={handleCellDoubleClick}
+                                onViewportChange={moveViewport}
+                                onRemovePlacement={removePlacement}
+                                onAddRow={addRow}
+                                onAddColumn={addColumn}
+                                onAddContent={handleAddContent}
+                                onOpenSubsetSelector={() => setShowSubsetSelector(true)}
+                            />
+                        ) : (
+                            <div className="canvas-workspace__empty">
+                                <p>No canvas selected</p>
+                                <button onClick={() => { /* TODO: Create canvas */ }}>
+                                    Create Canvas
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
-                {/* Right Floating Panel */}
-                <FloatingPanel
-                    side="right"
-                    visible={rightPanelOpen}
-                    onClose={() => setRightPanelOpen(false)}
-                    onDock={handleDockRightPanel}
-                    title="Properties"
-                    width={280}
-                >
-                    {rightPanelContent}
-                </FloatingPanel>
-            </div>
+                    {/* Right Edge Trigger */}
+                    <EdgeTrigger
+                        side="right"
+                        onClick={toggleRightPanel}
+                        active={rightPanelOpen}
+                    />
 
-            {/* Instance Tools Notch - Full-width bar for active instance tools */}
-            {/* Includes navigation controls (zoom, fit, reset) + instance-specific tools */}
-            <InstanceToolsNotch
-                activeView={contextActiveView}
-                tools={notchTools}
-                toolSections={toolSections}
-                onSelectTool={handleNotchToolSelect}
-                onOpenFullTools={handleOpenFullInstanceTools}
-                // Navigation controls
-                zoomLevel={zoomLevel}
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onFit={handleFit}
-                onResetCamera={handleResetCamera}
-            />
+                    {/* Subset panel (right sidebar) - legacy, will be replaced by FloatingPanel */}
+                    {showSubsetPanel && (
+                        <div className="canvas-workspace__subset-panel">
+                            <SubsetPanel
+                                canvasId={activeCanvasId}
+                                subsets={subsets}
+                                focusedSubset={focusedSubset}
+                                onEnterFocus={enterFocusMode}
+                                onExitFocus={exitFocusMode}
+                            />
+                        </div>
+                    )}
 
-            {/* CanvasToolbar removed - Active View Selector now in InstanceToolsNotch,
-               Focus/Subset/Links/Actions now in Footer2 */}
+                    {/* Left Floating Panel */}
+                    <FloatingPanel
+                        side="left"
+                        visible={leftPanelOpen}
+                        onClose={() => setLeftPanelOpen(false)}
+                        onDock={handleDockLeftPanel}
+                        title="Files"
+                        width={280}
+                    >
+                        {leftPanelContent}
+                    </FloatingPanel>
 
-            {/* ViewGroup Footer - ViewGroup selector, links, actions */}
-            <div ref={footerRef}>
-                <Footer2Container
-                    workspaceId={currentWorkspaceId || projectId}
-                    activeViewId={contextActiveView?.id || null}
-                    activeViewType={contextActiveView?.type || 'vtk-volume'}
-                    activeViewColor={contextActiveView?.color || null}
-                    isFocused={isFocusView}
-                    instanceTools={footerTools}
-                    toolSections={toolSections}
-                    onSelectTool={handleNotchToolSelect}
-                    onToggleFocus={() => {
-                        if (isFocusView) {
-                            goHome();
-                        } else {
-                            handleToolbarModeChange('focus');
-                        }
-                    }}
-                    activeSubset={focusedSubset}
-                    onOpenSubsetDropdown={() => setShowSubsetSelector(true)}
-                    onSnapshot={() => {
-                        log.debug('Snapshot requested from Footer2');
-                        // Dispatch snapshot event for active view
-                        if (contextActiveView?.id) {
-                            window.dispatchEvent(new CustomEvent('cia:snapshot-view', {
-                                detail: { viewId: contextActiveView.id }
-                            }));
-                        }
-                    }}
-                    onResetView={() => {
-                        log.debug('Reset view requested from Footer2');
-                        handleResetCamera();
-                    }}
-                    onDuplicateView={handleDuplicateView}
-                    onViewSettings={handleViewSettings}
-                    onOpenLayoutTab={() => {
-                        // Open layout panel
-                        setLeftDockedOpen(true);
-                    }}
-                    onOpenLinkManager={() => {
-                        // Open link manager panel
-                        log.debug('Link manager requested');
-                    }}
-                    isVRAvailable={true}
-                    isInVR={false}
-                    onToggleVR={() => {
-                        log.debug('VR toggle requested');
-                        // TODO: Connect to VR manager
-                    }}
-                    containerWidth={footerWidth}
-                />
-            </div>
-
-            {/* Canvas Info Footer - Canvas/Viewport/Cell size + Sync status */}
-            <CanvasInfoFooter
-                canvasSize={canvasSize}
-                viewportSize={gridSize}
-                cellSize={cellSize}
-                collaboratorCount={3} // TODO: Get from actual collab state
-                syncStatus="synced" // TODO: Get from actual sync state
-                onOpenNavigator={() => {
-                    // TODO: Open canvas navigator
-                }}
-            />
+                    {/* Right Floating Panel */}
+                    <FloatingPanel
+                        side="right"
+                        visible={rightPanelOpen}
+                        onClose={() => setRightPanelOpen(false)}
+                        onDock={handleDockRightPanel}
+                        title="Properties"
+                        width={280}
+                    >
+                        {rightPanelContent}
+                    </FloatingPanel>
+                </div>
+            </CanvasChrome>
 
             {/* Focus mode overlay */}
             {isFocusMode && focusedSubset && (
@@ -1157,7 +1213,6 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
                 userId={userId}
                 projectId={projectId}
             />
-            </div>
         </FloatingCanvasWrapper>
     );
 }

@@ -12,6 +12,7 @@ import { instanceTools } from '@Core/instances/types/vtk/vtkInstanceTools.js';
 import { vtkOrientationWidget } from '@Core/instances/types/vtk/widgets/orientation/VTKOrientationWidget.js';
 import vtkSceneFeature from '@Core/instances/types/vtk/features/VTKSceneFeature.js';
 import { TOOL_SECTIONS, TRANSFORM_LIMITS } from './constants';
+import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
 
 /**
  * useInstanceToolsPanel - Main logic hook for Instance Tools Panel V2
@@ -191,8 +192,9 @@ export function useInstanceToolsPanel({ workspaceId } = {}) {
     const loadTools = () => {
       try {
         const toolsList = workspaceManager.getInstanceTools(activeInstance.instanceId);
+        const normalized = normalizeInstanceToolsResult(toolsList);
         // Transform to consistent format
-        const formattedTools = toolsList.map(tool => ({
+        const formattedTools = (normalized.tools || []).map(tool => ({
           id: tool.id,
           icon: tool.icon,
           label: tool.label,
