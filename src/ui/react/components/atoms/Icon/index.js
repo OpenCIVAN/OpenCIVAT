@@ -90,7 +90,6 @@ export {
   // VR & Immersive
   IconVR,
   IconVRHeadset,
-  IconGlasses,
   IconSpatialAudio,
   IconGesture,
   IconController,
