@@ -51,12 +51,18 @@ function transformWorkspace(workspace) {
  * @param {string} options.projectId - Current project ID (optional)
  * @returns {Object} Workspace state and actions
  */
-export function useWorkspaces({ userId, projectId } = {}) {
+export function useWorkspaces({ userId, projectId, roomId } = {}) {
   // State
   const [workspaces, setWorkspaces] = useState([]);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const storageKey = useMemo(() => {
+    if (!userId) return null;
+    const scope = projectId || "default";
+    const roomScope = roomId || "default";
+    return `cia:last-workspace:${userId}:${scope}:${roomScope}`;
+  }, [projectId, roomId, userId]);
 
   // Load workspaces on mount and when userId changes
   useEffect(() => {
@@ -70,6 +76,8 @@ export function useWorkspaces({ userId, projectId } = {}) {
       setError(null);
 
       try {
+        await workspaceManager.loadWorkspaces(userId, projectId, roomId);
+
         // Get or create personal workspace
         let personal = workspaceManager.getPersonalWorkspace(userId);
         if (!personal) {
@@ -100,13 +108,27 @@ export function useWorkspaces({ userId, projectId } = {}) {
 
         setWorkspaces(allWorkspaces);
 
-        // Set current workspace to active or personal
+        // Prefer last-used workspace if available, otherwise keep active or personal
         const activeWs = workspaceManager.getActiveWorkspace();
-        if (activeWs) {
-          setCurrentWorkspaceId(activeWs.getEffectiveId());
-        } else if (personal) {
-          setCurrentWorkspaceId(personal.getEffectiveId());
-          workspaceManager.setActiveWorkspace(personal.getEffectiveId());
+        const activeId = activeWs?.getEffectiveId() || null;
+        let preferredId = null;
+
+        if (storageKey) {
+          try {
+            preferredId = window.localStorage.getItem(storageKey);
+          } catch (err) {
+            log.debug("Workspace localStorage read failed:", err);
+          }
+        }
+
+        const hasPreferred = preferredId && workspaceManager.getWorkspace(preferredId);
+        const nextId = hasPreferred
+          ? preferredId
+          : activeId || personal?.getEffectiveId() || null;
+
+        if (nextId) {
+          setCurrentWorkspaceId(nextId);
+          workspaceManager.setActiveWorkspace(nextId);
         }
       } catch (err) {
         log.error("Failed to load workspaces:", err);
@@ -117,7 +139,7 @@ export function useWorkspaces({ userId, projectId } = {}) {
     };
 
     loadWorkspaces();
-  }, [userId, projectId]);
+  }, [userId, projectId, roomId]);
 
   // Subscribe to workspace changes
   useEffect(() => {
@@ -148,17 +170,28 @@ export function useWorkspaces({ userId, projectId } = {}) {
         case "workspace:deleted":
         case "workspace:confirmed":
         case "workspace:breakout-merged":
+        case "workspace:canvas-added":
+        case "workspace:canvas-removed":
           refreshWorkspaces();
           break;
         case "workspace:activated":
-          setCurrentWorkspaceId(data.workspace?.getEffectiveId());
+          setCurrentWorkspaceId(data.workspace?.getEffectiveId() || null);
           break;
       }
     };
 
     const unsubscribe = workspaceManager.subscribe(handleChange);
     return unsubscribe;
-  }, [userId, projectId]);
+  }, [userId, projectId, roomId]);
+
+  useEffect(() => {
+    if (!storageKey || !currentWorkspaceId) return;
+    try {
+      window.localStorage.setItem(storageKey, currentWorkspaceId);
+    } catch (err) {
+      log.debug("Workspace localStorage write failed:", err);
+    }
+  }, [currentWorkspaceId, storageKey]);
 
   // Get current workspace object
   const currentWorkspace = useMemo(() => {
@@ -182,6 +215,11 @@ export function useWorkspaces({ userId, projectId } = {}) {
       workspaceManager.setActiveWorkspace(workspaceId);
       setCurrentWorkspaceId(workspaceId);
     }
+  }, []);
+
+  const clearActiveWorkspace = useCallback(() => {
+    workspaceManager.clearActiveWorkspace?.();
+    setCurrentWorkspaceId(null);
   }, []);
 
   const createBreakout = useCallback(
@@ -211,14 +249,19 @@ export function useWorkspaces({ userId, projectId } = {}) {
 
       const project = await workspaceManager.createProjectWorkspace(
         name,
-        userId,
-        description
+        description,
+        projectId
       );
 
       return transformWorkspace(project);
     },
-    [userId]
+    [projectId, userId]
   );
+
+  const updateWorkspace = useCallback(async (workspaceId, updates = {}) => {
+    const updated = await workspaceManager.updateWorkspace(workspaceId, updates);
+    return transformWorkspace(updated);
+  }, []);
 
   const deleteWorkspace = useCallback(async (workspaceId) => {
     await workspaceManager.deleteWorkspace(workspaceId);
@@ -239,8 +282,10 @@ export function useWorkspaces({ userId, projectId } = {}) {
 
     // Actions
     selectWorkspace,
+    clearActiveWorkspace,
     createBreakout,
     createProjectWorkspace,
+    updateWorkspace,
     deleteWorkspace,
     mergeBreakout,
   };

@@ -33,6 +33,24 @@ export function useSplitRatio(initialRatio = { h: 0.5, v: 0.5 }) {
     const [isDragging, setIsDragging] = useState(null);
     const containerRef = useRef(null);
 
+    const clampRatio = useCallback((ratio, size, minSize) => {
+        if (!size || size <= 0) return ratio;
+        const minBySize = minSize / size;
+        const minRatio = Math.max(CANVAS_SIZING.splitRatioMin, minBySize);
+        const maxRatio = Math.min(CANVAS_SIZING.splitRatioMax, 1 - minBySize);
+        if (minRatio >= maxRatio) return 0.5;
+        return Math.max(minRatio, Math.min(maxRatio, ratio));
+    }, []);
+
+    const clampSplitRatio = useCallback((nextRatio) => {
+        if (!containerRef.current) return nextRatio;
+        const rect = containerRef.current.getBoundingClientRect();
+        return {
+            h: clampRatio(nextRatio.h, rect.width, CANVAS_SIZING.minCanvasWidth),
+            v: clampRatio(nextRatio.v, rect.height, CANVAS_SIZING.minCanvasHeight),
+        };
+    }, [clampRatio]);
+
     const handleDividerMouseDown = useCallback((type) => (e) => {
         e.preventDefault();
         setIsDragging(type);
@@ -47,15 +65,15 @@ export function useSplitRatio(initialRatio = { h: 0.5, v: 0.5 }) {
 
             if (isDragging === 'h') {
                 const newRatio = (e.clientX - rect.left) / rect.width;
-                setSplitRatio(prev => ({
+                setSplitRatio(prev => clampSplitRatio({
                     ...prev,
-                    h: Math.max(CANVAS_SIZING.splitRatioMin, Math.min(CANVAS_SIZING.splitRatioMax, newRatio)),
+                    h: newRatio,
                 }));
             } else if (isDragging === 'v') {
                 const newRatio = (e.clientY - rect.top) / rect.height;
-                setSplitRatio(prev => ({
+                setSplitRatio(prev => clampSplitRatio({
                     ...prev,
-                    v: Math.max(CANVAS_SIZING.splitRatioMin, Math.min(CANVAS_SIZING.splitRatioMax, newRatio)),
+                    v: newRatio,
                 }));
             }
         };
@@ -71,7 +89,16 @@ export function useSplitRatio(initialRatio = { h: 0.5, v: 0.5 }) {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging]);
+    }, [clampSplitRatio, isDragging]);
+
+    useEffect(() => {
+        if (!containerRef.current) return undefined;
+        const observer = new ResizeObserver(() => {
+            setSplitRatio(prev => clampSplitRatio(prev));
+        });
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, [clampSplitRatio]);
 
     return {
         splitRatio,

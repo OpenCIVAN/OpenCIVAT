@@ -26,7 +26,7 @@ import { useViewportSize } from '@UI/react/hooks';
 import { useCanvasDimensions, RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
-import { useViewportEventListener } from '@UI/react/hooks/useViewportSync';
+import { useViewportEventListener, dispatchViewportChanged } from '@UI/react/hooks/useViewportSync';
 import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
 import { workspace as log } from '@Utils/logger.js';
@@ -123,9 +123,11 @@ export function CanvasGrid({
     // Listen for edit mode, tool, and merge mode changes from header
     useEffect(() => {
         const handleEditModeChange = (e) => {
+            if (e?.detail?.canvasId && e.detail.canvasId !== canvasId) return;
             setEditMode(e.detail.editMode);
         };
         const handleToolChange = (e) => {
+            if (e?.detail?.canvasId && e.detail.canvasId !== canvasId) return;
             setActiveTool(e.detail.tool);
             // Entering a tool also enables edit mode
             if (e.detail.tool !== 'select') {
@@ -133,6 +135,7 @@ export function CanvasGrid({
             }
         };
         const handleMergeModeChange = (e) => {
+            if (e?.detail?.canvasId && e.detail.canvasId !== canvasId) return;
             setMergeMode(e.detail.mergeMode);
         };
 
@@ -145,7 +148,7 @@ export function CanvasGrid({
             window.removeEventListener('canvas:toolChange', handleToolChange);
             window.removeEventListener('canvas:mergeModeChange', handleMergeModeChange);
         };
-    }, []);
+    }, [canvasId]);
 
     // Active view tracking - for performance optimization
     // Only the active view mounts InstanceViewport in THUMBNAIL/SNAPSHOT modes
@@ -233,6 +236,16 @@ export function CanvasGrid({
         rows: viewportSize.rows,
         cols: viewportSize.cols,
     }), [viewport.row, viewport.col, viewportSize.rows, viewportSize.cols]);
+
+    useEffect(() => {
+        if (!viewport || !viewportSize) return;
+        dispatchViewportChanged({
+            row: viewport.row,
+            col: viewport.col,
+            rows: viewportSize.rows,
+            cols: viewportSize.cols,
+        }, canvasId);
+    }, [viewport?.row, viewport?.col, viewportSize?.rows, viewportSize?.cols, canvasId]);
 
     // ==========================================================================
     // CLAMP VIEWPORT POSITION WHEN SIZE CHANGES (NEW)

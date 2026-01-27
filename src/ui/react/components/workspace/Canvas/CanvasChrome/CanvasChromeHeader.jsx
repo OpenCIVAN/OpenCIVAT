@@ -1,9 +1,10 @@
 // src/ui/react/components/workspace/Canvas/CanvasChrome/CanvasChromeHeader.jsx
 // CanvasChromeHeader - header bar for workspace/viewgroup/navigation controls.
 
-import React, { memo, useMemo, useRef, useState, useCallback } from 'react';
+import React, { memo, useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
+import { formatGridPosition } from '@UI/react/utils/gridPosition';
 import './CanvasChromeHeader.scss';
 
 const normalizeItems = (items = []) => items.map((item) => {
@@ -43,6 +44,16 @@ const DropdownList = memo(function DropdownList({
     );
 });
 
+const HeaderSection = memo(function HeaderSection({ label, color, children, className = '' }) {
+    const colorClass = color ? `canvas-chrome-header__label--${color}` : '';
+    return (
+        <div className={`canvas-chrome-header__section ${className}`}>
+            <div className={`canvas-chrome-header__label ${colorClass}`}>{label}</div>
+            <div className="canvas-chrome-header__content">{children}</div>
+        </div>
+    );
+});
+
 export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     // Navigation
     canGoBack = false,
@@ -53,6 +64,7 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     workspace,
     workspaces = [],
     onWorkspaceChange,
+    allowWorkspaceSwitch = true,
 
     // ViewGroup
     viewGroup,
@@ -76,11 +88,19 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     onToggleCoordinates,
     onToggleViewGroupBorders,
 
+    // Navigator
+    canvasSize = { cols: 1, rows: 1 },
+    viewportSize = { cols: 1, rows: 1 },
+    viewportPosition = { col: 0, row: 0 },
+    onMoveViewport,
+    onHome,
+    onOpenNavigator,
+
     // Window mode
     windowMode = 'docked',
     onWindowModeChange,
-    isFullscreen = false,
-    onToggleFullscreen,
+    onCloseWorkspace,
+    showWindowControls = true,
 
     className = '',
 }) {
@@ -98,6 +118,25 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     const workspaceTriggerRef = useRef(null);
     const viewGroupTriggerRef = useRef(null);
     const displayTriggerRef = useRef(null);
+    const headerRef = useRef(null);
+    const [headerWidth, setHeaderWidth] = useState(0);
+
+    useEffect(() => {
+        if (!headerRef.current) return;
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                setHeaderWidth(entry.contentRect.width);
+            }
+        });
+        observer.observe(headerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (!allowWorkspaceSwitch && workspaceOpen) {
+            setWorkspaceOpen(false);
+        }
+    }, [allowWorkspaceSwitch, workspaceOpen]);
 
     const workspaceItems = useMemo(() => normalizeItems(workspaces), [workspaces]);
     const viewGroupItems = useMemo(() => normalizeItems(viewGroups), [viewGroups]);
@@ -107,6 +146,10 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     const viewGroupId = viewGroup?.id || (typeof viewGroup === 'string' ? viewGroup : null);
 
     const activeDisplayCount = Number(showCoordinates) + Number(showViewGroupBorders);
+    const effectiveWidth = headerWidth || window.innerWidth || 0;
+    const showNames = effectiveWidth >= 500;
+    const workspaceNameMax = Math.max(40, Math.min(140, (effectiveWidth - 400) * 0.2));
+    const viewGroupNameMax = Math.max(40, Math.min(120, (effectiveWidth - 400) * 0.15));
 
     const viewGroupTags = useMemo(() => {
         const tags = new Set();
@@ -192,177 +235,326 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
         setViewGroupTag(null);
     }, []);
 
+    const showNavigator = Boolean(onMoveViewport || onHome || onOpenNavigator);
+
+    const viewportLabel = useMemo(() => {
+        return formatGridPosition(viewportPosition?.col || 0, viewportPosition?.row || 0);
+    }, [viewportPosition?.col, viewportPosition?.row]);
+
+    const rows = Math.max(canvasSize?.rows || 1, 1);
+    const cols = Math.max(canvasSize?.cols || 1, 1);
+    const viewportRows = Math.max(viewportSize?.rows || 1, 1);
+    const viewportCols = Math.max(viewportSize?.cols || 1, 1);
+    const viewportRow = Math.max(viewportPosition?.row || 0, 0);
+    const viewportCol = Math.max(viewportPosition?.col || 0, 0);
+
+    const canMoveUp = viewportRow > 0;
+    const canMoveDown = viewportRow + viewportRows < rows;
+    const canMoveLeft = viewportCol > 0;
+    const canMoveRight = viewportCol + viewportCols < cols;
+
+    const renderMiniGrid = () => {
+        const previewRows = Math.min(rows, 4);
+        const previewCols = Math.min(cols, 6);
+        const rowScale = previewRows / rows;
+        const colScale = previewCols / cols;
+        const viewRowSpan = Math.max(1, Math.round(viewportRows * rowScale));
+        const viewColSpan = Math.max(1, Math.round(viewportCols * colScale));
+        const maxRowTravel = Math.max(1, rows - viewportRows);
+        const maxColTravel = Math.max(1, cols - viewportCols);
+        const maxPreviewRow = Math.max(0, previewRows - viewRowSpan);
+        const maxPreviewCol = Math.max(0, previewCols - viewColSpan);
+        const viewRowStart = Math.round((viewportRow / maxRowTravel) * maxPreviewRow);
+        const viewColStart = Math.round((viewportCol / maxColTravel) * maxPreviewCol);
+        const viewRowEnd = Math.min(previewRows, viewRowStart + viewRowSpan);
+        const viewColEnd = Math.min(previewCols, viewColStart + viewColSpan);
+
+        const cells = [];
+        for (let r = 0; r < previewRows; r += 1) {
+            for (let c = 0; c < previewCols; c += 1) {
+                const isInViewport =
+                    r >= viewRowStart &&
+                    r < viewRowEnd &&
+                    c >= viewColStart &&
+                    c < viewColEnd;
+                cells.push(
+                    <span
+                        key={`${r}-${c}`}
+                        className={`canvas-chrome-header__mini-cell ${isInViewport ? 'is-viewport' : ''}`}
+                    />
+                );
+            }
+        }
+
+        return (
+            <button
+                type="button"
+                className="canvas-chrome-header__mini-grid"
+                style={{ '--grid-cols': previewCols }}
+                onClick={onOpenNavigator}
+                title="Open Navigator"
+            >
+                {cells}
+            </button>
+        );
+    };
+
     return (
-        <header className={`canvas-chrome-header ${className}`}>
+        <header ref={headerRef} className={`canvas-chrome-header ${className}`}>
             <div className="canvas-chrome-header__left">
-                <div className="canvas-chrome-header__nav-group">
-                    <button
-                        type="button"
-                        className="canvas-chrome-header__icon-btn"
-                        onClick={onGoBack}
-                        disabled={!canGoBack}
-                        title="Back"
-                        aria-label="Back"
-                    >
-                        <Icon name="arrowLeft" size={14} />
-                    </button>
-                    <button
-                        type="button"
-                        className="canvas-chrome-header__icon-btn"
-                        onClick={onGoHome}
-                        title="Home"
-                        aria-label="Home"
-                    >
-                        <Icon name="home" size={14} />
-                    </button>
-                </div>
+                <HeaderSection label="Workspace" color="teal" className="canvas-chrome-header__section--workspace">
+                    <div className="canvas-chrome-header__group">
+                        <div className="canvas-chrome-header__nav-group">
+                            <button
+                                type="button"
+                                className="canvas-chrome-header__icon-btn"
+                                onClick={onGoBack}
+                                disabled={!canGoBack}
+                                title="Back"
+                                aria-label="Back"
+                            >
+                                <Icon name="arrowLeft" size={14} />
+                            </button>
+                            <button
+                                type="button"
+                                className="canvas-chrome-header__icon-btn"
+                                onClick={onGoHome}
+                                title="Home"
+                                aria-label="Home"
+                            >
+                                <Icon name="home" size={14} />
+                            </button>
+                        </div>
 
-                <div className="canvas-chrome-header__selector-group">
-                    <button
-                        ref={workspaceTriggerRef}
-                        type="button"
-                        className="canvas-chrome-header__selector canvas-chrome-header__selector--workspace"
-                        onClick={() => setWorkspaceOpen((prev) => !prev)}
-                        aria-expanded={workspaceOpen}
-                        aria-haspopup="listbox"
-                    >
-                        <Icon name="grid" size={14} />
-                        <span className="canvas-chrome-header__selector-name">
-                            {workspaceLabel}
-                        </span>
-                        <Icon name="chevronDown" size={12} />
-                    </button>
-
-                    <Icon name="chevronRight" size={12} className="canvas-chrome-header__chevron" />
-
-                    <button
-                        ref={viewGroupTriggerRef}
-                        type="button"
-                        className="canvas-chrome-header__selector canvas-chrome-header__selector--viewgroup"
-                        onClick={() => setViewGroupOpen((prev) => !prev)}
-                        aria-expanded={viewGroupOpen}
-                        aria-haspopup="listbox"
-                    >
-                        {viewGroup ? (
-                            <>
-                                <span
-                                    className="canvas-chrome-header__dot"
-                                    style={{ background: viewGroup.color || 'var(--color-accent-purple)' }}
-                                />
-                                <span className="canvas-chrome-header__selector-name">
-                                    {viewGroupLabel}
-                                </span>
-                                {isViewGroupLinked && (
-                                    <Icon name="link" size={12} className="canvas-chrome-header__link" />
+                        <div className="canvas-chrome-header__selector-group">
+                            <button
+                                ref={workspaceTriggerRef}
+                                type="button"
+                                className={`canvas-chrome-header__selector canvas-chrome-header__selector--workspace${allowWorkspaceSwitch ? '' : ' canvas-chrome-header__selector--static'}`}
+                                onClick={
+                                    allowWorkspaceSwitch
+                                        ? () => setWorkspaceOpen((prev) => !prev)
+                                        : undefined
+                                }
+                                aria-expanded={allowWorkspaceSwitch ? workspaceOpen : undefined}
+                                aria-haspopup={allowWorkspaceSwitch ? 'listbox' : undefined}
+                                aria-disabled={!allowWorkspaceSwitch}
+                                disabled={!allowWorkspaceSwitch}
+                            >
+                                <Icon name="grid" size={14} />
+                                {showNames && (
+                                    <span
+                                        className="canvas-chrome-header__selector-name"
+                                        style={{ maxWidth: `${workspaceNameMax}px` }}
+                                    >
+                                        {workspaceLabel}
+                                    </span>
                                 )}
-                            </>
-                        ) : (
-                            <>
-                                <Icon name="grid3x3" size={12} />
-                                <span className="canvas-chrome-header__selector-name">All ViewGroups</span>
-                            </>
-                        )}
-                        <Icon name="chevronDown" size={12} />
-                    </button>
-                </div>
+                                {allowWorkspaceSwitch ? <Icon name="chevronDown" size={12} /> : null}
+                            </button>
+
+                            <Icon name="chevronRight" size={12} className="canvas-chrome-header__chevron" />
+
+                            <button
+                                ref={viewGroupTriggerRef}
+                                type="button"
+                                className="canvas-chrome-header__selector canvas-chrome-header__selector--viewgroup"
+                                onClick={() => setViewGroupOpen((prev) => !prev)}
+                                aria-expanded={viewGroupOpen}
+                                aria-haspopup="listbox"
+                            >
+                                {viewGroup ? (
+                                    <>
+                                        <span
+                                            className="canvas-chrome-header__dot"
+                                            style={{ background: viewGroup.color || 'var(--color-accent-purple)' }}
+                                        />
+                                        {showNames && (
+                                            <span
+                                                className="canvas-chrome-header__selector-name"
+                                                style={{ maxWidth: `${viewGroupNameMax}px` }}
+                                            >
+                                                {viewGroupLabel}
+                                            </span>
+                                        )}
+                                        {isViewGroupLinked && (
+                                            <Icon name="link" size={12} className="canvas-chrome-header__link" />
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Icon name="grid3x3" size={12} />
+                                        {showNames && (
+                                            <span
+                                                className="canvas-chrome-header__selector-name"
+                                                style={{ maxWidth: `${viewGroupNameMax}px` }}
+                                            >
+                                                All ViewGroups
+                                            </span>
+                                        )}
+                                    </>
+                                )}
+                                <Icon name="chevronDown" size={12} />
+                            </button>
+                        </div>
+                    </div>
+                </HeaderSection>
             </div>
 
             <div className="canvas-chrome-header__center">
-                <div className="canvas-chrome-header__edit">
-                    <button
-                        type="button"
-                        className={`canvas-chrome-header__pill-btn ${isEditMode ? 'is-active' : ''}`}
-                        onClick={() => onToggleEditMode?.(!isEditMode)}
-                        aria-pressed={isEditMode}
-                    >
-                        <Icon name="pencil" size={12} />
-                        <span>Edit</span>
-                    </button>
-                </div>
+                <HeaderSection label="Edit" color="amber">
+                    <div className="canvas-chrome-header__group">
+                        <div className="canvas-chrome-header__edit">
+                            <button
+                                type="button"
+                                className={`canvas-chrome-header__pill-btn ${isEditMode ? 'is-active' : ''}`}
+                                onClick={() => onToggleEditMode?.(!isEditMode)}
+                                aria-pressed={isEditMode}
+                            >
+                                <Icon name="pencil" size={12} />
+                                <span>Edit</span>
+                            </button>
+                        </div>
 
-                <div className="canvas-chrome-header__flow">
-                    <div className="canvas-chrome-header__button-group">
-                        <button
-                            type="button"
-                            className={`canvas-chrome-header__icon-btn ${flowDirection === 'right' ? 'is-active' : ''}`}
-                            onClick={() => onFlowDirectionChange?.('right')}
-                            title="Flow Right"
-                            aria-pressed={flowDirection === 'right'}
-                        >
-                            <Icon name="arrowRight" size={14} />
-                        </button>
-                        <button
-                            type="button"
-                            className={`canvas-chrome-header__icon-btn ${flowDirection === 'down' ? 'is-active' : ''}`}
-                            onClick={() => onFlowDirectionChange?.('down')}
-                            title="Flow Down"
-                            aria-pressed={flowDirection === 'down'}
-                        >
-                            <Icon name="arrowDown" size={14} />
-                        </button>
+                        <div className="canvas-chrome-header__flow">
+                            <div className="canvas-chrome-header__button-group">
+                                <button
+                                    type="button"
+                                    className={`canvas-chrome-header__icon-btn ${flowDirection === 'right' ? 'is-active' : ''}`}
+                                    onClick={() => onFlowDirectionChange?.('right')}
+                                    title="Flow Right"
+                                    aria-pressed={flowDirection === 'right'}
+                                >
+                                    <Icon name="arrowRight" size={14} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`canvas-chrome-header__icon-btn ${flowDirection === 'down' ? 'is-active' : ''}`}
+                                    onClick={() => onFlowDirectionChange?.('down')}
+                                    title="Flow Down"
+                                    aria-pressed={flowDirection === 'down'}
+                                >
+                                    <Icon name="arrowDown" size={14} />
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </HeaderSection>
             </div>
 
             <div className="canvas-chrome-header__right">
-                <div className="canvas-chrome-header__display">
-                    <button
-                        ref={displayTriggerRef}
-                        type="button"
-                        className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--dropdown"
-                        onClick={() => setDisplayOpen((prev) => !prev)}
-                        aria-expanded={displayOpen}
-                        aria-haspopup="menu"
-                        title="Display options"
-                    >
-                        <Icon name="grid" size={14} />
-                        {activeDisplayCount > 0 && (
-                            <span className="canvas-chrome-header__badge">{activeDisplayCount}</span>
-                        )}
-                        <Icon name="chevronDown" size={12} />
-                    </button>
-                </div>
+                {showNavigator && (
+                    <HeaderSection label="Navigator" color="teal">
+                        <div className="canvas-chrome-header__group canvas-chrome-header__group--navigator">
+                            {renderMiniGrid()}
+                            <button
+                                type="button"
+                                className="canvas-chrome-header__icon-btn"
+                                title="Home (A1)"
+                                aria-label="Home"
+                                onClick={onHome}
+                                disabled={!onHome}
+                            >
+                                <Icon name="home" size={14} />
+                            </button>
+                            <div className="canvas-chrome-header__nav-buttons">
+                                <button
+                                    type="button"
+                                    className="canvas-chrome-header__icon-btn"
+                                    title="Move Left"
+                                    disabled={!canMoveLeft}
+                                    onClick={() => onMoveViewport?.(0, -1)}
+                                >
+                                    <Icon name="arrowLeft" size={14} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="canvas-chrome-header__icon-btn"
+                                    title="Move Up"
+                                    disabled={!canMoveUp}
+                                    onClick={() => onMoveViewport?.(-1, 0)}
+                                >
+                                    <Icon name="arrowUp" size={14} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="canvas-chrome-header__icon-btn"
+                                    title="Move Down"
+                                    disabled={!canMoveDown}
+                                    onClick={() => onMoveViewport?.(1, 0)}
+                                >
+                                    <Icon name="arrowDown" size={14} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="canvas-chrome-header__icon-btn"
+                                    title="Move Right"
+                                    disabled={!canMoveRight}
+                                    onClick={() => onMoveViewport?.(0, 1)}
+                                >
+                                    <Icon name="arrowRight" size={14} />
+                                </button>
+                            </div>
+                            <span className="canvas-chrome-header__position">{viewportLabel}</span>
+                        </div>
+                    </HeaderSection>
+                )}
 
-                <div className="canvas-chrome-header__window">
-                    <div className="canvas-chrome-header__button-group">
+                <HeaderSection label="Display" color="blue">
+                    <div className="canvas-chrome-header__group">
                         <button
+                            ref={displayTriggerRef}
                             type="button"
-                            className={`canvas-chrome-header__icon-btn ${windowMode === 'docked' ? 'is-active' : ''}`}
-                            onClick={() => onWindowModeChange?.('docked')}
-                            title="Docked"
-                            aria-pressed={windowMode === 'docked'}
+                            className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--dropdown"
+                            onClick={() => setDisplayOpen((prev) => !prev)}
+                            aria-expanded={displayOpen}
+                            aria-haspopup="menu"
+                            title="Display options"
                         >
-                            <Icon name="dock" size={14} />
-                        </button>
-                        <button
-                            type="button"
-                            className={`canvas-chrome-header__icon-btn ${windowMode === 'floating' ? 'is-active' : ''}`}
-                            onClick={() => onWindowModeChange?.('floating')}
-                            title="Floating"
-                            aria-pressed={windowMode === 'floating'}
-                        >
-                            <Icon name="windowRestore" size={14} />
-                        </button>
-                        <button
-                            type="button"
-                            className={`canvas-chrome-header__icon-btn ${windowMode === 'full' ? 'is-active' : ''}`}
-                            onClick={() => onWindowModeChange?.('full')}
-                            title="Full"
-                            aria-pressed={windowMode === 'full'}
-                        >
-                            <Icon name="maximize" size={14} />
+                            <Icon name="grid" size={14} />
+                            {activeDisplayCount > 0 && (
+                                <span className="canvas-chrome-header__badge">{activeDisplayCount}</span>
+                            )}
+                            <Icon name="chevronDown" size={12} />
                         </button>
                     </div>
-                    <button
-                        type="button"
-                        className={`canvas-chrome-header__icon-btn ${isFullscreen ? 'is-active' : ''}`}
-                        onClick={() => onToggleFullscreen?.(!isFullscreen)}
-                        title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-                        aria-pressed={isFullscreen}
-                    >
-                        <Icon name={isFullscreen ? 'fullscreenExit' : 'fullscreen'} size={14} />
-                    </button>
-                </div>
+                </HeaderSection>
+
+                <HeaderSection label="Window" color="purple">
+                    <div className="canvas-chrome-header__group">
+                        {showWindowControls ? (
+                            <div className="canvas-chrome-header__button-group">
+                                <button
+                                    type="button"
+                                    className={`canvas-chrome-header__icon-btn ${windowMode === 'docked' ? 'is-active' : ''}`}
+                                    onClick={() => onWindowModeChange?.('docked')}
+                                    title="Docked"
+                                    aria-pressed={windowMode === 'docked'}
+                                >
+                                    <Icon name="dock" size={14} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`canvas-chrome-header__icon-btn ${windowMode === 'floating' ? 'is-active' : ''}`}
+                                    onClick={() => onWindowModeChange?.('floating')}
+                                    title="Floating"
+                                    aria-pressed={windowMode === 'floating'}
+                                >
+                                    <Icon name="windowRestore" size={14} />
+                                </button>
+                            </div>
+                        ) : null}
+                        <button
+                            type="button"
+                            className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--danger"
+                            onClick={() => onCloseWorkspace?.()}
+                            title="Close workspace"
+                            disabled={!onCloseWorkspace}
+                        >
+                            <Icon name="x" size={14} />
+                        </button>
+                    </div>
+                </HeaderSection>
             </div>
 
             {/* Workspace dropdown */}

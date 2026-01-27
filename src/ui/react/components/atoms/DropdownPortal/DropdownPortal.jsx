@@ -38,7 +38,7 @@ import './DropdownPortal.scss';
 // CONSTANTS
 // =============================================================================
 
-const PORTAL_Z_INDEX = 1000;
+const PORTAL_Z_INDEX = 10000;
 const VIEWPORT_PADDING = 8; // Min distance from viewport edge
 
 // =============================================================================

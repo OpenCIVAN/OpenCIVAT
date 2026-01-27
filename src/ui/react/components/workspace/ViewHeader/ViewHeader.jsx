@@ -328,9 +328,6 @@ export const ViewHeader = memo(function ViewHeader({
     const isMinimal = renderMode === 'thumbnail';
     const isSnapshot = renderMode === 'snapshot';
 
-    // Don't render header in snapshot mode
-    if (isSnapshot) return null;
-
     // Icon sizes based on render mode
     const iconSize = isMinimal ? 10 : (isCompact ? 11 : 12);
     const buttonSize = isMinimal ? 16 : (isCompact ? 18 : 20);
@@ -344,6 +341,9 @@ export const ViewHeader = memo(function ViewHeader({
             onActivate();
         }
     }, [isCold, onActivate]);
+
+    // Don't render header in snapshot mode
+    if (isSnapshot) return null;
 
     return (
         <div

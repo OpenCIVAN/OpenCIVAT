@@ -1,7 +1,7 @@
 // src/ui/react/components/workspace/Canvas/CanvasChrome/Footer1InstanceTools.jsx
 // Footer1InstanceTools - instance-specific tool strip with persistent Undo/Redo.
 
-import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
+import React, { memo, useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { ActiveViewSelector } from '@UI/react/components/molecules/ActiveViewSelector';
@@ -280,6 +280,105 @@ function ToolButton({ tool, accentColor, accentRgb, onSelect }) {
     );
 }
 
+// =============================================================================
+// OVERFLOW MENU (portaled)
+// =============================================================================
+
+function OverflowMenu({
+    isOpen,
+    onClose,
+    categories,
+    onSelectTool,
+    accentColor,
+    accentRgb,
+    triggerRef,
+}) {
+    const menuRef = useRef(null);
+    const [position, setPosition] = useState({ bottom: 0, left: 0 });
+
+    useEffect(() => {
+        if (!isOpen || !triggerRef?.current) return;
+
+        const updatePosition = () => {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setPosition({
+                bottom: window.innerHeight - rect.top + 8,
+                left: rect.left + rect.width / 2,
+            });
+        };
+
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        return () => window.removeEventListener('resize', updatePosition);
+    }, [isOpen, triggerRef]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (e) => {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(e.target) &&
+                triggerRef.current &&
+                !triggerRef.current.contains(e.target)
+            ) {
+                onClose();
+            }
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+
+        const timeoutId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleEscape);
+        }, 10);
+
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [isOpen, onClose, triggerRef]);
+
+    if (!isOpen || !categories?.length) return null;
+
+    return createPortal(
+        <div
+            className="footer1-instance-tools__overflow-menu"
+            ref={menuRef}
+            style={{
+                '--instance-color': accentColor,
+                '--instance-color-rgb': accentRgb,
+                bottom: position.bottom,
+                left: position.left,
+                transform: 'translateX(-50%)',
+            }}
+        >
+            {categories.map((category) => (
+                <div key={category.id} className="footer1-instance-tools__overflow-section">
+                    <div className="footer1-instance-tools__overflow-label">
+                        {category.label}
+                    </div>
+                    <div className="footer1-instance-tools__overflow-tools">
+                        {(category.tools || []).map((tool) => (
+                            <ToolButton
+                                key={tool.id}
+                                tool={tool}
+                                accentColor={accentColor}
+                                accentRgb={accentRgb}
+                                onSelect={(selectedTool) => onSelectTool?.(selectedTool, category)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>,
+        document.body
+    );
+}
+
 export const Footer1InstanceTools = memo(function Footer1InstanceTools({
     canUndo = false,
     canRedo = false,
@@ -348,6 +447,116 @@ export const Footer1InstanceTools = memo(function Footer1InstanceTools({
         return Array.from(grouped.values());
     }, [toolCategories, tools, toolSections, toolPlacement]);
 
+    const toolsRowRef = useRef(null);
+    const categoriesRef = useRef(null);
+    const moreButtonRef = useRef(null);
+    const moreMeasureRef = useRef(null);
+    const measureRef = useRef(null);
+    const categoryWidthsRef = useRef(new Map());
+    const [overflowCategoryIds, setOverflowCategoryIds] = useState([]);
+    const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+
+    const updateOverflow = useCallback(() => {
+        if (!toolsRowRef.current || !categoriesRef.current) return;
+
+        const rowEl = toolsRowRef.current;
+        const rowWidth = rowEl.clientWidth || 0;
+        if (rowWidth <= 0) return;
+
+        const rowStyles = window.getComputedStyle(rowEl);
+        const rowGap = parseFloat(rowStyles.columnGap || rowStyles.gap) || 0;
+
+        const measureCategories = measureRef.current?.querySelector('.footer1-instance-tools__categories');
+        const categoryGap = measureCategories
+            ? parseFloat(window.getComputedStyle(measureCategories).columnGap || window.getComputedStyle(measureCategories).gap) || 0
+            : 0;
+
+        if (measureCategories) {
+            const items = measureCategories.querySelectorAll('[data-category-id]');
+            items.forEach((item) => {
+                const id = item.getAttribute('data-category-id');
+                if (!id) return;
+                const width = item.getBoundingClientRect().width;
+                if (width > 0) {
+                    categoryWidthsRef.current.set(id, width);
+                }
+            });
+        }
+
+        const computeOverflow = (availableWidth) => {
+            let used = 0;
+            const overflow = [];
+            let hasVisible = false;
+
+            derivedCategories.forEach((category) => {
+                const width = categoryWidthsRef.current.get(category.id) || 0;
+                const next = hasVisible ? used + categoryGap + width : width;
+                if (next <= availableWidth) {
+                    used = next;
+                    hasVisible = true;
+                } else {
+                    overflow.push(category.id);
+                }
+            });
+
+            return overflow;
+        };
+
+        let overflow = computeOverflow(rowWidth);
+
+        if (overflow.length > 0) {
+            const moreWidth = moreMeasureRef.current?.getBoundingClientRect().width
+                || moreButtonRef.current?.getBoundingClientRect().width
+                || 0;
+            const available = Math.max(0, rowWidth - moreWidth - rowGap);
+            overflow = computeOverflow(available);
+        }
+
+        setOverflowCategoryIds(overflow);
+    }, [derivedCategories]);
+
+    useEffect(() => {
+        updateOverflow();
+    }, [updateOverflow]);
+
+    useEffect(() => {
+        const rowEl = toolsRowRef.current;
+        const measureEl = measureRef.current;
+        if (!rowEl) return undefined;
+
+        const observer = new ResizeObserver(() => {
+            updateOverflow();
+        });
+        observer.observe(rowEl);
+        if (measureEl) observer.observe(measureEl);
+        return () => observer.disconnect();
+    }, [updateOverflow]);
+
+    useEffect(() => {
+        if (overflowCategoryIds.length === 0 && showOverflowMenu) {
+            setShowOverflowMenu(false);
+        }
+    }, [overflowCategoryIds.length, showOverflowMenu]);
+
+    const visibleCategories = useMemo(() => {
+        if (overflowCategoryIds.length === 0) return derivedCategories;
+        const overflowSet = new Set(overflowCategoryIds);
+        return derivedCategories.filter((category) => !overflowSet.has(category.id));
+    }, [derivedCategories, overflowCategoryIds]);
+
+    const overflowCategories = useMemo(() => {
+        if (overflowCategoryIds.length === 0) return [];
+        const overflowSet = new Set(overflowCategoryIds);
+        return derivedCategories.filter((category) => overflowSet.has(category.id));
+    }, [derivedCategories, overflowCategoryIds]);
+
+    const overflowToolCount = useMemo(() => {
+        if (overflowCategories.length === 0) return 0;
+        return overflowCategories.reduce((total, category) => {
+            return total + (category.tools?.length || 0);
+        }, 0);
+    }, [overflowCategories]);
+
     return (
         <div className="footer1-instance-tools" style={containerStyle}>
             <div className="footer1-instance-tools__undo-redo">
@@ -387,39 +596,102 @@ export const Footer1InstanceTools = memo(function Footer1InstanceTools({
 
             <div className="footer1-instance-tools__divider" />
 
-            <div className="footer1-instance-tools__categories">
-                {derivedCategories.length === 0 && (
-                    <span className="footer1-instance-tools__empty">No tools available</span>
-                )}
-                {derivedCategories.map((category) => (
-                    <div key={category.id} className="footer1-instance-tools__category">
-                        <span className="footer1-instance-tools__category-label">{category.label}</span>
-                        <div className="footer1-instance-tools__category-tools">
-                            {(category.tools || []).map((tool) => (
-                                <ToolButton
-                                    key={tool.id}
-                                    tool={tool}
-                                    accentColor={accentColor}
-                                    accentRgb={accentRgb}
-                                    onSelect={(selectedTool) => onSelectTool?.(selectedTool, category)}
-                                />
-                            ))}
+            <div className="footer1-instance-tools__tools-row" ref={toolsRowRef}>
+                <div className="footer1-instance-tools__categories" ref={categoriesRef}>
+                    {derivedCategories.length === 0 && (
+                        <span className="footer1-instance-tools__empty">No tools available</span>
+                    )}
+                    {visibleCategories.map((category) => (
+                        <div
+                            key={category.id}
+                            className="footer1-instance-tools__category"
+                            data-category-id={category.id}
+                        >
+                            <span className="footer1-instance-tools__category-label">{category.label}</span>
+                            <div className="footer1-instance-tools__category-tools">
+                                {(category.tools || []).map((tool) => (
+                                    <ToolButton
+                                        key={tool.id}
+                                        tool={tool}
+                                        accentColor={accentColor}
+                                        accentRgb={accentRgb}
+                                        onSelect={(selectedTool) => onSelectTool?.(selectedTool, category)}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
+
+                <button
+                    ref={moreButtonRef}
+                    type="button"
+                    className={`footer1-instance-tools__icon-btn footer1-instance-tools__icon-btn--more ${overflowCategoryIds.length > 0 ? 'is-visible' : ''}`}
+                    onClick={() => {
+                        if (overflowCategoryIds.length === 0) return;
+                        setShowOverflowMenu((prev) => !prev);
+                        onOpenMoreTools?.();
+                    }}
+                    title="More tools"
+                    aria-label={overflowToolCount > 0 ? `More tools (+${overflowToolCount})` : 'More tools'}
+                    aria-expanded={showOverflowMenu}
+                >
+                    <Icon name="moreVertical" size={14} />
+                    {overflowToolCount > 0 && (
+                        <span className="footer1-instance-tools__more-count">+{overflowToolCount}</span>
+                    )}
+                </button>
             </div>
 
-            <div className="footer1-instance-tools__spacer" />
+            <div className="footer1-instance-tools__measure" ref={measureRef} aria-hidden="true">
+                <div className="footer1-instance-tools__categories footer1-instance-tools__categories--measure">
+                    {derivedCategories.length === 0 && (
+                        <span className="footer1-instance-tools__empty">No tools available</span>
+                    )}
+                    {derivedCategories.map((category) => (
+                        <div
+                            key={category.id}
+                            className="footer1-instance-tools__category"
+                            data-category-id={category.id}
+                        >
+                            <span className="footer1-instance-tools__category-label">{category.label}</span>
+                            <div className="footer1-instance-tools__category-tools">
+                                {(category.tools || []).map((tool) => (
+                                    <ToolButton
+                                        key={tool.id}
+                                        tool={tool}
+                                        accentColor={accentColor}
+                                        accentRgb={accentRgb}
+                                        onSelect={(selectedTool) => onSelectTool?.(selectedTool, category)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <button
+                    ref={moreMeasureRef}
+                    type="button"
+                    className="footer1-instance-tools__icon-btn footer1-instance-tools__icon-btn--more is-visible"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                >
+                    <Icon name="moreVertical" size={14} />
+                    {overflowToolCount > 0 && (
+                        <span className="footer1-instance-tools__more-count">+{overflowToolCount}</span>
+                    )}
+                </button>
+            </div>
 
-            <button
-                type="button"
-                className="footer1-instance-tools__icon-btn footer1-instance-tools__icon-btn--more"
-                onClick={onOpenMoreTools}
-                title="More tools"
-                aria-label="More tools"
-            >
-                <Icon name="moreVertical" size={14} />
-            </button>
+            <OverflowMenu
+                isOpen={showOverflowMenu}
+                onClose={() => setShowOverflowMenu(false)}
+                categories={overflowCategories}
+                onSelectTool={onSelectTool}
+                accentColor={accentColor}
+                accentRgb={accentRgb}
+                triggerRef={moreButtonRef}
+            />
         </div>
     );
 });

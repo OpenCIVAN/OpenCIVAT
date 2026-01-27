@@ -43,29 +43,29 @@ export class Workspace {
 
     // Hierarchy
     this.parentId = data.parentId || null; // For nested workspaces
-    this.projectId = data.projectId || null; // Parent project if breakout
-    this.roomId = data.roomId || data.room_id || null; // Room association for breakout workspaces
+    this.projectId = data.projectId ?? data.project_id ?? null; // Parent project if breakout
+    this.roomId = data.roomId ?? data.room_id ?? null; // Room association for breakout workspaces
 
     // Ownership
-    this.ownerId = data.ownerId || null;
-    this.createdBy = data.createdBy || null;
-    this.createdAt = data.createdAt || new Date().toISOString();
-    this.updatedAt = data.updatedAt || new Date().toISOString();
+    this.ownerId = data.ownerId ?? data.owner_id ?? null;
+    this.createdBy = data.createdBy ?? data.created_by ?? null;
+    this.createdAt = data.createdAt ?? data.created_at ?? new Date().toISOString();
+    this.updatedAt = data.updatedAt ?? data.updated_at ?? new Date().toISOString();
 
     // Members (for shared workspaces)
     this.members = data.members || []; // Array of { userId, permission, joinedAt }
 
     // Canvas IDs in this workspace
-    this.canvasIds = data.canvasIds || [];
-    this.activeCanvasId = data.activeCanvasId || null;
+    this.canvasIds = data.canvasIds ?? data.canvas_ids ?? [];
+    this.activeCanvasId = data.activeCanvasId ?? data.active_canvas_id ?? null;
 
     // State
-    this.isArchived = data.isArchived || false;
-    this.archivedAt = data.archivedAt || null;
+    this.isArchived = data.isArchived ?? data.is_archived ?? false;
+    this.archivedAt = data.archivedAt ?? data.archived_at ?? null;
 
     // Breakout-specific
-    this.expiresAt = data.expiresAt || null; // For temporary breakouts
-    this.autoMerge = data.autoMerge || false; // Merge back to project on close
+    this.expiresAt = data.expiresAt ?? data.expires_at ?? null; // For temporary breakouts
+    this.autoMerge = data.autoMerge ?? data.auto_merge ?? false; // Merge back to project on close
   }
 
   /**

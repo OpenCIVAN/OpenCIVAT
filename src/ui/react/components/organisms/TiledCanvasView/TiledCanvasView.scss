@@ -10,6 +10,9 @@
 // =============================================================================
 
 .tiled-canvas-view {
+    --tile-canvas-min-width: 280px;
+    --tile-canvas-min-height: 200px;
+    --tile-canvas-divider-size: 6px;
     display: flex;
     flex: 1;
     background: $color-bg-primary;
@@ -22,14 +25,25 @@
 
     &--single {
         padding: $spacing-xs;
+        min-width: var(--tile-canvas-min-width);
+        min-height: var(--tile-canvas-min-height);
+    }
+
+    &--maximized {
+        padding: 0;
+        height: 100%;
     }
 
     &--horizontal {
         flex-direction: row;
+        min-width: calc((var(--tile-canvas-min-width) * 2) + var(--tile-canvas-divider-size));
+        min-height: var(--tile-canvas-min-height);
     }
 
     &--grid {
         flex-direction: column;
+        min-width: calc((var(--tile-canvas-min-width) * 2) + var(--tile-canvas-divider-size));
+        min-height: calc((var(--tile-canvas-min-height) * 2) + var(--tile-canvas-divider-size));
     }
 }
 
@@ -66,10 +80,16 @@
     &--flex {
         flex: 1;
     }
+
+    &--maximized {
+        padding: 0;
+        flex: 1;
+        height: 100%;
+    }
 }
 
 .tiled-canvas-view__spacer {
-    width: 6px;
+    width: var(--tile-canvas-divider-size);
 }
 
 // =============================================================================
@@ -81,16 +101,31 @@
     flex-direction: column;
     flex: 1;
     background: $color-bg-secondary;
+    position: relative;
     border: 2px solid transparent;
     border-radius: $radius-md;
     overflow: hidden;
-    min-width: 280px;
-    min-height: 200px;
+    min-width: var(--tile-canvas-min-width);
+    min-height: var(--tile-canvas-min-height);
     transition: border-color 0.15s ease;
 
     &--active {
         border-color: color-mix(in srgb, $color-accent-cyan 50%, transparent);
     }
+
+    &--maximized {
+        height: 100%;
+        min-height: 100%;
+    }
+}
+
+.canvas-panel__focus-exit {
+    display: flex;
+    justify-content: flex-end;
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    z-index: 2;
 }
 
 .canvas-panel__content {

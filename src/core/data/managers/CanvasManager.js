@@ -204,12 +204,20 @@ export class CanvasManager extends BaseManager {
       name: options.name || "Untitled Workspace",
       ownership: options.ownership || { type: "personal", ownerId: userId },
       dimensions: options.dimensions || { rows: 3, cols: 3 },
+      workspace_id: options.workspaceId || options.workspace_id || null,
     };
 
     try {
-      const response = await this._fetch(`/projects/${projectId}/canvases`, {
+      const endpoint =
+        projectId && projectId !== "default-project"
+          ? `/projects/${projectId}/canvases`
+          : "/canvases";
+      const response = await this._fetch(endpoint, {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          project_id: options.projectId || options.project_id || projectId || null,
+        }),
       });
 
       const data = await response.json();

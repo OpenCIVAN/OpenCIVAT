@@ -28,6 +28,7 @@ import {
 import { dispatchNavigateTo } from "@UI/react/hooks/useViewportSync.js";
 import { view as log } from "@Utils/logger.js";
 import { getCellColorHex } from "@UI/react/utils/canvasColors.js";
+import { canvasHistory } from "@UI/react/store/canvasHistoryStore.js";
 
 // =============================================================================
 // VIEW MODES
@@ -566,7 +567,15 @@ export function useViewsTab({ workspaceId }) {
     // Find placement using our fallback function (canvasManager.getPlacementForView may not exist)
     const placement = findPlacementForView(viewId);
     if (placement) {
+      const prevRowSpan = placement.rowSpan || 1;
+      const prevColSpan = placement.colSpan || 1;
       canvasManager?.resizePlacement?.(placement.id, size.rows, size.cols);
+      canvasHistory.record({
+        type: "RESIZE",
+        description: `Resize view to ${size.rows}×${size.cols}`,
+        undo: () => canvasManager.resizePlacement(placement.id, prevRowSpan, prevColSpan),
+        redo: () => canvasManager.resizePlacement(placement.id, size.rows, size.cols),
+      });
     } else {
       log.warn("Cannot resize view - no placement found:", viewId);
     }

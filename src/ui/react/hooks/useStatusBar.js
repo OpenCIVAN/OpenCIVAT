@@ -17,22 +17,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { presenceSystem } from "@Collaboration/presence/presenceSystem.js";
 import { ws as log } from "@Utils/logger.js";
 
-// Try to import optional services (they may not always be available)
-let sessionService = null;
-let recordingService = null;
-
-try {
-  // Dynamic imports for optional services
-  import("@Services/sessionService.js").then((m) => {
-    sessionService = m.sessionService;
-  });
-  import("@Services/recordingService.js").then((m) => {
-    recordingService = m.recordingService;
-  });
-} catch (e) {
-  // Services not available
-}
-
 /**
  * Sync status type
  * @typedef {'connected' | 'syncing' | 'disconnected' | 'error'} SyncStatus
@@ -211,12 +195,6 @@ export function useStatusBar() {
     window.addEventListener("cia:recording-started", handleRecordingStart);
     window.addEventListener("cia:recording-stopped", handleRecordingStop);
 
-    // Check initial state from recording service
-    if (recordingService?.isRecording?.()) {
-      setIsRecording(true);
-      setRecordingMode(recordingService.getMode?.() || "workspace");
-    }
-
     return () => {
       window.removeEventListener("cia:recording-started", handleRecordingStart);
       window.removeEventListener("cia:recording-stopped", handleRecordingStop);
@@ -227,7 +205,6 @@ export function useStatusBar() {
   }, []);
 
   const stopRecording = useCallback(() => {
-    recordingService?.stopRecording?.();
     window.dispatchEvent(new CustomEvent("cia:recording-stopped"));
   }, []);
 

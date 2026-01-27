@@ -48,6 +48,7 @@ import { viewGroupManager } from "@Core/data/managers/ViewGroupManager.js";
 import { eventBus, BUS_EVENTS } from "@Core/events/EventBus.js";
 import { DOM_EVENTS } from "@Core/events/eventConstants.js";
 import { view as log } from "@Utils/logger.js";
+import { canvasHistory } from "@UI/react/store/canvasHistoryStore.js";
 
 // =============================================================================
 // SERVICE CLASS
@@ -571,6 +572,48 @@ class ViewLifecycleService {
     // Smart viewport navigation - only moves if cell is outside current view
     this._smartNavigateToPlacement({ row, col, rowSpan, colSpan });
 
+    let placementId = placement.id;
+    const placementSnapshot = { canvasId, row, col, rowSpan, colSpan };
+    const viewName = view?.name ? `"${view.name}"` : "view";
+
+    canvasHistory.record({
+      type: "ADD",
+      description: `Place ${viewName}`,
+      undo: async () => {
+        await canvasManager.removePlacement(placementId);
+        if (!canvasManager.isViewOnCanvas(viewId)) {
+          viewManager?.deactivateView?.(viewId);
+        }
+      },
+      redo: async () => {
+        const restored = await canvasManager.addPlacement(
+          placementSnapshot.canvasId,
+          {
+            row: placementSnapshot.row,
+            col: placementSnapshot.col,
+            rowSpan: placementSnapshot.rowSpan,
+            colSpan: placementSnapshot.colSpan,
+            content: {
+              type: "view",
+              viewConfigurationId: viewId,
+            },
+          }
+        );
+        placementId = restored?.id || placementId;
+        viewManager?.activateView?.(viewId);
+        this._ensureImplicitViewGroup(viewId, view, {
+          row: placementSnapshot.row,
+          col: placementSnapshot.col,
+        });
+        this._smartNavigateToPlacement({
+          row: placementSnapshot.row,
+          col: placementSnapshot.col,
+          rowSpan: placementSnapshot.rowSpan,
+          colSpan: placementSnapshot.colSpan,
+        });
+      },
+    });
+
     return placement;
   }
 
@@ -585,6 +628,28 @@ class ViewLifecycleService {
     log.debug(`Removing view ${viewId} from canvas`);
 
     const viewManager = getViewConfigurationManager();
+    const view = viewManager?.getView?.(viewId);
+
+    const placementsToRestore = canvasManager.getAllCanvases().flatMap((canvas) =>
+      canvas.placements
+        .filter((placement) => {
+          if (typeof placement?.isView === "function") {
+            return placement.isView() && placement.getViewId() === viewId;
+          }
+          return (
+            placement?.content?.type === "view" &&
+            (placement?.content?.viewConfigurationId || placement?.content?.viewId) === viewId
+          );
+        })
+        .map((placement) => ({
+          placementId: placement.id,
+          canvasId: canvas.id,
+          row: placement.row,
+          col: placement.col,
+          rowSpan: placement.rowSpan || 1,
+          colSpan: placement.colSpan || 1,
+        }))
+    );
 
     // Remove all placements with this view
     await canvasManager.removeViewPlacements(viewId);
@@ -593,6 +658,45 @@ class ViewLifecycleService {
     viewManager?.deactivateView?.(viewId);
 
     eventBus.emit(BUS_EVENTS.VIEW_REMOVED, { viewId });
+
+    if (placementsToRestore.length === 0) {
+      return;
+    }
+
+    const viewName = view?.name ? `"${view.name}"` : "view";
+
+    canvasHistory.record({
+      type: "DELETE",
+      description: `Remove ${viewName}`,
+      undo: async () => {
+        for (const placement of placementsToRestore) {
+          const restored = await canvasManager.addPlacement(placement.canvasId, {
+            row: placement.row,
+            col: placement.col,
+            rowSpan: placement.rowSpan,
+            colSpan: placement.colSpan,
+            content: {
+              type: "view",
+              viewConfigurationId: viewId,
+            },
+          });
+          placement.placementId = restored?.id || placement.placementId;
+        }
+        viewManager?.activateView?.(viewId);
+        if (placementsToRestore[0]) {
+          this._ensureImplicitViewGroup(viewId, view, {
+            row: placementsToRestore[0].row,
+            col: placementsToRestore[0].col,
+          });
+        }
+      },
+      redo: async () => {
+        for (const placement of placementsToRestore) {
+          await canvasManager.removePlacement(placement.placementId);
+        }
+        viewManager?.deactivateView?.(viewId);
+      },
+    });
   }
 
   // =========================================================================

@@ -158,16 +158,275 @@ export function CIAWebApp({ username, userId, projectId }) {
     initPhase3();
   }, []);
 
+  const [workspaceRoomId, setWorkspaceRoomId] = useState(null);
+
   // ===========================================================================
   // WORKSPACE STATE
   // ===========================================================================
   const {
     workspaces,
     currentWorkspace,
-    workspaceId,
-    handleWorkspaceChange,
-    handleCreateWorkspace,
-  } = useWorkspaces(projectId);
+    currentWorkspaceId,
+    selectWorkspace,
+    clearActiveWorkspace,
+    createProjectWorkspace,
+    updateWorkspace,
+  } = useWorkspaces({ userId, projectId, roomId: workspaceRoomId });
+
+  const [workspaceOrder, setWorkspaceOrder] = useState([]);
+  const [openWorkspaceIds, setOpenWorkspaceIds] = useState([]);
+  const workspaceTabsLoadedRef = useRef(false);
+  const workspaceTabsStorageKey = useMemo(() => {
+    const resolvedUserId =
+      userId || sessionManager.getUserId?.() || "anonymous";
+    if (!resolvedUserId) return null;
+    const projectScope = projectId || "default";
+    const roomScope = workspaceRoomId || "default";
+    return `cia:workspace-tabs:${resolvedUserId}:${projectScope}:${roomScope}`;
+  }, [projectId, userId, workspaceRoomId]);
+
+  const ensureCanvasForWorkspace = useCallback(
+    async (workspaceId) => {
+      if (!workspaceId) return null;
+      const workspace = (workspaces || []).find((ws) => ws.id === workspaceId);
+      if (!workspace) return null;
+      if (workspace.activeCanvasId) return workspace.activeCanvasId;
+      if (workspace.canvasIds && workspace.canvasIds.length > 0) {
+        const nextCanvasId = workspace.canvasIds[0];
+        await updateWorkspace?.(workspace.id, { activeCanvasId: nextCanvasId });
+        return nextCanvasId;
+      }
+
+      try {
+        setEnsuringWorkspaceIds((prev) => ({
+          ...prev,
+          [workspaceId]: true,
+        }));
+        const { canvasManager } = await import(
+          "@Core/data/managers/CanvasManager.js"
+        );
+        const { workspaceManager } = await import(
+          "@Core/data/managers/WorkspaceManager.js"
+        );
+
+        const ownership =
+          workspace.type === "personal"
+            ? { type: "personal", ownerId: userId || "anonymous" }
+            : { type: "project", ownerId: projectId || workspace.projectId };
+
+        const canvas = await canvasManager.createCanvas(
+          projectId || workspace.projectId || null,
+          {
+            name: workspace.name || "Workspace",
+            ownership,
+            workspaceId: workspace.id,
+            projectId: projectId || workspace.projectId || null,
+          }
+        );
+
+        await workspaceManager.addCanvasToWorkspace(workspace.id, canvas.id);
+        await updateWorkspace?.(workspace.id, {
+          activeCanvasId: canvas.id,
+        });
+
+        return canvas.id;
+      } catch (err) {
+        log.error("Failed to create canvas for workspace:", err);
+        return null;
+      } finally {
+        setEnsuringWorkspaceIds((prev) => {
+          if (!prev[workspaceId]) return prev;
+          const next = { ...prev };
+          delete next[workspaceId];
+          return next;
+        });
+      }
+    },
+    [projectId, updateWorkspace, userId, workspaces]
+  );
+
+  useEffect(() => {
+    if (!workspaces || workspaces.length === 0) return;
+    if (!openWorkspaceIds.length && !currentWorkspaceId) return;
+
+    const targets = new Set(openWorkspaceIds || []);
+    if (currentWorkspaceId) {
+      targets.add(currentWorkspaceId);
+    }
+
+    targets.forEach((workspaceId) => {
+      ensureCanvasForWorkspace(workspaceId);
+    });
+  }, [
+    currentWorkspaceId,
+    ensureCanvasForWorkspace,
+    openWorkspaceIds,
+    workspaces,
+  ]);
+
+  useEffect(() => {
+    if (!workspaces || workspaces.length === 0) {
+      setWorkspaceOrder([]);
+      setOpenWorkspaceIds([]);
+      return;
+    }
+
+    const ids = workspaces.map((ws) => ws.id);
+    const mergeOrder = (list = []) => {
+      const next = list.filter((id) => ids.includes(id));
+      ids.forEach((id) => {
+        if (!next.includes(id)) {
+          next.push(id);
+        }
+      });
+      return next;
+    };
+    const mergeOpen = (list = []) => {
+      const next =
+        list && list.length > 0 ? list.filter((id) => ids.includes(id)) : ids;
+      if (
+        currentWorkspaceId &&
+        ids.includes(currentWorkspaceId) &&
+        !next.includes(currentWorkspaceId)
+      ) {
+        next.push(currentWorkspaceId);
+      }
+      return next;
+    };
+
+    if (!workspaceTabsLoadedRef.current && workspaceTabsStorageKey) {
+      try {
+        const raw = window.localStorage.getItem(workspaceTabsStorageKey);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          setWorkspaceOrder(mergeOrder(saved?.order || []));
+          setOpenWorkspaceIds(mergeOpen(saved?.openIds || []));
+          workspaceTabsLoadedRef.current = true;
+          return;
+        }
+      } catch (err) {
+        log.debug("Workspace tabs localStorage read failed:", err);
+      }
+    }
+
+    workspaceTabsLoadedRef.current = true;
+    setWorkspaceOrder((prev) => mergeOrder(prev));
+    setOpenWorkspaceIds((prev) => mergeOpen(prev));
+  }, [workspaces, currentWorkspaceId, workspaceTabsStorageKey]);
+
+  useEffect(() => {
+    if (!workspaceTabsStorageKey) return;
+    workspaceTabsLoadedRef.current = false;
+    setWorkspaceOrder([]);
+    setOpenWorkspaceIds([]);
+  }, [workspaceTabsStorageKey]);
+
+  useEffect(() => {
+    if (!workspaceTabsStorageKey || !workspaceTabsLoadedRef.current) return;
+    try {
+      window.localStorage.setItem(
+        workspaceTabsStorageKey,
+        JSON.stringify({
+          order: workspaceOrder,
+          openIds: openWorkspaceIds,
+          activeId: currentWorkspaceId,
+        })
+      );
+    } catch (err) {
+      log.debug("Workspace tabs localStorage write failed:", err);
+    }
+  }, [
+    workspaceTabsStorageKey,
+    workspaceOrder,
+    openWorkspaceIds,
+    currentWorkspaceId,
+  ]);
+
+  const handleOpenWorkspace = useCallback(
+    async (workspaceId) => {
+      if (!workspaceId) return;
+      setOpenWorkspaceIds((prev) =>
+        prev.includes(workspaceId) ? prev : [...prev, workspaceId]
+      );
+      await ensureCanvasForWorkspace(workspaceId);
+      selectWorkspace(workspaceId);
+    },
+    [ensureCanvasForWorkspace, selectWorkspace]
+  );
+
+  const handleCreateWorkspace = useCallback(async (type = "empty") => {
+    if (!createProjectWorkspace) return;
+    const nextIndex = (workspaces?.length || 0) + 1;
+    const typeNames = {
+      empty: `Workspace ${nextIndex}`,
+      subset: `Subset ${nextIndex}`,
+      scratch: `Scratch Pad ${nextIndex}`,
+    };
+    const name = typeNames[type] || `Workspace ${nextIndex}`;
+    const created = await createProjectWorkspace(name, "");
+    if (created?.id) {
+      await ensureCanvasForWorkspace(created.id);
+      handleOpenWorkspace(created.id);
+    }
+  }, [createProjectWorkspace, ensureCanvasForWorkspace, handleOpenWorkspace, workspaces]);
+
+  const handleWorkspaceChange = useCallback(
+    (nextWorkspaceId) => {
+      handleOpenWorkspace(nextWorkspaceId);
+    },
+    [handleOpenWorkspace]
+  );
+
+  useEffect(() => {
+    if (currentWorkspaceId) {
+      ensureCanvasForWorkspace(currentWorkspaceId);
+    }
+  }, [currentWorkspaceId, ensureCanvasForWorkspace]);
+
+  const handleCloseWorkspace = useCallback(
+    (workspaceId) => {
+      if (!workspaceId) return;
+      setOpenWorkspaceIds((prev) => {
+        const next = prev.filter((id) => id !== workspaceId);
+        if (currentWorkspaceId === workspaceId) {
+          const nextActive = next[0];
+          if (nextActive) {
+            selectWorkspace(nextActive);
+          } else {
+            clearActiveWorkspace?.();
+          }
+        }
+        return next;
+      });
+    },
+    [clearActiveWorkspace, currentWorkspaceId, selectWorkspace]
+  );
+
+  const handleDeactivateWorkspace = useCallback(() => {
+    clearActiveWorkspace?.();
+  }, [clearActiveWorkspace]);
+
+  const handleRenameWorkspace = useCallback(
+    async (workspaceId, name) => {
+      if (!workspaceId || !name?.trim()) return;
+      await updateWorkspace?.(workspaceId, { name: name.trim() });
+    },
+    [updateWorkspace]
+  );
+
+  const handleReorderWorkspaces = useCallback((draggedId, targetId) => {
+    if (!draggedId || !targetId || draggedId === targetId) return;
+    setWorkspaceOrder((prev) => {
+      const next = prev.filter((id) => id !== draggedId);
+      const targetIndex = next.indexOf(targetId);
+      if (targetIndex === -1) {
+        next.push(draggedId);
+      } else {
+        next.splice(targetIndex, 0, draggedId);
+      }
+      return next;
+    });
+  }, []);
 
   // ===========================================================================
   // CANVAS STATE
@@ -179,7 +438,7 @@ export function CIAWebApp({ username, userId, projectId }) {
     setFlowDirection: setCanvasFlowDirection,
     setCanvasSize,
     setViewportSize,
-  } = useCanvas(workspaceId);
+  } = useCanvas(currentWorkspace?.activeCanvasId || null);
 
   // Derive canvas size from actual canvas dimensions
   const canvasSize = canvas?.dimensions || { rows: 3, cols: 3 };
@@ -285,6 +544,10 @@ export function CIAWebApp({ username, userId, projectId }) {
     },
   });
 
+  useEffect(() => {
+    setWorkspaceRoomId(currentRoomId || null);
+  }, [currentRoomId]);
+
   // Derive voice channels from rooms
   const availableVoiceChannels = useMemo(() => {
     return (availableRooms || [])
@@ -315,21 +578,76 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [breakouts, setBreakouts] = useState([]);
 
   // Workspace Bar state: canvas mode, popouts
-  // workspaces, workspaceId, and handleCreateWorkspace come from useWorkspaces hook above
+  // workspaces, currentWorkspaceId, and handleCreateWorkspace come from useWorkspaces hook above
   const [canvasMode, setCanvasMode] = useState('tile');
   const [popouts, setPopouts] = useState([]);
+  const [ensuringWorkspaceIds, setEnsuringWorkspaceIds] = useState({});
+  const canvasModeLoadedRef = useRef(false);
+  const canvasModeStorageKey = useMemo(() => {
+    const resolvedUserId =
+      userId || sessionManager.getUserId?.() || "anonymous";
+    if (!resolvedUserId) return null;
+    const projectScope = projectId || "default";
+    const roomScope = workspaceRoomId || "default";
+    return `cia:canvas-mode:${resolvedUserId}:${projectScope}:${roomScope}`;
+  }, [projectId, userId, workspaceRoomId]);
 
   // Map workspaces for WorkspaceBar (needs usersViewing, hasChanges, etc.)
   const workspaceBarItems = useMemo(() => {
-    return (workspaces || []).map(ws => ({
-      id: ws.id,
-      name: ws.name || 'Untitled',
-      usersViewing: 0,
-      hasChanges: false,
-      hasBreakout: false,
-      breakoutUsers: 0,
-    }));
-  }, [workspaces]);
+    const workspaceMap = new Map((workspaces || []).map((ws) => [ws.id, ws]));
+    const orderedIds =
+      workspaceOrder.length > 0
+        ? workspaceOrder
+        : (workspaces || []).map((ws) => ws.id);
+
+    return orderedIds
+      .map((id) => workspaceMap.get(id))
+      .filter(Boolean)
+      .map((ws) => {
+        const typeMap = {
+          project: "workspace",
+          breakout: "workspace",
+          personal: "scratch",
+        };
+
+        return {
+          id: ws.id,
+          name: ws.name || "Untitled",
+          type: typeMap[ws.type] || "workspace",
+          isOpen: openWorkspaceIds.includes(ws.id),
+          activeCanvasId: ws.activeCanvasId,
+          usersViewing: 0,
+          hasChanges: false,
+          hasBreakout: ws.type === "breakout",
+          breakoutUsers: 0,
+        };
+      });
+  }, [workspaces, workspaceOrder, openWorkspaceIds]);
+
+  useEffect(() => {
+    if (!canvasModeStorageKey) return;
+    canvasModeLoadedRef.current = false;
+    try {
+      const stored = window.localStorage.getItem(canvasModeStorageKey);
+      if (stored === "tabs" || stored === "tile") {
+        setCanvasMode(stored);
+      } else {
+        setCanvasMode("tile");
+      }
+    } catch (err) {
+      log.debug("Canvas mode localStorage read failed:", err);
+    }
+    canvasModeLoadedRef.current = true;
+  }, [canvasModeStorageKey]);
+
+  useEffect(() => {
+    if (!canvasModeStorageKey || !canvasModeLoadedRef.current) return;
+    try {
+      window.localStorage.setItem(canvasModeStorageKey, canvasMode);
+    } catch (err) {
+      log.debug("Canvas mode localStorage write failed:", err);
+    }
+  }, [canvasMode, canvasModeStorageKey]);
 
   // Derive voice room ID (voice.currentRoom is a name; match to room ID)
   const voiceRoomId = useMemo(() => {
@@ -960,13 +1278,34 @@ export function CIAWebApp({ username, userId, projectId }) {
 
     return (
       <CanvasWorkspace
-        workspaceId={workspaceId}
+        workspaceId={currentWorkspaceId}
         userId={userId || sessionManager.getUserId?.() || "anonymous"}
         projectId={projectId}
         layoutMode={layoutMode}
+        onCloseWorkspace={handleCloseWorkspace}
+        onDeactivateWorkspace={handleDeactivateWorkspace}
+        workspaceViewMode={canvasMode}
+        workspaceTabs={workspaceBarItems}
+        activeWorkspaceId={currentWorkspaceId}
+        onSelectWorkspace={handleWorkspaceChange}
+        onSetWorkspaceViewMode={setCanvasMode}
+        ensuringWorkspaceIds={ensuringWorkspaceIds}
       />
     );
-  }, [phase3Status, workspaceId, userId, projectId, layoutMode]);
+  }, [
+    phase3Status,
+    currentWorkspaceId,
+    userId,
+    projectId,
+    layoutMode,
+    handleCloseWorkspace,
+    canvasMode,
+    workspaceBarItems,
+    handleWorkspaceChange,
+    setCanvasMode,
+    handleDeactivateWorkspace,
+    ensuringWorkspaceIds,
+  ]);
 
   // ===========================================================================
   // RENDER
@@ -1046,9 +1385,13 @@ export function CIAWebApp({ username, userId, projectId }) {
                   />
                   <WorkspaceBar
                     workspaces={workspaceBarItems}
-                    activeWorkspaceId={workspaceId}
+                    activeWorkspaceId={currentWorkspaceId}
                     onSelectWorkspace={handleWorkspaceChange}
                     onCreateWorkspace={handleCreateWorkspace}
+                    onOpenWorkspace={handleOpenWorkspace}
+                    onCloseWorkspace={handleCloseWorkspace}
+                    onRenameWorkspace={handleRenameWorkspace}
+                    onReorderWorkspaces={handleReorderWorkspaces}
                     popouts={popouts}
                     breakouts={breakouts}
                     canvasMode={canvasMode}
@@ -1072,7 +1415,7 @@ export function CIAWebApp({ username, userId, projectId }) {
               rightActivityBar={<RightActivityBar />}
               rightPanelContent={
                 <RightPanelContent
-                  workspaceId={workspaceId}
+                  workspaceId={currentWorkspaceId}
                   projectId={projectId}
                   roomId={currentRoomId}
                   roomName={currentRoomName}
@@ -1085,7 +1428,7 @@ export function CIAWebApp({ username, userId, projectId }) {
               bottomBar={<StatusBar />}
             >
               {/* Floating panels rendered inside LayoutContext */}
-              <AllFloatingPanels workspaceId={workspaceId} />
+              <AllFloatingPanels workspaceId={currentWorkspaceId} />
               <FloatingCanvasNavigator />
 
               {/* Canvas Operations Panel */}

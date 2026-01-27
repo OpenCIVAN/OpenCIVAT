@@ -1,15 +1,13 @@
 // src/ui/react/components/workspace/Canvas/CanvasChrome/CanvasChromeFooter2.jsx
 // Footer 2 - Canvas controls bar per Canvas Chrome spec.
 
-import React, { memo, useMemo, useRef, useState, useEffect } from 'react';
+import React, { memo, useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
-import { formatGridPosition } from '@UI/react/utils/gridPosition';
 import './CanvasChromeFooter2.scss';
 
 const BREAKPOINTS = {
-    LINKS_COMPACT: 855,
-    FOOTER_WRAP: 650,
+    LINKS_COMPACT_WIDE: 1020,
 };
 
 const LINK_TYPES = [
@@ -59,16 +57,10 @@ const IconButton = memo(function IconButton({ icon, title, active, color, onClic
 });
 
 export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
-    canvasSize = { cols: 1, rows: 1 },
-    viewportSize = { cols: 1, rows: 1 },
-    viewportPosition = { col: 0, row: 0 },
     containerWidth,
     links,
     onUpdateLink,
     onOpenLinkManager,
-    onMoveViewport,
-    onHome,
-    onOpenNavigator,
     onToggleFocus,
     onOpenViewList,
     onSnapshot,
@@ -88,6 +80,10 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
 }) {
     const [linksOpen, setLinksOpen] = useState(false);
     const linksTriggerRef = useRef(null);
+    const [moreOpen, setMoreOpen] = useState(false);
+    const moreTriggerRef = useRef(null);
+    const measureRef = useRef(null);
+    const moreMeasureRef = useRef(null);
 
     const [localVisibility, setLocalVisibility] = useState(visibility);
     const [localOrientation, setLocalOrientation] = useState(orientation);
@@ -128,7 +124,7 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
     };
 
     const computedWidth = Number.isFinite(containerWidth) ? containerWidth : 0;
-    const linksCompact = computedWidth > 0 && computedWidth < BREAKPOINTS.LINKS_COMPACT;
+    const linksCompact = computedWidth > 0 && computedWidth < BREAKPOINTS.LINKS_COMPACT_WIDE;
 
     const linkStates = useMemo(() => {
         return LINK_TYPES.map((type) => ({
@@ -141,83 +137,72 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
         linkStates.filter((type) => type.active).length
     ), [linkStates]);
 
-    const viewportLabel = useMemo(() => {
-        return formatGridPosition(viewportPosition?.col || 0, viewportPosition?.row || 0);
-    }, [viewportPosition?.col, viewportPosition?.row]);
+    const footerRef = useRef(null);
+    const [visibleSectionIds, setVisibleSectionIds] = useState([]);
+    const [overflowSectionIds, setOverflowSectionIds] = useState([]);
 
-    const rows = Math.max(canvasSize?.rows || 1, 1);
-    const cols = Math.max(canvasSize?.cols || 1, 1);
-    const viewportRows = Math.max(viewportSize?.rows || 1, 1);
-    const viewportCols = Math.max(viewportSize?.cols || 1, 1);
-    const viewportRow = Math.max(viewportPosition?.row || 0, 0);
-    const viewportCol = Math.max(viewportPosition?.col || 0, 0);
+    const renderLinksGroup = useCallback((useTriggerRef) => (
+        <div className="canvas-footer2__group">
+            {linksCompact ? (
+                <button
+                    type="button"
+                    ref={useTriggerRef ? linksTriggerRef : null}
+                    className="canvas-footer2__links-compact"
+                    onClick={() => setLinksOpen((prev) => !prev)}
+                    aria-expanded={linksOpen}
+                >
+                    <Icon name="link" size={14} />
+                    <span className="canvas-footer2__links-count">{activeLinkCount}</span>
+                </button>
+            ) : (
+                <div className="canvas-footer2__links">
+                    {linkStates.map((link) => (
+                        <button
+                            key={link.id}
+                            type="button"
+                            className={`canvas-footer2__link-btn ${link.active ? 'is-active' : ''}`}
+                            style={{ '--link-color': `var(--color-accent-${link.color})` }}
+                            onClick={() => handleToggleLink(link)}
+                            title={link.label}
+                        >
+                            <Icon name={link.icon} size={14} />
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    ), [activeLinkCount, handleToggleLink, linkStates, linksCompact, linksOpen]);
 
-    const canMoveUp = viewportRow > 0;
-    const canMoveDown = viewportRow + viewportRows < rows;
-    const canMoveLeft = viewportCol > 0;
-    const canMoveRight = viewportCol + viewportCols < cols;
-
-    const renderMiniGrid = () => {
-        const previewRows = Math.min(rows, 4);
-        const previewCols = Math.min(cols, 6);
-        const rowScale = previewRows / rows;
-        const colScale = previewCols / cols;
-        const viewRowStart = Math.floor(viewportRow * rowScale);
-        const viewColStart = Math.floor(viewportCol * colScale);
-        const viewRowSpan = Math.max(1, Math.round(viewportRows * rowScale));
-        const viewColSpan = Math.max(1, Math.round(viewportCols * colScale));
-        const viewRowEnd = Math.min(previewRows, viewRowStart + viewRowSpan);
-        const viewColEnd = Math.min(previewCols, viewColStart + viewColSpan);
-
-        const cells = [];
-        for (let r = 0; r < previewRows; r += 1) {
-            for (let c = 0; c < previewCols; c += 1) {
-                const isInViewport =
-                    r >= viewRowStart &&
-                    r < viewRowEnd &&
-                    c >= viewColStart &&
-                    c < viewColEnd;
-                cells.push(
-                    <span
-                        key={`${r}-${c}`}
-                        className={`canvas-footer2__mini-cell ${isInViewport ? 'is-viewport' : ''}`}
-                    />
-                );
-            }
-        }
-
-        return (
-            <button
-                type="button"
-                className="canvas-footer2__mini-grid"
-                style={{ '--grid-cols': previewCols }}
-                onClick={onOpenNavigator}
-                title="Open Navigator"
-            >
-                {cells}
-            </button>
-        );
-    };
-
-    return (
-        <div className={`canvas-footer2 ${className}`}>
-            <FooterSection label="Focus" color="cyan">
+    const sections = useMemo(() => ([
+        {
+            id: 'focus',
+            label: 'Focus',
+            color: 'cyan',
+            content: (
                 <div className="canvas-footer2__group">
                     <IconButton icon="maximize" title="Focus View" onClick={onToggleFocus} />
                     <IconButton icon="list" title="View List" onClick={onOpenViewList} />
                 </div>
-            </FooterSection>
-
-            <FooterSection label="Actions" color="amber">
+            ),
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            color: 'amber',
+            content: (
                 <div className="canvas-footer2__group">
                     <IconButton icon="camera" title="Snapshot" onClick={onSnapshot} />
                     <IconButton icon="rotateCcw" title="Reset View" onClick={onResetView} />
                     <IconButton icon="copy" title="Copy" onClick={onCopyView} />
                     <IconButton icon="settings" title="Settings" onClick={onOpenSettings} />
                 </div>
-            </FooterSection>
-
-            <FooterSection label="Display" color="blue">
+            ),
+        },
+        {
+            id: 'display',
+            label: 'Display',
+            color: 'blue',
+            content: (
                 <div className="canvas-footer2__group">
                     <IconButton
                         icon="eye"
@@ -238,94 +223,194 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
                         onClick={() => handleToggle(effectiveOverlays, onToggleOverlays, setLocalOverlays)}
                     />
                 </div>
-            </FooterSection>
-
-            <div className="canvas-footer2__break" />
-
-            <FooterSection label="Navigator" color="teal">
-                <div className="canvas-footer2__group canvas-footer2__group--navigator">
-                    {renderMiniGrid()}
-                    <IconButton
-                        icon="home"
-                        title="Home (A1)"
-                        active={!canMoveUp && !canMoveLeft}
-                        onClick={onHome}
-                    />
-                    <div className="canvas-footer2__nav-buttons">
-                        <IconButton
-                            icon="arrowLeft"
-                            title="Move Left"
-                            disabled={!canMoveLeft}
-                            onClick={() => onMoveViewport?.(0, -1)}
-                        />
-                        <IconButton
-                            icon="arrowUp"
-                            title="Move Up"
-                            disabled={!canMoveUp}
-                            onClick={() => onMoveViewport?.(-1, 0)}
-                        />
-                        <IconButton
-                            icon="arrowDown"
-                            title="Move Down"
-                            disabled={!canMoveDown}
-                            onClick={() => onMoveViewport?.(1, 0)}
-                        />
-                        <IconButton
-                            icon="arrowRight"
-                            title="Move Right"
-                            disabled={!canMoveRight}
-                            onClick={() => onMoveViewport?.(0, 1)}
-                        />
-                    </div>
-                    <span className="canvas-footer2__position">{viewportLabel}</span>
-                </div>
-            </FooterSection>
-
-            <FooterSection label="Links" color="purple">
+            ),
+        },
+        {
+            id: 'links',
+            label: 'Links',
+            color: 'purple',
+            content: renderLinksGroup(true),
+        },
+        ...(isVRAvailable ? [{
+            id: 'vr',
+            label: 'VR',
+            color: 'purple',
+            content: (
                 <div className="canvas-footer2__group">
-                    {linksCompact ? (
-                        <button
-                            type="button"
-                            ref={linksTriggerRef}
-                            className="canvas-footer2__links-compact"
-                            onClick={() => setLinksOpen((prev) => !prev)}
-                            aria-expanded={linksOpen}
-                        >
-                            <Icon name="link" size={14} />
-                            <span className="canvas-footer2__links-count">{activeLinkCount}</span>
-                        </button>
-                    ) : (
-                        <div className="canvas-footer2__links">
-                            {linkStates.map((link) => (
-                                <button
-                                    key={link.id}
-                                    type="button"
-                                    className={`canvas-footer2__link-btn ${link.active ? 'is-active' : ''}`}
-                                    style={{ '--link-color': `var(--color-accent-${link.color})` }}
-                                    onClick={() => handleToggleLink(link)}
-                                    title={link.label}
-                                >
-                                    <Icon name={link.icon} size={14} />
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    <IconButton
+                        icon="vrHeadset"
+                        title={isInVR ? 'Exit VR' : 'Send to VR'}
+                        active={isInVR}
+                        color="purple"
+                        onClick={onToggleVR}
+                    />
                 </div>
-            </FooterSection>
+            ),
+        }] : []),
+    ]), [
+        activeLinkCount,
+        effectiveOrientation,
+        effectiveOverlays,
+        effectiveVisibility,
+        isInVR,
+        isVRAvailable,
+        onCopyView,
+        onOpenSettings,
+        onOpenViewList,
+        onResetView,
+        onSnapshot,
+        onToggleFocus,
+        onToggleOrientation,
+        onToggleOverlays,
+        onToggleVisibility,
+        onToggleVR,
+        renderLinksGroup,
+    ]);
 
-            {isVRAvailable && (
-                <FooterSection label="VR" color="purple">
-                    <div className="canvas-footer2__group">
-                        <IconButton
-                            icon="vrHeadset"
-                            title={isInVR ? 'Exit VR' : 'Send to VR'}
-                            active={isInVR}
-                            color="purple"
-                            onClick={onToggleVR}
-                        />
+    const sectionOrder = useMemo(() => sections.map((section) => section.id), [sections]);
+
+    useEffect(() => {
+        if (visibleSectionIds.length === 0 && sectionOrder.length > 0) {
+            setVisibleSectionIds(sectionOrder);
+        }
+    }, [sectionOrder, visibleSectionIds.length]);
+
+    useEffect(() => {
+        if (!footerRef.current || !measureRef.current) return undefined;
+
+        let rafId = null;
+        const measure = () => {
+            if (!footerRef.current || !measureRef.current) return;
+            const footerEl = footerRef.current;
+            const measureEl = measureRef.current;
+            const styles = window.getComputedStyle(footerEl);
+            const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+            const paddingRight = parseFloat(styles.paddingRight) || 0;
+            const availableWidth = Math.max(0, footerEl.clientWidth - paddingLeft - paddingRight);
+            if (!availableWidth) return;
+
+            const measureStyles = window.getComputedStyle(measureEl);
+            const gap = parseFloat(measureStyles.columnGap || measureStyles.gap) || 0;
+            const widths = sectionOrder.map((id) => {
+                const el = measureEl.querySelector(`[data-section-id="${id}"]`);
+                return el ? el.getBoundingClientRect().width : 0;
+            });
+            const moreWidth = moreMeasureRef.current?.getBoundingClientRect().width || 0;
+
+            const nextVisible = [];
+            let usedWidth = 0;
+
+            sectionOrder.forEach((id, index) => {
+                const nextWidth = widths[index] + (nextVisible.length > 0 ? gap : 0);
+                if (usedWidth + nextWidth <= availableWidth) {
+                    nextVisible.push(id);
+                    usedWidth += nextWidth;
+                }
+            });
+
+            let overflow = sectionOrder.filter((id) => !nextVisible.includes(id));
+            if (overflow.length > 0) {
+                let totalWidth = usedWidth + (nextVisible.length > 0 ? gap : 0) + moreWidth;
+                while (nextVisible.length > 0 && totalWidth > availableWidth) {
+                    const removed = nextVisible.pop();
+                    const removedIndex = sectionOrder.indexOf(removed);
+                    totalWidth -= widths[removedIndex] + (nextVisible.length > 0 ? gap : 0);
+                }
+                overflow = sectionOrder.filter((id) => !nextVisible.includes(id));
+            }
+
+            setVisibleSectionIds((prev) => (
+                prev.join(',') === nextVisible.join(',') ? prev : nextVisible
+            ));
+            setOverflowSectionIds((prev) => (
+                prev.join(',') === overflow.join(',') ? prev : overflow
+            ));
+        };
+
+        const scheduleMeasure = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(measure);
+        };
+
+        const observer = new ResizeObserver(scheduleMeasure);
+        observer.observe(footerRef.current);
+        observer.observe(measureRef.current);
+        scheduleMeasure();
+
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            observer.disconnect();
+        };
+    }, [sectionOrder]);
+
+    useEffect(() => {
+        if (overflowSectionIds.length === 0 && moreOpen) {
+            setMoreOpen(false);
+        }
+    }, [moreOpen, overflowSectionIds.length]);
+
+    const visibleSections = useMemo(() => (
+        sections.filter((section) => visibleSectionIds.includes(section.id))
+    ), [sections, visibleSectionIds]);
+
+    const overflowSections = useMemo(() => (
+        sections.filter((section) => overflowSectionIds.includes(section.id))
+    ), [sections, overflowSectionIds]);
+
+    return (
+        <div
+            ref={footerRef}
+            className={`canvas-footer2 ${className}`}
+        >
+            <div className="canvas-footer2__cluster">
+                {visibleSections.map((section) => (
+                    <div key={section.id} className="canvas-footer2__section-wrap" data-section-id={section.id}>
+                        <FooterSection label={section.label} color={section.color}>
+                            {section.content}
+                        </FooterSection>
                     </div>
-                </FooterSection>
-            )}
+                ))}
+                {overflowSections.length > 0 && (
+                    <div className="canvas-footer2__section-wrap canvas-footer2__section-wrap--more">
+                        <FooterSection label="More" color="teal">
+                            <button
+                                ref={moreTriggerRef}
+                                type="button"
+                                className="canvas-footer2__more-btn"
+                                onClick={() => setMoreOpen((prev) => !prev)}
+                                aria-expanded={moreOpen}
+                            >
+                                <Icon name="moreHorizontal" size={14} />
+                                <span className="canvas-footer2__more-count">+{overflowSections.length}</span>
+                            </button>
+                        </FooterSection>
+                    </div>
+                )}
+            </div>
+
+            <div className="canvas-footer2__measure" ref={measureRef} aria-hidden="true">
+                {sections.map((section) => (
+                    <div key={section.id} className="canvas-footer2__section-wrap" data-section-id={section.id}>
+                        <FooterSection label={section.label} color={section.color}>
+                            {section.id === 'links' ? renderLinksGroup(false) : section.content}
+                        </FooterSection>
+                    </div>
+                ))}
+                <div className="canvas-footer2__section-wrap canvas-footer2__section-wrap--more">
+                    <FooterSection label="More" color="teal">
+                        <button
+                            ref={moreMeasureRef}
+                            type="button"
+                            className="canvas-footer2__more-btn"
+                            aria-hidden="true"
+                            tabIndex={-1}
+                        >
+                            <Icon name="moreHorizontal" size={14} />
+                            <span className="canvas-footer2__more-count">+{overflowSections.length}</span>
+                        </button>
+                    </FooterSection>
+                </div>
+            </div>
 
             <DropdownPortal
                 open={linksCompact && linksOpen}
@@ -361,6 +446,29 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
                             </button>
                         ))}
                     </div>
+                </div>
+            </DropdownPortal>
+
+            <DropdownPortal
+                open={overflowSections.length > 0 && moreOpen}
+                onClose={() => setMoreOpen(false)}
+                triggerRef={moreTriggerRef}
+                align="center"
+                position="top"
+                offset={10}
+                className="canvas-footer2__overflow-popover"
+            >
+                <div className="canvas-footer2__overflow-panel">
+                    {overflowSections.map((section) => (
+                        <div key={section.id} className="canvas-footer2__overflow-section">
+                            <div className={`canvas-footer2__overflow-label canvas-footer2__label--${section.color}`}>
+                                {section.label}
+                            </div>
+                            <div className="canvas-footer2__overflow-content">
+                                {section.content}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </DropdownPortal>
         </div>

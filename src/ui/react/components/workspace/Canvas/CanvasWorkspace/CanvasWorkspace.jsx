@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { CanvasGrid } from '@UI/react/components/workspace';
+import { TiledCanvasView } from '@UI/react/components/organisms/TiledCanvasView';
 import { SubsetPanel } from '@UI/react/components/panels/SubsetPanel';
 import { FocusModeOverlay } from '@UI/react/components/panels/FocusModeOverlay';
 import { SubsetSelectorModal } from '@UI/react/components/modals/SubsetSelectorModal';
@@ -24,7 +25,9 @@ import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
 import { useViewGroupManagerSync } from '@UI/react/hooks/useViewGroupManagerSync.js';
-import { useViewGroups, useViewGroupLinks } from '@UI/react/hooks';
+import { useViewGroups, useViewGroupLinks, useViewportSize } from '@UI/react/hooks';
+import { useStatusBar } from '@UI/react/hooks/useStatusBar.js';
+import { useViewportSyncListener, dispatchMoveViewport, dispatchNavigateTo } from '@UI/react/hooks/useViewportSync';
 import { useLayoutContext } from '@UI/react/components/layout/ThreeEdgeLayout';
 import { useWorkspaces } from '@UI/react/hooks/useWorkspaces.js';
 import { useRoomActions } from '@UI/react/hooks/useRoomPresence.js';
@@ -35,14 +38,383 @@ import { sessionManager } from '@Core/session/sessionManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { workspace as log } from '@Utils/logger.js';
 import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
+import { useCanvasHistory } from '@UI/react/store/canvasHistoryStore';
 // Viewport sync handled by CanvasGrid - no need to import here
 
 import './CanvasWorkspace.scss';
 
+function WorkspaceTileCanvas({
+    canvasId,
+    showCoordinates,
+    showViewGroupBorders,
+    isEnsuringCanvas = false,
+}) {
+    const {
+        canvas,
+        loading,
+        error,
+        viewport,
+        visiblePlacements,
+        moveViewport,
+        removePlacement,
+        addRow,
+        addColumn,
+        addPlacement,
+    } = useCanvas(canvasId);
+
+    const handleAddContent = useCallback(async (row, col, type) => {
+        if (!canvasId) {
+            return;
+        }
+
+        switch (type) {
+            case 'view':
+                window.dispatchEvent(new CustomEvent('cia:open-dataset-selector', {
+                    detail: { targetRow: row, targetCol: col, canvasId },
+                }));
+                break;
+            case 'notes':
+                await addPlacement?.({
+                    row,
+                    col,
+                    rowSpan: 1,
+                    colSpan: 1,
+                    content: {
+                        type: 'notes',
+                        notesBlockId: null,
+                    },
+                });
+                break;
+            case 'image':
+                window.dispatchEvent(new CustomEvent('cia:open-image-selector', {
+                    detail: {
+                        targetRow: row,
+                        targetCol: col,
+                        purpose: 'add-image-to-cell',
+                        canvasId,
+                    },
+                }));
+                break;
+            default:
+                break;
+        }
+    }, [addPlacement, canvasId]);
+
+    if (!canvasId) {
+        if (isEnsuringCanvas) {
+            return <div className="canvas-workspace__loading">Preparing canvas...</div>;
+        }
+        return (
+            <div className="canvas-workspace__empty">
+                <p>No canvas for this workspace</p>
+            </div>
+        );
+    }
+
+    if (loading && !canvas) {
+        return <div className="canvas-workspace__loading">Loading canvas...</div>;
+    }
+
+    if (error) {
+        return (
+            <div className="canvas-workspace__error">
+                {error?.message || 'Failed to load canvas'}
+            </div>
+        );
+    }
+
+    if (!canvas) {
+        return (
+            <div className="canvas-workspace__empty">
+                <p>No canvas selected</p>
+            </div>
+        );
+    }
+
+    return (
+        <CanvasGrid
+            canvasId={canvasId}
+            viewport={viewport}
+            placements={visiblePlacements}
+            showCoordinates={showCoordinates}
+            showViewGroupBorders={showViewGroupBorders}
+            viewGroups={[]}
+            onViewportChange={moveViewport}
+            onRemovePlacement={removePlacement}
+            onAddRow={addRow}
+            onAddColumn={addColumn}
+            onAddContent={handleAddContent}
+        />
+    );
+}
+
+const DEFAULT_WINDOW_SIZE = { width: 860, height: 620 };
+const DEFAULT_WINDOW_OFFSET = { x: 140, y: 120 };
+const WINDOW_OFFSET_STEP = 32;
+const DEFAULT_TOOL_STATE = {
+    editMode: false,
+    activeTool: 'select',
+    mergeMode: false,
+    flowDirection: 'row',
+};
+const SNAP_THRESHOLD = 16;
+const FREE_LAYOUT_PADDING = 120;
+const FREE_LAYOUT_GAP = 24;
+
+const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
+    workspace,
+    position,
+    size,
+    zIndex,
+    onPositionChange,
+    onSizeChange,
+    onFocus,
+    onClose,
+    showCoordinates,
+    showViewGroupBorders,
+    isFocused = false,
+    footer1Props,
+    footer2,
+    infoBar,
+    isEnsuringCanvas = false,
+    toolState,
+    onEditModeChange,
+    onToolChange,
+    onMergeModeChange,
+    onFlowDirectionChange,
+    onOpenNavigator,
+}) {
+    const canvasId = workspace?.activeCanvasId || null;
+    const {
+        canvas,
+        loading,
+        error,
+        viewport,
+        addPlacement,
+        removePlacement,
+        addRow,
+        addColumn,
+        moveViewport,
+        setViewportPosition,
+    } = useCanvas(canvasId);
+    const effectiveToolState = toolState || DEFAULT_TOOL_STATE;
+    const {
+        editMode,
+        activeTool,
+        mergeMode,
+        flowDirection,
+    } = effectiveToolState;
+
+    const handleEditModeChange = useCallback((newEditMode) => {
+        onEditModeChange?.(newEditMode, canvasId);
+    }, [canvasId, onEditModeChange]);
+
+    const handleToolChange = useCallback((newTool) => {
+        onToolChange?.(newTool, canvasId);
+    }, [canvasId, onToolChange]);
+
+    const handleMergeModeChange = useCallback((newMergeMode) => {
+        onMergeModeChange?.(newMergeMode, canvasId);
+    }, [canvasId, onMergeModeChange]);
+
+    const handleEditBarGridAction = useCallback((action) => {
+        if (action === 'merge') {
+            handleMergeModeChange(!mergeMode);
+            return;
+        }
+        log.debug(`Canvas edit action not yet implemented: ${action}`);
+    }, [handleMergeModeChange, mergeMode]);
+
+    const handleEditBarRowAction = useCallback((action) => {
+        if (action === 'add') {
+            if (flowDirection === 'row') {
+                addColumn();
+            } else {
+                addRow();
+            }
+            return;
+        }
+        if (action === 'remove') {
+            const cachedCanvas = canvasManager.getCanvas(canvasId);
+            if (!cachedCanvas) return;
+            if (flowDirection === 'row') {
+                const nextCols = Math.max(1, cachedCanvas.dimensions.cols - 1);
+                canvasManager.updateCanvas(canvasId, {
+                    dimensions: { ...cachedCanvas.dimensions, cols: nextCols },
+                });
+            } else {
+                const nextRows = Math.max(1, cachedCanvas.dimensions.rows - 1);
+                canvasManager.updateCanvas(canvasId, {
+                    dimensions: { ...cachedCanvas.dimensions, rows: nextRows },
+                });
+            }
+        }
+    }, [addColumn, addRow, canvasId, flowDirection]);
+
+    const handleAddContent = useCallback(async (row, col, type) => {
+        if (!canvasId) return;
+
+        switch (type) {
+            case 'view':
+                window.dispatchEvent(new CustomEvent('cia:open-dataset-selector', {
+                    detail: {
+                        targetRow: row,
+                        targetCol: col,
+                        canvasId,
+                    }
+                }));
+                break;
+            case 'notes':
+                try {
+                    await addPlacement({
+                        row,
+                        col,
+                        rowSpan: 1,
+                        colSpan: 1,
+                        content: {
+                            type: 'notes',
+                            notesBlockId: null,
+                        },
+                    });
+                } catch (err) {
+                    log.error('Failed to add notes placement:', err);
+                }
+                break;
+            case 'image':
+                window.dispatchEvent(new CustomEvent('cia:open-image-selector', {
+                    detail: {
+                        targetRow: row,
+                        targetCol: col,
+                        purpose: 'add-image-to-cell',
+                        canvasId,
+                    }
+                }));
+                break;
+            default:
+                log.warn(`Unknown content type: ${type}`);
+        }
+    }, [addPlacement, canvasId]);
+
+    const canvasSize = useMemo(() => ({
+        cols: canvas?.dimensions?.cols || 1,
+        rows: canvas?.dimensions?.rows || 1,
+    }), [canvas?.dimensions?.cols, canvas?.dimensions?.rows]);
+
+    const viewportSize = useMemo(() => ({
+        cols: viewport?.cols || 1,
+        rows: viewport?.rows || 1,
+    }), [viewport?.cols, viewport?.rows]);
+
+    const viewportPosition = useMemo(() => ({
+        col: viewport?.col || 0,
+        row: viewport?.row || 0,
+    }), [viewport?.col, viewport?.row]);
+
+    return (
+        <FloatingCanvasWrapper
+            canvasMode={CANVAS_MODES.FLOATING}
+            position={position}
+            size={size}
+            onPositionChange={onPositionChange}
+            onSizeChange={onSizeChange}
+            onFocus={onFocus}
+            zIndex={zIndex}
+        >
+            <CanvasChrome
+                className="canvas-workspace__window"
+                headerProps={{
+                    canGoBack: false,
+                    onGoBack: undefined,
+                    onGoHome: undefined,
+                    workspace,
+                    workspaces: [],
+                    onWorkspaceChange: undefined,
+                    allowWorkspaceSwitch: false,
+                    viewGroup: null,
+                    viewGroups: [],
+                    onViewGroupChange: undefined,
+                    isViewGroupLinked: false,
+                    onEditViewGroup: undefined,
+                    onOpenViewGroupManager: undefined,
+                    isEditMode: editMode,
+                    onToggleEditMode: handleEditModeChange,
+                    flowDirection: flowDirection === 'row' ? 'right' : 'down',
+                    onFlowDirectionChange: (direction) => {
+                        const nextDirection = direction === 'right' ? 'row' : 'column';
+                        onFlowDirectionChange?.(nextDirection);
+                    },
+                    showCoordinates,
+                    showViewGroupBorders,
+                    onToggleCoordinates: undefined,
+                    onToggleViewGroupBorders: undefined,
+                    canvasSize,
+                    viewportSize,
+                    viewportPosition,
+                    onMoveViewport: moveViewport,
+                    onHome: () => setViewportPosition(0, 0),
+                    onOpenNavigator,
+                    windowMode: 'floating',
+                    showWindowControls: false,
+                    onCloseWorkspace: onClose,
+                }}
+                editBarProps={isFocused ? {
+                    activeTool,
+                    onToolChange: handleToolChange,
+                    onGridAction: handleEditBarGridAction,
+                    onRowAction: handleEditBarRowAction,
+                    onDone: () => handleEditModeChange(false),
+                } : null}
+                footer1Props={isFocused ? footer1Props : {}}
+                footer2={isFocused ? footer2 : null}
+                infoBar={isFocused ? infoBar : null}
+                isEditMode={isFocused ? editMode : false}
+            >
+                {error ? (
+                    <div className="canvas-workspace__error">
+                        {error.message || 'Failed to load canvas'}
+                    </div>
+                ) : loading && !canvas ? (
+                    <div className="canvas-workspace__loading">Loading canvas...</div>
+                ) : canvas ? (
+                    <CanvasGrid
+                        canvasId={canvasId}
+                        showCoordinates={showCoordinates}
+                        showViewGroupBorders={showViewGroupBorders}
+                        viewGroups={[]}
+                        onRemovePlacement={removePlacement}
+                        onAddRow={addRow}
+                        onAddColumn={addColumn}
+                        onAddContent={handleAddContent}
+                    />
+                ) : isEnsuringCanvas ? (
+                    <div className="canvas-workspace__loading">Preparing canvas...</div>
+                ) : (
+                    <div className="canvas-workspace__empty">
+                        <p>No canvas selected</p>
+                    </div>
+                )}
+            </CanvasChrome>
+        </FloatingCanvasWrapper>
+    );
+});
+
 /**
  * CanvasWorkspaceInner - Internal component with ViewStack context
  */
-function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelContent, rightPanelContent }) {
+function CanvasWorkspaceInner({
+    userId,
+    projectId: propProjectId,
+    leftPanelContent,
+    rightPanelContent,
+    onCloseWorkspace,
+    onDeactivateWorkspace,
+    workspaceViewMode = 'tabs',
+    workspaceTabs = [],
+    activeWorkspaceId,
+    onSelectWorkspace,
+    onSetWorkspaceViewMode,
+    ensuringWorkspaceIds = {},
+}) {
     const layoutContext = useLayoutContext();
     const setLeftDockedOpen = layoutContext?.setLeftOpen || (() => { });
     const setRightDockedOpen = layoutContext?.setRightOpen || (() => { });
@@ -63,8 +435,6 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     const [rightPanelOpen, setRightPanelOpen] = useState(false);
     const [showCreateWorkspacePanel, setShowCreateWorkspacePanel] = useState(false);
 
-    // Grid size state
-    const [gridSize, setGridSize] = useState({ rows: 3, cols: 3 });
 
     // Canvas mode state (dock/float/fullscreen)
     const [canvasMode, setCanvasMode] = useState(CANVAS_MODES.DOCKED);
@@ -73,15 +443,45 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     const [floatingSize, setFloatingSize] = useState({ width: 800, height: 600 });
 
     // Header bar state (edit mode, tools, flow)
-    const [editMode, setEditMode] = useState(false);
-    const [activeTool, setActiveTool] = useState('select');
-    const [mergeMode, setMergeMode] = useState(false);
-    const [flowDirection, setFlowDirection] = useState('row');
+    const [editMode, setEditMode] = useState(DEFAULT_TOOL_STATE.editMode);
+    const [activeTool, setActiveTool] = useState(DEFAULT_TOOL_STATE.activeTool);
+    const [mergeMode, setMergeMode] = useState(DEFAULT_TOOL_STATE.mergeMode);
+    const [flowDirection, setFlowDirection] = useState(DEFAULT_TOOL_STATE.flowDirection);
     const [showCoordinates, setShowCoordinates] = useState(false);
     const [showViewGroupBorders, setShowViewGroupBorders] = useState(false);
+    const [closedWorkspaceIds, setClosedWorkspaceIds] = useState([]);
+    const [tileMaximizedWorkspaceId, setTileMaximizedWorkspaceId] = useState(null);
+    const [windowLayouts, setWindowLayouts] = useState({});
+    const [windowOrder, setWindowOrder] = useState([]);
+    const [workspaceToolState, setWorkspaceToolState] = useState({});
+    const freeLayoutRef = useRef(null);
+    const [freeLayoutBounds, setFreeLayoutBounds] = useState({ width: 0, height: 0 });
+    const layoutLoadedRef = useRef(false);
+
+    const { syncStatus: rawSyncStatus, onlineCount } = useStatusBar();
+
+    const infoSyncStatus = useMemo(() => {
+        if (rawSyncStatus === 'connected') return 'synced';
+        if (rawSyncStatus === 'syncing') return 'syncing';
+        return 'disconnected';
+    }, [rawSyncStatus]);
 
     // Rooms and workspaces hooks
     const { currentRoom } = useRoomsTab({ projectId });
+    const layoutStorageKey = useMemo(() => {
+        let roomKey = currentRoom?.id;
+        if (!roomKey) {
+            try {
+                roomKey = sessionManager.getRoomId?.();
+            } catch {
+                roomKey = null;
+            }
+        }
+        if (!roomKey) return null;
+        const userKey = userId || sessionManager.getUserId?.() || 'anon';
+        const projectScope = projectId || 'default';
+        return `cia:workspace-window-layouts:${userKey}:${projectScope}:${roomKey}`;
+    }, [currentRoom?.id, projectId, userId]);
 
     const { setWorkspace: setWorkspacePresence } = useRoomActions();
 
@@ -91,16 +491,40 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         selectWorkspace,
         createBreakout,
         createProjectWorkspace,
-    } = useWorkspaces({ userId, projectId });
+        isLoading: isWorkspacesLoading,
+    } = useWorkspaces({ userId, projectId, roomId: currentRoom?.id });
 
     // Transform workspaces for the selector
     const workspacesForSelector = useMemo(() => {
         return allWorkspaces || [];
     }, [allWorkspaces]);
 
+    const tileWorkspaces = useMemo(() => {
+        if (workspaceTabs && workspaceTabs.length > 0) {
+            return workspaceTabs;
+        }
+        return workspacesForSelector.map((workspace) => ({
+            ...workspace,
+            isOpen: true,
+        }));
+    }, [workspaceTabs, workspacesForSelector]);
+
+    const hasOpenWorkspaces = useMemo(
+        () => tileWorkspaces.some((workspace) => workspace.isOpen),
+        [tileWorkspaces]
+    );
+    const closedWorkspaceSet = useMemo(
+        () => new Set(closedWorkspaceIds),
+        [closedWorkspaceIds]
+    );
+
     const currentWorkspace = useMemo(() => {
         return allWorkspaces?.find(ws => ws.id === currentWorkspaceId) || null;
     }, [allWorkspaces, currentWorkspaceId]);
+    const activeWorkspaceKey = activeWorkspaceId || currentWorkspaceId;
+    const activeWorkspaceEnsuring = Boolean(
+        (activeWorkspaceKey && ensuringWorkspaceIds?.[activeWorkspaceKey])
+    );
 
     // Handle workspace change
     const handleWorkspaceChange = useCallback((workspaceId) => {
@@ -110,10 +534,213 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
 
     const handleWorkspaceSelect = useCallback((workspaceItem) => {
         const workspaceId = workspaceItem?.id || workspaceItem;
-        if (workspaceId) {
+        if (!workspaceId) return;
+
+        setClosedWorkspaceIds((prev) => prev.filter((id) => id !== workspaceId));
+
+        if (onSelectWorkspace) {
+            onSelectWorkspace(workspaceId);
+        } else {
             handleWorkspaceChange(workspaceId);
         }
-    }, [handleWorkspaceChange]);
+    }, [handleWorkspaceChange, onSelectWorkspace]);
+
+    const handleTileWorkspaceSelect = useCallback((workspaceId) => {
+        setClosedWorkspaceIds((prev) => prev.filter((id) => id !== workspaceId));
+        if (onSelectWorkspace) {
+            onSelectWorkspace(workspaceId);
+        } else {
+            handleWorkspaceSelect(workspaceId);
+        }
+    }, [handleWorkspaceSelect, onSelectWorkspace]);
+
+    const handleTileWorkspaceMaximize = useCallback((workspaceId) => {
+        handleTileWorkspaceSelect(workspaceId);
+        setTileMaximizedWorkspaceId((prev) => (prev === workspaceId ? null : workspaceId));
+    }, [handleTileWorkspaceSelect]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        layoutLoadedRef.current = false;
+        if (!layoutStorageKey) return;
+
+        const stored = window.localStorage.getItem(layoutStorageKey);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (parsed && typeof parsed === 'object') {
+                    setWindowLayouts(parsed.layouts || {});
+                    setWindowOrder(Array.isArray(parsed.order) ? parsed.order : []);
+                    setClosedWorkspaceIds(Array.isArray(parsed.closedWorkspaceIds) ? parsed.closedWorkspaceIds : []);
+                    setTileMaximizedWorkspaceId(
+                        typeof parsed.tileMaximizedWorkspaceId === 'string' ? parsed.tileMaximizedWorkspaceId : null
+                    );
+                }
+            } catch (error) {
+                log.warn('Failed to parse workspace window layouts:', error);
+            }
+        } else {
+            setWindowLayouts({});
+            setWindowOrder([]);
+            setClosedWorkspaceIds([]);
+            setTileMaximizedWorkspaceId(null);
+        }
+
+        layoutLoadedRef.current = true;
+    }, [layoutStorageKey]);
+
+    useEffect(() => {
+        const openIds = tileWorkspaces
+            .filter((workspace) => workspace.isOpen)
+            .map((workspace) => workspace.id);
+
+        setClosedWorkspaceIds((prev) => prev.filter((id) => openIds.includes(id)));
+
+        setWindowLayouts((prev) => {
+            const next = { ...prev };
+            openIds.forEach((id, index) => {
+                if (!next[id]) {
+                    next[id] = {
+                        position: {
+                            x: DEFAULT_WINDOW_OFFSET.x + index * WINDOW_OFFSET_STEP,
+                            y: DEFAULT_WINDOW_OFFSET.y + index * WINDOW_OFFSET_STEP,
+                        },
+                        size: { ...DEFAULT_WINDOW_SIZE },
+                    };
+                }
+            });
+            return next;
+        });
+
+        setWindowOrder((prev) => {
+            const next = prev.filter((id) => openIds.includes(id));
+            openIds.forEach((id) => {
+                if (!next.includes(id)) {
+                    next.push(id);
+                }
+            });
+            return next;
+        });
+
+        setWorkspaceToolState((prev) => {
+            const next = { ...prev };
+            openIds.forEach((id) => {
+                if (!next[id]) {
+                    next[id] = { ...DEFAULT_TOOL_STATE };
+                }
+            });
+            return next;
+        });
+
+        setTileMaximizedWorkspaceId((prev) => (
+            prev && !openIds.includes(prev) ? null : prev
+        ));
+    }, [tileWorkspaces]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (!layoutLoadedRef.current || !layoutStorageKey) return;
+
+        const payload = {
+            layouts: windowLayouts,
+            order: windowOrder,
+            closedWorkspaceIds,
+            tileMaximizedWorkspaceId,
+        };
+        window.localStorage.setItem(layoutStorageKey, JSON.stringify(payload));
+    }, [closedWorkspaceIds, layoutStorageKey, tileMaximizedWorkspaceId, windowLayouts, windowOrder]);
+
+    const handleWindowFocus = useCallback((workspaceId) => {
+        if (!workspaceId) return;
+        setWindowOrder((prev) => {
+            const next = prev.filter((id) => id !== workspaceId);
+            next.push(workspaceId);
+            return next;
+        });
+        handleWorkspaceSelect(workspaceId);
+    }, [handleWorkspaceSelect]);
+
+    const handleCloseWorkspaceWindow = useCallback((workspaceId) => {
+        if (!workspaceId) return;
+        if (onCloseWorkspace) {
+            onCloseWorkspace(workspaceId);
+            return;
+        }
+        setClosedWorkspaceIds((prev) => (prev.includes(workspaceId) ? prev : [...prev, workspaceId]));
+        if (activeWorkspaceKey === workspaceId) {
+            const nextActive = freeLayoutWorkspaces
+                .map((workspace) => workspace.id)
+                .find((id) => id !== workspaceId);
+            if (nextActive) {
+                handleWorkspaceSelect(nextActive);
+            } else {
+                onDeactivateWorkspace?.();
+            }
+        }
+    }, [activeWorkspaceKey, freeLayoutWorkspaces, handleWorkspaceSelect, onCloseWorkspace, onDeactivateWorkspace]);
+
+    useEffect(() => {
+        if (workspaceViewMode !== 'tabs') return;
+        if (!activeWorkspaceKey) return;
+        setClosedWorkspaceIds((prev) => prev.filter((id) => id !== activeWorkspaceKey));
+        setWindowOrder((prev) => {
+            const next = prev.filter((id) => id !== activeWorkspaceKey);
+            next.push(activeWorkspaceKey);
+            return next;
+        });
+    }, [activeWorkspaceKey, workspaceViewMode]);
+
+    useEffect(() => {
+        if (!activeWorkspaceKey) return;
+        const storedState = workspaceToolState[activeWorkspaceKey] || DEFAULT_TOOL_STATE;
+        setEditMode(storedState.editMode);
+        setActiveTool(storedState.activeTool);
+        setMergeMode(storedState.mergeMode);
+        setFlowDirection(storedState.flowDirection);
+    }, [activeWorkspaceKey, workspaceToolState]);
+
+    useEffect(() => {
+        if (!activeWorkspaceKey) return;
+        setWorkspaceToolState((prev) => {
+            const previous = prev[activeWorkspaceKey] || DEFAULT_TOOL_STATE;
+            const next = {
+                ...previous,
+                editMode,
+                activeTool,
+                mergeMode,
+                flowDirection,
+            };
+            const isSame =
+                previous.editMode === next.editMode &&
+                previous.activeTool === next.activeTool &&
+                previous.mergeMode === next.mergeMode &&
+                previous.flowDirection === next.flowDirection;
+            if (isSame) return prev;
+            return { ...prev, [activeWorkspaceKey]: next };
+        });
+    }, [activeWorkspaceKey, activeTool, editMode, flowDirection, mergeMode]);
+
+    useEffect(() => {
+        if (workspaceViewMode !== 'tabs') return;
+        if (!freeLayoutRef.current) return;
+        const element = freeLayoutRef.current;
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                setFreeLayoutBounds({
+                    width: entry.contentRect.width,
+                    height: entry.contentRect.height,
+                });
+            }
+        });
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [workspaceViewMode]);
+
+    const getWindowZIndex = useCallback((workspaceId) => {
+        const index = windowOrder.indexOf(workspaceId);
+        if (index === -1) return 1;
+        return 10 + index;
+    }, [windowOrder]);
 
     // Handle workspace creation - open the panel
     const handleOpenCreateWorkspace = useCallback(() => {
@@ -143,36 +770,40 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     }, [createProjectWorkspace, createBreakout, selectWorkspace, setWorkspacePresence, currentRoom]);
 
     // Dispatch edit mode changes to CanvasGrid
-    const handleEditModeChange = useCallback((newEditMode) => {
+    const handleEditModeChange = useCallback((newEditMode, targetCanvasId = activeCanvasId) => {
         setEditMode(newEditMode);
+        if (!targetCanvasId) return;
         window.dispatchEvent(new CustomEvent('canvas:editModeChange', {
-            detail: { editMode: newEditMode }
+            detail: { editMode: newEditMode, canvasId: targetCanvasId }
         }));
-    }, []);
+    }, [activeCanvasId]);
 
     // Dispatch tool changes to CanvasGrid
-    const handleToolChange = useCallback((newTool) => {
+    const handleToolChange = useCallback((newTool, targetCanvasId = activeCanvasId) => {
         setActiveTool(newTool);
-        window.dispatchEvent(new CustomEvent('canvas:toolChange', {
-            detail: { tool: newTool }
-        }));
+        if (targetCanvasId) {
+            window.dispatchEvent(new CustomEvent('canvas:toolChange', {
+                detail: { tool: newTool, canvasId: targetCanvasId }
+            }));
+        }
         // Pan tool automatically enables edit mode
         if (newTool === 'pan') {
-            handleEditModeChange(true);
+            handleEditModeChange(true, targetCanvasId);
         }
-    }, [handleEditModeChange]);
+    }, [activeCanvasId, handleEditModeChange]);
 
     // Handle merge mode toggle
-    const handleMergeModeChange = useCallback((newMergeMode) => {
+    const handleMergeModeChange = useCallback((newMergeMode, targetCanvasId = activeCanvasId) => {
         setMergeMode(newMergeMode);
         if (newMergeMode) {
             // Entering merge mode also enables edit mode
-            handleEditModeChange(true);
+            handleEditModeChange(true, targetCanvasId);
         }
+        if (!targetCanvasId) return;
         window.dispatchEvent(new CustomEvent('canvas:mergeModeChange', {
-            detail: { mergeMode: newMergeMode }
+            detail: { mergeMode: newMergeMode, canvasId: targetCanvasId }
         }));
-    }, [handleEditModeChange]);
+    }, [activeCanvasId, handleEditModeChange]);
 
     const handleEditBarGridAction = useCallback((action) => {
         switch (action) {
@@ -215,9 +846,29 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         error: canvasError,
         moveViewport,
         setViewportPosition: navigateTo,
-        setViewportSize,
         addPlacement: serverAddPlacement,
     } = useCanvas(activeCanvasId);
+
+    const [syncedViewport, setSyncedViewport] = useState(() => ({
+        row: viewport?.row || 0,
+        col: viewport?.col || 0,
+    }));
+
+    useEffect(() => {
+        if (!viewport) return;
+        setSyncedViewport({ row: viewport.row, col: viewport.col });
+    }, [viewport?.row, viewport?.col]);
+
+    useViewportSyncListener({
+        onViewportChanged: (nextViewport) => {
+            if (!nextViewport) return;
+            setSyncedViewport({
+                row: nextViewport.row ?? 0,
+                col: nextViewport.col ?? 0,
+            });
+        },
+        canvasId: activeCanvasId,
+    });
 
     // Subsets hook
     const {
@@ -245,42 +896,24 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         setRightPanelOpen(false);
     }, [setRightDockedOpen, setRightPanelOpen]);
 
-    // Load initial workspace/canvas (server-authoritative, no local fallback)
     useEffect(() => {
-        const loadWorkspace = async () => {
-            log.debug(`Loading canvases for project: ${projectId}`);
-            setLoadError(null);
+        if (!currentWorkspace?.activeCanvasId) {
+            setActiveCanvasId(null);
+            return;
+        }
 
-            try {
-                // Get/create canvas from server (server is source of truth)
-                const personalCanvas = await canvasManager.getPersonalCanvas(projectId);
+        setActiveCanvasId(currentWorkspace.activeCanvasId);
+        canvasManager.setActiveCanvas(currentWorkspace.activeCanvasId);
+    }, [currentWorkspace?.activeCanvasId]);
 
-                if (personalCanvas) {
-                    log.debug(`Got personal canvas: ${personalCanvas.id}`);
-                    setActiveCanvasId(personalCanvas.id);
-                    // IMPORTANT: Also update the manager so other components can access it
-                    canvasManager.setActiveCanvas(personalCanvas.id);
-                }
-            } catch (error) {
-                log.error('Failed to load canvas from server:', error.message);
-                setLoadError(error);
-                // Mark as disconnected so ConnectionOverlay shows
-                canvasManager.handleDisconnected(error);
-            }
-        };
-
-        loadWorkspace();
-    }, [projectId]);
+    useEffect(() => {
+        if (canvasMode !== CANVAS_MODES.DOCKED) {
+            setCanvasMode(CANVAS_MODES.DOCKED);
+        }
+    }, [canvasMode, workspaceViewMode]);
 
     // NOTE: Viewport sync events are handled by CanvasGrid directly
     // Do NOT listen here to avoid double movement
-
-    // Sync local gridSize display state with actual viewport from useCanvas
-    useEffect(() => {
-        if (viewport?.rows && viewport?.cols) {
-            setGridSize({ rows: viewport.rows, cols: viewport.cols });
-        }
-    }, [viewport?.rows, viewport?.cols]);
 
     // Add placement (server-authoritative)
     const addPlacement = useCallback(async (placementData) => {
@@ -337,8 +970,53 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     // Remove placement (server-authoritative)
     const removePlacement = useCallback(async (placementId) => {
         if (!placementId) return;
+        const found = canvasManager.findPlacement?.(placementId);
+        const placement = found?.placement;
+        const canvasId = found?.canvas?.id || null;
+        const viewManager = getViewConfigurationManager();
+        const viewId = placement?.content?.viewConfigurationId || placement?.content?.viewId || null;
+        const view = viewId ? viewManager?.getView?.(viewId) : null;
+        const viewName = view?.name ? `"${view.name}"` : null;
+        const row = placement?.row ?? 0;
+        const col = placement?.col ?? 0;
+        const rowSpan = placement?.rowSpan ?? 1;
+        const colSpan = placement?.colSpan ?? 1;
+        const content = placement?.content;
+        let currentPlacementId = placementId;
         log.debug('Removing placement:', placementId);
         await canvasManager.removePlacement(placementId);
+
+        if (viewId && !canvasManager.isViewOnCanvas(viewId)) {
+            viewManager?.deactivateView?.(viewId);
+        }
+
+        if (!canvasId || !content) {
+            return;
+        }
+
+        canvasHistory.record({
+            type: 'DELETE',
+            description: viewName ? `Remove ${viewName}` : 'Remove placement',
+            undo: async () => {
+                const restored = await canvasManager.addPlacement(canvasId, {
+                    row,
+                    col,
+                    rowSpan,
+                    colSpan,
+                    content,
+                });
+                currentPlacementId = restored?.id || currentPlacementId;
+                if (viewId) {
+                    viewManager?.activateView?.(viewId);
+                }
+            },
+            redo: async () => {
+                await canvasManager.removePlacement(currentPlacementId);
+                if (viewId && !canvasManager.isViewOnCanvas(viewId)) {
+                    viewManager?.deactivateView?.(viewId);
+                }
+            },
+        });
     }, []);
 
     // Find next empty cell for placement
@@ -395,6 +1073,24 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
         onViewAction: contextViewAction,
         onUpdateLink: contextUpdateLink,
     } = useViewContextLogic();
+
+    const {
+        past: historyPast,
+        future: historyFuture,
+        isUndoing,
+        isRedoing,
+        undo,
+        redo,
+    } = useCanvasHistory((state) => ({
+        past: state.past,
+        future: state.future,
+        isUndoing: state.isUndoing,
+        isRedoing: state.isRedoing,
+        undo: state.undo,
+        redo: state.redo,
+    }));
+    const canUndo = historyPast.length > 0 && !isUndoing && !isRedoing;
+    const canRedo = historyFuture.length > 0 && !isUndoing && !isRedoing;
 
     // Connect WebSocket broadcasts to ViewGroupManager
     useViewGroupManagerSync();
@@ -902,7 +1598,10 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     const canvasSize = useMemo(() => ({
         cols: canvas?.dimensions?.cols || 10,
         rows: canvas?.dimensions?.rows || 10,
-    }), [canvas]);
+    }), [canvas?.dimensions?.cols, canvas?.dimensions?.rows]);
+
+    // Viewport size state (shared with CanvasGrid)
+    const { viewportSize: sharedViewportSize, setViewportSize: setSharedViewportSize } = useViewportSize(canvasSize);
 
     // Panel toggle handlers
     const toggleLeftPanel = useCallback(() => {
@@ -928,11 +1627,266 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
     }, [activeCanvasId, canvasManager]);
 
     const handleViewportSizeChange = useCallback((newSize) => {
-        // Update viewport size in useCanvas hook (this is the actual viewport used by CanvasGrid)
-        setViewportSize(newSize.rows, newSize.cols);
-        // Also update local gridSize state for UI display consistency
-        setGridSize({ rows: newSize.rows, cols: newSize.cols });
-    }, [setViewportSize, setGridSize]);
+        setSharedViewportSize(newSize.rows, newSize.cols);
+    }, [setSharedViewportSize]);
+
+    const hasWorkspace = Boolean(activeWorkspaceId || currentWorkspace?.id);
+    const isFreeLayout = workspaceViewMode === 'tabs';
+    const shouldRenderChrome =
+        !isFreeLayout && (workspaceViewMode === 'tile' ? hasOpenWorkspaces : hasWorkspace);
+    const freeLayoutWorkspaces = useMemo(() => (
+        tileWorkspaces.filter((workspace) => workspace.isOpen && !closedWorkspaceSet.has(workspace.id))
+    ), [tileWorkspaces, closedWorkspaceSet]);
+    const applySnap = useCallback((position, size) => {
+        if (!freeLayoutBounds.width || !freeLayoutBounds.height) {
+            return {
+                x: Math.max(0, position.x),
+                y: Math.max(0, position.y),
+            };
+        }
+
+        const maxX = Math.max(0, freeLayoutBounds.width - size.width);
+        const maxY = Math.max(0, freeLayoutBounds.height - size.height);
+        let nextX = position.x;
+        let nextY = position.y;
+
+        if (Math.abs(nextX) <= SNAP_THRESHOLD) {
+            nextX = 0;
+        } else if (Math.abs(nextX - maxX) <= SNAP_THRESHOLD) {
+            nextX = maxX;
+        }
+
+        if (Math.abs(nextY) <= SNAP_THRESHOLD) {
+            nextY = 0;
+        } else if (Math.abs(nextY - maxY) <= SNAP_THRESHOLD) {
+            nextY = maxY;
+        }
+
+        return {
+            x: Math.max(0, nextX),
+            y: Math.max(0, nextY),
+        };
+    }, [freeLayoutBounds.height, freeLayoutBounds.width]);
+    const freeLayoutSurfaceSize = useMemo(() => {
+        let maxWidth = freeLayoutBounds.width || 0;
+        let maxHeight = freeLayoutBounds.height || 0;
+
+        freeLayoutWorkspaces.forEach((workspace, index) => {
+            const layout = windowLayouts[workspace.id] || {
+                position: {
+                    x: DEFAULT_WINDOW_OFFSET.x + index * WINDOW_OFFSET_STEP,
+                    y: DEFAULT_WINDOW_OFFSET.y + index * WINDOW_OFFSET_STEP,
+                },
+                size: { ...DEFAULT_WINDOW_SIZE },
+            };
+            maxWidth = Math.max(maxWidth, layout.position.x + layout.size.width + FREE_LAYOUT_PADDING);
+            maxHeight = Math.max(maxHeight, layout.position.y + layout.size.height + FREE_LAYOUT_PADDING);
+        });
+
+        return {
+            width: Math.max(maxWidth, freeLayoutBounds.width || 0),
+            height: Math.max(maxHeight, freeLayoutBounds.height || 0),
+        };
+    }, [freeLayoutBounds.height, freeLayoutBounds.width, freeLayoutWorkspaces, windowLayouts]);
+    const handleWindowPositionChange = useCallback((workspaceId, nextPosition) => {
+        setWindowLayouts((prev) => {
+            const current = prev[workspaceId] || {
+                position: { ...DEFAULT_WINDOW_OFFSET },
+                size: { ...DEFAULT_WINDOW_SIZE },
+            };
+            const snappedPosition = applySnap(nextPosition, current.size);
+            return {
+                ...prev,
+                [workspaceId]: {
+                    ...current,
+                    position: snappedPosition,
+                },
+            };
+        });
+    }, [applySnap]);
+    const handleWindowSizeChange = useCallback((workspaceId, nextSize) => {
+        setWindowLayouts((prev) => {
+            const current = prev[workspaceId] || {
+                position: { ...DEFAULT_WINDOW_OFFSET },
+                size: { ...DEFAULT_WINDOW_SIZE },
+            };
+            const snappedPosition = applySnap(current.position, nextSize);
+            return {
+                ...prev,
+                [workspaceId]: {
+                    ...current,
+                    size: nextSize,
+                    position: snappedPosition,
+                },
+            };
+        });
+    }, [applySnap]);
+    const handleArrangeCascade = useCallback(() => {
+        setWindowLayouts((prev) => {
+            const next = { ...prev };
+            freeLayoutWorkspaces.forEach((workspace, index) => {
+                const current = next[workspace.id] || {
+                    position: { ...DEFAULT_WINDOW_OFFSET },
+                    size: { ...DEFAULT_WINDOW_SIZE },
+                };
+                next[workspace.id] = {
+                    ...current,
+                    position: {
+                        x: DEFAULT_WINDOW_OFFSET.x + index * WINDOW_OFFSET_STEP,
+                        y: DEFAULT_WINDOW_OFFSET.y + index * WINDOW_OFFSET_STEP,
+                    },
+                };
+            });
+            return next;
+        });
+    }, [freeLayoutWorkspaces]);
+    const handleArrangeTile = useCallback(() => {
+        setWindowLayouts((prev) => {
+            const next = { ...prev };
+            const count = freeLayoutWorkspaces.length;
+            if (!count) return next;
+
+            const availableWidth = Math.max(0, freeLayoutBounds.width - FREE_LAYOUT_GAP);
+            const columnCount = Math.max(1, Math.floor(availableWidth / (DEFAULT_WINDOW_SIZE.width + FREE_LAYOUT_GAP)));
+            freeLayoutWorkspaces.forEach((workspace, index) => {
+                const current = next[workspace.id] || {
+                    position: { ...DEFAULT_WINDOW_OFFSET },
+                    size: { ...DEFAULT_WINDOW_SIZE },
+                };
+                const row = Math.floor(index / columnCount);
+                const col = index % columnCount;
+                next[workspace.id] = {
+                    ...current,
+                    position: {
+                        x: FREE_LAYOUT_GAP + col * (DEFAULT_WINDOW_SIZE.width + FREE_LAYOUT_GAP),
+                        y: FREE_LAYOUT_GAP + row * (DEFAULT_WINDOW_SIZE.height + FREE_LAYOUT_GAP),
+                    },
+                };
+            });
+            return next;
+        });
+    }, [freeLayoutBounds.width, freeLayoutWorkspaces]);
+    useEffect(() => {
+        const handleArrangeEvent = (event) => {
+            const mode = event?.detail?.mode;
+            if (mode === 'cascade') {
+                handleArrangeCascade();
+                return;
+            }
+            if (mode === 'tile') {
+                handleArrangeTile();
+            }
+        };
+        if (workspaceViewMode !== 'tabs') return undefined;
+        window.addEventListener('cia:workspace-arrange', handleArrangeEvent);
+        return () => window.removeEventListener('cia:workspace-arrange', handleArrangeEvent);
+    }, [handleArrangeCascade, handleArrangeTile, workspaceViewMode]);
+
+    const sharedFooter1Props = useMemo(() => ({
+        canUndo,
+        canRedo,
+        onUndo: undo,
+        onRedo: redo,
+        activeView: contextActiveView,
+        onCanvasViews,
+        availableViews,
+        onSelectView: contextSelectView,
+        onPlaceView: contextPlaceView,
+        onViewAction: contextViewAction,
+        tools: notchTools,
+        toolSections,
+        onSelectTool: handleNotchToolSelect,
+    }), [
+        canRedo,
+        canUndo,
+        contextActiveView,
+        contextPlaceView,
+        contextSelectView,
+        contextViewAction,
+        availableViews,
+        notchTools,
+        onCanvasViews,
+        redo,
+        toolSections,
+        undo,
+        handleNotchToolSelect,
+    ]);
+
+    const sharedFooter2 = useMemo(() => (
+        <div ref={footerRef}>
+            <CanvasChromeFooter2
+                containerWidth={footerWidth}
+                links={contextActiveView?.links || {}}
+                onUpdateLink={contextUpdateLink}
+                onToggleFocus={() => {
+                    if (isFocusView) {
+                        goHome();
+                    } else {
+                        handleToolbarModeChange('focus');
+                    }
+                }}
+                onOpenViewList={() => {
+                    setLeftDockedOpen(true);
+                }}
+                onSnapshot={() => {
+                    log.debug('Snapshot requested from Footer2');
+                    if (contextActiveView?.id) {
+                        window.dispatchEvent(new CustomEvent('cia:snapshot-view', {
+                            detail: { viewId: contextActiveView.id }
+                        }));
+                    }
+                }}
+                onResetView={() => {
+                    log.debug('Reset view requested from Footer2');
+                    handleResetCamera();
+                }}
+                onCopyView={handleDuplicateView}
+                onOpenSettings={handleViewSettings}
+                isVRAvailable={true}
+                isInVR={false}
+                onToggleVR={() => {
+                    log.debug('VR toggle requested');
+                }}
+            />
+        </div>
+    ), [
+        activeCanvasId,
+        contextActiveView,
+        contextUpdateLink,
+        footerWidth,
+        goHome,
+        handleDuplicateView,
+        handleResetCamera,
+        handleToolbarModeChange,
+        handleViewSettings,
+        isFocusView,
+        setLeftDockedOpen,
+        sharedViewportSize,
+        syncedViewport,
+    ]);
+
+    const sharedInfoBar = useMemo(() => (
+        <CanvasInfoFooter
+            canvasSize={canvasSize}
+            viewportSize={sharedViewportSize}
+            cellSize={cellSize}
+            collaboratorCount={onlineCount}
+            syncStatus={infoSyncStatus}
+            onCanvasSizeChange={handleCanvasSizeChange}
+            onViewportSizeChange={handleViewportSizeChange}
+            onOpenNavigator={() => {
+                // TODO: Open canvas navigator
+            }}
+        />
+    ), [
+        canvasSize,
+        cellSize,
+        handleCanvasSizeChange,
+        handleViewportSizeChange,
+        infoSyncStatus,
+        onlineCount,
+        sharedViewportSize,
+    ]);
 
     return (
         <FloatingCanvasWrapper
@@ -944,221 +1898,284 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
             onSizeChange={setFloatingSize}
             onModeChange={setCanvasMode}
         >
-            <CanvasChrome
-                className="canvas-workspace"
-                headerProps={{
-                    canGoBack,
-                    onGoBack: goBack,
-                    onGoHome: goHome,
-                    workspace: currentWorkspace || { id: projectId, name: 'Workspace', type: 'project' },
-                    workspaces: workspacesForSelector,
-                    onWorkspaceChange: handleWorkspaceSelect,
-                    viewGroup: activeHeaderViewGroup,
-                    viewGroups: formattedViewGroups,
-                    onViewGroupChange: (viewGroup) => handleSelectViewGroup(viewGroup?.id ?? null),
-                    isViewGroupLinked,
-                    onEditViewGroup: (viewGroup) => {
-                        if (viewGroup?.id) {
-                            handleSelectViewGroup(viewGroup.id);
-                        }
-                        setLeftDockedOpen(true);
-                    },
-                    onOpenViewGroupManager: () => {
-                        setLeftDockedOpen(true);
-                    },
-                    isEditMode: editMode,
-                    onToggleEditMode: handleEditModeChange,
-                    flowDirection: flowDirection === 'row' ? 'right' : 'down',
-                    onFlowDirectionChange: (direction) => {
-                        setFlowDirection(direction === 'right' ? 'row' : 'column');
-                    },
-                    showCoordinates,
-                    showViewGroupBorders,
-                    onToggleCoordinates: setShowCoordinates,
-                    onToggleViewGroupBorders: setShowViewGroupBorders,
-                    windowMode: canvasMode === CANVAS_MODES.FULLSCREEN ? 'full' : canvasMode,
-                    onWindowModeChange: (mode) => {
-                        setCanvasMode(mode === 'full' ? CANVAS_MODES.FULLSCREEN : mode);
-                    },
-                    isFullscreen: canvasMode === CANVAS_MODES.FULLSCREEN,
-                    onToggleFullscreen: (next) => {
-                        setCanvasMode(next ? CANVAS_MODES.FULLSCREEN : CANVAS_MODES.DOCKED);
-                    },
-                }}
-                editBarProps={{
-                    activeTool,
-                    onToolChange: handleToolChange,
-                    onGridAction: handleEditBarGridAction,
-                    onRowAction: handleEditBarRowAction,
-                    onDone: () => handleEditModeChange(false),
-                }}
-                footer1Props={{
-                    canUndo: false,
-                    canRedo: false,
-                    activeView: contextActiveView,
-                    onCanvasViews,
-                    availableViews,
-                    onSelectView: contextSelectView,
-                    onPlaceView: contextPlaceView,
-                    onViewAction: contextViewAction,
-                    tools: notchTools,
-                    toolSections,
-                    onSelectTool: handleNotchToolSelect,
-                }}
-                footer2={(
-                    <div ref={footerRef}>
-                        <CanvasChromeFooter2
-                            canvasSize={canvasSize}
-                            viewportSize={{ rows: viewport?.rows || 1, cols: viewport?.cols || 1 }}
-                            viewportPosition={{ row: viewport?.row || 0, col: viewport?.col || 0 }}
-                            containerWidth={footerWidth}
-                            links={contextActiveView?.links || {}}
-                            onUpdateLink={contextUpdateLink}
-                            onMoveViewport={moveViewport}
-                            onHome={() => navigateTo(0, 0)}
-                            onOpenNavigator={() => {
-                                setLeftDockedOpen(true);
-                            }}
-                            onToggleFocus={() => {
-                                if (isFocusView) {
-                                    goHome();
-                                } else {
-                                    handleToolbarModeChange('focus');
-                                }
-                            }}
-                            onOpenViewList={() => {
-                                setLeftDockedOpen(true);
-                            }}
-                            onSnapshot={() => {
-                                log.debug('Snapshot requested from Footer2');
-                                if (contextActiveView?.id) {
-                                    window.dispatchEvent(new CustomEvent('cia:snapshot-view', {
-                                        detail: { viewId: contextActiveView.id }
-                                    }));
-                                }
-                            }}
-                            onResetView={() => {
-                                log.debug('Reset view requested from Footer2');
-                                handleResetCamera();
-                            }}
-                            onCopyView={handleDuplicateView}
-                            onOpenSettings={handleViewSettings}
-                            isVRAvailable={true}
-                            isInVR={false}
-                            onToggleVR={() => {
-                                log.debug('VR toggle requested');
-                            }}
+            {isFreeLayout ? (
+                <div className="canvas-workspace canvas-workspace--free-layout">
+                    <div className="canvas-workspace__content">
+                        <EdgeTrigger
+                            side="left"
+                            onClick={toggleLeftPanel}
+                            active={leftPanelOpen}
+                        />
+
+                        <div
+                            className="canvas-workspace__canvas canvas-workspace__canvas--free-layout"
+                            ref={freeLayoutRef}
+                        >
+                            <div
+                                className="canvas-workspace__free-surface"
+                                style={{
+                                    width: freeLayoutSurfaceSize.width,
+                                    height: freeLayoutSurfaceSize.height,
+                                }}
+                            >
+                                {freeLayoutWorkspaces.length > 0 ? (
+                                    freeLayoutWorkspaces.map((workspace) => {
+                                        const layout = windowLayouts[workspace.id] || {
+                                            position: {
+                                                x: DEFAULT_WINDOW_OFFSET.x,
+                                                y: DEFAULT_WINDOW_OFFSET.y,
+                                            },
+                                            size: { ...DEFAULT_WINDOW_SIZE },
+                                        };
+                                        const isFocused = activeWorkspaceKey === workspace.id;
+                                        return (
+                                            <WorkspaceFloatingWindow
+                                                key={workspace.id}
+                                                workspace={workspace}
+                                                position={layout.position}
+                                                size={layout.size}
+                                                zIndex={getWindowZIndex(workspace.id)}
+                                                onPositionChange={(nextPosition) => {
+                                                    handleWindowPositionChange(workspace.id, nextPosition);
+                                                }}
+                                                onSizeChange={(nextSize) => {
+                                                    handleWindowSizeChange(workspace.id, nextSize);
+                                                }}
+                                            onFocus={() => handleWindowFocus(workspace.id)}
+                                            onClose={() => handleCloseWorkspaceWindow(workspace.id)}
+                                            showCoordinates={showCoordinates}
+                                            showViewGroupBorders={showViewGroupBorders}
+                                            isFocused={isFocused}
+                                            footer1Props={sharedFooter1Props}
+                                            footer2={sharedFooter2}
+                                            infoBar={sharedInfoBar}
+                                            isEnsuringCanvas={Boolean(ensuringWorkspaceIds?.[workspace.id])}
+                                            toolState={workspaceToolState[workspace.id] || DEFAULT_TOOL_STATE}
+                                            onEditModeChange={handleEditModeChange}
+                                            onToolChange={handleToolChange}
+                                            onMergeModeChange={handleMergeModeChange}
+                                            onFlowDirectionChange={setFlowDirection}
+                                            onOpenNavigator={() => {
+                                                setLeftDockedOpen(true);
+                                            }}
+                                            />
+                                        );
+                                    })
+                                ) : (
+                                    <div className="canvas-workspace__empty">
+                                        <p>No workspace windows open</p>
+                                        <span className="canvas-workspace__empty-hint">
+                                            Select a workspace tab to open its window.
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <EdgeTrigger
+                            side="right"
+                            onClick={toggleRightPanel}
+                            active={rightPanelOpen}
                         />
                     </div>
-                )}
-                infoBar={(
-                    <CanvasInfoFooter
-                        canvasSize={canvasSize}
-                        viewportSize={gridSize}
-                        cellSize={cellSize}
-                        collaboratorCount={3}
-                        syncStatus="synced"
-                        onCanvasSizeChange={handleCanvasSizeChange}
-                        onViewportSizeChange={handleViewportSizeChange}
-                        onOpenNavigator={() => {
-                            // TODO: Open canvas navigator
-                        }}
-                    />
-                )}
-                isEditMode={editMode}
-            >
-                {/* Main content area */}
-                <div className="canvas-workspace__content">
-                    {/* Left Edge Trigger */}
-                    <EdgeTrigger
-                        side="left"
-                        onClick={toggleLeftPanel}
-                        active={leftPanelOpen}
-                    />
+                </div>
+            ) : shouldRenderChrome ? (
+                <CanvasChrome
+                    className="canvas-workspace"
+                    headerProps={{
+                        canGoBack,
+                        onGoBack: goBack,
+                        onGoHome: goHome,
+                        workspace: currentWorkspace || { id: projectId, name: 'Workspace', type: 'project' },
+                        workspaces: workspacesForSelector,
+                        onWorkspaceChange: handleWorkspaceSelect,
+                        allowWorkspaceSwitch: false,
+                        viewGroup: activeHeaderViewGroup,
+                        viewGroups: formattedViewGroups,
+                        onViewGroupChange: (viewGroup) => handleSelectViewGroup(viewGroup?.id ?? null),
+                        isViewGroupLinked,
+                        onEditViewGroup: (viewGroup) => {
+                            if (viewGroup?.id) {
+                                handleSelectViewGroup(viewGroup.id);
+                            }
+                            setLeftDockedOpen(true);
+                        },
+                        onOpenViewGroupManager: () => {
+                            setLeftDockedOpen(true);
+                        },
+                        isEditMode: editMode,
+                        onToggleEditMode: handleEditModeChange,
+                        flowDirection: flowDirection === 'row' ? 'right' : 'down',
+                        onFlowDirectionChange: (direction) => {
+                            setFlowDirection(direction === 'right' ? 'row' : 'column');
+                        },
+                        showCoordinates,
+                        showViewGroupBorders,
+                        onToggleCoordinates: setShowCoordinates,
+                        onToggleViewGroupBorders: setShowViewGroupBorders,
+                        canvasSize,
+                        viewportSize: sharedViewportSize,
+                        viewportPosition: syncedViewport,
+                        onMoveViewport: (deltaRow, deltaCol) => {
+                            dispatchMoveViewport(deltaRow, deltaCol, activeCanvasId);
+                        },
+                        onHome: () => dispatchNavigateTo(0, 0, activeCanvasId),
+                        onOpenNavigator: () => {
+                            setLeftDockedOpen(true);
+                        },
+                        windowMode: canvasMode === CANVAS_MODES.FULLSCREEN ? 'full' : canvasMode,
+                        showWindowControls: false,
+                        onCloseWorkspace: () => {
+                            if (onDeactivateWorkspace) {
+                                onDeactivateWorkspace();
+                                return;
+                            }
+                            if (currentWorkspace?.id) {
+                                onCloseWorkspace?.(currentWorkspace.id);
+                            }
+                        },
+                    }}
+                    editBarProps={{
+                        activeTool,
+                        onToolChange: handleToolChange,
+                        onGridAction: handleEditBarGridAction,
+                        onRowAction: handleEditBarRowAction,
+                        onDone: () => handleEditModeChange(false),
+                    }}
+                    footer1Props={sharedFooter1Props}
+                    footer2={sharedFooter2}
+                    infoBar={sharedInfoBar}
+                    isEditMode={editMode}
+                >
+                    {/* Main content area */}
+                    <div className="canvas-workspace__content">
+                        {/* Left Edge Trigger */}
+                        <EdgeTrigger
+                            side="left"
+                            onClick={toggleLeftPanel}
+                            active={leftPanelOpen}
+                        />
 
-                    {/* Canvas grid */}
-                    <div className="canvas-workspace__canvas">
-                        {isLoading && !canvas ? (
-                            <div className="canvas-workspace__loading">Loading canvas...</div>
-                        ) : showError ? (
-                            <div className="canvas-workspace__error">
-                                {(canvasError || loadError)?.message || 'Failed to load canvas'}
-                            </div>
-                        ) : canvas ? (
-                            <CanvasGrid
-                                canvasId={activeCanvasId}
-                                viewport={viewport}
-                                placements={visiblePlacements}
-                                focusedSubset={focusedSubset}
-                                highlightedPlacementId={highlightedPlacementId}
-                                showCoordinates={showCoordinates}
-                                showViewGroupBorders={showViewGroupBorders}
-                                viewGroups={formattedViewGroups}
-                                onPlacementClick={handlePlacementClick}
-                                onPlacementDoubleClick={handlePlacementDoubleClick}
-                                onCellDoubleClick={handleCellDoubleClick}
-                                onViewportChange={moveViewport}
-                                onRemovePlacement={removePlacement}
-                                onAddRow={addRow}
-                                onAddColumn={addColumn}
-                                onAddContent={handleAddContent}
-                                onOpenSubsetSelector={() => setShowSubsetSelector(true)}
-                            />
-                        ) : (
-                            <div className="canvas-workspace__empty">
-                                <p>No canvas selected</p>
-                                <button onClick={() => { /* TODO: Create canvas */ }}>
-                                    Create Canvas
-                                </button>
+                        {/* Canvas grid */}
+                        <div className="canvas-workspace__canvas">
+                            {workspaceViewMode === 'tile' ? (
+                                <TiledCanvasView
+                                    workspaces={tileWorkspaces}
+                                    activeWorkspaceId={activeWorkspaceId || currentWorkspace?.id}
+                                    maximizedWorkspaceId={tileMaximizedWorkspaceId}
+                                    onSelectWorkspace={handleTileWorkspaceSelect}
+                                    onCloseWorkspace={onCloseWorkspace}
+                                    onMaximizeWorkspace={handleTileWorkspaceMaximize}
+                                    renderCanvas={(workspace) => (
+                                        <WorkspaceTileCanvas
+                                            canvasId={workspace.activeCanvasId}
+                                            showCoordinates={showCoordinates}
+                                            showViewGroupBorders={showViewGroupBorders}
+                                            isEnsuringCanvas={Boolean(ensuringWorkspaceIds?.[workspace.id])}
+                                        />
+                                    )}
+                                />
+                            ) : isWorkspacesLoading && !currentWorkspaceId ? (
+                                <div className="canvas-workspace__loading">Loading workspace...</div>
+                            ) : isLoading && !canvas ? (
+                                <div className="canvas-workspace__loading">Loading canvas...</div>
+                            ) : activeWorkspaceEnsuring ? (
+                                <div className="canvas-workspace__loading">Preparing canvas...</div>
+                            ) : showError ? (
+                                <div className="canvas-workspace__error">
+                                    {(canvasError || loadError)?.message || 'Failed to load canvas'}
+                                </div>
+                            ) : canvas ? (
+                                <CanvasGrid
+                                    canvasId={activeCanvasId}
+                                    viewport={viewport}
+                                    placements={visiblePlacements}
+                                    focusedSubset={focusedSubset}
+                                    highlightedPlacementId={highlightedPlacementId}
+                                    showCoordinates={showCoordinates}
+                                    showViewGroupBorders={showViewGroupBorders}
+                                    viewGroups={formattedViewGroups}
+                                    onPlacementClick={handlePlacementClick}
+                                    onPlacementDoubleClick={handlePlacementDoubleClick}
+                                    onCellDoubleClick={handleCellDoubleClick}
+                                    onViewportChange={moveViewport}
+                                    onRemovePlacement={removePlacement}
+                                    onAddRow={addRow}
+                                    onAddColumn={addColumn}
+                                    onAddContent={handleAddContent}
+                                    onOpenSubsetSelector={() => setShowSubsetSelector(true)}
+                                />
+                            ) : (
+                                <div className="canvas-workspace__empty">
+                                    <p>No workspace open</p>
+                                    <div className="canvas-workspace__empty-hint">
+                                        Open a workspace from the Workspace Bar above, or create a new one.
+                                    </div>
+                                    <button onClick={handleOpenCreateWorkspace}>
+                                        Create Workspace
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right Edge Trigger */}
+                        <EdgeTrigger
+                            side="right"
+                            onClick={toggleRightPanel}
+                            active={rightPanelOpen}
+                        />
+
+                        {/* Subset panel (right sidebar) - legacy, will be replaced by FloatingPanel */}
+                        {showSubsetPanel && (
+                            <div className="canvas-workspace__subset-panel">
+                                <SubsetPanel
+                                    canvasId={activeCanvasId}
+                                    subsets={subsets}
+                                    focusedSubset={focusedSubset}
+                                    onEnterFocus={enterFocusMode}
+                                    onExitFocus={exitFocusMode}
+                                />
                             </div>
                         )}
+
+                        {/* Left Floating Panel */}
+                        <FloatingPanel
+                            side="left"
+                            visible={leftPanelOpen}
+                            onClose={() => setLeftPanelOpen(false)}
+                            onDock={handleDockLeftPanel}
+                            title="Files"
+                            width={280}
+                        >
+                            {leftPanelContent}
+                        </FloatingPanel>
+
+                        {/* Right Floating Panel */}
+                        <FloatingPanel
+                            side="right"
+                            visible={rightPanelOpen}
+                            onClose={() => setRightPanelOpen(false)}
+                            onDock={handleDockRightPanel}
+                            title="Properties"
+                            width={280}
+                        >
+                            {rightPanelContent}
+                        </FloatingPanel>
                     </div>
-
-                    {/* Right Edge Trigger */}
-                    <EdgeTrigger
-                        side="right"
-                        onClick={toggleRightPanel}
-                        active={rightPanelOpen}
-                    />
-
-                    {/* Subset panel (right sidebar) - legacy, will be replaced by FloatingPanel */}
-                    {showSubsetPanel && (
-                        <div className="canvas-workspace__subset-panel">
-                            <SubsetPanel
-                                canvasId={activeCanvasId}
-                                subsets={subsets}
-                                focusedSubset={focusedSubset}
-                                onEnterFocus={enterFocusMode}
-                                onExitFocus={exitFocusMode}
-                            />
+                </CanvasChrome>
+            ) : (
+                <div className="canvas-workspace__empty-shell">
+                    <div className="canvas-workspace__empty">
+                        <p>No workspace open</p>
+                        <div className="canvas-workspace__empty-hint">
+                            Open a workspace from the Workspace Bar above, or create a new one.
                         </div>
-                    )}
-
-                    {/* Left Floating Panel */}
-                    <FloatingPanel
-                        side="left"
-                        visible={leftPanelOpen}
-                        onClose={() => setLeftPanelOpen(false)}
-                        onDock={handleDockLeftPanel}
-                        title="Files"
-                        width={280}
-                    >
-                        {leftPanelContent}
-                    </FloatingPanel>
-
-                    {/* Right Floating Panel */}
-                    <FloatingPanel
-                        side="right"
-                        visible={rightPanelOpen}
-                        onClose={() => setRightPanelOpen(false)}
-                        onDock={handleDockRightPanel}
-                        title="Properties"
-                        width={280}
-                    >
-                        {rightPanelContent}
-                    </FloatingPanel>
+                        <button onClick={handleOpenCreateWorkspace}>
+                            Create Workspace
+                        </button>
+                    </div>
                 </div>
-            </CanvasChrome>
+            )}
 
             {/* Focus mode overlay */}
             {isFocusMode && focusedSubset && (
@@ -1200,7 +2217,20 @@ function CanvasWorkspaceInner({ userId, projectId: propProjectId, leftPanelConte
  * Wraps the inner component with ViewStackProvider for navigation state
  * Server-authoritative: No local fallback. Shows connection overlay when disconnected.
  */
-export function CanvasWorkspace({ userId, projectId, leftPanelContent, rightPanelContent }) {
+export function CanvasWorkspace({
+    userId,
+    projectId,
+    leftPanelContent,
+    rightPanelContent,
+    onCloseWorkspace,
+    onDeactivateWorkspace,
+    workspaceViewMode,
+    workspaceTabs,
+    activeWorkspaceId,
+    onSelectWorkspace,
+    onSetWorkspaceViewMode,
+    ensuringWorkspaceIds,
+}) {
     return (
         <ViewStackProvider>
             <CanvasWorkspaceInner
@@ -1208,6 +2238,14 @@ export function CanvasWorkspace({ userId, projectId, leftPanelContent, rightPane
                 projectId={projectId}
                 leftPanelContent={leftPanelContent}
                 rightPanelContent={rightPanelContent}
+                onCloseWorkspace={onCloseWorkspace}
+                onDeactivateWorkspace={onDeactivateWorkspace}
+                workspaceViewMode={workspaceViewMode}
+                workspaceTabs={workspaceTabs}
+                activeWorkspaceId={activeWorkspaceId}
+                onSelectWorkspace={onSelectWorkspace}
+                onSetWorkspaceViewMode={onSetWorkspaceViewMode}
+                ensuringWorkspaceIds={ensuringWorkspaceIds}
             />
         </ViewStackProvider>
     );

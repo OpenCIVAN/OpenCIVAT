@@ -21,12 +21,13 @@
   width: 100%;
   height: 100vh;
   display: grid;
-  overflow: hidden;
+  overflow: auto;
   background: $color-bg-primary;
 
   // Minimum width ensures activity bars + canvas toolbar are ALWAYS visible
-  // 48px (left activity) + 48px (right activity) + 650px (min canvas for footer) = 746px minimum
-  min-width: 746px;
+  // min canvas width + 2 * activity bar width
+  $canvas-min-width: 650px;
+  min-width: calc(#{$canvas-min-width} + (#{$panel-activity-bar-width} * 2));
 
   // CSS Custom Properties with defaults
   --left-activity-width: #{$panel-activity-bar-width}; // typically 48px
@@ -36,11 +37,11 @@
 
   // FIXED: Grid template that responds to collapsed state
   // Activity bars use fixed pixel values to guarantee they're never cut off
-  // Center workspace uses minmax with 650px minimum for footer toolbar
+  // Center workspace uses minmax with minimum canvas width
   grid-template-columns:
     #{$panel-activity-bar-width} // 1: Left activity bar (fixed 48px, never shrinks)
     var(--left-content-width, 0) // 2: Left panel content (0 when collapsed)
-    minmax(650px, 1fr) // 3: Center workspace (650px min for footer toolbar)
+    minmax(#{$canvas-min-width}, 1fr) // 3: Center workspace (min canvas width)
     var(--right-content-width, 0) // 4: Right panel content (0 when collapsed)
     #{$panel-activity-bar-width}; // 5: Right activity bar (fixed 48px, never shrinks)
 

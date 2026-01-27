@@ -1607,17 +1607,23 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           {
             label: "Position",
             sliders: [
-              { id: 'posX', label: 'X', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
-              { id: 'posY', label: 'Y', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
-              { id: 'posZ', label: 'Z', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
+              { id: 'posX', label: 'X', min: -1000, max: 1000, step: 1, precision: 1, defaultValue: 0 },
+              { id: 'posY', label: 'Y', min: -1000, max: 1000, step: 1, precision: 1, defaultValue: 0 },
+              { id: 'posZ', label: 'Z', min: -1000, max: 1000, step: 1, precision: 1, defaultValue: 0 },
             ],
           },
           {
             label: "Focal Point",
             sliders: [
-              { id: 'fpX', label: 'X', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
-              { id: 'fpY', label: 'Y', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
-              { id: 'fpZ', label: 'Z', min: -200, max: 200, step: 0.5, precision: 1, defaultValue: 0 },
+              { id: 'fpX', label: 'X', min: -500, max: 500, step: 1, precision: 1, defaultValue: 0 },
+              { id: 'fpY', label: 'Y', min: -500, max: 500, step: 1, precision: 1, defaultValue: 0 },
+              { id: 'fpZ', label: 'Z', min: -500, max: 500, step: 1, precision: 1, defaultValue: 0 },
+            ],
+          },
+          {
+            label: "View",
+            sliders: [
+              { id: 'viewAngle', label: 'Angle', min: 1, max: 120, step: 1, precision: 1, defaultValue: 30, unit: '°' },
             ],
           },
         ],
@@ -1627,6 +1633,7 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           return {
             posX: state.position[0], posY: state.position[1], posZ: state.position[2],
             fpX: state.focalPoint[0], fpY: state.focalPoint[1], fpZ: state.focalPoint[2],
+            viewAngle: state.viewAngle,
           };
         },
         onChange: (sliderId, value) => {
@@ -1639,6 +1646,10 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
           if (target) {
             target[0][target[1]] = value;
             instanceTools.setCameraState(instanceId, { ...state, position: pos, focalPoint: fp });
+            return;
+          }
+          if (sliderId === 'viewAngle') {
+            instanceTools.setCameraState(instanceId, { ...state, viewAngle: value });
           }
         },
         onReset: () => {
@@ -1707,9 +1718,9 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       popover: {
         title: "Position",
         sliders: [
-          { id: 'x', label: 'X', min: -100, max: 100, step: 0.1, precision: 1, defaultValue: 0 },
-          { id: 'y', label: 'Y', min: -100, max: 100, step: 0.1, precision: 1, defaultValue: 0 },
-          { id: 'z', label: 'Z', min: -100, max: 100, step: 0.1, precision: 1, defaultValue: 0 },
+          { id: 'x', label: 'X', min: -500, max: 500, step: 1, precision: 0, defaultValue: 0, unit: 'mm' },
+          { id: 'y', label: 'Y', min: -500, max: 500, step: 1, precision: 0, defaultValue: 0, unit: 'mm' },
+          { id: 'z', label: 'Z', min: -500, max: 500, step: 1, precision: 0, defaultValue: 0, unit: 'mm' },
         ],
         getValue: () => {
           const p = instanceTools.getPosition(instanceId);
@@ -1746,18 +1757,18 @@ export class VTKInstanceHandler extends InstanceTypeHandler {
       popover: {
         title: "Scale",
         sliders: [
-          { id: 'x', label: 'X', min: 0.1, max: 10, step: 0.1, precision: 1, defaultValue: 1 },
-          { id: 'y', label: 'Y', min: 0.1, max: 10, step: 0.1, precision: 1, defaultValue: 1 },
-          { id: 'z', label: 'Z', min: 0.1, max: 10, step: 0.1, precision: 1, defaultValue: 1 },
+          { id: 'x', label: 'X', min: 10, max: 200, step: 1, precision: 0, defaultValue: 100, unit: '%' },
+          { id: 'y', label: 'Y', min: 10, max: 200, step: 1, precision: 0, defaultValue: 100, unit: '%' },
+          { id: 'z', label: 'Z', min: 10, max: 200, step: 1, precision: 0, defaultValue: 100, unit: '%' },
         ],
         getValue: () => {
           const s = instanceTools.getScale(instanceId);
-          return { x: s[0], y: s[1], z: s[2] };
+          return { x: s[0] * 100, y: s[1] * 100, z: s[2] * 100 };
         },
         onChange: (axis, value) => {
           const s = instanceTools.getScale(instanceId);
           const map = { x: 0, y: 1, z: 2 };
-          s[map[axis]] = value;
+          s[map[axis]] = value / 100;
           instanceTools.setScale(instanceId, s[0], s[1], s[2]);
         },
         onReset: () => {

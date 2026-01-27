@@ -11,6 +11,7 @@ import { DatasetManager } from "@Core/data/managers/DatasetManager.js";
 import { ViewConfigurationManager } from "@Core/data/managers/ViewConfigurationManager.js";
 import { canvasManager } from "@Core/data/managers/CanvasManager.js";
 import { subsetManager } from "@Core/data/managers/SubsetManager.js";
+import { workspaceManager as workspaceDataManager } from "@Core/data/managers/WorkspaceManager.js";
 import { sessionManager } from "@Core/session/sessionManager.js";
 import { registerInstanceTypes } from "@Core/instances/types/instanceTypesInit.js";
 import { workspaceManager } from "@Core/instances/workspaceManager.js";
@@ -395,6 +396,10 @@ export async function initializePhase1() {
     // STEP 7: Initialize Canvas system managers
     log.debug("Initializing canvas managers...");
     await timeStartupStep("Canvas managers init", () => {
+      workspaceDataManager.initialize({
+        apiBaseUrl: config.apiBaseUrl,
+        sessionManager: sessionManager,
+      });
       canvasManager.initialize({
         apiBaseUrl: config.apiBaseUrl,
         sessionManager: sessionManager,

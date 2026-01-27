@@ -173,11 +173,14 @@ export function FloatingCanvasWrapper({
     onPositionChange,
     onSizeChange,
     onModeChange,
+    zIndex,
+    onFocus,
 }) {
     const [dragging, setDragging] = useState(false);
     const [resizing, setResizing] = useState(false);
     const dragStartRef = useRef({ x: 0, y: 0 });
-    const resizeStartRef = useRef({ width: 0, height: 0, x: 0, y: 0 });
+    const resizeStartRef = useRef({ width: 0, height: 0, x: 0, y: 0, left: 0, top: 0 });
+    const resizeDirectionRef = useRef('bottom-right');
 
     // Handle drag start
     const handleDragStart = useCallback((e) => {
@@ -191,18 +194,21 @@ export function FloatingCanvasWrapper({
     }, [canvasMode, position]);
 
     // Handle resize start
-    const handleResizeStart = useCallback((e) => {
+    const handleResizeStart = useCallback((direction) => (e) => {
         if (canvasMode !== CANVAS_MODES.FLOATING) return;
         e.preventDefault();
         e.stopPropagation();
         setResizing(true);
+        resizeDirectionRef.current = direction;
         resizeStartRef.current = {
             width: size.width,
             height: size.height,
             x: e.clientX,
             y: e.clientY,
+            left: position.x,
+            top: position.y,
         };
-    }, [canvasMode, size]);
+    }, [canvasMode, position.x, position.y, size]);
 
     // Handle mouse move for drag/resize
     useEffect(() => {
@@ -218,18 +224,67 @@ export function FloatingCanvasWrapper({
             if (resizing) {
                 const deltaX = e.clientX - resizeStartRef.current.x;
                 const deltaY = e.clientY - resizeStartRef.current.y;
-                const newWidth = Math.max(CANVAS_SIZE_CONSTRAINTS.MIN_WIDTH, resizeStartRef.current.width + deltaX);
-                const newHeight = Math.max(CANVAS_SIZE_CONSTRAINTS.MIN_HEIGHT, resizeStartRef.current.height + deltaY);
+                const direction = resizeDirectionRef.current;
+                const startWidth = resizeStartRef.current.width;
+                const startHeight = resizeStartRef.current.height;
+                const startLeft = resizeStartRef.current.left;
+                const startTop = resizeStartRef.current.top;
+                let nextWidth = startWidth;
+                let nextHeight = startHeight;
+                let nextLeft = startLeft;
+                let nextTop = startTop;
+
+                if (direction.includes('right')) {
+                    nextWidth = startWidth + deltaX;
+                }
+                if (direction.includes('left')) {
+                    nextWidth = startWidth - deltaX;
+                    nextLeft = startLeft + deltaX;
+                }
+                if (direction.includes('bottom')) {
+                    nextHeight = startHeight + deltaY;
+                }
+                if (direction.includes('top')) {
+                    nextHeight = startHeight - deltaY;
+                    nextTop = startTop + deltaY;
+                }
 
                 // Apply aspect ratio constraint if set
                 const ratioInfo = ASPECT_RATIOS[aspectRatio];
                 if (ratioInfo?.ratio) {
-                    const constrainedHeight = newWidth / ratioInfo.ratio;
-                    const finalHeight = Math.max(CANVAS_SIZE_CONSTRAINTS.MIN_HEIGHT, constrainedHeight);
-                    onSizeChange?.({ width: newWidth, height: finalHeight });
-                } else {
-                    onSizeChange?.({ width: newWidth, height: newHeight });
+                    if (direction.includes('left') || direction.includes('right')) {
+                        nextHeight = nextWidth / ratioInfo.ratio;
+                        if (direction.includes('top')) {
+                            nextTop = startTop + (startHeight - nextHeight);
+                        }
+                    } else if (direction.includes('top') || direction.includes('bottom')) {
+                        nextWidth = nextHeight * ratioInfo.ratio;
+                        if (direction.includes('left')) {
+                            nextLeft = startLeft + (startWidth - nextWidth);
+                        }
+                    }
                 }
+
+                if (nextWidth < CANVAS_SIZE_CONSTRAINTS.MIN_WIDTH) {
+                    const delta = CANVAS_SIZE_CONSTRAINTS.MIN_WIDTH - nextWidth;
+                    nextWidth = CANVAS_SIZE_CONSTRAINTS.MIN_WIDTH;
+                    if (direction.includes('left')) {
+                        nextLeft -= delta;
+                    }
+                }
+                if (nextHeight < CANVAS_SIZE_CONSTRAINTS.MIN_HEIGHT) {
+                    const delta = CANVAS_SIZE_CONSTRAINTS.MIN_HEIGHT - nextHeight;
+                    nextHeight = CANVAS_SIZE_CONSTRAINTS.MIN_HEIGHT;
+                    if (direction.includes('top')) {
+                        nextTop -= delta;
+                    }
+                }
+
+                const finalLeft = Math.max(0, nextLeft);
+                const finalTop = Math.max(0, nextTop);
+
+                onPositionChange?.({ x: finalLeft, y: finalTop });
+                onSizeChange?.({ width: nextWidth, height: nextHeight });
             }
         };
 
@@ -296,7 +351,9 @@ export function FloatingCanvasWrapper({
                 top: position.y,
                 width: size.width,
                 height: size.height,
+                zIndex,
             }}
+            onMouseDown={onFocus}
         >
             {/* Drag Handle */}
             <div
@@ -311,10 +368,38 @@ export function FloatingCanvasWrapper({
                 {children}
             </div>
 
-            {/* Resize Handle */}
+            {/* Resize Handles */}
             <div
-                className="floating-canvas__resize-handle"
-                onMouseDown={handleResizeStart}
+                className="floating-canvas__resize-handle floating-canvas__resize-handle--top"
+                onMouseDown={handleResizeStart('top')}
+            />
+            <div
+                className="floating-canvas__resize-handle floating-canvas__resize-handle--right"
+                onMouseDown={handleResizeStart('right')}
+            />
+            <div
+                className="floating-canvas__resize-handle floating-canvas__resize-handle--bottom"
+                onMouseDown={handleResizeStart('bottom')}
+            />
+            <div
+                className="floating-canvas__resize-handle floating-canvas__resize-handle--left"
+                onMouseDown={handleResizeStart('left')}
+            />
+            <div
+                className="floating-canvas__resize-handle floating-canvas__resize-handle--top-left"
+                onMouseDown={handleResizeStart('top-left')}
+            />
+            <div
+                className="floating-canvas__resize-handle floating-canvas__resize-handle--top-right"
+                onMouseDown={handleResizeStart('top-right')}
+            />
+            <div
+                className="floating-canvas__resize-handle floating-canvas__resize-handle--bottom-left"
+                onMouseDown={handleResizeStart('bottom-left')}
+            />
+            <div
+                className="floating-canvas__resize-handle floating-canvas__resize-handle--bottom-right"
+                onMouseDown={handleResizeStart('bottom-right')}
             />
         </div>
     );

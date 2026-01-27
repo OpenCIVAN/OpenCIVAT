@@ -18,6 +18,7 @@ import {
   getInitialViewportState,
   dispatchViewportSizeChanged,
 } from "./viewportState.js";
+import { canvasHistory } from "@UI/react/store/canvasHistoryStore";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -285,7 +286,39 @@ export function useCanvas(canvasId = null) {
   }, []);
 
   const removePlacement = useCallback(async (placementId) => {
-    return canvasManager.removePlacement(placementId);
+    const found = canvasManager.findPlacement?.(placementId);
+    const placement = found?.placement;
+    const canvasId = found?.canvas?.id || null;
+    const row = placement?.row ?? 0;
+    const col = placement?.col ?? 0;
+    const rowSpan = placement?.rowSpan ?? 1;
+    const colSpan = placement?.colSpan ?? 1;
+    const content = placement?.content;
+    let currentPlacementId = placementId;
+
+    await canvasManager.removePlacement(placementId);
+
+    if (!canvasId || !content) {
+      return;
+    }
+
+    canvasHistory.record({
+      type: "DELETE",
+      description: "Remove placement",
+      undo: async () => {
+        const restored = await canvasManager.addPlacement(canvasId, {
+          row,
+          col,
+          rowSpan,
+          colSpan,
+          content,
+        });
+        currentPlacementId = restored?.id || currentPlacementId;
+      },
+      redo: async () => {
+        await canvasManager.removePlacement(currentPlacementId);
+      },
+    });
   }, []);
 
   const movePlacement = useCallback(async (placementId, newRow, newCol) => {
@@ -293,7 +326,33 @@ export function useCanvas(canvasId = null) {
   }, []);
 
   const resizePlacement = useCallback(async (placementId, rowSpan, colSpan) => {
-    return canvasManager.resizePlacement(placementId, rowSpan, colSpan);
+    const found = canvasManager.findPlacement?.(placementId);
+    const prevRowSpan = found?.placement?.rowSpan ?? 1;
+    const prevColSpan = found?.placement?.colSpan ?? 1;
+    const viewId =
+      found?.placement?.content?.viewConfigurationId ||
+      found?.placement?.content?.viewId ||
+      null;
+
+    const updated = await canvasManager.resizePlacement(
+      placementId,
+      rowSpan,
+      colSpan
+    );
+
+    if (prevRowSpan !== rowSpan || prevColSpan !== colSpan) {
+      const description = viewId
+        ? `Resize view to ${rowSpan}×${colSpan}`
+        : `Resize placement to ${rowSpan}×${colSpan}`;
+      canvasHistory.record({
+        type: "RESIZE",
+        description,
+        undo: () => canvasManager.resizePlacement(placementId, prevRowSpan, prevColSpan),
+        redo: () => canvasManager.resizePlacement(placementId, rowSpan, colSpan),
+      });
+    }
+
+    return updated;
   }, []);
 
   // Canvas dimension operations
