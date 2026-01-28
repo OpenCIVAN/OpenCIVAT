@@ -13,8 +13,7 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
-import { Icon, getIconComponent } from '@UI/react/components/atoms/Icon';
+import { Icon, getIconComponent, IconClose } from '@UI/react/components/atoms/Icon';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import './PriorityPanel.scss';
 
@@ -230,7 +229,7 @@ export function PriorityPanel({
                             onClick={onClose}
                             aria-label="Close"
                         >
-                            <X size={20} />
+                            <IconClose size={20} />
                         </button>
                     )}
                 </div>
