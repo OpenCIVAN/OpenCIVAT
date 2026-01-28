@@ -17,6 +17,7 @@ import React, { memo, useState, useCallback, useRef, useMemo, useEffect } from '
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { ViewHeader } from '@UI/react/components/workspace/ViewHeader';
+import { useCanvasFocus } from '@UI/react/context/CanvasFocusContext';
 
 // =============================================================================
 // SHARED COLOR UTILITIES
@@ -179,6 +180,9 @@ export const CanvasCell = memo(function CanvasCell({
     // Refs for dragover throttling - avoid state updates on every mouse move
     const pendingZoneRef = useRef(DROP_ZONES.NONE);
     const rafIdRef = useRef(null);
+
+    // Canvas focus context for pane-scoped state in tile mode
+    const canvasFocusContext = useCanvasFocus();
 
     const isEmpty = !placement ||
         !placement.content ||
@@ -512,11 +516,19 @@ export const CanvasCell = memo(function CanvasCell({
         if (contentType === 'view' && placement?.content?.viewConfigurationId) {
             const viewId = placement.content.viewConfigurationId;
             // Dispatch activation event - CanvasGrid listens for this
+            // Include paneId for proper scoping in tile mode
             window.dispatchEvent(new CustomEvent('cia:instance-focused', {
-                detail: { viewId, source: 'cell-mousedown' }
+                detail: {
+                    viewId,
+                    paneId: canvasFocusContext?.paneId || null,
+                    source: 'cell-mousedown',
+                }
             }));
+
+            // Also request focus for this pane if in tile mode
+            canvasFocusContext?.requestFocus?.();
         }
-    }, [contentType, placement?.content?.viewConfigurationId]);
+    }, [contentType, placement?.content?.viewConfigurationId, canvasFocusContext]);
 
     const handleClick = useCallback((e) => {
         // In selection mode, clicking the cell toggles selection
@@ -607,8 +619,14 @@ export const CanvasCell = memo(function CanvasCell({
                 // Handler for activating cold views (promotes to LIVE)
                 const handleActivateView = () => {
                     window.dispatchEvent(new CustomEvent('cia:instance-focused', {
-                        detail: { viewId, source: 'cold-header-activate' }
+                        detail: {
+                            viewId,
+                            paneId: canvasFocusContext?.paneId || null,
+                            source: 'cold-header-activate',
+                        }
                     }));
+                    // Also request focus for this pane
+                    canvasFocusContext?.requestFocus?.();
                 };
 
                 // Handler for trashing the view (moves to Recently Deleted)

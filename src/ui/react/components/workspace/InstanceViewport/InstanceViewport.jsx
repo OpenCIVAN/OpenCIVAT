@@ -19,6 +19,7 @@ import { workspaceManager } from "@Core/instances/workspaceManager.js";
 import { setActiveInstance } from '@Collaboration/presence/cursors.js';
 import { vrManager } from '@Core/vr/VRManager.js';
 import { useFloatingPanels } from '@UI/react/components/panels/FloatingPanel/FloatingPanelContext';
+import { useCanvasFocus } from '@UI/react/context/CanvasFocusContext';
 
 import { getViewConfigurationManager, getDatasetManager } from "@Init/appInitializer.js";
 import { getFileTypeDisplayInfo } from "@Core/instances/types/instanceTypesInit.js";
@@ -389,6 +390,14 @@ export function InstanceViewport({
 
     // Track if Instance Tools tab is active in left panel
     const [instanceToolsTabActive, setInstanceToolsTabActive] = useState(false);
+
+    // =========================================================================
+    // CANVAS FOCUS CONTEXT (for tile mode pane-scoped state)
+    // =========================================================================
+    // When inside CanvasFocusProvider (tile mode), use pane-scoped methods
+    // to ensure clicking this viewport only affects this pane, not all panes
+
+    const canvasFocusContext = useCanvasFocus();
 
     // Refresh counter to re-render when view name/properties change
     const [viewRefreshCounter, setViewRefreshCounter] = useState(0);
@@ -848,25 +857,55 @@ export function InstanceViewport({
         setNavbarVisible(true);
 
         if (actualInstanceId) {
+            // Always set for presence/cursor tracking
             setActiveInstance(actualInstanceId, viewConfigId);
-            workspaceManager?.setActiveInstance?.(actualInstanceId);
+
+            // Use pane-scoped methods when in tile mode (context available)
+            // This ensures clicking one pane doesn't affect other panes
+            if (canvasFocusContext) {
+                canvasFocusContext.setActiveInstance(actualInstanceId);
+                canvasFocusContext.requestFocus?.();
+            } else {
+                // Fallback to global for tab mode or non-context scenarios
+                workspaceManager?.setActiveInstance?.(actualInstanceId);
+            }
+
+            // Include paneId in event for filtering in tile mode
             window.dispatchEvent(
                 new CustomEvent('cia:instance-focused', {
-                    detail: { instanceId: actualInstanceId, viewId: viewConfigId },
+                    detail: {
+                        instanceId: actualInstanceId,
+                        viewId: viewConfigId,
+                        paneId: canvasFocusContext?.paneId || null,
+                    },
                 })
             );
         }
-    }, [actualInstanceId, viewConfigId]);
+    }, [actualInstanceId, viewConfigId, canvasFocusContext]);
 
     const handleActivateInstance = useCallback(() => {
         if (!actualInstanceId) return;
-        workspaceManager?.setActiveInstance?.(actualInstanceId);
+
+        // Use pane-scoped methods when in tile mode (context available)
+        if (canvasFocusContext) {
+            canvasFocusContext.setActiveInstance(actualInstanceId);
+            canvasFocusContext.requestFocus?.();
+        } else {
+            // Fallback to global for tab mode
+            workspaceManager?.setActiveInstance?.(actualInstanceId);
+        }
+
+        // Include paneId in event for filtering in tile mode
         window.dispatchEvent(
             new CustomEvent('cia:instance-focused', {
-                detail: { instanceId: actualInstanceId, viewId: viewConfigId },
+                detail: {
+                    instanceId: actualInstanceId,
+                    viewId: viewConfigId,
+                    paneId: canvasFocusContext?.paneId || null,
+                },
             })
         );
-    }, [actualInstanceId, viewConfigId]);
+    }, [actualInstanceId, viewConfigId, canvasFocusContext]);
 
     const handleBlur = useCallback((e) => {
         // Only blur if focus is moving OUTSIDE the viewport entirely

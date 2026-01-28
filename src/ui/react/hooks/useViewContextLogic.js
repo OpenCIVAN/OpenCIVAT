@@ -467,9 +467,14 @@ export function useViewContextLogic() {
         if (effectivePaneId) {
           workspaceManager.setActiveInstanceForPane(effectivePaneId, instance.instanceId);
           log.debug(`ViewContext: Set active instance for pane ${effectivePaneId}: ${instance.instanceId}`);
+          // Only set global if this pane is focused (avoid cross-pane interference in tile mode)
+          if (workspaceManager.getFocusedPaneId?.() === effectivePaneId) {
+            workspaceManager.setActiveInstance(instance.instanceId);
+          }
+        } else {
+          // No pane context (tab mode) - set global directly
+          workspaceManager.setActiveInstance(instance.instanceId);
         }
-        // Also set global active instance (for backward compatibility)
-        workspaceManager.setActiveInstance(instance.instanceId);
       }
 
       // Find the view's position and navigate to it
@@ -522,9 +527,14 @@ export function useViewContextLogic() {
           // Use pane-scoped setter if we have a pane ID (tile mode)
           if (effectivePaneId) {
             workspaceManager.setActiveInstanceForPane(effectivePaneId, instance.instanceId);
+            // Only set global if this pane is focused (avoid cross-pane interference)
+            if (workspaceManager.getFocusedPaneId?.() === effectivePaneId) {
+              workspaceManager.setActiveInstance(instance.instanceId);
+            }
+          } else {
+            // No pane context (tab mode) - set global directly
+            workspaceManager.setActiveInstance(instance.instanceId);
           }
-          // Also set global active instance (for backward compatibility)
-          workspaceManager.setActiveInstance(instance.instanceId);
         }
       } catch (error) {
         log.error("ViewContext: Failed to place view", error);

@@ -74,7 +74,8 @@ export function dispatchViewportChanged(viewport, canvasId = null) {
 /**
  * Check if this pane should handle an event
  * - Events with paneId: Only matching pane handles it
- * - Events without paneId: Focused pane handles it (or all if no focus set)
+ * - Events without paneId: Focused pane handles it
+ * - If no focused pane AND we have a paneId: DON'T handle (prevents cross-pane interference)
  *
  * @param {string|null} myPaneId - This pane's ID
  * @param {string|null} eventPaneId - Event's target pane ID
@@ -94,11 +95,13 @@ function shouldHandleEvent(myPaneId, eventPaneId) {
     if (focusedPaneId) {
       return myPaneId === focusedPaneId;
     }
-    // No focused pane - all panes handle (backward compatibility)
-    return true;
+    // No focused pane but we have a paneId - we're in tile mode
+    // DON'T handle generic events to prevent cross-pane interference
+    // Events without paneId in tile mode should be ignored until a pane is focused
+    return false;
   }
 
-  // No pane ID configured - handle all events (backward compatibility)
+  // No pane ID configured (tab mode) - handle all events
   return true;
 }
 

@@ -89,10 +89,11 @@ export function CanvasFocusProvider({
     // Sync with workspaceManager when focus changes
     useEffect(() => {
         if (isFocused && paneId) {
+            console.log('[CanvasFocusContext] Setting focused pane:', paneId, 'canvasId:', canvasId);
             workspaceManager.setFocusedPane(paneId);
             canvasManager.setFocusedPane(paneId);
         }
-    }, [isFocused, paneId]);
+    }, [isFocused, paneId, canvasId]);
 
     // Listen for workspaceManager changes
     useEffect(() => {

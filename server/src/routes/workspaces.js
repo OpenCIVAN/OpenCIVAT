@@ -22,7 +22,8 @@ router.get("/", async (req, res, next) => {
     let query = `
       SELECT DISTINCT w.*,
              (SELECT COUNT(*) FROM workspace_members WHERE workspace_id = w.id) as member_count,
-             (SELECT COUNT(*) FROM canvases WHERE workspace_id = w.id AND is_active = true) as canvas_count
+             (SELECT COUNT(*) FROM canvases WHERE workspace_id = w.id AND is_active = true) as canvas_count,
+             (SELECT COALESCE(array_agg(id), ARRAY[]::uuid[]) FROM canvases WHERE workspace_id = w.id AND is_active = true) as canvas_ids
       FROM workspaces w
       LEFT JOIN workspace_members wm ON w.id = wm.workspace_id
       LEFT JOIN project_members pm ON w.project_id = pm.project_id AND pm.user_id = $1
@@ -75,7 +76,10 @@ router.get("/personal", async (req, res, next) => {
 
     // Check for existing personal workspace
     let result = await pool.query(
-      `SELECT * FROM workspaces WHERE type = 'personal' AND owner_id = $1 AND is_archived = false`,
+      `SELECT w.*,
+              (SELECT COALESCE(array_agg(id), ARRAY[]::uuid[]) FROM canvases WHERE workspace_id = w.id AND is_active = true) as canvas_ids
+       FROM workspaces w
+       WHERE w.type = 'personal' AND w.owner_id = $1 AND w.is_archived = false`,
       [userId]
     );
 
@@ -110,7 +114,8 @@ router.get("/:id", async (req, res, next) => {
     const result = await pool.query(
       `SELECT w.*,
               (SELECT json_agg(json_build_object('user_id', wm.user_id, 'permission', wm.permission))
-               FROM workspace_members wm WHERE wm.workspace_id = w.id) as members
+               FROM workspace_members wm WHERE wm.workspace_id = w.id) as members,
+              (SELECT COALESCE(array_agg(c.id), ARRAY[]::uuid[]) FROM canvases c WHERE c.workspace_id = w.id AND c.is_active = true) as canvas_ids
        FROM workspaces w
        LEFT JOIN workspace_members wm ON w.id = wm.workspace_id
        WHERE w.id = $1 AND (w.owner_id = $2 OR wm.user_id = $2)`,

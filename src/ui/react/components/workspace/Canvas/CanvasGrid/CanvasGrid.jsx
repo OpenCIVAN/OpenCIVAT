@@ -25,6 +25,7 @@ import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { useViewportSize } from '@UI/react/hooks';
 import { useCanvasDimensions, RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
+import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { useViewportEventListener, dispatchViewportChanged } from '@UI/react/hooks/useViewportSync';
 import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
@@ -317,7 +318,35 @@ export function CanvasGrid({
     useEffect(() => {
         const handleInstanceFocused = (e) => {
             // Note: The event uses 'viewId' not 'viewConfigId'
-            const { viewId } = e.detail || {};
+            const { viewId, paneId: eventPaneId } = e.detail || {};
+
+            // DEBUG: Log filtering decision
+            const focusedPaneId = workspaceManager?.getFocusedPaneId?.();
+            console.log('[CanvasGrid:handleInstanceFocused] myPaneId:', effectivePaneId, 'eventPaneId:', eventPaneId, 'focusedPaneId:', focusedPaneId, 'viewId:', viewId);
+
+            // Strict paneId filtering to prevent cross-pane interference in tile mode
+            if (eventPaneId) {
+                // Event targets a specific pane - only handle if it's us
+                if (effectivePaneId && eventPaneId !== effectivePaneId) {
+                    console.log('[CanvasGrid:handleInstanceFocused] SKIPPING - eventPaneId mismatch');
+                    return;
+                }
+            } else if (effectivePaneId) {
+                // Event has no target pane but we have a paneId (tile mode)
+                // Only handle if we're the focused pane
+                if (focusedPaneId && focusedPaneId !== effectivePaneId) {
+                    console.log('[CanvasGrid:handleInstanceFocused] SKIPPING - not focused pane');
+                    return;
+                }
+                // No focused pane set - don't handle to prevent cross-pane interference
+                if (!focusedPaneId) {
+                    console.log('[CanvasGrid:handleInstanceFocused] SKIPPING - no focused pane set');
+                    return;
+                }
+            }
+            // No effectivePaneId means tab mode - handle all events
+            console.log('[CanvasGrid:handleInstanceFocused] HANDLING event');
+
             if (viewId) {
                 setActiveViewId((prevActiveId) => {
                     // Update LRU cache when active view changes
@@ -362,7 +391,7 @@ export function CanvasGrid({
 
         window.addEventListener('cia:instance-focused', handleInstanceFocused);
         return () => window.removeEventListener('cia:instance-focused', handleInstanceFocused);
-    }, []);
+    }, [effectivePaneId]);
     // ==========================================================================
     // CONTAINER MEASUREMENT HOOK (robust resize handling)
     // ==========================================================================
@@ -707,10 +736,13 @@ export function CanvasGrid({
                         placement: nextPlacement,
                     }]);
 
-                    // Emit focus event for the selected view
+                    // Emit focus event for the selected view (include paneId for tile mode)
                     if (nextPlacement.content?.viewConfigurationId) {
                         window.dispatchEvent(new CustomEvent('cia:instance-focused', {
-                            detail: { viewId: nextPlacement.content.viewConfigurationId }
+                            detail: {
+                                viewId: nextPlacement.content.viewConfigurationId,
+                                paneId: effectivePaneId,
+                            }
                         }));
                     }
                 }
@@ -731,10 +763,13 @@ export function CanvasGrid({
                             col: selected.col,
                         });
                     } else {
-                        // Emit focus event
+                        // Emit focus event (include paneId for tile mode)
                         if (selected.placement.content?.viewConfigurationId) {
                             window.dispatchEvent(new CustomEvent('cia:instance-focused', {
-                                detail: { viewId: selected.placement.content.viewConfigurationId }
+                                detail: {
+                                    viewId: selected.placement.content.viewConfigurationId,
+                                    paneId: effectivePaneId,
+                                }
                             }));
                         }
                     }

@@ -9,7 +9,7 @@
  * - Layout patterns: single, horizontal split, 2×2 grid
  */
 
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Icon } from '@UI/react/components/atoms';
 import { CanvasFocusProvider, generatePaneId } from '@UI/react/context/CanvasFocusContext';
@@ -116,19 +116,48 @@ const TiledCanvasView = memo(function TiledCanvasView({
         onClearSelection?.();
     }, [onClearSelection]);
 
+    // Listen for pane focus requests from child components (e.g., InstanceViewport clicks)
+    // This enables the focus-on-click flow: InstanceViewport → requestFocus → here → onSelectWorkspace
+    useEffect(() => {
+        const handlePaneFocusRequested = (e) => {
+            const { paneId, canvasId } = e.detail || {};
+            console.log('[TiledCanvasView] pane-focus-requested:', { paneId, canvasId, activeWorkspaceId });
+            if (!paneId && !canvasId) return;
+
+            // Find workspace matching this pane/canvas
+            const targetWorkspace = openWorkspaces.find((ws) => {
+                const wsCanvasId = ws.activeCanvasId || ws.id;
+                // Check if paneId starts with the canvas ID (handles viewport indices)
+                return wsCanvasId === canvasId || paneId?.startsWith(wsCanvasId);
+            });
+
+            console.log('[TiledCanvasView] targetWorkspace:', targetWorkspace?.id, 'will select:', targetWorkspace && targetWorkspace.id !== activeWorkspaceId);
+            if (targetWorkspace && targetWorkspace.id !== activeWorkspaceId) {
+                onSelectWorkspace?.(targetWorkspace.id);
+            }
+        };
+
+        window.addEventListener('cia:pane-focus-requested', handlePaneFocusRequested);
+        return () => {
+            window.removeEventListener('cia:pane-focus-requested', handlePaneFocusRequested);
+        };
+    }, [openWorkspaces, activeWorkspaceId, onSelectWorkspace]);
+
     /**
      * Render a canvas panel wrapped with CanvasFocusProvider for pane-scoped state
      * @param {Object} workspace - Workspace object
-     * @param {number} paneIndex - Index of this pane (for multi-viewport support)
      */
-    const renderCanvasPanel = (workspace, paneIndex = 0) => {
+    const renderCanvasPanel = (workspace) => {
         if (!workspace) return null;
         const isActive = workspace.id === activeWorkspaceId;
         const isMaximized = workspace.id === maximizedWorkspaceId;
 
-        // Generate unique pane ID (supports multiple viewports of same canvas)
+        // Each workspace has a unique canvas, so paneId = canvasId
+        // (viewport index 0 for each canvas - paneIndex is only for multiple viewports of SAME canvas)
         const canvasId = workspace.activeCanvasId || workspace.id;
-        const paneId = generatePaneId(canvasId, paneIndex);
+        const paneId = generatePaneId(canvasId, 0);
+
+        console.log('[TiledCanvasView:renderCanvasPanel] workspace:', workspace.name, 'canvasId:', canvasId, 'paneId:', paneId, 'isActive:', isActive);
 
         return (
             <CanvasFocusProvider
@@ -175,8 +204,6 @@ const TiledCanvasView = memo(function TiledCanvasView({
         : null;
 
     if (maximizedWorkspace) {
-        // Find the index of the maximized workspace for consistent paneId
-        const maximizedIndex = openWorkspaces.findIndex(w => w.id === maximizedWorkspaceId);
         return (
             <div
                 ref={containerRef}
@@ -185,7 +212,7 @@ const TiledCanvasView = memo(function TiledCanvasView({
                 role="presentation"
             >
                 <div className="tiled-canvas-view__panel tiled-canvas-view__panel--maximized">
-                    {renderCanvasPanel(maximizedWorkspace, maximizedIndex >= 0 ? maximizedIndex : 0)}
+                    {renderCanvasPanel(maximizedWorkspace)}
                 </div>
             </div>
         );
@@ -201,7 +228,7 @@ const TiledCanvasView = memo(function TiledCanvasView({
                 role="presentation"
             >
                 <div className="tiled-canvas-view__panel">
-                    {renderCanvasPanel(openWorkspaces[0], 0)}
+                    {renderCanvasPanel(openWorkspaces[0])}
                 </div>
             </div>
         );
@@ -220,7 +247,7 @@ const TiledCanvasView = memo(function TiledCanvasView({
                     className="tiled-canvas-view__panel"
                     style={{ width: `${splitRatio.h * 100}%` }}
                 >
-                    {renderCanvasPanel(openWorkspaces[0], 0)}
+                    {renderCanvasPanel(openWorkspaces[0])}
                 </div>
                 <ResizableDivider
                     type="horizontal"
@@ -228,7 +255,7 @@ const TiledCanvasView = memo(function TiledCanvasView({
                     onMouseDown={handleDividerMouseDown('h')}
                 />
                 <div className="tiled-canvas-view__panel tiled-canvas-view__panel--flex">
-                    {renderCanvasPanel(openWorkspaces[1], 1)}
+                    {renderCanvasPanel(openWorkspaces[1])}
                 </div>
             </div>
         );
@@ -251,7 +278,7 @@ const TiledCanvasView = memo(function TiledCanvasView({
                     className="tiled-canvas-view__panel"
                     style={{ width: `${splitRatio.h * 100}%` }}
                 >
-                    {renderCanvasPanel(openWorkspaces[0], 0)}
+                    {renderCanvasPanel(openWorkspaces[0])}
                 </div>
                 <ResizableDivider
                     type="horizontal"
@@ -259,7 +286,7 @@ const TiledCanvasView = memo(function TiledCanvasView({
                     onMouseDown={handleDividerMouseDown('h')}
                 />
                 <div className="tiled-canvas-view__panel tiled-canvas-view__panel--flex">
-                    {renderCanvasPanel(openWorkspaces[1], 1)}
+                    {renderCanvasPanel(openWorkspaces[1])}
                 </div>
             </div>
 
@@ -276,11 +303,11 @@ const TiledCanvasView = memo(function TiledCanvasView({
                     className="tiled-canvas-view__panel"
                     style={{ width: `${splitRatio.h * 100}%` }}
                 >
-                    {renderCanvasPanel(openWorkspaces[2], 2)}
+                    {renderCanvasPanel(openWorkspaces[2])}
                 </div>
                 <div className="tiled-canvas-view__spacer" />
                 <div className="tiled-canvas-view__panel tiled-canvas-view__panel--flex">
-                    {openWorkspaces[3] && renderCanvasPanel(openWorkspaces[3], 3)}
+                    {openWorkspaces[3] && renderCanvasPanel(openWorkspaces[3])}
                 </div>
             </div>
         </div>

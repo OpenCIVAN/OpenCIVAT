@@ -3,7 +3,8 @@
 // ViewGroups are containers for organizing and linking views on the canvas
 
 const express = require('express');
-const router = express.Router();
+// mergeParams: true allows access to :workspaceId from parent mount
+const router = express.Router({ mergeParams: true });
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { getUser } = require('../middleware/auth');
@@ -43,7 +44,10 @@ router.get('/', async (req, res, next) => {
     try {
         const user = getUser(req);
         const { pool } = req.app.locals;
-        const { workspaceId, projectId, includeImplicit = 'false' } = req.query;
+        // workspaceId can come from route params (when mounted at /api/workspaces/:workspaceId/viewgroups)
+        // or from query params (when mounted at /api/viewgroups)
+        const workspaceId = req.params.workspaceId || req.query.workspaceId;
+        const { projectId, includeImplicit = 'false' } = req.query;
 
         let query = `
             SELECT vg.*,
@@ -225,13 +229,18 @@ router.get('/:id', async (req, res, next) => {
 /**
  * POST /api/workspaces/:workspaceId/viewgroups
  * Create a new ViewGroup
+ *
+ * Note: This route handles both:
+ * - POST /api/viewgroups/workspaces/:workspaceId/viewgroups (when mounted at /api/viewgroups)
+ * - POST /api/workspaces/:workspaceId/viewgroups/ (when mounted at /api/workspaces/:workspaceId/viewgroups)
  */
-router.post('/workspaces/:workspaceId/viewgroups', async (req, res, next) => {
+router.post(['/', '/workspaces/:workspaceId/viewgroups'], async (req, res, next) => {
     const { pool, wsManager } = req.app.locals;
 
     try {
         const user = getUser(req);
-        const { workspaceId } = req.params;
+        // workspaceId can come from route params or from the parent mount
+        const workspaceId = req.params.workspaceId;
         const {
             name = 'New Group',
             layoutId = 'single',

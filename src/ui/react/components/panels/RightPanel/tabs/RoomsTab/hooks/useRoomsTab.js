@@ -381,7 +381,8 @@ export function useRoomsTab(options = {}) {
           headers,
           body: JSON.stringify({
             name: roomConfig.name,
-            type: "breakout",
+            roomType: "breakout",  // Server expects roomType, not type
+            isPublic: roomConfig.access === "open",
             settings: {
               access: roomConfig.access,
               hasVoice: roomConfig.hasVoice,
@@ -395,8 +396,8 @@ export function useRoomsTab(options = {}) {
         throw new Error(`Failed to create room: ${response.status}`);
       }
 
-      const data = await response.json();
-      const newRoom = data.room;
+      // Server returns room as flat object, not nested under data.room
+      const newRoom = await response.json();
 
       // Add to local state
       setRooms((prev) => [
@@ -404,12 +405,12 @@ export function useRoomsTab(options = {}) {
         {
           id: newRoom.id,
           name: newRoom.name,
-          type: newRoom.type,
+          type: newRoom.room_type || newRoom.type || "breakout",
           access: newRoom.settings?.access || "open",
           hasVoice: newRoom.settings?.hasVoice ?? true,
           hasText: newRoom.settings?.hasText ?? true,
           isPersistent: false,
-          members: newRoom.members || [],
+          members: newRoom.participants || newRoom.members || [],
           isCurrentRoom: false,
           settings: newRoom.settings,
           createdAt: newRoom.created_at,

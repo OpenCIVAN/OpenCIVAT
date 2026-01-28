@@ -172,6 +172,10 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     [canvas]
   );
 
+  // Effective pane ID for event filtering in tile mode
+  // Used by moveViewport, setViewportPosition, and focusCell
+  const effectivePaneId = canvasId || canvas?.id || null;
+
   // ===========================================================================
   // VIEWPORT STATE
   // ===========================================================================
@@ -291,6 +295,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   /**
    * Move viewport by delta or direction string
    * Also dispatches sync events so CanvasGrid can follow
+   * Includes paneId for tile mode filtering
    */
   const moveViewport = useCallback(
     (deltaRowOrDirection, deltaCol) => {
@@ -300,19 +305,19 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         const direction = deltaRowOrDirection;
         switch (direction) {
           case "up":
-            dispatchMoveViewport(-1, 0);
+            dispatchMoveViewport(-1, 0, effectivePaneId);
             break;
           case "down":
-            dispatchMoveViewport(1, 0);
+            dispatchMoveViewport(1, 0, effectivePaneId);
             break;
           case "left":
-            dispatchMoveViewport(0, -1);
+            dispatchMoveViewport(0, -1, effectivePaneId);
             break;
           case "right":
-            dispatchMoveViewport(0, 1);
+            dispatchMoveViewport(0, 1, effectivePaneId);
             break;
           case "home":
-            dispatchNavigateTo(0, 0);
+            dispatchNavigateTo(0, 0, effectivePaneId);
             break;
           default:
             log.warn(`Unknown direction: ${direction}`);
@@ -323,15 +328,16 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       const deltaRow =
         typeof deltaRowOrDirection === "number" ? deltaRowOrDirection : 0;
       const dCol = typeof deltaCol === "number" ? deltaCol : 0;
-      dispatchMoveViewport(deltaRow, dCol);
+      dispatchMoveViewport(deltaRow, dCol, effectivePaneId);
     },
-    []
+    [effectivePaneId]
   );
 
   /**
    * Set viewport position directly
    * Also dispatches sync events so CanvasGrid can follow
    * Persists to localStorage for ViewLifecycleService flow-aware placement
+   * Includes paneId for tile mode filtering
    */
   const setViewportPosition = useCallback(
     (row, col) => {
@@ -345,7 +351,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       const clampedCol = Math.max(0, Math.min(targetCol, maxCol));
 
       canvasSetViewportPosition?.(clampedRow, clampedCol);
-      dispatchNavigateTo(clampedRow, clampedCol);
+      dispatchNavigateTo(clampedRow, clampedCol, effectivePaneId);
 
       // Persist to localStorage for ViewLifecycleService
       try {
@@ -354,7 +360,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         // Ignore localStorage errors
       }
     },
-    [canvasSetViewportPosition, canvasSize, viewportSize]
+    [canvasSetViewportPosition, canvasSize, viewportSize, effectivePaneId]
   );
 
   /**
@@ -430,10 +436,16 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         if (effectivePaneId) {
           workspaceManager.setActiveInstanceForPane(effectivePaneId, instance.instanceId);
           log.debug(`[focusCell] Set active instance for pane ${effectivePaneId}: ${instance.instanceId}`);
+          // Only set global if this pane is focused (avoid cross-pane interference)
+          if (workspaceManager.getFocusedPaneId?.() === effectivePaneId) {
+            workspaceManager.setActiveInstance(instance.instanceId);
+            log.debug(`[focusCell] Set global active instance: ${instance.instanceId}`);
+          }
+        } else {
+          // No pane context (tab mode) - set global directly
+          workspaceManager.setActiveInstance(instance.instanceId);
+          log.debug(`[focusCell] Set global active instance: ${instance.instanceId}`);
         }
-        // Also set global active instance (for backward compatibility)
-        workspaceManager.setActiveInstance(instance.instanceId);
-        log.debug(`[focusCell] Set global active instance: ${instance.instanceId}`);
       } else {
         log.debug(`[focusCell] No instance found for viewId ${viewId}`);
       }
