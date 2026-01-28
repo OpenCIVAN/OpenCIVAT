@@ -9,7 +9,6 @@
  *
  * Used by:
  * - CanvasToolbar (ViewContextBlock)
- * - SecondaryFooter (deprecated)
  *
  * Usage:
  * ```jsx

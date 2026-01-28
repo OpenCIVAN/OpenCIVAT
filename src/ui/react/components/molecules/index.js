@@ -125,9 +125,6 @@ export { CameraViewGridPicker } from './CameraViewGridPicker';
 // TOOLBAR/BAR MOLECULES (moved from bars/)
 // =============================================================================
 
-// FlowDirectionToggle - Row/Column flow toggle
-export { FlowDirectionToggle } from './FlowDirectionToggle';
-
 // CanvasSizeDisplay - Canvas dimensions display/editor
 export { CanvasSizeDisplay } from './CanvasSizeDisplay';
 
@@ -149,15 +146,9 @@ export { PopoutButtons } from './PopoutButtons';
 // StackedNavBlock - Stacked navigation with arrows
 export { StackedNavBlock, NAV_DIRECTIONS } from './StackedNavBlock';
 
-// ActiveViewSelector - Active view dropdown selector
-export { ActiveViewSelector } from './ActiveViewSelector';
-
 // =============================================================================
 // PANEL OVERLAY MOLECULES
 // =============================================================================
-
-// PreviewHintBanner - Banner shown when panel is in preview mode
-export { PreviewHintBanner } from './PreviewHintBanner';
 
 // OverlayPanelHeader - Panel header with context-aware buttons
 export { OverlayPanelHeader } from './OverlayPanelHeader';

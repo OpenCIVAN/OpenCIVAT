@@ -4,7 +4,7 @@
 import React, { memo, useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { ActiveViewSelector } from '@UI/react/components/molecules/ActiveViewSelector';
+import { ActiveViewSelector } from '@UI/react/components/organisms/ActiveViewSelector';
 import { ToolOptionItem } from '@UI/react/components/molecules/InstanceToolOptions/InstanceToolOptions';
 import { getViewColor, VIEW_COLORS, hexToRgbString } from '@UI/react/utils/canvasColors.js';
 import './Footer1InstanceTools.scss';

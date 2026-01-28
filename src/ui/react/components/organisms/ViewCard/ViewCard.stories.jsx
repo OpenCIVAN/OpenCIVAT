@@ -22,7 +22,7 @@ import { StatusDot } from '@UI/react/components/atoms/StatusDot';
 import { Badge } from '@UI/react/components/atoms/Badge';
 
 export default {
-    title: 'Molecules/ViewCard',
+    title: 'Organisms/ViewCard',
     component: ViewCard,
     parameters: {
         layout: 'padded',

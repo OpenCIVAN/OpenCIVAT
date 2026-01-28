@@ -44,7 +44,15 @@ module.exports = {
     clean: true,
   },
   mode: "development",
-  devtool: "source-map",
+  // eval-cheap-module-source-map is much faster than source-map for dev
+  devtool: "eval-cheap-module-source-map",
+  // Filesystem cache dramatically speeds up cold starts after first build
+  cache: {
+    type: "filesystem",
+    buildDependencies: {
+      config: [__filename],
+    },
+  },
   devServer: {
     static: [
       {
@@ -111,6 +119,7 @@ module.exports = {
           loader: "babel-loader",
           options: {
             presets: ["@babel/preset-react"],
+            cacheDirectory: true, // Cache transpilation results for faster rebuilds
           },
         },
       },

@@ -3,14 +3,8 @@
 // MAIN APPLICATION COMPONENT - CANVAS-CENTRIC VERSION
 // =============================================================================
 //
-// KEY CHANGE: Secondary bars (SecondaryHeader/SecondaryFooter) have been moved
-// into the canvas itself. The canvas now has its own chrome:
-// - CanvasHeader: Navigation (back, home, breadcrumb, viewport nav, grid size)
-// - CanvasToolbar: Actions (view mode, history, subset, active view, actions)
-// - CanvasStatusBar: Info (canvas size, viewport size, render mode, sync status)
-// - EdgeTriggers + FloatingPanels: Panel access via edge hover
-//
-// The ThreeEdgeLayout now has 3 rows instead of 5:
+// Canvas chrome (CanvasHeader, CanvasToolbar, CanvasStatusBar) is embedded
+// in CanvasWorkspace. ThreeEdgeLayout has 3 rows:
 // - Top bar (Header)
 // - Main content (activity bars + panels + workspace)
 // - Bottom bar (StatusBar)
@@ -33,14 +27,6 @@ import { ThreeEdgeLayout } from "@UI/react/components/layout/ThreeEdgeLayout";
 import { Header } from "@UI/react/components/layout/Header";
 import { RoomHeader } from "@UI/react/components/organisms/RoomHeader";
 import { WorkspaceBar } from "@UI/react/components/organisms/WorkspaceBar";
-
-// =============================================================================
-// SECONDARY BARS - DEPRECATED
-// =============================================================================
-// SecondaryHeader and SecondaryFooter are now deprecated.
-// Canvas chrome is now handled by CanvasWorkspace which includes:
-// - CanvasHeader, CanvasToolbar, CanvasStatusBar
-// - EdgeTriggers + FloatingPanels for panel access
 
 // =============================================================================
 // FOOTER / STATUS BAR (28px - System Status)

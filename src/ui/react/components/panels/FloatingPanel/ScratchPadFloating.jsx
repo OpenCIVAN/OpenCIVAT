@@ -1,7 +1,7 @@
 // src/ui/react/components/panels/FloatingPanel/ScratchPadFloating.jsx
 // ScratchPad as a floating panel - independent of docked panels
 //
-// Can be opened from SecondaryFooter and moved around freely.
+// Can be opened from canvas toolbar and moved around freely.
 // Uses the FloatingPanel system for position/size management.
 
 import React, { memo, useCallback } from "react";

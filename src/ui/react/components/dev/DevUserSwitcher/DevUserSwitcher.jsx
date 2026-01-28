@@ -4,7 +4,7 @@
 // This component provides a dropdown to switch between test users
 // for collaboration testing. Only renders in dev mode.
 //
-// Place this in the Header or SecondaryFooter for easy access.
+// Place this in the Header for easy access.
 
 import React, { useState, useRef, useEffect, memo } from "react";
 import { Icon } from '@UI/react/components/atoms/Icon';

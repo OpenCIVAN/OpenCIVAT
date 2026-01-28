@@ -1,4 +1,4 @@
-// src/ui/react/components/molecules/FlowDirectionToggle/FlowDirectionToggle.stories.jsx
+// src/ui/react/components/atoms/FlowDirectionToggle/FlowDirectionToggle.stories.jsx
 import React, { useState } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 
@@ -74,7 +74,7 @@ const InteractiveFlowToggle = () => {
 };
 
 export default {
-    title: 'Molecules/FlowDirectionToggle',
+    title: 'Atoms/FlowDirectionToggle',
     component: MockFlowDirectionToggle,
     parameters: {
         layout: 'centered',

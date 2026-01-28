@@ -13,7 +13,7 @@ import React from 'react';
 import classNames from 'classnames';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import { OverlayPanelHeader } from '@UI/react/components/molecules/OverlayPanelHeader';
-import { PreviewHintBanner } from '@UI/react/components/molecules/PreviewHintBanner';
+import { PreviewHintBanner } from '@UI/react/components/atoms/PreviewHintBanner';
 import './OverlayPanel.scss';
 
 /**

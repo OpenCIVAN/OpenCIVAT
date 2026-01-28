@@ -1,10 +1,6 @@
 // src/ui/react/components/layout/ThreeEdgeLayout/ThreeEdgeLayout.jsx
 // Main layout orchestrator for the three-edge panel system
 // CSS Grid layout with separated activity bars and panel content
-//
-// UPDATED: Now supports BOTH secondary bar patterns for backward compatibility:
-// - Pattern 1 (legacy): secondaryTopBarZones={{ left, center, right }}
-// - Pattern 2 (recommended): secondaryTopBar={<SecondaryHeader {...props} />}
 
 import React, { useMemo, cloneElement, useCallback, isValidElement, useContext } from 'react';
 import { LayoutPanelProvider } from '@UI/react/components/panels/LayoutPanel/LayoutPanelContext';
@@ -22,26 +18,12 @@ import './ThreeEdgeLayout.scss';
 /**
  * ThreeEdgeLayout - Main application layout container
  *
- * SUPPORTS TWO PATTERNS:
- * 
- * Pattern 1 - Zone Objects (legacy, for gradual migration):
- * ```jsx
- * <ThreeEdgeLayout
- *   secondaryTopBarZones={{ left: <Comp/>, center: <Comp/>, right: <Comp/> }}
- *   secondaryBottomBarZones={{ left: <Comp/>, center: <Comp/>, right: <Comp/> }}
- * />
- * ```
- * 
- * Pattern 2 - Rendered Components (recommended):
- * ```jsx
- * <ThreeEdgeLayout
- *   secondaryTopBar={<SecondaryHeader {...props} />}
- *   secondaryBottomBar={<SecondaryFooter {...props} />}
- * />
- * ```
- * 
- * When using Pattern 2, components receive layout props via cloneElement:
- * - leftPanelWidth, rightPanelWidth, leftPanelOpen, rightPanelOpen
+ * CSS Grid layout with 3 rows: top bar, main content, bottom bar.
+ * Main content area contains activity bars, panels, and workspace.
+ *
+ * Secondary bar slots (secondaryTopBar, secondaryBottomBar) receive
+ * layout props via cloneElement: leftPanelWidth, rightPanelWidth,
+ * leftPanelOpen, rightPanelOpen.
  */
 export function ThreeEdgeLayout({
     topBar,
@@ -51,12 +33,10 @@ export function ThreeEdgeLayout({
     leftPanelContent,
     rightActivityBar,
     rightPanelContent,
-    // Pattern 1: Zone objects (legacy)
     secondaryTopBarZones,    // { left, center, right }
     secondaryBottomBarZones, // { left, center, right }
-    // Pattern 2: Rendered components (recommended)
-    secondaryTopBar,         // <SecondaryHeader {...props} />
-    secondaryBottomBar,      // <SecondaryFooter {...props} />
+    secondaryTopBar,
+    secondaryBottomBar,
     children, // Additional content rendered inside LayoutContext (e.g., floating panels)
 }) {
     // Layout state management (legacy - keeps backward compatibility)
