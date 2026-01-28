@@ -436,10 +436,12 @@ export function useViewContextLogic() {
   /**
    * Select a view (focus it)
    * Sets the active instance via workspaceManager to stay in sync with InstanceToolsTab
+   * Uses pane-scoped setter in tile mode, global setter otherwise
    * @param {string|object} viewOrId - View object with id property, or view ID string
+   * @param {string} [paneId] - Optional pane ID for scoped focus (tile mode)
    */
   const handleSelectView = useCallback(
-    (viewOrId) => {
+    (viewOrId, paneId = null) => {
       // Support both view object and view ID
       const viewId = typeof viewOrId === "string" ? viewOrId : viewOrId?.id;
       if (!viewId) {
@@ -447,17 +449,26 @@ export function useViewContextLogic() {
         workspaceManager?.setActiveInstance?.(null);
         window.dispatchEvent(
           new CustomEvent("cia:active-instance-changed", {
-            detail: { viewId: null, instanceId: null },
+            detail: { viewId: null, instanceId: null, paneId: null },
           })
         );
         return;
       }
 
-      log.debug("ViewContext: Select view", viewId);
+      log.debug("ViewContext: Select view", viewId, "paneId:", paneId);
+
+      // Determine effective pane ID - use provided, or fall back to focused pane
+      const effectivePaneId = paneId || workspaceManager?.getFocusedPaneId?.();
 
       // Find the instance by viewConfigId and set it as active
       const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
       if (instance?.instanceId) {
+        // Use pane-scoped setter if we have a pane ID (tile mode)
+        if (effectivePaneId) {
+          workspaceManager.setActiveInstanceForPane(effectivePaneId, instance.instanceId);
+          log.debug(`ViewContext: Set active instance for pane ${effectivePaneId}: ${instance.instanceId}`);
+        }
+        // Also set global active instance (for backward compatibility)
         workspaceManager.setActiveInstance(instance.instanceId);
       }
 
@@ -468,10 +479,15 @@ export function useViewContextLogic() {
       }
 
       // Emit events for other components
-      eventBus.emit(BUS_EVENTS.VIEW_FOCUSED, { viewId });
+      eventBus.emit(BUS_EVENTS.VIEW_FOCUSED, { viewId, paneId: effectivePaneId });
       window.dispatchEvent(
         new CustomEvent("cia:instance-focused", {
-          detail: { viewId, instanceId: instance?.instanceId },
+          detail: {
+            viewId,
+            instanceId: instance?.instanceId,
+            paneId: effectivePaneId,
+            canvasId: effectivePaneId,
+          },
         })
       );
     },
@@ -484,10 +500,16 @@ export function useViewContextLogic() {
    * - Flow-aware position finding (viewport first, then rest of canvas)
    * - Auto-expansion when canvas is full
    * - Smart viewport navigation (minimal shift)
+   *
+   * @param {string} viewId - View configuration ID to place
+   * @param {string} [paneId] - Optional pane ID for scoped focus (tile mode)
    */
   const handlePlaceView = useCallback(
-    async (viewId) => {
-      log.debug("ViewContext: Place view", viewId);
+    async (viewId, paneId = null) => {
+      log.debug("ViewContext: Place view", viewId, "paneId:", paneId);
+
+      // Determine effective pane ID
+      const effectivePaneId = paneId || workspaceManager?.getFocusedPaneId?.();
 
       try {
         // Import dynamically to avoid circular dependencies
@@ -497,6 +519,11 @@ export function useViewContextLogic() {
         // Set the placed view as active
         const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
         if (instance?.instanceId) {
+          // Use pane-scoped setter if we have a pane ID (tile mode)
+          if (effectivePaneId) {
+            workspaceManager.setActiveInstanceForPane(effectivePaneId, instance.instanceId);
+          }
+          // Also set global active instance (for backward compatibility)
           workspaceManager.setActiveInstance(instance.instanceId);
         }
       } catch (error) {

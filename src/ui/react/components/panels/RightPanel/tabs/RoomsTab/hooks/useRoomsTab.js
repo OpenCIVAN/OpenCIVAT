@@ -140,7 +140,7 @@ export function useRoomsTab(options = {}) {
         } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
           const devUser = authService.getUser?.();
           headers["x-user-id"] =
-            devUser?.id || "00000000-0000-0000-0000-000000000001";
+            devUser?.id || "00000000-0000-0000-0000-000000000002";
           headers["x-user-name"] = devUser?.name || "Development User";
           headers["x-user-email"] = devUser?.email || "developer@localhost";
         }
@@ -277,7 +277,7 @@ export function useRoomsTab(options = {}) {
       } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
         const devUser = authService.getUser?.();
         headers["x-user-id"] =
-          devUser?.id || "00000000-0000-0000-0000-000000000001";
+          devUser?.id || "00000000-0000-0000-0000-000000000002";
         headers["x-user-name"] = devUser?.name || "Development User";
         headers["x-user-email"] = devUser?.email || "developer@localhost";
       }
@@ -321,7 +321,7 @@ export function useRoomsTab(options = {}) {
       } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
         const devUser = authService.getUser?.();
         headers["x-user-id"] =
-          devUser?.id || "00000000-0000-0000-0000-000000000001";
+          devUser?.id || "00000000-0000-0000-0000-000000000002";
         headers["x-user-name"] = devUser?.name || "Development User";
         headers["x-user-email"] = devUser?.email || "developer@localhost";
       }
@@ -368,7 +368,7 @@ export function useRoomsTab(options = {}) {
       } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
         const devUser = authService.getUser?.();
         headers["x-user-id"] =
-          devUser?.id || "00000000-0000-0000-0000-000000000001";
+          devUser?.id || "00000000-0000-0000-0000-000000000002";
         headers["x-user-name"] = devUser?.name || "Development User";
         headers["x-user-email"] = devUser?.email || "developer@localhost";
       }
@@ -432,7 +432,7 @@ export function useRoomsTab(options = {}) {
       } else if (config.devBypassAuth === true || config.devBypassAuth === "true") {
         const devUser = authService.getUser?.();
         headers["x-user-id"] =
-          devUser?.id || "00000000-0000-0000-0000-000000000001";
+          devUser?.id || "00000000-0000-0000-0000-000000000002";
         headers["x-user-name"] = devUser?.name || "Development User";
         headers["x-user-email"] = devUser?.email || "developer@localhost";
       }

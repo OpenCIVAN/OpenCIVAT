@@ -29,6 +29,7 @@ import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitial
 import { useViewportEventListener, dispatchViewportChanged } from '@UI/react/hooks/useViewportSync';
 import { useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { LAYOUT_MODES, FLOW_DIRECTIONS } from '@Core/data/models/WorkspaceCanvas.js';
+import { useCanvasFocus } from '@UI/react/context/CanvasFocusContext';
 import { workspace as log } from '@Utils/logger.js';
 import { canvasHistory } from '@UI/react/store/canvasHistoryStore';
 import './CanvasGrid.scss';
@@ -186,6 +187,16 @@ export function CanvasGrid({
     } = useCanvas(canvasId);
 
     // ==========================================================================
+    // CANVAS FOCUS CONTEXT (for tile mode pane-scoped state)
+    // ==========================================================================
+    // If we're inside a CanvasFocusProvider (tile mode), use the paneId for
+    // event filtering. This allows multiple viewports of the same canvas.
+
+    const canvasFocusContext = useCanvasFocus();
+    // Use paneId from context if available, otherwise fall back to canvasId
+    const effectivePaneId = canvasFocusContext?.paneId || canvasId;
+
+    // ==========================================================================
     // VIEWPORT SIZE HOOK (how many cells visible)
     // ==========================================================================
 
@@ -215,7 +226,9 @@ export function CanvasGrid({
             moveViewport(deltaRow, deltaCol);
         }, [moveViewport]),
 
-        canvasId: canvasId,
+        // Use effectivePaneId for proper filtering in tile mode
+        paneId: effectivePaneId,
+        canvasId: canvasId, // Keep for backward compatibility
     });
 
 
@@ -239,13 +252,14 @@ export function CanvasGrid({
 
     useEffect(() => {
         if (!viewport || !viewportSize) return;
+        // Use effectivePaneId for proper identification in tile mode
         dispatchViewportChanged({
             row: viewport.row,
             col: viewport.col,
             rows: viewportSize.rows,
             cols: viewportSize.cols,
-        }, canvasId);
-    }, [viewport?.row, viewport?.col, viewportSize?.rows, viewportSize?.cols, canvasId]);
+        }, effectivePaneId);
+    }, [viewport?.row, viewport?.col, viewportSize?.rows, viewportSize?.cols, effectivePaneId]);
 
     // ==========================================================================
     // CLAMP VIEWPORT POSITION WHEN SIZE CHANGES (NEW)

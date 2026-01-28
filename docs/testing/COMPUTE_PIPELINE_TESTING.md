@@ -8,7 +8,7 @@
 - [ ] API responding: `curl http://localhost:3001/api/health`
 - [ ] Redis running: `docker exec cia-redis redis-cli ping` → PONG
 - [ ] VTK Worker running: `docker-compose logs vtk-worker --tail=5`
-- [ ] Frontend running: `npm start` or `./scripts/start-frontend.sh`
+- [ ] Frontend running: `npm start`
 - [ ] Browser console open (F12)
 
 ### Test File Ready

@@ -69,6 +69,12 @@ class WorkspaceManager {
     this.listeners = new Set();
     this._colorIndex = 0; // Track color assignment
 
+    // Per-pane active instance tracking (for tile mode)
+    // Pane = a viewport into a canvas. Same canvas can have multiple panes.
+    this._activeInstancePerCanvas = new Map(); // paneId -> instanceId
+    this._focusedCanvasId = null;
+    this._focusedPaneId = null;
+
     log.debug("WorkspaceManager created (type-agnostic)");
   }
 
@@ -572,7 +578,7 @@ class WorkspaceManager {
   }
 
   /**
-   * Set the active instance
+   * Set the active instance (global - for backward compatibility)
    */
   setActiveInstance(instanceId) {
     if (instanceId == null) {
@@ -594,12 +600,131 @@ class WorkspaceManager {
 
   /**
    * Get the currently active instance
+   * In tile mode with a focused pane, returns that pane's active instance
+   * Otherwise returns the global active instance
    */
   getActiveInstance() {
+    // If we have a focused pane with its own active instance, use that
+    if (this._focusedCanvasId || this._focusedPaneId) {
+      const paneId = this._focusedPaneId || this._focusedCanvasId;
+      const paneInstanceId = this._activeInstancePerCanvas.get(paneId);
+      if (paneInstanceId && this.instances.has(paneInstanceId)) {
+        return this.getInstance(paneInstanceId);
+      }
+    }
+
+    // Fall back to global active instance
     if (!this.activeInstanceId) {
       return null;
     }
     return this.getInstance(this.activeInstanceId);
+  }
+
+  // =========================================================================
+  // PER-CANVAS/PANE ACTIVE INSTANCE MANAGEMENT (for tile mode)
+  // =========================================================================
+
+  /**
+   * Set the active instance for a specific pane (canvas viewport)
+   * In tile mode, each visible pane can have its own active instance
+   *
+   * @param {string} paneId - Unique pane identifier (canvasId or viewportId)
+   * @param {string} instanceId - Instance to set as active for this pane
+   */
+  setActiveInstanceForPane(paneId, instanceId) {
+    if (!paneId) {
+      log.warn("Cannot set active instance: no paneId provided");
+      return;
+    }
+
+    if (instanceId == null) {
+      this._activeInstancePerCanvas.delete(paneId);
+      this._notifyListeners();
+      return;
+    }
+
+    if (!this.instances.has(instanceId)) {
+      log.warn(`Cannot set non-existent instance as active: ${instanceId}`);
+      return;
+    }
+
+    this._activeInstancePerCanvas.set(paneId, instanceId);
+    const instance = this.instances.get(instanceId);
+    instance.lastActive = Date.now();
+
+    log.debug(`Set active instance for pane ${paneId}: ${instanceId}`);
+    this._notifyListeners();
+  }
+
+  /**
+   * Get the active instance for a specific pane
+   *
+   * @param {string} paneId - Pane identifier
+   * @returns {Object|null} Instance object or null
+   */
+  getActiveInstanceForPane(paneId) {
+    if (!paneId) return null;
+    const instanceId = this._activeInstancePerCanvas.get(paneId);
+    return instanceId ? this.getInstance(instanceId) : null;
+  }
+
+  /**
+   * Set which pane has focus (receives navigation events, etc.)
+   *
+   * @param {string} paneId - Pane identifier (canvasId or viewportId)
+   */
+  setFocusedPane(paneId) {
+    const previousPaneId = this._focusedPaneId;
+    this._focusedPaneId = paneId;
+
+    if (previousPaneId !== paneId) {
+      log.debug(`Focused pane changed: ${previousPaneId} -> ${paneId}`);
+      this._notifyListeners();
+
+      // Dispatch event for components that need to know about focus changes
+      window.dispatchEvent(
+        new CustomEvent("cia:pane-focus-changed", {
+          detail: { paneId, previousPaneId },
+        })
+      );
+    }
+  }
+
+  /**
+   * Get the currently focused pane ID
+   * @returns {string|null}
+   */
+  getFocusedPaneId() {
+    return this._focusedPaneId || this._focusedCanvasId || null;
+  }
+
+  /**
+   * Clear the active instance for a pane (when pane is closed)
+   * @param {string} paneId - Pane identifier
+   */
+  clearActiveInstanceForPane(paneId) {
+    if (this._activeInstancePerCanvas.has(paneId)) {
+      this._activeInstancePerCanvas.delete(paneId);
+      this._notifyListeners();
+    }
+  }
+
+  // Legacy alias methods for backward compatibility
+  setActiveInstanceForCanvas(canvasId, instanceId) {
+    return this.setActiveInstanceForPane(canvasId, instanceId);
+  }
+
+  getActiveInstanceForCanvas(canvasId) {
+    return this.getActiveInstanceForPane(canvasId);
+  }
+
+  setFocusedCanvas(canvasId) {
+    this._focusedCanvasId = canvasId;
+    return this.setFocusedPane(canvasId);
+  }
+
+  getFocusedCanvasId() {
+    return this._focusedCanvasId;
   }
 
   /**

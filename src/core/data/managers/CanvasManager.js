@@ -48,6 +48,9 @@ export class CanvasManager extends BaseManager {
     this._connectionState = "disconnected";
     this._reconnectAttempts = 0;
 
+    // Focused pane tracking (for tile mode with multiple viewports)
+    this._focusedPaneId = null;
+
     // Bind methods for WebSocket handlers
     this.handleServerBroadcast = this.handleServerBroadcast.bind(this);
   }
@@ -885,6 +888,46 @@ export class CanvasManager extends BaseManager {
    */
   getActiveCanvasId() {
     return this._activeCanvasId;
+  }
+
+  // ===========================================================================
+  // FOCUSED PANE MANAGEMENT (for tile mode)
+  // ===========================================================================
+
+  /**
+   * Set which pane has focus
+   * A pane is a viewport into a canvas - same canvas can have multiple panes
+   *
+   * @param {string} paneId - Unique pane identifier
+   */
+  setFocusedPane(paneId) {
+    const previousPaneId = this._focusedPaneId;
+    this._focusedPaneId = paneId;
+
+    if (previousPaneId !== paneId) {
+      log.debug(`CanvasManager: Focused pane changed: ${previousPaneId} -> ${paneId}`);
+      this._emit("focusedPaneChanged", {
+        paneId,
+        previousPaneId,
+      });
+    }
+  }
+
+  /**
+   * Get the currently focused pane ID
+   * @returns {string|null}
+   */
+  getFocusedPaneId() {
+    return this._focusedPaneId;
+  }
+
+  /**
+   * Check if a specific pane has focus
+   * @param {string} paneId
+   * @returns {boolean}
+   */
+  isPaneFocused(paneId) {
+    return this._focusedPaneId === paneId;
   }
 
   // ===========================================================================

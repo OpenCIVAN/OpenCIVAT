@@ -413,17 +413,27 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
    * @param {number} col - Cell column
    * @param {number} rowSpan - Cell row span (default 1)
    * @param {number} colSpan - Cell col span (default 1)
+   * @param {string} [paneId] - Optional pane ID for canvas-scoped focus (tile mode)
    */
   const focusCell = useCallback(
-    (viewId, row, col, rowSpan = 1, colSpan = 1) => {
-      log.debug(`[focusCell] Focusing viewId=${viewId} at (${row}, ${col}) span=(${rowSpan}x${colSpan})`);
+    (viewId, row, col, rowSpan = 1, colSpan = 1, paneId = null) => {
+      log.debug(`[focusCell] Focusing viewId=${viewId} at (${row}, ${col}) span=(${rowSpan}x${colSpan}) paneId=${paneId}`);
+
+      // Determine the effective pane ID (use provided or fall back to canvasId from hook)
+      const effectivePaneId = paneId || canvasId || canvas?.id;
 
       // 1. Find the instance and set it as active via workspaceManager (source of truth)
       // This is the KEY step that makes it the "active" instance
       const instance = workspaceManager?.getInstanceByViewConfigId?.(viewId);
       if (instance?.instanceId) {
+        // Use pane-scoped setter if we have a paneId (tile mode)
+        if (effectivePaneId) {
+          workspaceManager.setActiveInstanceForPane(effectivePaneId, instance.instanceId);
+          log.debug(`[focusCell] Set active instance for pane ${effectivePaneId}: ${instance.instanceId}`);
+        }
+        // Also set global active instance (for backward compatibility)
         workspaceManager.setActiveInstance(instance.instanceId);
-        log.debug(`[focusCell] Set active instance: ${instance.instanceId}`);
+        log.debug(`[focusCell] Set global active instance: ${instance.instanceId}`);
       } else {
         log.debug(`[focusCell] No instance found for viewId ${viewId}`);
       }
@@ -476,7 +486,8 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
 
         // Set the new viewport position
         canvasSetViewportPosition?.(newVpRow, newVpCol);
-        dispatchNavigateTo(newVpRow, newVpCol);
+        // Include paneId in navigation event for filtering
+        dispatchNavigateTo(newVpRow, newVpCol, effectivePaneId);
       } else {
         log.debug(`[focusCell] Cell already visible, not moving viewport`);
       }
@@ -484,15 +495,21 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       // 3. Dispatch events for other components (matches SecondaryHeader behavior)
       if (viewId) {
         const { eventBus, BUS_EVENTS } = require("@Core/events/EventBus.js");
-        eventBus.emit(BUS_EVENTS.VIEW_FOCUSED, { viewId });
+        eventBus.emit(BUS_EVENTS.VIEW_FOCUSED, { viewId, paneId: effectivePaneId });
         window.dispatchEvent(
           new CustomEvent("cia:instance-focused", {
-            detail: { viewId, instanceId: instance?.instanceId, source: "focus-button" },
+            detail: {
+              viewId,
+              instanceId: instance?.instanceId,
+              paneId: effectivePaneId,
+              canvasId: effectivePaneId,
+              source: "focus-button",
+            },
           })
         );
       }
     },
-    [canvasViewport, viewportSize, canvasSize, canvasSetViewportPosition, isCellVisible]
+    [canvasId, canvas, canvasViewport, viewportSize, canvasSize, canvasSetViewportPosition, isCellVisible]
   );
 
   // ===========================================================================

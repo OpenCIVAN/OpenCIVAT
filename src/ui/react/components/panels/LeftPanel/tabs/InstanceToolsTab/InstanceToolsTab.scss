@@ -119,6 +119,11 @@
         --tab-color: #{$color-accent-pink};
         --tab-color-rgb: 244, 114, 182;
       }
+
+      &[data-color="teal"] {
+        --tab-color: #{$color-accent-teal};
+        --tab-color-rgb: 45, 212, 191;
+      }
     }
   }
 
@@ -1138,6 +1143,114 @@
     &:hover {
       color: $color-text-secondary;
       background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+// =============================================================================
+// LINKS SUBTAB
+// =============================================================================
+
+.links-subtab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: $spacing-sm;
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+    flex: 1;
+
+    svg {
+      opacity: 0.5;
+      margin-bottom: $spacing-sm;
+    }
+
+    span {
+      font-size: 11px;
+      margin-bottom: $spacing-xs;
+    }
+
+    p {
+      font-size: 10px;
+      color: $color-text-tertiary;
+    }
+  }
+
+  &__property-detail {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: $spacing-xs;
+  }
+
+  &__property-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border-subtle;
+    margin-bottom: $spacing-sm;
+
+    svg {
+      color: $color-accent-teal;
+      flex-shrink: 0;
+    }
+  }
+
+  &__property-name {
+    font-size: 12px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__property-desc {
+    font-size: 10px;
+    color: $color-text-muted;
+    margin-left: auto;
+  }
+
+  &__members-section {
+    margin-top: $spacing-sm;
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm $spacing-xs;
+    font-size: 9px;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: $color-text-muted;
+  }
+
+  &__add-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: $color-bg-tertiary;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    font-size: 10px;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-bg-elevated;
+      border-color: $color-accent-teal;
+      color: $color-accent-teal;
     }
   }
 }

@@ -173,14 +173,15 @@ CIA_Web/
 | Script | Purpose |
 |--------|---------|
 | `./scripts/start.sh` | Start all Docker services |
+| `./scripts/stop.sh` | Stop all services |
 | `./scripts/restart.sh` | Restart Docker services |
-| `./scripts/start-frontend.sh` | Start frontend only |
 | `./scripts/reset-database.sh` | Reset database (with confirmation) |
-| `./scripts/seed-database.sh` | Seed sample data |
 | `./scripts/check-services.sh` | Check service health |
-| `npm start` | Start Webpack dev server |
+| `npm start` | Start frontend dev server |
 | `npm run build` | Production build |
 | `npm run storybook` | Component library |
+
+See `scripts/README.md` for full script documentation.
 
 ---
 

@@ -32,12 +32,12 @@ const PKCE_VERIFIER_KEY = "cia_pkce_verifier";
 /** Storage key for auth redirect state */
 const AUTH_STATE_KEY = "cia_auth_state";
 
-/** Mock user for development bypass mode */
+/** Mock user for development bypass mode (CIA Admin) */
 const DEV_USER = {
-  id: "00000000-0000-0000-0000-000000000001",
-  externalId: "dev-user-001",
-  email: "developer@localhost",
-  name: "Development User",
+  id: "00000000-0000-0000-0000-000000000002",
+  externalId: "cia-admin",
+  email: "admin@cia-web.local",
+  name: "CIA Admin",
   roles: ["user", "admin"],
 };
 

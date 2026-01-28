@@ -1276,18 +1276,20 @@ VALUES ('00000000-0000-0000-0000-000000000000', 'System', 'system', 109951162777
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed users matching Keycloak test users
+-- User ID ordering: System (001) > Admin (002) > Regular users (003+)
 INSERT INTO users (id, external_id, email, display_name)
 VALUES
-    ('00000000-0000-0000-0000-000000000010', 'system', 'system@cia-web.local', 'System'),
-    ('00000000-0000-0000-0000-000000000001', 'cia-admin', 'admin@cia-web.local', 'CIA Admin'),
-    ('00000000-0000-0000-0000-000000000002', 'alice', 'alice@cia-web.local', 'Alice Analyst'),
-    ('00000000-0000-0000-0000-000000000003', 'bob', 'bob@cia-web.local', 'Bob Builder'),
-    ('00000000-0000-0000-0000-000000000004', 'viewer', 'viewer@cia-web.local', 'View Only')
+    ('00000000-0000-0000-0000-000000000001', 'system', 'system@cia-web.local', 'System'),
+    ('00000000-0000-0000-0000-000000000002', 'cia-admin', 'admin@cia-web.local', 'CIA Admin'),
+    ('00000000-0000-0000-0000-000000000003', 'alice', 'alice@cia-web.local', 'Alice Analyst'),
+    ('00000000-0000-0000-0000-000000000004', 'bob', 'bob@cia-web.local', 'Bob Builder'),
+    ('00000000-0000-0000-0000-000000000005', 'viewer', 'viewer@cia-web.local', 'View Only')
 ON CONFLICT (id) DO UPDATE SET
     external_id = EXCLUDED.external_id,
     email = EXCLUDED.email,
     display_name = EXCLUDED.display_name;
 
+-- Sample project owned by System user
 INSERT INTO projects (id, organization_id, name, slug, description, visibility, created_by)
 VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'Sample Files', 'sample-files', 'Demo project with sample VTK files', 'public', '00000000-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO NOTHING;
@@ -1296,7 +1298,7 @@ INSERT INTO project_branches (project_id, name, description, status)
 VALUES ('00000000-0000-0000-0000-000000000001', 'main', 'Default branch', 'active')
 ON CONFLICT (project_id, name) DO NOTHING;
 
--- Seed demo room
+-- Seed demo room (created by System)
 INSERT INTO rooms (id, project_id, name, is_main, room_type, created_by)
 VALUES ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'Demo Room', FALSE, 'breakout', '00000000-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO NOTHING;
@@ -1304,21 +1306,21 @@ ON CONFLICT (id) DO NOTHING;
 -- Add all test users as project members
 INSERT INTO project_members (project_id, user_id, role)
 VALUES
-    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'admin'),
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'admin'),
-    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'member'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'admin'),
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'member'),
-    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004', 'viewer')
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004', 'member'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000005', 'viewer')
 ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role;
 
 -- Add all test users as organization members
 INSERT INTO organization_members (organization_id, user_id, role)
 VALUES
-    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000010', 'admin'),
     ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', 'admin'),
-    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000002', 'member'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000002', 'admin'),
     ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000003', 'member'),
-    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000004', 'member')
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000004', 'member'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000005', 'member')
 ON CONFLICT (organization_id, user_id) DO UPDATE SET role = EXCLUDED.role;
 
 -- Note: Main room and workspaces are auto-created by triggers when project is inserted

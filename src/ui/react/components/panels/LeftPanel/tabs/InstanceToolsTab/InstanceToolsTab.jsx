@@ -15,6 +15,7 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 import { ToolsList } from './subtabs/ToolsSubtab';
 import { LayersSubtab } from './subtabs/LayersSubtab';
 import { AnnotationsSubtab } from './subtabs/AnnotationsSubtab';
+import { LinksSubtab } from './subtabs/LinksSubtab';
 
 // Import InstanceCard for view header display
 import { InstanceCard } from '@UI/react/components/organisms/InstanceCard';
@@ -38,6 +39,7 @@ const SUBTABS = [
     { id: 'tools', label: 'Tools', icon: 'activity', color: 'amber' },
     { id: 'layers', label: 'Layers', icon: 'layers', color: 'purple' },
     { id: 'annotations', label: 'Annotations', icon: 'mapPin', color: 'pink' },
+    { id: 'links', label: 'Links', icon: 'link', color: 'teal' },
 ];
 
 // =============================================================================
@@ -276,6 +278,8 @@ export function InstanceToolsPanelContent({ workspaceId }) {
                 return <LayersSubtab activeInstance={activeInstance} />;
             case 'annotations':
                 return <AnnotationsSubtab activeInstance={activeInstance} />;
+            case 'links':
+                return <LinksSubtab activeInstance={activeInstance} />;
             default:
                 return null;
         }

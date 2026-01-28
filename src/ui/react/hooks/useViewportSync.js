@@ -6,8 +6,15 @@
 //
 // Solution: Event-based sync. When navigator changes viewport,
 // it dispatches an event that CanvasGrid listens to, and vice versa.
+//
+// Tile Mode Enhancement:
+// In tile mode, multiple panes can be visible. Events include paneId for filtering:
+// - Events with paneId: Only processed by matching pane
+// - Events without paneId: Processed by focused pane (workspaceManager.getFocusedPaneId())
+//   or all panes if no focus is set (backward compatibility)
 
 import { useEffect, useCallback, useRef } from "react";
+import { workspaceManager } from "@Core/instances/workspaceManager.js";
 
 // Event names
 export const VIEWPORT_EVENTS = {
@@ -65,29 +72,69 @@ export function dispatchViewportChanged(viewport, canvasId = null) {
 }
 
 /**
+ * Check if this pane should handle an event
+ * - Events with paneId: Only matching pane handles it
+ * - Events without paneId: Focused pane handles it (or all if no focus set)
+ *
+ * @param {string|null} myPaneId - This pane's ID
+ * @param {string|null} eventPaneId - Event's target pane ID
+ * @returns {boolean} Whether this pane should handle the event
+ */
+function shouldHandleEvent(myPaneId, eventPaneId) {
+  // If event has a specific target pane
+  if (eventPaneId) {
+    // Only handle if we're the target
+    return myPaneId === eventPaneId;
+  }
+
+  // Event has no specific target - check if we're focused
+  if (myPaneId) {
+    const focusedPaneId = workspaceManager?.getFocusedPaneId?.();
+    // If there's a focused pane, only it should handle
+    if (focusedPaneId) {
+      return myPaneId === focusedPaneId;
+    }
+    // No focused pane - all panes handle (backward compatibility)
+    return true;
+  }
+
+  // No pane ID configured - handle all events (backward compatibility)
+  return true;
+}
+
+/**
  * Hook for viewport event listening (used by CanvasGrid)
+ *
+ * In tile mode, events are filtered by paneId:
+ * - Events with paneId only go to that specific pane
+ * - Events without paneId go to the focused pane
  *
  * @param {Object} options
  * @param {Function} options.onNavigateTo - Called when navigate-to event received
  * @param {Function} options.onMoveViewport - Called when move-viewport event received
- * @param {string} [options.canvasId] - Only listen for events matching this canvas
+ * @param {string} [options.canvasId] - Pane ID for filtering (canvasId or paneId)
+ * @param {string} [options.paneId] - Explicit pane ID (takes precedence over canvasId)
  */
 export function useViewportEventListener({
   onNavigateTo,
   onMoveViewport,
   canvasId = null,
+  paneId = null,
 }) {
+  // Use paneId if provided, fall back to canvasId
+  const effectivePaneId = paneId || canvasId;
+
   useEffect(() => {
     const handleNavigateTo = (e) => {
       const { row, col, canvasId: eventCanvasId } = e.detail;
-      // If canvasId specified, only handle matching events
-      if (canvasId && eventCanvasId && eventCanvasId !== canvasId) return;
+      // Use the event's canvasId as paneId (they're equivalent for now)
+      if (!shouldHandleEvent(effectivePaneId, eventCanvasId)) return;
       onNavigateTo?.(row, col);
     };
 
     const handleMoveViewport = (e) => {
       const { deltaRow, deltaCol, canvasId: eventCanvasId } = e.detail;
-      if (canvasId && eventCanvasId && eventCanvasId !== canvasId) return;
+      if (!shouldHandleEvent(effectivePaneId, eventCanvasId)) return;
       onMoveViewport?.(deltaRow, deltaCol);
     };
 
@@ -101,7 +148,7 @@ export function useViewportEventListener({
         handleMoveViewport
       );
     };
-  }, [onNavigateTo, onMoveViewport, canvasId]);
+  }, [onNavigateTo, onMoveViewport, effectivePaneId]);
 }
 
 /**
@@ -109,16 +156,20 @@ export function useViewportEventListener({
  *
  * @param {Object} options
  * @param {Function} options.onViewportChanged - Called when viewport-changed event received
- * @param {string} [options.canvasId] - Only listen for events matching this canvas
+ * @param {string} [options.canvasId] - Pane ID for filtering
+ * @param {string} [options.paneId] - Explicit pane ID (takes precedence over canvasId)
  */
 export function useViewportSyncListener({
   onViewportChanged,
   canvasId = null,
+  paneId = null,
 }) {
+  const effectivePaneId = paneId || canvasId;
+
   useEffect(() => {
     const handleViewportChanged = (e) => {
       const { viewport, canvasId: eventCanvasId } = e.detail;
-      if (canvasId && eventCanvasId && eventCanvasId !== canvasId) return;
+      if (!shouldHandleEvent(effectivePaneId, eventCanvasId)) return;
       onViewportChanged?.(viewport);
     };
 
@@ -133,7 +184,7 @@ export function useViewportSyncListener({
         handleViewportChanged
       );
     };
-  }, [onViewportChanged, canvasId]);
+  }, [onViewportChanged, effectivePaneId]);
 }
 
 /**

@@ -115,18 +115,19 @@ class SessionManager {
 
   /*
    * Get current user ID
-   * Returns demo user ID if not set (for development)
+   * Returns CIA Admin user ID if not set (for development)
+   * Note: System user (000001) is reserved for automated processes
    */
   getUserId() {
-    return this.userId || "00000000-0000-0000-0000-000000000001";
+    return this.userId || "00000000-0000-0000-0000-000000000002";
   }
 
   /**
    * Get current user email
-   * Returns demo email if not set (for development)
+   * Returns CIA Admin email if not set (for development)
    */
   getUserEmail() {
-    return this.userEmail || "demo@cia-web.local";
+    return this.userEmail || "admin@cia-web.local";
   }
 
   /**

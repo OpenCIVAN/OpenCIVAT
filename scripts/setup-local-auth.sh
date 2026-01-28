@@ -218,12 +218,13 @@ ensure_role "user"
 ensure_role "admin"
 
 # Users with FIXED database UUIDs (must match mockUsers.js)
+# Note: System user (000001) is not created in Keycloak - it's for automated processes only
 # Format: username|email|display_name|role|password|db_uuid
 USERS=(
-  "cia-admin|admin@cia-web.local|CIA Admin|admin|Admin123!|00000000-0000-0000-0000-000000000001"
-  "alice|alice@cia-web.local|Alice Analyst|user|Password123!|00000000-0000-0000-0000-000000000002"
-  "bob|bob@cia-web.local|Bob Builder|user|Password123!|00000000-0000-0000-0000-000000000003"
-  "viewer|viewer@cia-web.local|View Only|user|Password123!|00000000-0000-0000-0000-000000000004"
+  "cia-admin|admin@cia-web.local|CIA Admin|admin|Admin123!|00000000-0000-0000-0000-000000000002"
+  "alice|alice@cia-web.local|Alice Analyst|user|Password123!|00000000-0000-0000-0000-000000000003"
+  "bob|bob@cia-web.local|Bob Builder|user|Password123!|00000000-0000-0000-0000-000000000004"
+  "viewer|viewer@cia-web.local|View Only|user|Password123!|00000000-0000-0000-0000-000000000005"
 )
 
 USER_RECORDS=()
@@ -253,7 +254,8 @@ done
 log "Seeding database mappings (users + memberships)"
 
 # Use the fixed admin UUID for project creation
-ADMIN_DB_UUID="00000000-0000-0000-0000-000000000001"
+# Note: System (000001) is for automated processes, Admin (000002) is for human admin
+ADMIN_DB_UUID="00000000-0000-0000-0000-000000000002"
 
 sql="BEGIN;"
 sql+="\nINSERT INTO organizations (id, name, slug, storage_quota_bytes)"

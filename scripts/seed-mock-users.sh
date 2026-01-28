@@ -82,27 +82,25 @@ cat << 'ENDSQL'
 -- ============================================================================
 
 -- Create test users with distinct UUIDs
+-- NOTE: These MUST match init.sql user IDs for consistency
+-- System user (000001) is created by init.sql, not here
 INSERT INTO users (id, external_id, email, display_name, preferences, created_at, updated_at)
-VALUES 
-    -- Primary dev user (matches hardcoded DEV_USER in auth middleware)
-    ('00000000-0000-0000-0000-000000000001', 'dev-user-001', 'developer@localhost', 'Development User', 
-     '{"theme": "dark", "role": "developer"}', NOW(), NOW()),
-    
-    -- Alice - Research Scientist
-    ('00000000-0000-0000-0000-000000000002', 'alice-001', 'alice@research.lab', 'Alice Chen',
-     '{"theme": "dark", "role": "researcher", "department": "Neuroscience"}', NOW(), NOW()),
-    
-    -- Bob - Data Analyst  
-    ('00000000-0000-0000-0000-000000000003', 'bob-001', 'bob@research.lab', 'Bob Martinez',
-     '{"theme": "light", "role": "analyst", "department": "Data Science"}', NOW(), NOW()),
-    
-    -- Carol - Principal Investigator
-    ('00000000-0000-0000-0000-000000000004', 'carol-001', 'carol@research.lab', 'Dr. Carol Williams',
-     '{"theme": "dark", "role": "pi", "department": "Cardiology"}', NOW(), NOW()),
-    
-    -- Dave - Graduate Student
-    ('00000000-0000-0000-0000-000000000005', 'dave-001', 'dave@university.edu', 'Dave Kim',
-     '{"theme": "system", "role": "student", "department": "Biomedical Engineering"}', NOW(), NOW())
+VALUES
+    -- CIA Admin (matches DEV_USER in auth middleware)
+    ('00000000-0000-0000-0000-000000000002', 'cia-admin', 'admin@cia-web.local', 'CIA Admin',
+     '{"theme": "dark", "role": "admin"}', NOW(), NOW()),
+
+    -- Alice - Analyst
+    ('00000000-0000-0000-0000-000000000003', 'alice', 'alice@cia-web.local', 'Alice Analyst',
+     '{"theme": "dark", "role": "researcher", "department": "Research"}', NOW(), NOW()),
+
+    -- Bob - Builder
+    ('00000000-0000-0000-0000-000000000004', 'bob', 'bob@cia-web.local', 'Bob Builder',
+     '{"theme": "light", "role": "engineer", "department": "Engineering"}', NOW(), NOW()),
+
+    -- Viewer - Read-only user
+    ('00000000-0000-0000-0000-000000000005', 'viewer', 'viewer@cia-web.local', 'View Only',
+     '{"theme": "dark", "role": "viewer"}', NOW(), NOW())
      
 ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
@@ -111,20 +109,19 @@ ON CONFLICT (id) DO UPDATE SET
     updated_at = NOW();
 
 -- Add all test users to the default organization
+-- Note: System (000001) is created by init.sql
 INSERT INTO organization_members (id, organization_id, user_id, role, joined_at)
-SELECT 
+SELECT
     uuid_generate_v4(),
     '00000000-0000-0000-0000-000000000000',
     u.id,
-    CASE 
-        WHEN u.id = '00000000-0000-0000-0000-000000000001' THEN 'admin'
-        WHEN u.id = '00000000-0000-0000-0000-000000000004' THEN 'admin'
+    CASE
+        WHEN u.id = '00000000-0000-0000-0000-000000000002' THEN 'admin'  -- CIA Admin
         ELSE 'member'
     END,
     NOW()
 FROM users u
 WHERE u.id IN (
-    '00000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000002',
     '00000000-0000-0000-0000-000000000003',
     '00000000-0000-0000-0000-000000000004',
@@ -134,21 +131,19 @@ ON CONFLICT (organization_id, user_id) DO NOTHING;
 
 -- Add all test users to the default project
 INSERT INTO project_members (id, project_id, user_id, role, joined_at)
-SELECT 
+SELECT
     uuid_generate_v4(),
     '00000000-0000-0000-0000-000000000001',
     u.id,
-    CASE 
-        WHEN u.id = '00000000-0000-0000-0000-000000000001' THEN 'owner'
-        WHEN u.id = '00000000-0000-0000-0000-000000000004' THEN 'admin'
-        WHEN u.id = '00000000-0000-0000-0000-000000000002' THEN 'editor'
-        WHEN u.id = '00000000-0000-0000-0000-000000000003' THEN 'editor'
-        ELSE 'viewer'
+    CASE
+        WHEN u.id = '00000000-0000-0000-0000-000000000002' THEN 'admin'   -- CIA Admin
+        WHEN u.id = '00000000-0000-0000-0000-000000000003' THEN 'member'  -- Alice
+        WHEN u.id = '00000000-0000-0000-0000-000000000004' THEN 'member'  -- Bob
+        ELSE 'viewer'  -- Viewer
     END,
     NOW()
 FROM users u
 WHERE u.id IN (
-    '00000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000002',
     '00000000-0000-0000-0000-000000000003',
     '00000000-0000-0000-0000-000000000004',
@@ -212,12 +207,12 @@ show_users() {
     "
     
     echo ""
-    echo "User IDs for switching:"
-    echo "  Dev:   00000000-0000-0000-0000-000000000001 (admin)"
-    echo "  Alice: 00000000-0000-0000-0000-000000000002 (researcher)"
-    echo "  Bob:   00000000-0000-0000-0000-000000000003 (analyst)"
-    echo "  Carol: 00000000-0000-0000-0000-000000000004 (pi/admin)"
-    echo "  Dave:  00000000-0000-0000-0000-000000000005 (student)"
+    echo "User IDs for switching (use x-user-id header):"
+    echo "  System: 00000000-0000-0000-0000-000000000001 (automated processes only)"
+    echo "  Admin:  00000000-0000-0000-0000-000000000002 (admin)"
+    echo "  Alice:  00000000-0000-0000-0000-000000000003 (member)"
+    echo "  Bob:    00000000-0000-0000-0000-000000000004 (member)"
+    echo "  Viewer: 00000000-0000-0000-0000-000000000005 (viewer)"
 }
 
 # Check status
@@ -257,12 +252,12 @@ reset_users() {
     log_info "Removing mock users..."
     
     # Remove in correct order (due to foreign keys)
-    # Keep user 00000000-0000-0000-0000-000000000001 as it's the default dev user
-    run_query "DELETE FROM project_members WHERE user_id LIKE '00000000-0000-0000-0000-00000000000%' AND user_id != '00000000-0000-0000-0000-000000000001';" > /dev/null 2>&1
-    run_query "DELETE FROM organization_members WHERE user_id LIKE '00000000-0000-0000-0000-00000000000%' AND user_id != '00000000-0000-0000-0000-000000000001';" > /dev/null 2>&1
-    run_query "DELETE FROM users WHERE id LIKE '00000000-0000-0000-0000-00000000000%' AND id != '00000000-0000-0000-0000-000000000001';" > /dev/null 2>&1
-    
-    log_success "Mock users removed (kept default dev user)"
+    # Keep System user (000001) and Admin user (000002) as they're core users
+    run_query "DELETE FROM project_members WHERE user_id LIKE '00000000-0000-0000-0000-00000000000%' AND user_id NOT IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002');" > /dev/null 2>&1
+    run_query "DELETE FROM organization_members WHERE user_id LIKE '00000000-0000-0000-0000-00000000000%' AND user_id NOT IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002');" > /dev/null 2>&1
+    run_query "DELETE FROM users WHERE id LIKE '00000000-0000-0000-0000-00000000000%' AND id NOT IN ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002');" > /dev/null 2>&1
+
+    log_success "Mock users removed (kept System and Admin users)"
     echo ""
     
     # Re-seed

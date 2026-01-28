@@ -1,346 +1,69 @@
 #!/bin/bash
-# scripts/seed-mock-users.sh
-# Create mock users for collaboration testing in development mode
-#
+# stop.sh - Stop all CIA Web services
 # Usage:
-#   ./scripts/seed-mock-users.sh           # Seed mock users
-#   ./scripts/seed-mock-users.sh status    # Check current users
-#   ./scripts/seed-mock-users.sh reset     # Remove and re-seed users
-#   ./scripts/seed-mock-users.sh help      # Show help
-#
-# Prerequisites:
-#   - PostgreSQL container must be running (docker-compose up -d postgres)
-#   - DEV_BYPASS_AUTH=true in server environment
+#   ./scripts/stop.sh           # Stop services (keep volumes)
+#   ./scripts/stop.sh --clean   # Stop and remove volumes (data loss!)
 
 set -e
 
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
-
-CONTAINER_NAME="${DB_CONTAINER:-cia-postgres}"
-DB_USER="${POSTGRES_USER:-ciauser}"
-DB_NAME="${POSTGRES_DB:-cia_analytics}"
-
-# Colors for output
-RED='\033[0;31m'
+# Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'
+NC='\033[0m'
 
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
+CLEAN_MODE=false
 
-log_info()    { echo -e "${BLUE}ℹ${NC}  $1"; }
-log_success() { echo -e "${GREEN}✓${NC}  $1"; }
-log_warning() { echo -e "${YELLOW}⚠${NC}  $1"; }
-log_error()   { echo -e "${RED}✗${NC}  $1"; }
-log_user()    { echo -e "${PURPLE}👤${NC} $1"; }
-
-# Check if Docker container is running
-check_container() {
-    if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-        log_error "Container '${CONTAINER_NAME}' is not running"
-        echo "  Start it with: docker-compose up -d postgres"
-        echo ""
-        echo "  Or set DB_CONTAINER environment variable to your container name:"
-        echo "    DB_CONTAINER=my-postgres ./scripts/seed-mock-users.sh"
-        exit 1
-    fi
-    log_success "Database container '${CONTAINER_NAME}' is running"
-}
-
-# Run SQL query and return result
-run_query() {
-    docker exec -i "${CONTAINER_NAME}" psql -U "$DB_USER" -d "$DB_NAME" -t -c "$1" 2>/dev/null
-}
-
-# Run SQL query with formatted output
-run_query_formatted() {
-    docker exec -i "${CONTAINER_NAME}" psql -U "$DB_USER" -d "$DB_NAME" -c "$1" 2>/dev/null
-}
-
-# Run SQL file
-run_sql() {
-    docker exec -i "${CONTAINER_NAME}" psql -U "$DB_USER" -d "$DB_NAME" 2>&1
-}
-
-# =============================================================================
-# MOCK USERS DATA
-# =============================================================================
-
-# Inline SQL for seeding users (no external file dependency)
-# Note: Using heredoc with single quotes to prevent shell expansion
-seed_users_sql() {
-cat << 'ENDSQL'
--- ============================================================================
--- CIA Web - Mock Users for Development Testing
--- ============================================================================
-
--- Create test users with distinct UUIDs
-INSERT INTO users (id, external_id, email, display_name, preferences, created_at, updated_at)
-VALUES 
-    -- Primary dev user (matches hardcoded DEV_USER in auth middleware)
-    ('00000000-0000-0000-0000-000000000001', 'dev-user-001', 'developer@localhost', 'Development User', 
-     '{"theme": "dark", "role": "developer"}', NOW(), NOW()),
-    
-    -- Alice - Research Scientist
-    ('00000000-0000-0000-0000-000000000002', 'alice-001', 'alice@research.lab', 'Alice Chen',
-     '{"theme": "dark", "role": "researcher", "department": "Neuroscience"}', NOW(), NOW()),
-    
-    -- Bob - Data Analyst  
-    ('00000000-0000-0000-0000-000000000003', 'bob-001', 'bob@research.lab', 'Bob Martinez',
-     '{"theme": "light", "role": "analyst", "department": "Data Science"}', NOW(), NOW()),
-    
-    -- Carol - Principal Investigator
-    ('00000000-0000-0000-0000-000000000004', 'carol-001', 'carol@research.lab', 'Dr. Carol Williams',
-     '{"theme": "dark", "role": "pi", "department": "Cardiology"}', NOW(), NOW()),
-    
-    -- Dave - Graduate Student
-    ('00000000-0000-0000-0000-000000000005', 'dave-001', 'dave@university.edu', 'Dave Kim',
-     '{"theme": "system", "role": "student", "department": "Biomedical Engineering"}', NOW(), NOW())
-     
-ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    display_name = EXCLUDED.display_name,
-    preferences = EXCLUDED.preferences,
-    updated_at = NOW();
-
--- Add all test users to the default organization
-INSERT INTO organization_members (id, organization_id, user_id, role, joined_at)
-SELECT 
-    uuid_generate_v4(),
-    '00000000-0000-0000-0000-000000000001',
-    u.id,
-    CASE 
-        WHEN u.id = '00000000-0000-0000-0000-000000000001' THEN 'admin'
-        WHEN u.id = '00000000-0000-0000-0000-000000000004' THEN 'admin'
-        ELSE 'member'
-    END,
-    NOW()
-FROM users u
-WHERE u.id IN (
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000003',
-    '00000000-0000-0000-0000-000000000004',
-    '00000000-0000-0000-0000-000000000005'
-)
-ON CONFLICT (organization_id, user_id) DO NOTHING;
-
--- Add all test users to the default project
-INSERT INTO project_members (id, project_id, user_id, role, joined_at)
-SELECT 
-    uuid_generate_v4(),
-    '00000000-0000-0000-0000-000000000001',
-    u.id,
-    CASE 
-        WHEN u.id = '00000000-0000-0000-0000-000000000001' THEN 'owner'
-        WHEN u.id = '00000000-0000-0000-0000-000000000004' THEN 'admin'
-        WHEN u.id = '00000000-0000-0000-0000-000000000002' THEN 'editor'
-        WHEN u.id = '00000000-0000-0000-0000-000000000003' THEN 'editor'
-        ELSE 'viewer'
-    END,
-    NOW()
-FROM users u
-WHERE u.id IN (
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000003',
-    '00000000-0000-0000-0000-000000000004',
-    '00000000-0000-0000-0000-000000000005'
-)
-ON CONFLICT (project_id, user_id) DO NOTHING;
-
--- Verify users were created
-SELECT id, email, display_name FROM users 
-WHERE id LIKE '00000000-0000-0000-0000-00000000000%'
-ORDER BY id;
-ENDSQL
-}
-
-# =============================================================================
-# COMMANDS
-# =============================================================================
-
-# Seed mock users
-seed_users() {
-    log_info "Seeding mock users..."
-    echo ""
-    
-    if seed_users_sql | run_sql > /dev/null 2>&1; then
-        log_success "Mock users seeded successfully!"
-        echo ""
-        show_users
-    else
-        log_error "Failed to seed mock users"
-        echo ""
-        echo "Debug: Running SQL again with output..."
-        seed_users_sql | run_sql
-        echo ""
-        echo "Make sure the database schema is initialized."
-        exit 1
-    fi
-}
-
-# Show current mock users
-show_users() {
-    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                    Mock Users for Testing                      ║${NC}"
-    echo -e "${CYAN}╠════════════════════════════════════════════════════════════════╣${NC}"
-    echo ""
-    
-    # Simple query to list users
-    run_query_formatted "
-        SELECT 
-            u.display_name as \"Name\",
-            u.email as \"Email\",
-            COALESCE(pm.role, '-') as \"Project Role\"
-        FROM users u
-        LEFT JOIN project_members pm ON u.id = pm.user_id 
-            AND pm.project_id = '00000000-0000-0000-0000-000000000001'
-        WHERE u.id IN (
-            '00000000-0000-0000-0000-000000000001',
-            '00000000-0000-0000-0000-000000000002',
-            '00000000-0000-0000-0000-000000000003',
-            '00000000-0000-0000-0000-000000000004',
-            '00000000-0000-0000-0000-000000000005'
-        )
-        ORDER BY u.id;
-    "
-    
-    echo ""
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo "User IDs for reference:"
-    echo "  Dev:   00000000-0000-0000-0000-000000000001"
-    echo "  Alice: 00000000-0000-0000-0000-000000000002"
-    echo "  Bob:   00000000-0000-0000-0000-000000000003"
-    echo "  Carol: 00000000-0000-0000-0000-000000000004"
-    echo "  Dave:  00000000-0000-0000-0000-000000000005"
-}
-
-# Check status
-check_status() {
-    log_info "Checking mock users status..."
-    echo ""
-    
-    local count=$(run_query "SELECT COUNT(*) FROM users WHERE id IN (
-        '00000000-0000-0000-0000-000000000001',
-        '00000000-0000-0000-0000-000000000002',
-        '00000000-0000-0000-0000-000000000003',
-        '00000000-0000-0000-0000-000000000004',
-        '00000000-0000-0000-0000-000000000005'
-    );" | xargs)
-    
-    if [ "$count" -gt 0 ] 2>/dev/null; then
-        log_success "Found $count mock user(s)"
-        echo ""
-        show_users
-    else
-        log_warning "No mock users found"
-        echo ""
-        echo "Run '$0' or '$0 seed' to create mock users."
-    fi
-}
-
-# Reset (remove and re-seed)
-reset_users() {
-    log_warning "This will remove all mock users and their data!"
-    read -p "Are you sure? Type 'yes' to confirm: " confirm
-    
-    if [ "$confirm" != "yes" ]; then
-        log_info "Cancelled"
-        exit 0
-    fi
-    
-    log_info "Removing mock users..."
-    
-    # Remove in correct order (due to foreign keys)
-    # Keep user 00000000-0000-0000-0000-000000000001 as it's the default dev user
-    run_query "DELETE FROM project_members WHERE user_id LIKE '00000000-0000-0000-0000-00000000000%' AND user_id != '00000000-0000-0000-0000-000000000001';" > /dev/null 2>&1
-    run_query "DELETE FROM organization_members WHERE user_id LIKE '00000000-0000-0000-0000-00000000000%' AND user_id != '00000000-0000-0000-0000-000000000001';" > /dev/null 2>&1
-    run_query "DELETE FROM users WHERE id LIKE '00000000-0000-0000-0000-00000000000%' AND id != '00000000-0000-0000-0000-000000000001';" > /dev/null 2>&1
-    
-    log_success "Mock users removed (kept default dev user)"
-    echo ""
-    
-    # Re-seed
-    seed_users
-}
-
-# Show help
-show_help() {
-    echo ""
-    echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║           CIA Web - Mock Users Setup Script                    ║"
-    echo "╚════════════════════════════════════════════════════════════════╝"
-    echo ""
-    echo "Creates mock users for testing collaboration features in dev mode."
-    echo ""
-    echo "Usage: $0 [command]"
-    echo ""
-    echo "Commands:"
-    echo "  (default)   Seed mock users (same as 'seed')"
-    echo "  seed        Create mock users in the database"
-    echo "  status      Check current mock users"
-    echo "  reset       Remove and re-create mock users"
-    echo "  help        Show this help message"
-    echo ""
-    echo "Environment Variables:"
-    echo "  DB_CONTAINER   Docker container name (default: ciaweb-postgres)"
-    echo "  POSTGRES_USER  Database user (default: cia_user)"
-    echo "  POSTGRES_DB    Database name (default: cia_web)"
-    echo ""
-    echo "Examples:"
-    echo "  $0                                    # Seed users"
-    echo "  $0 status                             # Check users"
-    echo "  DB_CONTAINER=my-pg $0                 # Use different container"
-    echo ""
-    echo "Mock Users Created:"
-    echo "  • Development User (admin)    - developer@localhost"
-    echo "  • Alice Chen (editor)         - alice@research.lab"
-    echo "  • Bob Martinez (editor)       - bob@research.lab"
-    echo "  • Dr. Carol Williams (admin)  - carol@research.lab"
-    echo "  • Dave Kim (viewer)           - dave@university.edu"
-    echo ""
-}
-
-# =============================================================================
-# MAIN
-# =============================================================================
-
-main() {
-    echo ""
-    echo -e "${PURPLE}🧪 CIA Web Mock Users Setup${NC}"
-    echo ""
-    
-    check_container
-    echo ""
-    
-    case "${1:-seed}" in
-        seed)
-            seed_users
-            ;;
-        status)
-            check_status
-            ;;
-        reset)
-            reset_users
-            ;;
-        help|--help|-h)
-            show_help
-            ;;
-        *)
-            log_error "Unknown command: $1"
-            echo "  Run '$0 help' for usage"
-            exit 1
+for arg in "$@"; do
+    case $arg in
+        --clean|-c) CLEAN_MODE=true ;;
+        --help|-h)
+            echo "Usage: $0 [options]"
+            echo ""
+            echo "Options:"
+            echo "  --clean, -c   Remove volumes (deletes all data)"
+            echo "  --help, -h    Show this help"
+            exit 0
             ;;
     esac
-}
+done
 
-main "$@"
+echo "🛑 Stopping CIA Web services..."
+echo ""
+
+# Stop main services
+echo "📦 Stopping Docker Compose services..."
+if [ "$CLEAN_MODE" = true ]; then
+    echo -e "${YELLOW}⚠️  Removing volumes (all data will be deleted)${NC}"
+    docker compose down -v
+else
+    docker compose down
+fi
+
+# Stop Matrix services
+echo ""
+echo "🔐 Stopping Matrix Federation services..."
+if [ -f "server/docker-compose.matrix.yml" ]; then
+    cd server
+    if [ "$CLEAN_MODE" = true ]; then
+        docker-compose -f docker-compose.matrix.yml down -v
+    else
+        docker-compose -f docker-compose.matrix.yml down
+    fi
+    cd ..
+fi
+
+# Stop LiveKit if running
+if docker ps --format '{{.Names}}' | grep -q "livekit"; then
+    echo ""
+    echo "🎥 Stopping LiveKit services..."
+    ./scripts/stop-livekit.sh 2>/dev/null || true
+fi
+
+echo ""
+echo -e "${GREEN}✅ All services stopped${NC}"
+
+if [ "$CLEAN_MODE" = true ]; then
+    echo ""
+    echo -e "${YELLOW}💡 Data was removed. Run ./scripts/reset-database.sh to reinitialize.${NC}"
+fi

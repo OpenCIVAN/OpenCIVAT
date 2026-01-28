@@ -13,6 +13,16 @@ export {
     ADAPTIVE_TOKENS,
 } from './AdaptiveContext.jsx';
 
+// Canvas focus context for tile mode pane-scoped state
+export {
+    CanvasFocusProvider,
+    useCanvasFocus,
+    useCanvasFocusRequired,
+    useScopedActiveInstance,
+    useIsPaneFocused,
+    generatePaneId,
+} from './CanvasFocusContext.jsx';
+
 // Drag-to-link context for view linking
 export { DragLinkProvider, useDragLink } from './DragLinkContext.jsx';
 

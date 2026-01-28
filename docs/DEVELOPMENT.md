@@ -21,10 +21,10 @@ CIA Web now uses a full-stack architecture with:
 
 ```bash
 # 1. Start backend services
-./start.sh
+./scripts/start.sh
 
 # 2. Start frontend (in separate terminal)
-./start-frontend.sh
+npm start
 ```
 
 The frontend will open automatically at `http://localhost:8080`
@@ -33,22 +33,18 @@ The frontend will open automatically at `http://localhost:8080`
 
 ## Development Scripts
 
-### `./start.sh`
-Starts all Docker services (PostgreSQL, MinIO, API)
+See `scripts/README.md` for full documentation.
+
+### `./scripts/start.sh`
+Starts all Docker services (PostgreSQL, MinIO, API, Matrix, etc.)
 - Checks Docker is running
 - Starts containers
 - Waits for health checks
-- Installs npm dependencies if needed
 
-### `./start-frontend.sh`
-Starts WebSocket server and Webpack dev server
-- Runs both in the same terminal
-- Press Ctrl+C to stop both
-
-### `./stop.sh`
+### `./scripts/stop.sh`
 Stops all Docker services
 - Keeps data volumes intact
-- To reset database: `docker-compose down -v`
+- Use `--clean` flag to also remove volumes
 
 ### `./restart.sh`
 Restarts Docker services without losing data
@@ -243,7 +239,7 @@ client.bucketExists('cia-files').then(console.log);
 
 1. Create a feature branch
 2. Make changes
-3. Test locally with `./start.sh` and `./start-frontend.sh`
+3. Test locally with `./scripts/start.sh` and `npm start`
 4. Run tests: `npm test` (when implemented)
 5. Build: `npm run build`
 6. Commit and push

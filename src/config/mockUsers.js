@@ -6,13 +6,30 @@
 // switching between these identities.
 
 /**
+ * System user - for automated processes, seeding, internal operations
+ * Not included in MOCK_USERS as it's not meant for human login
+ */
+export const SYSTEM_USER = {
+  id: "00000000-0000-0000-0000-000000000001",
+  externalId: "system",
+  email: "system@cia-web.local",
+  name: "System",
+  shortName: "System",
+  avatar: null,
+  color: "#64748b", // Slate
+  roles: ["system", "admin"],
+  department: null,
+};
+
+/**
  * Mock users available in development mode
  * These MUST match the Keycloak users in docker/keycloak/realm-export.json
+ * Note: System user (000001) is excluded - it's for automated processes only
  * @type {Array<MockUser>}
  */
 export const MOCK_USERS = [
   {
-    id: "00000000-0000-0000-0000-000000000001",
+    id: "00000000-0000-0000-0000-000000000002",
     externalId: "cia-admin",
     email: "admin@cia-web.local",
     name: "CIA Admin",
@@ -23,7 +40,7 @@ export const MOCK_USERS = [
     department: "Administration",
   },
   {
-    id: "00000000-0000-0000-0000-000000000002",
+    id: "00000000-0000-0000-0000-000000000003",
     externalId: "alice",
     email: "alice@cia-web.local",
     name: "Alice Analyst",
@@ -34,7 +51,7 @@ export const MOCK_USERS = [
     department: "Research",
   },
   {
-    id: "00000000-0000-0000-0000-000000000003",
+    id: "00000000-0000-0000-0000-000000000004",
     externalId: "bob",
     email: "bob@cia-web.local",
     name: "Bob Builder",
@@ -45,7 +62,7 @@ export const MOCK_USERS = [
     department: "Engineering",
   },
   {
-    id: "00000000-0000-0000-0000-000000000004",
+    id: "00000000-0000-0000-0000-000000000005",
     externalId: "viewer",
     email: "viewer@cia-web.local",
     name: "View Only",

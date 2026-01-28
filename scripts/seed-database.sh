@@ -104,79 +104,77 @@ INSERT INTO organizations (id, name, slug, storage_quota_bytes)
 VALUES ('00000000-0000-0000-0000-000000000002', 'Demo Organization', 'demo-org', 107374182400)
 ON CONFLICT (id) DO NOTHING;
 
-\echo '=== Step 4: Seed user ==='
+\echo '=== Step 4: Seed users ==='
 
--- 3. DEV USER
+-- Users (must match init.sql and mockUsers.js)
+-- System (000001) > Admin (000002) > Regular users (000003+)
 INSERT INTO users (id, external_id, email, display_name)
-VALUES ('00000000-0000-0000-0000-000000000001', 'dev-user', 'developer@localhost', 'Development User')
-ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.display_name;
+VALUES
+    ('00000000-0000-0000-0000-000000000001', 'system', 'system@cia-web.local', 'System'),
+    ('00000000-0000-0000-0000-000000000002', 'cia-admin', 'admin@cia-web.local', 'CIA Admin'),
+    ('00000000-0000-0000-0000-000000000003', 'alice', 'alice@cia-web.local', 'Alice Analyst'),
+    ('00000000-0000-0000-0000-000000000004', 'bob', 'bob@cia-web.local', 'Bob Builder'),
+    ('00000000-0000-0000-0000-000000000005', 'viewer', 'viewer@cia-web.local', 'View Only')
+ON CONFLICT (id) DO UPDATE SET
+    external_id = EXCLUDED.external_id,
+    email = EXCLUDED.email,
+    display_name = EXCLUDED.display_name;
 
 \echo '=== Step 5: Seed project ==='
 
--- 4. DEMO PROJECT (without trigger now)
+-- Sample project (owned by System user)
 INSERT INTO projects (id, organization_id, name, slug, description, visibility, created_by, status)
 VALUES (
     '00000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000000',
-    'Demo Project',
-    'demo-project',
-    'Default demo project for development and testing',
+    'Sample Files',
+    'sample-files',
+    'Demo project with sample VTK files',
     'public',
     '00000000-0000-0000-0000-000000000001',
     'active'
 )
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     description = EXCLUDED.description;
 
 \echo '=== Step 6: Seed memberships ==='
 
--- 5. ORGANIZATION MEMBERSHIPS
+-- Organization memberships (all users in System org)
 INSERT INTO organization_members (organization_id, user_id, role)
-VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', 'admin')
-ON CONFLICT (organization_id, user_id) DO NOTHING;
+VALUES
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', 'admin'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000002', 'admin'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000003', 'member'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000004', 'member'),
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000005', 'member')
+ON CONFLICT (organization_id, user_id) DO UPDATE SET role = EXCLUDED.role;
 
-INSERT INTO organization_members (organization_id, user_id, role)
-VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'admin')
-ON CONFLICT (organization_id, user_id) DO NOTHING;
+-- Project memberships
+INSERT INTO project_members (project_id, user_id, role)
+VALUES
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'admin'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'admin'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'member'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004', 'member'),
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000005', 'viewer')
+ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role;
 
--- 6. PROJECT MEMBERSHIP
-INSERT INTO project_members (project_id, user_id, role, added_by)
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
-    'admin',
-    '00000000-0000-0000-0000-000000000001'
-)
-ON CONFLICT (project_id, user_id) DO NOTHING;
+\echo '=== Step 7: Seed room ==='
 
-\echo '=== Step 7: Seed room and workspace ==='
-
--- 7. DEFAULT ROOM
+-- Demo room (created by System)
 INSERT INTO rooms (id, project_id, name, room_type, is_public, created_by)
 VALUES (
+    '00000000-0000-0000-0000-000000000010',
     '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
-    'Main Room',
-    'main',
+    'Demo Room',
+    'breakout',
     true,
     '00000000-0000-0000-0000-000000000001'
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 8. DEFAULT WORKSPACE
-INSERT INTO workspaces (id, project_id, room_id, name, description, layout_mode, is_default, created_by)
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
-    'Default Workspace',
-    'Main collaborative workspace',
-    'flow',
-    true,
-    '00000000-0000-0000-0000-000000000001'
-)
-ON CONFLICT (id) DO NOTHING;
+-- Note: Workspaces are auto-created by triggers in init.sql
 
 \echo ''
 \echo '=== VERIFICATION ==='
@@ -216,13 +214,18 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}  ✓ Database seeded successfully!${NC}"
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
     echo ""
-    echo "Demo credentials:"
-    echo "  Project ID: 00000000-0000-0000-0000-000000000001"
-    echo "  User ID:    00000000-0000-0000-0000-000000000001"
-    echo "  Email:      developer@localhost"
+    echo "Seeded data:"
+    echo "  Project ID: 00000000-0000-0000-0000-000000000001 (Sample Files)"
+    echo ""
+    echo "Users:"
+    echo "  System:     00000000-0000-0000-0000-000000000001 (system@cia-web.local)"
+    echo "  Admin:      00000000-0000-0000-0000-000000000002 (admin@cia-web.local)"
+    echo "  Alice:      00000000-0000-0000-0000-000000000003 (alice@cia-web.local)"
+    echo "  Bob:        00000000-0000-0000-0000-000000000004 (bob@cia-web.local)"
+    echo "  Viewer:     00000000-0000-0000-0000-000000000005 (viewer@cia-web.local)"
     echo ""
     echo "Test with:"
-    echo "  curl http://localhost:3001/api/projects/00000000-0000-0000-0000-000000000001 | jq"
+    echo "  curl http://localhost:3001/api/projects/00000000-0000-0000-0000-000000000001 -H 'x-user-id: 00000000-0000-0000-0000-000000000002' | jq"
 else
     echo ""
     echo -e "${RED}✗ Failed to seed database${NC}"

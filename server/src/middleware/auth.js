@@ -104,12 +104,13 @@ const DEV_BYPASS_AUTH =
   process.env.NODE_ENV === "development" &&
   process.env.DEV_BYPASS_AUTH === "true";
 
-// Mock user for development bypass
+// Mock user for development bypass (defaults to CIA Admin)
+// System user (000001) is reserved for automated processes
 const DEV_USER = {
-  id: "00000000-0000-0000-0000-000000000001",
-  externalId: "dev-user-001",
-  email: "developer@localhost",
-  name: "Development User",
+  id: "00000000-0000-0000-0000-000000000002",
+  externalId: "cia-admin",
+  email: "admin@cia-web.local",
+  name: "CIA Admin",
   roles: ["user", "admin"],
 };
 

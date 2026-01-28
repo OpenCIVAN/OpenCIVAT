@@ -39,7 +39,7 @@ export function useBookmarks(options = {}) {
     () => ({
       "Content-Type": "application/json",
       "x-user-id":
-        sessionManager.getUserId?.() || "00000000-0000-0000-0000-000000000001",
+        sessionManager.getUserId?.() || "00000000-0000-0000-0000-000000000002",
       "x-user-email": sessionManager.getUserEmail?.() || "demo@cia-web.local",
       "x-user-name": sessionManager.getUserName?.() || "Demo User",
     }),
