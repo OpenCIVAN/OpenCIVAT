@@ -213,6 +213,7 @@ CREATE TABLE workspaces (
     parent_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     room_id UUID REFERENCES rooms(id) ON DELETE SET NULL,
+    active_canvas_id UUID,
     owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
     created_by UUID REFERENCES users(id),
     is_archived BOOLEAN DEFAULT FALSE,
@@ -954,6 +955,9 @@ CREATE TABLE canvases (
 CREATE INDEX idx_canvases_workspace ON canvases(workspace_id);
 CREATE INDEX idx_canvases_project ON canvases(project_id);
 
+-- Deferred FK: workspaces.active_canvas_id -> canvases (canvases depends on workspaces, so this can't be inline)
+ALTER TABLE workspaces ADD CONSTRAINT fk_workspaces_active_canvas FOREIGN KEY (active_canvas_id) REFERENCES canvases(id) ON DELETE SET NULL;
+
 CREATE TABLE placements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     canvas_id UUID NOT NULL REFERENCES canvases(id) ON DELETE CASCADE,
@@ -1243,17 +1247,6 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_create_main_room AFTER INSERT ON projects FOR EACH ROW EXECUTE FUNCTION create_main_room_for_project();
 
--- Auto-create default project workspace when project is created
-CREATE OR REPLACE FUNCTION create_default_workspace_for_project() RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO workspaces (name, description, type, project_id, owner_id, created_by)
-    VALUES ('Project Workspace', 'Default shared workspace for ' || NEW.name, 'project', NEW.id, NULL, NEW.created_by);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_create_project_workspace AFTER INSERT ON projects FOR EACH ROW EXECUTE FUNCTION create_default_workspace_for_project();
-
 -- Auto-create default workspace for breakout rooms
 CREATE OR REPLACE FUNCTION create_default_workspace_for_room() RETURNS TRIGGER AS $$
 BEGIN
@@ -1285,6 +1278,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Seed users matching Keycloak test users
 INSERT INTO users (id, external_id, email, display_name)
 VALUES
+    ('00000000-0000-0000-0000-000000000010', 'system', 'system@cia-web.local', 'System'),
     ('00000000-0000-0000-0000-000000000001', 'cia-admin', 'admin@cia-web.local', 'CIA Admin'),
     ('00000000-0000-0000-0000-000000000002', 'alice', 'alice@cia-web.local', 'Alice Analyst'),
     ('00000000-0000-0000-0000-000000000003', 'bob', 'bob@cia-web.local', 'Bob Builder'),
@@ -1302,9 +1296,15 @@ INSERT INTO project_branches (project_id, name, description, status)
 VALUES ('00000000-0000-0000-0000-000000000001', 'main', 'Default branch', 'active')
 ON CONFLICT (project_id, name) DO NOTHING;
 
+-- Seed demo room
+INSERT INTO rooms (id, project_id, name, is_main, room_type, created_by)
+VALUES ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'Demo Room', FALSE, 'breakout', '00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
 -- Add all test users as project members
 INSERT INTO project_members (project_id, user_id, role)
 VALUES
+    ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'admin'),
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'admin'),
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'member'),
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'member'),
@@ -1314,6 +1314,7 @@ ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role;
 -- Add all test users as organization members
 INSERT INTO organization_members (organization_id, user_id, role)
 VALUES
+    ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000010', 'admin'),
     ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001', 'admin'),
     ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000002', 'member'),
     ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000003', 'member'),

@@ -170,6 +170,11 @@
     background: rgba(255, 255, 255, 0.08);
   }
 
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   &.is-active {
     color: var(--link-color);
     background: color-mix(in srgb, var(--link-color) 20%, transparent);
@@ -191,6 +196,11 @@
   &:hover {
     color: $color-text-primary;
     border-color: $color-border-default;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 }
 
@@ -246,6 +256,11 @@
   &:hover {
     background: $color-glass-light;
     color: $color-text-primary;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   &.is-active {

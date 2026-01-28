@@ -232,28 +232,33 @@
 .workspace-bar__new-btn {
     width: 28px;
     height: 28px;
-    border-radius: $radius-md;
-    border: 1px dashed $color-border-subtle;
-    background: transparent;
-    color: $color-text-muted;
+    border-radius: 999px;
+    border: 1px solid $color-border-default;
+    background: $color-glass-light;
+    backdrop-filter: $backdrop-glass-subtle;
+    -webkit-backdrop-filter: $backdrop-glass-subtle;
+    color: $color-text-secondary;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
     margin-left: 4px;
     transition: all 0.15s ease;
+    box-shadow: $shadow-glass;
+
+    svg {
+        display: block;
+    }
 
     &:hover {
-        border-color: $color-border-default;
-        color: $color-text-secondary;
-        background: rgba(255, 255, 255, 0.03);
+        background: $color-glass-medium;
+        color: $color-text-primary;
     }
 }
 
 .workspace-bar__new-btn--active {
-    border-color: $color-border-default;
-    color: $color-text-secondary;
-    background: $color-active-bg;
+    border-color: $color-border-strong;
+    color: $color-text-primary;
+    background: $color-glass-strong;
 }
 
 .workspace-bar__create {

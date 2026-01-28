@@ -250,12 +250,25 @@ export function useWorkspaces({ userId, projectId, roomId } = {}) {
       const project = await workspaceManager.createProjectWorkspace(
         name,
         description,
-        projectId
+        projectId,
+        roomId
       );
 
       return transformWorkspace(project);
     },
-    [projectId, userId]
+    [projectId, roomId, userId]
+  );
+
+  const createPersonalWorkspace = useCallback(
+    async (name = "My Workspace") => {
+      if (!userId) {
+        throw new Error("Cannot create personal workspace: missing userId");
+      }
+
+      const personal = await workspaceManager.createPersonalWorkspace(userId, name, { projectId, roomId });
+      return transformWorkspace(personal);
+    },
+    [userId, projectId, roomId]
   );
 
   const updateWorkspace = useCallback(async (workspaceId, updates = {}) => {
@@ -285,6 +298,7 @@ export function useWorkspaces({ userId, projectId, roomId } = {}) {
     clearActiveWorkspace,
     createBreakout,
     createProjectWorkspace,
+    createPersonalWorkspace,
     updateWorkspace,
     deleteWorkspace,
     mergeBreakout,

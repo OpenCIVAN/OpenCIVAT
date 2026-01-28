@@ -116,16 +116,8 @@
     &--maximized {
         height: 100%;
         min-height: 100%;
+        border-color: transparent;
     }
-}
-
-.canvas-panel__focus-exit {
-    display: flex;
-    justify-content: flex-end;
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    z-index: 2;
 }
 
 .canvas-panel__content {

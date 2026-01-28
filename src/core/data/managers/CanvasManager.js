@@ -87,14 +87,35 @@ export class CanvasManager extends BaseManager {
   async loadCanvas(canvasId) {
     // Check cache first
     if (this._canvases.has(canvasId)) {
-      return this._canvases.get(canvasId);
+      const cached = this._canvases.get(canvasId);
+      if (cached?.placements !== undefined) {
+        return cached;
+      }
     }
 
     try {
       const response = await this._fetch(`/canvases/${canvasId}`);
       const data = await response.json();
+      let placements = data.placements;
 
-      const canvas = new WorkspaceCanvas(data);
+      // Some API responses omit placements entirely; fetch them explicitly.
+      if (!Array.isArray(placements)) {
+        try {
+          const placementsResponse = await this._fetch(
+            `/canvases/${canvasId}/placements`
+          );
+          const placementsData = await placementsResponse.json();
+          placements = placementsData.placements || [];
+        } catch (error) {
+          log.warn("Failed to load placements for canvas:", error);
+          placements = [];
+        }
+      }
+
+      const canvas = new WorkspaceCanvas({
+        ...data,
+        placements,
+      });
       this._canvases.set(canvas.id, canvas);
       this._emit("canvasLoaded", { canvas });
 

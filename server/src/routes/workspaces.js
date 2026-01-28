@@ -135,18 +135,19 @@ router.post("/", async (req, res, next) => {
   try {
     const userId = getUserId(req);
     const { pool } = req.app.locals;
-    const { name, description, type, project_id, expires_at, auto_merge } =
+    const { name, description, type, project_id, room_id, expires_at, auto_merge } =
       req.body;
 
     const result = await pool.query(
-      `INSERT INTO workspaces (name, description, type, project_id, owner_id, created_by, expires_at, auto_merge)
-       VALUES ($1, $2, $3, $4, $5, $5, $6, $7)
+      `INSERT INTO workspaces (name, description, type, project_id, room_id, owner_id, created_by, expires_at, auto_merge)
+       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8)
        RETURNING *`,
       [
         name || "Untitled Workspace",
         description || "",
         type || "project",
         project_id || null,
+        room_id || null,
         userId,
         expires_at || null,
         auto_merge || false,
@@ -194,16 +195,18 @@ router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const { pool } = req.app.locals;
-    const { name, description } = req.body;
+    const { name, description, room_id, active_canvas_id } = req.body;
 
     const result = await pool.query(
       `UPDATE workspaces
        SET name = COALESCE($1, name),
            description = COALESCE($2, description),
+           room_id = COALESCE($3, room_id),
+           active_canvas_id = COALESCE($4, active_canvas_id),
            updated_at = NOW()
-       WHERE id = $3
+       WHERE id = $5
        RETURNING *`,
-      [name, description, id]
+      [name, description, room_id, active_canvas_id, id]
     );
 
     if (result.rows.length === 0) {

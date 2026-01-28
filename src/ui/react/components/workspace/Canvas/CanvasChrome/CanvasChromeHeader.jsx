@@ -4,6 +4,8 @@
 import React, { memo, useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { DropdownPortal } from '@UI/react/components/atoms/DropdownPortal';
+import { ModeToggle } from '@UI/react/components/organisms/WorkspaceBar';
+import { CREATE_OPTIONS } from '@UI/react/components/organisms/CanvasTabsBar/CanvasTabsBar.logic';
 import { formatGridPosition } from '@UI/react/utils/gridPosition';
 import './CanvasChromeHeader.scss';
 
@@ -65,6 +67,7 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     workspaces = [],
     onWorkspaceChange,
     allowWorkspaceSwitch = true,
+    onOpenCreateWorkspace,
 
     // ViewGroup
     viewGroup,
@@ -87,6 +90,10 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     showViewGroupBorders = false,
     onToggleCoordinates,
     onToggleViewGroupBorders,
+
+    // Mode toggle (tile vs tabs)
+    workspaceViewMode = 'tile',
+    onWorkspaceViewModeChange,
 
     // Navigator
     canvasSize = { cols: 1, rows: 1 },
@@ -115,6 +122,8 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     const [workspaceSort, setWorkspaceSort] = useState('name-asc');
     const [workspaceFilter, setWorkspaceFilter] = useState('all');
     const [workspaceTag, setWorkspaceTag] = useState(null);
+    const [headerOverflowOpen, setHeaderOverflowOpen] = useState(false);
+    const overflowTriggerRef = useRef(null);
     const workspaceTriggerRef = useRef(null);
     const viewGroupTriggerRef = useRef(null);
     const displayTriggerRef = useRef(null);
@@ -138,6 +147,12 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
         }
     }, [allowWorkspaceSwitch, workspaceOpen]);
 
+    useEffect(() => {
+        if (hideDisplayGroup && displayOpen) {
+            setDisplayOpen(false);
+        }
+    }, [displayOpen, hideDisplayGroup]);
+
     const workspaceItems = useMemo(() => normalizeItems(workspaces), [workspaces]);
     const viewGroupItems = useMemo(() => normalizeItems(viewGroups), [viewGroups]);
     const workspaceLabel = workspace?.name || (typeof workspace === 'string' ? workspace : 'Workspace');
@@ -148,6 +163,9 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     const activeDisplayCount = Number(showCoordinates) + Number(showViewGroupBorders);
     const effectiveWidth = headerWidth || window.innerWidth || 0;
     const showNames = effectiveWidth >= 500;
+    const hideEditGroup = effectiveWidth < 980;
+    const hideDisplayGroup = effectiveWidth < 900;
+    const overflowCount = Number(hideEditGroup) + Number(hideDisplayGroup);
     const workspaceNameMax = Math.max(40, Math.min(140, (effectiveWidth - 400) * 0.2));
     const viewGroupNameMax = Math.max(40, Math.min(120, (effectiveWidth - 400) * 0.15));
 
@@ -236,6 +254,7 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     }, []);
 
     const showNavigator = Boolean(onMoveViewport || onHome || onOpenNavigator);
+    const showModeToggle = Boolean(onWorkspaceViewModeChange) && workspaceViewMode === 'tile';
 
     const viewportLabel = useMemo(() => {
         return formatGridPosition(viewportPosition?.col || 0, viewportPosition?.row || 0);
@@ -254,33 +273,46 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
     const canMoveRight = viewportCol + viewportCols < cols;
 
     const renderMiniGrid = () => {
-        const previewRows = Math.min(rows, 4);
-        const previewCols = Math.min(cols, 6);
+        const maxPreviewRows = 4;
+        const maxPreviewCols = 6;
+        const previewRows = Math.min(rows, maxPreviewRows);
+        const previewCols = Math.min(cols, maxPreviewCols);
+        const rowOffset = Math.floor((maxPreviewRows - previewRows) / 2);
+        const colOffset = Math.floor((maxPreviewCols - previewCols) / 2);
         const rowScale = previewRows / rows;
         const colScale = previewCols / cols;
-        const viewRowSpan = Math.max(1, Math.round(viewportRows * rowScale));
-        const viewColSpan = Math.max(1, Math.round(viewportCols * colScale));
-        const maxRowTravel = Math.max(1, rows - viewportRows);
-        const maxColTravel = Math.max(1, cols - viewportCols);
+        const viewRowSpan = Math.min(previewRows, Math.max(1, Math.round(viewportRows * rowScale)));
+        const viewColSpan = Math.min(previewCols, Math.max(1, Math.round(viewportCols * colScale)));
+        const maxRowTravel = Math.max(0, rows - viewportRows);
+        const maxColTravel = Math.max(0, cols - viewportCols);
         const maxPreviewRow = Math.max(0, previewRows - viewRowSpan);
         const maxPreviewCol = Math.max(0, previewCols - viewColSpan);
-        const viewRowStart = Math.round((viewportRow / maxRowTravel) * maxPreviewRow);
-        const viewColStart = Math.round((viewportCol / maxColTravel) * maxPreviewCol);
+        const viewRowStart = maxRowTravel === 0 ? 0 : Math.round((viewportRow / maxRowTravel) * maxPreviewRow);
+        const viewColStart = maxColTravel === 0 ? 0 : Math.round((viewportCol / maxColTravel) * maxPreviewCol);
         const viewRowEnd = Math.min(previewRows, viewRowStart + viewRowSpan);
         const viewColEnd = Math.min(previewCols, viewColStart + viewColSpan);
+        const hasOverflow = rows > maxPreviewRows || cols > maxPreviewCols;
 
         const cells = [];
-        for (let r = 0; r < previewRows; r += 1) {
-            for (let c = 0; c < previewCols; c += 1) {
+        for (let r = 0; r < maxPreviewRows; r += 1) {
+            for (let c = 0; c < maxPreviewCols; c += 1) {
+                const localRow = r - rowOffset;
+                const localCol = c - colOffset;
+                const isWithinGrid =
+                    localRow >= 0 &&
+                    localRow < previewRows &&
+                    localCol >= 0 &&
+                    localCol < previewCols;
                 const isInViewport =
-                    r >= viewRowStart &&
-                    r < viewRowEnd &&
-                    c >= viewColStart &&
-                    c < viewColEnd;
+                    isWithinGrid &&
+                    localRow >= viewRowStart &&
+                    localRow < viewRowEnd &&
+                    localCol >= viewColStart &&
+                    localCol < viewColEnd;
                 cells.push(
                     <span
                         key={`${r}-${c}`}
-                        className={`canvas-chrome-header__mini-cell ${isInViewport ? 'is-viewport' : ''}`}
+                        className={`canvas-chrome-header__mini-cell ${isWithinGrid ? 'is-visible' : 'is-empty'} ${isInViewport ? 'is-viewport' : ''}`}
                     />
                 );
             }
@@ -290,11 +322,16 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
             <button
                 type="button"
                 className="canvas-chrome-header__mini-grid"
-                style={{ '--grid-cols': previewCols }}
+                style={{ '--grid-cols': maxPreviewCols }}
                 onClick={onOpenNavigator}
                 title="Open Navigator"
             >
                 {cells}
+                {hasOverflow && (
+                    <span className="canvas-chrome-header__mini-more" title="Grid larger than preview">
+                        +
+                    </span>
+                )}
             </button>
         );
     };
@@ -314,15 +351,6 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                                 aria-label="Back"
                             >
                                 <Icon name="arrowLeft" size={14} />
-                            </button>
-                            <button
-                                type="button"
-                                className="canvas-chrome-header__icon-btn"
-                                onClick={onGoHome}
-                                title="Home"
-                                aria-label="Home"
-                            >
-                                <Icon name="home" size={14} />
                             </button>
                         </div>
 
@@ -402,44 +430,46 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
             </div>
 
             <div className="canvas-chrome-header__center">
-                <HeaderSection label="Edit" color="amber">
-                    <div className="canvas-chrome-header__group">
-                        <div className="canvas-chrome-header__edit">
-                            <button
-                                type="button"
-                                className={`canvas-chrome-header__pill-btn ${isEditMode ? 'is-active' : ''}`}
-                                onClick={() => onToggleEditMode?.(!isEditMode)}
-                                aria-pressed={isEditMode}
-                            >
-                                <Icon name="pencil" size={12} />
-                                <span>Edit</span>
-                            </button>
-                        </div>
-
-                        <div className="canvas-chrome-header__flow">
-                            <div className="canvas-chrome-header__button-group">
+                {!hideEditGroup && (
+                    <HeaderSection label="Edit" color="amber">
+                        <div className="canvas-chrome-header__group">
+                            <div className="canvas-chrome-header__edit">
                                 <button
                                     type="button"
-                                    className={`canvas-chrome-header__icon-btn ${flowDirection === 'right' ? 'is-active' : ''}`}
-                                    onClick={() => onFlowDirectionChange?.('right')}
-                                    title="Flow Right"
-                                    aria-pressed={flowDirection === 'right'}
+                                    className={`canvas-chrome-header__pill-btn ${isEditMode ? 'is-active' : ''}`}
+                                    onClick={() => onToggleEditMode?.(!isEditMode)}
+                                    aria-pressed={isEditMode}
                                 >
-                                    <Icon name="arrowRight" size={14} />
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`canvas-chrome-header__icon-btn ${flowDirection === 'down' ? 'is-active' : ''}`}
-                                    onClick={() => onFlowDirectionChange?.('down')}
-                                    title="Flow Down"
-                                    aria-pressed={flowDirection === 'down'}
-                                >
-                                    <Icon name="arrowDown" size={14} />
+                                    <Icon name="pencil" size={12} />
+                                    <span>Edit</span>
                                 </button>
                             </div>
+
+                            <div className="canvas-chrome-header__flow">
+                                <div className="canvas-chrome-header__button-group">
+                                    <button
+                                        type="button"
+                                        className={`canvas-chrome-header__icon-btn ${flowDirection === 'right' ? 'is-active' : ''}`}
+                                        onClick={() => onFlowDirectionChange?.('right')}
+                                        title="Flow Right"
+                                        aria-pressed={flowDirection === 'right'}
+                                    >
+                                        <Icon name="arrowRight" size={14} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`canvas-chrome-header__icon-btn ${flowDirection === 'down' ? 'is-active' : ''}`}
+                                        onClick={() => onFlowDirectionChange?.('down')}
+                                        title="Flow Down"
+                                        aria-pressed={flowDirection === 'down'}
+                                    >
+                                        <Icon name="arrowDown" size={14} />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </HeaderSection>
+                    </HeaderSection>
+                )}
             </div>
 
             <div className="canvas-chrome-header__right">
@@ -500,27 +530,57 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                     </HeaderSection>
                 )}
 
-                <HeaderSection label="Display" color="blue">
-                    <div className="canvas-chrome-header__group">
-                        <button
-                            ref={displayTriggerRef}
-                            type="button"
-                            className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--dropdown"
-                            onClick={() => setDisplayOpen((prev) => !prev)}
-                            aria-expanded={displayOpen}
-                            aria-haspopup="menu"
-                            title="Display options"
-                        >
-                            <Icon name="grid" size={14} />
-                            {activeDisplayCount > 0 && (
-                                <span className="canvas-chrome-header__badge">{activeDisplayCount}</span>
-                            )}
-                            <Icon name="chevronDown" size={12} />
-                        </button>
-                    </div>
-                </HeaderSection>
+                {showModeToggle && (
+                    <HeaderSection label="Mode" color="cyan">
+                        <div className="canvas-chrome-header__group">
+                            <ModeToggle
+                                canvasMode={workspaceViewMode}
+                                onModeChange={onWorkspaceViewModeChange}
+                            />
+                        </div>
+                    </HeaderSection>
+                )}
 
-                <HeaderSection label="Window" color="purple">
+                {!hideDisplayGroup && (
+                    <HeaderSection label="Display" color="blue">
+                        <div className="canvas-chrome-header__group">
+                            <button
+                                ref={displayTriggerRef}
+                                type="button"
+                                className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--dropdown"
+                                onClick={() => setDisplayOpen((prev) => !prev)}
+                                aria-expanded={displayOpen}
+                                aria-haspopup="menu"
+                                title="Display options"
+                            >
+                                <Icon name="grid" size={14} />
+                                {activeDisplayCount > 0 && (
+                                    <span className="canvas-chrome-header__badge">{activeDisplayCount}</span>
+                                )}
+                                <Icon name="chevronDown" size={12} />
+                            </button>
+                        </div>
+                    </HeaderSection>
+                )}
+
+                {overflowCount > 0 && (
+                    <HeaderSection label="More" color="teal">
+                        <div className="canvas-chrome-header__group">
+                            <button
+                                ref={overflowTriggerRef}
+                                type="button"
+                                className="canvas-chrome-header__more-btn"
+                                onClick={() => setHeaderOverflowOpen((prev) => !prev)}
+                                aria-expanded={headerOverflowOpen}
+                            >
+                                <Icon name="moreHorizontal" size={14} />
+                                <span className="canvas-chrome-header__more-count">+{overflowCount}</span>
+                            </button>
+                        </div>
+                    </HeaderSection>
+                )}
+
+                <HeaderSection label="Canvas" color="purple">
                     <div className="canvas-chrome-header__group">
                         {showWindowControls ? (
                             <div className="canvas-chrome-header__button-group">
@@ -548,7 +608,7 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                             type="button"
                             className="canvas-chrome-header__icon-btn canvas-chrome-header__icon-btn--danger"
                             onClick={() => onCloseWorkspace?.()}
-                            title="Close workspace"
+                            title="Close canvas"
                             disabled={!onCloseWorkspace}
                         >
                             <Icon name="x" size={14} />
@@ -627,6 +687,44 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                         <span>{item.name}</span>
                     </button>
                 )}
+                footer={onOpenCreateWorkspace ? (
+                    <div className="canvas-chrome-header__dropdown-footer">
+                        {workspaceViewMode === 'tile' ? (
+                            <>
+                                <div className="canvas-chrome-header__dropdown-subtitle">Create</div>
+                                {CREATE_OPTIONS.map((option) => (
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        className="canvas-chrome-header__dropdown-item canvas-chrome-header__dropdown-item--create"
+                                        onClick={() => {
+                                            onOpenCreateWorkspace?.(option.id);
+                                            handleCloseWorkspace();
+                                        }}
+                                    >
+                                        <Icon name={option.icon} size={12} />
+                                        <span className="canvas-chrome-header__dropdown-main">
+                                            <span className="canvas-chrome-header__dropdown-text">{option.label}</span>
+                                            <span className="canvas-chrome-header__dropdown-desc">{option.description}</span>
+                                        </span>
+                                    </button>
+                                ))}
+                            </>
+                        ) : (
+                            <button
+                                type="button"
+                                className="canvas-chrome-header__dropdown-item canvas-chrome-header__dropdown-item--footer"
+                                onClick={() => {
+                                    onOpenCreateWorkspace?.('empty');
+                                    handleCloseWorkspace();
+                                }}
+                            >
+                                <Icon name="plus" size={12} />
+                                <span className="canvas-chrome-header__dropdown-text">Create Workspace</span>
+                            </button>
+                        )}
+                    </div>
+                ) : null}
             />
 
             {/* ViewGroup dropdown */}
@@ -785,16 +883,99 @@ export const CanvasChromeHeader = memo(function CanvasChromeHeader({
                     { id: 'borders', label: 'ViewGroup Borders', value: showViewGroupBorders, onToggle: onToggleViewGroupBorders },
                 ]}
                 renderItem={(item) => (
-                    <label key={item.id} className="canvas-chrome-header__dropdown-item canvas-chrome-header__dropdown-item--toggle">
+                    <label key={item.id} className="canvas-chrome-header__dropdown-item canvas-chrome-header__dropdown-item--toggle canvas-chrome-header__toggle">
                         <input
                             type="checkbox"
                             checked={item.value}
                             onChange={() => item.onToggle?.(!item.value)}
+                            className="canvas-chrome-header__toggle-input"
                         />
-                        <span>{item.label}</span>
+                        <span className="canvas-chrome-header__toggle-track">
+                            <span className="canvas-chrome-header__toggle-thumb" />
+                        </span>
+                        <span className="canvas-chrome-header__toggle-label">{item.label}</span>
                     </label>
                 )}
             />
+
+            <DropdownPortal
+                open={overflowCount > 0 && headerOverflowOpen}
+                onClose={() => setHeaderOverflowOpen(false)}
+                triggerRef={overflowTriggerRef}
+                align="end"
+                position="bottom"
+                className="canvas-chrome-header__overflow"
+            >
+                <div className="canvas-chrome-header__overflow-panel">
+                    {hideEditGroup && (
+                        <div className="canvas-chrome-header__overflow-section">
+                            <div className="canvas-chrome-header__label canvas-chrome-header__label--amber">Edit</div>
+                            <div className="canvas-chrome-header__overflow-content">
+                                <button
+                                    type="button"
+                                    className={`canvas-chrome-header__pill-btn ${isEditMode ? 'is-active' : ''}`}
+                                    onClick={() => onToggleEditMode?.(!isEditMode)}
+                                    aria-pressed={isEditMode}
+                                >
+                                    <Icon name="pencil" size={12} />
+                                    <span>Edit</span>
+                                </button>
+                                <div className="canvas-chrome-header__button-group">
+                                    <button
+                                        type="button"
+                                        className={`canvas-chrome-header__icon-btn ${flowDirection === 'right' ? 'is-active' : ''}`}
+                                        onClick={() => onFlowDirectionChange?.('right')}
+                                        title="Flow Right"
+                                        aria-pressed={flowDirection === 'right'}
+                                    >
+                                        <Icon name="arrowRight" size={14} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`canvas-chrome-header__icon-btn ${flowDirection === 'down' ? 'is-active' : ''}`}
+                                        onClick={() => onFlowDirectionChange?.('down')}
+                                        title="Flow Down"
+                                        aria-pressed={flowDirection === 'down'}
+                                    >
+                                        <Icon name="arrowDown" size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {hideDisplayGroup && (
+                        <div className="canvas-chrome-header__overflow-section">
+                            <div className="canvas-chrome-header__label canvas-chrome-header__label--blue">Display</div>
+                            <div className="canvas-chrome-header__overflow-content canvas-chrome-header__overflow-content--display">
+                                <label className="canvas-chrome-header__overflow-toggle canvas-chrome-header__toggle">
+                                    <input
+                                        type="checkbox"
+                                        checked={showCoordinates}
+                                        onChange={() => onToggleCoordinates?.(!showCoordinates)}
+                                        className="canvas-chrome-header__toggle-input"
+                                    />
+                                    <span className="canvas-chrome-header__toggle-track">
+                                        <span className="canvas-chrome-header__toggle-thumb" />
+                                    </span>
+                                    <span className="canvas-chrome-header__toggle-label">Grid Coordinates</span>
+                                </label>
+                                <label className="canvas-chrome-header__overflow-toggle canvas-chrome-header__toggle">
+                                    <input
+                                        type="checkbox"
+                                        checked={showViewGroupBorders}
+                                        onChange={() => onToggleViewGroupBorders?.(!showViewGroupBorders)}
+                                        className="canvas-chrome-header__toggle-input"
+                                    />
+                                    <span className="canvas-chrome-header__toggle-track">
+                                        <span className="canvas-chrome-header__toggle-thumb" />
+                                    </span>
+                                    <span className="canvas-chrome-header__toggle-label">ViewGroup Borders</span>
+                                </label>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </DropdownPortal>
         </header>
     );
 });

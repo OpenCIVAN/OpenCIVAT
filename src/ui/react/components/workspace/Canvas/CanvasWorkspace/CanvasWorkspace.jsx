@@ -15,6 +15,8 @@ import { SubsetSelectorModal } from '@UI/react/components/modals/SubsetSelectorM
 
 // New canvas chrome components
 import { CanvasChrome } from '../CanvasChrome/CanvasChrome.jsx';
+import { ConfirmationDialog } from '@UI/react/components/modals/ConfirmationDialog';
+import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import { CanvasChromeFooter2 } from '../CanvasChrome/CanvasChromeFooter2.jsx';
 import { CanvasInfoFooter } from '../CanvasInfoFooter/CanvasInfoFooter.jsx';
 import { EdgeTrigger, FloatingPanel } from '../EdgePanels';
@@ -416,6 +418,7 @@ function CanvasWorkspaceInner({
     ensuringWorkspaceIds = {},
 }) {
     const layoutContext = useLayoutContext();
+    const { isVR } = useAdaptive();
     const setLeftDockedOpen = layoutContext?.setLeftOpen || (() => { });
     const setRightDockedOpen = layoutContext?.setRightOpen || (() => { });
     // Use sessionManager room ID as fallback project ID
@@ -434,6 +437,13 @@ function CanvasWorkspaceInner({
     const [leftPanelOpen, setLeftPanelOpen] = useState(false);
     const [rightPanelOpen, setRightPanelOpen] = useState(false);
     const [showCreateWorkspacePanel, setShowCreateWorkspacePanel] = useState(false);
+    const [createWorkspaceDefaults, setCreateWorkspaceDefaults] = useState({
+        type: 'project',
+        namePrefix: 'Workspace',
+    });
+    const [createWorkspaceAllowedTypes, setCreateWorkspaceAllowedTypes] = useState(null);
+    const [showCloseAllTilesConfirm, setShowCloseAllTilesConfirm] = useState(false);
+    const [skipCloseAllTilesConfirm, setSkipCloseAllTilesConfirm] = useState(false);
 
 
     // Canvas mode state (dock/float/fullscreen)
@@ -457,6 +467,10 @@ function CanvasWorkspaceInner({
     const freeLayoutRef = useRef(null);
     const [freeLayoutBounds, setFreeLayoutBounds] = useState({ width: 0, height: 0 });
     const layoutLoadedRef = useRef(false);
+    const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
+    const loadingShowTimerRef = useRef(null);
+    const loadingHideTimerRef = useRef(null);
+    const loadingStartRef = useRef(0);
 
     const { syncStatus: rawSyncStatus, onlineCount } = useStatusBar();
 
@@ -482,6 +496,20 @@ function CanvasWorkspaceInner({
         const projectScope = projectId || 'default';
         return `cia:workspace-window-layouts:${userKey}:${projectScope}:${roomKey}`;
     }, [currentRoom?.id, projectId, userId]);
+    const closeAllTilesStorageKey = useMemo(() => {
+        let roomKey = currentRoom?.id;
+        if (!roomKey) {
+            try {
+                roomKey = sessionManager.getRoomId?.();
+            } catch {
+                roomKey = null;
+            }
+        }
+        if (!roomKey) return null;
+        const userKey = userId || sessionManager.getUserId?.() || 'anon';
+        const projectScope = projectId || 'default';
+        return `cia:close-all-tiles-confirm:${userKey}:${projectScope}:${roomKey}`;
+    }, [currentRoom?.id, projectId, userId]);
 
     const { setWorkspace: setWorkspacePresence } = useRoomActions();
 
@@ -491,6 +519,7 @@ function CanvasWorkspaceInner({
         selectWorkspace,
         createBreakout,
         createProjectWorkspace,
+        createPersonalWorkspace,
         isLoading: isWorkspacesLoading,
     } = useWorkspaces({ userId, projectId, roomId: currentRoom?.id });
 
@@ -513,6 +542,30 @@ function CanvasWorkspaceInner({
         () => tileWorkspaces.some((workspace) => workspace.isOpen),
         [tileWorkspaces]
     );
+    const openTileWorkspaceNames = useMemo(() => (
+        tileWorkspaces
+            .filter((workspace) => workspace.isOpen)
+            .map((workspace) => workspace.name || 'Untitled Workspace')
+    ), [tileWorkspaces]);
+
+    useEffect(() => {
+        if (!closeAllTilesStorageKey) return;
+        try {
+            const stored = window.localStorage.getItem(closeAllTilesStorageKey);
+            setSkipCloseAllTilesConfirm(stored === '1');
+        } catch (error) {
+            log.debug('Close-all tiles localStorage read failed:', error);
+        }
+    }, [closeAllTilesStorageKey]);
+
+    useEffect(() => {
+        if (!closeAllTilesStorageKey) return;
+        try {
+            window.localStorage.setItem(closeAllTilesStorageKey, skipCloseAllTilesConfirm ? '1' : '0');
+        } catch (error) {
+            log.debug('Close-all tiles localStorage write failed:', error);
+        }
+    }, [closeAllTilesStorageKey, skipCloseAllTilesConfirm]);
     const closedWorkspaceSet = useMemo(
         () => new Set(closedWorkspaceIds),
         [closedWorkspaceIds]
@@ -525,6 +578,61 @@ function CanvasWorkspaceInner({
     const activeWorkspaceEnsuring = Boolean(
         (activeWorkspaceKey && ensuringWorkspaceIds?.[activeWorkspaceKey])
     );
+    const isCanvasBusy = Boolean(
+        isWorkspacesLoading
+        || activeWorkspaceEnsuring
+        || (activeCanvasId && isLoading && !canvas)
+    );
+    const loadingLabel = useMemo(() => {
+        if (isWorkspacesLoading) return 'Loading workspace...';
+        if (activeWorkspaceEnsuring) return 'Preparing canvas...';
+        if (isLoading && !canvas) return 'Loading canvas...';
+        return 'Loading canvas...';
+    }, [activeWorkspaceEnsuring, canvas, isLoading, isWorkspacesLoading]);
+
+    useEffect(() => {
+        if (isCanvasBusy) {
+            if (loadingHideTimerRef.current) {
+                clearTimeout(loadingHideTimerRef.current);
+                loadingHideTimerRef.current = null;
+            }
+            if (showLoadingOverlay) return undefined;
+            if (!loadingShowTimerRef.current) {
+                loadingShowTimerRef.current = setTimeout(() => {
+                    loadingStartRef.current = Date.now();
+                    setShowLoadingOverlay(true);
+                    loadingShowTimerRef.current = null;
+                }, 150);
+            }
+        } else {
+            if (loadingShowTimerRef.current) {
+                clearTimeout(loadingShowTimerRef.current);
+                loadingShowTimerRef.current = null;
+            }
+            if (!showLoadingOverlay) return undefined;
+            const elapsed = Date.now() - (loadingStartRef.current || 0);
+            const remaining = Math.max(0, 300 - elapsed);
+            if (loadingHideTimerRef.current) {
+                clearTimeout(loadingHideTimerRef.current);
+            }
+            loadingHideTimerRef.current = setTimeout(() => {
+                setShowLoadingOverlay(false);
+                loadingHideTimerRef.current = null;
+            }, remaining);
+        }
+        return undefined;
+    }, [isCanvasBusy, showLoadingOverlay]);
+
+    useEffect(() => {
+        return () => {
+            if (loadingShowTimerRef.current) {
+                clearTimeout(loadingShowTimerRef.current);
+            }
+            if (loadingHideTimerRef.current) {
+                clearTimeout(loadingHideTimerRef.current);
+            }
+        };
+    }, []);
 
     // Handle workspace change
     const handleWorkspaceChange = useCallback((workspaceId) => {
@@ -558,6 +666,13 @@ function CanvasWorkspaceInner({
         handleTileWorkspaceSelect(workspaceId);
         setTileMaximizedWorkspaceId((prev) => (prev === workspaceId ? null : workspaceId));
     }, [handleTileWorkspaceSelect]);
+
+    const handleTileClearSelection = useCallback(() => {
+        if (tileMaximizedWorkspaceId) {
+            setTileMaximizedWorkspaceId(null);
+        }
+        onDeactivateWorkspace?.();
+    }, [onDeactivateWorkspace, tileMaximizedWorkspaceId]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -595,6 +710,8 @@ function CanvasWorkspaceInner({
             .map((workspace) => workspace.id);
 
         setClosedWorkspaceIds((prev) => prev.filter((id) => openIds.includes(id)));
+
+        setTileMaximizedWorkspaceId((prev) => (prev && !openIds.includes(prev) ? null : prev));
 
         setWindowLayouts((prev) => {
             const next = { ...prev };
@@ -662,10 +779,7 @@ function CanvasWorkspaceInner({
 
     const handleCloseWorkspaceWindow = useCallback((workspaceId) => {
         if (!workspaceId) return;
-        if (onCloseWorkspace) {
-            onCloseWorkspace(workspaceId);
-            return;
-        }
+        onCloseWorkspace?.(workspaceId);
         setClosedWorkspaceIds((prev) => (prev.includes(workspaceId) ? prev : [...prev, workspaceId]));
         if (activeWorkspaceKey === workspaceId) {
             const nextActive = freeLayoutWorkspaces
@@ -678,6 +792,23 @@ function CanvasWorkspaceInner({
             }
         }
     }, [activeWorkspaceKey, freeLayoutWorkspaces, handleWorkspaceSelect, onCloseWorkspace, onDeactivateWorkspace]);
+
+    const handleCloseAllTileWorkspaces = useCallback(() => {
+        const openIds = tileWorkspaces
+            .filter((workspace) => workspace.isOpen)
+            .map((workspace) => workspace.id);
+        if (openIds.length === 0) return;
+        setTileMaximizedWorkspaceId(null);
+        setClosedWorkspaceIds((prev) => {
+            const next = new Set(prev);
+            openIds.forEach((id) => next.add(id));
+            return Array.from(next);
+        });
+        openIds.forEach((id) => onCloseWorkspace?.(id));
+        if (!onCloseWorkspace) {
+            onDeactivateWorkspace?.();
+        }
+    }, [onCloseWorkspace, onDeactivateWorkspace, tileWorkspaces]);
 
     useEffect(() => {
         if (workspaceViewMode !== 'tabs') return;
@@ -742,24 +873,59 @@ function CanvasWorkspaceInner({
         return 10 + index;
     }, [windowOrder]);
 
-    // Handle workspace creation - open the panel
-    const handleOpenCreateWorkspace = useCallback(() => {
+    // Handle workspace creation - open the panel or route to subset/scratchpad
+    const handleOpenCreateWorkspace = useCallback((intent = 'empty', allowedTypes = null) => {
+        if (Array.isArray(allowedTypes) && allowedTypes.length > 0) {
+            setCreateWorkspaceAllowedTypes(allowedTypes);
+        } else {
+            setCreateWorkspaceAllowedTypes(null);
+        }
+        if (intent === 'subset') {
+            setShowCreateWorkspacePanel(false);
+            setShowSubsetSelector(true);
+            return;
+        }
+
+        if (intent === 'scratch') {
+            const personalWorkspace = allWorkspaces?.find((workspace) => workspace.type === 'personal');
+            if (personalWorkspace?.id) {
+                handleWorkspaceSelect(personalWorkspace);
+                return;
+            }
+
+            setCreateWorkspaceDefaults({
+                type: 'personal',
+                namePrefix: 'Scratch Pad',
+            });
+            setShowCreateWorkspacePanel(true);
+            return;
+        }
+
+        setCreateWorkspaceDefaults({
+            type: 'project',
+            namePrefix: 'Workspace',
+        });
         setShowCreateWorkspacePanel(true);
-    }, []);
+    }, [allWorkspaces, handleWorkspaceSelect]);
+    const handleOpenCreateWorkspaceLimited = useCallback((intent = 'empty', allowedTypes = null) => {
+        handleOpenCreateWorkspace(intent, allowedTypes);
+    }, [handleOpenCreateWorkspace]);
 
     // Handle actual workspace creation from the panel
     const handleCreateWorkspace = useCallback(async ({ name, description, type }) => {
         try {
             let workspace;
-            if (type === 'breakout') {
+            if (type === 'personal') {
+                workspace = await createPersonalWorkspace(name);
+            } else if (type === 'breakout') {
                 workspace = await createBreakout(name, 2, currentRoom?.id);
             } else {
                 workspace = await createProjectWorkspace(name, description);
             }
 
             if (workspace) {
-                // Select the newly created workspace
-                selectWorkspace(workspace.id);
+                // Select/open the newly created workspace
+                handleWorkspaceSelect(workspace.id);
                 setWorkspacePresence(workspace.id);
                 log.info('Created and selected workspace:', workspace.name);
             }
@@ -767,7 +933,14 @@ function CanvasWorkspaceInner({
             log.error('Failed to create workspace:', error);
             throw error; // Re-throw so the panel can handle it
         }
-    }, [createProjectWorkspace, createBreakout, selectWorkspace, setWorkspacePresence, currentRoom]);
+    }, [
+        createProjectWorkspace,
+        createBreakout,
+        createPersonalWorkspace,
+        handleWorkspaceSelect,
+        setWorkspacePresence,
+        currentRoom,
+    ]);
 
     // Dispatch edit mode changes to CanvasGrid
     const handleEditModeChange = useCallback((newEditMode, targetCanvasId = activeCanvasId) => {
@@ -1816,6 +1989,7 @@ function CanvasWorkspaceInner({
         <div ref={footerRef}>
             <CanvasChromeFooter2
                 containerWidth={footerWidth}
+                hasActiveView={Boolean(contextActiveView?.id)}
                 links={contextActiveView?.links || {}}
                 onUpdateLink={contextUpdateLink}
                 onToggleFocus={() => {
@@ -1989,7 +2163,8 @@ function CanvasWorkspaceInner({
                         workspace: currentWorkspace || { id: projectId, name: 'Workspace', type: 'project' },
                         workspaces: workspacesForSelector,
                         onWorkspaceChange: handleWorkspaceSelect,
-                        allowWorkspaceSwitch: false,
+                        allowWorkspaceSwitch: workspaceViewMode === 'tile',
+                        onOpenCreateWorkspace: handleOpenCreateWorkspace,
                         viewGroup: activeHeaderViewGroup,
                         viewGroups: formattedViewGroups,
                         onViewGroupChange: (viewGroup) => handleSelectViewGroup(viewGroup?.id ?? null),
@@ -2013,6 +2188,8 @@ function CanvasWorkspaceInner({
                         showViewGroupBorders,
                         onToggleCoordinates: setShowCoordinates,
                         onToggleViewGroupBorders: setShowViewGroupBorders,
+                        workspaceViewMode,
+                        onWorkspaceViewModeChange: onSetWorkspaceViewMode,
                         canvasSize,
                         viewportSize: sharedViewportSize,
                         viewportPosition: syncedViewport,
@@ -2026,6 +2203,18 @@ function CanvasWorkspaceInner({
                         windowMode: canvasMode === CANVAS_MODES.FULLSCREEN ? 'full' : canvasMode,
                         showWindowControls: false,
                         onCloseWorkspace: () => {
+                            if (workspaceViewMode === 'tile' && tileMaximizedWorkspaceId) {
+                                setTileMaximizedWorkspaceId(null);
+                                return;
+                            }
+                            if (workspaceViewMode === 'tile' && !tileMaximizedWorkspaceId) {
+                                if (skipCloseAllTilesConfirm) {
+                                    handleCloseAllTileWorkspaces();
+                                    return;
+                                }
+                                setShowCloseAllTilesConfirm(true);
+                                return;
+                            }
                             if (onDeactivateWorkspace) {
                                 onDeactivateWorkspace();
                                 return;
@@ -2049,6 +2238,20 @@ function CanvasWorkspaceInner({
                 >
                     {/* Main content area */}
                     <div className="canvas-workspace__content">
+                        {showLoadingOverlay && (
+                            <div
+                                className={`canvas-workspace__loading-overlay ${isVR ? 'canvas-workspace__loading-overlay--vr' : ''}`}
+                                aria-live="polite"
+                            >
+                                <div className={`canvas-workspace__loading-card ${isVR ? 'canvas-workspace__loading-card--vr' : ''}`}>
+                                    <div className="canvas-workspace__spinner" />
+                                    <div className="canvas-workspace__loading-title">{loadingLabel}</div>
+                                    <div className="canvas-workspace__loading-subtitle">
+                                        Syncing workspace state…
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {/* Left Edge Trigger */}
                         <EdgeTrigger
                             side="left"
@@ -2064,7 +2267,13 @@ function CanvasWorkspaceInner({
                                     activeWorkspaceId={activeWorkspaceId || currentWorkspace?.id}
                                     maximizedWorkspaceId={tileMaximizedWorkspaceId}
                                     onSelectWorkspace={handleTileWorkspaceSelect}
-                                    onCloseWorkspace={onCloseWorkspace}
+                                    onClearSelection={handleTileClearSelection}
+                                    onCloseWorkspace={(workspaceId) => {
+                                        if (tileMaximizedWorkspaceId === workspaceId) {
+                                            setTileMaximizedWorkspaceId(null);
+                                        }
+                                        onCloseWorkspace?.(workspaceId);
+                                    }}
                                     onMaximizeWorkspace={handleTileWorkspaceMaximize}
                                     renderCanvas={(workspace) => (
                                         <WorkspaceTileCanvas
@@ -2109,11 +2318,37 @@ function CanvasWorkspaceInner({
                                 <div className="canvas-workspace__empty">
                                     <p>No workspace open</p>
                                     <div className="canvas-workspace__empty-hint">
-                                        Open a workspace from the Workspace Bar above, or create a new one.
+                                        Open a workspace from the Workspace Bar above, or choose one below.
                                     </div>
-                                    <button onClick={handleOpenCreateWorkspace}>
-                                        Create Workspace
-                                    </button>
+                                    <div className="canvas-workspace__empty-actions">
+                                        <button
+                                            onClick={() => handleOpenCreateWorkspaceLimited('empty', ['project', 'personal'])}
+                                        >
+                                            Create Workspace
+                                        </button>
+                                        <button
+                                            onClick={() => handleOpenCreateWorkspaceLimited('scratch', ['personal'])}
+                                        >
+                                            Create Scratchpad
+                                        </button>
+                                    </div>
+                                    {tileWorkspaces.filter((workspace) => !workspace.isOpen).length > 0 && (
+                                        <div className="canvas-workspace__empty-list">
+                                            <div className="canvas-workspace__empty-label">Open workspace</div>
+                                            <div className="canvas-workspace__empty-buttons">
+                                                {tileWorkspaces
+                                                    .filter((workspace) => !workspace.isOpen)
+                                                    .map((workspace) => (
+                                                        <button
+                                                            key={workspace.id}
+                                                            onClick={() => handleWorkspaceSelect(workspace)}
+                                                        >
+                                                            {workspace.name || 'Untitled Workspace'}
+                                                        </button>
+                                                    ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -2168,11 +2403,37 @@ function CanvasWorkspaceInner({
                     <div className="canvas-workspace__empty">
                         <p>No workspace open</p>
                         <div className="canvas-workspace__empty-hint">
-                            Open a workspace from the Workspace Bar above, or create a new one.
+                            Open a workspace from the Workspace Bar above, or choose one below.
                         </div>
-                        <button onClick={handleOpenCreateWorkspace}>
-                            Create Workspace
-                        </button>
+                        <div className="canvas-workspace__empty-actions">
+                            <button
+                                onClick={() => handleOpenCreateWorkspaceLimited('empty', ['project', 'personal'])}
+                            >
+                                Create Workspace
+                            </button>
+                            <button
+                                onClick={() => handleOpenCreateWorkspaceLimited('scratch', ['personal'])}
+                            >
+                                Create Scratchpad
+                            </button>
+                        </div>
+                        {tileWorkspaces.filter((workspace) => !workspace.isOpen).length > 0 && (
+                            <div className="canvas-workspace__empty-list">
+                                <div className="canvas-workspace__empty-label">Open workspace</div>
+                                <div className="canvas-workspace__empty-buttons">
+                                    {tileWorkspaces
+                                        .filter((workspace) => !workspace.isOpen)
+                                        .map((workspace) => (
+                                            <button
+                                                key={workspace.id}
+                                                onClick={() => handleWorkspaceSelect(workspace)}
+                                            >
+                                                {workspace.name || 'Untitled Workspace'}
+                                            </button>
+                                        ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -2204,8 +2465,32 @@ function CanvasWorkspaceInner({
                 isOpen={showCreateWorkspacePanel}
                 onClose={() => setShowCreateWorkspacePanel(false)}
                 onCreate={handleCreateWorkspace}
+                initialType={createWorkspaceDefaults.type}
+                initialNamePrefix={createWorkspaceDefaults.namePrefix}
+                allowedTypes={createWorkspaceAllowedTypes}
                 userId={userId}
                 projectId={projectId}
+            />
+
+            <ConfirmationDialog
+                isOpen={showCloseAllTilesConfirm}
+                onClose={() => setShowCloseAllTilesConfirm(false)}
+                title="Close all canvases?"
+                description="This will close every open workspace canvas in this room."
+                severity="warning"
+                confirmLabel="Close All"
+                cancelLabel="Cancel"
+                itemList={openTileWorkspaceNames}
+                showCheckbox={true}
+                checkboxLabel="Don't ask again"
+                checkboxChecked={skipCloseAllTilesConfirm}
+                onCheckboxChange={setSkipCloseAllTilesConfirm}
+                className={isVR ? 'confirmation-dialog--vr' : ''}
+                onConfirm={() => {
+                    handleCloseAllTileWorkspaces();
+                    setShowCloseAllTilesConfirm(false);
+                }}
+                onCancel={() => setShowCloseAllTilesConfirm(false)}
             />
         </FloatingCanvasWrapper>
     );

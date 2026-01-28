@@ -91,6 +91,7 @@ import './ConfirmationDialog.scss';
  * @property {(checked: boolean) => void} [onCheckboxChange] - Checkbox change handler
  * @property {string[]} [itemList] - List of items to show (for bulk operations)
  * @property {boolean} [enterKeyEnabled=true] - Allow Enter to confirm (auto-false for danger)
+ * @property {string} [className] - Additional class for modal/content
  * @property {string} [testId] - Data-testid for testing
  */
 
@@ -138,6 +139,7 @@ function ConfirmationDialog({
     onCheckboxChange,
     itemList,
     enterKeyEnabled,
+    className = '',
     testId
 }) {
     // State for the confirmation input
@@ -366,9 +368,10 @@ function ConfirmationDialog({
             size="sm"
             closeOnBackdrop={false}
             footer={renderFooter()}
+            className={className}
             testId={testId}
         >
-            <div className="confirmation-dialog">
+            <div className={`confirmation-dialog ${className}`}>
                 <p className="confirmation-dialog__description">
                     {description}
                 </p>

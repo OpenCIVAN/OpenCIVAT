@@ -23,6 +23,14 @@
   gap: $spacing-lg;
 }
 
+.confirmation-dialog--vr {
+  gap: $spacing-xl;
+}
+
+.modal.confirmation-dialog--vr {
+  max-width: 520px;
+}
+
 // ============================================================================
 // DESCRIPTION TEXT
 // ============================================================================
@@ -32,6 +40,11 @@
   font-size: $font-size-base;
   color: $color-text-secondary;
   line-height: $line-height-normal;
+}
+
+.confirmation-dialog--vr .confirmation-dialog__description {
+  font-size: $font-size-md;
+  line-height: 1.45;
 }
 
 // ============================================================================
@@ -63,6 +76,11 @@
       background: rgba(255, 255, 255, 0.15);
     }
   }
+}
+
+.confirmation-dialog--vr .confirmation-dialog__item-list {
+  max-height: 160px;
+  padding: $spacing-lg;
 }
 
 .confirmation-dialog__items {
@@ -226,6 +244,10 @@
   font-size: $font-size-sm;
   color: $color-text-secondary;
   line-height: 1;
+}
+
+.confirmation-dialog--vr .confirmation-dialog__checkbox-text {
+  font-size: $font-size-base;
 }
 
 // ============================================================================

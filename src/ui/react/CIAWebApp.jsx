@@ -46,6 +46,7 @@ import { WorkspaceBar } from "@UI/react/components/organisms/WorkspaceBar";
 // FOOTER / STATUS BAR (28px - System Status)
 // =============================================================================
 import { StatusBar } from "@UI/react/components/layout/StatusBar";
+import { ConfirmationDialog } from "@UI/react/components/modals/ConfirmationDialog";
 
 // =============================================================================
 // WORKSPACE & CANVAS
@@ -133,6 +134,7 @@ const getInitialCanvasSize = () => {
 // =============================================================================
 
 export function CIAWebApp({ username, userId, projectId }) {
+  const { isVR } = useAdaptive();
   // ===========================================================================
   // PHASE 3 INITIALIZATION
   // ===========================================================================
@@ -163,6 +165,15 @@ export function CIAWebApp({ username, userId, projectId }) {
   // ===========================================================================
   // WORKSPACE STATE
   // ===========================================================================
+  const resolvedWorkspaceRoomId = useMemo(() => {
+    return (
+      workspaceRoomId
+      || currentRoomId
+      || sessionManager.getRoomId?.()
+      || null
+    );
+  }, [currentRoomId, workspaceRoomId]);
+
   const {
     workspaces,
     currentWorkspace,
@@ -170,20 +181,46 @@ export function CIAWebApp({ username, userId, projectId }) {
     selectWorkspace,
     clearActiveWorkspace,
     createProjectWorkspace,
+    createPersonalWorkspace,
     updateWorkspace,
-  } = useWorkspaces({ userId, projectId, roomId: workspaceRoomId });
+  } = useWorkspaces({ userId, projectId, roomId: resolvedWorkspaceRoomId });
 
   const [workspaceOrder, setWorkspaceOrder] = useState([]);
   const [openWorkspaceIds, setOpenWorkspaceIds] = useState([]);
+  const [showCloseAllTabsConfirm, setShowCloseAllTabsConfirm] = useState(false);
+  const [skipCloseAllTabsConfirm, setSkipCloseAllTabsConfirm] = useState(false);
   const workspaceTabsLoadedRef = useRef(false);
-  const workspaceTabsStorageKey = useMemo(() => {
+  const workspaceTabsMigratedRef = useRef(false);
+  const closeAllTabsMigratedRef = useRef(false);
+  const canvasModeMigratedRef = useRef(false);
+  const workspaceTabsDefaultKey = useMemo(() => {
     const resolvedUserId =
       userId || sessionManager.getUserId?.() || "anonymous";
     if (!resolvedUserId) return null;
     const projectScope = projectId || "default";
-    const roomScope = workspaceRoomId || "default";
-    return `cia:workspace-tabs:${resolvedUserId}:${projectScope}:${roomScope}`;
-  }, [projectId, userId, workspaceRoomId]);
+    return `cia:workspace-tabs:${resolvedUserId}:${projectScope}:default`;
+  }, [projectId, userId]);
+  const workspaceTabsStorageKey = useMemo(() => {
+    const resolvedUserId =
+      userId || sessionManager.getUserId?.() || "anonymous";
+    if (!resolvedUserId || !resolvedWorkspaceRoomId) return null;
+    const projectScope = projectId || "default";
+    return `cia:workspace-tabs:${resolvedUserId}:${projectScope}:${resolvedWorkspaceRoomId}`;
+  }, [projectId, resolvedWorkspaceRoomId, userId]);
+  const closeAllTabsDefaultKey = useMemo(() => {
+    const resolvedUserId =
+      userId || sessionManager.getUserId?.() || "anonymous";
+    if (!resolvedUserId) return null;
+    const projectScope = projectId || "default";
+    return `cia:close-all-tabs-confirm:${resolvedUserId}:${projectScope}:default`;
+  }, [projectId, userId]);
+  const closeAllTabsStorageKey = useMemo(() => {
+    const resolvedUserId =
+      userId || sessionManager.getUserId?.() || "anonymous";
+    if (!resolvedUserId || !resolvedWorkspaceRoomId) return null;
+    const projectScope = projectId || "default";
+    return `cia:close-all-tabs-confirm:${resolvedUserId}:${projectScope}:${resolvedWorkspaceRoomId}`;
+  }, [projectId, resolvedWorkspaceRoomId, userId]);
 
   const ensureCanvasForWorkspace = useCallback(
     async (workspaceId) => {
@@ -281,15 +318,20 @@ export function CIAWebApp({ username, userId, projectId }) {
       });
       return next;
     };
-    const mergeOpen = (list = []) => {
-      const next =
-        list && list.length > 0 ? list.filter((id) => ids.includes(id)) : ids;
+    const mergeOpen = (list = [], allowEmpty = false) => {
+      const normalized = Array.isArray(list)
+        ? list.filter((id) => ids.includes(id))
+        : [];
+      const hasList = normalized.length > 0;
+      const next = !allowEmpty && !hasList ? [...ids] : [...normalized];
       if (
         currentWorkspaceId &&
         ids.includes(currentWorkspaceId) &&
         !next.includes(currentWorkspaceId)
       ) {
-        next.push(currentWorkspaceId);
+        if (!allowEmpty || hasList) {
+          next.push(currentWorkspaceId);
+        }
       }
       return next;
     };
@@ -300,7 +342,7 @@ export function CIAWebApp({ username, userId, projectId }) {
         if (raw) {
           const saved = JSON.parse(raw);
           setWorkspaceOrder(mergeOrder(saved?.order || []));
-          setOpenWorkspaceIds(mergeOpen(saved?.openIds || []));
+          setOpenWorkspaceIds(mergeOpen(saved?.openIds || [], true));
           workspaceTabsLoadedRef.current = true;
           return;
         }
@@ -309,16 +351,15 @@ export function CIAWebApp({ username, userId, projectId }) {
       }
     }
 
+    const allowEmpty = workspaceTabsLoadedRef.current;
     workspaceTabsLoadedRef.current = true;
     setWorkspaceOrder((prev) => mergeOrder(prev));
-    setOpenWorkspaceIds((prev) => mergeOpen(prev));
+    setOpenWorkspaceIds((prev) => mergeOpen(prev, allowEmpty));
   }, [workspaces, currentWorkspaceId, workspaceTabsStorageKey]);
 
   useEffect(() => {
     if (!workspaceTabsStorageKey) return;
     workspaceTabsLoadedRef.current = false;
-    setWorkspaceOrder([]);
-    setOpenWorkspaceIds([]);
   }, [workspaceTabsStorageKey]);
 
   useEffect(() => {
@@ -355,7 +396,6 @@ export function CIAWebApp({ username, userId, projectId }) {
   );
 
   const handleCreateWorkspace = useCallback(async (type = "empty") => {
-    if (!createProjectWorkspace) return;
     const nextIndex = (workspaces?.length || 0) + 1;
     const typeNames = {
       empty: `Workspace ${nextIndex}`,
@@ -363,12 +403,36 @@ export function CIAWebApp({ username, userId, projectId }) {
       scratch: `Scratch Pad ${nextIndex}`,
     };
     const name = typeNames[type] || `Workspace ${nextIndex}`;
+
+    if (type === "scratch") {
+      const personal = (workspaces || []).find((ws) => ws.type === "personal");
+      if (personal?.id) {
+        await ensureCanvasForWorkspace(personal.id);
+        handleOpenWorkspace(personal.id);
+        return;
+      }
+      if (!createPersonalWorkspace) return;
+      const createdPersonal = await createPersonalWorkspace(name);
+      if (createdPersonal?.id) {
+        await ensureCanvasForWorkspace(createdPersonal.id);
+        handleOpenWorkspace(createdPersonal.id);
+      }
+      return;
+    }
+
+    if (!createProjectWorkspace) return;
     const created = await createProjectWorkspace(name, "");
     if (created?.id) {
       await ensureCanvasForWorkspace(created.id);
       handleOpenWorkspace(created.id);
     }
-  }, [createProjectWorkspace, ensureCanvasForWorkspace, handleOpenWorkspace, workspaces]);
+  }, [
+    createPersonalWorkspace,
+    createProjectWorkspace,
+    ensureCanvasForWorkspace,
+    handleOpenWorkspace,
+    workspaces,
+  ]);
 
   const handleWorkspaceChange = useCallback(
     (nextWorkspaceId) => {
@@ -401,6 +465,21 @@ export function CIAWebApp({ username, userId, projectId }) {
     },
     [clearActiveWorkspace, currentWorkspaceId, selectWorkspace]
   );
+
+  const handleConfirmCloseAllTabs = useCallback(() => {
+    setOpenWorkspaceIds([]);
+    clearActiveWorkspace?.();
+    setShowCloseAllTabsConfirm(false);
+  }, [clearActiveWorkspace]);
+
+  const handleRequestCloseAllTabs = useCallback(() => {
+    if (!openWorkspaceIds.length) return;
+    if (skipCloseAllTabsConfirm) {
+      handleConfirmCloseAllTabs();
+      return;
+    }
+    setShowCloseAllTabsConfirm(true);
+  }, [handleConfirmCloseAllTabs, openWorkspaceIds.length, skipCloseAllTabsConfirm]);
 
   const handleDeactivateWorkspace = useCallback(() => {
     clearActiveWorkspace?.();
@@ -583,14 +662,77 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [popouts, setPopouts] = useState([]);
   const [ensuringWorkspaceIds, setEnsuringWorkspaceIds] = useState({});
   const canvasModeLoadedRef = useRef(false);
-  const canvasModeStorageKey = useMemo(() => {
+  const canvasModeDefaultKey = useMemo(() => {
     const resolvedUserId =
       userId || sessionManager.getUserId?.() || "anonymous";
     if (!resolvedUserId) return null;
     const projectScope = projectId || "default";
-    const roomScope = workspaceRoomId || "default";
-    return `cia:canvas-mode:${resolvedUserId}:${projectScope}:${roomScope}`;
-  }, [projectId, userId, workspaceRoomId]);
+    return `cia:canvas-mode:${resolvedUserId}:${projectScope}:default`;
+  }, [projectId, userId]);
+  const canvasModeStorageKey = useMemo(() => {
+    const resolvedUserId =
+      userId || sessionManager.getUserId?.() || "anonymous";
+    if (!resolvedUserId || !resolvedWorkspaceRoomId) return null;
+    const projectScope = projectId || "default";
+    return `cia:canvas-mode:${resolvedUserId}:${projectScope}:${resolvedWorkspaceRoomId}`;
+  }, [projectId, resolvedWorkspaceRoomId, userId]);
+
+  useEffect(() => {
+    if (!resolvedWorkspaceRoomId) return;
+    if (workspaceTabsMigratedRef.current) return;
+    if (!workspaceTabsStorageKey || !workspaceTabsDefaultKey) return;
+    try {
+      const target = window.localStorage.getItem(workspaceTabsStorageKey);
+      const fallback = window.localStorage.getItem(workspaceTabsDefaultKey);
+      if (!target && fallback) {
+        window.localStorage.setItem(workspaceTabsStorageKey, fallback);
+      }
+      if (fallback) {
+        window.localStorage.removeItem(workspaceTabsDefaultKey);
+      }
+    } catch (err) {
+      log.debug("Workspace tabs localStorage migrate failed:", err);
+    }
+    workspaceTabsMigratedRef.current = true;
+  }, [resolvedWorkspaceRoomId, workspaceTabsDefaultKey, workspaceTabsStorageKey]);
+
+  useEffect(() => {
+    if (!resolvedWorkspaceRoomId) return;
+    if (closeAllTabsMigratedRef.current) return;
+    if (!closeAllTabsStorageKey || !closeAllTabsDefaultKey) return;
+    try {
+      const target = window.localStorage.getItem(closeAllTabsStorageKey);
+      const fallback = window.localStorage.getItem(closeAllTabsDefaultKey);
+      if (!target && fallback) {
+        window.localStorage.setItem(closeAllTabsStorageKey, fallback);
+      }
+      if (fallback) {
+        window.localStorage.removeItem(closeAllTabsDefaultKey);
+      }
+    } catch (err) {
+      log.debug("Close-all tabs localStorage migrate failed:", err);
+    }
+    closeAllTabsMigratedRef.current = true;
+  }, [closeAllTabsDefaultKey, closeAllTabsStorageKey, resolvedWorkspaceRoomId]);
+
+  useEffect(() => {
+    if (!resolvedWorkspaceRoomId) return;
+    if (canvasModeMigratedRef.current) return;
+    if (!canvasModeStorageKey || !canvasModeDefaultKey) return;
+    try {
+      const target = window.localStorage.getItem(canvasModeStorageKey);
+      const fallback = window.localStorage.getItem(canvasModeDefaultKey);
+      if (!target && fallback) {
+        window.localStorage.setItem(canvasModeStorageKey, fallback);
+      }
+      if (fallback) {
+        window.localStorage.removeItem(canvasModeDefaultKey);
+      }
+    } catch (err) {
+      log.debug("Canvas mode localStorage migrate failed:", err);
+    }
+    canvasModeMigratedRef.current = true;
+  }, [canvasModeDefaultKey, canvasModeStorageKey, resolvedWorkspaceRoomId]);
 
   // Map workspaces for WorkspaceBar (needs usersViewing, hasChanges, etc.)
   const workspaceBarItems = useMemo(() => {
@@ -624,6 +766,14 @@ export function CIAWebApp({ username, userId, projectId }) {
       });
   }, [workspaces, workspaceOrder, openWorkspaceIds]);
 
+  const openWorkspaceNames = useMemo(() => {
+    const workspaceMap = new Map((workspaces || []).map((ws) => [ws.id, ws]));
+    return openWorkspaceIds
+      .map((id) => workspaceMap.get(id))
+      .filter(Boolean)
+      .map((workspace) => workspace.name || "Untitled Workspace");
+  }, [openWorkspaceIds, workspaces]);
+
   useEffect(() => {
     if (!canvasModeStorageKey) return;
     canvasModeLoadedRef.current = false;
@@ -640,6 +790,7 @@ export function CIAWebApp({ username, userId, projectId }) {
     canvasModeLoadedRef.current = true;
   }, [canvasModeStorageKey]);
 
+
   useEffect(() => {
     if (!canvasModeStorageKey || !canvasModeLoadedRef.current) return;
     try {
@@ -648,6 +799,28 @@ export function CIAWebApp({ username, userId, projectId }) {
       log.debug("Canvas mode localStorage write failed:", err);
     }
   }, [canvasMode, canvasModeStorageKey]);
+
+  useEffect(() => {
+    if (!closeAllTabsStorageKey) return;
+    try {
+      const stored = window.localStorage.getItem(closeAllTabsStorageKey);
+      setSkipCloseAllTabsConfirm(stored === "1");
+    } catch (err) {
+      log.debug("Close-all tabs localStorage read failed:", err);
+    }
+  }, [closeAllTabsStorageKey]);
+
+  useEffect(() => {
+    if (!closeAllTabsStorageKey) return;
+    try {
+      window.localStorage.setItem(
+        closeAllTabsStorageKey,
+        skipCloseAllTabsConfirm ? "1" : "0"
+      );
+    } catch (err) {
+      log.debug("Close-all tabs localStorage write failed:", err);
+    }
+  }, [closeAllTabsStorageKey, skipCloseAllTabsConfirm]);
 
   // Derive voice room ID (voice.currentRoom is a name; match to room ID)
   const voiceRoomId = useMemo(() => {
@@ -1276,6 +1449,14 @@ export function CIAWebApp({ username, userId, projectId }) {
       );
     }
 
+    if (isLoadingRooms && !resolvedWorkspaceRoomId) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+          Preparing workspace...
+        </div>
+      );
+    }
+
     return (
       <CanvasWorkspace
         workspaceId={currentWorkspaceId}
@@ -1294,6 +1475,8 @@ export function CIAWebApp({ username, userId, projectId }) {
     );
   }, [
     phase3Status,
+    isLoadingRooms,
+    resolvedWorkspaceRoomId,
     currentWorkspaceId,
     userId,
     projectId,
@@ -1383,21 +1566,24 @@ export function CIAWebApp({ username, userId, projectId }) {
                     }}
                     onCreateRoom={handleCreateRoom}
                   />
-                  <WorkspaceBar
-                    workspaces={workspaceBarItems}
-                    activeWorkspaceId={currentWorkspaceId}
-                    onSelectWorkspace={handleWorkspaceChange}
-                    onCreateWorkspace={handleCreateWorkspace}
-                    onOpenWorkspace={handleOpenWorkspace}
-                    onCloseWorkspace={handleCloseWorkspace}
-                    onRenameWorkspace={handleRenameWorkspace}
-                    onReorderWorkspaces={handleReorderWorkspaces}
-                    popouts={popouts}
-                    breakouts={breakouts}
-                    canvasMode={canvasMode}
-                    onModeChange={setCanvasMode}
-                    onJoinBreakout={handleJoinBreakout}
-                  />
+                  {canvasMode === 'tabs' && (
+                    <WorkspaceBar
+                      workspaces={workspaceBarItems}
+                      activeWorkspaceId={currentWorkspaceId}
+                      onSelectWorkspace={handleWorkspaceChange}
+                      onCreateWorkspace={handleCreateWorkspace}
+                      onOpenWorkspace={handleOpenWorkspace}
+                      onCloseWorkspace={handleCloseWorkspace}
+                      onCloseAllWorkspaces={handleRequestCloseAllTabs}
+                      onRenameWorkspace={handleRenameWorkspace}
+                      onReorderWorkspaces={handleReorderWorkspaces}
+                      popouts={popouts}
+                      breakouts={breakouts}
+                      canvasMode={canvasMode}
+                      onModeChange={setCanvasMode}
+                      onJoinBreakout={handleJoinBreakout}
+                    />
+                  )}
                 </div>
               }
               // ─────────────────────────────────────────────────────────────
@@ -1464,6 +1650,24 @@ export function CIAWebApp({ username, userId, projectId }) {
                 }
               }}
               availableUsers={roomMembers.filter((m) => !m.isYou)}
+            />
+
+            <ConfirmationDialog
+              isOpen={showCloseAllTabsConfirm}
+              onClose={() => setShowCloseAllTabsConfirm(false)}
+              title="Close all workspace windows?"
+              description="This will close every open workspace window in this room."
+              severity="warning"
+              confirmLabel="Close All"
+              cancelLabel="Cancel"
+              itemList={openWorkspaceNames}
+              showCheckbox={true}
+              checkboxLabel="Don't ask again"
+              checkboxChecked={skipCloseAllTabsConfirm}
+              onCheckboxChange={setSkipCloseAllTabsConfirm}
+              className={isVR ? "confirmation-dialog--vr" : ""}
+              onConfirm={handleConfirmCloseAllTabs}
+              onCancel={() => setShowCloseAllTabsConfirm(false)}
             />
 
             {/* Keyboard Shortcuts Modal (? or ⌘/) */}

@@ -29,7 +29,7 @@ class WorkspaceManagerClass {
     this.pendingByLocalId = new Map(); // localId -> Workspace
 
     // Index by type
-    this.personalWorkspaces = new Map(); // userId -> workspaceId
+    this.personalWorkspaces = new Map(); // userId -> Set<workspaceId>
     this.projectWorkspaces = new Set(); // workspaceIds
     this.breakoutWorkspaces = new Map(); // projectId -> Set<workspaceId>
 
@@ -181,14 +181,17 @@ class WorkspaceManagerClass {
         description: data?.description,
         type: data?.type,
         project_id: data?.projectId || data?.project_id || null,
+        room_id: data?.roomId || data?.room_id || null,
         expires_at: data?.expiresAt || data?.expires_at || null,
         auto_merge: data?.autoMerge ?? data?.auto_merge ?? false,
       };
+      log.debug("WorkspaceManager.createWorkspace payload:", payload);
       const response = await this._fetch("/workspaces", {
         method: "POST",
         body: JSON.stringify(payload),
       });
       const serverData = await response.json();
+      log.debug("WorkspaceManager.createWorkspace response:", serverData);
       const workspace = new Workspace(this._normalizeWorkspaceData(serverData));
       this._upsertWorkspace(workspace);
       this.notify("workspace:created", { workspace, pending: false });
@@ -207,21 +210,44 @@ class WorkspaceManagerClass {
   /**
    * Create personal workspace for user
    */
-  async createPersonalWorkspace(userId, name = "My Workspace") {
-    // Check if user already has a personal workspace
-    if (this.personalWorkspaces.has(userId)) {
-      return this.getWorkspace(this.personalWorkspaces.get(userId));
+  async createPersonalWorkspace(userId, name = "My Workspace", options = {}) {
+    const {
+      allowMultiple = false,
+      projectId = null,
+      roomId = null,
+    } = options || {};
+
+    if (!allowMultiple) {
+      const existing = this.getPersonalWorkspace(userId);
+      if (existing) return existing;
     }
+
     try {
-      const response = await this._fetch("/workspaces/personal");
-      const serverData = await response.json();
-      const workspace = new Workspace(this._normalizeWorkspaceData(serverData));
-      this._upsertWorkspace(workspace);
-      this.notify("workspace:created", { workspace, pending: false });
+      if (!allowMultiple) {
+        const params = new URLSearchParams();
+        if (projectId) params.set("project_id", projectId);
+        const response = await this._fetch(
+          `/workspaces/personal${params.toString() ? `?${params.toString()}` : ""}`
+        );
+        const serverData = await response.json();
+        const workspace = new Workspace(this._normalizeWorkspaceData(serverData));
+        this._upsertWorkspace(workspace);
+        this.notify("workspace:created", { workspace, pending: false });
+        return workspace;
+      }
+
+      const workspace = await this.createWorkspace({
+        name,
+        type: WorkspaceType.PERSONAL,
+        projectId,
+        roomId,
+      });
       return workspace;
     } catch (err) {
       log.error("Failed to load personal workspace from server:", err);
       const workspace = Workspace.createPersonal(userId, name);
+      workspace.projectId = projectId || null;
+      workspace.roomId = roomId || null;
       return this.createWorkspace(workspace.toJSON());
     }
   }
@@ -229,12 +255,13 @@ class WorkspaceManagerClass {
   /**
    * Create project workspace
    */
-  async createProjectWorkspace(name, description = "", projectId = null) {
+  async createProjectWorkspace(name, description = "", projectId = null, roomId = null) {
     return this.createWorkspace({
       name,
       description,
       type: WorkspaceType.PROJECT,
       projectId: projectId || null,
+      roomId: roomId || null,
     });
   }
 
@@ -285,9 +312,32 @@ class WorkspaceManagerClass {
   /**
    * Get personal workspace for user
    */
+  getPersonalWorkspaces(userId) {
+    const ids = this.personalWorkspaces.get(userId);
+    if (!ids || ids.size === 0) return [];
+    const workspaces = Array.from(ids)
+      .map((id) => this.getWorkspace(id))
+      .filter(Boolean);
+
+    const normalizeName = (value) => (value || "").trim().toLowerCase();
+    const hasPrimaryName = (ws) =>
+      normalizeName(ws.name) === "my workspace";
+
+    return workspaces.sort((a, b) => {
+      const aPrimary = hasPrimaryName(a);
+      const bPrimary = hasPrimaryName(b);
+      if (aPrimary !== bPrimary) return aPrimary ? -1 : 1;
+      const aCreated = new Date(a.createdAt || 0).getTime();
+      const bCreated = new Date(b.createdAt || 0).getTime();
+      return aCreated - bCreated;
+    });
+  }
+
+  /**
+   * Get primary personal workspace for user
+   */
   getPersonalWorkspace(userId) {
-    const id = this.personalWorkspaces.get(userId);
-    return id ? this.getWorkspace(id) : null;
+    return this.getPersonalWorkspaces(userId)[0] || null;
   }
 
   /**
@@ -317,12 +367,21 @@ class WorkspaceManagerClass {
     const workspace = this.getWorkspace(id);
     if (!workspace) return null;
     try {
+      const payload = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.description !== undefined) payload.description = updates.description;
+      if (updates.roomId !== undefined || updates.room_id !== undefined) {
+        payload.room_id = updates.roomId ?? updates.room_id;
+      }
+      if (updates.canvasIds !== undefined || updates.canvas_ids !== undefined) {
+        payload.canvas_ids = updates.canvasIds ?? updates.canvas_ids;
+      }
+      if (updates.activeCanvasId !== undefined || updates.active_canvas_id !== undefined) {
+        payload.active_canvas_id = updates.activeCanvasId ?? updates.active_canvas_id;
+      }
       const response = await this._fetch(`/workspaces/${id}`, {
         method: "PUT",
-        body: JSON.stringify({
-          name: updates.name,
-          description: updates.description,
-        }),
+        body: JSON.stringify(payload),
       });
       const serverData = await response.json();
       const normalized = this._normalizeWorkspaceData({
@@ -496,7 +555,10 @@ class WorkspaceManagerClass {
 
     workspace.addCanvas(canvasId);
 
-    // TODO: Sync to server
+    await this.updateWorkspace(workspaceId, {
+      canvasIds: workspace.canvasIds,
+      activeCanvasId: workspace.activeCanvasId,
+    });
     this.notify("workspace:canvas-added", { workspace, canvasId });
 
     return workspace;
@@ -511,7 +573,10 @@ class WorkspaceManagerClass {
 
     workspace.removeCanvas(canvasId);
 
-    // TODO: Sync to server
+    await this.updateWorkspace(workspaceId, {
+      canvasIds: workspace.canvasIds,
+      activeCanvasId: workspace.activeCanvasId,
+    });
     this.notify("workspace:canvas-removed", { workspace, canvasId });
 
     return workspace;
@@ -580,7 +645,10 @@ class WorkspaceManagerClass {
 
     switch (workspace.type) {
       case WorkspaceType.PERSONAL:
-        this.personalWorkspaces.set(workspace.ownerId, id);
+        if (!this.personalWorkspaces.has(workspace.ownerId)) {
+          this.personalWorkspaces.set(workspace.ownerId, new Set());
+        }
+        this.personalWorkspaces.get(workspace.ownerId).add(id);
         break;
       case WorkspaceType.PROJECT:
         this.projectWorkspaces.add(id);
@@ -602,8 +670,12 @@ class WorkspaceManagerClass {
 
     switch (type) {
       case WorkspaceType.PERSONAL:
-        if (this.personalWorkspaces.get(workspace.ownerId) === id) {
-          this.personalWorkspaces.delete(workspace.ownerId);
+        if (this.personalWorkspaces.has(workspace.ownerId)) {
+          const ids = this.personalWorkspaces.get(workspace.ownerId);
+          ids.delete(id);
+          if (ids.size === 0) {
+            this.personalWorkspaces.delete(workspace.ownerId);
+          }
         }
         break;
       case WorkspaceType.PROJECT:
@@ -624,10 +696,19 @@ class WorkspaceManagerClass {
   async loadWorkspaces(userId, projectId = null, roomId = null) {
     try {
       this._resetCaches();
+      log.debug("WorkspaceManager.loadWorkspaces params:", {
+        userId,
+        projectId,
+        roomId,
+      });
 
       let personalWorkspace = null;
       try {
-        const personalResponse = await this._fetch("/workspaces/personal");
+        const personalParams = new URLSearchParams();
+        if (projectId) personalParams.set("project_id", projectId);
+        const personalResponse = await this._fetch(
+          `/workspaces/personal${personalParams.toString() ? `?${personalParams.toString()}` : ""}`
+        );
         const personalData = await personalResponse.json();
         personalWorkspace = new Workspace(
           this._normalizeWorkspaceData(personalData)
@@ -645,7 +726,40 @@ class WorkspaceManagerClass {
         `/workspaces${params.toString() ? `?${params.toString()}` : ""}`
       );
       const data = await response.json();
-      const serverWorkspaces = data.workspaces || [];
+      log.debug("WorkspaceManager.loadWorkspaces response:", data);
+      let serverWorkspaces = data.workspaces || [];
+
+      if (roomId && serverWorkspaces.length === 0) {
+        try {
+          const fallbackParams = new URLSearchParams();
+          if (projectId) fallbackParams.set("project_id", projectId);
+          const fallbackResponse = await this._fetch(
+            `/workspaces${fallbackParams.toString() ? `?${fallbackParams.toString()}` : ""}`
+          );
+          const fallbackData = await fallbackResponse.json();
+          const fallbackWorkspaces = fallbackData.workspaces || [];
+          if (fallbackWorkspaces.length > 0) {
+            const roomless = fallbackWorkspaces.filter((ws) => !ws.room_id && !ws.roomId);
+            serverWorkspaces = roomless.length > 0 ? roomless : fallbackWorkspaces;
+            await Promise.all(
+              serverWorkspaces.map(async (workspace) => {
+                try {
+                  if (!workspace.room_id && !workspace.roomId) {
+                    await this.updateWorkspace(workspace.id, { roomId });
+                  }
+                } catch (err) {
+                  log.debug(
+                    `Failed to assign room for workspace ${workspace.id}:`,
+                    err
+                  );
+                }
+              })
+            );
+          }
+        } catch (err) {
+          log.debug("Workspace fallback load failed:", err);
+        }
+      }
 
       const workspaceList = [];
       serverWorkspaces.forEach((row) => {
@@ -653,6 +767,10 @@ class WorkspaceManagerClass {
         this._upsertWorkspace(workspace);
         workspaceList.push(workspace);
       });
+
+      if (personalWorkspace && !workspaceList.find((ws) => ws.id === personalWorkspace.id)) {
+        workspaceList.push(personalWorkspace);
+      }
 
       await Promise.all(
         workspaceList.map(async (workspace) => {
@@ -667,6 +785,17 @@ class WorkspaceManagerClass {
             workspace.canvasIds = canvasIds;
             if (!workspace.activeCanvasId && canvasIds.length > 0) {
               workspace.activeCanvasId = canvasIds[0];
+              try {
+                await this.updateWorkspace(workspace.id, {
+                  canvasIds: workspace.canvasIds,
+                  activeCanvasId: workspace.activeCanvasId,
+                });
+              } catch (error) {
+                log.debug(
+                  `Failed to persist active canvas for workspace ${workspace.id}:`,
+                  error
+                );
+              }
             }
           } catch (err) {
             log.debug(

@@ -43,6 +43,7 @@ export const Default = {
         viewportSize: { cols: 2, rows: 2 },
         viewportPosition: { col: 1, row: 1 },
         containerWidth: 1200,
+        hasActiveView: true,
         links: mockLinks,
         isVRAvailable: true,
         isInVR: false,

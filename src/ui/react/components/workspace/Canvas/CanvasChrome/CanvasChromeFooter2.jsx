@@ -58,6 +58,7 @@ const IconButton = memo(function IconButton({ icon, title, active, color, onClic
 
 export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
     containerWidth,
+    hasActiveView = true,
     links,
     onUpdateLink,
     onOpenLinkManager,
@@ -150,6 +151,7 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
                     className="canvas-footer2__links-compact"
                     onClick={() => setLinksOpen((prev) => !prev)}
                     aria-expanded={linksOpen}
+                    disabled={!hasActiveView}
                 >
                     <Icon name="link" size={14} />
                     <span className="canvas-footer2__links-count">{activeLinkCount}</span>
@@ -164,6 +166,7 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
                             style={{ '--link-color': `var(--color-accent-${link.color})` }}
                             onClick={() => handleToggleLink(link)}
                             title={link.label}
+                            disabled={!hasActiveView}
                         >
                             <Icon name={link.icon} size={14} />
                         </button>
@@ -171,7 +174,7 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
                 </div>
             )}
         </div>
-    ), [activeLinkCount, handleToggleLink, linkStates, linksCompact, linksOpen]);
+    ), [activeLinkCount, handleToggleLink, hasActiveView, linkStates, linksCompact, linksOpen]);
 
     const sections = useMemo(() => ([
         {
@@ -180,8 +183,17 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
             color: 'cyan',
             content: (
                 <div className="canvas-footer2__group">
-                    <IconButton icon="maximize" title="Focus View" onClick={onToggleFocus} />
-                    <IconButton icon="list" title="View List" onClick={onOpenViewList} />
+                    <IconButton
+                        icon="maximize"
+                        title="Focus View"
+                        onClick={onToggleFocus}
+                        disabled={!hasActiveView}
+                    />
+                    <IconButton
+                        icon="list"
+                        title={hasActiveView ? 'View List' : 'Select a view to enable tools'}
+                        onClick={onOpenViewList}
+                    />
                 </div>
             ),
         },
@@ -191,10 +203,10 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
             color: 'amber',
             content: (
                 <div className="canvas-footer2__group">
-                    <IconButton icon="camera" title="Snapshot" onClick={onSnapshot} />
-                    <IconButton icon="rotateCcw" title="Reset View" onClick={onResetView} />
-                    <IconButton icon="copy" title="Copy" onClick={onCopyView} />
-                    <IconButton icon="settings" title="Settings" onClick={onOpenSettings} />
+                    <IconButton icon="camera" title="Snapshot" onClick={onSnapshot} disabled={!hasActiveView} />
+                    <IconButton icon="rotateCcw" title="Reset View" onClick={onResetView} disabled={!hasActiveView} />
+                    <IconButton icon="copy" title="Copy" onClick={onCopyView} disabled={!hasActiveView} />
+                    <IconButton icon="settings" title="Settings" onClick={onOpenSettings} disabled={!hasActiveView} />
                 </div>
             ),
         },
@@ -209,18 +221,21 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
                         title="Visibility"
                         active={effectiveVisibility}
                         onClick={() => handleToggle(effectiveVisibility, onToggleVisibility, setLocalVisibility)}
+                        disabled={!hasActiveView}
                     />
                     <IconButton
                         icon="cube"
                         title="Orientation"
                         active={effectiveOrientation}
                         onClick={() => handleToggle(effectiveOrientation, onToggleOrientation, setLocalOrientation)}
+                        disabled={!hasActiveView}
                     />
                     <IconButton
                         icon="layers"
                         title="Overlays"
                         active={effectiveOverlays}
                         onClick={() => handleToggle(effectiveOverlays, onToggleOverlays, setLocalOverlays)}
+                        disabled={!hasActiveView}
                     />
                 </div>
             ),
@@ -243,12 +258,14 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
                         active={isInVR}
                         color="purple"
                         onClick={onToggleVR}
+                        disabled={!hasActiveView}
                     />
                 </div>
             ),
         }] : []),
     ]), [
         activeLinkCount,
+        hasActiveView,
         effectiveOrientation,
         effectiveOverlays,
         effectiveVisibility,
@@ -435,6 +452,7 @@ export const CanvasChromeFooter2 = memo(function CanvasChromeFooter2({
                                 className={`canvas-footer2__links-panel-item ${link.active ? 'is-active' : ''}`}
                                 style={{ '--link-color': `var(--color-accent-${link.color})` }}
                                 onClick={() => handleToggleLink(link)}
+                                disabled={!hasActiveView}
                             >
                                 <span className="canvas-footer2__links-panel-icon">
                                     <Icon name={link.icon} size={14} />

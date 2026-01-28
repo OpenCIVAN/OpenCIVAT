@@ -42,6 +42,7 @@ const WorkspaceBar = memo(function WorkspaceBar({
     onClosePopout,
     onTileAllPopouts,
     onCloseAllPopouts,
+    onCloseAllWorkspaces,
     // Layout props (injected by ThreeEdgeLayout cloneElement)
     style,
     ...layoutProps
@@ -207,6 +208,15 @@ const WorkspaceBar = memo(function WorkspaceBar({
                                     }));
                                 }}
                             />
+                            {onCloseAllWorkspaces && (
+                                <IconButton
+                                    icon="x"
+                                    label="Close all windows"
+                                    tooltip="Close all windows"
+                                    size="sm"
+                                    onClick={() => onCloseAllWorkspaces()}
+                                />
+                            )}
                         </div>
                     )}
                 </div>
@@ -304,6 +314,7 @@ WorkspaceBar.propTypes = {
     onClosePopout: PropTypes.func,
     onTileAllPopouts: PropTypes.func,
     onCloseAllPopouts: PropTypes.func,
+    onCloseAllWorkspaces: PropTypes.func,
     style: PropTypes.object,
 };
 

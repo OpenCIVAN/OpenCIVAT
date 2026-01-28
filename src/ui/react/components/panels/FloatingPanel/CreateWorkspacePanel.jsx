@@ -18,7 +18,7 @@
  * />
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { PriorityPanel } from './PriorityPanel';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import './CreateWorkspacePanel.scss';
@@ -34,6 +34,13 @@ const WORKSPACE_TYPES = [
         label: 'Project Workspace',
         description: 'Shared workspace for team collaboration',
         color: 'blue',
+    },
+    {
+        id: 'personal',
+        icon: 'user',
+        label: 'Scratch Pad',
+        description: 'Personal workspace for quick experiments',
+        color: 'green',
     },
     {
         id: 'breakout',
@@ -52,6 +59,9 @@ export function CreateWorkspacePanel({
     isOpen,
     onClose,
     onCreate,
+    initialType = 'project',
+    initialNamePrefix,
+    allowedTypes = null,
     userId,
     projectId,
 }) {
@@ -79,13 +89,30 @@ export function CreateWorkspacePanel({
                 minute: '2-digit',
                 hour12: false,
             });
-            setName(`Workspace ${timestamp}`);
+            const resolvedPrefix = initialNamePrefix
+                || (initialType === 'breakout'
+                    ? 'Breakout'
+                    : initialType === 'personal'
+                        ? 'Scratch Pad'
+                        : 'Workspace');
+            setName(`${resolvedPrefix} ${timestamp}`);
             setDescription('');
-            setWorkspaceType('project');
+            const allowedList = Array.isArray(allowedTypes) && allowedTypes.length > 0
+                ? allowedTypes
+                : null;
+            const nextType = allowedList?.includes(initialType) ? initialType : (allowedList?.[0] || initialType || 'project');
+            setWorkspaceType(nextType);
             setErrors({});
             setIsCreating(false);
         }
-    }, [isOpen]);
+    }, [allowedTypes, initialNamePrefix, initialType, isOpen]);
+
+    const workspaceTypeOptions = useMemo(() => {
+        if (Array.isArray(allowedTypes) && allowedTypes.length > 0) {
+            return WORKSPACE_TYPES.filter((type) => allowedTypes.includes(type.id));
+        }
+        return WORKSPACE_TYPES;
+    }, [allowedTypes]);
 
     // ---------------------------------------------------------------------------
     // VALIDATION
@@ -249,7 +276,7 @@ export function CreateWorkspacePanel({
                 <div className="form-field">
                     <label className="form-field__label">Workspace Type</label>
                     <div className="workspace-type-selector">
-                        {WORKSPACE_TYPES.map((type) => {
+                        {workspaceTypeOptions.map((type) => {
                             const isSelected = workspaceType === type.id;
                             return (
                                 <button
