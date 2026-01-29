@@ -58,6 +58,7 @@ import {
   useInstanceToolsFloating,
 } from "@UI/react/components/panels/FloatingPanel";
 import { PanelShellProvider } from "@UI/react/components/panels/PanelShell";
+import { CanvasMapPanel } from "@UI/react/components/panels/CanvasMapPanel";
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 import { FloatingCanvasNavigator, useNavigatorButton } from "@UI/react/components/panels/LayoutPanel";
 import { CanvasOperationsPanel } from "@UI/react/components/panels/FloatingPanel/CanvasOperationsPanel";
@@ -1530,6 +1531,13 @@ export function CIAWebApp({ username, userId, projectId }) {
         return;
       }
 
+      // M = Toggle Canvas Map Panel (not in inputs)
+      if (e.key === 'm' && !isInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('cia:toggle-canvas-map'));
+        return;
+      }
+
       // ⌘/Ctrl + Z = Undo
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
@@ -1741,6 +1749,9 @@ export function CIAWebApp({ username, userId, projectId }) {
               {/* Floating panels rendered inside LayoutContext */}
               <AllFloatingPanels workspaceId={currentWorkspaceId} />
               <FloatingCanvasNavigator />
+
+              {/* Canvas Map Panel (PanelShell floating panel) */}
+              <CanvasMapPanel workspaceId={currentWorkspaceId} />
 
               {/* Canvas Operations Panel */}
               <CanvasOperationsPanel

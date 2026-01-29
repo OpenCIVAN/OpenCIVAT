@@ -1,0 +1,77 @@
+/**
+ * CollaboratorIndicator Styles
+ */
+
+@use "theme" as *;
+
+.collaborator-indicator {
+  position: relative;
+  border: 2px solid var(--collab-color);
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, var(--collab-color) 10%, transparent);
+  pointer-events: none;
+  z-index: 5;
+
+  &--broadcasting {
+    animation: broadcast-pulse 2s ease-in-out infinite;
+    border-style: double;
+    border-width: 4px;
+  }
+
+  &__avatar {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 20px;
+    height: 20px;
+    background: var(--collab-color);
+    border: 2px solid $color-bg-secondary;
+    border-radius: $radius-full;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    z-index: 1;
+  }
+
+  &__broadcast {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    background: $color-accent-red;
+    color: white;
+    border-radius: $radius-full;
+    padding: 2px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  &__name {
+    position: absolute;
+    bottom: 2px;
+    right: $spacing-xs;
+    font-size: 8px;
+    font-weight: $font-weight-semibold;
+    color: var(--collab-color);
+    background: color-mix(in srgb, $color-bg-secondary 90%, transparent);
+    padding: 1px $spacing-xs;
+    border-radius: $radius-xs;
+  }
+}
+
+@keyframes broadcast-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--collab-color) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 12px 4px color-mix(in srgb, var(--collab-color) 20%, transparent);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

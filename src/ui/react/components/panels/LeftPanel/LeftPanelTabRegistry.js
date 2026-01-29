@@ -25,6 +25,8 @@ import { NavigatorTab as NavigatorPanelContent } from "./tabs/NavigatorTab";
 import { AnnotationsPanelContent } from "./tabs/AnnotationsTab";
 import { BookmarksFiltersPanelContent } from "./tabs/BookmarksFiltersTab";
 import { CursorsPanelContent } from "./tabs/CursorsTab";
+// NOTE: CanvasMapTab has been migrated to CanvasMapPanel (PanelShell floating panel)
+// import { CanvasMapPanel } from '@UI/react/components/panels/CanvasMapPanel';
 
 // =============================================================================
 // REGISTER ALL TAB COMPONENTS
@@ -49,5 +51,5 @@ registerLeftPanelTab("cursors", CursorsPanelContent);
 
 // Log registration status in development
 if (process.env.NODE_ENV === "development") {
-  console.log("[LeftPanel] All 9 tab components registered");
+  console.log("[LeftPanel] All 9 tab components registered (CanvasMap migrated to PanelShell)");
 }

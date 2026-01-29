@@ -1,0 +1,80 @@
+/**
+ * ModeToolbar Styles
+ */
+
+@use "theme" as *;
+
+.mode-toolbar {
+  --accent-purple: #{$color-accent-purple};
+  --accent-blue: #{$color-accent-blue};
+  --accent-cyan: #{$color-accent-cyan};
+  --accent-green: #{$color-accent-green};
+  --accent-amber: #{$color-accent-amber};
+  --accent-teal: #{$color-accent-teal};
+  --accent-red: #{$color-accent-red};
+
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 6px $spacing-sm;
+  border-bottom: 1px solid $color-border-subtle;
+  background: $color-bg-tertiary;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: color-mix(in srgb, var(--active-color, $color-accent-purple) 20%, transparent);
+      color: var(--active-color, $color-accent-purple);
+
+      &:hover {
+        background: color-mix(in srgb, var(--active-color, $color-accent-purple) 30%, transparent);
+      }
+    }
+
+    &[data-vr="true"] {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  &__separator {
+    width: 1px;
+    height: 16px;
+    margin: 0 $spacing-xs;
+    background: $color-border-default;
+  }
+
+  &__zoom-value {
+    font-size: 9px;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+    min-width: 28px;
+    text-align: center;
+  }
+
+  // ToggleGroup molecule is used - these styles override for compact toolbar context
+  .toggle-group {
+    margin-left: 2px;
+  }
+}

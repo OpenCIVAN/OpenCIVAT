@@ -1,0 +1,92 @@
+/**
+ * VGListItem Styles
+ * Follows NavigatorTab styling with frosted glass effects.
+ */
+
+@use "theme" as *;
+
+.vg-list-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm;
+  margin-bottom: $spacing-xs;
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  // Subtle inner shadow for depth
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    background: $color-glass-medium;
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--vg-color, $color-accent-purple);
+    outline-offset: 1px;
+  }
+
+  &--selected {
+    background: color-mix(in srgb, var(--vg-color) 20%, $color-glass-subtle);
+    border-color: var(--vg-color);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.1),
+      0 0 6px color-mix(in srgb, var(--vg-color) 30%, transparent);
+  }
+
+  &--inactive {
+    opacity: 0.6;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  &__name {
+    flex: 1;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__position {
+    font-size: $font-size-xs;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+    padding: 2px $spacing-xs;
+    background: $color-glass-subtle;
+    border-radius: $radius-xs;
+  }
+
+  &__count {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  &__restore {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, $color-accent-blue 20%, transparent);
+    color: $color-accent-blue;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: color-mix(in srgb, $color-accent-blue 30%, transparent);
+    }
+  }
+}

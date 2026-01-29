@@ -120,6 +120,8 @@ export const LEFT_PANEL_TABS = [
         group: 'presence',
         contentComponent: 'CursorsPanelContent',
     },
+    // NOTE: Canvas Map has been migrated to CanvasMapPanel (PanelShell floating panel)
+    // Use: import { CanvasMapPanel } from '@UI/react/components/panels/CanvasMapPanel';
 ];
 
 /**
@@ -129,6 +131,7 @@ export const LEFT_PANEL_DIVIDERS_AFTER = ['datasets', 'navigator', 'bookmarks'];
 
 /**
  * Keyboard shortcuts for tabs (per spec Section 13)
+ * Note: Canvas Map (m) shortcut should be handled by PanelShell for CanvasMapPanel
  */
 export const LEFT_PANEL_SHORTCUTS = {
     f: 'files',
@@ -140,6 +143,7 @@ export const LEFT_PANEL_SHORTCUTS = {
     a: 'annotations',
     'shift+b': 'bookmarks',
     c: 'cursors',
+    // m: 'canvasmap' - migrated to CanvasMapPanel (PanelShell)
 };
 
 // =============================================================================

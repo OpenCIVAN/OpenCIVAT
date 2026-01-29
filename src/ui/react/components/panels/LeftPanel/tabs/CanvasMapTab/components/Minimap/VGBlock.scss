@@ -1,0 +1,90 @@
+/**
+ * VGBlock Styles
+ * Follows NavigatorTab cell styling with frosted glass effects.
+ */
+
+@use "theme" as *;
+
+.vg-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  // Frosted glass effect with color mixing
+  background: color-mix(in srgb, var(--vg-color) 30%, $color-bg-secondary);
+  border: 2px solid var(--vg-color);
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  overflow: hidden;
+  // Inner glow for depth - matching NavigatorTab
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.2),
+    0 0 4px color-mix(in srgb, var(--vg-color) 30%, transparent);
+
+  &:hover {
+    background: color-mix(in srgb, var(--vg-color) 40%, $color-bg-secondary);
+    border-color: var(--vg-color);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.2),
+      0 0 8px color-mix(in srgb, var(--vg-color) 50%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-text-primary;
+    outline-offset: 2px;
+  }
+
+  // Selected state
+  &--selected {
+    background: color-mix(in srgb, var(--vg-color) 45%, $color-bg-secondary);
+    border-color: var(--vg-color);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.2),
+      0 0 10px color-mix(in srgb, var(--vg-color) 60%, transparent);
+  }
+
+  // Ghosted state (for links mode highlighting)
+  &--ghosted {
+    opacity: 0.4;
+    background: color-mix(in srgb, var(--vg-color) 10%, $color-bg-secondary);
+    border-color: color-mix(in srgb, var(--vg-color) 30%, transparent);
+    box-shadow: none;
+  }
+
+  // Implicit VG (dashed border)
+  &--implicit {
+    border-style: dashed;
+  }
+
+  &__name {
+    padding: $spacing-xs 6px;
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  &__internals {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  &__internal-cell {
+    position: absolute;
+    border-radius: $radius-xs;
+    background: color-mix(in srgb, var(--vg-color) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--vg-color) 30%, transparent);
+
+    &--filled {
+      background: color-mix(in srgb, var(--vg-color) 40%, transparent);
+      border-color: color-mix(in srgb, var(--vg-color) 60%, transparent);
+    }
+  }
+}
