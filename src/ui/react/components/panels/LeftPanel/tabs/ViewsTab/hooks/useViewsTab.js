@@ -29,6 +29,7 @@ import { dispatchNavigateTo } from "@UI/react/hooks/useViewportSync.js";
 import { view as log } from "@Utils/logger.js";
 import { getCellColorHex } from "@UI/react/utils/canvasColors.js";
 import { canvasHistory } from "@UI/react/store/canvasHistoryStore.js";
+import { useListFilter, VIEWS_FILTER_CONFIG } from "@UI/react/hooks";
 
 // =============================================================================
 // VIEW MODES
@@ -204,13 +205,20 @@ export function useViewsTab({ workspaceId }) {
 
   const [views, setViews] = useState([]);
   const [trashedViews, setTrashedViews] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState(["active", "inactive"]);
   const [viewMode, setViewMode] = useState(VIEW_MODES.BY_STATUS);
-  const [sortBy, setSortBy] = useState("name");
   const [expandedDatasets, setExpandedDatasets] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // =========================================================================
+  // UNIFIED FILTER SYSTEM
+  // =========================================================================
+
+  const filter = useListFilter({
+    ...VIEWS_FILTER_CONFIG,
+    // Override search fields to match view structure
+    searchFields: (view) => [view.name, view.datasetName],
+  });
 
   // =========================================================================
   // LOAD VIEWS - Called on mount and when events fire
@@ -316,57 +324,30 @@ export function useViewsTab({ workspaceId }) {
   }, [loadViews]);
 
   // =========================================================================
-  // FILTERED & SORTED VIEWS
+  // FILTERED & SORTED VIEWS - Using unified filter system
   // =========================================================================
 
   const filteredViews = useMemo(() => {
-    let result = [...views];
+    // Apply unified filter system
+    let result = filter.applyFilters(views);
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (v) =>
-          v.name?.toLowerCase().includes(query) ||
-          v.datasetName?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply status filters
-    if (activeFilters.length > 0 && !activeFilters.includes("all")) {
+    // Quick filters in Views tab work as OR filters for status
+    // If quick filters are active, apply them as status filters
+    if (filter.quickFilters.length > 0) {
       result = result.filter((v) => {
-        if (activeFilters.includes("active") && v.status === "active")
-          return true;
-        if (activeFilters.includes("inactive") && v.status === "inactive")
-          return true;
-        if (activeFilters.includes("shared") && v.isShared) return true;
-        if (activeFilters.includes("linked") && v.isLinked) return true;
-        return false;
+        // If any quick filter matches, include the view
+        return filter.quickFilters.some((filterId) => {
+          if (filterId === "active") return v.status === "active" || v.isOnCanvas;
+          if (filterId === "inactive") return v.status === "inactive" && !v.isOnCanvas;
+          if (filterId === "shared") return v.isShared;
+          if (filterId === "linked") return v.isLinked || v.hasLinks;
+          return false;
+        });
       });
     }
 
-    // Apply sorting
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return (a.name || "").localeCompare(b.name || "");
-        case "position":
-          const posA = a.position || { row: 999, col: 999 };
-          const posB = b.position || { row: 999, col: 999 };
-          return posA.row !== posB.row
-            ? posA.row - posB.row
-            : posA.col - posB.col;
-        case "recent":
-          return (b.updatedAt || 0) - (a.updatedAt || 0);
-        case "dataset":
-          return (a.datasetName || "").localeCompare(b.datasetName || "");
-        default:
-          return 0;
-      }
-    });
-
     return result;
-  }, [views, searchQuery, activeFilters, sortBy]);
+  }, [views, filter]);
 
   // =========================================================================
   // CATEGORIZED VIEWS
@@ -416,16 +397,13 @@ export function useViewsTab({ workspaceId }) {
   }, [filteredViews]);
 
   // =========================================================================
-  // FILTER TOGGLE
+  // FILTER TOGGLE - Now uses unified filter system
   // =========================================================================
 
+  // Legacy toggle for backwards compatibility
   const toggleFilter = useCallback((filterId) => {
-    setActiveFilters((prev) =>
-      prev.includes(filterId)
-        ? prev.filter((f) => f !== filterId)
-        : [...prev, filterId]
-    );
-  }, []);
+    filter.toggleQuickFilter(filterId);
+  }, [filter]);
 
   // =========================================================================
   // DATASET EXPANSION
@@ -698,19 +676,25 @@ export function useViewsTab({ workspaceId }) {
     recentlyDeletedViews,
     viewsByDataset,
 
+    // Unified filter system
+    filter,
+    filterConfig: VIEWS_FILTER_CONFIG,
+
     // State
     isLoading,
     error,
-    searchQuery,
-    setSearchQuery,
-    activeFilters,
-    toggleFilter,
     viewMode,
     setViewMode,
-    sortBy,
-    setSortBy,
     expandedDatasets,
     toggleDatasetExpanded,
+
+    // Legacy filter props (backwards compatibility)
+    searchQuery: filter.searchQuery,
+    setSearchQuery: filter.setSearchQuery,
+    activeFilters: filter.quickFilters,
+    toggleFilter,
+    sortBy: filter.sortBy,
+    setSortBy: filter.setSortBy,
 
     // Handlers - all using ViewLifecycleService
     handlePlaceView,

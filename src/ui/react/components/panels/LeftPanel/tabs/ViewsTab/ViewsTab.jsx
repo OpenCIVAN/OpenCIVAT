@@ -20,10 +20,8 @@
 import React, { useMemo, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms';
 import { LabeledButton } from '@UI/react/components/molecules';
-import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import { PanelHeader } from '../../components/PanelHeader';
-import { SectionNavGroup } from '@UI/react/components/organisms';
-import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
+import { SectionNavGroup, FilterToolbar } from '@UI/react/components/organisms';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { ViewItem, InactiveViewItem, TrashedViewItem } from '@UI/react/components/molecules/ViewItem';
 import {
@@ -34,17 +32,6 @@ import {
 import { useViewsTab, VIEW_MODES } from './hooks/useViewsTab';
 import { viewLifecycleService } from '@Services';
 import './ViewsTab.scss';
-
-// =============================================================================
-// FILTER CONFIGURATION
-// =============================================================================
-
-const VIEW_FILTERS = [
-    { id: 'active', label: 'Active', color: 'green' },
-    { id: 'inactive', label: 'Inactive', color: 'gray' },
-    { id: 'shared', label: 'Shared', color: 'pink' },
-    { id: 'linked', label: 'Linked', color: 'teal' },
-];
 
 // =============================================================================
 // VIEW MODE BUTTONS
@@ -163,10 +150,8 @@ export function ViewsPanelContent({ workspaceId }) {
         notPlacedViews,
         recentlyDeletedViews,
         viewsByDataset,
-        searchQuery,
-        setSearchQuery,
-        activeFilters,
-        toggleFilter,
+        filter,
+        filterConfig,
         viewMode,
         setViewMode,
         expandedDatasets,
@@ -489,16 +474,8 @@ export function ViewsPanelContent({ workspaceId }) {
                 <span className="panel-header__title">Views</span>
             </div>
 
-            {/* Search */}
-            <SearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Search views..."
-            />
-
             {/* Filters Toolbar */}
             <div className="views-tab__toolbar">
-
                 {/* View Mode Toggle */}
                 <div className="views-tab__mode-toggle">
                     {VIEW_MODE_OPTIONS.map(({ id, icon, label }) => (
@@ -513,15 +490,13 @@ export function ViewsPanelContent({ workspaceId }) {
                     ))}
                 </div>
 
-                {/* Filter Chips */}
-                <div className="views-tab__filters">
-                    <ChipGroup
-                        chips={VIEW_FILTERS}
-                        activeChips={activeFilters}
-                        onToggle={toggleFilter}
-                        size="sm"
-                    />
-                </div>
+                {/* Filter System */}
+                <FilterToolbar
+                    filter={filter}
+                    config={filterConfig}
+                    showQuickFilters={true}
+                    searchPlaceholder="Search views..."
+                />
             </div>
 
             {/* Content - varies by view mode */}

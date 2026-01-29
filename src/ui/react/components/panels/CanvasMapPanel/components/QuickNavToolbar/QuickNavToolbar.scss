@@ -1,0 +1,78 @@
+/**
+ * QuickNavToolbar Styles
+ */
+
+@use "theme" as *;
+
+.quick-nav-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-sm;
+  background: $color-bg-secondary;
+  border-right: 1px solid $color-border-subtle;
+
+  &--right {
+    border-right: none;
+    border-left: 1px solid $color-border-subtle;
+  }
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: $spacing-xs 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid $color-border-subtle;
+    }
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
+      color: $color-accent-blue;
+    }
+
+    &--companion {
+      &.quick-nav-toolbar__btn--active {
+        background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+        border-color: color-mix(in srgb, $color-accent-purple 40%, transparent);
+        color: $color-accent-purple;
+      }
+    }
+
+    &[data-vr="true"] {
+      width: 44px;
+      height: 44px;
+    }
+  }
+}

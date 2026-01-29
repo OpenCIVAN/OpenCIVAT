@@ -14,6 +14,7 @@ import { useComputeJobs } from "@UI/react/hooks/useComputeJobs.js";
 import { useDatasets } from "@UI/react/hooks/useDatasets.js";
 import { useDatasetManager } from "@UI/react/hooks/useDatasetManager.js";
 import { useSectionStates } from "@UI/react/components/organisms/ResizableSections";
+import { useListFilter, FILES_FILTER_CONFIG } from "@UI/react/hooks";
 import { formatFileSize } from "@Utils/formatters.js";
 import { getHandlerForFileType } from "@Core/instances/types/instanceTypesInit.js";
 import { instanceTypeRegistry } from "@Core/instances/types/instanceTypeRegistry.js";
@@ -55,9 +56,12 @@ export function useFilesTab({
 }) {
   // View state
   const [viewMode, setViewMode] = useState("list");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeFilters, setActiveFilters] = useState({ types: [] });
+
+  // Unified filter system
+  const filter = useListFilter({
+    ...FILES_FILTER_CONFIG,
+    searchFields: (file) => [file.name],
+  });
 
   // Selection and expansion state
   const [selectedFileId, setSelectedFileId] = useState(null);
@@ -236,23 +240,24 @@ export function useFilesTab({
     return Array.from(types);
   }, []);
 
-  // Filter files
+  // Filter files using unified filter system
   const filteredFiles = useMemo(() => {
-    let result = files;
+    let result = filter.applyFilters(files);
 
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter((f) => f.name?.toLowerCase().includes(query));
-    }
-
-    // Type filter
-    if (activeFilters.types.length > 0) {
-      result = result.filter((f) => activeFilters.types.includes(f.fileType));
+    // Apply quick filters (OR logic for file status)
+    if (filter.quickFilters.length > 0) {
+      result = result.filter((file) => {
+        return filter.quickFilters.some((filterId) => {
+          if (filterId === "starred") return file.starred;
+          if (filterId === "loaded") return file.loaded;
+          if (filterId === "stored") return !file.loaded;
+          return true;
+        });
+      });
     }
 
     return result;
-  }, [files, searchQuery, activeFilters]);
+  }, [files, filter]);
 
   // Handlers
   const toggleFolder = useCallback((id) => {
@@ -467,19 +472,6 @@ export function useFilesTab({
     [submitJob, handleStar, loadedDatasets, datasetManager, addToWorkspace, removeFromWorkspace]
   );
 
-  const toggleTypeFilter = useCallback((type) => {
-    setActiveFilters((prev) => ({
-      ...prev,
-      types: prev.types.includes(type)
-        ? prev.types.filter((t) => t !== type)
-        : [...prev.types, type],
-    }));
-  }, []);
-
-  const clearFilters = useCallback(() => {
-    setActiveFilters({ types: [] });
-  }, []);
-
   const handleUpload = useCallback(
     async (file) => {
       try {
@@ -496,13 +488,17 @@ export function useFilesTab({
     // View state
     viewMode,
     setViewMode,
-    searchQuery,
-    setSearchQuery,
-    showFilters,
-    setShowFilters,
-    activeFilters,
-    toggleTypeFilter,
-    clearFilters,
+
+    // Unified filter system
+    filter,
+    filterConfig: FILES_FILTER_CONFIG,
+
+    // Backwards compatibility aliases
+    searchQuery: filter.search,
+    setSearchQuery: filter.setSearch,
+    activeFilters: { types: filter.types },
+    toggleTypeFilter: filter.toggleType,
+    clearFilters: filter.clearAll,
 
     // Selection
     selectedFileId,

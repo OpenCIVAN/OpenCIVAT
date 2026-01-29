@@ -25,11 +25,11 @@
 import React, { useCallback } from 'react';
 import { Icon, IconButton, Tooltip } from '@UI/react/components/atoms';
 import { LabeledButton, ToggleGroup } from '@UI/react/components/molecules';
-import { SearchBar } from '@UI/react/components/molecules/SearchBar';
 import {
     ResizableSectionsContainer,
     ResizableSection,
 } from '@UI/react/components/organisms/ResizableSections';
+import { FilterToolbar } from '@UI/react/components/organisms';
 import { useFilesTab } from './hooks/useFilesTab';
 import { FileItemList, FileItemGrid } from './components/FileItem';
 import { FileContextMenu } from './components/FileContextMenu';
@@ -66,13 +66,11 @@ export function FilesPanelContent({
         // View state
         viewMode,
         setViewMode,
-        searchQuery,
-        setSearchQuery,
-        showFilters,
-        setShowFilters,
+
+        // Filter system
+        filter,
+        filterConfig,
         activeFilters,
-        toggleTypeFilter,
-        clearFilters,
 
         // Selection
         selectedFileId,
@@ -202,14 +200,7 @@ export function FilesPanelContent({
                 </div>
             </div>
 
-            {/* Search */}
-            <SearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Search files..."
-            />
-
-            {/* Toolbar */}
+            {/* Toolbar with view toggle and info */}
             <div className="panel-toolbar">
                 <ToggleGroup
                     options={[
@@ -220,28 +211,20 @@ export function FilesPanelContent({
                     onChange={setViewMode}
                     size="xs"
                 />
-                <LabeledButton
-                    icon="arrowUpDown"
-                    label="Date"
-                    size="xs"
-                    variant="ghost"
-                    className="filter-toggle"
-                />
                 <div className="panel-toolbar__spacer" />
-                <IconButton
-                    icon="filter"
-                    onClick={() => setShowFilters(!showFilters)}
-                    active={showFilters || activeFilters.types.length > 0}
-                    size="xs"
-                    variant="ghost"
-                    tooltip="Filter files"
-                    className="filter-toggle"
-                />
                 <span className="panel-toolbar__info">
                     <strong>{workspaceFileCount}</strong> in workspace
                     {loadedCount > 0 && <> · <strong>{loadedCount}</strong> loaded</>}
                 </span>
             </div>
+
+            {/* Filter System */}
+            <FilterToolbar
+                filter={filter}
+                config={filterConfig}
+                showQuickFilters={true}
+                searchPlaceholder="Search files..."
+            />
 
             {/* Loading indicator */}
             {isLoading && (
@@ -261,34 +244,6 @@ export function FilesPanelContent({
                         size="xs"
                         variant="ghost"
                     />
-                </div>
-            )}
-
-            {/* Filters panel */}
-            {showFilters && (
-                <div className="panel-filters">
-                    <div className="panel-filters__row">
-                        {supportedFileTypes.map((type) => (
-                            <LabeledButton
-                                key={type}
-                                label={type.toUpperCase()}
-                                onClick={() => toggleTypeFilter(type)}
-                                active={activeFilters.types.includes(type)}
-                                size="xs"
-                                variant="ghost"
-                                className="filter-toggle"
-                            />
-                        ))}
-                        {activeFilters.types.length > 0 && (
-                            <LabeledButton
-                                label="Clear"
-                                onClick={clearFilters}
-                                size="xs"
-                                variant="ghost"
-                                className="panel-filters__clear"
-                            />
-                        )}
-                    </div>
                 </div>
             )}
 

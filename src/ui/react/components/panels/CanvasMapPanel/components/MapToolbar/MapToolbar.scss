@@ -1,0 +1,90 @@
+/**
+ * MapToolbar Styles
+ */
+
+@use "theme" as *;
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-tertiary;
+  border-bottom: 1px solid $color-border-subtle;
+  flex-wrap: wrap;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &--active {
+      background: color-mix(in srgb, var(--active-color, $color-accent-blue) 20%, transparent);
+      color: var(--active-color, $color-accent-blue);
+
+      &:hover {
+        background: color-mix(in srgb, var(--active-color, $color-accent-blue) 30%, transparent);
+      }
+    }
+
+    &[data-vr="true"] {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  &__separator {
+    width: 1px;
+    height: 20px;
+    background: $color-border-subtle;
+    margin: 0 $spacing-xs;
+  }
+
+  &__zoom-value {
+    min-width: 40px;
+    text-align: center;
+    font-size: $font-size-xs;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+  }
+
+  // Compact mode
+  &[data-size-mode="compact"] {
+    padding: $spacing-xs $spacing-sm;
+    gap: 2px;
+
+    .map-toolbar__btn {
+      width: 24px;
+      height: 24px;
+    }
+
+    .map-toolbar__zoom-value {
+      min-width: 32px;
+      font-size: 9px;
+    }
+
+    .map-toolbar__separator {
+      height: 16px;
+      margin: 0 2px;
+    }
+  }
+}

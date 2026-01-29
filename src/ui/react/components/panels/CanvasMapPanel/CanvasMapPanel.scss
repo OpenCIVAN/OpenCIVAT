@@ -1,0 +1,185 @@
+/**
+ * CanvasMapPanel V2 Styles
+ * Main panel layout and composition styles
+ */
+
+@use "theme" as *;
+
+.canvas-map-v2 {
+  // CSS variables for accent colors
+  --accent-blue: #{$color-accent-blue};
+  --accent-cyan: #{$color-accent-cyan};
+  --accent-green: #{$color-accent-green};
+  --accent-amber: #{$color-accent-amber};
+  --accent-purple: #{$color-accent-purple};
+  --accent-red: #{$color-accent-red};
+  --accent-teal: #{$color-accent-teal};
+  --accent-pink: #{$color-accent-pink};
+
+  // Mode color RGB values for transparency effects
+  --mode-color-rgb: 100, 100, 100;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: $color-bg-primary;
+  color: $color-text-primary;
+  font-family: $font-family-base;
+  overflow: hidden;
+
+  // VR mode adjustments
+  &[data-vr="true"] {
+    --btn-size: 44px;
+    --font-size-sm: 14px;
+    --font-size-xs: 12px;
+  }
+
+  &:not([data-vr="true"]) {
+    --btn-size: 28px;
+    --font-size-sm: 11px;
+    --font-size-xs: 9px;
+  }
+
+  // Mode-specific color theming
+  &--navigate {
+    --mode-color: #{$color-accent-blue};
+    --mode-color-rgb: 59, 130, 246;
+  }
+
+  &--layout {
+    --mode-color: #{$color-accent-green};
+    --mode-color-rgb: 34, 197, 94;
+  }
+
+  &--links {
+    --mode-color: #{$color-accent-purple};
+    --mode-color-rgb: 168, 85, 247;
+  }
+
+  &--collaborate {
+    --mode-color: #{$color-accent-amber};
+    --mode-color-rgb: 245, 158, 11;
+  }
+
+  // -------------------------------------------------------------------------
+  // Main Layout
+  // -------------------------------------------------------------------------
+  &__body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  // -------------------------------------------------------------------------
+  // Breadcrumb (focused VG navigation)
+  // -------------------------------------------------------------------------
+  &__breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background: color-mix(in srgb, var(--vg-color) 15%, $color-bg-secondary);
+    border-bottom: 1px solid color-mix(in srgb, var(--vg-color) 30%, transparent);
+  }
+
+  &__breadcrumb-back {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-sm;
+    background: $color-bg-tertiary;
+    color: $color-text-secondary;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-bg-secondary;
+      color: $color-text-primary;
+    }
+  }
+
+  &__breadcrumb-sep {
+    color: $color-text-muted;
+  }
+
+  &__breadcrumb-current {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__breadcrumb-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: $radius-xs;
+  }
+
+  // -------------------------------------------------------------------------
+  // Minimap Container
+  // -------------------------------------------------------------------------
+  &__minimap-container {
+    flex: 1;
+    min-height: 200px;
+    overflow: hidden;
+    background: $color-bg-primary;
+    position: relative;
+  }
+
+  // -------------------------------------------------------------------------
+  // Contextual Panel
+  // -------------------------------------------------------------------------
+  &__panel {
+    border-top: 1px solid $color-border-subtle;
+    max-height: 280px;
+    overflow: auto;
+    flex-shrink: 0;
+    background: $color-bg-secondary;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  // -------------------------------------------------------------------------
+  // Loading State
+  // -------------------------------------------------------------------------
+  &__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: $spacing-xl;
+    color: $color-text-muted;
+    font-size: $font-size-sm;
+  }
+
+  // -------------------------------------------------------------------------
+  // Size Mode Responsive Adjustments
+  // -------------------------------------------------------------------------
+  &[data-size-mode="compact"] {
+    .canvas-map-v2__breadcrumb {
+      padding: $spacing-xs $spacing-sm;
+    }
+
+    .canvas-map-v2__panel {
+      max-height: 200px;
+    }
+  }
+
+  &[data-size-mode="expanded"] {
+    .canvas-map-v2__panel {
+      max-height: 360px;
+    }
+  }
+}
+
+// Note: Component styles are imported directly in their respective JSX files
+// This file only contains the main panel layout styles
