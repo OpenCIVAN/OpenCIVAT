@@ -89,11 +89,10 @@ export function CanvasFocusProvider({
     // Sync with workspaceManager when focus changes
     useEffect(() => {
         if (isFocused && paneId) {
-            console.log('[CanvasFocusContext] Setting focused pane:', paneId, 'canvasId:', canvasId);
             workspaceManager.setFocusedPane(paneId);
             canvasManager.setFocusedPane(paneId);
         }
-    }, [isFocused, paneId, canvasId]);
+    }, [isFocused, paneId]);
 
     // Listen for workspaceManager changes
     useEffect(() => {
@@ -134,6 +133,15 @@ export function CanvasFocusProvider({
                 log.warn('CanvasFocusContext: Cannot set active instance without paneId');
                 return;
             }
+
+            // DEBUG: Log instance focus changes with full context
+            console.log(`[CanvasFocusContext] setActiveInstance called:`, {
+                paneId,
+                canvasId,
+                instanceId,
+                isFocused,
+                stack: new Error().stack?.split('\n').slice(2, 5).join(' <- '),
+            });
 
             log.debug(`CanvasFocusContext: Setting active instance for pane ${paneId}: ${instanceId}`);
 

@@ -30,7 +30,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "stop": "lsof -ti :8080,:3000,:3001,:8000 | xargs kill -9 2>/dev/null || echo 'No processes found'",
+    "stop:all": "lsof -ti :8080,:3000,:3001,:8000,:7880,:7881 | xargs kill -9 2>/dev/null || echo 'No processes found'"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

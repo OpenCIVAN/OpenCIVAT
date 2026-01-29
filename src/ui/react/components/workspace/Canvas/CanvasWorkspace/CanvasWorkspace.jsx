@@ -26,6 +26,7 @@ import { CreateWorkspacePanel } from '@UI/react/components/panels/FloatingPanel'
 import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { ViewStackProvider, useViewStack, VIEW_TYPES } from '@UI/react/hooks/useViewStack.js';
 import { useViewContextLogic } from '@UI/react/hooks/useViewContextLogic.js';
+import { CanvasFocusProvider, generatePaneId } from '@UI/react/context/CanvasFocusContext';
 import { useViewGroupManagerSync } from '@UI/react/hooks/useViewGroupManagerSync.js';
 import { useViewGroups, useViewGroupLinks, useViewportSize } from '@UI/react/hooks';
 import { useStatusBar } from '@UI/react/hooks/useStatusBar.js';
@@ -45,29 +46,96 @@ import { useCanvasHistory } from '@UI/react/store/canvasHistoryStore';
 
 import './CanvasWorkspace.scss';
 
-function WorkspaceTileCanvas({
+// =============================================================================
+// PANE-ISOLATED CANVAS RENDERER
+// =============================================================================
+// This component wraps CanvasGrid with ViewStackProvider to ensure each pane
+// (whether in tile mode, tab mode, or floating window) has independent state.
+//
+// PANE ISOLATION PATTERN:
+// -----------------------
+// PROBLEM: When multiple panes share a single context provider, state changes
+// in one pane affect ALL panes. For example, clicking "Focus" in pane A would
+// cause ALL panes to enter focus mode.
+//
+// SOLUTION: Wrap each pane's CanvasGrid with its own ViewStackProvider instance.
+//
+// CHECKLIST for pane-scoped features:
+// 1. ViewStackProvider - focus/subset mode (DONE - wrapped here)
+// 2. CanvasFocusProvider - active instance per pane (DONE - in TiledCanvasView/FloatingWindow)
+// 3. Any new feature state (VR mode, selection, etc.) needs its own provider
+//    OR must filter events by paneId
+//
+// HOW TO IDENTIFY: If clicking/interacting in one pane affects other panes,
+// check if the feature uses:
+//   - A shared context (React.createContext) → Wrap with per-pane provider
+//   - Global events without paneId filtering → Add paneId to event detail
+//   - Global state (workspaceManager.xxx) → Use pane-scoped getters/setters
+// =============================================================================
+
+/**
+ * IsolatedCanvasGrid - CanvasGrid with pane-isolated ViewStackProvider
+ *
+ * Use this component instead of CanvasGrid directly when rendering in multi-pane
+ * contexts (tile mode, floating windows, etc.) to ensure focus mode and other
+ * view stack features are isolated per pane.
+ */
+function IsolatedCanvasGrid({ children, ...canvasGridProps }) {
+    return (
+        <ViewStackProvider>
+            <CanvasGrid {...canvasGridProps}>
+                {children}
+            </CanvasGrid>
+        </ViewStackProvider>
+    );
+}
+
+/**
+ * WorkspaceCanvasRenderer - Unified canvas renderer for all modes
+ *
+ * Handles loading states, errors, and wraps CanvasGrid with proper isolation.
+ * Used by both tile mode and floating window mode.
+ */
+function WorkspaceCanvasRenderer({
     canvasId,
     showCoordinates,
     showViewGroupBorders,
     isEnsuringCanvas = false,
+    // Optional overrides - if not provided, uses useCanvas internally
+    canvas: canvasProp,
+    loading: loadingProp,
+    error: errorProp,
+    viewport: viewportProp,
+    placements: placementsProp,
+    onViewportChange: onViewportChangeProp,
+    onRemovePlacement: onRemovePlacementProp,
+    onAddRow: onAddRowProp,
+    onAddColumn: onAddColumnProp,
+    onAddContent: onAddContentProp,
+    // Additional CanvasGrid props
+    viewGroups = [],
+    ...extraGridProps
 }) {
-    const {
-        canvas,
-        loading,
-        error,
-        viewport,
-        visiblePlacements,
-        moveViewport,
-        removePlacement,
-        addRow,
-        addColumn,
-        addPlacement,
-    } = useCanvas(canvasId);
+    // Use internal hook if props not provided
+    const canvasHook = useCanvas(canvasId);
+
+    const canvas = canvasProp ?? canvasHook.canvas;
+    const loading = loadingProp ?? canvasHook.loading;
+    const error = errorProp ?? canvasHook.error;
+    const viewport = viewportProp ?? canvasHook.viewport;
+    const placements = placementsProp ?? canvasHook.visiblePlacements;
+    const moveViewport = onViewportChangeProp ?? canvasHook.moveViewport;
+    const removePlacement = onRemovePlacementProp ?? canvasHook.removePlacement;
+    const addRow = onAddRowProp ?? canvasHook.addRow;
+    const addColumn = onAddColumnProp ?? canvasHook.addColumn;
+    const addPlacement = canvasHook.addPlacement;
 
     const handleAddContent = useCallback(async (row, col, type) => {
-        if (!canvasId) {
-            return;
+        if (onAddContentProp) {
+            return onAddContentProp(row, col, type);
         }
+
+        if (!canvasId) return;
 
         switch (type) {
             case 'view':
@@ -100,8 +168,9 @@ function WorkspaceTileCanvas({
             default:
                 break;
         }
-    }, [addPlacement, canvasId]);
+    }, [onAddContentProp, addPlacement, canvasId]);
 
+    // Loading/error states
     if (!canvasId) {
         if (isEnsuringCanvas) {
             return <div className="canvas-workspace__loading">Preparing canvas...</div>;
@@ -134,21 +203,25 @@ function WorkspaceTileCanvas({
     }
 
     return (
-        <CanvasGrid
+        <IsolatedCanvasGrid
             canvasId={canvasId}
             viewport={viewport}
-            placements={visiblePlacements}
+            placements={placements}
             showCoordinates={showCoordinates}
             showViewGroupBorders={showViewGroupBorders}
-            viewGroups={[]}
+            viewGroups={viewGroups}
             onViewportChange={moveViewport}
             onRemovePlacement={removePlacement}
             onAddRow={addRow}
             onAddColumn={addColumn}
             onAddContent={handleAddContent}
+            {...extraGridProps}
         />
     );
 }
+
+// Legacy alias for backward compatibility
+const WorkspaceTileCanvas = WorkspaceCanvasRenderer;
 
 const DEFAULT_WINDOW_SIZE = { width: 860, height: 620 };
 const DEFAULT_WINDOW_OFFSET = { x: 140, y: 120 };
@@ -162,6 +235,7 @@ const DEFAULT_TOOL_STATE = {
 const SNAP_THRESHOLD = 16;
 const FREE_LAYOUT_PADDING = 120;
 const FREE_LAYOUT_GAP = 24;
+const EMPTY_FOOTER_PROPS = {}; // Stable reference to avoid re-renders
 
 const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
     workspace,
@@ -186,7 +260,9 @@ const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
     onFlowDirectionChange,
     onOpenNavigator,
 }) {
-    const canvasId = workspace?.activeCanvasId || null;
+    // Use workspace.id as fallback if activeCanvasId not set yet
+    const canvasId = workspace?.activeCanvasId || workspace?.id || null;
+    const paneId = canvasId ? generatePaneId(canvasId, 0) : null;
     const {
         canvas,
         loading,
@@ -313,16 +389,21 @@ const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
     }), [viewport?.col, viewport?.row]);
 
     return (
-        <FloatingCanvasWrapper
-            canvasMode={CANVAS_MODES.FLOATING}
-            position={position}
-            size={size}
-            onPositionChange={onPositionChange}
-            onSizeChange={onSizeChange}
-            onFocus={onFocus}
-            zIndex={zIndex}
+        <CanvasFocusProvider
+            canvasId={canvasId}
+            paneId={paneId}
+            isFocused={isFocused}
         >
-            <CanvasChrome
+            <FloatingCanvasWrapper
+                canvasMode={CANVAS_MODES.FLOATING}
+                position={position}
+                size={size}
+                onPositionChange={onPositionChange}
+                onSizeChange={onSizeChange}
+                onFocus={onFocus}
+                zIndex={zIndex}
+            >
+                <CanvasChrome
                 className="canvas-workspace__window"
                 headerProps={{
                     canGoBack: false,
@@ -366,37 +447,27 @@ const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
                     onRowAction: handleEditBarRowAction,
                     onDone: () => handleEditModeChange(false),
                 } : null}
-                footer1Props={isFocused ? footer1Props : {}}
+                footer1Props={isFocused ? footer1Props : EMPTY_FOOTER_PROPS}
                 footer2={isFocused ? footer2 : null}
                 infoBar={isFocused ? infoBar : null}
                 isEditMode={isFocused ? editMode : false}
             >
-                {error ? (
-                    <div className="canvas-workspace__error">
-                        {error.message || 'Failed to load canvas'}
-                    </div>
-                ) : loading && !canvas ? (
-                    <div className="canvas-workspace__loading">Loading canvas...</div>
-                ) : canvas ? (
-                    <CanvasGrid
-                        canvasId={canvasId}
-                        showCoordinates={showCoordinates}
-                        showViewGroupBorders={showViewGroupBorders}
-                        viewGroups={[]}
-                        onRemovePlacement={removePlacement}
-                        onAddRow={addRow}
-                        onAddColumn={addColumn}
-                        onAddContent={handleAddContent}
-                    />
-                ) : isEnsuringCanvas ? (
-                    <div className="canvas-workspace__loading">Preparing canvas...</div>
-                ) : (
-                    <div className="canvas-workspace__empty">
-                        <p>No canvas selected</p>
-                    </div>
-                )}
-            </CanvasChrome>
-        </FloatingCanvasWrapper>
+                <WorkspaceCanvasRenderer
+                    canvasId={canvasId}
+                    showCoordinates={showCoordinates}
+                    showViewGroupBorders={showViewGroupBorders}
+                    isEnsuringCanvas={isEnsuringCanvas}
+                    canvas={canvas}
+                    loading={loading}
+                    error={error}
+                    onRemovePlacement={removePlacement}
+                    onAddRow={addRow}
+                    onAddColumn={addColumn}
+                    onAddContent={handleAddContent}
+                />
+                </CanvasChrome>
+            </FloatingCanvasWrapper>
+        </CanvasFocusProvider>
     );
 });
 
@@ -409,6 +480,7 @@ function CanvasWorkspaceInner({
     leftPanelContent,
     rightPanelContent,
     onCloseWorkspace,
+    onRenameWorkspace,
     onDeactivateWorkspace,
     workspaceViewMode = 'tabs',
     workspaceTabs = [],
@@ -416,6 +488,15 @@ function CanvasWorkspaceInner({
     onSelectWorkspace,
     onSetWorkspaceViewMode,
     ensuringWorkspaceIds = {},
+    // Server-persisted preferences
+    tileMaximizedWorkspaceId,
+    onMaximizeWorkspace,
+    windowPositions = {},
+    windowSizes = {},
+    viewportPositions = {},
+    onWindowPositionChange,
+    onWindowSizeChange,
+    onViewportPositionChange,
 }) {
     const layoutContext = useLayoutContext();
     const { isVR } = useAdaptive();
@@ -460,7 +541,14 @@ function CanvasWorkspaceInner({
     const [showCoordinates, setShowCoordinates] = useState(false);
     const [showViewGroupBorders, setShowViewGroupBorders] = useState(false);
     const [closedWorkspaceIds, setClosedWorkspaceIds] = useState([]);
-    const [tileMaximizedWorkspaceId, setTileMaximizedWorkspaceId] = useState(null);
+    // Tile maximized state - use prop if provided, otherwise local state
+    const [localTileMaximizedId, setLocalTileMaximizedId] = useState(null);
+    const effectiveTileMaximizedId = tileMaximizedWorkspaceId ?? localTileMaximizedId;
+    const setTileMaximizedWorkspaceId = useCallback((id) => {
+        // Update both local state and prop callback (for server persistence)
+        setLocalTileMaximizedId(id);
+        onMaximizeWorkspace?.(id);
+    }, [onMaximizeWorkspace]);
     const [windowLayouts, setWindowLayouts] = useState({});
     const [windowOrder, setWindowOrder] = useState([]);
     const [workspaceToolState, setWorkspaceToolState] = useState({});
@@ -668,11 +756,11 @@ function CanvasWorkspaceInner({
     }, [handleTileWorkspaceSelect]);
 
     const handleTileClearSelection = useCallback(() => {
-        if (tileMaximizedWorkspaceId) {
+        if (effectiveTileMaximizedId) {
             setTileMaximizedWorkspaceId(null);
         }
         onDeactivateWorkspace?.();
-    }, [onDeactivateWorkspace, tileMaximizedWorkspaceId]);
+    }, [onDeactivateWorkspace, effectiveTileMaximizedId, setTileMaximizedWorkspaceId]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -762,10 +850,10 @@ function CanvasWorkspaceInner({
             layouts: windowLayouts,
             order: windowOrder,
             closedWorkspaceIds,
-            tileMaximizedWorkspaceId,
+            tileMaximizedWorkspaceId: effectiveTileMaximizedId,
         };
         window.localStorage.setItem(layoutStorageKey, JSON.stringify(payload));
-    }, [closedWorkspaceIds, layoutStorageKey, tileMaximizedWorkspaceId, windowLayouts, windowOrder]);
+    }, [closedWorkspaceIds, layoutStorageKey, effectiveTileMaximizedId, windowLayouts, windowOrder]);
 
     const handleWindowFocus = useCallback((workspaceId) => {
         if (!workspaceId) return;
@@ -2203,11 +2291,11 @@ function CanvasWorkspaceInner({
                         windowMode: canvasMode === CANVAS_MODES.FULLSCREEN ? 'full' : canvasMode,
                         showWindowControls: false,
                         onCloseWorkspace: () => {
-                            if (workspaceViewMode === 'tile' && tileMaximizedWorkspaceId) {
+                            if (workspaceViewMode === 'tile' && effectiveTileMaximizedId) {
                                 setTileMaximizedWorkspaceId(null);
                                 return;
                             }
-                            if (workspaceViewMode === 'tile' && !tileMaximizedWorkspaceId) {
+                            if (workspaceViewMode === 'tile' && !effectiveTileMaximizedId) {
                                 if (skipCloseAllTilesConfirm) {
                                     handleCloseAllTileWorkspaces();
                                     return;
@@ -2265,16 +2353,17 @@ function CanvasWorkspaceInner({
                                 <TiledCanvasView
                                     workspaces={tileWorkspaces}
                                     activeWorkspaceId={activeWorkspaceId || currentWorkspace?.id}
-                                    maximizedWorkspaceId={tileMaximizedWorkspaceId}
+                                    maximizedWorkspaceId={effectiveTileMaximizedId}
                                     onSelectWorkspace={handleTileWorkspaceSelect}
                                     onClearSelection={handleTileClearSelection}
                                     onCloseWorkspace={(workspaceId) => {
-                                        if (tileMaximizedWorkspaceId === workspaceId) {
+                                        if (effectiveTileMaximizedId === workspaceId) {
                                             setTileMaximizedWorkspaceId(null);
                                         }
                                         onCloseWorkspace?.(workspaceId);
                                     }}
                                     onMaximizeWorkspace={handleTileWorkspaceMaximize}
+                                    onRenameWorkspace={onRenameWorkspace}
                                     renderCanvas={(workspace) => (
                                         <WorkspaceTileCanvas
                                             canvasId={workspace.activeCanvasId}
@@ -2508,6 +2597,7 @@ export function CanvasWorkspace({
     leftPanelContent,
     rightPanelContent,
     onCloseWorkspace,
+    onRenameWorkspace,
     onDeactivateWorkspace,
     workspaceViewMode,
     workspaceTabs,
@@ -2515,6 +2605,15 @@ export function CanvasWorkspace({
     onSelectWorkspace,
     onSetWorkspaceViewMode,
     ensuringWorkspaceIds,
+    // Server-persisted preferences
+    tileMaximizedWorkspaceId,
+    onMaximizeWorkspace,
+    windowPositions,
+    windowSizes,
+    viewportPositions,
+    onWindowPositionChange,
+    onWindowSizeChange,
+    onViewportPositionChange,
 }) {
     return (
         <ViewStackProvider>
@@ -2524,6 +2623,7 @@ export function CanvasWorkspace({
                 leftPanelContent={leftPanelContent}
                 rightPanelContent={rightPanelContent}
                 onCloseWorkspace={onCloseWorkspace}
+                onRenameWorkspace={onRenameWorkspace}
                 onDeactivateWorkspace={onDeactivateWorkspace}
                 workspaceViewMode={workspaceViewMode}
                 workspaceTabs={workspaceTabs}
@@ -2531,6 +2631,14 @@ export function CanvasWorkspace({
                 onSelectWorkspace={onSelectWorkspace}
                 onSetWorkspaceViewMode={onSetWorkspaceViewMode}
                 ensuringWorkspaceIds={ensuringWorkspaceIds}
+                tileMaximizedWorkspaceId={tileMaximizedWorkspaceId}
+                onMaximizeWorkspace={onMaximizeWorkspace}
+                windowPositions={windowPositions}
+                windowSizes={windowSizes}
+                viewportPositions={viewportPositions}
+                onWindowPositionChange={onWindowPositionChange}
+                onWindowSizeChange={onWindowSizeChange}
+                onViewportPositionChange={onViewportPositionChange}
             />
         </ViewStackProvider>
     );

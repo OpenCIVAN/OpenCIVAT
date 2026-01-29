@@ -583,6 +583,10 @@ export function InstanceViewport({
         const initialize = async () => {
             try {
                 setLoading(true);
+                // DEBUG: Log instance creation with pane context
+                const paneId = canvasFocusContext?.paneId || 'no-pane';
+                const canvasId = canvasFocusContext?.canvasId || 'no-canvas';
+                console.log(`[InstanceViewport] Creating instance - paneId: ${paneId}, canvasId: ${canvasId}, viewConfigId: ${viewConfigId || 'none'}`);
                 log.debug(`Creating typeless instance (view: ${viewConfigId || 'none'})`);
 
                 // Check if view is trashed or archived before creating instance
@@ -853,6 +857,9 @@ export function InstanceViewport({
     // =========================================================================
 
     const handleFocus = useCallback(() => {
+        const myPaneId = canvasFocusContext?.paneId || 'no-pane';
+        console.log(`[InstanceViewport] handleFocus called - paneId: ${myPaneId}, instanceId: ${actualInstanceId}, viewConfigId: ${viewConfigId}`);
+
         setIsFocused(true);
         setNavbarVisible(true);
 
@@ -863,10 +870,12 @@ export function InstanceViewport({
             // Use pane-scoped methods when in tile mode (context available)
             // This ensures clicking one pane doesn't affect other panes
             if (canvasFocusContext) {
+                console.log(`[InstanceViewport] Using pane-scoped focus for paneId: ${myPaneId}`);
                 canvasFocusContext.setActiveInstance(actualInstanceId);
                 canvasFocusContext.requestFocus?.();
             } else {
                 // Fallback to global for tab mode or non-context scenarios
+                console.log(`[InstanceViewport] Using GLOBAL focus (no context) - this may cause cross-pane issues`);
                 workspaceManager?.setActiveInstance?.(actualInstanceId);
             }
 

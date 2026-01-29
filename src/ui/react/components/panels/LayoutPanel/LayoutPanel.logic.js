@@ -172,8 +172,20 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
     [canvas]
   );
 
-  // Effective pane ID for event filtering in tile mode
-  // Used by moveViewport, setViewportPosition, and focusCell
+  // Get the effective pane ID for dispatching navigation events
+  // In tile mode, use the focused pane ID from workspaceManager
+  // In tab mode, use the canvasId from props
+  const getEffectivePaneId = useCallback(() => {
+    // First check if there's a focused pane (tile mode)
+    const focusedPaneId = workspaceManager?.getFocusedPaneId?.();
+    if (focusedPaneId) {
+      return focusedPaneId;
+    }
+    // Fall back to canvasId from props (tab mode)
+    return canvasId || canvas?.id || null;
+  }, [canvasId, canvas?.id]);
+
+  // Static version for cases where we need a stable reference (like focusCell)
   const effectivePaneId = canvasId || canvas?.id || null;
 
   // ===========================================================================
@@ -295,29 +307,32 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
   /**
    * Move viewport by delta or direction string
    * Also dispatches sync events so CanvasGrid can follow
-   * Includes paneId for tile mode filtering
+   * Uses getFocusedPaneId() for tile mode routing
    */
   const moveViewport = useCallback(
     (deltaRowOrDirection, deltaCol) => {
+      // Get the target pane ID dynamically (focused pane in tile mode)
+      const targetPaneId = getEffectivePaneId();
+
       // Only dispatch events - CanvasGrid listens and updates its viewport
       // Don't call canvasMoveViewport directly to avoid double movement
       if (typeof deltaRowOrDirection === "string") {
         const direction = deltaRowOrDirection;
         switch (direction) {
           case "up":
-            dispatchMoveViewport(-1, 0, effectivePaneId);
+            dispatchMoveViewport(-1, 0, targetPaneId);
             break;
           case "down":
-            dispatchMoveViewport(1, 0, effectivePaneId);
+            dispatchMoveViewport(1, 0, targetPaneId);
             break;
           case "left":
-            dispatchMoveViewport(0, -1, effectivePaneId);
+            dispatchMoveViewport(0, -1, targetPaneId);
             break;
           case "right":
-            dispatchMoveViewport(0, 1, effectivePaneId);
+            dispatchMoveViewport(0, 1, targetPaneId);
             break;
           case "home":
-            dispatchNavigateTo(0, 0, effectivePaneId);
+            dispatchNavigateTo(0, 0, targetPaneId);
             break;
           default:
             log.warn(`Unknown direction: ${direction}`);
@@ -328,16 +343,16 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       const deltaRow =
         typeof deltaRowOrDirection === "number" ? deltaRowOrDirection : 0;
       const dCol = typeof deltaCol === "number" ? deltaCol : 0;
-      dispatchMoveViewport(deltaRow, dCol, effectivePaneId);
+      dispatchMoveViewport(deltaRow, dCol, targetPaneId);
     },
-    [effectivePaneId]
+    [getEffectivePaneId]
   );
 
   /**
    * Set viewport position directly
    * Also dispatches sync events so CanvasGrid can follow
    * Persists to localStorage for ViewLifecycleService flow-aware placement
-   * Includes paneId for tile mode filtering
+   * Uses getFocusedPaneId() for tile mode routing
    */
   const setViewportPosition = useCallback(
     (row, col) => {
@@ -351,7 +366,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
       const clampedCol = Math.max(0, Math.min(targetCol, maxCol));
 
       canvasSetViewportPosition?.(clampedRow, clampedCol);
-      dispatchNavigateTo(clampedRow, clampedCol, effectivePaneId);
+      dispatchNavigateTo(clampedRow, clampedCol, getEffectivePaneId());
 
       // Persist to localStorage for ViewLifecycleService
       try {
@@ -360,7 +375,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         // Ignore localStorage errors
       }
     },
-    [canvasSetViewportPosition, canvasSize, viewportSize, effectivePaneId]
+    [canvasSetViewportPosition, canvasSize, viewportSize, getEffectivePaneId]
   );
 
   /**
@@ -423,10 +438,12 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
    */
   const focusCell = useCallback(
     (viewId, row, col, rowSpan = 1, colSpan = 1, paneId = null) => {
-      log.debug(`[focusCell] Focusing viewId=${viewId} at (${row}, ${col}) span=(${rowSpan}x${colSpan}) paneId=${paneId}`);
+      // Get the target pane ID - use provided, or get focused pane dynamically
+      const targetPaneId = paneId || getEffectivePaneId();
+      log.debug(`[focusCell] Focusing viewId=${viewId} at (${row}, ${col}) span=(${rowSpan}x${colSpan}) targetPaneId=${targetPaneId}`);
 
-      // Determine the effective pane ID (use provided or fall back to canvasId from hook)
-      const effectivePaneId = paneId || canvasId || canvas?.id;
+      // Use targetPaneId for all pane-scoped operations
+      const effectivePaneId = targetPaneId;
 
       // 1. Find the instance and set it as active via workspaceManager (source of truth)
       // This is the KEY step that makes it the "active" instance
@@ -521,7 +538,7 @@ export function useLayoutPanel({ canvasId, __testing } = {}) {
         );
       }
     },
-    [canvasId, canvas, canvasViewport, viewportSize, canvasSize, canvasSetViewportPosition, isCellVisible]
+    [getEffectivePaneId, canvasViewport, viewportSize, canvasSize, canvasSetViewportPosition, isCellVisible]
   );
 
   // ===========================================================================

@@ -202,10 +202,28 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: text;
 
     .mini-canvas-header--active & {
         font-weight: 500;
         color: $color-text-primary;
+    }
+}
+
+.mini-canvas-header__name-input {
+    flex: 1;
+    font-size: $font-size-xs;
+    font-weight: 500;
+    color: $color-text-primary;
+    background: $color-bg-secondary;
+    border: 1px solid $color-accent-primary;
+    border-radius: $radius-sm;
+    padding: 2px 4px;
+    outline: none;
+    min-width: 60px;
+
+    &:focus {
+        box-shadow: 0 0 0 2px rgba($color-accent-primary, 0.3);
     }
 }
 

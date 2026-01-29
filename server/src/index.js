@@ -227,6 +227,9 @@ const workspacesRouter = require("./routes/workspaces");
 const subsetsRouter = require("./routes/subsets");
 const contentRouter = require("./routes/content");
 
+// User preferences routes
+const userPreferencesRouter = require("./routes/userPreferences");
+
 const folderRoutes = require("./routes/folders");
 const starRoutes = require("./routes/stars");
 
@@ -278,6 +281,9 @@ app.use("/api/workspaces", optionalAuth, workspacesRouter);
 app.use("/api/subsets", optionalAuth, subsetsRouter);
 app.use("/api/content", optionalAuth, contentRouter);
 app.use("/api/placements", optionalAuth, canvasesRouter);
+
+// User preferences endpoints
+app.use("/api/users/preferences", optionalAuth, userPreferencesRouter);
 
 // Note: /api/files/:id/download is now handled by filesRouter
 

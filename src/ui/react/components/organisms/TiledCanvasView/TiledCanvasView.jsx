@@ -33,6 +33,7 @@ const CanvasPanel = memo(function CanvasPanel({
     onSelect,
     onClose,
     onMaximize,
+    onRename,
     currentBreakoutId,
     onJoinBreakout,
     children,
@@ -55,6 +56,7 @@ const CanvasPanel = memo(function CanvasPanel({
                     onActivate={onSelect}
                     onClose={onClose}
                     onMaximize={onMaximize}
+                    onRename={onRename}
                     currentBreakoutId={currentBreakoutId}
                     onJoinBreakout={onJoinBreakout}
                 />
@@ -85,6 +87,7 @@ const TiledCanvasView = memo(function TiledCanvasView({
     onSelectWorkspace,
     onCloseWorkspace,
     onMaximizeWorkspace,
+    onRenameWorkspace,
     onClearSelection,
     currentBreakoutId,
     onJoinBreakout,
@@ -112,6 +115,10 @@ const TiledCanvasView = memo(function TiledCanvasView({
         onMaximizeWorkspace?.(id);
     }, [onMaximizeWorkspace]);
 
+    const handleRename = useCallback((id, name) => {
+        onRenameWorkspace?.(id, name);
+    }, [onRenameWorkspace]);
+
     const handleClearSelection = useCallback(() => {
         onClearSelection?.();
     }, [onClearSelection]);
@@ -121,7 +128,8 @@ const TiledCanvasView = memo(function TiledCanvasView({
     useEffect(() => {
         const handlePaneFocusRequested = (e) => {
             const { paneId, canvasId } = e.detail || {};
-            console.log('[TiledCanvasView] pane-focus-requested:', { paneId, canvasId, activeWorkspaceId });
+            console.log(`[TiledCanvasView] pane-focus-requested event:`, { paneId, canvasId, activeWorkspaceId });
+
             if (!paneId && !canvasId) return;
 
             // Find workspace matching this pane/canvas
@@ -131,8 +139,10 @@ const TiledCanvasView = memo(function TiledCanvasView({
                 return wsCanvasId === canvasId || paneId?.startsWith(wsCanvasId);
             });
 
-            console.log('[TiledCanvasView] targetWorkspace:', targetWorkspace?.id, 'will select:', targetWorkspace && targetWorkspace.id !== activeWorkspaceId);
+            console.log(`[TiledCanvasView] Found target workspace:`, targetWorkspace?.id, 'current active:', activeWorkspaceId);
+
             if (targetWorkspace && targetWorkspace.id !== activeWorkspaceId) {
+                console.log(`[TiledCanvasView] Switching to workspace:`, targetWorkspace.id);
                 onSelectWorkspace?.(targetWorkspace.id);
             }
         };
@@ -157,8 +167,6 @@ const TiledCanvasView = memo(function TiledCanvasView({
         const canvasId = workspace.activeCanvasId || workspace.id;
         const paneId = generatePaneId(canvasId, 0);
 
-        console.log('[TiledCanvasView:renderCanvasPanel] workspace:', workspace.name, 'canvasId:', canvasId, 'paneId:', paneId, 'isActive:', isActive);
-
         return (
             <CanvasFocusProvider
                 key={paneId}
@@ -173,6 +181,7 @@ const TiledCanvasView = memo(function TiledCanvasView({
                     onSelect={() => handleSelect(workspace.id)}
                     onClose={() => handleClose(workspace.id)}
                     onMaximize={() => handleMaximize(workspace.id)}
+                    onRename={(name) => handleRename(workspace.id, name)}
                     currentBreakoutId={currentBreakoutId}
                     onJoinBreakout={onJoinBreakout}
                 >

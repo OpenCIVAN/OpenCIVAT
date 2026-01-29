@@ -453,6 +453,7 @@ export const Footer1InstanceTools = memo(function Footer1InstanceTools({
     const moreMeasureRef = useRef(null);
     const measureRef = useRef(null);
     const categoryWidthsRef = useRef(new Map());
+    const updateOverflowRef = useRef(null); // Ref to avoid ResizeObserver recreation
     const [overflowCategoryIds, setOverflowCategoryIds] = useState([]);
     const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
@@ -512,8 +513,16 @@ export const Footer1InstanceTools = memo(function Footer1InstanceTools({
             overflow = computeOverflow(available);
         }
 
-        setOverflowCategoryIds(overflow);
+        // Only update if overflow actually changed to prevent ResizeObserver loops
+        setOverflowCategoryIds((prev) => {
+            if (prev.length !== overflow.length) return overflow;
+            if (prev.every((id, i) => id === overflow[i])) return prev;
+            return overflow;
+        });
     }, [derivedCategories]);
+
+    // Keep ref updated so ResizeObserver can use latest function without recreation
+    updateOverflowRef.current = updateOverflow;
 
     useEffect(() => {
         updateOverflow();
@@ -524,13 +533,21 @@ export const Footer1InstanceTools = memo(function Footer1InstanceTools({
         const measureEl = measureRef.current;
         if (!rowEl) return undefined;
 
+        let rafId = null;
         const observer = new ResizeObserver(() => {
-            updateOverflow();
+            // Debounce with requestAnimationFrame to prevent rapid-fire updates
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                updateOverflowRef.current?.();
+            });
         });
         observer.observe(rowEl);
         if (measureEl) observer.observe(measureEl);
-        return () => observer.disconnect();
-    }, [updateOverflow]);
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            observer.disconnect();
+        };
+    }, []); // Empty deps - observer uses ref, doesn't need recreation
 
     useEffect(() => {
         if (overflowCategoryIds.length === 0 && showOverflowMenu) {

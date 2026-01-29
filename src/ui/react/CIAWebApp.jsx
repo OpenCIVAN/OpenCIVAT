@@ -100,6 +100,7 @@ import {
 } from "@UI/react/components/organisms";
 import { useVoiceControls } from "@UI/react/hooks/useVoiceBar.js";
 import { useRoomIndicator } from "@UI/react/hooks/useRoomIndicator.js";
+import { useWorkspacePreferences } from "@UI/react/hooks/useWorkspacePreferences.js";
 
 // =============================================================================
 // CENTRALIZED STATE MODULES
@@ -169,6 +170,7 @@ export function CIAWebApp({ username, userId, projectId }) {
     createProjectWorkspace,
     createPersonalWorkspace,
     updateWorkspace,
+    deleteWorkspace,
   } = useWorkspaces({ userId, projectId, roomId: resolvedWorkspaceRoomId });
 
   const [workspaceOrder, setWorkspaceOrder] = useState([]);
@@ -176,6 +178,25 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [showCloseAllTabsConfirm, setShowCloseAllTabsConfirm] = useState(false);
   const [skipCloseAllTabsConfirm, setSkipCloseAllTabsConfirm] = useState(false);
   const workspaceTabsLoadedRef = useRef(false);
+
+  // ===========================================================================
+  // SERVER-SIDE PREFERENCES (persisted per-user, per-project)
+  // ===========================================================================
+  const {
+    preferences: serverPreferences,
+    hasLoaded: serverPrefsLoaded,
+    setViewMode: setServerViewMode,
+    setOpenWorkspaceIds: setServerOpenWorkspaceIds,
+    setActiveWorkspaceId: setServerActiveWorkspaceId,
+    setWorkspaceOrder: setServerWorkspaceOrder,
+    setWindowPosition: setServerWindowPosition,
+    setWindowSize: setServerWindowSize,
+    setViewportPosition: setServerViewportPosition,
+    setTileMaximizedWorkspaceId: setServerTileMaximizedId,
+    updatePreferences: updateServerPreferences,
+  } = useWorkspacePreferences(projectId);
+
+  const serverPrefsSyncedRef = useRef(false);
   const workspaceTabsMigratedRef = useRef(false);
   const closeAllTabsMigratedRef = useRef(false);
   const canvasModeMigratedRef = useRef(false);
@@ -479,6 +500,17 @@ export function CIAWebApp({ username, userId, projectId }) {
     [updateWorkspace]
   );
 
+  const handleDeleteWorkspace = useCallback(
+    async (workspaceId) => {
+      if (!workspaceId) return;
+      // Close the tab first
+      handleCloseWorkspace(workspaceId);
+      // Then delete from database
+      await deleteWorkspace?.(workspaceId);
+    },
+    [deleteWorkspace, handleCloseWorkspace]
+  );
+
   const handleReorderWorkspaces = useCallback((draggedId, targetId) => {
     if (!draggedId || !targetId || draggedId === targetId) return;
     setWorkspaceOrder((prev) => {
@@ -647,6 +679,7 @@ export function CIAWebApp({ username, userId, projectId }) {
   const [canvasMode, setCanvasMode] = useState('tile');
   const [popouts, setPopouts] = useState([]);
   const [ensuringWorkspaceIds, setEnsuringWorkspaceIds] = useState({});
+  const [tileMaximizedWorkspaceId, setTileMaximizedWorkspaceId] = useState(null);
   const canvasModeLoadedRef = useRef(false);
   const canvasModeDefaultKey = useMemo(() => {
     const resolvedUserId =
@@ -785,6 +818,100 @@ export function CIAWebApp({ username, userId, projectId }) {
       log.debug("Canvas mode localStorage write failed:", err);
     }
   }, [canvasMode, canvasModeStorageKey]);
+
+  // ===========================================================================
+  // SERVER PREFERENCES SYNC
+  // ===========================================================================
+  // Initialize from server preferences when they load (if no localStorage data)
+  useEffect(() => {
+    if (!serverPrefsLoaded || serverPrefsSyncedRef.current) return;
+    serverPrefsSyncedRef.current = true;
+
+    // Only apply server preferences if we have them and localStorage is empty
+    if (!serverPreferences || Object.keys(serverPreferences).length === 0) {
+      return;
+    }
+
+    log.debug('[Preferences] Applying server preferences:', serverPreferences);
+
+    // Apply viewMode from server if localStorage hasn't set it
+    if (serverPreferences.viewMode && !canvasModeLoadedRef.current) {
+      setCanvasMode(serverPreferences.viewMode);
+    }
+
+    // Apply workspace state from server if localStorage hasn't set it
+    if (!workspaceTabsLoadedRef.current) {
+      if (serverPreferences.openWorkspaceIds?.length > 0) {
+        setOpenWorkspaceIds(serverPreferences.openWorkspaceIds);
+      }
+      if (serverPreferences.workspaceOrder?.length > 0) {
+        setWorkspaceOrder(serverPreferences.workspaceOrder);
+      }
+      if (serverPreferences.activeWorkspaceId) {
+        selectWorkspace(serverPreferences.activeWorkspaceId);
+      }
+    }
+  }, [serverPrefsLoaded, serverPreferences, selectWorkspace]);
+
+  // Sync state changes to server (debounced by the hook)
+  useEffect(() => {
+    if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
+
+    // Sync viewMode
+    setServerViewMode?.(canvasMode);
+  }, [canvasMode, serverPrefsLoaded, setServerViewMode]);
+
+  useEffect(() => {
+    if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
+
+    // Sync workspace state
+    setServerOpenWorkspaceIds?.(openWorkspaceIds);
+  }, [openWorkspaceIds, serverPrefsLoaded, setServerOpenWorkspaceIds]);
+
+  useEffect(() => {
+    if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
+
+    setServerActiveWorkspaceId?.(currentWorkspaceId);
+  }, [currentWorkspaceId, serverPrefsLoaded, setServerActiveWorkspaceId]);
+
+  useEffect(() => {
+    if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
+
+    setServerWorkspaceOrder?.(workspaceOrder);
+  }, [workspaceOrder, serverPrefsLoaded, setServerWorkspaceOrder]);
+
+  useEffect(() => {
+    if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
+
+    setServerTileMaximizedId?.(tileMaximizedWorkspaceId);
+  }, [tileMaximizedWorkspaceId, serverPrefsLoaded, setServerTileMaximizedId]);
+
+  // Initialize tileMaximizedWorkspaceId from server preferences
+  useEffect(() => {
+    if (!serverPrefsLoaded || !serverPrefsSyncedRef.current) return;
+    if (serverPreferences?.tileMaximizedWorkspaceId && !tileMaximizedWorkspaceId) {
+      setTileMaximizedWorkspaceId(serverPreferences.tileMaximizedWorkspaceId);
+    }
+  }, [serverPrefsLoaded, serverPreferences?.tileMaximizedWorkspaceId, tileMaximizedWorkspaceId]);
+
+  // Callbacks for persisting window/viewport positions (for floating windows)
+  const handleWindowPositionChange = useCallback((workspaceId, position) => {
+    if (serverPrefsLoaded) {
+      setServerWindowPosition?.(workspaceId, position);
+    }
+  }, [serverPrefsLoaded, setServerWindowPosition]);
+
+  const handleWindowSizeChange = useCallback((workspaceId, size) => {
+    if (serverPrefsLoaded) {
+      setServerWindowSize?.(workspaceId, size);
+    }
+  }, [serverPrefsLoaded, setServerWindowSize]);
+
+  const handleViewportPositionChange = useCallback((canvasId, position) => {
+    if (serverPrefsLoaded) {
+      setServerViewportPosition?.(canvasId, position);
+    }
+  }, [serverPrefsLoaded, setServerViewportPosition]);
 
   useEffect(() => {
     if (!closeAllTabsStorageKey) return;
@@ -1450,6 +1577,7 @@ export function CIAWebApp({ username, userId, projectId }) {
         projectId={projectId}
         layoutMode={layoutMode}
         onCloseWorkspace={handleCloseWorkspace}
+        onRenameWorkspace={handleRenameWorkspace}
         onDeactivateWorkspace={handleDeactivateWorkspace}
         workspaceViewMode={canvasMode}
         workspaceTabs={workspaceBarItems}
@@ -1457,6 +1585,14 @@ export function CIAWebApp({ username, userId, projectId }) {
         onSelectWorkspace={handleWorkspaceChange}
         onSetWorkspaceViewMode={setCanvasMode}
         ensuringWorkspaceIds={ensuringWorkspaceIds}
+        tileMaximizedWorkspaceId={tileMaximizedWorkspaceId}
+        onMaximizeWorkspace={setTileMaximizedWorkspaceId}
+        windowPositions={serverPreferences?.windowPositions}
+        windowSizes={serverPreferences?.windowSizes}
+        viewportPositions={serverPreferences?.viewportPositions}
+        onWindowPositionChange={handleWindowPositionChange}
+        onWindowSizeChange={handleWindowSizeChange}
+        onViewportPositionChange={handleViewportPositionChange}
       />
     );
   }, [
@@ -1468,6 +1604,7 @@ export function CIAWebApp({ username, userId, projectId }) {
     projectId,
     layoutMode,
     handleCloseWorkspace,
+    handleRenameWorkspace,
     canvasMode,
     workspaceBarItems,
     handleWorkspaceChange,

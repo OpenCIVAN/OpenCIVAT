@@ -320,32 +320,37 @@ export function CanvasGrid({
             // Note: The event uses 'viewId' not 'viewConfigId'
             const { viewId, paneId: eventPaneId } = e.detail || {};
 
-            // DEBUG: Log filtering decision
-            const focusedPaneId = workspaceManager?.getFocusedPaneId?.();
-            console.log('[CanvasGrid:handleInstanceFocused] myPaneId:', effectivePaneId, 'eventPaneId:', eventPaneId, 'focusedPaneId:', focusedPaneId, 'viewId:', viewId);
+            // DEBUG: Log all instance-focused events for debugging cross-pane issues
+            console.log(`[CanvasGrid] instance-focused event received:`, {
+                viewId,
+                eventPaneId,
+                effectivePaneId,
+                focusedPaneId: workspaceManager?.getFocusedPaneId?.(),
+            });
 
             // Strict paneId filtering to prevent cross-pane interference in tile mode
             if (eventPaneId) {
                 // Event targets a specific pane - only handle if it's us
                 if (effectivePaneId && eventPaneId !== effectivePaneId) {
-                    console.log('[CanvasGrid:handleInstanceFocused] SKIPPING - eventPaneId mismatch');
+                    console.log(`[CanvasGrid] FILTERED OUT: event paneId ${eventPaneId} !== our paneId ${effectivePaneId}`);
                     return;
                 }
             } else if (effectivePaneId) {
                 // Event has no target pane but we have a paneId (tile mode)
                 // Only handle if we're the focused pane
+                const focusedPaneId = workspaceManager?.getFocusedPaneId?.();
                 if (focusedPaneId && focusedPaneId !== effectivePaneId) {
-                    console.log('[CanvasGrid:handleInstanceFocused] SKIPPING - not focused pane');
+                    console.log(`[CanvasGrid] FILTERED OUT: not the focused pane (focused: ${focusedPaneId}, we are: ${effectivePaneId})`);
                     return;
                 }
                 // No focused pane set - don't handle to prevent cross-pane interference
                 if (!focusedPaneId) {
-                    console.log('[CanvasGrid:handleInstanceFocused] SKIPPING - no focused pane set');
+                    console.log(`[CanvasGrid] FILTERED OUT: no focused pane set, we have paneId ${effectivePaneId}`);
                     return;
                 }
             }
             // No effectivePaneId means tab mode - handle all events
-            console.log('[CanvasGrid:handleInstanceFocused] HANDLING event');
+            console.log(`[CanvasGrid] HANDLING event for paneId: ${effectivePaneId || 'tab-mode'}, viewId: ${viewId}`);
 
             if (viewId) {
                 setActiveViewId((prevActiveId) => {

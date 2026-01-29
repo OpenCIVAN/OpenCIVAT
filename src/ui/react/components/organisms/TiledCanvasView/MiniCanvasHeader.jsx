@@ -3,7 +3,7 @@
  * @description Mini header for each canvas in tile mode
  */
 
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Icon, Button } from '@UI/react/components/atoms';
 import { WORKSPACE_TYPE_CONFIG } from './TiledCanvasView.logic';
@@ -17,12 +17,55 @@ const MiniCanvasHeader = memo(function MiniCanvasHeader({
     onActivate,
     onClose,
     onMaximize,
+    onRename,
     currentBreakoutId,
     onJoinBreakout,
 }) {
     const [isHovered, setIsHovered] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState(workspace.name);
+    const inputRef = useRef(null);
     const config = WORKSPACE_TYPE_CONFIG[workspace.type] || WORKSPACE_TYPE_CONFIG.workspace;
     const isInThisBreakout = currentBreakoutId === workspace.id;
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [isEditing]);
+
+    useEffect(() => {
+        if (!isEditing) {
+            setEditName(workspace.name);
+        }
+    }, [workspace.name, isEditing]);
+
+    const handleDoubleClick = (e) => {
+        e.stopPropagation();
+        setIsEditing(true);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            if (editName.trim()) {
+                console.log('[MiniCanvasHeader] Enter pressed, calling onRename with:', editName.trim());
+                onRename?.(editName.trim());
+            }
+            setIsEditing(false);
+        } else if (e.key === 'Escape') {
+            setIsEditing(false);
+            setEditName(workspace.name);
+        }
+    };
+
+    const handleBlur = () => {
+        if (editName.trim() && editName.trim() !== workspace.name) {
+            console.log('[MiniCanvasHeader] Blur with changed name, calling onRename with:', editName.trim());
+            onRename?.(editName.trim());
+        }
+        setIsEditing(false);
+    };
 
     const handleClose = (e) => {
         e.stopPropagation();
@@ -62,10 +105,27 @@ const MiniCanvasHeader = memo(function MiniCanvasHeader({
                 <span className="mini-canvas-header__unsaved-dot" />
             )}
 
-            {/* Name */}
-            <span className="mini-canvas-header__name">
-                {workspace.name}
-            </span>
+            {/* Name - double-click to rename */}
+            {isEditing ? (
+                <input
+                    ref={inputRef}
+                    type="text"
+                    className="mini-canvas-header__name-input"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleBlur}
+                    onClick={(e) => e.stopPropagation()}
+                />
+            ) : (
+                <span
+                    className="mini-canvas-header__name"
+                    onDoubleClick={handleDoubleClick}
+                    title="Double-click to rename"
+                >
+                    {workspace.name}
+                </span>
+            )}
 
             {/* Breakout indicator */}
             {workspace.hasBreakout && (
@@ -116,6 +176,7 @@ MiniCanvasHeader.propTypes = {
     onActivate: PropTypes.func,
     onClose: PropTypes.func,
     onMaximize: PropTypes.func,
+    onRename: PropTypes.func,
     currentBreakoutId: PropTypes.string,
     onJoinBreakout: PropTypes.func,
 };
