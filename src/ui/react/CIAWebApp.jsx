@@ -57,6 +57,7 @@ import {
   AllFloatingPanels,
   useInstanceToolsFloating,
 } from "@UI/react/components/panels/FloatingPanel";
+import { PanelShellProvider } from "@UI/react/components/panels/PanelShell";
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 import { FloatingCanvasNavigator, useNavigatorButton } from "@UI/react/components/panels/LayoutPanel";
 import { CanvasOperationsPanel } from "@UI/react/components/panels/FloatingPanel/CanvasOperationsPanel";
@@ -1621,6 +1622,7 @@ export function CIAWebApp({ username, userId, projectId }) {
       <VRWristMenuProvider>
         <VRAccessibilityProvider>
           <FloatingPanelProvider>
+            <PanelShellProvider>
             <LeftPanelProvider>
               <RightPanelProvider>
                 <LayoutPanelProvider canvasId={canvasId}>
@@ -1913,6 +1915,7 @@ export function CIAWebApp({ username, userId, projectId }) {
             </LayoutPanelProvider>
               </RightPanelProvider>
             </LeftPanelProvider>
+            </PanelShellProvider>
           </FloatingPanelProvider>
         </VRAccessibilityProvider>
       </VRWristMenuProvider>
