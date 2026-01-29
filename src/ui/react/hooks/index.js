@@ -200,3 +200,26 @@ export {
 } from "./useViewGroups.js";
 
 export { useViewGroupManagerSync } from "./useViewGroupManagerSync.js";
+
+// =============================================================================
+// UNIFIED FILTER SYSTEM
+// =============================================================================
+
+export { useListFilter } from "./useListFilter";
+export {
+  FILES_FILTER_CONFIG,
+  FILES_QUICK_FILTERS,
+  FILES_TYPE_CATEGORIES,
+  FILES_SORT_OPTIONS,
+  VIEWS_FILTER_CONFIG,
+  VIEWS_QUICK_FILTERS,
+  VIEWS_SORT_OPTIONS,
+  DATASETS_FILTER_CONFIG,
+  DATASETS_QUICK_FILTERS,
+  DATASETS_TYPE_CATEGORIES,
+  DATASETS_SORT_OPTIONS,
+  ANNOTATIONS_FILTER_CONFIG,
+  ANNOTATIONS_QUICK_FILTERS,
+  ANNOTATIONS_TYPE_CATEGORIES,
+  ANNOTATIONS_SORT_OPTIONS,
+} from "./useListFilter/filterConfigs";

@@ -1,0 +1,151 @@
+/**
+ * QuickFilterChip styles
+ *
+ * Toggleable filter chip with count badge.
+ * Supports full, compact, and VR modes.
+ */
+
+@use "theme" as *;
+
+.quick-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: token('gap.xs');
+  padding: token('spacing.xs') token('spacing.sm');
+
+  background: token('colors.bg.secondary');
+  border: 1px solid token('colors.border.subtle');
+  border-radius: token('radius.md');
+
+  color: token('colors.text.secondary');
+  font-size: token('text.sm');
+  font-family: inherit;
+  line-height: 1;
+
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: token('colors.bg.hover');
+    border-color: token('colors.border.default');
+  }
+
+  &:focus-visible {
+    outline: 2px solid token('colors.accent.blue');
+    outline-offset: 2px;
+  }
+
+  // =========================================================================
+  // ACTIVE STATE
+  // =========================================================================
+
+  &--active {
+    background: color-mix(
+      in srgb,
+      token('colors.accent.blue') 15%,
+      transparent
+    );
+    border-color: token('colors.accent.blue');
+    color: token('colors.accent.blue');
+
+    .quick-filter-chip__count {
+      background: token('colors.accent.blue');
+      color: #fff;
+    }
+
+    &:hover:not(:disabled) {
+      background: color-mix(
+        in srgb,
+        token('colors.accent.blue') 25%,
+        transparent
+      );
+    }
+  }
+
+  // =========================================================================
+  // COMPACT MODE
+  // =========================================================================
+
+  &--compact {
+    padding: token('spacing.xs') token('spacing.sm');
+    min-width: 32px;
+    gap: 4px;
+
+    .quick-filter-chip__icon {
+      margin-right: 0;
+    }
+  }
+
+  // =========================================================================
+  // VR MODE
+  // =========================================================================
+
+  &--vr {
+    min-height: 44px;
+    padding: token('spacing.sm') token('spacing.md');
+    font-size: token('text.md');
+    gap: token('gap.sm');
+
+    .quick-filter-chip__icon {
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    .quick-filter-chip__count {
+      padding: 2px 8px;
+      font-size: token('text.sm');
+      line-height: 18px;
+      min-width: 18px;
+    }
+  }
+
+  // =========================================================================
+  // DISABLED STATE
+  // =========================================================================
+
+  &--disabled,
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  // =========================================================================
+  // CHILD ELEMENTS
+  // =========================================================================
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    svg {
+      width: 11px;
+      height: 11px;
+    }
+  }
+
+  &__label {
+    font-weight: 500;
+  }
+
+  &__count {
+    padding: 0 token('spacing.xs');
+    min-width: 14px;
+
+    background: token('colors.bg.tertiary');
+    border-radius: 8px;
+
+    font-size: token('text.xs');
+    font-weight: 500;
+    text-align: center;
+    line-height: 14px;
+  }
+}

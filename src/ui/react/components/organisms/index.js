@@ -27,6 +27,9 @@ export { PropertyPanel } from './PropertyPanel';
 // FilterBar - Search and filter bar
 export { FilterBar } from './FilterBar';
 
+// FilterToolbar - Unified filter system with responsive layouts
+export { FilterToolbar, LAYOUT_BREAKPOINTS } from './FilterToolbar';
+
 // =============================================================================
 // TOOLBAR/BAR ORGANISMS (moved from bars/)
 // =============================================================================

@@ -100,6 +100,9 @@ export { NumberStepper } from './NumberStepper';
 // MiniMapCell - Canvas navigator minimap cell
 export { MiniMapCell } from './MiniMapCell';
 
+// LayoutMiniPreview - Tiny pixel-art grid layout preview
+export { LayoutMiniPreview, DEFAULT_LAYOUTS } from './LayoutMiniPreview';
+
 // PositionDisplay - Position coordinates display
 export { PositionDisplay } from './PositionDisplay';
 
@@ -189,6 +192,25 @@ export { PopoutManager } from './PopoutManager';
 
 // BreakoutManager - Manager dropdown for workspace voice breakouts
 export { BreakoutManager } from './BreakoutManager';
+
+// =============================================================================
+// FILTER SYSTEM MOLECULES
+// =============================================================================
+
+// QuickFilterChip - Toggleable filter chip with count badge
+export { QuickFilterChip } from './QuickFilterChip';
+
+// TypeFilterDropdown - Categorized multi-select dropdown for type filtering
+export { TypeFilterDropdown } from './TypeFilterDropdown';
+
+// SortDropdown - Radio selection dropdown for sort options
+export { SortDropdown } from './SortDropdown';
+
+// FilterOverflowMenu - Overflow menu for quick filters
+export { FilterOverflowMenu } from './FilterOverflowMenu';
+
+// CombinedFiltersDropdown - Tabbed Types + Tags dropdown for minimal mode
+export { CombinedFiltersDropdown } from './CombinedFiltersDropdown';
 
 // =============================================================================
 // RE-EXPORTS FROM ATOMS (for convenience)

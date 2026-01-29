@@ -1,0 +1,262 @@
+/**
+ * TypeFilterDropdown styles
+ *
+ * Categorized multi-select dropdown for type filtering.
+ */
+
+@use "theme" as *;
+
+.type-filter-dropdown {
+  // Portal styling handled by DropdownPortal
+
+  &__container {
+    width: 280px;
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
+
+    background: token('colors.bg.surface');
+    border: 1px solid token('colors.border.subtle');
+    border-radius: token('radius.lg');
+    box-shadow: token('shadows.lg');
+    overflow: hidden;
+  }
+
+  // =========================================================================
+  // SEARCH
+  // =========================================================================
+
+  &__search {
+    padding: token('spacing.sm');
+    border-bottom: 1px solid token('colors.border.subtle');
+  }
+
+  &__search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: token('gap.xs');
+    padding: token('spacing.xs') token('spacing.sm');
+
+    background: token('colors.bg.secondary');
+    border: 1px solid token('colors.border.subtle');
+    border-radius: token('radius.md');
+
+    &:focus-within {
+      border-color: token('colors.accent.blue');
+    }
+  }
+
+  &__search-icon {
+    flex-shrink: 0;
+    color: token('colors.text.tertiary');
+  }
+
+  &__search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: token('text.sm');
+    color: token('colors.text.primary');
+
+    &::placeholder {
+      color: token('colors.text.tertiary');
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  &__search-clear {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    background: token('colors.bg.tertiary');
+    border-radius: token('radius.sm');
+    color: token('colors.text.tertiary');
+    cursor: pointer;
+
+    &:hover {
+      background: token('colors.bg.hover');
+      color: token('colors.text.secondary');
+    }
+  }
+
+  // =========================================================================
+  // ACTIONS
+  // =========================================================================
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: token('gap.xs');
+    padding: token('spacing.xs') token('spacing.sm');
+    border-bottom: 1px solid token('colors.border.subtle');
+  }
+
+  &__action {
+    padding: token('spacing.xs') token('spacing.sm');
+    border: none;
+    background: transparent;
+    font-size: token('text.xs');
+    color: token('colors.accent.blue');
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      text-decoration: underline;
+    }
+
+    &:disabled {
+      color: token('colors.text.tertiary');
+      cursor: not-allowed;
+    }
+  }
+
+  &__separator {
+    color: token('colors.border.subtle');
+    font-size: token('text.xs');
+  }
+
+  // =========================================================================
+  // CATEGORIES
+  // =========================================================================
+
+  &__categories {
+    flex: 1;
+    overflow-y: auto;
+    padding: token('spacing.xs') 0;
+  }
+
+  &__category {
+    &:not(:last-child) {
+      margin-bottom: token('spacing.xs');
+    }
+  }
+
+  &__category-header {
+    display: flex;
+    align-items: center;
+    gap: token('gap.xs');
+    padding: token('spacing.xs') token('spacing.sm');
+
+    font-size: token('text.xs');
+    font-weight: 600;
+    color: token('colors.text.tertiary');
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  // =========================================================================
+  // OPTIONS
+  // =========================================================================
+
+  &__options {
+    padding: 0 token('spacing.xs');
+  }
+
+  &__option {
+    display: flex;
+    align-items: center;
+    gap: token('gap.xs');
+    padding: token('spacing.xs') token('spacing.sm');
+    border-radius: token('radius.sm');
+    cursor: pointer;
+
+    &:hover:not(.type-filter-dropdown__option--empty) {
+      background: token('colors.bg.hover');
+    }
+
+    &--empty {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &--selected {
+      background: color-mix(
+        in srgb,
+        token('colors.accent.blue') 10%,
+        transparent
+      );
+
+      .type-filter-dropdown__option-label {
+        color: token('colors.accent.blue');
+      }
+    }
+  }
+
+  &__checkbox {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    accent-color: token('colors.accent.blue');
+    cursor: inherit;
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+
+  &__option-label {
+    flex: 1;
+    font-size: token('text.sm');
+    color: token('colors.text.primary');
+  }
+
+  &__option-count {
+    flex-shrink: 0;
+    font-size: token('text.xs');
+    color: token('colors.text.tertiary');
+  }
+
+  // =========================================================================
+  // EMPTY STATE
+  // =========================================================================
+
+  &__empty {
+    padding: token('spacing.lg');
+    text-align: center;
+    font-size: token('text.sm');
+    color: token('colors.text.tertiary');
+  }
+
+  // =========================================================================
+  // VR MODE
+  // =========================================================================
+
+  &--vr {
+    .type-filter-dropdown__container {
+      width: 320px;
+    }
+
+    .type-filter-dropdown__search-input {
+      font-size: token('text.md');
+      padding: token('spacing.sm') 0;
+    }
+
+    .type-filter-dropdown__option {
+      padding: token('spacing.sm') token('spacing.md');
+      min-height: 44px;
+    }
+
+    .type-filter-dropdown__checkbox {
+      width: 20px;
+      height: 20px;
+    }
+
+    .type-filter-dropdown__option-label {
+      font-size: token('text.md');
+    }
+
+    .type-filter-dropdown__action {
+      font-size: token('text.sm');
+      padding: token('spacing.sm');
+      min-height: 44px;
+    }
+  }
+}

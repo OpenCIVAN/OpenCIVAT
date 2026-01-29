@@ -1,0 +1,116 @@
+/**
+ * FilterOverflowMenu styles
+ *
+ * Overflow menu for quick filters.
+ */
+
+@use "theme" as *;
+
+.filter-overflow-menu {
+  // =========================================================================
+  // TRIGGER BUTTON
+  // =========================================================================
+
+  &__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: token('gap.xs');
+    padding: token('spacing.xs') token('spacing.sm');
+
+    background: token('colors.bg.secondary');
+    border: 1px solid token('colors.border.subtle');
+    border-radius: token('radius.md');
+
+    color: token('colors.text.secondary');
+    font-size: token('text.xs');
+    font-family: inherit;
+    font-weight: 500;
+
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: token('colors.bg.hover');
+      border-color: token('colors.border.default');
+    }
+
+    &--open {
+      background: token('colors.bg.hover');
+      border-color: token('colors.border.default');
+    }
+
+    &--has-active {
+      border-color: token('colors.accent.blue');
+      color: token('colors.accent.blue');
+    }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 14px;
+    padding: 0 4px;
+
+    background: token('colors.accent.blue');
+    border-radius: 8px;
+
+    font-size: token('text.xs');
+    font-weight: 600;
+    color: #fff;
+    line-height: 14px;
+  }
+
+  // =========================================================================
+  // PANEL
+  // =========================================================================
+
+  &__panel {
+    min-width: 200px;
+    background: token('colors.bg.surface');
+    border: 1px solid token('colors.border.subtle');
+    border-radius: token('radius.lg');
+    box-shadow: token('shadows.lg');
+    overflow: hidden;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: token('gap.xs');
+    padding: token('spacing.sm') token('spacing.md');
+    border-bottom: 1px solid token('colors.border.subtle');
+
+    font-size: token('text.xs');
+    font-weight: 600;
+    color: token('colors.text.tertiary');
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__filters {
+    display: flex;
+    flex-direction: column;
+    gap: token('gap.xs');
+    padding: token('spacing.sm');
+  }
+
+  // =========================================================================
+  // VR MODE
+  // =========================================================================
+
+  &--vr {
+    .filter-overflow-menu__trigger {
+      min-height: 44px;
+      padding: token('spacing.sm') token('spacing.md');
+      font-size: token('text.sm');
+    }
+
+    .filter-overflow-menu__panel {
+      min-width: 240px;
+    }
+  }
+}
