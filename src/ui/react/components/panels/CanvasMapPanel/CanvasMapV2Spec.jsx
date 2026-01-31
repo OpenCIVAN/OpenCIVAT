@@ -3,7 +3,7 @@
  * @description Spec-driven Canvas Map V2 design prototype (storybook-only).
  */
 
-import React, { useState, useMemo, useCallback, useId, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useId, useRef } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { useListFilter } from '@UI/react/hooks/useListFilter';
 
@@ -21,6 +21,8 @@ const ChevronDown = makeIcon('chevronDown');
 const Check = makeIcon('check');
 const ArrowDownAZ = makeIcon('sort');
 const ArrowUpDown = makeIcon('arrowUpDown');
+const Filter = makeIcon('filter');
+const Tag = makeIcon('tag');
 const Star = makeIcon('star');
 const CheckCircle = makeIcon('checkCircle');
 const Users = makeIcon('users');
@@ -51,7 +53,6 @@ const ChevronLeft = makeIcon('chevronLeft');
 const ChevronRight = makeIcon('chevronRight');
 const ChevronUp = makeIcon('chevronUp');
 const Activity = makeIcon('activity');
-const LayoutGrid = makeIcon('layoutGrid');
 const Scan = makeIcon('scan');
 const Crosshair = makeIcon('crosshair');
 const ArrowLeftRight = makeIcon('arrowLeftRight');
@@ -96,8 +97,8 @@ const tokens = {
       bg: '#030303',
       cell: '#080808',
       cellHover: '#0f0f12',
-      gridLine: 'rgba(96, 165, 250, 0.04)',
-      gridLineMajor: 'rgba(96, 165, 250, 0.10)',
+      gridLine: 'rgba(96, 165, 250, 0.12)',
+      gridLineMajor: 'rgba(96, 165, 250, 0.22)',
     },
   },
   radius: { xs: '2px', sm: '4px', md: '6px', lg: '8px', xl: '12px' },
@@ -268,6 +269,23 @@ const MOCK_VIEWPORT = {
   isPrimary: true,
 };
 
+const MOCK_VIEWPORTS = [
+  {
+    id: 'main',
+    name: 'Main',
+    position: { row: 0, col: 0 },
+    size: { rows: 5, cols: 5 },
+    isPrimary: true,
+  },
+  {
+    id: 'detail',
+    name: 'Detail',
+    position: { row: 3, col: 4 },
+    size: { rows: 3, cols: 3 },
+    isPrimary: false,
+  },
+];
+
 const MOCK_COLLABORATORS = [
   { id: 'u-1', name: 'Alice Chen', color: '#22c55e', avatar: 'AC', viewportPos: { row: 2, col: 3 }, cursorPos: { row: 2.5, col: 4.2 }, isOnline: true, isBroadcasting: true },
   { id: 'u-2', name: 'Bob Smith', color: '#3b82f6', avatar: 'BS', viewportPos: { row: 5, col: 5 }, cursorPos: { row: 6.1, col: 7.3 }, isOnline: true, isBroadcasting: false },
@@ -320,11 +338,22 @@ const flattenViewsToCanvas = (viewGroups) => {
   return views;
 };
 
-const FilterToolbar = ({ filter, sizeMode }) => {
+const FilterToolbar = ({
+  filter,
+  sizeMode,
+  tagOptions = [],
+  showQuickFilters = true,
+  dense = false,
+}) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const isCompact = sizeMode === 'compact';
   const isMinimal = sizeMode === 'minimal';
   const currentSort = filter.currentSortOption || SORT_OPTIONS.find((o) => o.value === filter.sortBy);
+  const paddingY = dense ? tokens.spacing.xs : tokens.spacing.sm;
+  const controlFontSize = dense ? tokens.fontSize.xs : tokens.fontSize.sm;
+  const quickCount = filter.quickFilters.length;
+  const tagCount = filter.selectedTags.length;
+  const hasTags = tagOptions.length > 0;
 
   return (
     <div style={{ borderBottom: `1px solid ${tokens.colors.border.subtle}` }}>
@@ -333,7 +362,7 @@ const FilterToolbar = ({ filter, sizeMode }) => {
           display: 'flex',
           alignItems: 'center',
           gap: tokens.spacing.sm,
-          padding: `${tokens.spacing.sm} ${tokens.spacing.md}`,
+          padding: `${paddingY} ${tokens.spacing.md}`,
           background: tokens.colors.bg.secondary,
         }}
       >
@@ -362,7 +391,7 @@ const FilterToolbar = ({ filter, sizeMode }) => {
               border: 'none',
               outline: 'none',
               color: tokens.colors.text.primary,
-              fontSize: tokens.fontSize.sm,
+              fontSize: controlFontSize,
               minWidth: 0,
             }}
           />
@@ -383,77 +412,242 @@ const FilterToolbar = ({ filter, sizeMode }) => {
           )}
         </div>
 
-        <div style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
-              background: 'transparent',
-              border: `1px solid ${tokens.colors.border.subtle}`,
-              borderRadius: tokens.radius.md,
-              color: tokens.colors.text.secondary,
-              cursor: 'pointer',
-              fontSize: tokens.fontSize.sm,
-            }}
-          >
-            <ArrowUpDown size={12} />
-            {!isCompact && !isMinimal && <span>{currentSort?.shortLabel}</span>}
-            <ChevronDown size={10} />
-          </button>
-
-          {activeDropdown === 'sort' && (
-            <div
+        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setActiveDropdown(activeDropdown === 'filters' ? null : 'filters')}
               style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: 4,
-                zIndex: 1000,
-                width: 180,
-                background: tokens.colors.bg.primary,
-                border: `1px solid ${tokens.colors.border.default}`,
-                borderRadius: tokens.radius.lg,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                padding: tokens.spacing.xs,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
+                background: quickCount ? tokens.colors.glass.strong : 'transparent',
+                border: `1px solid ${quickCount ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
+                borderRadius: tokens.radius.md,
+                color: quickCount ? tokens.colors.accent.blue : tokens.colors.text.secondary,
+                cursor: 'pointer',
+                fontSize: controlFontSize,
               }}
             >
-              {SORT_OPTIONS.map((opt) => {
-                const isActive = filter.sortBy === opt.value;
-                const OptIcon = opt.icon;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      filter.setSortBy(opt.value);
-                      setActiveDropdown(null);
-                    }}
+              <Filter size={12} />
+              {!isMinimal && !dense && <span>Filter</span>}
+              {quickCount > 0 && (
+                <span
+                  style={{
+                    padding: '0 6px',
+                    borderRadius: tokens.radius.lg,
+                    background: 'rgba(59,130,246,0.2)',
+                    color: tokens.colors.accent.blue,
+                    fontSize: tokens.fontSize.xs,
+                    fontWeight: 600,
+                  }}
+                >
+                  {quickCount}
+                </span>
+              )}
+            </button>
+            {activeDropdown === 'filters' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: 4,
+                  zIndex: 1000,
+                  width: 180,
+                  background: tokens.colors.bg.primary,
+                  border: `1px solid ${tokens.colors.border.default}`,
+                  borderRadius: tokens.radius.lg,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                  padding: tokens.spacing.xs,
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {QUICK_FILTERS.map((qf) => {
+                    const isActive = filter.quickFilters.includes(qf.id);
+                    const QfIcon = qf.icon;
+                    return (
+                      <button
+                        key={qf.id}
+                        type="button"
+                        onClick={() => filter.toggleQuickFilter(qf.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 8px',
+                          borderRadius: tokens.radius.md,
+                          border: `1px solid ${isActive ? tokens.colors.accent.blue : 'transparent'}`,
+                          background: isActive ? tokens.colors.glass.strong : 'transparent',
+                          color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
+                          cursor: 'pointer',
+                          fontSize: tokens.fontSize.sm,
+                        }}
+                      >
+                        <QfIcon size={12} />
+                        <span style={{ flex: 1, textAlign: 'left' }}>{qf.label}</span>
+                        {isActive && <Check size={12} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {hasTags && (
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setActiveDropdown(activeDropdown === 'tags' ? null : 'tags')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
+                  background: tagCount ? tokens.colors.glass.strong : 'transparent',
+                  border: `1px solid ${tagCount ? tokens.colors.accent.cyan : tokens.colors.border.subtle}`,
+                  borderRadius: tokens.radius.md,
+                  color: tagCount ? tokens.colors.accent.cyan : tokens.colors.text.secondary,
+                  cursor: 'pointer',
+                  fontSize: controlFontSize,
+                }}
+              >
+                <Tag size={12} />
+                {!isMinimal && !dense && <span>Tags</span>}
+                {tagCount > 0 && (
+                  <span
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: tokens.spacing.sm,
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: isActive ? tokens.colors.glass.medium : 'transparent',
-                      border: 'none',
-                      borderRadius: tokens.radius.sm,
-                      color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
-                      cursor: 'pointer',
-                      textAlign: 'left',
+                      padding: '0 6px',
+                      borderRadius: tokens.radius.lg,
+                      background: 'rgba(34,211,238,0.18)',
+                      color: tokens.colors.accent.cyan,
+                      fontSize: tokens.fontSize.xs,
+                      fontWeight: 600,
                     }}
                   >
-                    <OptIcon size={12} />
-                    <span style={{ flex: 1, fontSize: tokens.fontSize.sm }}>{opt.label}</span>
-                    {isActive && <Check size={12} />}
-                  </button>
-                );
-              })}
+                    {tagCount}
+                  </span>
+                )}
+              </button>
+              {activeDropdown === 'tags' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: 4,
+                    zIndex: 1000,
+                    width: 200,
+                    background: tokens.colors.bg.primary,
+                    border: `1px solid ${tokens.colors.border.default}`,
+                    borderRadius: tokens.radius.lg,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                    padding: tokens.spacing.sm,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: tokens.spacing.xs,
+                  }}
+                >
+                  {tagOptions.map((tag) => {
+                    const isActive = filter.selectedTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => filter.toggleTag(tag)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: tokens.radius.lg,
+                          border: `1px solid ${isActive ? tokens.colors.accent.cyan : tokens.colors.border.subtle}`,
+                          background: isActive ? tokens.colors.glass.strong : tokens.colors.glass.subtle,
+                          color: isActive ? tokens.colors.accent.cyan : tokens.colors.text.secondary,
+                          fontSize: tokens.fontSize.xs,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        #{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
+
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
+                background: 'transparent',
+                border: `1px solid ${tokens.colors.border.subtle}`,
+                borderRadius: tokens.radius.md,
+                color: tokens.colors.text.secondary,
+                cursor: 'pointer',
+                fontSize: controlFontSize,
+              }}
+            >
+              <ArrowUpDown size={12} />
+              {!isCompact && !isMinimal && <span>{currentSort?.shortLabel}</span>}
+              <ChevronDown size={10} />
+            </button>
+
+            {activeDropdown === 'sort' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: 4,
+                  zIndex: 1000,
+                  width: 180,
+                  background: tokens.colors.bg.primary,
+                  border: `1px solid ${tokens.colors.border.default}`,
+                  borderRadius: tokens.radius.lg,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                  padding: tokens.spacing.xs,
+                }}
+              >
+                {SORT_OPTIONS.map((opt) => {
+                  const isActive = filter.sortBy === opt.value;
+                  const OptIcon = opt.icon;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        filter.setSortBy(opt.value);
+                        setActiveDropdown(null);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: tokens.spacing.sm,
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: isActive ? tokens.colors.glass.medium : 'transparent',
+                        border: 'none',
+                        borderRadius: tokens.radius.sm,
+                        color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <OptIcon size={12} />
+                      <span style={{ flex: 1, fontSize: tokens.fontSize.sm }}>{opt.label}</span>
+                      {isActive && <Check size={12} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {filter.hasActiveFilters && (
@@ -473,53 +667,55 @@ const FilterToolbar = ({ filter, sizeMode }) => {
         )}
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: tokens.spacing.xs,
-          padding: `${tokens.spacing.xs} ${tokens.spacing.md}`,
-          background: tokens.colors.glass.subtle,
-          flexWrap: 'nowrap',
-          overflow: 'hidden',
-        }}
-      >
-        <span style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted, flexShrink: 0 }}>
-          Quick:
-        </span>
-        {QUICK_FILTERS.map((qf) => {
-          const isActive = filter.quickFilters.includes(qf.id);
-          const QfIcon = qf.icon;
-          return (
-            <button
-              key={qf.id}
-              type="button"
-              onClick={() => filter.toggleQuickFilter(qf.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px',
-                padding: '3px 8px',
-                background: isActive ? tokens.colors.glass.strong : tokens.colors.glass.subtle,
-                border: `1px solid ${isActive ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
-                borderRadius: tokens.radius.lg,
-                color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
-                cursor: 'pointer',
-                fontSize: tokens.fontSize.xs,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <QfIcon size={10} />
-              {!isCompact && <span>{qf.label}</span>}
-            </button>
-          );
-        })}
-      </div>
+      {showQuickFilters && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: tokens.spacing.xs,
+            padding: `${tokens.spacing.xs} ${tokens.spacing.md}`,
+            background: tokens.colors.glass.subtle,
+            flexWrap: 'nowrap',
+            overflow: 'hidden',
+          }}
+        >
+          <span style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted, flexShrink: 0 }}>
+            Quick:
+          </span>
+          {QUICK_FILTERS.map((qf) => {
+            const isActive = filter.quickFilters.includes(qf.id);
+            const QfIcon = qf.icon;
+            return (
+              <button
+                key={qf.id}
+                type="button"
+                onClick={() => filter.toggleQuickFilter(qf.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '3px 8px',
+                  background: isActive ? tokens.colors.glass.strong : tokens.colors.glass.subtle,
+                  border: `1px solid ${isActive ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
+                  borderRadius: tokens.radius.lg,
+                  color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
+                  cursor: 'pointer',
+                  fontSize: tokens.fontSize.xs,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <QfIcon size={10} />
+                {!isCompact && <span>{qf.label}</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
 
-const GridPaperBackground = ({ rows, cols, cellSize, gap, visible }) => {
+const GridPaperBackground = ({ rows, cols, cellSize, gap, visible, minorColor, majorColor, offsetX = 0, offsetY = 0 }) => {
   const patternId = useId();
   if (!visible) return null;
   const gridWidth = cols * (cellSize + gap) - gap;
@@ -535,14 +731,21 @@ const GridPaperBackground = ({ rows, cols, cellSize, gap, visible }) => {
         height: '100%',
         pointerEvents: 'none',
         zIndex: 0,
+        shapeRendering: 'crispEdges',
       }}
     >
       <defs>
-        <pattern id={`${patternId}-minor`} width={cellSize + gap} height={cellSize + gap} patternUnits="userSpaceOnUse">
+        <pattern
+          id={`${patternId}-minor`}
+          width={cellSize + gap}
+          height={cellSize + gap}
+          patternUnits="userSpaceOnUse"
+          patternTransform={`translate(${offsetX} ${offsetY})`}
+        >
           <path
             d={`M ${cellSize + gap} 0 L 0 0 0 ${cellSize + gap}`}
             fill="none"
-            stroke={tokens.colors.canvas.gridLine}
+            stroke={minorColor || tokens.colors.canvas.gridLine}
             strokeWidth="0.5"
           />
         </pattern>
@@ -551,6 +754,7 @@ const GridPaperBackground = ({ rows, cols, cellSize, gap, visible }) => {
           width={(cellSize + gap) * majorInterval}
           height={(cellSize + gap) * majorInterval}
           patternUnits="userSpaceOnUse"
+          patternTransform={`translate(${offsetX} ${offsetY})`}
         >
           <rect
             width={(cellSize + gap) * majorInterval}
@@ -560,7 +764,7 @@ const GridPaperBackground = ({ rows, cols, cellSize, gap, visible }) => {
           <path
             d={`M ${(cellSize + gap) * majorInterval} 0 L 0 0 0 ${(cellSize + gap) * majorInterval}`}
             fill="none"
-            stroke={tokens.colors.canvas.gridLineMajor}
+            stroke={majorColor || tokens.colors.canvas.gridLineMajor}
             strokeWidth="1"
           />
         </pattern>
@@ -623,62 +827,160 @@ const DPadControls = ({ position, onMove, onGoHome, homePosition, compact }) => 
 const FloatingDPad = ({
   sizeMode,
   position,
+  zIndex = 30,
+  docked = false,
+  showHandle = true,
+  centerContent,
   onMove,
   onGoHome,
   onHandlePointerDown,
   onHandlePointerMove,
   onHandlePointerUp,
 }) => {
-  const size = sizeMode === 'minimal' ? 76 : sizeMode === 'compact' ? 88 : 102;
-  const btnSize = sizeMode === 'minimal' ? 22 : sizeMode === 'compact' ? 24 : 26;
-  const centerSize = sizeMode === 'minimal' ? 28 : sizeMode === 'compact' ? 30 : 34;
+  const size = sizeMode === 'minimal' ? 70 : sizeMode === 'compact' ? 82 : 96;
+  const centerSize = sizeMode === 'minimal' ? 34 : sizeMode === 'compact' ? 38 : 42;
   const handleSize = sizeMode === 'minimal' ? 18 : 20;
+  const iconSize = sizeMode === 'minimal' ? 14 : sizeMode === 'compact' ? 16 : 18;
+  const wedgeInset = sizeMode === 'minimal' ? 3 : sizeMode === 'compact' ? 4 : 5;
+  const rotation = 0;
+  const iconOffset = sizeMode === 'minimal' ? 14 : sizeMode === 'compact' ? 16 : 18;
 
-  const btnStyle = {
-    width: btnSize,
-    height: btnSize,
+  const wedgeStyle = {
+    position: 'absolute',
+    inset: wedgeInset,
+    borderRadius: '50%',
+    border: `1px solid rgba(96,165,250,0.18)`,
+    background: 'linear-gradient(160deg, rgba(96,165,250,0.22), rgba(10,16,28,0.65))',
+    color: 'rgba(248, 250, 252, 0.95)',
+    textShadow: '0 1px 6px rgba(15,23,42,0.8)',
+    cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '50%',
-    border: `1px solid ${tokens.colors.border.subtle}`,
-    background: tokens.colors.glass.medium,
-    color: tokens.colors.text.secondary,
-    cursor: 'pointer',
+    backdropFilter: 'blur(6px)',
+    transition: 'all 0.18s ease',
   };
 
   return (
     <div
       style={{
-        position: 'absolute',
-        left: position.x,
-        top: position.y,
+        position: docked ? 'relative' : 'absolute',
+        left: docked ? undefined : position?.x,
+        top: docked ? undefined : position?.y,
         width: size,
         height: size,
         borderRadius: '50%',
-        background: 'rgba(6, 10, 18, 0.72)',
-        border: `1px solid ${tokens.colors.border.subtle}`,
-        boxShadow: '0 10px 24px rgba(0,0,0,0.45)',
-        backdropFilter: 'blur(6px)',
+        background: 'radial-gradient(circle at 30% 30%, rgba(96,165,250,0.18), rgba(2,6,16,0.92))',
+        border: '1px solid rgba(96,165,250,0.2)',
+        boxShadow: '0 0 0 2px rgba(15,23,42,0.6), 0 12px 24px rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 30,
+        zIndex,
+        transform: `rotate(${rotation}deg)`,
+        transformOrigin: 'center',
       }}
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <button type="button" onClick={() => onMove('up')} style={{ ...btnStyle, position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)' }}>
-        <ChevronUp size={12} />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          border: '1px solid rgba(96,165,250,0.18)',
+          boxShadow: 'inset 0 0 0 1px rgba(2,6,16,0.65)',
+          pointerEvents: 'none',
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => onMove('up')}
+        style={{
+          ...wedgeStyle,
+          clipPath: 'polygon(50% 50%, 0% 0%, 100% 0%)',
+        }}
+      >
+        <ChevronUp
+          size={iconSize}
+          style={{
+            transform: `rotate(-${rotation}deg) translateY(-${iconOffset}px)`,
+            color: 'rgba(248, 250, 252, 0.95)',
+          }}
+        />
       </button>
-      <button type="button" onClick={() => onMove('left')} style={{ ...btnStyle, position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)' }}>
-        <ChevronLeft size={12} />
+      <button
+        type="button"
+        onClick={() => onMove('right')}
+        style={{
+          ...wedgeStyle,
+          clipPath: 'polygon(50% 50%, 100% 0%, 100% 100%)',
+        }}
+      >
+        <ChevronRight
+          size={iconSize}
+          style={{
+            transform: `rotate(-${rotation}deg) translateX(${iconOffset}px)`,
+            color: 'rgba(248, 250, 252, 0.95)',
+          }}
+        />
       </button>
-      <button type="button" onClick={() => onMove('right')} style={{ ...btnStyle, position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)' }}>
-        <ChevronRight size={12} />
+      <button
+        type="button"
+        onClick={() => onMove('down')}
+        style={{
+          ...wedgeStyle,
+          clipPath: 'polygon(50% 50%, 100% 100%, 0% 100%)',
+        }}
+      >
+        <ChevronDown
+          size={iconSize}
+          style={{
+            transform: `rotate(-${rotation}deg) translateY(${iconOffset}px)`,
+            color: 'rgba(248, 250, 252, 0.95)',
+          }}
+        />
       </button>
-      <button type="button" onClick={() => onMove('down')} style={{ ...btnStyle, position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)' }}>
-        <ChevronDown size={12} />
+      <button
+        type="button"
+        onClick={() => onMove('left')}
+        style={{
+          ...wedgeStyle,
+          clipPath: 'polygon(50% 50%, 0% 100%, 0% 0%)',
+        }}
+      >
+        <ChevronLeft
+          size={iconSize}
+          style={{
+            transform: `rotate(-${rotation}deg) translateX(-${iconOffset}px)`,
+            color: 'rgba(248, 250, 252, 0.95)',
+          }}
+        />
       </button>
+      <div
+        style={{
+          position: 'absolute',
+          top: wedgeInset + 1,
+          bottom: wedgeInset + 1,
+          left: '50%',
+          width: 1,
+          transform: 'translateX(-0.5px)',
+          background: 'rgba(5, 8, 16, 0.6)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: wedgeInset + 1,
+          right: wedgeInset + 1,
+          top: '50%',
+          height: 1,
+          transform: 'translateY(-0.5px)',
+          background: 'rgba(5, 8, 16, 0.6)',
+          pointerEvents: 'none',
+        }}
+      />
       <button
         type="button"
         onClick={onGoHome}
@@ -686,54 +988,201 @@ const FloatingDPad = ({
           width: centerSize,
           height: centerSize,
           borderRadius: '50%',
-          border: `1px solid ${tokens.colors.border.subtle}`,
-          background: `${tokens.colors.accent.amber}22`,
+          border: `1px solid rgba(96,165,250,0.45)`,
+          background: 'radial-gradient(circle at 35% 35%, rgba(96,165,250,0.4), rgba(8,14,24,0.95))',
           color: tokens.colors.accent.amber,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontWeight: 600,
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.14), 0 0 18px rgba(59,130,246,0.45)',
+          zIndex: 2,
+          transform: `rotate(-${rotation}deg)`,
         }}
       >
-        <Home size={12} />
+        {centerContent || <Home size={iconSize} style={{ color: tokens.colors.accent.amber }} />}
       </button>
-      <div
-        onPointerDown={onHandlePointerDown}
-        onPointerMove={onHandlePointerMove}
-        onPointerUp={onHandlePointerUp}
-        onPointerLeave={onHandlePointerUp}
-        style={{
-          position: 'absolute',
-          right: -4,
-          top: -4,
-          width: handleSize,
-          height: handleSize,
-          borderRadius: '50%',
-          background: tokens.colors.bg.secondary,
-          border: `1px solid ${tokens.colors.border.subtle}`,
-          color: tokens.colors.text.muted,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'grab',
-        }}
-      >
-        <Grip size={10} />
-      </div>
+      {showHandle && (
+        <div
+          onPointerDown={onHandlePointerDown}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={onHandlePointerUp}
+          onPointerLeave={onHandlePointerUp}
+          style={{
+            position: 'absolute',
+            right: -4,
+            top: -4,
+            width: handleSize,
+            height: handleSize,
+            borderRadius: '50%',
+            background: tokens.colors.bg.secondary,
+            border: `1px solid ${tokens.colors.border.subtle}`,
+            color: tokens.colors.text.muted,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'grab',
+          }}
+        >
+          <Grip size={10} />
+        </div>
+      )}
     </div>
   );
 };
 
-const MapSidebar = ({
-  side,
-  onToggleSide,
-  onGoHome,
-  onSetHome,
-  onFitAll,
-  onAddBookmark,
-  currentPosition,
-}) => {
+const SquareDPad = ({ sizeMode, onMove, onGoHome, centerLabel, isAtHome }) => {
+  const size = sizeMode === 'minimal' ? 76 : sizeMode === 'compact' ? 88 : 100;
+  const centerSize = Math.round(size * 0.38);
+  const cornerRadius = 6;
+  const gap = 2;
+  const cx = size / 2;
+  const cy = size / 2;
+
+  const [hoveredQuadrant, setHoveredQuadrant] = useState(null);
+  const [activeQuadrant, setActiveQuadrant] = useState(null);
+
+  const getQuadrantColor = (quadrant) => {
+    if (activeQuadrant === quadrant) return tokens.colors.accent.cyan;
+    if (hoveredQuadrant === quadrant) return tokens.colors.accent.blue;
+    return tokens.colors.glass.medium;
+  };
+
+  const getIconColor = (quadrant) => {
+    if (hoveredQuadrant === quadrant || activeQuadrant === quadrant) return 'white';
+    return tokens.colors.text.muted;
+  };
+
+  const handleClick = (direction) => {
+    setActiveQuadrant(direction);
+    setTimeout(() => setActiveQuadrant(null), 150);
+    onMove(direction);
+  };
+
+  const quadrants = [
+    {
+      id: 'up',
+      points: `${gap},${gap} ${size - gap},${gap} ${cx + centerSize / 2 + gap},${cy - centerSize / 2 - gap} ${
+        cx - centerSize / 2 - gap
+      },${cy - centerSize / 2 - gap}`,
+      iconX: cx,
+      iconY: (gap + cy - centerSize / 2 - gap) / 2 + 2,
+    },
+    {
+      id: 'right',
+      points: `${size - gap},${gap} ${size - gap},${size - gap} ${cx + centerSize / 2 + gap},${cy + centerSize / 2 + gap} ${
+        cx + centerSize / 2 + gap
+      },${cy - centerSize / 2 - gap}`,
+      iconX: (size - gap + cx + centerSize / 2 + gap) / 2 - 2,
+      iconY: cy,
+    },
+    {
+      id: 'down',
+      points: `${size - gap},${size - gap} ${gap},${size - gap} ${cx - centerSize / 2 - gap},${cy + centerSize / 2 + gap} ${
+        cx + centerSize / 2 + gap
+      },${cy + centerSize / 2 + gap}`,
+      iconX: cx,
+      iconY: (size - gap + cy + centerSize / 2 + gap) / 2 - 2,
+    },
+    {
+      id: 'left',
+      points: `${gap},${size - gap} ${gap},${gap} ${cx - centerSize / 2 - gap},${cy - centerSize / 2 - gap} ${
+        cx - centerSize / 2 - gap
+      },${cy + centerSize / 2 + gap}`,
+      iconX: (gap + cx - centerSize / 2 - gap) / 2 + 2,
+      iconY: cy,
+    },
+  ];
+
+  const getChevronPath = (direction) => {
+    const s = Math.max(6, size * 0.09);
+    switch (direction) {
+      case 'up':
+        return `M ${-s} ${s / 2} L 0 ${-s / 2} L ${s} ${s / 2}`;
+      case 'down':
+        return `M ${-s} ${-s / 2} L 0 ${s / 2} L ${s} ${-s / 2}`;
+      case 'left':
+        return `M ${s / 2} ${-s} L ${-s / 2} 0 L ${s / 2} ${s}`;
+      case 'right':
+        return `M ${-s / 2} ${-s} L ${s / 2} 0 L ${-s / 2} ${s}`;
+      default:
+        return '';
+    }
+  };
+
+  return (
+    <svg width={size} height={size} style={{ flexShrink: 0 }}>
+      <rect
+        x={1}
+        y={1}
+        width={size - 2}
+        height={size - 2}
+        rx={cornerRadius}
+        fill={tokens.colors.bg.tertiary}
+        stroke={tokens.colors.border.default}
+        strokeWidth={1}
+      />
+
+      {quadrants.map((q) => (
+        <g key={q.id}>
+          <polygon
+            points={q.points}
+            fill={getQuadrantColor(q.id)}
+            stroke={tokens.colors.border.subtle}
+            strokeWidth={0.5}
+            style={{ cursor: 'pointer' }}
+            onMouseEnter={() => setHoveredQuadrant(q.id)}
+            onMouseLeave={() => setHoveredQuadrant(null)}
+            onClick={() => handleClick(q.id)}
+          />
+          <path
+            d={getChevronPath(q.id)}
+            transform={`translate(${q.iconX}, ${q.iconY})`}
+            fill="none"
+            stroke={getIconColor(q.id)}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ pointerEvents: 'none' }}
+          />
+        </g>
+      ))}
+
+      <rect
+        x={cx - centerSize / 2}
+        y={cy - centerSize / 2}
+        width={centerSize}
+        height={centerSize}
+        rx={4}
+        fill={isAtHome ? `${tokens.colors.accent.amber}30` : tokens.colors.bg.secondary}
+        stroke={isAtHome ? tokens.colors.accent.amber : tokens.colors.border.default}
+        strokeWidth={1.5}
+        style={{ cursor: 'pointer' }}
+        onClick={onGoHome}
+      />
+      <text
+        x={cx}
+        y={cy + 1}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={isAtHome ? tokens.colors.accent.amber : tokens.colors.text.primary}
+        fontSize={Math.max(11, size * 0.16)}
+        fontWeight="700"
+        fontFamily="monospace"
+        style={{ pointerEvents: 'none' }}
+      >
+        {centerLabel || 'A1'}
+      </text>
+    </svg>
+  );
+};
+
+  const MapSidebar = ({
+    side,
+    onToggleSide,
+    showItems = [],
+  }) => {
   const btnStyle = {
     width: 30,
     height: 30,
@@ -748,10 +1197,21 @@ const MapSidebar = ({
   };
 
   return (
-    <div style={{ width: 48, display: 'flex', justifyContent: 'center' }}>
+    <div
+      style={{
+        width: 56,
+        display: 'flex',
+        justifyContent: 'center',
+        overflow: 'visible',
+        background:
+          side === 'left'
+            ? 'linear-gradient(90deg, rgba(6,10,18,0.0), rgba(6,10,18,0.55))'
+            : 'linear-gradient(270deg, rgba(6,10,18,0.0), rgba(6,10,18,0.55))',
+      }}
+    >
       <div
         style={{
-          padding: 6,
+          padding: 4,
           borderRadius: tokens.radius.lg,
           border: `1px solid ${tokens.colors.border.subtle}`,
           background: tokens.colors.glass.subtle,
@@ -759,47 +1219,65 @@ const MapSidebar = ({
           flexDirection: 'column',
           gap: 6,
           alignItems: 'center',
+          zIndex: 1,
         }}
       >
-        <button type="button" onClick={onGoHome} title="Go Home" style={btnStyle}>
-          <Home size={14} />
-        </button>
-        <button type="button" onClick={onSetHome} title="Set Home" style={btnStyle}>
-          <Crosshair size={14} />
-        </button>
-        <button type="button" onClick={onFitAll} title="Fit All" style={btnStyle}>
-          <Scan size={14} />
-        </button>
+        {showItems.length > 0 && (
+          <>
+            <div style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted }}>Show</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {showItems.map((item, idx) => {
+                const ItemIcon = item.icon;
+                return (
+                  <button
+                    key={`${item.label}-${idx}`}
+                    type="button"
+                    onClick={item.onClick}
+                    title={item.label}
+                    style={{
+                      ...btnStyle,
+                      border: `1px solid ${item.active ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
+                      background: item.active ? tokens.colors.glass.medium : 'transparent',
+                      color: item.active ? tokens.colors.accent.blue : tokens.colors.text.muted,
+                    }}
+                  >
+                    <ItemIcon size={14} />
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
         <div style={{ width: '100%', height: 1, background: tokens.colors.border.subtle }} />
-        <button type="button" onClick={onAddBookmark} title="Add Bookmark" style={btnStyle}>
-          <Bookmark size={14} />
-        </button>
         <button type="button" onClick={onToggleSide} title={`Move to ${side === 'left' ? 'right' : 'left'}`} style={btnStyle}>
           <ArrowLeftRight size={14} />
         </button>
-        <div
-          style={{
-            marginTop: 4,
-            padding: '4px 8px',
-            borderRadius: tokens.radius.md,
-            background: tokens.colors.glass.medium,
-            fontSize: tokens.fontSize.xs,
-            fontFamily: 'monospace',
-            fontWeight: 600,
-            color: tokens.colors.accent.amber,
-            textAlign: 'center',
-            minWidth: 36,
-          }}
-        >
-          {currentPosition}
-        </div>
       </div>
     </div>
   );
 };
 
-const CompanionPanel = ({ isOpen, onClose, activeTab, setActiveTab, viewGroups, unplacedViews, datasets, filter, onDragStart }) => {
+const CompanionPanel = ({
+  isOpen,
+  onClose,
+  activeTab,
+  setActiveTab,
+  viewGroups,
+  unplacedViews,
+  datasets,
+  sizeMode,
+  width = 180,
+  showToolbar = true,
+  onDragStart,
+}) => {
   if (!isOpen) return null;
+
+  const companionFilter = useListFilter({
+    searchFields: (item) => [item.name, item.type, ...(item.tags || [])],
+    quickFilterDefs: QUICK_FILTERS,
+    sortOptions: SORT_OPTIONS,
+  });
 
   const allViews = useMemo(() => {
     const placed = viewGroups.flatMap((vg) =>
@@ -819,12 +1297,21 @@ const CompanionPanel = ({ isOpen, onClose, activeTab, setActiveTab, viewGroups, 
     return [...placed, ...unplaced];
   }, [viewGroups, unplacedViews]);
 
-  const filteredViews = filter.applyFilters(allViews);
+  const datasetsWithTags = useMemo(
+    () => datasets.map((ds) => ({ ...ds, tags: [ds.type] })),
+    [datasets]
+  );
+  const viewTags = useMemo(() => Array.from(new Set(allViews.flatMap((view) => view.tags || []))), [allViews]);
+  const datasetTags = useMemo(() => Array.from(new Set(datasets.map((ds) => ds.type))), [datasets]);
+  const tagOptions = activeTab === COMPANION_TABS.DATASETS ? datasetTags : viewTags;
+
+  const filteredViews = companionFilter.applyFilters(allViews);
+  const filteredDatasets = companionFilter.applyFilters(datasetsWithTags);
 
   return (
     <div
       style={{
-        width: 160,
+        width,
         background: tokens.colors.bg.secondary,
         borderLeft: `1px solid ${tokens.colors.border.subtle}`,
         display: 'flex',
@@ -872,6 +1359,16 @@ const CompanionPanel = ({ isOpen, onClose, activeTab, setActiveTab, viewGroups, 
           <X size={12} />
         </button>
       </div>
+
+      {showToolbar && (
+        <FilterToolbar
+          filter={companionFilter}
+          sizeMode={sizeMode}
+          tagOptions={tagOptions}
+          showQuickFilters={false}
+          dense
+        />
+      )}
 
       <div style={{ flex: 1, overflow: 'auto', padding: tokens.spacing.xs }}>
         {activeTab === COMPANION_TABS.VIEWS && (
@@ -939,7 +1436,7 @@ const CompanionPanel = ({ isOpen, onClose, activeTab, setActiveTab, viewGroups, 
             <div style={{ fontSize: '9px', color: tokens.colors.text.muted, padding: '2px 4px' }}>
               Drag to create new view
             </div>
-            {datasets.map((ds) => (
+            {filteredDatasets.map((ds) => (
               <div
                 key={ds.id}
                 draggable
@@ -1326,11 +1823,532 @@ const ModeTabs = ({ activeMode, onModeChange, sizeMode }) => {
   );
 };
 
+const ModeTabsPill = ({ activeMode, onModeChange }) => (
+  <div style={{ display: 'flex', gap: tokens.spacing.md, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+    {Object.entries(MODE_CONFIG).map(([mode, config]) => {
+      const isActive = activeMode === mode;
+      const ModeIcon = config.icon;
+      return (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onModeChange(mode)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: tokens.spacing.xs,
+            padding: '6px 8px',
+            borderRadius: tokens.radius.sm,
+            border: 'none',
+            borderBottom: `2px solid ${isActive ? config.color : 'transparent'}`,
+            background: 'transparent',
+            color: isActive ? config.color : tokens.colors.text.muted,
+            cursor: 'pointer',
+            fontSize: tokens.fontSize.xs,
+            fontWeight: isActive ? 600 : 500,
+          }}
+        >
+          <ModeIcon size={12} />
+          <span>{config.label}</span>
+        </button>
+      );
+    })}
+  </div>
+);
+
+const LayoutSearchRow = ({ filter, tagOptions = [] }) => {
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const tagCount = filter.selectedTags.length;
+  const quickCount = filter.quickFilters.length;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.xs }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, flexWrap: 'nowrap' }}>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: tokens.spacing.xs,
+            padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
+            background: tokens.colors.bg.secondary,
+            borderRadius: tokens.radius.md,
+            border: `1px solid ${tokens.colors.border.subtle}`,
+            minWidth: 140,
+          }}
+        >
+          <Search size={12} style={{ color: tokens.colors.text.muted, flexShrink: 0 }} />
+          <input
+            type="text"
+            value={filter.searchQuery}
+            onChange={(e) => filter.setSearchQuery(e.target.value)}
+            placeholder="Search..."
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: tokens.colors.text.primary,
+              fontSize: tokens.fontSize.sm,
+              minWidth: 0,
+            }}
+          />
+          {filter.searchQuery && (
+            <button
+              type="button"
+              onClick={() => filter.setSearchQuery('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                display: 'flex',
+              }}
+            >
+              <X size={10} style={{ color: tokens.colors.text.muted }} />
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setActiveDropdown(activeDropdown === 'filters' ? null : 'filters')}
+            title="Filters"
+            style={{
+              width: 28,
+              height: 28,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: tokens.radius.sm,
+              border: `1px solid ${quickCount ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
+              background: quickCount ? tokens.colors.glass.medium : tokens.colors.bg.secondary,
+              color: quickCount ? tokens.colors.accent.blue : tokens.colors.text.muted,
+              cursor: 'pointer',
+            }}
+          >
+            <Filter size={12} />
+          </button>
+          {activeDropdown === 'filters' && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: 4,
+                zIndex: 1000,
+                width: 180,
+                background: tokens.colors.bg.primary,
+                border: `1px solid ${tokens.colors.border.default}`,
+                borderRadius: tokens.radius.lg,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                padding: tokens.spacing.xs,
+              }}
+            >
+              {QUICK_FILTERS.map((qf) => {
+                const isActive = filter.quickFilters.includes(qf.id);
+                const QfIcon = qf.icon;
+                return (
+                  <button
+                    key={qf.id}
+                    type="button"
+                    onClick={() => filter.toggleQuickFilter(qf.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      width: '100%',
+                      padding: '6px 8px',
+                      background: isActive ? tokens.colors.glass.medium : 'transparent',
+                      border: 'none',
+                      borderRadius: tokens.radius.md,
+                      color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <QfIcon size={12} />
+                    <span style={{ flex: 1 }}>{qf.label}</span>
+                    {isActive && <Check size={12} />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setActiveDropdown(activeDropdown === 'tags' ? null : 'tags')}
+            title="Tags"
+            style={{
+              width: 28,
+              height: 28,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: tokens.radius.sm,
+              border: `1px solid ${tagCount ? tokens.colors.accent.cyan : tokens.colors.border.subtle}`,
+              background: tagCount ? tokens.colors.glass.medium : tokens.colors.bg.secondary,
+              color: tagCount ? tokens.colors.accent.cyan : tokens.colors.text.muted,
+              cursor: 'pointer',
+            }}
+          >
+            <Tag size={12} />
+          </button>
+          {activeDropdown === 'tags' && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: 4,
+                zIndex: 1000,
+                width: 200,
+                background: tokens.colors.bg.primary,
+                border: `1px solid ${tokens.colors.border.default}`,
+                borderRadius: tokens.radius.lg,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                padding: tokens.spacing.sm,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: tokens.spacing.xs,
+              }}
+            >
+              {tagOptions.map((tag) => {
+                const isActive = filter.selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => filter.toggleTag(tag)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: tokens.radius.lg,
+                      border: `1px solid ${isActive ? tokens.colors.accent.cyan : tokens.colors.border.subtle}`,
+                      background: isActive ? tokens.colors.glass.strong : tokens.colors.glass.subtle,
+                      color: isActive ? tokens.colors.accent.cyan : tokens.colors.text.secondary,
+                      fontSize: tokens.fontSize.xs,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    #{tag}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')}
+            title="Sort"
+            style={{
+              width: 28,
+              height: 28,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: tokens.radius.sm,
+              border: `1px solid ${tokens.colors.border.subtle}`,
+              background: tokens.colors.bg.secondary,
+              color: tokens.colors.text.muted,
+              cursor: 'pointer',
+            }}
+          >
+            <ArrowUpDown size={12} />
+          </button>
+          {activeDropdown === 'sort' && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: 4,
+                zIndex: 1000,
+                width: 180,
+                background: tokens.colors.bg.primary,
+                border: `1px solid ${tokens.colors.border.default}`,
+                borderRadius: tokens.radius.lg,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                padding: tokens.spacing.xs,
+              }}
+            >
+              {SORT_OPTIONS.map((opt) => {
+                const isActive = filter.sortBy === opt.value;
+                const OptIcon = opt.icon;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      filter.setSortBy(opt.value);
+                      setActiveDropdown(null);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      width: '100%',
+                      padding: '6px 8px',
+                      background: isActive ? tokens.colors.glass.medium : 'transparent',
+                      border: 'none',
+                      borderRadius: tokens.radius.md,
+                      color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <OptIcon size={12} />
+                    <span style={{ flex: 1 }}>{opt.label}</span>
+                    {isActive && <Check size={12} />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted, flexShrink: 0 }}>Quick:</span>
+        {QUICK_FILTERS.map((qf) => {
+          const isActive = filter.quickFilters.includes(qf.id);
+          const QfIcon = qf.icon;
+          return (
+            <button
+              key={qf.id}
+              type="button"
+              onClick={() => filter.toggleQuickFilter(qf.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                borderRadius: tokens.radius.lg,
+                border: `1px solid ${isActive ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
+                background: isActive ? tokens.colors.glass.medium : tokens.colors.bg.secondary,
+                color: isActive ? tokens.colors.accent.blue : tokens.colors.text.muted,
+                cursor: 'pointer',
+                fontSize: tokens.fontSize.xs,
+              }}
+            >
+              <QfIcon size={10} />
+              <span>{qf.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const LayoutControlDeck = ({
+  minimapZoom,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
+  companionOpen,
+  toggleCompanion,
+  currentPositionLabel,
+  isAtHome,
+  canvasSizeLabel,
+  openViewportCount,
+  onMove,
+  onGoHome,
+  onSetHome,
+  onFitAll,
+  onAddBookmark,
+  sizeMode,
+  deckWidth,
+}) => {
+  const dpadSize = sizeMode === 'minimal' ? 76 : sizeMode === 'compact' ? 88 : 100;
+  const leftWidth = deckWidth ?? dpadSize + 24;
+  const actions = [
+    { icon: Home, title: 'Go Home', onClick: onGoHome },
+    { icon: Crosshair, title: 'Set Home', onClick: onSetHome },
+    { icon: Scan, title: 'Fit All', onClick: onFitAll },
+    { icon: Star, title: 'Bookmark', onClick: onAddBookmark },
+  ];
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: tokens.spacing.sm,
+        padding: tokens.spacing.sm,
+        background: tokens.colors.bg.tertiary,
+        borderRight: `1px solid ${tokens.colors.border.subtle}`,
+        width: leftWidth,
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.xs }}>
+        <div
+          style={{
+            fontSize: tokens.fontSize.xs,
+            color: tokens.colors.text.muted,
+            textAlign: 'center',
+            width: '100%',
+          }}
+        >
+          Zoom
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: tokens.spacing.xs,
+            width: '100%',
+            background: tokens.colors.bg.secondary,
+            borderRadius: tokens.radius.lg,
+            border: `1px solid ${tokens.colors.border.subtle}`,
+            padding: tokens.spacing.xs,
+          }}
+        >
+          <button
+            type="button"
+            onClick={onZoomOut}
+            style={{
+              width: 22,
+              height: 22,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: `1px solid ${tokens.colors.border.subtle}`,
+              borderRadius: tokens.radius.sm,
+              color: tokens.colors.text.muted,
+              cursor: 'pointer',
+            }}
+          >
+            <Minus size={10} />
+          </button>
+          <button
+            type="button"
+            onClick={onZoomReset}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 22,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: `1px solid ${tokens.colors.border.subtle}`,
+              borderRadius: tokens.radius.sm,
+              color: tokens.colors.text.muted,
+              cursor: 'pointer',
+              fontSize: tokens.fontSize.xs,
+            }}
+          >
+            {minimapZoom}%
+          </button>
+          <button
+            type="button"
+            onClick={onZoomIn}
+            style={{
+              width: 22,
+              height: 22,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: `1px solid ${tokens.colors.border.subtle}`,
+              borderRadius: tokens.radius.sm,
+              color: tokens.colors.text.muted,
+              cursor: 'pointer',
+            }}
+          >
+            <Plus size={10} />
+          </button>
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: 'relative',
+          background: tokens.colors.bg.secondary,
+          borderRadius: tokens.radius.lg,
+          border: `1px solid ${tokens.colors.border.subtle}`,
+          padding: tokens.spacing.xs,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          minHeight: dpadSize + 6,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: tokens.spacing.sm,
+            borderRadius: tokens.radius.md,
+            border: `1px solid ${tokens.colors.border.subtle}`,
+            opacity: 0.35,
+            pointerEvents: 'none',
+          }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', padding: tokens.spacing.xs }}>
+          <SquareDPad
+            sizeMode={sizeMode}
+            onMove={onMove}
+            onGoHome={onGoHome}
+            centerLabel={currentPositionLabel}
+            isAtHome={isAtHome}
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: tokens.spacing.xs,
+          background: tokens.colors.bg.secondary,
+          borderRadius: tokens.radius.lg,
+          border: `1px solid ${tokens.colors.border.subtle}`,
+          padding: tokens.spacing.xs,
+        }}
+      >
+        {actions.map((action, idx) => {
+          const ActionIcon = action.icon;
+          return (
+            <button
+              key={`${action.title}-${idx}`}
+              type="button"
+              onClick={action.onClick}
+              title={action.title}
+              style={{
+                height: 26,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: tokens.radius.md,
+                border: `1px solid ${tokens.colors.border.subtle}`,
+                background: 'transparent',
+                color: tokens.colors.text.muted,
+                cursor: 'pointer',
+              }}
+            >
+              <ActionIcon size={14} />
+            </button>
+          );
+        })}
+      </div>
+
+    </div>
+  );
+};
+
 const MapToolbar = ({
   displayMode,
   setDisplayMode,
-  showGridPaper,
-  toggleGridPaper,
   showViewports,
   toggleViewports,
   showCollaborators,
@@ -1399,7 +2417,6 @@ const MapToolbar = ({
 
       <div style={{ display: 'flex', gap: '4px' }}>
         {[
-          { active: showGridPaper, toggle: toggleGridPaper, icon: LayoutGrid, label: 'Grid' },
           { active: showViewports, toggle: toggleViewports, icon: Scan, label: 'Viewport' },
           { active: showCollaborators, toggle: toggleCollaborators, icon: Users, label: 'Team' },
         ].map((item, i) => (
@@ -1505,6 +2522,47 @@ const MapToolbar = ({
           {companionOpen ? <PanelRightClose size={12} /> : <PanelRightOpen size={12} />}
         </button>
       </div>
+
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: tokens.spacing.xs,
+          background: tokens.colors.bg.secondary,
+          borderRadius: tokens.radius.lg,
+          border: `1px solid ${tokens.colors.border.subtle}`,
+          padding: tokens.spacing.xs,
+        }}
+      >
+        <div style={{ display: 'flex', gap: tokens.spacing.xs, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span
+            style={{
+              padding: '2px 6px',
+              borderRadius: tokens.radius.md,
+              background: tokens.colors.glass.subtle,
+              border: `1px solid ${tokens.colors.border.subtle}`,
+              color: tokens.colors.text.muted,
+              fontSize: tokens.fontSize.xs,
+              fontWeight: 600,
+            }}
+          >
+            Canvas {canvasSizeLabel}
+          </span>
+          <span
+            style={{
+              padding: '2px 6px',
+              borderRadius: tokens.radius.md,
+              background: tokens.colors.glass.subtle,
+              border: `1px solid ${tokens.colors.border.subtle}`,
+              color: tokens.colors.text.muted,
+              fontSize: tokens.fontSize.xs,
+              fontWeight: 600,
+            }}
+          >
+            {openViewportCount} Viewports
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1526,6 +2584,7 @@ const ContextualPanelContent = ({
   bookmarks,
   filter,
   sizeMode,
+  showToolbar = true,
 }) => {
   const handleMove = (dir) => {
     setViewport((prev) => ({
@@ -1539,16 +2598,19 @@ const ContextualPanelContent = ({
 
   const filteredVGs = filter.applyFilters(viewGroups);
   const activeVGs = filteredVGs.filter((vg) => vg.position);
+  const availableTags = useMemo(
+    () => Array.from(new Set(viewGroups.flatMap((vg) => vg.tags || []))),
+    [viewGroups]
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <FilterToolbar filter={filter} sizeMode={sizeMode} />
+      {showToolbar && <FilterToolbar filter={filter} sizeMode={sizeMode} tagOptions={availableTags} />}
 
-      <div style={{ flex: 1, overflow: 'auto', padding: tokens.spacing.md }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: showToolbar ? tokens.spacing.md : tokens.spacing.sm }}>
         {mode === MAP_MODES.NAVIGATE && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.lg, marginBottom: tokens.spacing.lg }}>
-              <DPadControls position={viewport.position} homePosition={homePosition} onMove={handleMove} onGoHome={() => setViewport((p) => ({ ...p, position: homePosition }))} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.muted, marginBottom: '2px' }}>Current Position</div>
                 <div
@@ -1565,6 +2627,74 @@ const ContextualPanelContent = ({
                   Viewport: {viewport.size.cols}x{viewport.size.rows}
                 </div>
               </div>
+            </div>
+
+            <div style={{ marginBottom: tokens.spacing.lg }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: tokens.spacing.sm }}>
+                <span style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary }}>Viewports</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '2px 8px',
+                      background: tokens.colors.glass.subtle,
+                      border: 'none',
+                      borderRadius: tokens.radius.md,
+                      color: tokens.colors.accent.cyan,
+                      cursor: 'pointer',
+                      fontSize: tokens.fontSize.xs,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Plus size={10} /> New
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '2px 8px',
+                      background: tokens.colors.glass.subtle,
+                      border: 'none',
+                      borderRadius: tokens.radius.md,
+                      color: tokens.colors.accent.blue,
+                      cursor: 'pointer',
+                      fontSize: tokens.fontSize.xs,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <CheckCircle size={10} /> Save
+                  </button>
+                </div>
+              </div>
+              {MOCK_VIEWPORTS.map((vp) => {
+                const isActive = vp.id === viewport.id;
+                return (
+                  <div
+                    key={vp.id}
+                    onClick={() => setViewport(vp)}
+                    role="button"
+                    tabIndex={0}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: tokens.spacing.sm,
+                      padding: tokens.spacing.sm,
+                      marginBottom: tokens.spacing.xs,
+                      background: isActive ? tokens.colors.glass.medium : tokens.colors.glass.subtle,
+                      border: `1px solid ${isActive ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
+                      borderRadius: tokens.radius.md,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: isActive ? tokens.colors.accent.blue : tokens.colors.text.muted }} />
+                    <span style={{ flex: 1, fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>{vp.name}</span>
+                    <span style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted }}>{vp.size.cols}x{vp.size.rows}</span>
+                  </div>
+                );
+              })}
             </div>
 
             <div>
@@ -1632,17 +2762,36 @@ const ContextualPanelContent = ({
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: tokens.spacing.sm }}>
               <span style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary }}>On Canvas</span>
-              <span
-                style={{
-                  fontSize: tokens.fontSize.xs,
-                  color: tokens.colors.text.muted,
-                  background: tokens.colors.glass.medium,
-                  padding: '2px 8px',
-                  borderRadius: tokens.radius.lg,
-                }}
-              >
-                {activeVGs.length}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: '2px 8px',
+                    background: tokens.colors.glass.subtle,
+                    border: `1px solid ${tokens.colors.border.subtle}`,
+                    borderRadius: tokens.radius.md,
+                    color: tokens.colors.text.secondary,
+                    cursor: 'pointer',
+                    fontSize: tokens.fontSize.xs,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Scan size={10} /> Fit All
+                </button>
+                <span
+                  style={{
+                    fontSize: tokens.fontSize.xs,
+                    color: tokens.colors.text.muted,
+                    background: tokens.colors.glass.medium,
+                    padding: '2px 8px',
+                    borderRadius: tokens.radius.lg,
+                  }}
+                >
+                  {activeVGs.length}
+                </span>
+              </div>
             </div>
             {activeVGs.map((vg) => (
               <div
@@ -1875,24 +3024,24 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   const [selectedVGId, setSelectedVGId] = useState('vg-1');
   const [highlightedLinkId, setHighlightedLinkId] = useState(null);
   const [showGridLabels] = useState(true);
-  const [showGridPaper, setShowGridPaper] = useState(true);
+  const showGridPaper = true;
   const [showViewports, setShowViewports] = useState(true);
-  const [showCollaborators, setShowCollaborators] = useState(true);
+  const [showCollaborators, setShowCollaborators] = useState(false);
   const [showCursors, setShowCursors] = useState(true);
   const [lockLabels] = useState(true);
   const [minimapZoom, setMinimapZoom] = useState(100);
   const [companionOpen, setCompanionOpen] = useState(true);
   const [companionTab, setCompanionTab] = useState(COMPANION_TABS.VIEWS);
   const [viewport, setViewport] = useState(MOCK_VIEWPORT);
-  const [homePosition] = useState({ row: 0, col: 0 });
+  const [homePosition, setHomePosition] = useState({ row: 0, col: 0 });
   const [isDraggingViewport] = useState(false);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [sidebarSide, setSidebarSide] = useState('left');
-  const [dpadPosition, setDpadPosition] = useState({ x: 18, y: 120 });
-  const [dpadHasMoved, setDpadHasMoved] = useState(false);
+  const [minimapHeightOverride, setMinimapHeightOverride] = useState(null);
+  const [isResizingMinimap, setIsResizingMinimap] = useState(false);
   const panStartRef = useRef(null);
-  const dpadDragRef = useRef(null);
+  const resizeStartRef = useRef(null);
 
   const filter = useListFilter({
     searchFields: (item) => [item.name, ...(item.views?.map((v) => v.name) || []), ...(item.tags || [])],
@@ -1900,14 +3049,65 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
     sortOptions: SORT_OPTIONS,
   });
 
+  const sidebarShowItems = useMemo(() => {
+    const isVGMode = displayMode === DISPLAY_MODES.VG;
+    return [
+      {
+        icon: isVGMode ? Grid3X3 : Layers,
+        label: isVGMode ? 'VG' : 'View',
+        active: true,
+        onClick: () => setDisplayMode(isVGMode ? DISPLAY_MODES.VIEW : DISPLAY_MODES.VG),
+      },
+      { icon: Scan, label: 'Viewport', active: showViewports, onClick: () => setShowViewports((p) => !p) },
+      { icon: Users, label: 'Team', active: showCollaborators, onClick: () => setShowCollaborators((p) => !p) },
+      {
+        icon: companionOpen ? PanelRightClose : PanelRightOpen,
+        label: 'Panel',
+        active: companionOpen,
+        onClick: () => setCompanionOpen((p) => !p),
+      },
+    ];
+  }, [displayMode, showViewports, showCollaborators, companionOpen]);
+
+
   const sizeMode = width < 320 ? 'minimal' : width < 400 ? 'compact' : 'standard';
-  const companionWidth = companionOpen ? 160 : 0;
+  const dpadSize = sizeMode === 'minimal' ? 76 : sizeMode === 'compact' ? 88 : 100;
+  const controlDeckWidth = dpadSize + 32;
+  const companionWidth = companionOpen ? (width < 420 ? 160 : 200) : 0;
   const labelSize = sizeMode === 'minimal' ? 16 : 20;
   const mapOuterPadding = 8;
   const mapInset = sizeMode === 'minimal' ? 6 : 8;
-  const topSectionHeight = Math.max(240, Math.floor(height * 0.55));
+  const spacingXs = parseFloat(tokens.spacing.xs) || 4;
+  const spacingSm = parseFloat(tokens.spacing.sm) || 6;
+  const fontXs = parseFloat(tokens.fontSize.xs) || 9;
+  const zoomLabelHeight = fontXs + 4;
+  const zoomRowHeight = 22;
+  const zoomBlockHeight = zoomLabelHeight + spacingXs + zoomRowHeight;
+  const dpadBlockHeight = dpadSize + 6;
+  const actionRowHeight = 26 + spacingXs * 2;
+  const deckMinHeight = zoomBlockHeight + dpadBlockHeight + actionRowHeight + spacingSm * 2 + spacingSm * 3;
+  const bottomMinHeight = Math.max(220, Math.ceil(deckMinHeight));
+  const headerHeightEstimate = 40;
+  const resizerHeight = 6;
+  const innerHeight = Math.max(0, height - headerHeightEstimate);
+  const desiredTopHeight = Math.floor(height * 0.55);
+  const sidebarButtonHeight = 30;
+  const sidebarGap = 6;
+  const sidebarPadding = 12;
+  const sidebarLabelHeight = fontXs + 4;
+  const sidebarButtonCount = sidebarShowItems.length + 1;
+  const sidebarMinHeight =
+    sidebarPadding + sidebarLabelHeight + sidebarButtonCount * sidebarButtonHeight + sidebarGap * (sidebarButtonCount + 1);
+  const availableTopHeight = Math.max(0, innerHeight - bottomMinHeight - resizerHeight);
+  const minTopHeight = Math.min(availableTopHeight, Math.max(160, sidebarMinHeight + mapOuterPadding * 2));
+  const clampedTopHeight = Math.max(minTopHeight, Math.min(desiredTopHeight, availableTopHeight));
+  const topSectionHeight =
+    minimapHeightOverride != null
+      ? Math.max(minTopHeight, Math.min(availableTopHeight, minimapHeightOverride))
+      : clampedTopHeight;
+  const bottomSectionHeight = Math.max(bottomMinHeight, innerHeight - topSectionHeight - resizerHeight);
   const gap = sizeMode === 'minimal' ? 2 : 3;
-  const sidebarWidth = 48;
+  const sidebarWidth = 56;
   const sidebarVisible = true;
   const rowInnerWidth = Math.max(0, width - mapOuterPadding * 2);
   const mapViewportWidth = Math.max(
@@ -1932,6 +3132,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   const zoomScale = minimapZoom / 100;
   const renderCellSize = Math.max(10, cellSize * zoomScale);
   const renderGap = Math.max(1, gap * zoomScale);
+  const tileSize = renderCellSize + renderGap;
   const gridWidth = CANVAS.cols * (renderCellSize + renderGap) - renderGap;
   const gridHeight = CANVAS.rows * (renderCellSize + renderGap) - renderGap;
   const contentWidth = gridWidth + (labelLocked ? 0 : labelOffset);
@@ -1946,25 +3147,20 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   };
   const showHorizontalFade = contentWidth > gridViewportWidth + 1;
   const showVerticalFade = contentHeight > gridViewportHeight + 1;
-  const dpadSize = sizeMode === 'minimal' ? 76 : sizeMode === 'compact' ? 88 : 102;
-  const sidebarOverlap = sidebarVisible ? sidebarWidth + mapOuterPadding : 0;
-  const extraLeft = sidebarSide === 'left' ? sidebarOverlap : 0;
-  const extraRight = sidebarSide === 'right' ? sidebarOverlap : 0;
-  const dpadBounds = {
-    minX: mapInset - extraLeft,
-    minY: mapInset,
-    maxX: Math.max(mapInset, mapViewportWidth - mapInset - dpadSize + extraRight),
-    maxY: Math.max(mapInset, mapViewportHeight - mapInset - dpadSize),
-  };
-  const safeDpadPosition = {
-    x: Math.min(dpadBounds.maxX, Math.max(dpadBounds.minX, dpadPosition.x)),
-    y: Math.min(dpadBounds.maxY, Math.max(dpadBounds.minY, dpadPosition.y)),
-  };
+  const gridPatternOffsetX = ((panContainerOffset + safePanOffset.x) % tileSize + tileSize) % tileSize;
+  const gridPatternOffsetY = ((panContainerOffset + safePanOffset.y) % tileSize + tileSize) % tileSize;
 
   const flattenedViews = useMemo(() => flattenViewsToCanvas(MOCK_VIEWGROUPS), []);
   const filteredVGs = useMemo(() => filter.applyFilters(MOCK_VIEWGROUPS), [filter]);
   const visibleVGs = useMemo(() => filteredVGs.filter((vg) => vg.position), [filteredVGs]);
-
+  const currentPositionLabel = formatCellRef(viewport.position.row, viewport.position.col);
+  const isAtHome = viewport.position.row === homePosition.row && viewport.position.col === homePosition.col;
+  const canvasSizeLabel = `${CANVAS.cols}x${CANVAS.rows}`;
+  const openViewportCount = flattenedViews.length;
+  const availableTags = useMemo(
+    () => Array.from(new Set(MOCK_VIEWGROUPS.flatMap((vg) => vg.tags || []))),
+    []
+  );
   const handleMove = useCallback(
     (dir) => {
       setViewport((prev) => ({
@@ -1987,6 +3183,15 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   }, []);
 
   const clamp = useCallback((value, min, max) => Math.min(max, Math.max(min, value)), []);
+
+  const handleMinimapResizeStart = useCallback(
+    (event) => {
+      resizeStartRef.current = { startY: event.clientY, startHeight: topSectionHeight };
+      setIsResizingMinimap(true);
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    },
+    [topSectionHeight]
+  );
 
   const handlePanStart = useCallback(
     (event) => {
@@ -2025,49 +3230,29 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   }, []);
 
-  const handleDpadDragStart = useCallback(
-    (event) => {
-      event.stopPropagation();
-      event.preventDefault();
-      setDpadHasMoved(true);
-      dpadDragRef.current = {
-        startX: event.clientX,
-        startY: event.clientY,
-        originX: safeDpadPosition.x,
-        originY: safeDpadPosition.y,
-      };
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-    },
-    [safeDpadPosition]
-  );
+  useEffect(() => {
+    if (!isResizingMinimap) return;
 
-  const handleDpadDragMove = useCallback(
-    (event) => {
-      const start = dpadDragRef.current;
-      if (!start) return;
-      const nextX = start.originX + (event.clientX - start.startX);
-      const nextY = start.originY + (event.clientY - start.startY);
-      setDpadPosition({
-        x: clamp(nextX, dpadBounds.minX, dpadBounds.maxX),
-        y: clamp(nextY, dpadBounds.minY, dpadBounds.maxY),
-      });
-    },
-    [clamp, dpadBounds]
-  );
+    const handleMove = (event) => {
+      if (!resizeStartRef.current) return;
+      const next = resizeStartRef.current.startHeight + (event.clientY - resizeStartRef.current.startY);
+      setMinimapHeightOverride(clamp(next, minTopHeight, availableTopHeight));
+    };
 
-  const handleDpadDragEnd = useCallback((event) => {
-    if (!dpadDragRef.current) return;
-    dpadDragRef.current = null;
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-  }, []);
+    const handleUp = () => {
+      setIsResizingMinimap(false);
+      resizeStartRef.current = null;
+    };
 
-  React.useEffect(() => {
-    if (dpadHasMoved) return;
-    const next = { x: dpadBounds.minX, y: dpadBounds.maxY };
-    if (next.x !== dpadPosition.x || next.y !== dpadPosition.y) {
-      setDpadPosition(next);
-    }
-  }, [dpadBounds, dpadHasMoved, dpadPosition.x, dpadPosition.y]);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+  }, [isResizingMinimap, clamp, minTopHeight, availableTopHeight]);
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.lg, padding: tokens.spacing.xl, background: tokens.colors.bg.base }}>
@@ -2177,26 +3362,6 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
           </button>
         </div>
 
-        <ModeTabs activeMode={mapMode} onModeChange={setMapMode} sizeMode={sizeMode} />
-
-        <MapToolbar
-          displayMode={displayMode}
-          setDisplayMode={setDisplayMode}
-          showGridPaper={showGridPaper}
-          toggleGridPaper={() => setShowGridPaper((p) => !p)}
-          showViewports={showViewports}
-          toggleViewports={() => setShowViewports((p) => !p)}
-          showCollaborators={showCollaborators}
-          toggleCollaborators={() => setShowCollaborators((p) => !p)}
-          minimapZoom={minimapZoom}
-          onZoomIn={() => setMinimapZoom((p) => Math.min(150, p + 10))}
-          onZoomOut={() => setMinimapZoom((p) => Math.max(50, p - 10))}
-          onZoomReset={() => setMinimapZoom(100)}
-          companionOpen={companionOpen}
-          toggleCompanion={() => setCompanionOpen((p) => !p)}
-          sizeMode={sizeMode}
-        />
-
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div
             style={{
@@ -2210,15 +3375,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
             }}
           >
             {sidebarVisible && sidebarSide === 'left' && (
-              <MapSidebar
-                side={sidebarSide}
-                onToggleSide={handleSidebarToggle}
-                onGoHome={() => setViewport((p) => ({ ...p, position: homePosition }))}
-                onSetHome={() => setViewport((p) => ({ ...p, position: p.position }))}
-                onFitAll={() => {}}
-                onAddBookmark={() => {}}
-                currentPosition={formatCellRef(viewport.position.row, viewport.position.col)}
-              />
+              <MapSidebar side={sidebarSide} onToggleSide={handleSidebarToggle} showItems={sidebarShowItems} />
             )}
 
             <div
@@ -2227,6 +3384,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                 position: 'relative',
                 minHeight: 0,
                 overflow: 'visible',
+                zIndex: 2,
               }}
             >
               <div
@@ -2243,6 +3401,19 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                 onPointerUp={handlePanEnd}
                 onPointerLeave={handlePanEnd}
               >
+                <div style={{ position: 'absolute', inset: 0 }}>
+                  <GridPaperBackground
+                    rows={Math.ceil(mapViewportHeight / (renderCellSize + renderGap))}
+                    cols={Math.ceil(mapViewportWidth / (renderCellSize + renderGap))}
+                    cellSize={renderCellSize}
+                    gap={renderGap}
+                    visible={showGridPaper}
+                    minorColor="rgba(96, 165, 250, 0.04)"
+                    majorColor="rgba(96, 165, 250, 0.08)"
+                    offsetX={gridPatternOffsetX}
+                    offsetY={gridPatternOffsetY}
+                  />
+                </div>
                 <div
                   style={{
                     position: 'absolute',
@@ -2330,13 +3501,23 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                       </>
                     )}
 
-                    <div style={{ position: 'absolute', top: gridOffset, left: gridOffset }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: gridWidth,
+                        height: gridHeight,
+                      }}
+                    >
                       <GridPaperBackground
                         rows={CANVAS.rows}
                         cols={CANVAS.cols}
                         cellSize={renderCellSize}
                         gap={renderGap}
                         visible={showGridPaper}
+                        offsetX={0}
+                        offsetY={0}
                       />
 
                       {mapMode === MAP_MODES.LINKS && (
@@ -2415,7 +3596,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                         left: 0,
                         width: labelOffset,
                         height: labelOffset,
-                        background: 'rgba(6, 10, 18, 0.92)',
+                        background: '#000000',
                       }}
                     />
                     <div
@@ -2510,7 +3691,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                       right: 0,
                       bottom: 0,
                       pointerEvents: 'none',
-                      zIndex: 20,
+                      zIndex: 14,
                       borderRadius: tokens.radius.md,
                     }}
                   >
@@ -2586,27 +3767,10 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                 )}
               </div>
 
-              <FloatingDPad
-                sizeMode={sizeMode}
-                position={safeDpadPosition}
-                onMove={handleMove}
-                onGoHome={() => setViewport((p) => ({ ...p, position: homePosition }))}
-                onHandlePointerDown={handleDpadDragStart}
-                onHandlePointerMove={handleDpadDragMove}
-                onHandlePointerUp={handleDpadDragEnd}
-              />
             </div>
 
             {sidebarVisible && sidebarSide === 'right' && (
-              <MapSidebar
-                side={sidebarSide}
-                onToggleSide={handleSidebarToggle}
-                onGoHome={() => setViewport((p) => ({ ...p, position: homePosition }))}
-                onSetHome={() => setViewport((p) => ({ ...p, position: p.position }))}
-                onFitAll={() => {}}
-                onAddBookmark={() => {}}
-                currentPosition={formatCellRef(viewport.position.row, viewport.position.col)}
-              />
+              <MapSidebar side={sidebarSide} onToggleSide={handleSidebarToggle} showItems={sidebarShowItems} />
             )}
 
             <CompanionPanel
@@ -2617,30 +3781,85 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
               viewGroups={MOCK_VIEWGROUPS}
               unplacedViews={MOCK_UNPLACED_VIEWS}
               datasets={MOCK_DATASETS}
-              filter={filter}
+              sizeMode={sizeMode}
+              width={companionWidth}
+              showToolbar
               onDragStart={handleDragStart}
             />
           </div>
 
-          <div style={{ flex: '45 1 0%', borderTop: `1px solid ${tokens.colors.border.subtle}`, background: tokens.colors.bg.secondary, overflow: 'hidden' }}>
-            <ContextualPanelContent
-              mode={mapMode}
-              viewport={viewport}
-              setViewport={setViewport}
-              homePosition={homePosition}
-              viewGroups={MOCK_VIEWGROUPS}
-              selectedVGId={selectedVGId}
-              setSelectedVGId={setSelectedVGId}
-              links={MOCK_VG_LINKS}
-              highlightedLinkId={highlightedLinkId}
-              setHighlightedLinkId={setHighlightedLinkId}
-              collaborators={MOCK_COLLABORATORS}
-              showCursors={showCursors}
-              setShowCursors={setShowCursors}
-              bookmarks={MOCK_BOOKMARKS}
-              filter={filter}
-              sizeMode={sizeMode}
-            />
+          <div
+            onPointerDown={handleMinimapResizeStart}
+            style={{
+              height: resizerHeight,
+              cursor: 'row-resize',
+              background: tokens.colors.bg.tertiary,
+              borderTop: `1px solid ${tokens.colors.border.subtle}`,
+              borderBottom: `1px solid ${tokens.colors.border.subtle}`,
+            }}
+          />
+
+          <div
+            style={{
+              flex: '0 0 auto',
+              height: bottomSectionHeight,
+              minHeight: bottomMinHeight,
+              borderTop: `1px solid ${tokens.colors.border.subtle}`,
+              background: tokens.colors.bg.secondary,
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ display: 'flex', height: '100%', minHeight: 0 }}>
+              <LayoutControlDeck
+                minimapZoom={minimapZoom}
+                onZoomIn={() => setMinimapZoom((p) => Math.min(150, p + 10))}
+                onZoomOut={() => setMinimapZoom((p) => Math.max(50, p - 10))}
+                onZoomReset={() => setMinimapZoom(100)}
+                companionOpen={companionOpen}
+                toggleCompanion={() => setCompanionOpen((p) => !p)}
+                currentPositionLabel={currentPositionLabel}
+                isAtHome={isAtHome}
+                canvasSizeLabel={canvasSizeLabel}
+                openViewportCount={openViewportCount}
+                onMove={handleMove}
+                onGoHome={() => setViewport((p) => ({ ...p, position: homePosition }))}
+                onSetHome={() => setHomePosition(viewport.position)}
+                onFitAll={() => {}}
+                onAddBookmark={() => {}}
+                sizeMode={sizeMode}
+                deckWidth={controlDeckWidth}
+              />
+
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ padding: tokens.spacing.sm, borderBottom: `1px solid ${tokens.colors.border.subtle}` }}>
+                  <LayoutSearchRow filter={filter} tagOptions={availableTags} />
+                  <div style={{ marginTop: tokens.spacing.xs }}>
+                    <ModeTabsPill activeMode={mapMode} onModeChange={setMapMode} />
+                  </div>
+                </div>
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  <ContextualPanelContent
+                    mode={mapMode}
+                    viewport={viewport}
+                    setViewport={setViewport}
+                    homePosition={homePosition}
+                    viewGroups={MOCK_VIEWGROUPS}
+                    selectedVGId={selectedVGId}
+                    setSelectedVGId={setSelectedVGId}
+                    links={MOCK_VG_LINKS}
+                    highlightedLinkId={highlightedLinkId}
+                    setHighlightedLinkId={setHighlightedLinkId}
+                    collaborators={MOCK_COLLABORATORS}
+                    showCursors={showCursors}
+                    setShowCursors={setShowCursors}
+                    bookmarks={MOCK_BOOKMARKS}
+                    filter={filter}
+                    sizeMode={sizeMode}
+                    showToolbar={false}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
