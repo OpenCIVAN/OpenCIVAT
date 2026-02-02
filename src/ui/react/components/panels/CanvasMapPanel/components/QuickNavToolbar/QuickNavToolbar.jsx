@@ -1,92 +1,171 @@
 /**
  * @file QuickNavToolbar.jsx
- * @description Side quick navigation toolbar for Canvas Map Panel
+ * @description Side navigation toolbar for Canvas Map Panel V2
  *
- * Vertical toolbar with quick actions:
- * - Home (go to home position)
- * - Set Home (set current position as home)
- * - Fit All (zoom to fit all content)
- * - Bookmark (add current position as bookmark)
+ * Matches V2Spec MapSidebar design with:
+ * - Panel toggle (open/close companion panel)
+ * - Show section (VG Outlines, Views, Viewport, Team)
+ * - Move to left/right button
+ *
+ * Uses existing Tooltip atom for VR-compatible tooltips
  */
 
 import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { Tooltip } from '@UI/react/components/atoms/Tooltip';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import './QuickNavToolbar.scss';
 
 /**
- * QuickNav button component
+ * Toolbar button component with tooltip support
  */
-const QuickNavBtn = memo(function QuickNavBtn({
+const ToolbarBtn = memo(function ToolbarBtn({
   icon,
   label,
   onClick,
   active,
   disabled,
+  accentColor,
+  placement = 'right',
 }) {
   const { isVR } = useAdaptive();
+  const iconSize = isVR ? 18 : 14;
 
-  return (
+  const button = (
     <button
-      className={`quick-nav-toolbar__btn ${active ? 'quick-nav-toolbar__btn--active' : ''}`}
+      className={[
+        'quick-nav-toolbar__btn',
+        active && 'quick-nav-toolbar__btn--active',
+        accentColor && `quick-nav-toolbar__btn--${accentColor}`,
+      ].filter(Boolean).join(' ')}
       onClick={onClick}
       disabled={disabled}
-      title={label}
       type="button"
       data-vr={isVR}
     >
-      <Icon name={icon} size={isVR ? 20 : 16} />
+      <Icon name={icon} size={iconSize} />
     </button>
+  );
+
+  return (
+    <Tooltip content={label} placement={placement}>
+      {button}
+    </Tooltip>
   );
 });
 
 /**
- * QuickNavToolbar - Side quick navigation toolbar
+ * QuickNavToolbar - Side navigation toolbar matching V2Spec MapSidebar
  *
  * @param {Object} props
- * @param {Function} props.onGoHome - Navigate to home position
- * @param {Function} props.onSetHome - Set current position as home
- * @param {Function} props.onFitAll - Fit all content in view
- * @param {Function} props.onAddBookmark - Add bookmark at current position
  * @param {string} [props.position='left'] - Toolbar position ('left' or 'right')
+ * @param {Function} props.onTogglePosition - Toggle toolbar to other side
+ *
+ * Panel Toggle:
+ * @param {boolean} props.companionOpen - Whether companion panel is open
+ * @param {Function} props.onToggleCompanion - Toggle companion panel
+ *
+ * Show Toggles:
+ * @param {boolean} props.showVGOutlines - Show VG outlines on minimap
+ * @param {Function} props.onToggleVGOutlines - Toggle VG outlines
+ * @param {boolean} props.showViews - Show individual views on minimap
+ * @param {Function} props.onToggleViews - Toggle views
+ * @param {boolean} props.showViewports - Show viewport indicators
+ * @param {Function} props.onToggleViewports - Toggle viewports
+ * @param {boolean} props.showCollaborators - Show team viewports
+ * @param {Function} props.onToggleCollaborators - Toggle team display
  */
 export const QuickNavToolbar = memo(function QuickNavToolbar({
-  onGoHome,
-  onSetHome,
-  onFitAll,
-  onAddBookmark,
   position = 'left',
+  onTogglePosition,
+  // Panel toggle
+  companionOpen = false,
+  onToggleCompanion,
+  // Show toggles
+  showVGOutlines = true,
+  onToggleVGOutlines,
+  showViews = false,
+  onToggleViews,
+  showViewports = true,
+  onToggleViewports,
+  showCollaborators = false,
+  onToggleCollaborators,
 }) {
+  const tooltipPlacement = position === 'left' ? 'right' : 'left';
+
   return (
     <div className={`quick-nav-toolbar quick-nav-toolbar--${position}`}>
-      {/* Navigation group */}
-      <div className="quick-nav-toolbar__group">
-        <QuickNavBtn
-          icon="home"
-          label="Go to Home"
-          onClick={onGoHome}
-        />
-        <QuickNavBtn
-          icon="crosshair"
-          label="Set Home Here"
-          onClick={onSetHome}
-        />
-        <QuickNavBtn
-          icon="scan"
-          label="Fit All"
-          onClick={onFitAll}
-        />
-      </div>
+      <div className="quick-nav-toolbar__inner">
+        {/* Panel Toggle - Top section */}
+        {onToggleCompanion && (
+          <>
+            <ToolbarBtn
+              icon={companionOpen ? 'panelRightClose' : 'panelRightOpen'}
+              label={companionOpen ? 'Close Panel' : 'Open Panel'}
+              onClick={onToggleCompanion}
+              active={companionOpen}
+              accentColor="cyan"
+              placement={tooltipPlacement}
+            />
+            <div className="quick-nav-toolbar__divider" />
+          </>
+        )}
 
-      {/* Bookmark */}
-      <div className="quick-nav-toolbar__group">
-        <QuickNavBtn
-          icon="bookmarkPlus"
-          label="Add Bookmark"
-          onClick={onAddBookmark}
-        />
-      </div>
+        {/* Show Section */}
+        <div className="quick-nav-toolbar__section">
+          <span className="quick-nav-toolbar__label">Show</span>
+          <div className="quick-nav-toolbar__group">
+            <ToolbarBtn
+              icon="grid3x3"
+              label="VG Outlines"
+              onClick={onToggleVGOutlines}
+              active={showVGOutlines}
+              accentColor="blue"
+              placement={tooltipPlacement}
+            />
+            <ToolbarBtn
+              icon="layers"
+              label="Views"
+              onClick={onToggleViews}
+              active={showViews}
+              accentColor="blue"
+              placement={tooltipPlacement}
+            />
+            <ToolbarBtn
+              icon="scan"
+              label="Viewport"
+              onClick={onToggleViewports}
+              active={showViewports}
+              accentColor="blue"
+              placement={tooltipPlacement}
+            />
+            <ToolbarBtn
+              icon="users"
+              label="Team"
+              onClick={onToggleCollaborators}
+              active={showCollaborators}
+              accentColor="blue"
+              placement={tooltipPlacement}
+            />
+          </div>
+        </div>
 
+        {/* Spacer */}
+        <div className="quick-nav-toolbar__spacer" />
+
+        {/* Move Position - Bottom */}
+        {onTogglePosition && (
+          <>
+            <div className="quick-nav-toolbar__divider" />
+            <ToolbarBtn
+              icon="arrowLeftRight"
+              label={`Move to ${position === 'left' ? 'right' : 'left'}`}
+              onClick={onTogglePosition}
+              placement={tooltipPlacement}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 });

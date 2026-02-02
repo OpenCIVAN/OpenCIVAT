@@ -25,6 +25,8 @@ import { getVGDisplayName } from '../../utils/gridUtils';
  * @param {boolean} props.isSelected - Whether this VG is selected
  * @param {boolean} props.isGhosted - Whether to show ghosted (for links mode)
  * @param {boolean} props.showInternals - Whether to show internal layout grid
+ * @param {boolean} [props.subtle=false] - Subtle mode: thinner borders, no fill, click-through
+ *   Used when showing both VG outlines AND views (views take priority for interaction)
  * @param {Function} props.onClick - Click handler
  * @param {Function} props.onDoubleClick - Double-click handler
  */
@@ -36,6 +38,7 @@ export const VGBlock = memo(function VGBlock({
   isSelected,
   isGhosted,
   showInternals,
+  subtle = false,
   onClick,
   onDoubleClick,
 }) {
@@ -141,14 +144,15 @@ export const VGBlock = memo(function VGBlock({
       className={`vg-block
         ${isSelected ? 'vg-block--selected' : ''}
         ${isGhosted ? 'vg-block--ghosted' : ''}
-        ${!isExplicit ? 'vg-block--implicit' : ''}`}
+        ${!isExplicit ? 'vg-block--implicit' : ''}
+        ${subtle ? 'vg-block--subtle' : ''}`}
       style={style}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      role="button"
-      tabIndex={0}
+      onClick={subtle ? undefined : onClick}
+      onDoubleClick={subtle ? undefined : onDoubleClick}
+      role={subtle ? undefined : 'button'}
+      tabIndex={subtle ? -1 : 0}
       title={`${name} (${position.rowSpan}x${position.colSpan})`}
-      onKeyDown={(e) => {
+      onKeyDown={subtle ? undefined : (e) => {
         if (e.key === 'Enter') onClick?.();
         if (e.key === ' ') {
           e.preventDefault();

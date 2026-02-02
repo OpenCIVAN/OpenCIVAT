@@ -11,8 +11,9 @@
  * - Understand linking relationships between VGs and Views
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { PanelShell, CHROME_LEVELS, usePanelShell } from '@UI/react/components/panels/PanelShell';
+import { Icon } from '@UI/react/components/atoms/Icon';
 import { CanvasMapContent } from './CanvasMapContent';
 
 // Panel ID constant for external access
@@ -34,6 +35,20 @@ const CANVAS_MAP_BREAKPOINTS = {
  */
 export function CanvasMapPanel({ workspaceId }) {
   const { togglePanel } = usePanelShell();
+  const [companionOpen, setCompanionOpen] = useState(false);
+  const companionToggleRef = useRef(null);
+
+  const handleCompanionToggleReady = useCallback((toggleFn) => {
+    companionToggleRef.current = toggleFn;
+  }, []);
+
+  const handleCompanionOpenChange = useCallback((nextOpen) => {
+    setCompanionOpen(nextOpen);
+  }, []);
+
+  const handleCompanionToggle = useCallback(() => {
+    companionToggleRef.current?.();
+  }, []);
 
   // Listen for toggle event (keyboard shortcut 'm')
   useEffect(() => {
@@ -52,6 +67,16 @@ export function CanvasMapPanel({ workspaceId }) {
       icon="map"
       chrome={CHROME_LEVELS.FULL}
       color="#3b82f6"
+      headerActions={(
+        <button
+          className="panel-header__button"
+          onClick={handleCompanionToggle}
+          title={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
+          type="button"
+        >
+          <Icon name={companionOpen ? 'panelRightClose' : 'panelRightOpen'} size={12} />
+        </button>
+      )}
       defaultWidth={380}
       defaultHeight={600}
       minWidth={280}
@@ -66,6 +91,8 @@ export function CanvasMapPanel({ workspaceId }) {
           width={width}
           height={height}
           sizeMode={sizeMode}
+          onCompanionToggleReady={handleCompanionToggleReady}
+          onCompanionOpenChange={handleCompanionOpenChange}
         />
       )}
     </PanelShell>

@@ -282,6 +282,144 @@
   }
 
   // =========================================================================
+  // EMBEDDED VARIANT - For contextual panels
+  // =========================================================================
+
+  &--embedded {
+    gap: $spacing-sm;
+  }
+
+  &__embedded-bar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-xs;
+    background: $color-glass-subtle;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    transition: all $transition-fast;
+
+    &:focus-within {
+      border-color: $color-border-default;
+      background: $color-glass-light;
+      box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 15%, transparent);
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 0;
+      // Remove border/background since the embedded-bar provides it
+      background: transparent;
+      border: none;
+
+      &:hover {
+        border-color: transparent;
+      }
+
+      &--focused {
+        border-color: transparent;
+        box-shadow: none;
+      }
+
+      .search-input__icon {
+        color: $color-text-muted;
+      }
+
+      .search-input__field {
+        font-size: $font-size-xs;
+      }
+
+      .search-input__clear {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  &__filter-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+      border-color: $color-border-subtle;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-accent-blue;
+      outline-offset: 2px;
+    }
+
+    &--active {
+      color: $color-accent-blue;
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
+
+      &:hover {
+        background: color-mix(in srgb, $color-accent-blue 25%, transparent);
+      }
+    }
+  }
+
+  &__filter-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: $radius-full;
+    background: $color-accent-blue;
+    color: #fff;
+    font-size: 9px;
+    font-weight: $font-weight-bold;
+    line-height: 16px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+
+    // Pulse animation for attention
+    animation: filter-badge-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes filter-badge-pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  &__embedded-filters {
+    // Slide in animation when opened
+    animation: embedded-filters-slide-in 0.2s ease-out;
+  }
+
+  @keyframes embedded-filters-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // =========================================================================
   // VR MODE
   // =========================================================================
 

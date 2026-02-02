@@ -13,6 +13,7 @@ import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { ToggleGroup } from '@UI/react/components/molecules/ToggleGroup';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
+import { AdaptiveTooltip } from '../shared/AdaptiveTooltip';
 import {
   MAP_MODES,
   DISPLAY_MODES,
@@ -22,7 +23,7 @@ import {
 import './MapToolbar.scss';
 
 /**
- * Small toolbar button
+ * Small toolbar button with adaptive tooltip
  */
 const ToolbarBtn = memo(function ToolbarBtn({
   icon,
@@ -35,18 +36,25 @@ const ToolbarBtn = memo(function ToolbarBtn({
 }) {
   const { isVR } = useAdaptive();
 
-  return (
+  const button = (
     <button
       className={`map-toolbar__btn ${active ? 'map-toolbar__btn--active' : ''}`}
       style={active && activeColor ? { '--active-color': activeColor } : undefined}
       onClick={onClick}
       disabled={disabled}
-      title={title}
       type="button"
       data-vr={isVR}
     >
       <Icon name={icon} size={isVR ? size + 4 : size} />
     </button>
+  );
+
+  if (!title) return button;
+
+  return (
+    <AdaptiveTooltip content={title} placement="bottom" delay={400}>
+      {button}
+    </AdaptiveTooltip>
   );
 });
 
@@ -65,7 +73,6 @@ export const MapToolbar = memo(function MapToolbar({
   displayMode,
   setDisplayMode,
   minimapZoom,
-  showGridLabels,
   showViewports,
   showCollaborators,
   showBookmarks,
@@ -79,7 +86,7 @@ export const MapToolbar = memo(function MapToolbar({
   // Handlers
   onZoomIn,
   onZoomOut,
-  toggleShowGridLabels,
+  onResetView,
   toggleShowViewports,
   toggleShowCollaborators,
   toggleShowBookmarks,
@@ -93,8 +100,6 @@ export const MapToolbar = memo(function MapToolbar({
   onBreakLink,
 
   // Companion panel
-  companionOpen,
-  onToggleCompanion,
 
   sizeMode = 'standard',
 }) {
@@ -106,20 +111,14 @@ export const MapToolbar = memo(function MapToolbar({
       <ToolbarBtn icon="zoomOut" onClick={onZoomOut} title="Zoom out" />
       <span className="map-toolbar__zoom-value">{minimapZoom}%</span>
       <ToolbarBtn icon="zoomIn" onClick={onZoomIn} title="Zoom in" />
+      {onResetView && (
+        <ToolbarBtn icon="aspectRatio" onClick={onResetView} title="Reset view" />
+      )}
 
       <Separator />
 
       {!isCompact && (
         <>
-          {/* Grid labels toggle */}
-          <ToolbarBtn
-            icon="hash"
-            active={showGridLabels}
-            onClick={toggleShowGridLabels}
-            title="Grid labels (A1, B2...)"
-            activeColor="var(--accent-purple)"
-          />
-
           {/* VG vs View display mode toggle */}
           <ToggleGroup
             options={[
@@ -220,16 +219,6 @@ export const MapToolbar = memo(function MapToolbar({
       )}
 
       <div className="map-toolbar__spacer" />
-
-      {onToggleCompanion && (
-        <ToolbarBtn
-          icon="panelRightClose"
-          active={companionOpen}
-          onClick={onToggleCompanion}
-          title="Views & Datasets"
-          activeColor="var(--accent-teal)"
-        />
-      )}
 
       {isCompact && <ToolbarBtn icon="moreHorizontal" title="More options" />}
     </div>

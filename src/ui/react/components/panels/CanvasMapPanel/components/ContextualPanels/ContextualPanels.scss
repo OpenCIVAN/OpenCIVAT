@@ -412,6 +412,13 @@
     color: $color-text-secondary;
   }
 
+  &__controls {
+    display: flex;
+    gap: $spacing-xs;
+    margin: $spacing-sm 0 $spacing-md;
+    flex-wrap: wrap;
+  }
+
   &__following {
     display: flex;
     align-items: center;
@@ -422,6 +429,107 @@
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     color: var(--user-color);
+  }
+}
+
+// Viewports tab styles
+.viewports-panel {
+  padding: $spacing-md;
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    background: $color-glass-subtle;
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    &--selected {
+      border-color: $color-accent-cyan;
+      box-shadow: 0 0 0 1px color-mix(in srgb, $color-accent-cyan 35%, transparent);
+    }
+  }
+
+  &__card-main {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-width: 0;
+  }
+
+  &__card-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__card-name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__card-position {
+    font-size: $font-size-xs;
+    font-family: $font-family-mono;
+    color: $color-text-muted;
+  }
+
+  &__card-actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex-shrink: 0;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: $radius-md;
+    background: $color-glass-medium;
+    border: 1px solid $color-border-subtle;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    padding: $spacing-xs 0;
+  }
+
+  &__status-label {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__status-value {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
   }
 }
 
@@ -568,6 +676,95 @@
       background: $color-glass-medium;
       color: $color-accent-green;
     }
+  }
+}
+
+// Layout panel extras
+.layout-panel {
+  &__templates {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: $spacing-xs;
+  }
+
+  &__template-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-md;
+    border: 1px solid $color-border-subtle;
+    background: $color-glass-subtle;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+      border-color: rgba(255, 255, 255, 0.2);
+      color: $color-text-primary;
+    }
+  }
+
+  &__controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: $spacing-sm;
+  }
+
+  &__spinner {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-xs;
+    border-radius: $radius-md;
+    border: 1px solid $color-border-subtle;
+    background: $color-glass-subtle;
+  }
+
+  &__spinner-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__spinner-controls {
+    display: grid;
+    grid-template-columns: 24px 1fr 24px;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__spinner-btn {
+    height: 24px;
+    border-radius: $radius-sm;
+    border: 1px solid $color-border-subtle;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: $color-glass-medium;
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &__spinner-value {
+    text-align: center;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    font-family: $font-family-mono;
+  }
+
+  &__control-row {
+    display: flex;
+    gap: $spacing-xs;
+    margin-top: $spacing-sm;
   }
 }
 

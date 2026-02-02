@@ -2,7 +2,7 @@
  * @file ModeTabs.jsx
  * @description Mode tabs for Canvas Map Panel
  *
- * Horizontal tab bar for switching between Navigate, Layout, Links, and Team modes.
+ * Horizontal tab bar for switching between Viewports, Layout, and Team modes.
  */
 
 import React, { memo } from 'react';

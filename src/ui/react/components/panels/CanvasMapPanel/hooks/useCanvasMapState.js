@@ -72,12 +72,17 @@ export function useCanvasMapState({
   bookmarks = [],
   callbacks = {},
 } = {}) {
+  const normalizeMapMode = useCallback((mode) => {
+    if (mode === MAP_MODES.LINKS) return MAP_MODES.LAYOUT;
+    return MODE_CONFIG[mode] ? mode : MAP_MODES.LAYOUT;
+  }, []);
   // -------------------------------------------------------------------------
   // UI State with localStorage persistence
   // -------------------------------------------------------------------------
   const [mapMode, setMapModeState] = useState(() => {
-    const stored = loadPreference('mapMode', MAP_MODES.NAVIGATE);
-    return stored === 'collaborate' ? MAP_MODES.TEAM : stored;
+    const stored = loadPreference('mapMode', MAP_MODES.LAYOUT);
+    const normalized = stored === 'collaborate' ? MAP_MODES.TEAM : stored;
+    return normalizeMapMode(normalized);
   });
   const [displayMode, setDisplayModeState] = useState(() =>
     loadPreference('displayMode', DISPLAY_MODES.VG)
@@ -106,6 +111,11 @@ export function useCanvasMapState({
     loadPreference('showCursors', true)
   );
 
+  // Show VG outlines even when in View display mode (dual display)
+  const [showVGOutlines, setShowVGOutlinesState] = useState(() =>
+    loadPreference('showVGOutlines', false)
+  );
+
   // My cursor settings (broadcast to collaborators)
   const [myCursorVisible, setMyCursorVisibleState] = useState(() =>
     loadPreference('myCursorVisible', true)
@@ -126,6 +136,10 @@ export function useCanvasMapState({
   const [toolbarPosition, setToolbarPositionState] = useState(() =>
     loadPreference('toolbarPosition', 'left')
   );
+
+  // Companion panel side is always opposite of toolbar (per V2Spec)
+  // This is derived, not stored independently
+  const companionSide = toolbarPosition === 'left' ? 'right' : 'left';
 
   // Per-collaborator cursor visibility (default true)
   const [collaboratorCursorVisibility, setCollaboratorCursorVisibility] = useState(() =>
@@ -148,9 +162,10 @@ export function useCanvasMapState({
 
   // Persist state changes
   const setMapMode = useCallback((mode) => {
-    setMapModeState(mode);
-    savePreference('mapMode', mode);
-  }, []);
+    const normalized = normalizeMapMode(mode);
+    setMapModeState(normalized);
+    savePreference('mapMode', normalized);
+  }, [normalizeMapMode]);
 
   const setDisplayMode = useCallback((mode) => {
     setDisplayModeState(mode);
@@ -190,6 +205,11 @@ export function useCanvasMapState({
   const setShowCursors = useCallback((show) => {
     setShowCursorsState(show);
     savePreference('showCursors', show);
+  }, []);
+
+  const setShowVGOutlines = useCallback((show) => {
+    setShowVGOutlinesState(show);
+    savePreference('showVGOutlines', show);
   }, []);
 
   const setMyCursorVisible = useCallback((visible) => {
@@ -400,6 +420,10 @@ export function useCanvasMapState({
     setShowCursors(prev => !prev);
   }, [setShowCursors]);
 
+  const toggleShowVGOutlines = useCallback(() => {
+    setShowVGOutlines(prev => !prev);
+  }, [setShowVGOutlines]);
+
   const toggleMyCursorVisible = useCallback(() => {
     setMyCursorVisible(prev => !prev);
   }, [setMyCursorVisible]);
@@ -422,11 +446,13 @@ export function useCanvasMapState({
     showBookmarks,
     showInternals,
     showCursors,
+    showVGOutlines,
     myCursorVisible,
     myCursorColor,
     companionOpen,
     companionTab,
     toolbarPosition,
+    companionSide,
     collaboratorCursorVisibility,
     linksSubTab,
     collaborateSubTab,
@@ -447,6 +473,7 @@ export function useCanvasMapState({
     setShowBookmarks,
     setShowInternals,
     setShowCursors,
+    setShowVGOutlines,
     setMyCursorVisible,
     setMyCursorColor,
     setCompanionOpen,
@@ -486,6 +513,7 @@ export function useCanvasMapState({
     toggleShowBookmarks,
     toggleShowInternals,
     toggleShowCursors,
+    toggleShowVGOutlines,
     toggleMyCursorVisible,
     toggleCompanion,
     toggleToolbarPosition,

@@ -10,12 +10,13 @@
     --search-input-placeholder: var(--color-text-muted, #888);
     --search-input-icon: var(--color-text-secondary, #a0a0a0);
     --search-input-icon-size: 16px;
-    --search-input-gap: 8px;
+    --search-input-padding: 10px;
+    --search-input-icon-gap: 6px; // Gap between icon and input text
 
     position: relative;
     display: flex;
     align-items: center;
-    gap: var(--search-input-gap);
+    // Note: Don't use gap - icon container handles its own spacing to prevent overlay
     background: var(--search-input-bg);
     border: 1px solid var(--search-input-border);
     border-radius: 6px;
@@ -28,24 +29,15 @@
         border-color: rgba(255, 255, 255, 0.2);
     }
 
-    // Size variants
+    // Size variants - set CSS variables, base styles use them
     &--sm {
         height: 28px;
         border-radius: 4px;
         --search-input-icon-size: 14px;
-        --search-input-gap: 6px;
-
-        .search-input__icon {
-            padding-left: 8px;
-        }
+        --search-input-padding: 8px;
 
         .search-input__field {
-            padding: 0 8px;
             font-size: 12px;
-        }
-
-        .search-input__clear {
-            padding-right: 6px;
         }
     }
 
@@ -53,19 +45,10 @@
         height: 36px;
         border-radius: 6px;
         --search-input-icon-size: 16px;
-        --search-input-gap: 8px;
-
-        .search-input__icon {
-            padding-left: 10px;
-        }
+        --search-input-padding: 10px;
 
         .search-input__field {
-            padding: 0 10px;
             font-size: 13px;
-        }
-
-        .search-input__clear {
-            padding-right: 8px;
         }
     }
 
@@ -73,19 +56,10 @@
         height: 44px;
         border-radius: 8px;
         --search-input-icon-size: 18px;
-        --search-input-gap: 8px;
-
-        .search-input__icon {
-            padding-left: 12px;
-        }
+        --search-input-padding: 12px;
 
         .search-input__field {
-            padding: 0 12px;
             font-size: 14px;
-        }
-
-        .search-input__clear {
-            padding-right: 10px;
         }
     }
 
@@ -146,16 +120,17 @@
     }
 }
 
-// Search icon
+// Search icon - uses fixed width container to prevent overlay
 .search-input__icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 var(--search-input-icon-size);
-    min-width: var(--search-input-icon-size);
+    // Fixed width prevents icon from overlaying input text
+    // Left padding = edge spacing, Right padding = gap to input text
+    flex: 0 0 auto;
     flex-shrink: 0;
-    width: var(--search-input-icon-size);
-    height: var(--search-input-icon-size);
+    height: 100%;
+    padding: 0 var(--search-input-icon-gap) 0 var(--search-input-padding);
     color: var(--search-input-icon);
     opacity: 0.7;
 
@@ -170,7 +145,10 @@
     flex: 1;
     min-width: 0;
     height: 100%;
+    // No left padding - icon container handles left spacing
+    // Right padding handled by size variants
     padding: 0;
+    padding-right: var(--search-input-padding);
     margin: 0;
     border: none;
     background: transparent;
@@ -199,6 +177,7 @@
     height: 20px;
     padding: 0;
     margin: 0;
+    margin-right: var(--search-input-padding);
     border: none;
     border-radius: 50%;
     background: transparent;

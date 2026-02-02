@@ -42,6 +42,7 @@ $color-glass-light: rgba(96, 165, 250, 0.05);
 $color-glass-medium: rgba(96, 165, 250, 0.08);
 $color-glass-strong: rgba(96, 165, 250, 0.12);
 $color-glass-panel: rgba(8, 14, 24, 0.88); // Panel backgrounds with blur
+$color-glass-frosted: rgba(12, 18, 32, 0.75); // Frosted glass - V2Spec style
 
 // Neutral glass for canvas elements
 $color-glass-canvas: rgba(255, 255, 255, 0.04);
@@ -56,6 +57,7 @@ $color-border-default: rgba(96, 165, 250, 0.12);
 $color-border-medium: rgba(96, 165, 250, 0.18);
 $color-border-strong: rgba(96, 165, 250, 0.25);
 $color-border-accent: rgba(96, 165, 250, 0.4);
+$color-border-glow: rgba(96, 165, 250, 0.25); // Glowing border - V2Spec style
 
 // Neutral borders for canvas/data areas
 $color-border-canvas: rgba(255, 255, 255, 0.06);

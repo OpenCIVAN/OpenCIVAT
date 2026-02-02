@@ -203,6 +203,11 @@ const QuickFiltersRow = memo(function QuickFiltersRow({
  * @param {boolean} [props.showQuickFilters=true] - Show quick filters row
  * @param {number} [props.maxVisibleQuickFilters=4] - Max quick filters before overflow
  * @param {boolean} [props.collapsible=false] - Allow collapsing quick filters
+ * @param {boolean} [props.showTypeFilter=true] - Show type filter dropdown
+ * @param {boolean} [props.showTagFilter=true] - Show tag filter dropdown
+ * @param {boolean} [props.showSortFilter=true] - Show sort filter dropdown
+ * @param {boolean} [props.quickFiltersToggleable=false] - Add toggle button for quick filters
+ * @param {'default'|'embedded'} [props.variant='default'] - Visual variant
  * @param {string} [props.className] - Additional CSS classes
  */
 export const FilterToolbar = memo(function FilterToolbar({
@@ -218,9 +223,16 @@ export const FilterToolbar = memo(function FilterToolbar({
   showQuickFilters = true,
   maxVisibleQuickFilters = 4,
   collapsible = false,
+  showTypeFilter = true,
+  showTagFilter = true,
+  showSortFilter = true,
+  quickFiltersToggleable = false,
+  variant = 'default',
   className = '',
 }) {
   const { isVR } = useAdaptive();
+
+  const isEmbedded = variant === 'embedded';
 
   // Dropdown states
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
@@ -228,6 +240,7 @@ export const FilterToolbar = memo(function FilterToolbar({
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [filtersDropdownOpen, setFiltersDropdownOpen] = useState(false);
   const [quickFiltersCollapsed, setQuickFiltersCollapsed] = useState(false);
+  const [quickFiltersOpen, setQuickFiltersOpen] = useState(!quickFiltersToggleable);
 
   // Refs
   const typeButtonRef = useRef(null);
@@ -280,11 +293,131 @@ export const FilterToolbar = memo(function FilterToolbar({
     if (keep !== 'filters') setFiltersDropdownOpen(false);
   };
 
-  const hasTypes = config.typeCategories?.length > 0;
-  const hasTags = tags.length > 0;
-  const hasSort = config.sortOptions?.length > 0;
+  const hasTypes = showTypeFilter && config.typeCategories?.length > 0;
+  const hasTags = showTagFilter && tags.length > 0;
+  const hasSort = showSortFilter && config.sortOptions?.length > 0;
   const hasQuickFilters = config.quickFilterDefs?.length > 0;
 
+  // Effective quick filters visibility (respects toggleable state)
+  const quickFiltersVisible = showQuickFilters && hasQuickFilters && (quickFiltersToggleable ? quickFiltersOpen : true);
+  const activeFilterCount = filter?.activeFilterCount ?? 0;
+
+  // =========================================================================
+  // EMBEDDED VARIANT - Simplified for contextual panels
+  // =========================================================================
+  if (isEmbedded) {
+    const hasFiltersDropdown = hasTypes || hasTags;
+    const filtersDropdownBadge = (filter.selectedTypes?.length || 0) + (filter.selectedTags?.length || 0);
+
+    return (
+      <div
+        className={[
+          'filter-toolbar',
+          'filter-toolbar--embedded',
+          isVR && 'filter-toolbar--vr',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {/* Search bar with optional filter toggle and filters dropdown */}
+        <div className="filter-toolbar__embedded-bar">
+          <SearchInput
+            value={filter.searchQuery}
+            onChange={filter.setSearchQuery}
+            placeholder={searchPlaceholder}
+            size="sm"
+          />
+
+          {/* Filters dropdown (for types/tags) */}
+          {hasFiltersDropdown && (
+            <DropdownTrigger
+              ref={filtersButtonRef}
+              label="Filters"
+              icon="filter"
+              badge={filtersDropdownBadge}
+              active={filtersDropdownBadge > 0}
+              isOpen={filtersDropdownOpen}
+              onClick={() => setFiltersDropdownOpen(!filtersDropdownOpen)}
+              iconOnly
+            />
+          )}
+
+          {/* Quick filters toggle */}
+          {quickFiltersToggleable && hasQuickFilters && (
+            <button
+              type="button"
+              className={[
+                'filter-toolbar__filter-toggle',
+                quickFiltersOpen && 'filter-toolbar__filter-toggle--active',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => setQuickFiltersOpen(!quickFiltersOpen)}
+              title="Toggle quick filters"
+            >
+              <Icon name="filterList" size={14} />
+              {filter.quickFilters?.length > 0 && (
+                <span className="filter-toolbar__filter-badge">
+                  {filter.quickFilters.length}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Sort dropdown */}
+          {hasSort && (
+            <div className="filter-toolbar__sort-wrapper filter-toolbar__sort-wrapper--compact">
+              <SortDropdown
+                value={filter.sortBy}
+                onChange={filter.setSortBy}
+                options={sortOptionsForDropdown}
+                showLabel={false}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Quick filters (toggleable) */}
+        {quickFiltersVisible && (
+          <div className="filter-toolbar__embedded-filters">
+            <QuickFiltersRow
+              quickFilterDefs={config.quickFilterDefs}
+              activeFilters={filter.quickFilters}
+              onToggle={filter.toggleQuickFilter}
+              counts={quickFilterCounts}
+              maxVisible={quickFilterMaxVisible}
+              compact
+            />
+          </div>
+        )}
+
+        {/* Filters dropdown panel */}
+        {hasFiltersDropdown && (
+          <CombinedFiltersDropdown
+            isOpen={filtersDropdownOpen}
+            onClose={() => setFiltersDropdownOpen(false)}
+            triggerRef={filtersButtonRef}
+            typeCategories={config.typeCategories || []}
+            selectedTypes={filter.selectedTypes}
+            typeCounts={counts}
+            onToggleType={filter.toggleType}
+            onSelectAllTypes={filter.selectAllTypes}
+            onClearAllTypes={filter.clearAllTypes}
+            tags={tags}
+            tagsByCategory={tagsByCategory}
+            selectedTags={filter.selectedTags}
+            onToggleTag={filter.toggleTag}
+            onClearAllTags={filter.clearAllTags}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // DEFAULT VARIANT - Full featured toolbar
+  // =========================================================================
   return (
     <div
       className={[
@@ -584,7 +717,7 @@ export const FilterToolbar = memo(function FilterToolbar({
       {/* QUICK FILTERS ROW                                                 */}
       {/* ================================================================= */}
 
-      {showQuickFilters && hasQuickFilters && !isUltra && (
+      {quickFiltersVisible && !isUltra && (
         <QuickFiltersRow
           quickFilterDefs={config.quickFilterDefs}
           activeFilters={filter.quickFilters}

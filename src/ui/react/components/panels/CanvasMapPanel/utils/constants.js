@@ -19,10 +19,10 @@ export const MAP_MODES = {
 export const MODE_CONFIG = {
   [MAP_MODES.NAVIGATE]: {
     id: MAP_MODES.NAVIGATE,
-    name: 'Navigate',
-    icon: 'compass',
-    color: 'blue',
-    description: 'Move around, find locations',
+    name: 'Viewports',
+    icon: 'frame',
+    color: 'cyan',
+    description: 'Manage viewports',
   },
   [MAP_MODES.LAYOUT]: {
     id: MAP_MODES.LAYOUT,
@@ -30,13 +30,6 @@ export const MODE_CONFIG = {
     icon: 'layoutGrid',
     color: 'green',
     description: 'Build and edit canvas',
-  },
-  [MAP_MODES.LINKS]: {
-    id: MAP_MODES.LINKS,
-    name: 'Links',
-    icon: 'gitBranch',
-    color: 'purple',
-    description: 'Manage connections',
   },
   [MAP_MODES.TEAM]: {
     id: MAP_MODES.TEAM,
@@ -114,6 +107,9 @@ export const MINIMAP_CONSTANTS = {
   ZOOM_STEP: 25,
   GRID_GAP: 4,
   HEADER_SIZE: 24,
+  SCROLL_PADDING: 0,
+  EXTRA_GRID_CELLS: 2,
+  PAN_PADDING_CELLS: 1,
 };
 
 /**

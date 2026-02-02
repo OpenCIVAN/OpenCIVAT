@@ -40,6 +40,7 @@ import './PanelShell.scss';
  * @property {boolean} [resizable] - Whether panel is resizable (defaults based on chrome)
  * @property {boolean} [minimizable] - Whether panel is minimizable (defaults based on chrome)
  * @property {boolean} [closable=true] - Whether panel is closable
+ * @property {React.ReactNode} [headerActions] - Optional header action buttons (rendered before chrome buttons)
  * @property {() => void} [onClose] - Close callback
  * @property {() => void} [onMinimize] - Minimize callback
  * @property {(width: number, height: number) => void} [onResize] - Resize callback
@@ -69,6 +70,7 @@ export function PanelShell({
   onResize,
   onMove,
   onFocus,
+  headerActions,
 }) {
   const { tokens, isVR } = useAdaptive();
   const panelRef = useRef(null);
@@ -216,6 +218,7 @@ export function PanelShell({
           onDragStart={handleDragStart}
           onMinimize={handleMinimize}
           onClose={handleClose}
+          headerActions={headerActions}
         />
       )}
 

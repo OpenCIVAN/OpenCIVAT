@@ -52,6 +52,8 @@ export const TeamPanel = memo(function TeamPanel({
   // Team handlers
   onFollow,
   onLocate,
+  onJoinVoice,
+  onInvite,
 
   sizeMode = 'standard',
 }) {
@@ -88,6 +90,8 @@ export const TeamPanel = memo(function TeamPanel({
       onFollow={onFollow}
       onLocate={onLocate}
       onToggleCollaboratorCursor={onToggleCollaboratorCursor}
+      onJoinVoice={onJoinVoice}
+      onInvite={onInvite}
       sizeMode={sizeMode}
     />
   );

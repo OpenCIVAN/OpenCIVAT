@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { clamp } from '../utils/gridUtils';
+import { MINIMAP_CONSTANTS } from '../utils/constants';
 
 /**
  * useMinimapPanning - Drag panning logic for minimap
@@ -18,6 +19,10 @@ import { clamp } from '../utils/gridUtils';
  * @param {number} options.viewportWidth - Visible viewport width in pixels
  * @param {number} options.viewportHeight - Visible viewport height in pixels
  * @param {boolean} [options.enabled=true] - Whether panning is enabled
+ * @param {number} [options.companionOffset=0] - Extra offset when companion panel is open
+ * @param {'left' | 'right' | null} [options.companionSide=null] - Which side companion is on
+ * @param {number} [options.cellPitch=0] - Cell size + gap (for calculating padding)
+ * @param {boolean} [options.companionOpen=false] - Whether companion panel is open
  * @returns {Object} Panning state and handlers
  */
 export function useMinimapPanning({
@@ -26,6 +31,10 @@ export function useMinimapPanning({
   viewportWidth,
   viewportHeight,
   enabled = true,
+  companionOffset = 0,
+  companionSide = null,
+  cellPitch = 0,
+  companionOpen = false,
 } = {}) {
   // Current pan offset
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -35,20 +44,32 @@ export function useMinimapPanning({
   const dragStartRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0 });
 
-  // Calculate pan bounds
-  const maxPanX = Math.max(0, contentWidth - viewportWidth);
-  const maxPanY = Math.max(0, contentHeight - viewportHeight);
-  const canPan = maxPanX > 0 || maxPanY > 0;
+  // Calculate pan bounds with extended padding (V2Spec: ~3 cells beyond bounds)
+  // This allows users to access obstructed areas
+  const panPaddingCells = MINIMAP_CONSTANTS.PAN_PADDING_CELLS ?? 3;
+  const panPadding = cellPitch > 0 ? cellPitch * panPaddingCells : 50;
+
+  // Add companion width to pan limits on BOTH sides when open
+  // This allows user to access full map when companion overlays part of it
+  const companionPanExtra = companionOpen ? companionOffset : 0;
+
+  // Extended bounds: can pan beyond content in both directions
+  const minPanX = Math.min(0, viewportWidth - contentWidth) - panPadding - companionPanExtra;
+  const minPanY = Math.min(0, viewportHeight - contentHeight) - panPadding;
+  const maxPanX = panPadding + companionPanExtra;
+  const maxPanY = panPadding;
+
+  const canPan = enabled;
 
   /**
    * Clamp pan offset to valid bounds
    */
   const clampPan = useCallback((x, y) => {
     return {
-      x: clamp(x, 0, maxPanX),
-      y: clamp(y, 0, maxPanY),
+      x: clamp(x, minPanX, maxPanX),
+      y: clamp(y, minPanY, maxPanY),
     };
-  }, [maxPanX, maxPanY]);
+  }, [minPanX, maxPanX, minPanY, maxPanY]);
 
   /**
    * Handle mouse/touch down - start dragging
@@ -156,7 +177,9 @@ export function useMinimapPanning({
     panOffset,
     isDragging,
     canPan,
+    minPanX,
     maxPanX,
+    minPanY,
     maxPanY,
 
     // Event handlers (attach to minimap container)

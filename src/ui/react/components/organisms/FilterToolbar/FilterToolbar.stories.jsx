@@ -265,6 +265,153 @@ export const WithoutTags = () => {
   );
 };
 
+// Embedded Variant - For contextual panels
+export const EmbeddedVariant = () => {
+  const filter = useListFilter(FILES_FILTER_CONFIG);
+
+  return (
+    <div
+      style={{
+        width: 300,
+        ...PANEL_STYLE,
+      }}
+    >
+      <h3 style={SECTION_HEADING_STYLE}>Embedded Variant (for contextual panels)</h3>
+      <FilterToolbar
+        filter={filter}
+        config={FILES_FILTER_CONFIG}
+        quickFilterCounts={SAMPLE_QUICK_FILTER_COUNTS}
+        variant="embedded"
+        quickFiltersToggleable
+        showTypeFilter={false}
+        showTagFilter={false}
+        showSortFilter={false}
+        searchPlaceholder="Search groups..."
+      />
+    </div>
+  );
+};
+
+// Embedded with Sort
+export const EmbeddedWithSort = () => {
+  const filter = useListFilter(FILES_FILTER_CONFIG);
+
+  return (
+    <div
+      style={{
+        width: 300,
+        ...PANEL_STYLE,
+      }}
+    >
+      <h3 style={SECTION_HEADING_STYLE}>Embedded with Sort dropdown</h3>
+      <FilterToolbar
+        filter={filter}
+        config={FILES_FILTER_CONFIG}
+        quickFilterCounts={SAMPLE_QUICK_FILTER_COUNTS}
+        variant="embedded"
+        quickFiltersToggleable
+        showTypeFilter={false}
+        showTagFilter={false}
+        showSortFilter
+        searchPlaceholder="Search items..."
+      />
+    </div>
+  );
+};
+
+// Embedded with Filters Dropdown - For complex filtering (file types, tags, etc.)
+export const EmbeddedWithFiltersDropdown = () => {
+  const filter = useListFilter(FILES_FILTER_CONFIG);
+
+  return (
+    <div
+      style={{
+        width: 320,
+        ...PANEL_STYLE,
+      }}
+    >
+      <h3 style={SECTION_HEADING_STYLE}>Embedded with Filters Dropdown</h3>
+      <p style={{ color: '#9ca3af', fontSize: 11, marginBottom: 12 }}>
+        Click the filter icon to open type/tag filters
+      </p>
+      <FilterToolbar
+        filter={filter}
+        config={FILES_FILTER_CONFIG}
+        counts={SAMPLE_TYPE_COUNTS}
+        quickFilterCounts={SAMPLE_QUICK_FILTER_COUNTS}
+        tags={SAMPLE_TAGS}
+        variant="embedded"
+        quickFiltersToggleable
+        showTypeFilter
+        showTagFilter
+        showSortFilter
+        searchPlaceholder="Search files..."
+      />
+    </div>
+  );
+};
+
+// Embedded Full Featured - All options enabled
+export const EmbeddedFullFeatured = () => {
+  const filter = useListFilter(FILES_FILTER_CONFIG);
+
+  return (
+    <div
+      style={{
+        width: 350,
+        ...PANEL_STYLE,
+      }}
+    >
+      <h3 style={SECTION_HEADING_STYLE}>Embedded Full Featured</h3>
+      <p style={{ color: '#9ca3af', fontSize: 11, marginBottom: 12 }}>
+        Search + Filters dropdown + Quick filters + Sort
+      </p>
+      <FilterToolbar
+        filter={filter}
+        config={FILES_FILTER_CONFIG}
+        counts={SAMPLE_TYPE_COUNTS}
+        quickFilterCounts={SAMPLE_QUICK_FILTER_COUNTS}
+        tags={SAMPLE_TAGS}
+        variant="embedded"
+        quickFiltersToggleable
+        showTypeFilter
+        showTagFilter
+        showSortFilter
+        showQuickFilters
+        searchPlaceholder="Search..."
+      />
+    </div>
+  );
+};
+
+// Embedded Without Quick Filters
+export const EmbeddedSearchOnly = () => {
+  const filter = useListFilter({
+    ...FILES_FILTER_CONFIG,
+    quickFilterDefs: [], // No quick filters
+  });
+
+  return (
+    <div
+      style={{
+        width: 300,
+        ...PANEL_STYLE,
+      }}
+    >
+      <h3 style={SECTION_HEADING_STYLE}>Embedded (search only)</h3>
+      <FilterToolbar
+        filter={filter}
+        config={{ ...FILES_FILTER_CONFIG, quickFilterDefs: [] }}
+        variant="embedded"
+        showTypeFilter={false}
+        showTagFilter={false}
+        showSortFilter={false}
+        searchPlaceholder="Search..."
+      />
+    </div>
+  );
+};
+
 // All Layouts Side by Side
 export const AllLayouts = () => {
   const filterFull = useListFilter(FILES_FILTER_CONFIG);

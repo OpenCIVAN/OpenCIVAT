@@ -84,6 +84,13 @@
     flex-shrink: 0;
   }
 
+  &__actions {
+    display: flex;
+    gap: 2px;
+    margin-right: 4px;
+    align-items: center;
+  }
+
   &__button {
     width: 24px;
     height: 24px;

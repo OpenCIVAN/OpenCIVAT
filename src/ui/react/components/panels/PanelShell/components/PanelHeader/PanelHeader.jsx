@@ -26,6 +26,7 @@ import './PanelHeader.scss';
  * @property {(e: MouseEvent) => void} onDragStart - Drag start handler
  * @property {() => void} [onMinimize] - Minimize handler
  * @property {() => void} [onClose] - Close handler
+ * @property {React.ReactNode} [headerActions] - Optional header actions
  */
 
 export function PanelHeader({
@@ -41,6 +42,7 @@ export function PanelHeader({
   onDragStart,
   onMinimize,
   onClose,
+  headerActions,
 }) {
   const isFull = chrome === CHROME_LEVELS.FULL;
   const isCompact = chrome === CHROME_LEVELS.COMPACT;
@@ -81,6 +83,15 @@ export function PanelHeader({
 
       {/* Buttons */}
       <div className="panel-header__buttons">
+        {headerActions && (
+          <div
+            className="panel-header__actions"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {headerActions}
+          </div>
+        )}
         {/* Minimize/Collapse */}
         {minimizable && (
           <button

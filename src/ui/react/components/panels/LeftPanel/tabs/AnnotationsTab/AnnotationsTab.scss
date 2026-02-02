@@ -505,57 +505,8 @@
 }
 
 // =============================================================================
-// SEARCH INPUT
+// SEARCH INPUT - Use SearchInput molecule, no overrides needed
 // =============================================================================
-
-.search-input {
-  position: relative;
-  display: flex;
-  align-items: center;
-
-  &__icon {
-    position: absolute;
-    left: 8px;
-    color: $color-text-muted;
-    pointer-events: none;
-  }
-
-  input {
-    width: 100%;
-    padding: 6px 28px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid $color-border-default;
-    border-radius: $radius-sm;
-    color: $color-text-primary;
-    font-size: 11px;
-    transition: all $transition-fast;
-
-    &::placeholder {
-      color: $color-text-muted;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: $color-accent-primary;
-      background: rgba(0, 0, 0, 0.4);
-    }
-  }
-
-  &__clear {
-    position: absolute;
-    right: 6px;
-    background: none;
-    border: none;
-    color: $color-text-muted;
-    cursor: pointer;
-    padding: 2px;
-    border-radius: $radius-xs;
-
-    &:hover {
-      color: $color-text-secondary;
-    }
-  }
-}
 
 // =============================================================================
 // TYPE FILTER WRAPPER - CENTERED

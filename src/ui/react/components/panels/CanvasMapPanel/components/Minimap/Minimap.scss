@@ -12,14 +12,22 @@
   --accent-blue: #{$color-accent-blue};
   --accent-red: #{$color-accent-red};
   --grid-pitch: calc(var(--cell-size) + var(--grid-gap));
+  --label-bg: #060a12;
+  --label-border: rgba(96, 165, 250, 0.16);
+  --fade-color: rgba(6, 10, 18, 0.9);
 
   position: relative;
   flex: 1;
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  background: $color-bg-canvas;
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.2);
+  // V2Spec: Solid canvas backdrop
+  background: #060a12;
+  border: 1px solid rgba(96, 165, 250, 0.10);
+  border-radius: $radius-lg;
+  // V2Spec: Subtle inset highlights
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 
   &--pannable {
     cursor: grab;
@@ -34,19 +42,54 @@
     align-items: flex-start;
     justify-content: flex-start;
     min-height: 100%;
-    padding: $spacing-sm;
     transition: transform 0.05s ease-out;
+    position: relative;
   }
 
   &__container {
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 1;
   }
 
-  &__col-headers {
+  &__labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  &__labels-corner {
+    position: absolute;
+    background: #060a12;
+    z-index: 10;
+  }
+
+  &__labels-top {
+    position: absolute;
     display: flex;
-    margin-left: 24px;
-    margin-bottom: 2px;
+    height: var(--header-size);
+    background: var(--label-bg);
+    border-bottom: 1px solid var(--label-border);
+    overflow: visible;
+    z-index: 8;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -12px;
+      height: 12px;
+      background: linear-gradient(180deg, rgba(6, 10, 18, 1) 0%, rgba(6, 10, 18, 0) 100%);
+      pointer-events: none;
+    }
+  }
+
+  &__labels-top-inner {
+    display: flex;
+    height: 100%;
   }
 
   &__col-header {
@@ -56,7 +99,7 @@
     font-size: clamp(8px, calc(var(--cell-size) / 6), 10px);
     font-weight: $font-weight-semibold;
     font-family: $font-family-mono;
-    color: $color-text-muted;
+    color: #f59e0b;
 
     &:not(:last-child) {
       margin-right: var(--grid-gap);
@@ -68,10 +111,31 @@
     position: relative;
   }
 
-  &__row-headers {
+  &__labels-left {
+    position: absolute;
     display: flex;
     flex-direction: column;
-    margin-right: 2px;
+    width: var(--header-size);
+    background: var(--label-bg);
+    border-right: 1px solid var(--label-border);
+    overflow: visible;
+    z-index: 8;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: -12px;
+      width: 12px;
+      background: linear-gradient(90deg, rgba(6, 10, 18, 1) 0%, rgba(6, 10, 18, 0) 100%);
+      pointer-events: none;
+    }
+  }
+
+  &__labels-left-inner {
+    display: flex;
+    flex-direction: column;
   }
 
   &__row-header {
@@ -82,8 +146,8 @@
     font-size: clamp(8px, calc(var(--cell-size) / 6), 10px);
     font-weight: $font-weight-semibold;
     font-family: $font-family-mono;
-    color: $color-text-muted;
-    min-width: 20px;
+    color: #f59e0b;
+    min-width: var(--header-size);
 
     &:not(:last-child) {
       margin-bottom: var(--grid-gap);
@@ -91,23 +155,45 @@
   }
 
   &__grid {
-    display: grid;
-    gap: var(--grid-gap);
     position: relative;
+    background: transparent;
+    border-radius: $radius-md;
+    overflow: hidden;
+  }
+
+  &__grid-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  &__grid-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
   }
 
   &__grid-paper {
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 0;
+    z-index: 2;
     pointer-events: none;
   }
 
+  &__grid-paper--active {
+    opacity: 1;
+  }
+
   &__cell {
-    background: color-mix(in srgb, $color-bg-canvas-cell 45%, transparent);
-    border: 1px solid color-mix(in srgb, $color-border-subtle 55%, transparent);
-    border-radius: $radius-xs;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     position: relative;
     z-index: 1;
   }
@@ -141,15 +227,75 @@
 
   &__pan-hint {
     position: absolute;
-    bottom: $spacing-sm;
-    right: $spacing-sm;
-    padding: 2px 6px;
+    bottom: $spacing-md;
+    right: $spacing-md;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
     font-size: 9px;
+    letter-spacing: 0.2px;
     color: $color-text-muted;
-    background: $color-glass-medium;
-    border-radius: $radius-xs;
+    background: rgba(2, 6, 16, 0.65);
+    border: 1px solid $color-border-subtle;
+    border-radius: $radius-md;
     pointer-events: none;
-    opacity: 0.7;
+    z-index: 15;
+  }
+
+  // Edge fade gradients when content is pannable
+  &__edge-fades {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 14;
+    border-radius: $radius-lg;
+    overflow: hidden;
+  }
+
+  &__fade-left {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 28px;
+    height: 100%;
+    background: linear-gradient(90deg, var(--fade-color), transparent);
+  }
+
+  &__fade-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 36px;
+    height: 100%;
+    background: linear-gradient(270deg, var(--fade-color), transparent);
+  }
+
+  &__fade-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 28px;
+    background: linear-gradient(180deg, var(--fade-color), transparent);
+  }
+
+  &__fade-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 36px;
+    background: linear-gradient(0deg, var(--fade-color), transparent);
+  }
+
+  // Companion panel offset support
+  &--companion-left {
+    margin-left: var(--companion-offset, 0);
+  }
+
+  &--companion-right {
+    margin-right: var(--companion-offset, 0);
   }
 }
 
@@ -211,6 +357,25 @@
 
   &--implicit {
     border-style: dashed;
+  }
+
+  // Subtle mode: thinner borders, no fill, click-through for dual display
+  &--subtle {
+    background: transparent;
+    border-width: 1px;
+    border-color: color-mix(in srgb, var(--vg-color) 40%, transparent);
+    pointer-events: none;
+    z-index: 0;
+
+    &:hover {
+      background: transparent;
+      border-color: color-mix(in srgb, var(--vg-color) 40%, transparent);
+    }
+
+    .vg-block__name {
+      opacity: 0.6;
+      font-size: 8px;
+    }
   }
 
   &__name {

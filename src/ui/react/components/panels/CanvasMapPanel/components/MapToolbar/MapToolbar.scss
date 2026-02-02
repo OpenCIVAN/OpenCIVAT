@@ -9,7 +9,9 @@
   align-items: center;
   gap: 4px;
   padding: 6px 8px;
-  background: $color-glass-subtle;
+  background: $color-glass-light;
+  backdrop-filter: $blur-subtle;
+  -webkit-backdrop-filter: $blur-subtle;
   border-bottom: 1px solid $color-border-subtle;
   flex-wrap: nowrap;
 

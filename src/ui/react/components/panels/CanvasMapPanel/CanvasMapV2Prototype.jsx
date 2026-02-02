@@ -296,7 +296,6 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
         displayMode={state.displayMode}
         setDisplayMode={state.setDisplayMode}
         minimapZoom={state.minimapZoom}
-        showGridLabels={state.showGridLabels}
         showViewports={state.showViewports}
         showCollaborators={state.showCollaborators}
         showBookmarks={state.showBookmarks}
@@ -308,15 +307,12 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
         onlineCollaboratorsCount={state.onlineCollaboratorsCount}
         onZoomIn={state.handleZoomIn}
         onZoomOut={state.handleZoomOut}
-        toggleShowGridLabels={state.toggleShowGridLabels}
         toggleShowViewports={state.toggleShowViewports}
         toggleShowCollaborators={state.toggleShowCollaborators}
         toggleShowBookmarks={state.toggleShowBookmarks}
         toggleShowInternals={state.toggleShowInternals}
         onAddVG={handleAddVG}
         sizeMode={effectiveSizeMode}
-        companionOpen={state.companionOpen}
-        onToggleCompanion={state.toggleCompanion}
       />
 
       <div className="canvas-map-v2__body">
@@ -347,7 +343,7 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
                 mapMode={state.mapMode}
                 focusedVG={state.focusedVG}
                 minimapZoom={state.minimapZoom}
-                showGridLabels={state.showGridLabels}
+                showGridLabels
                 showInternals={state.showInternals}
                 showViewports={state.showViewports}
                 showCollaborators={state.showCollaborators}
@@ -361,6 +357,8 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
                 onLinkClick={state.handleLinkClick}
                 containerWidth={minimapWidth}
                 containerHeight={minimapInnerHeight}
+                companionOpen={state.companionOpen}
+                companionWidth={companionWidth}
               />
             </div>
           </div>

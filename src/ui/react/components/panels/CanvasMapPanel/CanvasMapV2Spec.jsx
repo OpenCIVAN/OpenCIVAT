@@ -68,15 +68,18 @@ const tokens = {
       active: 'rgba(96, 165, 250, 0.15)',
     },
     glass: {
-      subtle: 'rgba(96, 165, 250, 0.03)',
-      light: 'rgba(96, 165, 250, 0.05)',
-      medium: 'rgba(96, 165, 250, 0.08)',
-      strong: 'rgba(96, 165, 250, 0.12)',
+      subtle: 'rgba(96, 165, 250, 0.04)',
+      light: 'rgba(96, 165, 250, 0.06)',
+      medium: 'rgba(96, 165, 250, 0.10)',
+      strong: 'rgba(96, 165, 250, 0.15)',
+      panel: 'rgba(6, 10, 18, 0.85)',
+      frosted: 'rgba(12, 18, 32, 0.75)',
     },
     border: {
-      subtle: 'rgba(96, 165, 250, 0.08)',
-      default: 'rgba(96, 165, 250, 0.15)',
+      subtle: 'rgba(96, 165, 250, 0.10)',
+      default: 'rgba(96, 165, 250, 0.18)',
       focus: 'rgba(59, 130, 246, 0.5)',
+      glow: 'rgba(96, 165, 250, 0.25)',
     },
     text: {
       primary: 'rgba(248, 250, 252, 0.95)',
@@ -104,6 +107,307 @@ const tokens = {
   radius: { xs: '2px', sm: '4px', md: '6px', lg: '8px', xl: '12px' },
   fontSize: { xs: '9px', sm: '10px', md: '11px', lg: '12px', xl: '13px' },
   spacing: { xs: '4px', sm: '6px', md: '8px', lg: '12px', xl: '16px' },
+  blur: { subtle: 'blur(8px)', medium: 'blur(12px)', strong: 'blur(20px)' },
+  shadow: {
+    glass: '0 4px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1)',
+    glow: (color) => `0 0 20px ${color}40, 0 0 40px ${color}20`,
+    depth: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+  },
+};
+
+/**
+ * AdaptiveTooltip - VR-compatible tooltip with raycast support and adaptive positioning
+ * Works in both desktop (hover) and VR (raycast/pointer) modes
+ */
+const AdaptiveTooltip = ({ children, content, placement = 'top', delay = 300, disabled = false }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [actualPlacement, setActualPlacement] = useState(placement);
+  const triggerRef = useRef(null);
+  const tooltipRef = useRef(null);
+  const timeoutRef = useRef(null);
+  const tooltipId = useId();
+
+  const calculatePosition = useCallback(() => {
+    if (!triggerRef.current || !tooltipRef.current) return;
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const padding = 8;
+    const arrowSize = 6;
+
+    // Calculate available space in each direction
+    const spaceTop = triggerRect.top;
+    const spaceBottom = window.innerHeight - triggerRect.bottom;
+    const spaceLeft = triggerRect.left;
+    const spaceRight = window.innerWidth - triggerRect.right;
+
+    // Determine best placement based on available space
+    let bestPlacement = placement;
+    const tooltipHeight = tooltipRect.height + arrowSize + padding;
+    const tooltipWidth = tooltipRect.width + arrowSize + padding;
+
+    if (placement === 'top' && spaceTop < tooltipHeight && spaceBottom > tooltipHeight) {
+      bestPlacement = 'bottom';
+    } else if (placement === 'bottom' && spaceBottom < tooltipHeight && spaceTop > tooltipHeight) {
+      bestPlacement = 'top';
+    } else if (placement === 'left' && spaceLeft < tooltipWidth && spaceRight > tooltipWidth) {
+      bestPlacement = 'right';
+    } else if (placement === 'right' && spaceRight < tooltipWidth && spaceLeft > tooltipWidth) {
+      bestPlacement = 'left';
+    }
+
+    setActualPlacement(bestPlacement);
+
+    // Calculate position based on placement
+    let x, y;
+    const centerX = triggerRect.left + triggerRect.width / 2;
+    const centerY = triggerRect.top + triggerRect.height / 2;
+
+    switch (bestPlacement) {
+      case 'top':
+        x = centerX - tooltipRect.width / 2;
+        y = triggerRect.top - tooltipRect.height - arrowSize - 4;
+        break;
+      case 'bottom':
+        x = centerX - tooltipRect.width / 2;
+        y = triggerRect.bottom + arrowSize + 4;
+        break;
+      case 'left':
+        x = triggerRect.left - tooltipRect.width - arrowSize - 4;
+        y = centerY - tooltipRect.height / 2;
+        break;
+      case 'right':
+        x = triggerRect.right + arrowSize + 4;
+        y = centerY - tooltipRect.height / 2;
+        break;
+      default:
+        x = centerX - tooltipRect.width / 2;
+        y = triggerRect.top - tooltipRect.height - arrowSize - 4;
+    }
+
+    // Clamp to viewport
+    x = Math.max(8, Math.min(x, window.innerWidth - tooltipRect.width - 8));
+    y = Math.max(8, Math.min(y, window.innerHeight - tooltipRect.height - 8));
+
+    setPosition({ x, y });
+  }, [placement]);
+
+  const show = useCallback(() => {
+    if (disabled) return;
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(true);
+    }, delay);
+  }, [delay, disabled]);
+
+  const hide = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsVisible(false);
+  }, []);
+
+  useEffect(() => {
+    if (isVisible) {
+      // Small delay to allow tooltip to render before measuring
+      requestAnimationFrame(calculatePosition);
+    }
+  }, [isVisible, calculatePosition]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  if (disabled || !content) return children;
+
+  const arrowStyle = {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    ...(actualPlacement === 'top' && {
+      bottom: -6,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      borderLeft: '6px solid transparent',
+      borderRight: '6px solid transparent',
+      borderTop: `6px solid ${tokens.colors.glass.panel}`,
+    }),
+    ...(actualPlacement === 'bottom' && {
+      top: -6,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      borderLeft: '6px solid transparent',
+      borderRight: '6px solid transparent',
+      borderBottom: `6px solid ${tokens.colors.glass.panel}`,
+    }),
+    ...(actualPlacement === 'left' && {
+      right: -6,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      borderTop: '6px solid transparent',
+      borderBottom: '6px solid transparent',
+      borderLeft: `6px solid ${tokens.colors.glass.panel}`,
+    }),
+    ...(actualPlacement === 'right' && {
+      left: -6,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      borderTop: '6px solid transparent',
+      borderBottom: '6px solid transparent',
+      borderRight: `6px solid ${tokens.colors.glass.panel}`,
+    }),
+  };
+
+  return (
+    <>
+      {React.cloneElement(children, {
+        ref: triggerRef,
+        onMouseEnter: show,
+        onMouseLeave: hide,
+        onPointerEnter: show, // VR raycast support
+        onPointerLeave: hide,
+        onFocus: show,
+        onBlur: hide,
+        'aria-describedby': isVisible ? tooltipId : undefined,
+      })}
+      {isVisible && (
+        <div
+          ref={tooltipRef}
+          id={tooltipId}
+          role="tooltip"
+          style={{
+            position: 'fixed',
+            left: position.x,
+            top: position.y,
+            zIndex: 9999,
+            padding: '6px 10px',
+            background: tokens.colors.glass.panel,
+            backdropFilter: tokens.blur.strong,
+            WebkitBackdropFilter: tokens.blur.strong,
+            border: `1px solid ${tokens.colors.border.glow}`,
+            borderRadius: tokens.radius.md,
+            boxShadow: `${tokens.shadow.glass}, 0 0 20px rgba(96, 165, 250, 0.15)`,
+            color: tokens.colors.text.primary,
+            fontSize: tokens.fontSize.sm,
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            animation: 'tooltipFadeIn 0.15s ease-out',
+          }}
+        >
+          <div style={arrowStyle} />
+          {content}
+        </div>
+      )}
+      <style>{`
+        @keyframes tooltipFadeIn {
+          from { opacity: 0; transform: translateY(${actualPlacement === 'bottom' ? '-4px' : actualPlacement === 'top' ? '4px' : '0'}); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </>
+  );
+};
+
+/**
+ * SearchInput - Reusable search input with icon, clear button, and proper styling
+ * Prevents icon overlay issues by using proper flexbox layout
+ */
+const SearchInput = ({
+  value,
+  onChange,
+  onClear,
+  placeholder = 'Search...',
+  autoFocus = false,
+  onBlur,
+  size = 'default', // 'default' | 'small' | 'compact'
+  style = {},
+}) => {
+  const sizes = {
+    default: { height: 32, iconSize: 14, fontSize: tokens.fontSize.sm, padding: tokens.spacing.sm },
+    small: { height: 28, iconSize: 12, fontSize: tokens.fontSize.xs, padding: tokens.spacing.xs },
+    compact: { height: 24, iconSize: 10, fontSize: tokens.fontSize.xs, padding: '4px' },
+  };
+  const s = sizes[size] || sizes.default;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: s.height,
+        background: tokens.colors.bg.tertiary,
+        borderRadius: tokens.radius.md,
+        border: `1px solid ${tokens.colors.border.subtle}`,
+        overflow: 'hidden',
+        ...style,
+      }}
+    >
+      {/* Icon container - fixed width to prevent overlay */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: s.height,
+          height: '100%',
+          flexShrink: 0,
+          color: tokens.colors.text.muted,
+        }}
+      >
+        <Search size={s.iconSize} />
+      </div>
+
+      {/* Input - takes remaining space */}
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        onBlur={onBlur}
+        style={{
+          flex: 1,
+          height: '100%',
+          padding: 0,
+          paddingRight: s.padding,
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: tokens.colors.text.primary,
+          fontSize: s.fontSize,
+          minWidth: 0,
+        }}
+      />
+
+      {/* Clear button - only shown when there's a value */}
+      {value && (
+        <button
+          type="button"
+          onClick={onClear}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: s.height - 4,
+            height: s.height - 4,
+            marginRight: 2,
+            background: 'transparent',
+            border: 'none',
+            borderRadius: tokens.radius.sm,
+            cursor: 'pointer',
+            color: tokens.colors.text.muted,
+            flexShrink: 0,
+          }}
+        >
+          <X size={s.iconSize - 2} />
+        </button>
+      )}
+    </div>
+  );
 };
 
 const VIEW_TYPES = {
@@ -346,6 +650,7 @@ const FilterToolbar = ({
   dense = false,
 }) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const isCompact = sizeMode === 'compact';
   const isMinimal = sizeMode === 'minimal';
   const currentSort = filter.currentSortOption || SORT_OPTIONS.find((o) => o.value === filter.sortBy);
@@ -355,62 +660,53 @@ const FilterToolbar = ({
   const tagCount = filter.selectedTags.length;
   const hasTags = tagOptions.length > 0;
 
+  // In dense mode, search is icon-only until expanded
+  const showSearchInput = !dense || searchExpanded || filter.searchQuery;
+
   return (
     <div style={{ borderBottom: `1px solid ${tokens.colors.border.subtle}` }}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: tokens.spacing.sm,
-          padding: `${paddingY} ${tokens.spacing.md}`,
+          gap: tokens.spacing.xs,
+          padding: `${paddingY} ${dense ? tokens.spacing.sm : tokens.spacing.md}`,
           background: tokens.colors.bg.secondary,
         }}
       >
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: tokens.spacing.xs,
-            padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
-            background: tokens.colors.bg.tertiary,
-            borderRadius: tokens.radius.md,
-            border: `1px solid ${tokens.colors.border.subtle}`,
-            minWidth: 0,
-          }}
-        >
-          <Search size={12} style={{ color: tokens.colors.text.muted, flexShrink: 0 }} />
-          <input
-            type="text"
-            value={filter.searchQuery}
-            onChange={(e) => filter.setSearchQuery(e.target.value)}
-            placeholder="Search..."
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: tokens.colors.text.primary,
-              fontSize: controlFontSize,
-              minWidth: 0,
-            }}
-          />
-          {filter.searchQuery && (
+        {/* Search - icon-only in dense mode, expands on click */}
+        {dense && !showSearchInput ? (
+          <AdaptiveTooltip content="Search" placement="bottom">
             <button
               type="button"
-              onClick={() => filter.setSearchQuery('')}
+              onClick={() => setSearchExpanded(true)}
               style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
                 display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                background: tokens.colors.bg.tertiary,
+                borderRadius: tokens.radius.md,
+                border: `1px solid ${tokens.colors.border.subtle}`,
+                color: tokens.colors.text.muted,
+                cursor: 'pointer',
               }}
             >
-              <X size={10} style={{ color: tokens.colors.text.muted }} />
+              <Search size={12} />
             </button>
-          )}
-        </div>
+          </AdaptiveTooltip>
+        ) : (
+          <SearchInput
+            value={filter.searchQuery}
+            onChange={filter.setSearchQuery}
+            onClear={() => { filter.setSearchQuery(''); if (dense) setSearchExpanded(false); }}
+            autoFocus={dense && searchExpanded}
+            onBlur={() => { if (dense && !filter.searchQuery) setSearchExpanded(false); }}
+            size={dense ? 'small' : 'default'}
+            style={{ flex: 1, minWidth: 0 }}
+          />
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs }}>
           <div style={{ position: 'relative' }}>
@@ -686,27 +982,26 @@ const FilterToolbar = ({
             const isActive = filter.quickFilters.includes(qf.id);
             const QfIcon = qf.icon;
             return (
-              <button
-                key={qf.id}
-                type="button"
-                onClick={() => filter.toggleQuickFilter(qf.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  padding: '3px 8px',
-                  background: isActive ? tokens.colors.glass.strong : tokens.colors.glass.subtle,
-                  border: `1px solid ${isActive ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
-                  borderRadius: tokens.radius.lg,
-                  color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
-                  cursor: 'pointer',
-                  fontSize: tokens.fontSize.xs,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <QfIcon size={10} />
-                {!isCompact && <span>{qf.label}</span>}
-              </button>
+              <AdaptiveTooltip key={qf.id} content={qf.label} placement="bottom">
+                <button
+                  type="button"
+                  onClick={() => filter.toggleQuickFilter(qf.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 24,
+                    height: 24,
+                    background: isActive ? tokens.colors.glass.strong : tokens.colors.glass.subtle,
+                    border: `1px solid ${isActive ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
+                    borderRadius: tokens.radius.md,
+                    color: isActive ? tokens.colors.accent.blue : tokens.colors.text.secondary,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <QfIcon size={12} />
+                </button>
+              </AdaptiveTooltip>
             );
           })}
         </div>
@@ -1182,19 +1477,33 @@ const SquareDPad = ({ sizeMode, onMove, onGoHome, centerLabel, isAtHome }) => {
     side,
     onToggleSide,
     showItems = [],
+    panelToggle, // Separate toggle for companion panel - goes above Show section
   }) => {
+  // Glassmorphic button style
   const btnStyle = {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     borderRadius: tokens.radius.md,
     border: `1px solid ${tokens.colors.border.subtle}`,
-    background: 'transparent',
+    background: tokens.colors.glass.light,
+    backdropFilter: tokens.blur.subtle,
+    WebkitBackdropFilter: tokens.blur.subtle,
     color: tokens.colors.text.muted,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
+    transition: 'all 0.15s ease',
   };
+
+  // Active button style with glow
+  const getActiveStyle = (isActive, accentColor) => ({
+    ...btnStyle,
+    border: `1px solid ${isActive ? accentColor : tokens.colors.border.subtle}`,
+    background: isActive ? `${accentColor}18` : tokens.colors.glass.light,
+    color: isActive ? accentColor : tokens.colors.text.muted,
+    boxShadow: isActive ? `0 0 12px ${accentColor}40, inset 0 1px 0 rgba(255,255,255,0.1)` : 'inset 0 1px 0 rgba(255,255,255,0.05)',
+  });
 
   return (
     <div
@@ -1211,10 +1520,13 @@ const SquareDPad = ({ sizeMode, onMove, onGoHome, centerLabel, isAtHome }) => {
     >
       <div
         style={{
-          padding: 4,
+          padding: 5,
           borderRadius: tokens.radius.lg,
-          border: `1px solid ${tokens.colors.border.subtle}`,
-          background: tokens.colors.glass.subtle,
+          border: `1px solid ${tokens.colors.border.glow}`,
+          background: tokens.colors.glass.frosted,
+          backdropFilter: tokens.blur.strong,
+          WebkitBackdropFilter: tokens.blur.strong,
+          boxShadow: `${tokens.shadow.glass}, inset 0 1px 0 rgba(255,255,255,0.08)`,
           display: 'flex',
           flexDirection: 'column',
           gap: 6,
@@ -1222,37 +1534,55 @@ const SquareDPad = ({ sizeMode, onMove, onGoHome, centerLabel, isAtHome }) => {
           zIndex: 1,
         }}
       >
+        {/* Panel toggle button - above Show section */}
+        {panelToggle && (
+          <>
+            <AdaptiveTooltip content={panelToggle.label} placement={side === 'left' ? 'right' : 'left'}>
+              <button
+                type="button"
+                onClick={panelToggle.onClick}
+                style={getActiveStyle(panelToggle.active, tokens.colors.accent.cyan)}
+              >
+                <panelToggle.icon size={14} />
+              </button>
+            </AdaptiveTooltip>
+            <div style={{ width: '100%', height: 1, background: `linear-gradient(90deg, transparent, ${tokens.colors.border.default}, transparent)` }} />
+          </>
+        )}
+
+        {/* Show section */}
         {showItems.length > 0 && (
           <>
-            <div style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted }}>Show</div>
+            <div style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Show</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {showItems.map((item, idx) => {
                 const ItemIcon = item.icon;
                 return (
-                  <button
-                    key={`${item.label}-${idx}`}
-                    type="button"
-                    onClick={item.onClick}
-                    title={item.label}
-                    style={{
-                      ...btnStyle,
-                      border: `1px solid ${item.active ? tokens.colors.accent.blue : tokens.colors.border.subtle}`,
-                      background: item.active ? tokens.colors.glass.medium : 'transparent',
-                      color: item.active ? tokens.colors.accent.blue : tokens.colors.text.muted,
-                    }}
-                  >
-                    <ItemIcon size={14} />
-                  </button>
+                  <AdaptiveTooltip key={`${item.label}-${idx}`} content={item.label} placement={side === 'left' ? 'right' : 'left'}>
+                    <button
+                      type="button"
+                      onClick={item.onClick}
+                      style={getActiveStyle(item.active, tokens.colors.accent.blue)}
+                    >
+                      <ItemIcon size={14} />
+                    </button>
+                  </AdaptiveTooltip>
                 );
               })}
             </div>
           </>
         )}
 
-        <div style={{ width: '100%', height: 1, background: tokens.colors.border.subtle }} />
-        <button type="button" onClick={onToggleSide} title={`Move to ${side === 'left' ? 'right' : 'left'}`} style={btnStyle}>
-          <ArrowLeftRight size={14} />
-        </button>
+        {/* Spacer to push toggle-side button to bottom */}
+        <div style={{ flex: 1 }} />
+
+        {/* Move to other side button - at bottom */}
+        <div style={{ width: '100%', height: 1, background: `linear-gradient(90deg, transparent, ${tokens.colors.border.default}, transparent)` }} />
+        <AdaptiveTooltip content={`Move to ${side === 'left' ? 'right' : 'left'}`} placement={side === 'left' ? 'right' : 'left'}>
+          <button type="button" onClick={onToggleSide} style={btnStyle}>
+            <ArrowLeftRight size={14} />
+          </button>
+        </AdaptiveTooltip>
       </div>
     </div>
   );
@@ -1270,6 +1600,8 @@ const CompanionPanel = ({
   width = 180,
   showToolbar = true,
   onDragStart,
+  overlay = false, // When true, panel overlays the minimap instead of pushing it
+  side = 'right', // Which side the companion panel appears on
 }) => {
   if (!isOpen) return null;
 
@@ -1308,18 +1640,34 @@ const CompanionPanel = ({
   const filteredViews = companionFilter.applyFilters(allViews);
   const filteredDatasets = companionFilter.applyFilters(datasetsWithTags);
 
+  const isLeftSide = side === 'left';
+
   return (
     <div
       style={{
         width,
-        background: tokens.colors.bg.secondary,
-        borderLeft: `1px solid ${tokens.colors.border.subtle}`,
+        background: tokens.colors.glass.frosted,
+        backdropFilter: tokens.blur.strong,
+        WebkitBackdropFilter: tokens.blur.strong,
+        borderLeft: isLeftSide ? 'none' : `1px solid ${tokens.colors.border.glow}`,
+        borderRight: isLeftSide ? `1px solid ${tokens.colors.border.glow}` : 'none',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        // Overlay positioning
+        ...(overlay && {
+          position: 'absolute',
+          top: 0,
+          [isLeftSide ? 'left' : 'right']: 0,
+          bottom: 0,
+          zIndex: 20,
+          boxShadow: isLeftSide
+            ? `4px 0 24px rgba(0, 0, 0, 0.5), 0 0 1px rgba(96, 165, 250, 0.2), inset -1px 0 0 rgba(255,255,255,0.05)`
+            : `-4px 0 24px rgba(0, 0, 0, 0.5), 0 0 1px rgba(96, 165, 250, 0.2), inset 1px 0 0 rgba(255,255,255,0.05)`,
+        }),
       }}
     >
-      <div style={{ display: 'flex', borderBottom: `1px solid ${tokens.colors.border.subtle}` }}>
+      <div style={{ display: 'flex', borderBottom: `1px solid ${tokens.colors.border.default}`, background: tokens.colors.glass.subtle }}>
         {[
           { id: COMPANION_TABS.VIEWS, label: 'Views', icon: Layers, count: allViews.length },
           { id: COMPANION_TABS.DATASETS, label: 'Data', icon: Database, count: datasets.length },
@@ -1327,37 +1675,49 @@ const CompanionPanel = ({
           const isActive = activeTab === tab.id;
           const TabIcon = tab.icon;
           return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                padding: tokens.spacing.sm,
-                background: isActive ? tokens.colors.glass.medium : 'transparent',
-                border: 'none',
-                borderBottom: `2px solid ${isActive ? tokens.colors.accent.blue : 'transparent'}`,
-                color: isActive ? tokens.colors.accent.blue : tokens.colors.text.muted,
-                cursor: 'pointer',
-                fontSize: tokens.fontSize.xs,
-              }}
-            >
-              <TabIcon size={12} />
-              <span>{tab.count}</span>
-            </button>
+            <AdaptiveTooltip key={tab.id} content={`${tab.label} (${tab.count})`} placement="bottom">
+              <button
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  padding: tokens.spacing.sm,
+                  background: isActive ? tokens.colors.glass.medium : 'transparent',
+                  border: 'none',
+                  borderBottom: `2px solid ${isActive ? tokens.colors.accent.blue : 'transparent'}`,
+                  color: isActive ? tokens.colors.accent.blue : tokens.colors.text.muted,
+                  cursor: 'pointer',
+                  fontSize: tokens.fontSize.xs,
+                }}
+              >
+                <TabIcon size={12} />
+                <span style={{
+                  fontSize: '9px',
+                  padding: '1px 4px',
+                  background: isActive ? 'rgba(59,130,246,0.2)' : tokens.colors.glass.subtle,
+                  borderRadius: tokens.radius.sm,
+                  minWidth: 16,
+                  textAlign: 'center',
+                }}>
+                  {tab.count}
+                </span>
+              </button>
+            </AdaptiveTooltip>
           );
         })}
-        <button
-          type="button"
-          onClick={onClose}
-          style={{ padding: '4px 8px', background: 'transparent', border: 'none', color: tokens.colors.text.muted, cursor: 'pointer' }}
-        >
-          <X size={12} />
-        </button>
+        <AdaptiveTooltip content="Close panel" placement="bottom">
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ padding: '4px 8px', background: 'transparent', border: 'none', color: tokens.colors.text.muted, cursor: 'pointer' }}
+          >
+            <X size={12} />
+          </button>
+        </AdaptiveTooltip>
       </div>
 
       {showToolbar && (
@@ -1481,12 +1841,16 @@ const CompanionPanel = ({
   );
 };
 
-const VGBlock = ({ vg, cellSize, gap, isSelected, onClick }) => {
+const VGBlock = ({ vg, cellSize, gap, isSelected, onClick, subtle = false }) => {
   const { position, color, name, isExplicit, views } = vg;
   const width = position.colSpan * cellSize + (position.colSpan - 1) * gap;
   const height = position.rowSpan * cellSize + (position.rowSpan - 1) * gap;
   const left = position.col * (cellSize + gap);
   const top = position.row * (cellSize + gap);
+
+  // When subtle mode is on (showing both VG outlines and views), make outlines less prominent
+  const bgOpacity = subtle ? '08' : '20';
+  const borderOpacity = subtle ? '40' : '80';
 
   return (
     <div
@@ -1499,8 +1863,8 @@ const VGBlock = ({ vg, cellSize, gap, isSelected, onClick }) => {
         top,
         width,
         height,
-        background: `${color}20`,
-        border: `2px ${isExplicit ? 'solid' : 'dashed'} ${color}80`,
+        background: subtle ? 'transparent' : `${color}${bgOpacity}`,
+        border: `${subtle ? 1 : 2}px ${isExplicit ? 'solid' : 'dashed'} ${color}${borderOpacity}`,
         borderRadius: tokens.radius.md,
         cursor: 'pointer',
         boxShadow: isSelected ? `0 0 16px ${color}50, inset 0 0 24px ${color}10` : 'none',
@@ -1509,8 +1873,9 @@ const VGBlock = ({ vg, cellSize, gap, isSelected, onClick }) => {
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        zIndex: isSelected ? 10 : 1,
-        transition: 'box-shadow 0.15s ease',
+        zIndex: isSelected ? 10 : (subtle ? 0 : 1),
+        transition: 'box-shadow 0.15s ease, border 0.15s ease',
+        pointerEvents: subtle ? 'none' : 'auto', // Let clicks pass through to views when subtle
       }}
     >
       <span
@@ -1864,51 +2229,13 @@ const LayoutSearchRow = ({ filter, tagOptions = [] }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.xs }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, flexWrap: 'nowrap' }}>
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: tokens.spacing.xs,
-            padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
-            background: tokens.colors.bg.secondary,
-            borderRadius: tokens.radius.md,
-            border: `1px solid ${tokens.colors.border.subtle}`,
-            minWidth: 140,
-          }}
-        >
-          <Search size={12} style={{ color: tokens.colors.text.muted, flexShrink: 0 }} />
-          <input
-            type="text"
-            value={filter.searchQuery}
-            onChange={(e) => filter.setSearchQuery(e.target.value)}
-            placeholder="Search..."
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: tokens.colors.text.primary,
-              fontSize: tokens.fontSize.sm,
-              minWidth: 0,
-            }}
-          />
-          {filter.searchQuery && (
-            <button
-              type="button"
-              onClick={() => filter.setSearchQuery('')}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                display: 'flex',
-              }}
-            >
-              <X size={10} style={{ color: tokens.colors.text.muted }} />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={filter.searchQuery}
+          onChange={filter.setSearchQuery}
+          onClear={() => filter.setSearchQuery('')}
+          size="small"
+          style={{ flex: 1, minWidth: 140, background: tokens.colors.bg.secondary }}
+        />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         <div style={{ position: 'relative' }}>
@@ -2585,6 +2912,18 @@ const ContextualPanelContent = ({
   filter,
   sizeMode,
   showToolbar = true,
+  // Subtab props
+  linksSubTab,
+  setLinksSubTab,
+  teamSubTab,
+  setTeamSubTab,
+  // Me tab props
+  isBroadcasting,
+  setIsBroadcasting,
+  cursorVisible,
+  setCursorVisible,
+  cursorColor,
+  setCursorColor,
 }) => {
   const handleMove = (dir) => {
     setViewport((prev) => ({
@@ -2835,182 +3174,617 @@ const ContextualPanelContent = ({
 
         {mode === MAP_MODES.LINKS && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: tokens.spacing.sm }}>
-              <span style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary }}>VG Links</span>
-              <button
-                type="button"
-                style={{
-                  padding: '2px 8px',
-                  background: tokens.colors.glass.subtle,
-                  border: 'none',
-                  borderRadius: tokens.radius.md,
-                  color: tokens.colors.accent.cyan,
-                  cursor: 'pointer',
-                  fontSize: tokens.fontSize.xs,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <Plus size={10} /> Create
-              </button>
-            </div>
-            {links.map((link) => {
-              const fromVG = viewGroups.find((v) => v.id === link.from);
-              const toVG = viewGroups.find((v) => v.id === link.to);
-              const isHighlighted = highlightedLinkId === link.id;
-              const color = link.type === 'camera' ? tokens.colors.accent.cyan : tokens.colors.accent.purple;
-              return (
-                <div
-                  key={link.id}
-                  onClick={() => setHighlightedLinkId(isHighlighted ? null : link.id)}
-                  role="button"
-                  tabIndex={0}
-                  style={{
-                    padding: tokens.spacing.sm,
-                    marginBottom: tokens.spacing.xs,
-                    background: isHighlighted ? tokens.colors.glass.medium : tokens.colors.glass.subtle,
-                    border: `1px solid ${isHighlighted ? color : tokens.colors.border.subtle}`,
-                    borderRadius: tokens.radius.md,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, marginBottom: '4px' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: fromVG?.color }} />
-                    <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>{fromVG?.name}</span>
-                    <span style={{ color }}>{link.mode === 'bidirectional' ? '<->' : '->'}</span>
-                    <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>{toVG?.name}</span>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: toVG?.color }} />
-                  </div>
-                  <span
-                    style={{
-                      fontSize: tokens.fontSize.xs,
-                      padding: '2px 6px',
-                      background: `${color}20`,
-                      color,
-                      borderRadius: tokens.radius.sm,
-                    }}
-                  >
-                    {link.type}
-                  </span>
-                </div>
-              );
-            })}
-          </>
-        )}
-
-        {mode === MAP_MODES.TEAM && (
-          <>
+            {/* Subtabs */}
             <div
               style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: tokens.spacing.sm,
-                marginBottom: tokens.spacing.lg,
+                gap: tokens.spacing.xs,
+                marginBottom: tokens.spacing.md,
+                padding: tokens.spacing.xs,
                 background: tokens.colors.glass.subtle,
                 borderRadius: tokens.radius.md,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
-                <MousePointer2 size={14} style={{ color: tokens.colors.text.muted }} />
-                <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>Show cursors</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCursors(!showCursors)}
-                style={{
-                  width: 40,
-                  height: 22,
-                  borderRadius: 11,
-                  background: showCursors ? tokens.colors.accent.green : tokens.colors.bg.tertiary,
-                  border: 'none',
-                  cursor: 'pointer',
-                  position: 'relative',
-                }}
-              >
-                <div
+              {[
+                { id: 'vg', label: 'VG Links', icon: Layers },
+                { id: 'view', label: 'View Links', icon: Link2 },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setLinksSubTab(tab.id)}
                   style={{
-                    position: 'absolute',
-                    top: 2,
-                    left: showCursors ? 20 : 2,
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    background: 'white',
-                    transition: 'left 0.2s',
-                  }}
-                />
-              </button>
-            </div>
-
-            <div style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary, marginBottom: tokens.spacing.sm }}>
-              Online ({collaborators.filter((c) => c.isOnline).length})
-            </div>
-            {collaborators
-              .filter((c) => c.isOnline)
-              .map((collab) => (
-                <div
-                  key={collab.id}
-                  style={{
+                    flex: 1,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: tokens.spacing.sm,
+                    justifyContent: 'center',
+                    gap: tokens.spacing.xs,
+                    padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
+                    background: linksSubTab === tab.id ? tokens.colors.accent.purple + '20' : 'transparent',
+                    border: linksSubTab === tab.id ? `1px solid ${tokens.colors.accent.purple}40` : '1px solid transparent',
+                    borderRadius: tokens.radius.sm,
+                    color: linksSubTab === tab.id ? tokens.colors.accent.purple : tokens.colors.text.muted,
+                    cursor: 'pointer',
+                    fontSize: tokens.fontSize.sm,
+                    fontWeight: linksSubTab === tab.id ? 600 : 400,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <tab.icon size={12} />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* VG Links subtab */}
+            {linksSubTab === 'vg' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: tokens.spacing.sm }}>
+                  <span style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary }}>
+                    ViewGroup Links ({links.length})
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '2px 8px',
+                      background: tokens.colors.glass.subtle,
+                      border: 'none',
+                      borderRadius: tokens.radius.md,
+                      color: tokens.colors.accent.purple,
+                      cursor: 'pointer',
+                      fontSize: tokens.fontSize.xs,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Plus size={10} /> Create
+                  </button>
+                </div>
+                {links.map((link) => {
+                  const fromVG = viewGroups.find((v) => v.id === link.from);
+                  const toVG = viewGroups.find((v) => v.id === link.to);
+                  const isHighlighted = highlightedLinkId === link.id;
+                  const color = link.type === 'camera' ? tokens.colors.accent.cyan : tokens.colors.accent.purple;
+                  return (
+                    <div
+                      key={link.id}
+                      onClick={() => setHighlightedLinkId(isHighlighted ? null : link.id)}
+                      role="button"
+                      tabIndex={0}
+                      style={{
+                        padding: tokens.spacing.sm,
+                        marginBottom: tokens.spacing.xs,
+                        background: isHighlighted ? tokens.colors.glass.medium : tokens.colors.glass.subtle,
+                        border: `1px solid ${isHighlighted ? color : tokens.colors.border.subtle}`,
+                        borderRadius: tokens.radius.md,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, marginBottom: '4px' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: fromVG?.color }} />
+                        <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>{fromVG?.name}</span>
+                        <span style={{ color }}>{link.mode === 'bidirectional' ? '↔' : '→'}</span>
+                        <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>{toVG?.name}</span>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: toVG?.color }} />
+                      </div>
+                      <span
+                        style={{
+                          fontSize: tokens.fontSize.xs,
+                          padding: '2px 6px',
+                          background: `${color}20`,
+                          color,
+                          borderRadius: tokens.radius.sm,
+                        }}
+                      >
+                        {link.type}
+                      </span>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {/* View Links subtab */}
+            {linksSubTab === 'view' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: tokens.spacing.sm }}>
+                  <span style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary }}>
+                    View Links
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '2px 8px',
+                      background: tokens.colors.glass.subtle,
+                      border: 'none',
+                      borderRadius: tokens.radius.md,
+                      color: tokens.colors.accent.purple,
+                      cursor: 'pointer',
+                      fontSize: tokens.fontSize.xs,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Plus size={10} /> Create
+                  </button>
+                </div>
+                {/* View links - sync camera, window/level, crosshairs between individual views */}
+                <div
+                  style={{
                     padding: tokens.spacing.sm,
+                    background: tokens.colors.glass.subtle,
+                    border: `1px solid ${tokens.colors.border.subtle}`,
+                    borderRadius: tokens.radius.md,
                     marginBottom: tokens.spacing.xs,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, marginBottom: '4px' }}>
+                    <span
+                      style={{
+                        fontSize: tokens.fontSize.xs,
+                        padding: '2px 6px',
+                        background: `${tokens.colors.accent.cyan}20`,
+                        color: tokens.colors.accent.cyan,
+                        borderRadius: tokens.radius.sm,
+                      }}
+                    >
+                      Camera Sync
+                    </span>
+                  </div>
+                  <div style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.secondary }}>
+                    Volume A ↔ Volume B ↔ Slice C
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: tokens.spacing.sm,
+                    background: tokens.colors.glass.subtle,
+                    border: `1px solid ${tokens.colors.border.subtle}`,
+                    borderRadius: tokens.radius.md,
+                    marginBottom: tokens.spacing.xs,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, marginBottom: '4px' }}>
+                    <span
+                      style={{
+                        fontSize: tokens.fontSize.xs,
+                        padding: '2px 6px',
+                        background: `${tokens.colors.accent.amber}20`,
+                        color: tokens.colors.accent.amber,
+                        borderRadius: tokens.radius.sm,
+                      }}
+                    >
+                      Window/Level
+                    </span>
+                  </div>
+                  <div style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.secondary }}>
+                    Slice A ↔ Slice B
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: tokens.spacing.sm,
                     background: tokens.colors.glass.subtle,
                     border: `1px solid ${tokens.colors.border.subtle}`,
                     borderRadius: tokens.radius.md,
                   }}
                 >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, marginBottom: '4px' }}>
+                    <span
+                      style={{
+                        fontSize: tokens.fontSize.xs,
+                        padding: '2px 6px',
+                        background: `${tokens.colors.accent.green}20`,
+                        color: tokens.colors.accent.green,
+                        borderRadius: tokens.radius.sm,
+                      }}
+                    >
+                      Crosshairs
+                    </span>
+                  </div>
+                  <div style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.secondary }}>
+                    MPR Axial ↔ MPR Sagittal ↔ MPR Coronal
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {mode === MAP_MODES.TEAM && (
+          <>
+            {/* Subtabs */}
+            <div
+              style={{
+                display: 'flex',
+                gap: tokens.spacing.xs,
+                marginBottom: tokens.spacing.md,
+                padding: tokens.spacing.xs,
+                background: tokens.colors.glass.subtle,
+                borderRadius: tokens.radius.md,
+              }}
+            >
+              {[
+                { id: 'me', label: 'Me', icon: MousePointer2 },
+                { id: 'team', label: 'Team', icon: Users },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setTeamSubTab(tab.id)}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: tokens.spacing.xs,
+                    padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
+                    background: teamSubTab === tab.id ? tokens.colors.accent.amber + '20' : 'transparent',
+                    border: teamSubTab === tab.id ? `1px solid ${tokens.colors.accent.amber}40` : '1px solid transparent',
+                    borderRadius: tokens.radius.sm,
+                    color: teamSubTab === tab.id ? tokens.colors.accent.amber : tokens.colors.text.muted,
+                    cursor: 'pointer',
+                    fontSize: tokens.fontSize.sm,
+                    fontWeight: teamSubTab === tab.id ? 600 : 400,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <tab.icon size={12} />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Me subtab */}
+            {teamSubTab === 'me' && (
+              <>
+                {/* My Viewports */}
+                <div style={{ marginBottom: tokens.spacing.lg }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: tokens.spacing.sm }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
+                      <Scan size={12} style={{ color: tokens.colors.accent.teal }} />
+                      <span style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary }}>My Viewports</span>
+                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '2px 8px',
+                        background: tokens.colors.glass.subtle,
+                        border: 'none',
+                        borderRadius: tokens.radius.md,
+                        color: tokens.colors.accent.teal,
+                        cursor: 'pointer',
+                        fontSize: tokens.fontSize.xs,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Plus size={10} /> New
+                    </button>
+                  </div>
                   <div
                     style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      background: collab.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      color: 'white',
+                      padding: tokens.spacing.sm,
+                      background: tokens.colors.glass.medium,
+                      border: `1px solid ${tokens.colors.accent.teal}40`,
+                      borderRadius: tokens.radius.md,
+                      marginBottom: tokens.spacing.xs,
                     }}
                   >
-                    {collab.avatar}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>Main Viewport</span>
+                      <span style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.accent.amber, fontFamily: 'monospace' }}>
+                        {formatCellRef(viewport.position.row, viewport.position.col)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted, marginTop: '2px' }}>
+                      {viewport.size.cols}×{viewport.size.rows} cells
+                    </div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>{collab.name}</div>
-                    {collab.isBroadcasting && (
+                </div>
+
+                {/* Broadcast */}
+                <div style={{ marginBottom: tokens.spacing.lg }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, marginBottom: tokens.spacing.sm }}>
+                    <Radio size={12} style={{ color: tokens.colors.accent.red }} />
+                    <span style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary }}>Broadcast</span>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: tokens.spacing.sm,
+                      background: isBroadcasting ? `${tokens.colors.accent.red}15` : tokens.colors.glass.subtle,
+                      border: `1px solid ${isBroadcasting ? tokens.colors.accent.red + '40' : tokens.colors.border.subtle}`,
+                      borderRadius: tokens.radius.md,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>
+                        {isBroadcasting ? 'Broadcasting to team' : 'Not broadcasting'}
+                      </div>
+                      {isBroadcasting && (
+                        <div style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.accent.red, marginTop: '2px' }}>
+                          Team can follow your viewport
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsBroadcasting(!isBroadcasting)}
+                      style={{
+                        width: 40,
+                        height: 22,
+                        borderRadius: 11,
+                        background: isBroadcasting ? tokens.colors.accent.red : tokens.colors.bg.tertiary,
+                        border: 'none',
+                        cursor: 'pointer',
+                        position: 'relative',
+                      }}
+                    >
                       <div
                         style={{
-                          fontSize: tokens.fontSize.xs,
-                          color: tokens.colors.accent.red,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
+                          position: 'absolute',
+                          top: 2,
+                          left: isBroadcasting ? 20 : 2,
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          background: 'white',
+                          transition: 'left 0.2s',
+                        }}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* My Cursor */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, marginBottom: tokens.spacing.sm }}>
+                    <MousePointer2 size={12} style={{ color: tokens.colors.accent.cyan }} />
+                    <span style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary }}>My Cursor</span>
+                  </div>
+                  <div
+                    style={{
+                      padding: tokens.spacing.sm,
+                      background: tokens.colors.glass.subtle,
+                      border: `1px solid ${tokens.colors.border.subtle}`,
+                      borderRadius: tokens.radius.md,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: tokens.spacing.sm }}>
+                      <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>Visible to team</span>
+                      <button
+                        type="button"
+                        onClick={() => setCursorVisible(!cursorVisible)}
+                        style={{
+                          width: 40,
+                          height: 22,
+                          borderRadius: 11,
+                          background: cursorVisible ? tokens.colors.accent.cyan : tokens.colors.bg.tertiary,
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
                         }}
                       >
-                        <Radio size={10} /> Broadcasting
-                      </div>
-                    )}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 2,
+                            left: cursorVisible ? 20 : 2,
+                            width: 18,
+                            height: 18,
+                            borderRadius: '50%',
+                            background: 'white',
+                            transition: 'left 0.2s',
+                          }}
+                        />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
+                      <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.muted }}>Color:</span>
+                      {[
+                        tokens.colors.accent.cyan,
+                        tokens.colors.accent.green,
+                        tokens.colors.accent.pink,
+                        tokens.colors.accent.amber,
+                        tokens.colors.accent.purple,
+                      ].map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setCursorColor(color)}
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: color,
+                            border: cursorColor === color ? '2px solid white' : '2px solid transparent',
+                            cursor: 'pointer',
+                            boxShadow: cursorColor === color ? `0 0 0 2px ${color}` : 'none',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Team subtab */}
+            {teamSubTab === 'team' && (
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: tokens.spacing.sm,
+                    marginBottom: tokens.spacing.md,
+                    background: tokens.colors.glass.subtle,
+                    borderRadius: tokens.radius.md,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
+                    <MousePointer2 size={14} style={{ color: tokens.colors.text.muted }} />
+                    <span style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>Show all cursors</span>
                   </div>
                   <button
                     type="button"
+                    onClick={() => setShowCursors(!showCursors)}
                     style={{
-                      padding: '4px 8px',
-                      background: tokens.colors.glass.medium,
+                      width: 40,
+                      height: 22,
+                      borderRadius: 11,
+                      background: showCursors ? tokens.colors.accent.green : tokens.colors.bg.tertiary,
                       border: 'none',
-                      borderRadius: tokens.radius.sm,
-                      color: tokens.colors.accent.blue,
                       cursor: 'pointer',
-                      fontSize: tokens.fontSize.xs,
+                      position: 'relative',
                     }}
                   >
-                    Follow
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 2,
+                        left: showCursors ? 20 : 2,
+                        width: 18,
+                        height: 18,
+                        borderRadius: '50%',
+                        background: 'white',
+                        transition: 'left 0.2s',
+                      }}
+                    />
                   </button>
                 </div>
-              ))}
+
+                <div style={{ fontSize: tokens.fontSize.sm, fontWeight: 600, color: tokens.colors.text.secondary, marginBottom: tokens.spacing.sm }}>
+                  Online ({collaborators.filter((c) => c.isOnline).length})
+                </div>
+                {collaborators
+                  .filter((c) => c.isOnline)
+                  .map((collab) => (
+                    <div
+                      key={collab.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: tokens.spacing.sm,
+                        padding: tokens.spacing.sm,
+                        marginBottom: tokens.spacing.xs,
+                        background: tokens.colors.glass.subtle,
+                        border: `1px solid ${tokens.colors.border.subtle}`,
+                        borderRadius: tokens.radius.md,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          background: collab.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: 'white',
+                        }}
+                      >
+                        {collab.avatar}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>{collab.name}</div>
+                        {collab.isBroadcasting && (
+                          <div
+                            style={{
+                              fontSize: tokens.fontSize.xs,
+                              color: tokens.colors.accent.red,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <Radio size={10} /> Broadcasting
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        style={{
+                          padding: '4px 8px',
+                          background: tokens.colors.glass.medium,
+                          border: 'none',
+                          borderRadius: tokens.radius.sm,
+                          color: tokens.colors.accent.blue,
+                          cursor: 'pointer',
+                          fontSize: tokens.fontSize.xs,
+                        }}
+                      >
+                        Follow
+                      </button>
+                    </div>
+                  ))}
+
+                {collaborators.filter((c) => !c.isOnline).length > 0 && (
+                  <>
+                    <div
+                      style={{
+                        fontSize: tokens.fontSize.sm,
+                        fontWeight: 600,
+                        color: tokens.colors.text.muted,
+                        marginTop: tokens.spacing.md,
+                        marginBottom: tokens.spacing.sm,
+                      }}
+                    >
+                      Offline ({collaborators.filter((c) => !c.isOnline).length})
+                    </div>
+                    {collaborators
+                      .filter((c) => !c.isOnline)
+                      .map((collab) => (
+                        <div
+                          key={collab.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: tokens.spacing.sm,
+                            padding: tokens.spacing.sm,
+                            marginBottom: tokens.spacing.xs,
+                            background: tokens.colors.glass.subtle,
+                            border: `1px solid ${tokens.colors.border.subtle}`,
+                            borderRadius: tokens.radius.md,
+                            opacity: 0.5,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: '50%',
+                              background: collab.color,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: 'white',
+                            }}
+                          >
+                            {collab.avatar}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: tokens.fontSize.sm, color: tokens.colors.text.primary }}>{collab.name}</div>
+                            <div style={{ fontSize: tokens.fontSize.xs, color: tokens.colors.text.muted }}>Last seen 2h ago</div>
+                          </div>
+                        </div>
+                      ))}
+                  </>
+                )}
+              </>
+            )}
           </>
         )}
       </div>
@@ -3020,7 +3794,8 @@ const ContextualPanelContent = ({
 
 export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugControls = false }) => {
   const [mapMode, setMapMode] = useState(MAP_MODES.LAYOUT);
-  const [displayMode, setDisplayMode] = useState(DISPLAY_MODES.VG);
+  const [showVGOutlines, setShowVGOutlines] = useState(true); // Show ViewGroup outlines
+  const [showViews, setShowViews] = useState(false); // Show individual views within VGs
   const [selectedVGId, setSelectedVGId] = useState('vg-1');
   const [highlightedLinkId, setHighlightedLinkId] = useState(null);
   const [showGridLabels] = useState(true);
@@ -3028,6 +3803,11 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   const [showViewports, setShowViewports] = useState(true);
   const [showCollaborators, setShowCollaborators] = useState(false);
   const [showCursors, setShowCursors] = useState(true);
+  const [linksSubTab, setLinksSubTab] = useState('vg'); // 'vg' | 'view'
+  const [teamSubTab, setTeamSubTab] = useState('me'); // 'me' | 'team'
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [cursorVisible, setCursorVisible] = useState(true);
+  const [cursorColor, setCursorColor] = useState('#22d3ee');
   const [lockLabels] = useState(true);
   const [minimapZoom, setMinimapZoom] = useState(100);
   const [companionOpen, setCompanionOpen] = useState(true);
@@ -3050,30 +3830,30 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   });
 
   const sidebarShowItems = useMemo(() => {
-    const isVGMode = displayMode === DISPLAY_MODES.VG;
     return [
-      {
-        icon: isVGMode ? Grid3X3 : Layers,
-        label: isVGMode ? 'VG' : 'View',
-        active: true,
-        onClick: () => setDisplayMode(isVGMode ? DISPLAY_MODES.VIEW : DISPLAY_MODES.VG),
-      },
+      { icon: Grid3X3, label: 'VG Outlines', active: showVGOutlines, onClick: () => setShowVGOutlines((p) => !p) },
+      { icon: Layers, label: 'Views', active: showViews, onClick: () => setShowViews((p) => !p) },
       { icon: Scan, label: 'Viewport', active: showViewports, onClick: () => setShowViewports((p) => !p) },
       { icon: Users, label: 'Team', active: showCollaborators, onClick: () => setShowCollaborators((p) => !p) },
-      {
-        icon: companionOpen ? PanelRightClose : PanelRightOpen,
-        label: 'Panel',
-        active: companionOpen,
-        onClick: () => setCompanionOpen((p) => !p),
-      },
     ];
-  }, [displayMode, showViewports, showCollaborators, companionOpen]);
+  }, [showVGOutlines, showViews, showViewports, showCollaborators]);
+
+  // Separate panel toggle - placed above Show section in toolbar
+  const panelToggle = useMemo(() => ({
+    icon: companionOpen ? PanelRightClose : PanelRightOpen,
+    label: 'Panel',
+    active: companionOpen,
+    onClick: () => setCompanionOpen((p) => !p),
+  }), [companionOpen]);
 
 
   const sizeMode = width < 320 ? 'minimal' : width < 400 ? 'compact' : 'standard';
   const dpadSize = sizeMode === 'minimal' ? 76 : sizeMode === 'compact' ? 88 : 100;
   const controlDeckWidth = dpadSize + 32;
   const companionWidth = companionOpen ? (width < 420 ? 160 : 200) : 0;
+  const companionSide = sidebarSide === 'left' ? 'right' : 'left'; // Companion opens opposite the toolbar
+  const companionLeftOffset = companionOpen && companionSide === 'left' ? companionWidth : 0;
+  const companionRightOffset = companionOpen && companionSide === 'right' ? companionWidth : 0;
   const labelSize = sizeMode === 'minimal' ? 16 : 20;
   const mapOuterPadding = 8;
   const mapInset = sizeMode === 'minimal' ? 6 : 8;
@@ -3095,7 +3875,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   const sidebarGap = 6;
   const sidebarPadding = 12;
   const sidebarLabelHeight = fontXs + 4;
-  const sidebarButtonCount = sidebarShowItems.length + 1;
+  const sidebarButtonCount = sidebarShowItems.length + 2; // +1 for panelToggle, +1 for toggle-side button
   const sidebarMinHeight =
     sidebarPadding + sidebarLabelHeight + sidebarButtonCount * sidebarButtonHeight + sidebarGap * (sidebarButtonCount + 1);
   const availableTopHeight = Math.max(0, innerHeight - bottomMinHeight - resizerHeight);
@@ -3110,11 +3890,11 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   const sidebarWidth = 56;
   const sidebarVisible = true;
   const rowInnerWidth = Math.max(0, width - mapOuterPadding * 2);
+  // Companion panel overlays the minimap rather than pushing it
   const mapViewportWidth = Math.max(
     0,
     rowInnerWidth -
-      (sidebarVisible ? sidebarWidth + mapOuterPadding : 0) -
-      (companionOpen ? companionWidth + mapOuterPadding : 0)
+      (sidebarVisible ? sidebarWidth + mapOuterPadding : 0)
   );
   const mapViewportHeight = Math.max(0, topSectionHeight - mapOuterPadding * 2);
   const viewportInnerWidth = Math.max(0, mapViewportWidth - mapInset * 2);
@@ -3130,25 +3910,28 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
   const cellSizeH = Math.floor((gridAvailableHeight - (CANVAS.rows - 1) * gap) / CANVAS.rows);
   const cellSize = Math.min(64, Math.max(18, Math.min(cellSizeW, cellSizeH)));
   const zoomScale = minimapZoom / 100;
-  const renderCellSize = Math.max(10, cellSize * zoomScale);
-  const renderGap = Math.max(1, gap * zoomScale);
-  const tileSize = renderCellSize + renderGap;
-  const gridWidth = CANVAS.cols * (renderCellSize + renderGap) - renderGap;
-  const gridHeight = CANVAS.rows * (renderCellSize + renderGap) - renderGap;
+  const renderCellSize = Math.round(Math.max(10, cellSize * zoomScale));
+  const renderGap = Math.round(Math.max(1, gap * zoomScale));
+  const gridWidth = (CANVAS.cols + 2) * (renderCellSize + renderGap) - renderGap;
+  const gridHeight = (CANVAS.rows + 2) * (renderCellSize + renderGap) - renderGap;
   const contentWidth = gridWidth + (labelLocked ? 0 : labelOffset);
   const contentHeight = gridHeight + (labelLocked ? 0 : labelOffset);
   const gridViewportWidth = Math.max(0, viewportInnerWidth - (labelLocked ? labelOffset : 0));
   const gridViewportHeight = Math.max(0, viewportInnerHeight - (labelLocked ? labelOffset : 0));
-  const panMinX = Math.min(0, gridViewportWidth - contentWidth);
-  const panMinY = Math.min(0, gridViewportHeight - contentHeight);
+  // Allow extra panning beyond content bounds so users can access obstructed areas
+  const panPadding = (renderCellSize + renderGap) * 3; // Allow panning ~3 cells beyond bounds
+  // Add companion width to pan limits on BOTH sides so user can access full map when companion is open
+  const companionPanExtra = companionOpen ? companionWidth : 0;
+  const panMinX = Math.min(0, gridViewportWidth - contentWidth) - panPadding - companionPanExtra;
+  const panMinY = Math.min(0, gridViewportHeight - contentHeight) - panPadding;
+  const panMaxX = panPadding + companionPanExtra;
+  const panMaxY = panPadding;
   const safePanOffset = {
-    x: Math.min(0, Math.max(panMinX, panOffset.x)),
-    y: Math.min(0, Math.max(panMinY, panOffset.y)),
+    x: Math.min(panMaxX, Math.max(panMinX, panOffset.x)),
+    y: Math.min(panMaxY, Math.max(panMinY, panOffset.y)),
   };
-  const showHorizontalFade = contentWidth > gridViewportWidth + 1;
-  const showVerticalFade = contentHeight > gridViewportHeight + 1;
-  const gridPatternOffsetX = ((panContainerOffset + safePanOffset.x) % tileSize + tileSize) % tileSize;
-  const gridPatternOffsetY = ((panContainerOffset + safePanOffset.y) % tileSize + tileSize) % tileSize;
+  const showHorizontalFade = contentWidth > gridViewportWidth + 1 || safePanOffset.x !== 0;
+  const showVerticalFade = contentHeight > gridViewportHeight + 1 || safePanOffset.y !== 0;
 
   const flattenedViews = useMemo(() => flattenViewsToCanvas(MOCK_VIEWGROUPS), []);
   const filteredVGs = useMemo(() => filter.applyFilters(MOCK_VIEWGROUPS), [filter]);
@@ -3203,11 +3986,13 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
         originY: safePanOffset.y,
         minX: panMinX,
         minY: panMinY,
+        maxX: panMaxX,
+        maxY: panMaxY,
       };
       setIsPanning(true);
       event.currentTarget.setPointerCapture?.(event.pointerId);
     },
-    [panMinX, panMinY, safePanOffset]
+    [panMinX, panMinY, panMaxX, panMaxY, safePanOffset]
   );
 
   const handlePanMove = useCallback(
@@ -3216,8 +4001,8 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
       if (!start) return;
       const nextX = start.originX + (event.clientX - start.startX);
       const nextY = start.originY + (event.clientY - start.startY);
-      const clampedX = clamp(nextX, start.minX, 0);
-      const clampedY = clamp(nextY, start.minY, 0);
+      const clampedX = clamp(nextX, start.minX, start.maxX);
+      const clampedY = clamp(nextY, start.minY, start.maxY);
       setPanOffset({ x: clampedX, y: clampedY });
     },
     [clamp]
@@ -3310,13 +4095,15 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
         style={{
           width,
           height,
-          background: tokens.colors.bg.primary,
-          borderRadius: tokens.radius.lg,
-          border: `1px solid ${tokens.colors.border.default}`,
+          background: tokens.colors.glass.frosted,
+          backdropFilter: tokens.blur.strong,
+          WebkitBackdropFilter: tokens.blur.strong,
+          borderRadius: tokens.radius.xl,
+          border: `1px solid ${tokens.colors.border.glow}`,
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: `0 12px 48px rgba(0,0,0,0.5), 0 0 1px rgba(96, 165, 250, 0.3), inset 0 1px 0 rgba(255,255,255,0.08)`,
         }}
       >
         <div
@@ -3325,8 +4112,9 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
             alignItems: 'center',
             gap: tokens.spacing.sm,
             padding: `${tokens.spacing.sm} ${tokens.spacing.md}`,
-            background: tokens.colors.bg.tertiary,
-            borderBottom: `1px solid ${tokens.colors.border.subtle}`,
+            background: `linear-gradient(180deg, ${tokens.colors.glass.medium} 0%, ${tokens.colors.glass.subtle} 100%)`,
+            borderBottom: `1px solid ${tokens.colors.border.default}`,
+            boxShadow: 'inset 0 -1px 0 rgba(0,0,0,0.2)',
           }}
         >
           <Grip size={12} style={{ color: tokens.colors.text.muted }} />
@@ -3368,6 +4156,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
               flex: '0 0 auto',
               height: topSectionHeight,
               display: 'flex',
+              position: 'relative', // For companion panel overlay positioning
               background: tokens.colors.canvas.bg,
               minHeight: 0,
               padding: mapOuterPadding,
@@ -3375,7 +4164,12 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
             }}
           >
             {sidebarVisible && sidebarSide === 'left' && (
-              <MapSidebar side={sidebarSide} onToggleSide={handleSidebarToggle} showItems={sidebarShowItems} />
+              <MapSidebar
+                side={sidebarSide}
+                onToggleSide={handleSidebarToggle}
+                showItems={sidebarShowItems}
+                panelToggle={panelToggle}
+              />
             )}
 
             <div
@@ -3390,9 +4184,14 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
               <div
                 style={{
                   position: 'absolute',
-                  inset: 0,
-                  background: tokens.colors.canvas.cell,
-                  borderRadius: tokens.radius.md,
+                  top: 0,
+                  bottom: 0,
+                  left: companionLeftOffset,
+                  right: companionRightOffset,
+                  background: `linear-gradient(135deg, ${tokens.colors.canvas.cell} 0%, ${tokens.colors.bg.primary} 100%)`,
+                  borderRadius: tokens.radius.lg,
+                  border: `1px solid ${tokens.colors.border.subtle}`,
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03), inset 0 -1px 0 rgba(0,0,0,0.2)',
                   overflow: 'hidden',
                   cursor: isPanning ? 'grabbing' : 'grab',
                 }}
@@ -3401,19 +4200,6 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                 onPointerUp={handlePanEnd}
                 onPointerLeave={handlePanEnd}
               >
-                <div style={{ position: 'absolute', inset: 0 }}>
-                  <GridPaperBackground
-                    rows={Math.ceil(mapViewportHeight / (renderCellSize + renderGap))}
-                    cols={Math.ceil(mapViewportWidth / (renderCellSize + renderGap))}
-                    cellSize={renderCellSize}
-                    gap={renderGap}
-                    visible={showGridPaper}
-                    minorColor="rgba(96, 165, 250, 0.04)"
-                    majorColor="rgba(96, 165, 250, 0.08)"
-                    offsetX={gridPatternOffsetX}
-                    offsetY={gridPatternOffsetY}
-                  />
-                </div>
                 <div
                   style={{
                     position: 'absolute',
@@ -3441,7 +4227,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                             top: 0,
                             left: labelOffset,
                             height: labelOffset,
-                            width: gridWidth,
+                            width: (CANVAS.cols + 1) * (renderCellSize + renderGap) - renderGap,
                             display: 'flex',
                             background: 'rgba(6, 10, 18, 0.92)',
                             borderBottom: `1px solid ${tokens.colors.border.subtle}`,
@@ -3472,7 +4258,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                             top: labelOffset,
                             left: 0,
                             width: labelOffset,
-                            height: gridHeight,
+                            height: (CANVAS.rows + 1) * (renderCellSize + renderGap) - renderGap,
                             display: 'flex',
                             flexDirection: 'column',
                             background: 'rgba(6, 10, 18, 0.92)',
@@ -3504,15 +4290,16 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                     <div
                       style={{
                         position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: gridWidth,
-                        height: gridHeight,
+                        top: gridOffset - (renderCellSize + renderGap),
+                        left: gridOffset - (renderCellSize + renderGap),
+                        width: (CANVAS.cols + 2) * (renderCellSize + renderGap) - renderGap,
+                        height: (CANVAS.rows + 2) * (renderCellSize + renderGap) - renderGap,
+                        overflow: 'visible',
                       }}
                     >
                       <GridPaperBackground
-                        rows={CANVAS.rows}
-                        cols={CANVAS.cols}
+                        rows={CANVAS.rows + 2}
+                        cols={CANVAS.cols + 2}
                         cellSize={renderCellSize}
                         gap={renderGap}
                         visible={showGridPaper}
@@ -3520,53 +4307,64 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                         offsetY={0}
                       />
 
-                      {mapMode === MAP_MODES.LINKS && (
-                        <LinkLines
-                          links={MOCK_VG_LINKS}
-                          viewGroups={MOCK_VIEWGROUPS}
-                          cellSize={renderCellSize}
-                          gap={renderGap}
-                          highlightedId={highlightedLinkId}
-                          onLinkClick={setHighlightedLinkId}
-                        />
-                      )}
-
-                      {displayMode === DISPLAY_MODES.VG &&
-                        visibleVGs.map((vg) => (
-                          <VGBlock
-                            key={vg.id}
-                            vg={vg}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: renderCellSize + renderGap,
+                          left: renderCellSize + renderGap,
+                        }}
+                      >
+                        {mapMode === MAP_MODES.LINKS && (
+                          <LinkLines
+                            links={MOCK_VG_LINKS}
+                            viewGroups={MOCK_VIEWGROUPS}
                             cellSize={renderCellSize}
                             gap={renderGap}
-                            isSelected={selectedVGId === vg.id}
-                            onClick={() => setSelectedVGId(vg.id)}
+                            highlightedId={highlightedLinkId}
+                            onLinkClick={setHighlightedLinkId}
                           />
-                        ))}
+                        )}
 
-                      {displayMode === DISPLAY_MODES.VIEW &&
-                        flattenedViews.map((view) => (
-                          <ViewCell
-                            key={view.id}
-                            view={view}
+                        {/* VG Outlines - can be shown independently or with views */}
+                        {showVGOutlines &&
+                          visibleVGs.map((vg) => (
+                            <VGBlock
+                              key={vg.id}
+                              vg={vg}
+                              cellSize={renderCellSize}
+                              gap={renderGap}
+                              isSelected={selectedVGId === vg.id}
+                              onClick={() => setSelectedVGId(vg.id)}
+                              // When showing both, make VG outlines more subtle
+                              subtle={showViews}
+                            />
+                          ))}
+
+                        {/* Individual Views - can be shown independently or with VG outlines */}
+                        {showViews &&
+                          flattenedViews.map((view) => (
+                            <ViewCell
+                              key={view.id}
+                              view={view}
+                              cellSize={renderCellSize}
+                              gap={renderGap}
+                              isSelected={selectedVGId === view.vgId}
+                              onClick={() => setSelectedVGId(view.vgId)}
+                            />
+                          ))}
+
+                        {showViewports && (
+                          <ViewportIndicator
+                            viewport={viewport}
                             cellSize={renderCellSize}
                             gap={renderGap}
-                            isSelected={selectedVGId === view.vgId}
-                            onClick={() => setSelectedVGId(view.vgId)}
+                            isDragging={isDraggingViewport}
+                            onMouseDown={() => {}}
                           />
-                        ))}
+                        )}
 
-                      {showViewports && (
-                        <ViewportIndicator
-                          viewport={viewport}
-                          cellSize={renderCellSize}
-                          gap={renderGap}
-                          isDragging={isDraggingViewport}
-                          onMouseDown={() => {}}
-                        />
-                      )}
-
-                      {showCollaborators && (
-                        <CollaboratorIndicators
+                        {showCollaborators && (
+                          <CollaboratorIndicators
                           collaborators={MOCK_COLLABORATORS}
                           cellSize={renderCellSize}
                           gap={renderGap}
@@ -3575,6 +4373,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                       )}
                     </div>
                   </div>
+                </div>
                 </div>
 
                 {showGridLabels && labelLocked && (
@@ -3770,7 +4569,7 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
             </div>
 
             {sidebarVisible && sidebarSide === 'right' && (
-              <MapSidebar side={sidebarSide} onToggleSide={handleSidebarToggle} showItems={sidebarShowItems} />
+              <MapSidebar side={sidebarSide} onToggleSide={handleSidebarToggle} showItems={sidebarShowItems} panelToggle={panelToggle} />
             )}
 
             <CompanionPanel
@@ -3785,6 +4584,8 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
               width={companionWidth}
               showToolbar
               onDragStart={handleDragStart}
+              overlay // Companion overlays minimap instead of pushing it
+              side={sidebarSide === 'left' ? 'right' : 'left'} // Opposite side of toolbar
             />
           </div>
 
@@ -3856,6 +4657,16 @@ export const CanvasMapV2Spec = ({ width = 480, height = 650, onClose, showDebugC
                     filter={filter}
                     sizeMode={sizeMode}
                     showToolbar={false}
+                    linksSubTab={linksSubTab}
+                    setLinksSubTab={setLinksSubTab}
+                    teamSubTab={teamSubTab}
+                    setTeamSubTab={setTeamSubTab}
+                    isBroadcasting={isBroadcasting}
+                    setIsBroadcasting={setIsBroadcasting}
+                    cursorVisible={cursorVisible}
+                    setCursorVisible={setCursorVisible}
+                    cursorColor={cursorColor}
+                    setCursorColor={setCursorColor}
                   />
                 </div>
               </div>

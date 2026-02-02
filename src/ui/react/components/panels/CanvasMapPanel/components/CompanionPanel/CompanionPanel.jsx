@@ -9,11 +9,54 @@
 
 import React, { memo, useState, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { SearchInput } from '@UI/react/components/molecules/SearchInput';
+import { FilterToolbar } from '@UI/react/components/organisms/FilterToolbar';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
+import { useListFilter } from '@UI/react/hooks/useListFilter';
 import { ViewListItem } from './ViewListItem';
 import { DatasetItem } from './DatasetItem';
 import './CompanionPanel.scss';
+
+const VIEW_SORT_OPTIONS = [
+  {
+    value: 'name-asc',
+    label: 'Name (A→Z)',
+    icon: 'sort',
+    comparator: (a, b) => (a.name || '').localeCompare(b.name || ''),
+  },
+  {
+    value: 'name-desc',
+    label: 'Name (Z→A)',
+    icon: 'sort',
+    comparator: (a, b) => (b.name || '').localeCompare(a.name || ''),
+  },
+  {
+    value: 'group',
+    label: 'ViewGroup',
+    icon: 'layers',
+    comparator: (a, b) => (a.vgName || '').localeCompare(b.vgName || ''),
+  },
+];
+
+const DATASET_SORT_OPTIONS = [
+  {
+    value: 'name-asc',
+    label: 'Name (A→Z)',
+    icon: 'sort',
+    comparator: (a, b) => (a.name || '').localeCompare(b.name || ''),
+  },
+  {
+    value: 'name-desc',
+    label: 'Name (Z→A)',
+    icon: 'sort',
+    comparator: (a, b) => (b.name || '').localeCompare(a.name || ''),
+  },
+  {
+    value: 'type',
+    label: 'Type',
+    icon: 'database',
+    comparator: (a, b) => (a.type || '').localeCompare(b.type || ''),
+  },
+];
 
 /**
  * CompanionPanel - Views and Datasets side panel
@@ -29,6 +72,8 @@ import './CompanionPanel.scss';
  * @param {Function} [props.onViewDragStart] - View drag start handler
  * @param {Function} [props.onDatasetDragStart] - Dataset drag start handler
  * @param {string} [props.sizeMode='standard'] - Size mode for compact rendering
+ * @param {'left' | 'right'} [props.side='right'] - Which side the panel appears on
+ * @param {Function} [props.onClose] - Close button handler
  */
 export const CompanionPanel = memo(function CompanionPanel({
   isOpen,
@@ -41,27 +86,50 @@ export const CompanionPanel = memo(function CompanionPanel({
   onViewDragStart,
   onDatasetDragStart,
   sizeMode = 'standard',
+  side = 'right',
+  onClose,
 }) {
   const isCompact = sizeMode === 'compact';
-  const [searchQuery, setSearchQuery] = useState('');
   const [expandedDatasets, setExpandedDatasets] = useState(new Set());
 
-  // Filter views by search
-  const filteredViews = useMemo(() => {
-    if (!searchQuery) return views;
-    const query = searchQuery.toLowerCase();
-    return views.filter(v =>
-      v.name.toLowerCase().includes(query) ||
-      v.vgName?.toLowerCase().includes(query)
-    );
-  }, [views, searchQuery]);
+  const viewFilter = useListFilter({
+    searchFields: (view) => [view.name || '', view.vgName || ''],
+    sortOptions: VIEW_SORT_OPTIONS,
+  });
 
-  // Filter datasets by search
-  const filteredDatasets = useMemo(() => {
-    if (!searchQuery) return datasets;
-    const query = searchQuery.toLowerCase();
-    return datasets.filter(d => d.name.toLowerCase().includes(query));
-  }, [datasets, searchQuery]);
+  const datasetFilter = useListFilter({
+    searchFields: (dataset) => [dataset.name || '', dataset.type || ''],
+    sortOptions: DATASET_SORT_OPTIONS,
+  });
+
+  const datasetsWithTags = useMemo(
+    () =>
+      datasets.map((dataset) => ({
+        ...dataset,
+        tags: dataset.type ? [dataset.type] : [],
+      })),
+    [datasets]
+  );
+
+  const viewTags = useMemo(
+    () => Array.from(new Set(views.flatMap((view) => view.tags || []))).filter(Boolean),
+    [views]
+  );
+
+  const datasetTags = useMemo(
+    () => Array.from(new Set(datasets.map((dataset) => dataset.type))).filter(Boolean),
+    [datasets]
+  );
+
+  const filteredViews = useMemo(
+    () => viewFilter.applyFilters(views),
+    [viewFilter, views]
+  );
+
+  const filteredDatasets = useMemo(
+    () => datasetFilter.applyFilters(datasetsWithTags),
+    [datasetFilter, datasetsWithTags]
+  );
 
   // Toggle dataset expansion
   const toggleDataset = (datasetId) => {
@@ -78,8 +146,14 @@ export const CompanionPanel = memo(function CompanionPanel({
 
   if (!isOpen) return null;
 
+  const isLeftSide = side === 'left';
+
   return (
-    <div className="companion-panel" data-size-mode={sizeMode}>
+    <div
+      className="companion-panel"
+      data-size-mode={sizeMode}
+      data-side={side}
+    >
       {/* Header */}
       <div className="companion-panel__header">
         <div className="companion-panel__tabs">
@@ -105,11 +179,19 @@ export const CompanionPanel = memo(function CompanionPanel({
       {/* Content */}
       <div className="companion-panel__content">
         <div className="companion-panel__search">
-          <SearchInput
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder={activeTab === 'views' ? 'Search views...' : 'Search datasets...'}
-            size="sm"
+          <FilterToolbar
+            filter={activeTab === 'views' ? viewFilter : datasetFilter}
+            config={{
+              quickFilterDefs: [],
+              typeCategories: [],
+              sortOptions: activeTab === 'views' ? VIEW_SORT_OPTIONS : DATASET_SORT_OPTIONS,
+            }}
+            tags={activeTab === 'views' ? viewTags : datasetTags}
+            variant="embedded"
+            showTypeFilter={false}
+            showTagFilter={(activeTab === 'views' ? viewTags : datasetTags).length > 0}
+            showSortFilter
+            searchPlaceholder={activeTab === 'views' ? 'Search views...' : 'Search datasets...'}
           />
           <p className="companion-panel__hint">Drag to add to canvas</p>
         </div>
@@ -130,8 +212,8 @@ export const CompanionPanel = memo(function CompanionPanel({
               </div>
             ) : (
               <EmptyState
-                icon={searchQuery ? 'search' : 'layers'}
-                title={searchQuery ? 'No views match your search' : 'No views yet'}
+                icon={viewFilter.searchQuery ? 'search' : 'layers'}
+                title={viewFilter.searchQuery ? 'No views match your search' : 'No views yet'}
                 size="sm"
               />
             )}
@@ -155,8 +237,8 @@ export const CompanionPanel = memo(function CompanionPanel({
               </div>
             ) : (
               <EmptyState
-                icon={searchQuery ? 'search' : 'database'}
-                title={searchQuery ? 'No datasets match your search' : 'No datasets loaded'}
+                icon={datasetFilter.searchQuery ? 'search' : 'database'}
+                title={datasetFilter.searchQuery ? 'No datasets match your search' : 'No datasets loaded'}
                 size="sm"
               />
             )}

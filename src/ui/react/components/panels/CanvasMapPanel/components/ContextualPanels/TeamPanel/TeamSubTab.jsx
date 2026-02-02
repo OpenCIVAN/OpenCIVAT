@@ -7,6 +7,7 @@ import React, { memo, useState, useCallback, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { Toggle } from '@UI/react/components/atoms/Toggle';
+import { Button } from '@UI/react/components/atoms/Button';
 import { SearchInput } from '@UI/react/components/molecules/SearchInput';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
 import { CollaboratorItem, PanelSection } from '../../shared';
@@ -23,6 +24,8 @@ export const TeamSubTab = memo(function TeamSubTab({
   onFollow,
   onLocate,
   onToggleCollaboratorCursor,
+  onJoinVoice,
+  onInvite,
   sizeMode = 'standard',
 }) {
   // Filter state
@@ -86,6 +89,15 @@ export const TeamSubTab = memo(function TeamSubTab({
           onChange={onToggleShowCursors}
           size="sm"
         />
+      </div>
+
+      <div className="team-subtab__controls">
+        <Button variant="ghost" size="sm" icon="mic" onClick={onJoinVoice}>
+          Join Voice
+        </Button>
+        <Button variant="ghost" size="sm" icon="users" onClick={onInvite}>
+          Invite
+        </Button>
       </div>
 
       <SearchInput

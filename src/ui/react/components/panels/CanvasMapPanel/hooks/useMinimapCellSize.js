@@ -35,11 +35,11 @@ export function useMinimapCellSize({
   focusedVG = null,
 } = {}) {
   return useMemo(() => {
-    const { GRID_GAP, HEADER_SIZE } = MINIMAP_CONSTANTS;
+    const { GRID_GAP, HEADER_SIZE, SCROLL_PADDING } = MINIMAP_CONSTANTS;
 
     // Account for labels if shown
     const labelOffset = showLabels ? HEADER_SIZE : 0;
-    const padding = 32;
+    const padding = SCROLL_PADDING * 2;
     const availableWidth = Math.max(0, containerWidth - labelOffset - padding);
     const availableHeight = Math.max(0, containerHeight - labelOffset - padding);
 

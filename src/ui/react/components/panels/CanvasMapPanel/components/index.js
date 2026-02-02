@@ -27,9 +27,13 @@ export { QuickNavToolbar } from './QuickNavToolbar';
 // CompanionPanel
 export { CompanionPanel, ViewListItem, DatasetItem } from './CompanionPanel';
 
+// BottomPanel
+export { CanvasMapBottomPanel } from './BottomPanel/CanvasMapBottomPanel';
+
 // ContextualPanels
 export {
   NavigatePanel,
+  ViewportsPanel,
   LayoutPanel,
   LinksPanel,
   TeamPanel,

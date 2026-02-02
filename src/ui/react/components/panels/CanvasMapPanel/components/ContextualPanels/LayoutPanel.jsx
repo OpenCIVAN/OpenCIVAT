@@ -13,7 +13,7 @@ import { Icon } from '@UI/react/components/atoms/Icon';
 import { Button } from '@UI/react/components/atoms/Button';
 import { Badge } from '@UI/react/components/atoms/Badge';
 import { ChipGroup } from '@UI/react/components/molecules/ChipGroup';
-import { VGListItem, PanelSection, FilterToolbarCompact, QuickFiltersRow } from '../shared';
+import { VGListItem, PanelSection } from '../shared';
 import { getVGDisplayName } from '../../utils/gridUtils';
 
 /**
@@ -25,11 +25,6 @@ export const LayoutPanel = memo(function LayoutPanel({
   inactiveVGs = [],
   selectedVGId,
   focusedVG,
-  searchQuery,
-  setSearchQuery,
-  filter,
-  quickFilterDefs = [],
-  quickFilterCounts = {},
   onVGClick,
   onVGDoubleClick,
   onVGRestore,
@@ -39,11 +34,15 @@ export const LayoutPanel = memo(function LayoutPanel({
   onDuplicate,
   onLink,
   onSaveTemplate,
+  canvasRows,
+  canvasCols,
+  onAdjustRows,
+  onAdjustCols,
+  onToggleSnap,
   onNameGroup,
   sizeMode = 'standard',
 }) {
   const isCompact = sizeMode === 'compact';
-  const [showQuickFilters, setShowQuickFilters] = useState(!isCompact);
 
   // Filter state for ChipGroup
   const [activeFilter, setActiveFilter] = useState('all');
@@ -55,12 +54,6 @@ export const LayoutPanel = memo(function LayoutPanel({
   const explicitCount = viewGroups.filter(v => v.isExplicit).length;
   const implicitCount = viewGroups.filter(v => !v.isExplicit).length;
 
-  const effectiveSearchQuery = filter?.searchQuery ?? searchQuery ?? '';
-  const handleSearchChange = filter?.setSearchQuery ?? setSearchQuery;
-  const activeQuickFilters = filter?.quickFilters ?? [];
-  const handleToggleQuickFilter = filter?.toggleQuickFilter ?? (() => {});
-  const activeFilterCount = filter?.activeFilterCount ?? 0;
-
   // Apply filter
   const displayVGs = activeFilter === 'all'
     ? filteredVGs
@@ -71,7 +64,7 @@ export const LayoutPanel = memo(function LayoutPanel({
   // If focused on a VG, show edit controls
   if (focusedVG) {
     return (
-      <div className="contextual-panel">
+      <div className="contextual-panel layout-panel">
         <PanelSection title="Edit ViewGroup" icon="pencil" sizeMode={sizeMode}>
           <div className="contextual-panel__actions">
             <Button variant="ghost" size="sm" icon="grid3x3" onClick={onChangeLayout}>
@@ -114,7 +107,7 @@ export const LayoutPanel = memo(function LayoutPanel({
   }
 
   return (
-    <div className="contextual-panel">
+    <div className="contextual-panel layout-panel">
       {/* On Canvas */}
       <PanelSection
         title="On Canvas"
@@ -129,23 +122,6 @@ export const LayoutPanel = memo(function LayoutPanel({
         }
         sizeMode={sizeMode}
       >
-        <FilterToolbarCompact
-          searchQuery={effectiveSearchQuery}
-          onSearchChange={handleSearchChange}
-          onToggleFilters={() => setShowQuickFilters(prev => !prev)}
-          filtersOpen={showQuickFilters}
-          activeFilterCount={activeFilterCount}
-          placeholder="Search groups..."
-        />
-        {showQuickFilters && (
-          <QuickFiltersRow
-            quickFilterDefs={quickFilterDefs}
-            activeFilters={activeQuickFilters}
-            counts={quickFilterCounts}
-            onToggle={handleToggleQuickFilter}
-            compact={isCompact}
-          />
-        )}
         <ChipGroup
           chips={[
             { id: 'all', label: 'All' },
@@ -197,6 +173,89 @@ export const LayoutPanel = memo(function LayoutPanel({
           </div>
         </PanelSection>
       )}
+
+      {/* Quick Layout Templates */}
+      <PanelSection title="Quick Layout Templates" icon="layoutGrid" sizeMode={sizeMode}>
+        <div className="layout-panel__templates">
+          {[
+            { id: '1x1', label: '1x1', layoutId: 'single' },
+            { id: '1x2', label: '1x2', layoutId: 'side-by-side' },
+            { id: '2x1', label: '2x1', layoutId: 'stacked' },
+            { id: '2x2', label: '2x2', layoutId: '2x2' },
+            { id: 'main-side', label: 'Main+Side', layoutId: '1+2' },
+          ].map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              className="layout-panel__template-btn"
+              onClick={() => onAddVG?.(template.layoutId)}
+            >
+              <Icon name="layoutGrid" size={12} />
+              <span>{template.label}</span>
+            </button>
+          ))}
+        </div>
+      </PanelSection>
+
+      {/* Canvas Controls */}
+      <PanelSection title="Canvas Controls" icon="grid3x3" sizeMode={sizeMode}>
+        <div className="layout-panel__controls">
+          <div className="layout-panel__spinner">
+            <span className="layout-panel__spinner-label">Rows</span>
+            <div className="layout-panel__spinner-controls">
+              <button
+                type="button"
+                className="layout-panel__spinner-btn"
+                onClick={() => onAdjustRows?.(-1)}
+                disabled={!onAdjustRows}
+              >
+                -
+              </button>
+              <span className="layout-panel__spinner-value">{canvasRows ?? '—'}</span>
+              <button
+                type="button"
+                className="layout-panel__spinner-btn"
+                onClick={() => onAdjustRows?.(1)}
+                disabled={!onAdjustRows}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div className="layout-panel__spinner">
+            <span className="layout-panel__spinner-label">Cols</span>
+            <div className="layout-panel__spinner-controls">
+              <button
+                type="button"
+                className="layout-panel__spinner-btn"
+                onClick={() => onAdjustCols?.(-1)}
+                disabled={!onAdjustCols}
+              >
+                -
+              </button>
+              <span className="layout-panel__spinner-value">{canvasCols ?? '—'}</span>
+              <button
+                type="button"
+                className="layout-panel__spinner-btn"
+                onClick={() => onAdjustCols?.(1)}
+                disabled={!onAdjustCols}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="layout-panel__control-row">
+          <Button variant="ghost" size="sm" icon="move" onClick={() => {}}>
+            {!isCompact && 'Align'}
+          </Button>
+          <Button variant="ghost" size="sm" icon="grid3x3" onClick={onToggleSnap}>
+            {!isCompact && 'Snap'}
+          </Button>
+        </div>
+      </PanelSection>
     </div>
   );
 });

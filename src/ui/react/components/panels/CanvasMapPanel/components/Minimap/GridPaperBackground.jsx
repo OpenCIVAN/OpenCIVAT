@@ -14,6 +14,12 @@ import React, { memo, useId } from 'react';
  * @param {number} props.cellSize - Cell size in pixels
  * @param {number} props.gap - Gap size in pixels
  * @param {number} [props.majorEvery=5] - Major grid interval (in cells)
+ * @param {number} [props.offsetX=0] - Pattern offset X
+ * @param {number} [props.offsetY=0] - Pattern offset Y
+ * @param {string} [props.minorColor] - Minor grid line color
+ * @param {string} [props.majorColor] - Major grid line color
+ * @param {string} [props.className] - Optional className
+ * @param {Object} [props.style] - Optional style
  * @param {boolean} [props.show=true] - Whether to render
  */
 export const GridPaperBackground = memo(function GridPaperBackground({
@@ -22,6 +28,12 @@ export const GridPaperBackground = memo(function GridPaperBackground({
   cellSize,
   gap,
   majorEvery = 5,
+  offsetX = 0,
+  offsetY = 0,
+  minorColor = 'rgba(96, 165, 250, 0.14)',
+  majorColor = 'rgba(96, 165, 250, 0.26)',
+  className = '',
+  style,
   show = true,
 }) {
   const uid = useId();
@@ -34,11 +46,13 @@ export const GridPaperBackground = memo(function GridPaperBackground({
 
   return (
     <svg
-      className="minimap__grid-paper"
+      className={['minimap__grid-paper', className].filter(Boolean).join(' ')}
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       aria-hidden="true"
+      shapeRendering="crispEdges"
+      style={style}
     >
       <defs>
         <pattern
@@ -46,11 +60,12 @@ export const GridPaperBackground = memo(function GridPaperBackground({
           width={pitch}
           height={pitch}
           patternUnits="userSpaceOnUse"
+          patternTransform={`translate(${offsetX} ${offsetY})`}
         >
           <path
             d={`M ${pitch} 0 L 0 0 0 ${pitch}`}
-            stroke="rgba(96, 165, 250, 0.06)"
-            strokeWidth="0.5"
+            stroke={minorColor}
+            strokeWidth="0.75"
           />
         </pattern>
         <pattern
@@ -58,16 +73,23 @@ export const GridPaperBackground = memo(function GridPaperBackground({
           width={majorPitch}
           height={majorPitch}
           patternUnits="userSpaceOnUse"
+          patternTransform={`translate(${offsetX} ${offsetY})`}
         >
           <rect width={majorPitch} height={majorPitch} fill={`url(#${minorId})`} />
           <path
             d={`M ${majorPitch} 0 L 0 0 0 ${majorPitch}`}
-            stroke="rgba(96, 165, 250, 0.12)"
-            strokeWidth="1"
+            stroke={majorColor}
+            strokeWidth="1.2"
           />
         </pattern>
+        <clipPath id={`${majorId}-clip`}>
+          <rect width={width} height={height} />
+        </clipPath>
       </defs>
-      <rect width={width} height={height} fill={`url(#${majorId})`} />
+      <g clipPath={`url(#${majorId}-clip)`}>
+        <rect width={width} height={height} fill={`url(#${majorId})`} />
+        <rect width={width} height={height} fill="none" stroke={majorColor} strokeWidth="1.2" />
+      </g>
     </svg>
   );
 });
