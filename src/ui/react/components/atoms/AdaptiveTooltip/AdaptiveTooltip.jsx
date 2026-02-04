@@ -11,7 +11,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useId, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { tokens } from '../../utils/tokens';
+import { tokens } from '@UI/react/styles/tokens';
 
 /**
  * AdaptiveTooltip - VR-compatible tooltip with adaptive positioning

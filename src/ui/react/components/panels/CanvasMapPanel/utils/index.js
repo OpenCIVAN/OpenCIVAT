@@ -5,4 +5,5 @@
 
 export * from './constants';
 export * from './gridUtils';
-export * from './tokens';
+// Re-export from global tokens (consolidated)
+export * from '@UI/react/styles/tokens';

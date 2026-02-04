@@ -1,14 +1,17 @@
 /**
  * @file tokens.js
- * @description Design tokens for Canvas Map V2 components
+ * @description Global design tokens for React components
  *
- * These tokens match the SCSS theme system but are available for
- * inline styles in React components. Based on the V2Spec design.
+ * These tokens match the SCSS theme system (_colors.scss, _effects.scss, etc.)
+ * and are available for inline styles in React components.
+ *
+ * USAGE: Import these tokens when you need inline JS styles that match the theme.
+ * For SCSS-based components, prefer using the SCSS variables via @use "theme" as *.
  */
 
 /**
- * Design tokens for CanvasMap V2
- * Matches _colors.scss and _effects.scss from the theme system
+ * Global design tokens
+ * Matches SCSS tokens in src/ui/react/styles/tokens/
  */
 export const tokens = {
   colors: {
@@ -20,38 +23,53 @@ export const tokens = {
       elevated: '#18223c',
       hover: 'rgba(96, 165, 250, 0.08)',
       active: 'rgba(96, 165, 250, 0.15)',
+      canvas: '#030303',
+      canvasCell: '#080808',
+      canvasEmpty: '#050505',
     },
     glass: {
-      subtle: 'rgba(96, 165, 250, 0.04)',
-      light: 'rgba(96, 165, 250, 0.06)',
-      medium: 'rgba(96, 165, 250, 0.10)',
-      strong: 'rgba(96, 165, 250, 0.15)',
-      panel: 'rgba(6, 10, 18, 0.85)',
+      subtle: 'rgba(96, 165, 250, 0.03)',
+      light: 'rgba(96, 165, 250, 0.05)',
+      medium: 'rgba(96, 165, 250, 0.08)',
+      strong: 'rgba(96, 165, 250, 0.12)',
+      panel: 'rgba(8, 14, 24, 0.88)',
       frosted: 'rgba(12, 18, 32, 0.75)',
+      canvas: 'rgba(255, 255, 255, 0.04)',
     },
     border: {
-      subtle: 'rgba(96, 165, 250, 0.10)',
-      default: 'rgba(96, 165, 250, 0.18)',
-      medium: 'rgba(96, 165, 250, 0.25)',
-      focus: 'rgba(59, 130, 246, 0.5)',
+      subtle: 'rgba(96, 165, 250, 0.08)',
+      default: 'rgba(96, 165, 250, 0.12)',
+      medium: 'rgba(96, 165, 250, 0.18)',
+      strong: 'rgba(96, 165, 250, 0.25)',
+      accent: 'rgba(96, 165, 250, 0.4)',
       glow: 'rgba(96, 165, 250, 0.25)',
+      focus: 'rgba(96, 165, 250, 0.4)',
+      canvas: 'rgba(255, 255, 255, 0.06)',
     },
     text: {
-      primary: 'rgba(248, 250, 252, 0.95)',
-      secondary: 'rgba(203, 213, 225, 0.8)',
-      tertiary: 'rgba(148, 163, 184, 0.65)',
-      muted: 'rgba(148, 163, 184, 0.6)',
+      primary: 'rgba(255, 255, 255, 0.95)',
+      secondary: 'rgba(180, 200, 240, 0.8)',
+      tertiary: 'rgba(140, 160, 200, 0.6)',
+      muted: 'rgba(120, 150, 210, 0.5)',
+      disabled: 'rgba(100, 130, 180, 0.3)',
     },
     accent: {
-      blue: '#3b82f6',
+      primary: '#60a5fa',
+      blue: '#60a5fa',
       cyan: '#22d3ee',
-      purple: '#a855f7',
-      amber: '#f59e0b',
-      green: '#22c55e',
-      red: '#ef4444',
-      teal: '#14b8a6',
-      pink: '#ec4899',
-      indigo: '#6366f1',
+      purple: '#c084fc',
+      amber: '#fbbf24',
+      green: '#34d399',
+      red: '#f87171',
+      teal: '#7dd3fc',
+      pink: '#fb7185',
+      indigo: '#a78bfa',
+    },
+    status: {
+      success: '#30d158',
+      warning: '#ff9f0a',
+      error: '#ff453a',
+      info: '#0a84ff',
     },
     canvas: {
       bg: '#030303',
@@ -79,6 +97,7 @@ export const tokens = {
     lg: '12px',
     xl: '13px',
     '2xl': '14px',
+    '3xl': '16px',
   },
 
   spacing: {
@@ -88,6 +107,7 @@ export const tokens = {
     lg: '12px',
     xl: '16px',
     '2xl': '20px',
+    '3xl': '24px',
   },
 
   blur: {
@@ -107,18 +127,6 @@ export const tokens = {
     glass: '0 4px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1)',
     glassLg: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
     depth: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-    /**
-     * Generate a glow shadow for a given color
-     * @param {string} color - Hex color (e.g., '#3b82f6')
-     * @returns {string} CSS box-shadow value
-     */
-    glow: (color) => `0 0 20px ${color}40, 0 0 40px ${color}20`,
-    /**
-     * Generate a subtle glow for a given color
-     * @param {string} color - Hex color
-     * @returns {string} CSS box-shadow value
-     */
-    glowSubtle: (color) => `0 0 12px ${color}30`,
   },
 
   transition: {

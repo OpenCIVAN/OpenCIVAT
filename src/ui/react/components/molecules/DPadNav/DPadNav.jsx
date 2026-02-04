@@ -11,7 +11,7 @@
  */
 
 import React, { memo, useState } from 'react';
-import { tokens } from '../../utils/tokens';
+import { tokens } from '@UI/react/styles/tokens';
 
 /**
  * SquareDPad - SVG-based D-Pad navigation control

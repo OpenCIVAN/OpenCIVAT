@@ -82,3 +82,6 @@ export { NavDot } from './NavDot';
 
 // ScopeIndicator - View scope level indicator
 export { ScopeIndicator } from './ScopeIndicator';
+
+// AdaptiveTooltip - VR-compatible tooltip with adaptive positioning
+export { AdaptiveTooltip } from './AdaptiveTooltip';

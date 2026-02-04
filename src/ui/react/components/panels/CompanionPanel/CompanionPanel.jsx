@@ -22,7 +22,7 @@ import { ViewListItem } from './ViewListItem';
 import { DatasetItem } from './DatasetItem';
 import { CollapsibleSection } from './CollapsibleSection';
 import { VGItem } from './VGItem';
-import { LayoutMiniPreview } from './LayoutMiniPreview';
+import { LayoutMiniPreview } from '@UI/react/components/molecules/LayoutMiniPreview';
 import './CompanionPanel.scss';
 
 /**

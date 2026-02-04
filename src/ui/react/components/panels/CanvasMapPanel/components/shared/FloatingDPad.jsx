@@ -12,7 +12,7 @@
 
 import React, { memo, useState, useCallback, useRef } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { tokens } from '../../utils/tokens';
+import { tokens } from '@UI/react/styles/tokens';
 
 /**
  * FloatingDPad - Circular draggable D-Pad navigation control

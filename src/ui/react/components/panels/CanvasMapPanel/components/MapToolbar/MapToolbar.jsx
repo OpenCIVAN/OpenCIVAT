@@ -13,7 +13,7 @@ import React, { memo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { ToggleGroup } from '@UI/react/components/molecules/ToggleGroup';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
-import { AdaptiveTooltip } from '../shared/AdaptiveTooltip';
+import { AdaptiveTooltip } from '@UI/react/components/atoms/AdaptiveTooltip';
 import {
   MAP_MODES,
   LINKS_SUB_TABS,

@@ -36,22 +36,45 @@ export const DEFAULT_LAYOUTS = {
  * LayoutMiniPreview - Pixel art layout representation
  *
  * @param {Object} props
- * @param {string} props.layoutId - Layout identifier ('single', '2x2', '1+2', etc.)
+ * @param {string} [props.layoutId] - Layout identifier ('single', '2x2', '1+2', etc.)
+ * @param {number} [props.rows] - Grid rows (used when layoutId doesn't match a predefined layout)
+ * @param {number} [props.cols] - Grid columns (used when layoutId doesn't match a predefined layout)
  * @param {string} props.color - Color for filled cells (CSS color value)
- * @param {number} props.filledCount - Number of cells to show as filled
+ * @param {number} [props.filledCount] - Number of cells to show as filled
+ * @param {number} [props.viewCount] - Alias for filledCount (for backwards compatibility)
  * @param {number} [props.size=16] - Total size in pixels
  * @param {Object} [props.layouts] - Custom layouts config (defaults to DEFAULT_LAYOUTS)
  * @param {string} [props.className] - Additional CSS classes
  */
 export const LayoutMiniPreview = memo(function LayoutMiniPreview({
   layoutId,
+  rows: propRows,
+  cols: propCols,
   color,
   filledCount,
+  viewCount, // Alias for filledCount
   size = 16,
   layouts = DEFAULT_LAYOUTS,
   className = '',
 }) {
-  const layout = layouts[layoutId] || layouts.single || DEFAULT_LAYOUTS.single;
+  // Support viewCount as alias for filledCount
+  const effectiveFilledCount = filledCount ?? viewCount;
+
+  // Determine layout from layoutId or generate from rows/cols
+  const layout = useMemo(() => {
+    // First try to find a predefined layout
+    if (layoutId && layouts[layoutId]) {
+      return layouts[layoutId];
+    }
+    // Generate dynamic layout from rows/cols
+    if (propRows && propCols) {
+      const totalCells = propRows * propCols;
+      return { rows: propRows, cols: propCols, cells: totalCells };
+    }
+    // Default fallback
+    return layouts.single || DEFAULT_LAYOUTS.single;
+  }, [layoutId, propRows, propCols, layouts]);
+
   const gap = 1;
 
   /**
@@ -74,7 +97,7 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
         y: 0,
         width: size,
         height: cellHeight,
-        filled: filledCount > 0,
+        filled: effectiveFilledCount > 0,
       });
       // Bottom left
       result.push({
@@ -82,7 +105,7 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
         y: cellHeight + gap,
         width: cellWidth,
         height: cellHeight,
-        filled: filledCount > 1,
+        filled: effectiveFilledCount > 1,
       });
       // Bottom right
       result.push({
@@ -90,7 +113,7 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
         y: cellHeight + gap,
         width: cellWidth,
         height: cellHeight,
-        filled: filledCount > 2,
+        filled: effectiveFilledCount > 2,
       });
     } else if (merged === 'right') {
       // 2+1 layout: left has two cells, right spans both rows
@@ -100,7 +123,7 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
         y: 0,
         width: cellWidth,
         height: cellHeight,
-        filled: filledCount > 0,
+        filled: effectiveFilledCount > 0,
       });
       // Left bottom
       result.push({
@@ -108,7 +131,7 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
         y: cellHeight + gap,
         width: cellWidth,
         height: cellHeight,
-        filled: filledCount > 1,
+        filled: effectiveFilledCount > 1,
       });
       // Right (spans full height)
       result.push({
@@ -116,7 +139,7 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
         y: 0,
         width: cellWidth,
         height: size,
-        filled: filledCount > 2,
+        filled: effectiveFilledCount > 2,
       });
     } else {
       // Standard grid layout
@@ -129,7 +152,7 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
               y: r * (cellHeight + gap),
               width: cellWidth,
               height: cellHeight,
-              filled: cellIndex < filledCount,
+              filled: cellIndex < effectiveFilledCount,
             });
           }
         }
@@ -137,7 +160,7 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
     }
 
     return result;
-  }, [layout, size, filledCount, gap]);
+  }, [layout, size, effectiveFilledCount, gap]);
 
   const classList = [
     'layout-mini-preview',

@@ -15,7 +15,7 @@
 
 import React, { memo, useCallback } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
-import { LayoutMiniPreview } from './LayoutMiniPreview';
+import { LayoutMiniPreview } from '@UI/react/components/molecules/LayoutMiniPreview';
 
 /**
  * Scope icons and colors

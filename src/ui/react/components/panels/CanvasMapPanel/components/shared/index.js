@@ -13,6 +13,8 @@ export { BookmarkItem } from './BookmarkItem';
 export { CollaboratorItem } from './CollaboratorItem';
 export { ViewportItem } from './ViewportItem';
 export { LinkItem } from './LinkItem';
-export { AdaptiveTooltip } from './AdaptiveTooltip';
-export { SquareDPad, SimpleDPad } from './DPadNav';
+// Re-export from atoms (consolidated)
+export { AdaptiveTooltip } from '@UI/react/components/atoms/AdaptiveTooltip';
+// Re-export from molecules (consolidated)
+export { SquareDPad, SimpleDPad } from '@UI/react/components/molecules/DPadNav';
 export { FloatingDPad } from './FloatingDPad';

@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { SquareDPad, SimpleDPad } from './DPadNav';
 
 export default {
-  title: 'Panels/CanvasMap/Shared/DPadNav',
+  title: 'Molecules/DPadNav',
   component: SquareDPad,
   decorators: [
     (Story) => (

@@ -15,6 +15,7 @@ export { ViewListItem } from './ViewListItem';
 export { DatasetItem } from './DatasetItem';
 export { CollapsibleSection } from './CollapsibleSection';
 export { VGItem } from './VGItem';
-export { LayoutMiniPreview } from './LayoutMiniPreview';
+// Re-export from molecules (consolidated)
+export { LayoutMiniPreview } from '@UI/react/components/molecules/LayoutMiniPreview';
 export { GridSizePicker } from './GridSizePicker';
 export { default } from './CompanionPanel';

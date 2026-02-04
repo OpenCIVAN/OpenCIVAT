@@ -212,6 +212,9 @@ export { FilterOverflowMenu } from './FilterOverflowMenu';
 // CombinedFiltersDropdown - Tabbed Types + Tags dropdown for minimal mode
 export { CombinedFiltersDropdown } from './CombinedFiltersDropdown';
 
+// DPadNav - Navigation D-Pad controls for canvas panning
+export { SquareDPad, SimpleDPad } from './DPadNav';
+
 // =============================================================================
 // RE-EXPORTS FROM ATOMS (for convenience)
 // =============================================================================

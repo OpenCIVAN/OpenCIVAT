@@ -6,9 +6,9 @@
 import React, { memo, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { FilterToolbar } from '@UI/react/components/organisms/FilterToolbar';
-import { SquareDPad } from '../shared/DPadNav';
+import { SquareDPad } from '@UI/react/components/molecules/DPadNav';
 import { MODE_CONFIG } from '../../utils/constants';
-import { tokens } from '../../utils/tokens';
+import { tokens } from '@UI/react/styles/tokens';
 
 const getModeIconName = (modeConfig) => modeConfig.icon || 'layoutGrid';
 

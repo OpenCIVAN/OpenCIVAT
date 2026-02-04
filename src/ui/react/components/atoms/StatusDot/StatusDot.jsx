@@ -29,24 +29,28 @@ const SIZE_MAP = {
  * - Connection status
  * - Activity states
  *
- * @param {string} status - Status state: 'online' | 'offline' | 'busy' | 'away' | 'loading'
- * @param {string} size - Size variant: 'sm' | 'md' | 'lg'
- * @param {boolean} pulse - Show pulse animation (auto-enabled for 'loading')
- * @param {string} className - Additional CSS classes
+ * @param {string} [status] - Status state: 'online' | 'offline' | 'busy' | 'away' | 'loading'
+ * @param {string} [color] - Direct color override (CSS color value). Takes precedence over status.
+ * @param {string|number} [size] - Size variant: 'sm' | 'md' | 'lg' or pixel number
+ * @param {boolean} [pulse] - Show pulse animation (auto-enabled for 'loading' status)
+ * @param {string} [className] - Additional CSS classes
  */
 export const StatusDot = memo(function StatusDot({
     status = 'offline',
+    color: colorProp,
     size = 'md',
     pulse,
     className = '',
 }) {
     const { isVR } = useAdaptive();
 
-    // Get size based on mode
-    const dotSize = SIZE_MAP[size]?.[isVR ? 'vr' : 'desktop'] ?? SIZE_MAP.md.desktop;
+    // Get size based on mode - support both string variants and pixel numbers
+    const dotSize = typeof size === 'number'
+        ? size
+        : SIZE_MAP[size]?.[isVR ? 'vr' : 'desktop'] ?? SIZE_MAP.md.desktop;
 
-    // Get color for status
-    const color = STATUS_COLORS[status] ?? STATUS_COLORS.offline;
+    // Get color - direct color prop takes precedence over status
+    const color = colorProp ?? STATUS_COLORS[status] ?? STATUS_COLORS.offline;
 
     // Auto-pulse for loading state
     const shouldPulse = pulse ?? status === 'loading';
