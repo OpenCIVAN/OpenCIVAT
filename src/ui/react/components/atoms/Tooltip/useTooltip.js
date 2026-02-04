@@ -379,6 +379,33 @@ export function useTooltip(options = {}) {
     };
   }, [isVisible, updatePosition]);
 
+  // Hide tooltip on global visibility changes to prevent "stuck" states
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const handleBlur = () => hideImmediate();
+    const handleVisibility = () => {
+      if (document.hidden) {
+        hideImmediate();
+      }
+    };
+    const handleMouseOut = (event) => {
+      if (!event.relatedTarget) {
+        hideImmediate();
+      }
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("mouseout", handleMouseOut);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("mouseout", handleMouseOut);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isVisible, hideImmediate]);
+
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {

@@ -227,6 +227,8 @@ export const ICON_REGISTRY = {
   dragHorizontal: "drag_handle",
   dragVertical: "drag_indicator",
   dock: "view_module", // Grid layout for docked mode
+  viewGroup: "view_quilt",
+  view: "view_carousel",
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STATUS & FEEDBACK

@@ -91,7 +91,7 @@ export const VIEW_TYPES = {
  * Size mode breakpoints for responsive behavior
  */
 export const SIZE_MODE_BREAKPOINTS = {
-  compact: 300,
+  compact: 320,
   standard: 380,
   expanded: 440,
 };

@@ -28,6 +28,7 @@
   // V2Spec: Subtle inset highlights
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03),
               inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
   &--pannable {
     cursor: grab;
@@ -35,6 +36,13 @@
 
   &--dragging {
     cursor: grabbing;
+  }
+
+  &--drop-target {
+    border-color: rgba(56, 189, 248, 0.6);
+    box-shadow:
+      inset 0 0 0 1px rgba(56, 189, 248, 0.35),
+      0 0 0 2px rgba(56, 189, 248, 0.15);
   }
 
   &__scroll {

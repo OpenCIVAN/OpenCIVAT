@@ -16,7 +16,6 @@ import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import { AdaptiveTooltip } from '../shared/AdaptiveTooltip';
 import {
   MAP_MODES,
-  DISPLAY_MODES,
   LINKS_SUB_TABS,
   COLLABORATE_SUB_TABS,
 } from '../../utils/constants';
@@ -70,8 +69,8 @@ const Separator = memo(function Separator() {
  */
 export const MapToolbar = memo(function MapToolbar({
   mapMode,
-  displayMode,
-  setDisplayMode,
+  showViews,
+  showVGs,
   minimapZoom,
   showViewports,
   showCollaborators,
@@ -91,6 +90,8 @@ export const MapToolbar = memo(function MapToolbar({
   toggleShowCollaborators,
   toggleShowBookmarks,
   toggleShowInternals,
+  toggleShowViews,
+  toggleShowVGs,
 
   // Action handlers
   onAddVG,
@@ -104,6 +105,7 @@ export const MapToolbar = memo(function MapToolbar({
   sizeMode = 'standard',
 }) {
   const isCompact = sizeMode === 'compact';
+  const showLabels = !isCompact;
 
   return (
     <div className="map-toolbar" data-size-mode={sizeMode}>
@@ -117,28 +119,28 @@ export const MapToolbar = memo(function MapToolbar({
 
       <Separator />
 
-      {!isCompact && (
-        <>
-          {/* VG vs View display mode toggle */}
-          <ToggleGroup
-            options={[
-              { value: DISPLAY_MODES.VG, label: 'VG', icon: 'package' },
-              { value: DISPLAY_MODES.VIEW, label: 'View', icon: 'layers' },
-            ]}
-            value={displayMode}
-            onChange={setDisplayMode}
-            variant="segmented"
-            size="sm"
-          />
+      {/* View layer toggles */}
+      <ToolbarBtn
+        icon="viewGroup"
+        active={showVGs}
+        onClick={toggleShowVGs}
+        title="ViewGroups"
+        activeColor="var(--accent-purple)"
+      />
+      <ToolbarBtn
+        icon="view"
+        active={showViews}
+        onClick={toggleShowViews}
+        title="Views"
+        activeColor="var(--accent-blue)"
+      />
 
-          <Separator />
-        </>
-      )}
+      <Separator />
 
       {/* Mode-specific controls */}
-      {!isCompact && (mapMode === MAP_MODES.NAVIGATE || mapMode === MAP_MODES.LAYOUT) && (
+      {(mapMode === MAP_MODES.NAVIGATE || mapMode === MAP_MODES.LAYOUT) && (
         <ToolbarBtn
-          icon="frame"
+          icon="iframe"
           active={showViewports}
           onClick={toggleShowViewports}
           title="Viewports"
@@ -146,7 +148,7 @@ export const MapToolbar = memo(function MapToolbar({
         />
       )}
 
-      {!isCompact && mapMode === MAP_MODES.NAVIGATE && (
+      {mapMode === MAP_MODES.NAVIGATE && (
         <>
           <ToolbarBtn
             icon="users"
@@ -165,7 +167,7 @@ export const MapToolbar = memo(function MapToolbar({
         </>
       )}
 
-      {mapMode === MAP_MODES.LAYOUT && !isCompact && (
+      {mapMode === MAP_MODES.LAYOUT && (
         <>
           <ToolbarBtn
             icon="grid3x3"
@@ -174,10 +176,14 @@ export const MapToolbar = memo(function MapToolbar({
             title="Internal layouts"
             activeColor="var(--accent-green)"
           />
-          <Separator />
-          <ToolbarBtn icon="plus" onClick={onAddVG} title="Add VG" />
-          <ToolbarBtn icon="combine" onClick={onMergeVG} title="Merge VGs" />
-          <ToolbarBtn icon="split" onClick={onSplitVG} title="Split VG" />
+          {!isCompact && (
+            <>
+              <Separator />
+              <ToolbarBtn icon="plus" onClick={onAddVG} title="Add VG" />
+              <ToolbarBtn icon="combine" onClick={onMergeVG} title="Merge VGs" />
+              <ToolbarBtn icon="split" onClick={onSplitVG} title="Split VG" />
+            </>
+          )}
         </>
       )}
 
@@ -185,8 +191,8 @@ export const MapToolbar = memo(function MapToolbar({
         <>
           <ToggleGroup
             options={[
-              { value: LINKS_SUB_TABS.VG, label: 'VG' },
-              { value: LINKS_SUB_TABS.VIEW, label: 'View' },
+              { value: LINKS_SUB_TABS.VG, label: showLabels ? 'VG' : undefined, icon: 'package' },
+              { value: LINKS_SUB_TABS.VIEW, label: showLabels ? 'View' : undefined, icon: 'layers' },
             ]}
             value={linksSubTab}
             onChange={setLinksSubTab}
@@ -207,8 +213,8 @@ export const MapToolbar = memo(function MapToolbar({
         <>
           <ToggleGroup
             options={[
-              { value: COLLABORATE_SUB_TABS.ME, label: 'Me' },
-              { value: COLLABORATE_SUB_TABS.TEAM, label: `Team (${onlineCollaboratorsCount})` },
+              { value: COLLABORATE_SUB_TABS.ME, label: showLabels ? 'Me' : undefined },
+              { value: COLLABORATE_SUB_TABS.TEAM, label: showLabels ? `Team (${onlineCollaboratorsCount})` : undefined },
             ]}
             value={collaborateSubTab}
             onChange={setCollaborateSubTab}

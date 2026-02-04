@@ -18,24 +18,24 @@
 import React, { memo, useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
+import { useCanvasMap } from '@UI/react/context/CanvasMapContext';
 import { useViewGroups } from '@UI/react/hooks/useViewGroups';
 import { useWorkspacePresence } from '@UI/react/hooks/useRoomPresence';
 import { useBookmarks } from '@UI/react/hooks/useBookmarks';
 import { useCanvas } from '@UI/react/hooks/useCanvas';
-import { useDatasets } from '@UI/react/hooks/useDatasets';
 import { useListFilter } from '@UI/react/hooks/useListFilter';
 
 // V2 Components
 import { MapToolbar } from './components/MapToolbar';
 import { Minimap } from './components/Minimap';
-import { CompanionPanel } from './components/CompanionPanel';
 import { CanvasMapBottomPanel } from './components/BottomPanel/CanvasMapBottomPanel';
 import { ViewportsPanel, LayoutPanel, TeamPanel } from './components/ContextualPanels';
 
 // Hooks and Utils
 import { useCanvasMapState } from './hooks/useCanvasMapState';
-import { MAP_MODES, SIZE_MODE_BREAKPOINTS, DISPLAY_MODES, LAYOUTS } from './utils/constants';
+import { MAP_MODES, SIZE_MODE_BREAKPOINTS, LAYOUTS } from './utils/constants';
 import { formatCellRef, getVGDisplayName } from './utils/gridUtils';
+import { addCustomTemplate, createTemplateFromViewGroup } from '@Core/viewgroups/templates';
 
 // Styles - Component styles are imported by each component
 import './CanvasMapPanel.scss';
@@ -54,10 +54,9 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   width,
   height,
   sizeMode: panelSizeMode,
-  onCompanionToggleReady,
-  onCompanionOpenChange,
 }) {
   const { isVR } = useAdaptive();
+  const canvasMapContext = useCanvasMap();
   const minimapContainerRef = useRef(null);
 
   // ---------------------------------------------------------------------------
@@ -65,16 +64,15 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   // ---------------------------------------------------------------------------
 
   // Canvas data
-  const { canvas, viewport } = useCanvas();
-
-  // Loaded datasets
-  const loadedDatasets = useDatasets();
+  const { canvas, viewport, setCanvasSize } = useCanvas();
 
   // ViewGroups
   const {
     viewGroups: rawViewGroups,
     visibleViewGroups,
     isLoading: vgLoading,
+    createViewGroup,
+    updateViewGroup,
   } = useViewGroups(workspaceId);
 
   // Collaborators
@@ -99,27 +97,51 @@ export const CanvasMapContent = memo(function CanvasMapContent({
 
   // Transform ViewGroups to expected structure
   const viewGroups = useMemo(() => {
-    return (visibleViewGroups || []).map(vg => ({
-      id: vg.id,
-      name: vg.name,
-      color: vg.color || '#a855f7',
-      isExplicit: !!vg.name,
-      isActive: vg.row !== undefined && vg.col !== undefined,
-      isLinked: !!vg.link,
-      isShared: vg.isShared ?? (vg.sharedWith?.length > 0),
-      isStarred: vg.isStarred ?? vg.starred ?? false,
-      layoutId: vg.layout?.type || 'single',
-      type: vg.layout?.type || 'single',
-      tags: vg.tags || [],
-      position: vg.row !== undefined ? {
-        row: vg.row,
-        col: vg.col,
-        rowSpan: vg.rowSpan || 1,
-        colSpan: vg.colSpan || 1,
-      } : null,
-      views: vg.views || [],
-      link: vg.link,
-    }));
+    return (visibleViewGroups || []).map(vg => {
+      const canvasPosition = vg.getCanvasPosition?.()
+        || vg.canvasPosition
+        || vg.position
+        || (vg.row !== undefined ? {
+          row: vg.row,
+          col: vg.col,
+          rowSpan: vg.rowSpan,
+          colSpan: vg.colSpan,
+        } : null);
+
+      const normalizedPosition = canvasPosition
+        ? {
+          row: canvasPosition.row ?? 0,
+          col: canvasPosition.col ?? 0,
+          rowSpan: canvasPosition.rowSpan ?? 1,
+          colSpan: canvasPosition.colSpan ?? 1,
+        }
+        : null;
+
+      return ({
+        id: vg.id,
+        name: vg.name,
+        color: vg.color || '#a855f7',
+        isExplicit: !!vg.name,
+        isActive: normalizedPosition?.row !== undefined && normalizedPosition?.col !== undefined,
+        isLinked: !!vg.link,
+        isShared: vg.isShared ?? (vg.sharedWith?.length > 0),
+        isStarred: vg.isStarred ?? vg.starred ?? false,
+        layoutId: vg.layout?.type || 'single',
+        type: vg.layout?.type || 'single',
+        tags: vg.tags || [],
+        position: normalizedPosition,
+        views: (vg.views || vg.getViews?.() || vg.slots || [])
+          .filter((view) => view && (view.id || view.viewId))
+          .map((view) => ({
+            id: view.id || view.viewId,
+            name: view.name || view.viewName,
+            type: view.type || view.viewType,
+            datasetId: view.datasetId,
+            datasetName: view.datasetName,
+          })),
+        link: vg.link,
+      });
+    });
   }, [visibleViewGroups]);
 
   const vgTypeCategories = useMemo(() => ([
@@ -214,6 +236,11 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     return filteredViewGroups.filter(vg => !vg.position);
   }, [filteredViewGroups]);
 
+  useEffect(() => {
+    if (!canvasMapContext) return;
+    canvasMapContext.setPlacedVGs(activeViewGroups.map((vg) => vg.id));
+  }, [canvasMapContext, activeViewGroups]);
+
   // Transform viewports from canvas viewport
   const viewports = useMemo(() => {
     if (!viewport) return [];
@@ -239,10 +266,6 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const currentViewport = customViewports.find((vp) => vp.id === selectedViewportId) || customViewports[0];
   const currentPosition = currentViewport?.position || { row: 0, col: 0 };
   const currentPositionLabel = formatCellRef(currentPosition.row, currentPosition.col);
-  const activeViewportLabel = currentPositionLabel;
-  const activeViewportSizeLabel = currentViewport?.size
-    ? `${currentViewport.size.cols}x${currentViewport.size.rows}`
-    : '—';
   const isAtHome =
     currentPosition.row === canvasData.homePosition.row &&
     currentPosition.col === canvasData.homePosition.col;
@@ -307,29 +330,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     }));
   }, [rawBookmarks]);
 
-  // All views flattened (for companion panel)
-  const allViews = useMemo(() => {
-    return activeViewGroups.flatMap(vg =>
-      (vg.views || []).map(v => ({
-        ...v,
-        vgId: vg.id,
-        vgName: vg.name || getVGDisplayName(vg),
-        vgColor: vg.color,
-      }))
-    );
-  }, [activeViewGroups]);
-  const openViewportCount = customViewports.length;
-  const canvasSizeLabel = `${canvasData.cols}x${canvasData.rows}`;
   const [minimapResetSignal, setMinimapResetSignal] = useState(0);
-
-  const datasets = useMemo(() => {
-    return (loadedDatasets || []).map((dataset) => ({
-      id: dataset.id,
-      name: dataset.name,
-      type: (dataset.fileType || 'default').toLowerCase(),
-      size: dataset.size,
-    }));
-  }, [loadedDatasets]);
 
   const handleResetMinimapView = useCallback(() => {
     setMinimapResetSignal((prev) => prev + 1);
@@ -350,16 +351,6 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     bookmarks,
     callbacks: {},
   });
-
-  useEffect(() => {
-    if (!onCompanionToggleReady) return;
-    onCompanionToggleReady(state.toggleCompanion);
-  }, [onCompanionToggleReady, state.toggleCompanion]);
-
-  useEffect(() => {
-    if (!onCompanionOpenChange) return;
-    onCompanionOpenChange(state.companionOpen);
-  }, [onCompanionOpenChange, state.companionOpen]);
 
   const filteredActiveIds = useMemo(() => {
     return new Set(filteredActiveViewGroups.map(vg => vg.id));
@@ -417,6 +408,66 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     console.log('Add ViewGroup');
     // TODO: Implement VG creation
   }, []);
+
+  const handleAdjustRows = useCallback((delta) => {
+    if (!setCanvasSize || !canvasData) return;
+    const newRows = Math.max(1, canvasData.rows + delta);
+    setCanvasSize({ rows: newRows, cols: canvasData.cols });
+  }, [setCanvasSize, canvasData]);
+
+  const handleAdjustCols = useCallback((delta) => {
+    if (!setCanvasSize || !canvasData) return;
+    const newCols = Math.max(1, canvasData.cols + delta);
+    setCanvasSize({ rows: canvasData.rows, cols: newCols });
+  }, [setCanvasSize, canvasData]);
+
+  const handleCanvasDrop = useCallback(async ({ row, col, data }) => {
+    if (!data) return;
+
+    if (data.type === 'vg-place') {
+      const targetVG = rawViewGroups.find((vg) => vg.id === data.vgId);
+      if (!targetVG || !updateViewGroup) return;
+
+      const position = targetVG.canvasPosition || targetVG.position || {};
+      const rowSpan = position.rowSpan || 1;
+      const colSpan = position.colSpan || 1;
+
+      try {
+        await updateViewGroup(targetVG.id, {
+          canvasPosition: { row, col, rowSpan, colSpan },
+        });
+      } catch (err) {
+        console.error('Failed to place ViewGroup:', err);
+      }
+      return;
+    }
+
+    if (data.type === 'template-create') {
+      if (!createViewGroup || !updateViewGroup) return;
+
+      try {
+        const created = await createViewGroup(data.layoutId || 'single', data.templateId || null);
+        if (!created) return;
+        await updateViewGroup(created.id, {
+          name: data.templateName || created.name,
+          color: data.color || created.color,
+          canvasPosition: { row, col, rowSpan: 1, colSpan: 1 },
+        });
+      } catch (err) {
+        console.error('Failed to create ViewGroup from template:', err);
+      }
+    }
+  }, [rawViewGroups, createViewGroup, updateViewGroup]);
+
+  const handleVGDoubleClick = useCallback((vgId) => {
+    state.handleVGDoubleClick(vgId);
+    const viewGroup = viewGroups.find((vg) => vg.id === vgId);
+    if (viewGroup) {
+      window.dispatchEvent(new CustomEvent('cia:open-vg-editor', {
+        detail: { viewGroup, isNewVG: false },
+      }));
+    }
+  }, [state, viewGroups]);
 
   const handleMove = useCallback((direction) => {
     const delta = {
@@ -507,6 +558,14 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     // TODO: Implement VG restoration
   }, []);
 
+  const handleSaveTemplate = useCallback(() => {
+    if (!state.focusedVG) return;
+    const template = createTemplateFromViewGroup(state.focusedVG, {
+      name: `${getVGDisplayName(state.focusedVG)} Template`,
+    });
+    addCustomTemplate(template);
+  }, [state.focusedVG]);
+
   const handleFollow = useCallback((userId) => {
     const user = collaborators.find((collab) => collab.id === userId);
     setFollowingUser(user ? { id: user.id, name: user.name, color: user.color } : null);
@@ -546,11 +605,10 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     // TODO: Implement broadcast stop
   }, []);
 
-  const COMPANION_WIDTHS = { compact: 140, standard: 160 };
   const QUICK_NAV_WIDTH = 40;
   const MINIMAP_PADDING = 8;
 
-  const effectiveWidth = width - (state.companionOpen ? COMPANION_WIDTHS.standard : 0);
+  const effectiveWidth = width;
   const effectiveSizeMode = (() => {
     if (!Number.isFinite(effectiveWidth)) return panelSizeMode || 'standard';
     if (effectiveWidth < SIZE_MODE_BREAKPOINTS.compact) return 'compact';
@@ -559,9 +617,6 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   })();
 
   const isCompact = effectiveSizeMode === 'compact';
-  const companionWidth = state.companionOpen
-    ? (isCompact ? COMPANION_WIDTHS.compact : COMPANION_WIDTHS.standard)
-    : 0;
 
   // Calculate available heights
   const headerHeight = state.focusedVGId ? 40 : 0;
@@ -571,20 +626,27 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const contentHeight = Math.max(0, height - chromeHeight);
 
   const isShort = height < 520;
-  const minContextualHeight = isCompact ? 130 : (isShort ? 150 : 180);
-  const minMinimapHeight = isShort ? 120 : 150;
+  const minContextualHeight = isCompact ? 180 : (isShort ? 200 : 220);
+  const minMinimapHeight = isShort ? 80 : 110;
+  const minimapShare = isCompact ? 0.4 : (isShort ? 0.45 : 0.55);
 
-  let minimapHeight = Math.max(minMinimapHeight, Math.floor(contentHeight * 0.55));
-  if (contentHeight - minimapHeight < minContextualHeight) {
-    minimapHeight = Math.max(minMinimapHeight, contentHeight - minContextualHeight);
-  }
+  const contextualFloor = Math.min(
+    minContextualHeight,
+    Math.max(80, contentHeight - minMinimapHeight)
+  );
+  const maxMinimapHeight = Math.max(60, contentHeight - contextualFloor);
+  const targetMinimapHeight = Math.floor(contentHeight * minimapShare);
 
-  const contextualHeight = Math.max(minContextualHeight, contentHeight - minimapHeight);
+  const minimapHeight = Math.max(
+    60,
+    Math.min(maxMinimapHeight, Math.max(minMinimapHeight, targetMinimapHeight))
+  );
+  const contextualHeight = Math.max(80, contentHeight - minimapHeight);
   const densityMode = isShort || isCompact ? 'dense' : 'standard';
 
   // Calculate minimap container dimensions (after minimapHeight is calculated)
   const quickNavWidth = state.toolbarPosition ? QUICK_NAV_WIDTH : 0;
-  const minimapWidth = Math.max(0, width - quickNavWidth - companionWidth - MINIMAP_PADDING * 2);
+  const minimapWidth = Math.max(0, width - quickNavWidth - MINIMAP_PADDING * 2);
   const minimapInnerHeight = Math.max(0, minimapHeight - MINIMAP_PADDING * 2);
 
   // ---------------------------------------------------------------------------
@@ -641,8 +703,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       {/* Toolbar */}
       <MapToolbar
         mapMode={state.mapMode}
-        displayMode={state.displayMode}
-        setDisplayMode={state.setDisplayMode}
+        showViews={state.showViews}
+        showVGs={state.showVGs}
         minimapZoom={state.minimapZoom}
         showViewports={state.showViewports}
         showCollaborators={state.showCollaborators}
@@ -660,70 +722,57 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         toggleShowCollaborators={state.toggleShowCollaborators}
         toggleShowBookmarks={state.toggleShowBookmarks}
         toggleShowInternals={state.toggleShowInternals}
+        toggleShowViews={state.toggleShowViews}
+        toggleShowVGs={state.toggleShowVGs}
         onAddVG={handleAddVG}
         sizeMode={effectiveSizeMode}
       />
 
-      {/* Main Body with Minimap Row + Contextual Panel */}
+      {/* Main Body with Companion Panel beside content */}
       <div className="canvas-map-v2__body">
-        <div
-          className="canvas-map-v2__minimap-row"
-          style={{ height: minimapHeight }}
-        >
-          <div className="canvas-map-v2__minimap-shell" ref={minimapContainerRef}>
-            <div className="canvas-map-v2__minimap-container">
-              <Minimap
-                canvas={canvasData}
-                viewGroups={filteredActiveViewGroups}
-                viewports={customViewports}
-                collaborators={collaborators}
-                vgLinks={minimapVgLinks}
-                bookmarks={bookmarks}
-                flattenedViews={filteredFlattenedViews}
-                displayMode={state.displayMode}
-                mapMode={state.mapMode}
-                focusedVG={state.focusedVG}
-                minimapZoom={state.minimapZoom}
-                showGridLabels
-                showInternals={state.showInternals}
-                showViewports={state.showViewports}
-                showCollaborators={state.showCollaborators}
-                showBookmarks={state.showBookmarks}
-                showCursors={state.showCursors}
-                showVGOutlines={state.showVGOutlines}
-                selectedVGId={state.selectedVGId}
-                selectedViewportId={selectedViewportId}
-                highlightedLinkId={state.highlightedLinkId}
-                onVGClick={state.handleVGClick}
-                onVGDoubleClick={state.handleVGDoubleClick}
-                onLinkClick={state.handleLinkClick}
-                containerWidth={minimapWidth}
-                containerHeight={minimapInnerHeight}
-                companionOpen={state.companionOpen}
-                companionWidth={companionWidth}
-                resetPanSignal={minimapResetSignal}
-              />
+        {/* Main content column */}
+        <div className="canvas-map-v2__main-content">
+          <div
+            className="canvas-map-v2__minimap-row"
+            style={{ height: minimapHeight }}
+          >
+            <div className="canvas-map-v2__minimap-shell" ref={minimapContainerRef}>
+              <div className="canvas-map-v2__minimap-container">
+                <Minimap
+                  canvas={canvasData}
+                  viewGroups={filteredActiveViewGroups}
+                  viewports={customViewports}
+                  collaborators={collaborators}
+                  vgLinks={minimapVgLinks}
+                  bookmarks={bookmarks}
+                  flattenedViews={filteredFlattenedViews}
+                  showViews={state.showViews}
+                  showVGs={state.showVGs}
+                  mapMode={state.mapMode}
+                  focusedVG={state.focusedVG}
+                  minimapZoom={state.minimapZoom}
+                  showGridLabels
+                  showInternals={state.showInternals}
+                  showViewports={state.showViewports}
+                  showCollaborators={state.showCollaborators}
+                  showBookmarks={state.showBookmarks}
+                  showCursors={state.showCursors}
+                  selectedVGId={state.selectedVGId}
+                  selectedViewportId={selectedViewportId}
+                  highlightedLinkId={state.highlightedLinkId}
+                  onVGClick={state.handleVGClick}
+                  onVGDoubleClick={handleVGDoubleClick}
+                  onLinkClick={state.handleLinkClick}
+                  onDropItem={handleCanvasDrop}
+                  containerWidth={minimapWidth}
+                  containerHeight={minimapInnerHeight}
+                  resetPanSignal={minimapResetSignal}
+                />
+              </div>
             </div>
           </div>
-          <CompanionPanel
-            isOpen={state.companionOpen}
-            activeTab={state.companionTab}
-            onTabChange={state.setCompanionTab}
-            views={allViews}
-            datasets={datasets}
-            onViewClick={(view) => {
-              state.handleVGClick(view.vgId);
-            }}
-            onDatasetClick={(dataset) => {
-              console.log('Dataset clicked:', dataset);
-            }}
-            sizeMode={effectiveSizeMode}
-            side={state.companionSide}
-            onClose={state.toggleCompanion}
-          />
-        </div>
 
-        <CanvasMapBottomPanel
+          <CanvasMapBottomPanel
           mapMode={state.mapMode}
           onModeChange={state.handleModeChange}
           sizeMode={effectiveSizeMode}
@@ -745,11 +794,10 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           onAddBookmark={handleAddBookmark}
           currentPositionLabel={currentPositionLabel}
           isAtHome={isAtHome}
-          canvasSizeLabel={canvasSizeLabel}
-          openViewportCount={openViewportCount}
-          activeViewportLabel={activeViewportLabel}
-          activeViewportSizeLabel={activeViewportSizeLabel}
           minHeight={contextualHeight}
+          totalVGCount={viewGroups.length}
+          activeVGCount={activeViewGroups.length}
+          filteredVGCount={filteredViewGroups.length}
         >
           {state.mapMode === MAP_MODES.NAVIGATE && !state.focusedVGId && (
             <ViewportsPanel
@@ -775,11 +823,14 @@ export const CanvasMapContent = memo(function CanvasMapContent({
               selectedVGId={state.selectedVGId}
               focusedVG={state.focusedVG}
               onVGClick={state.handleVGClick}
-              onVGDoubleClick={state.handleVGDoubleClick}
+              onVGDoubleClick={handleVGDoubleClick}
               onVGRestore={handleVGRestore}
               onAddVG={handleAddVG}
+              onSaveTemplate={handleSaveTemplate}
               canvasRows={canvasData.rows}
               canvasCols={canvasData.cols}
+              onAdjustRows={handleAdjustRows}
+              onAdjustCols={handleAdjustCols}
               sizeMode={effectiveSizeMode}
             />
           )}
@@ -816,6 +867,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
             />
           )}
         </CanvasMapBottomPanel>
+        </div>
       </div>
     </div>
   );

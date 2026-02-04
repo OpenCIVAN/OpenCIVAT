@@ -14,7 +14,13 @@
   --accent-teal: #{$color-accent-teal};
   --text-muted: #{$color-text-muted};
 
-  padding: $spacing-md;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: $spacing-sm;
+  gap: $spacing-sm;
 
   // Icon button used in Section actions
   &__icon-btn {
@@ -40,16 +46,16 @@
   // Layout for Button groups
   &__actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
-    margin-bottom: $spacing-lg;
+    margin-bottom: $spacing-xs;
   }
 
   // Helper text
   &__hint {
-    font-size: $font-size-xs;
+    font-size: 9px;
     color: $color-text-muted;
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-xs;
   }
 
   // List container for items
@@ -334,13 +340,13 @@
   border-radius: $radius-md;
   background: $color-glass-subtle;
   overflow: hidden;
-  margin-bottom: $spacing-md;
+  flex-shrink: 0;
 
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: $spacing-xs $spacing-sm;
+    padding: 4px $spacing-xs;
     background: $color-glass-light;
     border-bottom: 1px solid $color-border-subtle;
   }
@@ -349,7 +355,7 @@
     display: flex;
     align-items: center;
     gap: $spacing-xs;
-    font-size: $font-size-xs;
+    font-size: 10px;
     font-weight: $font-weight-semibold;
     color: $color-text-secondary;
   }
@@ -361,18 +367,16 @@
   }
 
   &__content {
-    padding: $spacing-sm;
+    padding: $spacing-xs;
   }
 
   &[data-size-mode="compact"] {
-    margin-bottom: $spacing-sm;
-
     .panel-section__header {
-      padding: 4px $spacing-xs;
+      padding: 3px $spacing-xs;
     }
 
     .panel-section__content {
-      padding: $spacing-xs;
+      padding: 4px;
     }
   }
 }
@@ -682,21 +686,21 @@
 // Layout panel extras
 .layout-panel {
   &__templates {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-    gap: $spacing-xs;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
   }
 
   &__template-btn {
     display: inline-flex;
     align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-md;
+    gap: 4px;
+    padding: 3px 6px;
+    border-radius: $radius-sm;
     border: 1px solid $color-border-subtle;
     background: $color-glass-subtle;
     color: $color-text-secondary;
-    font-size: $font-size-xs;
+    font-size: 10px;
     cursor: pointer;
     transition: all $transition-fast;
 
@@ -709,62 +713,84 @@
 
   &__controls {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-xs;
+  }
+
+  &__steppers {
+    display: flex;
     gap: $spacing-sm;
   }
 
-  &__spinner {
+  &__stepper {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: $spacing-xs;
-    padding: $spacing-xs;
-    border-radius: $radius-md;
+    gap: 2px;
+    padding: 6px;
+    border-radius: $radius-sm;
     border: 1px solid $color-border-subtle;
     background: $color-glass-subtle;
   }
 
-  &__spinner-label {
-    font-size: $font-size-xs;
+  &__stepper-label {
+    font-size: 9px;
     color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
-  &__spinner-controls {
-    display: grid;
-    grid-template-columns: 24px 1fr 24px;
+  &__stepper-controls {
+    display: flex;
     align-items: center;
-    gap: $spacing-xs;
+    justify-content: space-between;
+    gap: 4px;
   }
 
-  &__spinner-btn {
-    height: 24px;
-    border-radius: $radius-sm;
+  &__stepper-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: $radius-xs;
     border: 1px solid $color-border-subtle;
-    background: transparent;
+    background: $color-glass-light;
     color: $color-text-secondary;
     cursor: pointer;
+    transition: all $transition-fast;
 
     &:hover:not(:disabled) {
       background: $color-glass-medium;
       color: $color-text-primary;
+      border-color: $color-border-default;
+    }
+
+    &:active:not(:disabled) {
+      background: $color-accent-blue;
+      color: white;
+      border-color: $color-accent-blue;
     }
 
     &:disabled {
-      opacity: 0.4;
+      opacity: 0.35;
       cursor: not-allowed;
     }
   }
 
-  &__spinner-value {
+  &__stepper-value {
+    flex: 1;
     text-align: center;
-    font-size: $font-size-sm;
+    font-size: 14px;
+    font-weight: $font-weight-semibold;
     color: $color-text-primary;
     font-family: $font-family-mono;
   }
 
   &__control-row {
     display: flex;
-    gap: $spacing-xs;
-    margin-top: $spacing-sm;
+    gap: 4px;
+    margin-top: $spacing-xs;
   }
 }
 

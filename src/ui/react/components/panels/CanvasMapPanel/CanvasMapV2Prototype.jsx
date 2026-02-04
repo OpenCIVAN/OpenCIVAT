@@ -293,8 +293,8 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
 
       <MapToolbar
         mapMode={state.mapMode}
-        displayMode={state.displayMode}
-        setDisplayMode={state.setDisplayMode}
+        showViews={state.showViews}
+        showVGs={state.showVGs}
         minimapZoom={state.minimapZoom}
         showViewports={state.showViewports}
         showCollaborators={state.showCollaborators}
@@ -311,6 +311,8 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
         toggleShowCollaborators={state.toggleShowCollaborators}
         toggleShowBookmarks={state.toggleShowBookmarks}
         toggleShowInternals={state.toggleShowInternals}
+        toggleShowViews={state.toggleShowViews}
+        toggleShowVGs={state.toggleShowVGs}
         onAddVG={handleAddVG}
         sizeMode={effectiveSizeMode}
       />
@@ -339,7 +341,8 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
                 vgLinks={minimapVgLinks}
                 bookmarks={MOCK_BOOKMARKS}
                 flattenedViews={filteredFlattenedViews}
-                displayMode={state.displayMode}
+                showViews={state.showViews}
+                showVGs={state.showVGs}
                 mapMode={state.mapMode}
                 focusedVG={state.focusedVG}
                 minimapZoom={state.minimapZoom}

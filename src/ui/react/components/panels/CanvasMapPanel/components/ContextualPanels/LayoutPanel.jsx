@@ -198,57 +198,57 @@ export const LayoutPanel = memo(function LayoutPanel({
       </PanelSection>
 
       {/* Canvas Controls */}
-      <PanelSection title="Canvas Controls" icon="grid3x3" sizeMode={sizeMode}>
-        <div className="layout-panel__controls">
-          <div className="layout-panel__spinner">
-            <span className="layout-panel__spinner-label">Rows</span>
-            <div className="layout-panel__spinner-controls">
+      <PanelSection title="Canvas Size" icon="grid3x3" sizeMode={sizeMode}>
+        <div className="layout-panel__steppers">
+          <div className="layout-panel__stepper">
+            <span className="layout-panel__stepper-label">Cols</span>
+            <div className="layout-panel__stepper-controls">
               <button
                 type="button"
-                className="layout-panel__spinner-btn"
-                onClick={() => onAdjustRows?.(-1)}
-                disabled={!onAdjustRows}
+                className="layout-panel__stepper-btn"
+                onClick={() => onAdjustCols?.(-1)}
+                disabled={!onAdjustCols || (canvasCols ?? 0) <= 1}
               >
-                -
+                <Icon name="minus" size={10} />
               </button>
-              <span className="layout-panel__spinner-value">{canvasRows ?? '—'}</span>
+              <span className="layout-panel__stepper-value">{canvasCols ?? '—'}</span>
               <button
                 type="button"
-                className="layout-panel__spinner-btn"
-                onClick={() => onAdjustRows?.(1)}
-                disabled={!onAdjustRows}
+                className="layout-panel__stepper-btn"
+                onClick={() => onAdjustCols?.(1)}
+                disabled={!onAdjustCols}
               >
-                +
+                <Icon name="plus" size={10} />
               </button>
             </div>
           </div>
 
-          <div className="layout-panel__spinner">
-            <span className="layout-panel__spinner-label">Cols</span>
-            <div className="layout-panel__spinner-controls">
+          <div className="layout-panel__stepper">
+            <span className="layout-panel__stepper-label">Rows</span>
+            <div className="layout-panel__stepper-controls">
               <button
                 type="button"
-                className="layout-panel__spinner-btn"
-                onClick={() => onAdjustCols?.(-1)}
-                disabled={!onAdjustCols}
+                className="layout-panel__stepper-btn"
+                onClick={() => onAdjustRows?.(-1)}
+                disabled={!onAdjustRows || (canvasRows ?? 0) <= 1}
               >
-                -
+                <Icon name="minus" size={10} />
               </button>
-              <span className="layout-panel__spinner-value">{canvasCols ?? '—'}</span>
+              <span className="layout-panel__stepper-value">{canvasRows ?? '—'}</span>
               <button
                 type="button"
-                className="layout-panel__spinner-btn"
-                onClick={() => onAdjustCols?.(1)}
-                disabled={!onAdjustCols}
+                className="layout-panel__stepper-btn"
+                onClick={() => onAdjustRows?.(1)}
+                disabled={!onAdjustRows}
               >
-                +
+                <Icon name="plus" size={10} />
               </button>
             </div>
           </div>
         </div>
 
         <div className="layout-panel__control-row">
-          <Button variant="ghost" size="sm" icon="move" onClick={() => {}}>
+          <Button variant="ghost" size="sm" icon="alignCenter" onClick={() => {}}>
             {!isCompact && 'Align'}
           </Button>
           <Button variant="ghost" size="sm" icon="grid3x3" onClick={onToggleSnap}>

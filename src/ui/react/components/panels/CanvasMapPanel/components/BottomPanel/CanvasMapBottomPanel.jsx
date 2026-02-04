@@ -34,16 +34,18 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
   onAddBookmark,
   currentPositionLabel,
   isAtHome,
-  canvasSizeLabel,
-  openViewportCount,
-  activeViewportLabel,
-  activeViewportSizeLabel,
   minHeight,
   children,
+  // Stats for footer
+  totalVGCount = 0,
+  activeVGCount = 0,
+  filteredVGCount = 0,
 }) {
-  const dpadSize = sizeMode === 'compact' ? 88 : sizeMode === 'minimal' ? 76 : 100;
-  const deckWidth = dpadSize + 32;
+  // Balanced sizes to match SquareDPad
+  const dpadSize = sizeMode === 'compact' ? 72 : sizeMode === 'minimal' ? 64 : 84;
+  const deckWidth = dpadSize + 28;
   const showTabLabels = sizeMode === 'expanded';
+  const showQuickLabel = sizeMode !== 'compact';
 
   const quickFilters = useMemo(() => quickFilterDefs, [quickFilterDefs]);
   const toolbarConfig = useMemo(
@@ -60,8 +62,8 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: minHeight ? `${minHeight}px` : '100%',
-        minHeight,
+        flex: 1,
+        minHeight: minHeight || 0,
         background: tokens.colors.bg.secondary,
         borderTop: `1px solid ${tokens.colors.border.subtle}`,
         overflow: 'hidden',
@@ -101,18 +103,23 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
               alignItems: 'center',
               gap: tokens.spacing.xs,
               marginTop: tokens.spacing.xs,
-              flexWrap: 'wrap',
+              flexWrap: 'nowrap',
+              overflowX: 'auto',
+              paddingBottom: 2,
             }}
           >
-            <span
-              style={{
-                fontSize: tokens.fontSize.xs,
-                color: tokens.colors.text.muted,
-                marginRight: tokens.spacing.xs,
-              }}
-            >
-              Quick:
-            </span>
+            {showQuickLabel && (
+              <span
+                style={{
+                  fontSize: tokens.fontSize.xs,
+                  color: tokens.colors.text.muted,
+                  marginRight: tokens.spacing.xs,
+                  flexShrink: 0,
+                }}
+              >
+                Quick:
+              </span>
+            )}
             {quickFilterDefs.map((def) => {
               const isActive = filter?.quickFilters?.includes(def.id);
               const count = quickFilterCounts?.[def.id];
@@ -132,6 +139,7 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
                     color: isActive ? tokens.colors.accent.cyan : tokens.colors.text.muted,
                     fontSize: tokens.fontSize.xs,
                     cursor: 'pointer',
+                    flexShrink: 0,
                   }}
                 >
                   {def.label}
@@ -156,6 +164,8 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
             padding: tokens.spacing.sm,
             borderRight: `1px solid ${tokens.colors.border.subtle}`,
             background: tokens.colors.bg.tertiary,
+            minHeight: 0,
+            overflowY: 'auto',
           }}
         >
           <div
@@ -220,7 +230,7 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
 
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
           <div style={{ padding: tokens.spacing.sm, borderBottom: `1px solid ${tokens.colors.border.subtle}` }}>
             <div
               style={{
@@ -265,26 +275,40 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
             </div>
           </div>
 
-          <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+          <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>{children}</div>
         </div>
       </div>
 
+      {/* Status footer */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
           gap: tokens.spacing.md,
-          padding: `${tokens.spacing.xs} ${tokens.spacing.md}`,
+          padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
           borderTop: `1px solid ${tokens.colors.border.subtle}`,
-          background: tokens.colors.bg.tertiary,
-          fontSize: tokens.fontSize.xs,
-          color: tokens.colors.text.muted,
+          background: tokens.colors.glass.subtle,
+          flexShrink: 0,
         }}
       >
-        <span>Canvas {canvasSizeLabel}</span>
-        <span>Viewport {activeViewportSizeLabel}</span>
-        <span>{openViewportCount} Viewports · Active {activeViewportLabel}</span>
+        <span
+          style={{
+            fontSize: '9px',
+            color: tokens.colors.text.muted,
+          }}
+        >
+          {filteredVGCount !== totalVGCount
+            ? `${filteredVGCount} of ${totalVGCount} VGs`
+            : `${totalVGCount} VG${totalVGCount !== 1 ? 's' : ''}`}
+        </span>
+        <span
+          style={{
+            fontSize: '9px',
+            color: tokens.colors.accent.green,
+          }}
+        >
+          {activeVGCount} active
+        </span>
       </div>
     </div>
   );

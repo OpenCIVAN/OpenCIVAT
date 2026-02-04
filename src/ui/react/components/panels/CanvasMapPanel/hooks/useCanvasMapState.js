@@ -10,7 +10,6 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   MAP_MODES,
   MODE_CONFIG,
-  DISPLAY_MODES,
   LINKS_SUB_TABS,
   COLLABORATE_SUB_TABS,
   LAYOUTS,
@@ -34,6 +33,17 @@ function loadPreference(key, defaultValue) {
     // Ignore parsing errors
   }
   return defaultValue;
+}
+
+/**
+ * Check if a preference key exists in localStorage
+ */
+function hasStoredPreference(key) {
+  try {
+    return localStorage.getItem(`${STORAGE_PREFIX}${key}`) !== null;
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -84,9 +94,24 @@ export function useCanvasMapState({
     const normalized = stored === 'collaborate' ? MAP_MODES.TEAM : stored;
     return normalizeMapMode(normalized);
   });
-  const [displayMode, setDisplayModeState] = useState(() =>
-    loadPreference('displayMode', DISPLAY_MODES.VG)
-  );
+  const [showViews, setShowViewsState] = useState(() => {
+    if (hasStoredPreference('showViews')) {
+      return loadPreference('showViews', false);
+    }
+    const legacyDisplayMode = loadPreference('displayMode', 'vg');
+    return legacyDisplayMode === 'view';
+  });
+  const [showVGs, setShowVGsState] = useState(() => {
+    if (hasStoredPreference('showVGs')) {
+      return loadPreference('showVGs', true);
+    }
+    const legacyDisplayMode = loadPreference('displayMode', 'vg');
+    if (legacyDisplayMode === 'view') {
+      const legacyShowVGOutlines = loadPreference('showVGOutlines', false);
+      return !!legacyShowVGOutlines;
+    }
+    return true;
+  });
   const [minimapZoom, setMinimapZoomState] = useState(() =>
     loadPreference('minimapZoom', 100)
   );
@@ -109,11 +134,6 @@ export function useCanvasMapState({
   );
   const [showCursors, setShowCursorsState] = useState(() =>
     loadPreference('showCursors', true)
-  );
-
-  // Show VG outlines even when in View display mode (dual display)
-  const [showVGOutlines, setShowVGOutlinesState] = useState(() =>
-    loadPreference('showVGOutlines', false)
   );
 
   // My cursor settings (broadcast to collaborators)
@@ -167,9 +187,14 @@ export function useCanvasMapState({
     savePreference('mapMode', normalized);
   }, [normalizeMapMode]);
 
-  const setDisplayMode = useCallback((mode) => {
-    setDisplayModeState(mode);
-    savePreference('displayMode', mode);
+  const setShowViews = useCallback((show) => {
+    setShowViewsState(show);
+    savePreference('showViews', show);
+  }, []);
+
+  const setShowVGs = useCallback((show) => {
+    setShowVGsState(show);
+    savePreference('showVGs', show);
   }, []);
 
   const setMinimapZoom = useCallback((zoom) => {
@@ -205,11 +230,6 @@ export function useCanvasMapState({
   const setShowCursors = useCallback((show) => {
     setShowCursorsState(show);
     savePreference('showCursors', show);
-  }, []);
-
-  const setShowVGOutlines = useCallback((show) => {
-    setShowVGOutlinesState(show);
-    savePreference('showVGOutlines', show);
   }, []);
 
   const setMyCursorVisible = useCallback((visible) => {
@@ -276,7 +296,7 @@ export function useCanvasMapState({
    * Each view = exactly 1 cell, positioned within its VG's canvas area
    */
   const flattenedViews = useMemo(() => {
-    if (displayMode !== DISPLAY_MODES.VIEW) return [];
+    if (!showViews) return [];
 
     const views = [];
     viewGroups.forEach(vg => {
@@ -304,7 +324,7 @@ export function useCanvasMapState({
       });
     });
     return views;
-  }, [displayMode, viewGroups]);
+  }, [showViews, viewGroups]);
 
   /**
    * Current grid size
@@ -420,9 +440,21 @@ export function useCanvasMapState({
     setShowCursors(prev => !prev);
   }, [setShowCursors]);
 
-  const toggleShowVGOutlines = useCallback(() => {
-    setShowVGOutlines(prev => !prev);
-  }, [setShowVGOutlines]);
+  const toggleShowViews = useCallback(() => {
+    setShowViewsState(prev => {
+      const next = !prev;
+      savePreference('showViews', next);
+      return next;
+    });
+  }, []);
+
+  const toggleShowVGs = useCallback(() => {
+    setShowVGsState(prev => {
+      const next = !prev;
+      savePreference('showVGs', next);
+      return next;
+    });
+  }, []);
 
   const toggleMyCursorVisible = useCallback(() => {
     setMyCursorVisible(prev => !prev);
@@ -438,7 +470,8 @@ export function useCanvasMapState({
   return {
     // State
     mapMode,
-    displayMode,
+    showViews,
+    showVGs,
     minimapZoom,
     showGridLabels,
     showViewports,
@@ -446,7 +479,6 @@ export function useCanvasMapState({
     showBookmarks,
     showInternals,
     showCursors,
-    showVGOutlines,
     myCursorVisible,
     myCursorColor,
     companionOpen,
@@ -465,7 +497,8 @@ export function useCanvasMapState({
 
     // Setters
     setMapMode: handleModeChange,
-    setDisplayMode,
+    setShowViews,
+    setShowVGs,
     setMinimapZoom,
     setShowGridLabels,
     setShowViewports,
@@ -473,7 +506,6 @@ export function useCanvasMapState({
     setShowBookmarks,
     setShowInternals,
     setShowCursors,
-    setShowVGOutlines,
     setMyCursorVisible,
     setMyCursorColor,
     setCompanionOpen,
@@ -513,7 +545,8 @@ export function useCanvasMapState({
     toggleShowBookmarks,
     toggleShowInternals,
     toggleShowCursors,
-    toggleShowVGOutlines,
+    toggleShowViews,
+    toggleShowVGs,
     toggleMyCursorVisible,
     toggleCompanion,
     toggleToolbarPosition,

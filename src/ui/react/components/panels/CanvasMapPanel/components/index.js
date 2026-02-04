@@ -24,8 +24,8 @@ export {
 // QuickNavToolbar
 export { QuickNavToolbar } from './QuickNavToolbar';
 
-// CompanionPanel
-export { CompanionPanel, ViewListItem, DatasetItem } from './CompanionPanel';
+// CompanionPanel (re-exported from shared location)
+export { CompanionPanel, ViewListItem, DatasetItem } from '../../CompanionPanel';
 
 // BottomPanel
 export { CanvasMapBottomPanel } from './BottomPanel/CanvasMapBottomPanel';

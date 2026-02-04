@@ -208,6 +208,7 @@ const QuickFiltersRow = memo(function QuickFiltersRow({
  * @param {boolean} [props.showSortFilter=true] - Show sort filter dropdown
  * @param {boolean} [props.quickFiltersToggleable=false] - Add toggle button for quick filters
  * @param {'default'|'embedded'} [props.variant='default'] - Visual variant
+ * @param {boolean} [props.stacked=false] - Stack controls on second line (embedded variant only)
  * @param {string} [props.className] - Additional CSS classes
  */
 export const FilterToolbar = memo(function FilterToolbar({
@@ -228,6 +229,7 @@ export const FilterToolbar = memo(function FilterToolbar({
   showSortFilter = true,
   quickFiltersToggleable = false,
   variant = 'default',
+  stacked = false,
   className = '',
 }) {
   const { isVR } = useAdaptive();
@@ -314,6 +316,7 @@ export const FilterToolbar = memo(function FilterToolbar({
         className={[
           'filter-toolbar',
           'filter-toolbar--embedded',
+          stacked && 'filter-toolbar--stacked',
           isVR && 'filter-toolbar--vr',
           className,
         ]
@@ -329,53 +332,56 @@ export const FilterToolbar = memo(function FilterToolbar({
             size="sm"
           />
 
-          {/* Filters dropdown (for types/tags) */}
-          {hasFiltersDropdown && (
-            <DropdownTrigger
-              ref={filtersButtonRef}
-              label="Filters"
-              icon="filter"
-              badge={filtersDropdownBadge}
-              active={filtersDropdownBadge > 0}
-              isOpen={filtersDropdownOpen}
-              onClick={() => setFiltersDropdownOpen(!filtersDropdownOpen)}
-              iconOnly
-            />
-          )}
-
-          {/* Quick filters toggle */}
-          {quickFiltersToggleable && hasQuickFilters && (
-            <button
-              type="button"
-              className={[
-                'filter-toolbar__filter-toggle',
-                quickFiltersOpen && 'filter-toolbar__filter-toggle--active',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onClick={() => setQuickFiltersOpen(!quickFiltersOpen)}
-              title="Toggle quick filters"
-            >
-              <Icon name="filterList" size={14} />
-              {filter.quickFilters?.length > 0 && (
-                <span className="filter-toolbar__filter-badge">
-                  {filter.quickFilters.length}
-                </span>
-              )}
-            </button>
-          )}
-
-          {/* Sort dropdown */}
-          {hasSort && (
-            <div className="filter-toolbar__sort-wrapper filter-toolbar__sort-wrapper--compact">
-              <SortDropdown
-                value={filter.sortBy}
-                onChange={filter.setSortBy}
-                options={sortOptionsForDropdown}
-                showLabel={false}
+          {/* Controls wrapper - groups filter/sort controls, allows stacking */}
+          <div className="filter-toolbar__embedded-controls">
+            {/* Filters dropdown (for types/tags) */}
+            {hasFiltersDropdown && (
+              <DropdownTrigger
+                ref={filtersButtonRef}
+                label="Filters"
+                icon="filter"
+                badge={filtersDropdownBadge}
+                active={filtersDropdownBadge > 0}
+                isOpen={filtersDropdownOpen}
+                onClick={() => setFiltersDropdownOpen(!filtersDropdownOpen)}
+                iconOnly
               />
-            </div>
-          )}
+            )}
+
+            {/* Quick filters toggle */}
+            {quickFiltersToggleable && hasQuickFilters && (
+              <button
+                type="button"
+                className={[
+                  'filter-toolbar__filter-toggle',
+                  quickFiltersOpen && 'filter-toolbar__filter-toggle--active',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => setQuickFiltersOpen(!quickFiltersOpen)}
+                title="Toggle quick filters"
+              >
+                <Icon name="filterList" size={14} />
+                {filter.quickFilters?.length > 0 && (
+                  <span className="filter-toolbar__filter-badge">
+                    {filter.quickFilters.length}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Sort dropdown */}
+            {hasSort && (
+              <div className="filter-toolbar__sort-wrapper filter-toolbar__sort-wrapper--compact">
+                <SortDropdown
+                  value={filter.sortBy}
+                  onChange={filter.setSortBy}
+                  options={sortOptionsForDropdown}
+                  showLabel={false}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Quick filters (toggleable) */}

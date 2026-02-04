@@ -11,7 +11,7 @@
  * - Panning support for large canvases
  */
 
-import React, { memo, useMemo, useRef, useCallback } from 'react';
+import React, { memo, useMemo, useRef, useCallback, useState } from 'react';
 import { VGBlock } from './VGBlock';
 import { ViewCell } from './ViewCell';
 import { ViewportIndicator } from './ViewportIndicator';
@@ -21,8 +21,8 @@ import { LinkLines } from './LinkLines';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { useMinimapPanning } from '../../hooks/useMinimapPanning';
 import { useMinimapCellSize } from '../../hooks/useMinimapCellSize';
-import { DISPLAY_MODES, MAP_MODES, MINIMAP_CONSTANTS } from '../../utils/constants';
-import { colToLetter, getGridCenter } from '../../utils/gridUtils';
+import { MAP_MODES, MINIMAP_CONSTANTS } from '../../utils/constants';
+import { colToLetter, getGridCenter, clamp } from '../../utils/gridUtils';
 import './Minimap.scss';
 
 /**
@@ -39,7 +39,8 @@ export const Minimap = memo(function Minimap({
   flattenedViews,
 
   // Display settings
-  displayMode,
+  showViews = false,
+  showVGs = true,
   mapMode,
   minimapZoom,
   showGridLabels,
@@ -48,7 +49,6 @@ export const Minimap = memo(function Minimap({
   showCollaborators,
   showBookmarks,
   showCursors,
-  showVGOutlines = false, // Show VG outlines in subtle mode when in VIEW display mode
 
   // Selection state
   selectedVGId,
@@ -59,6 +59,7 @@ export const Minimap = memo(function Minimap({
   onVGClick,
   onVGDoubleClick,
   onLinkClick,
+  onDropItem,
 
   // Container dimensions
   containerWidth,
@@ -76,6 +77,7 @@ export const Minimap = memo(function Minimap({
 }) {
   const { rows, cols, homePosition } = canvas;
   const containerRef = useRef(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Calculate cell sizing
   const sizing = useMinimapCellSize({
@@ -153,12 +155,61 @@ export const Minimap = memo(function Minimap({
   return (
     <div
       ref={containerRef}
-      className={`minimap ${panning.isDragging ? 'minimap--dragging' : ''} ${panning.canPan ? 'minimap--pannable' : ''}`}
+      className={`minimap ${panning.isDragging ? 'minimap--dragging' : ''} ${panning.canPan ? 'minimap--pannable' : ''} ${isDragOver ? 'minimap--drop-target' : ''}`}
       style={{
         '--cell-size': `${cellSize}px`,
         '--grid-gap': `${renderGap}px`,
         '--header-size': `${headerSize}px`,
         '--scroll-padding': `${MINIMAP_CONSTANTS.SCROLL_PADDING}px`,
+      }}
+      onDragEnter={(e) => {
+        if (!onDropItem) return;
+        if (!e.dataTransfer?.types?.includes('application/json')) return;
+        setIsDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (!onDropItem) return;
+        if (e.currentTarget.contains(e.relatedTarget)) return;
+        setIsDragOver(false);
+      }}
+      onDragOver={(e) => {
+        if (!onDropItem) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }}
+      onDrop={(e) => {
+        if (!onDropItem || !containerRef.current) return;
+        e.preventDefault();
+        const payload = e.dataTransfer.getData('application/json');
+        if (!payload) return;
+
+        let data;
+        try {
+          data = JSON.parse(payload);
+        } catch (err) {
+          console.warn('Invalid drop data:', err);
+          return;
+        }
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const localX = e.clientX - rect.left;
+        const localY = e.clientY - rect.top;
+        const scrollPadding = MINIMAP_CONSTANTS.SCROLL_PADDING;
+        const contentX = localX - scrollPadding - labelOffset + panning.panOffset.x;
+        const contentY = localY - scrollPadding - labelOffset + panning.panOffset.y;
+
+        if (!Number.isFinite(contentX) || !Number.isFinite(contentY)) return;
+
+        const rawCol = Math.floor(contentX / renderPitch);
+        const rawRow = Math.floor(contentY / renderPitch);
+
+        if (rawCol < 0 || rawRow < 0) return;
+
+        const col = clamp(rawCol, 0, Math.max(0, cols - 1));
+        const row = clamp(rawRow, 0, Math.max(0, rows - 1));
+
+        onDropItem({ row, col, data });
+        setIsDragOver(false);
       }}
       {...panning.panProps}
     >
@@ -256,7 +307,7 @@ export const Minimap = memo(function Minimap({
       >
         {/* Field grid disabled to match spec (cleaner grid) */}
         {/* Link lines (Links mode, VG sub-tab) */}
-        {mapMode === MAP_MODES.LINKS && displayMode === DISPLAY_MODES.VG && (
+        {mapMode === MAP_MODES.LINKS && showVGs && (
           <LinkLines
             links={vgLinks}
             getVGCenter={getVGCenter}
@@ -339,13 +390,13 @@ export const Minimap = memo(function Minimap({
 
               <div className="minimap__grid-content">
                 {/* VG Blocks (VG mode, or subtle outlines in VIEW mode) */}
-                {(displayMode === DISPLAY_MODES.VG || showVGOutlines) && viewGroups.map(vg => {
+                {showVGs && viewGroups.map(vg => {
                   if (!vg.position) return null;
                   const isSelected = selectedVGId === vg.id;
                   const isGhosted = mapMode === MAP_MODES.LINKS &&
                     highlightedLinkId &&
                     !highlightedLinkVGs.has(vg.id);
-                  const isSubtle = displayMode === DISPLAY_MODES.VIEW && showVGOutlines;
+                  const isSubtle = showViews && showVGs;
 
                   return (
                     <VGBlock
@@ -364,7 +415,7 @@ export const Minimap = memo(function Minimap({
                 })}
 
                 {/* View Cells (View mode) */}
-                {displayMode === DISPLAY_MODES.VIEW && flattenedViews.map(view => (
+                {showViews && flattenedViews.map(view => (
                   <ViewCell
                     key={view.id}
                     view={view}

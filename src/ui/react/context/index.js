@@ -4,6 +4,26 @@
  */
 
 export { DevUserProvider, useDevUser } from './DevUserContext.jsx';
+
+// VG Editor context for multi-editor state management
+export {
+    VGEditorProvider,
+    useVGEditor,
+    useVGEditorRequired,
+    useActiveVGEditor,
+    useIsVGBeingEdited,
+    useVGEditorPanelId,
+} from './VGEditorContext.jsx';
+
+// Canvas Map context for canvas editing state
+export {
+    CanvasMapProvider,
+    useCanvasMap,
+    useCanvasMapRequired,
+    useCanvasMapActive,
+    usePlacedVGIds,
+    useIsVGOnCanvas,
+} from './CanvasMapContext.jsx';
 export {
     AdaptiveProvider,
     useAdaptive,

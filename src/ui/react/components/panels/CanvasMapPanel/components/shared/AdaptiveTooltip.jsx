@@ -40,6 +40,13 @@ export const AdaptiveTooltip = memo(function AdaptiveTooltip({
   const timeoutRef = useRef(null);
   const tooltipId = useId();
 
+  const clearShowTimeout = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
   const calculatePosition = useCallback(() => {
     if (!triggerRef.current || !tooltipRef.current) return;
 
@@ -107,18 +114,16 @@ export const AdaptiveTooltip = memo(function AdaptiveTooltip({
 
   const show = useCallback(() => {
     if (disabled) return;
+    clearShowTimeout();
     timeoutRef.current = setTimeout(() => {
       setIsVisible(true);
     }, delay);
-  }, [delay, disabled]);
+  }, [delay, disabled, clearShowTimeout]);
 
   const hide = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    clearShowTimeout();
     setIsVisible(false);
-  }, []);
+  }, [clearShowTimeout]);
 
   useEffect(() => {
     if (isVisible) {
@@ -129,9 +134,54 @@ export const AdaptiveTooltip = memo(function AdaptiveTooltip({
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      clearShowTimeout();
     };
-  }, []);
+  }, [clearShowTimeout]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        hide();
+      }
+    };
+
+    const handlePointerDown = (event) => {
+      const target = event.target;
+      if (triggerRef.current && triggerRef.current.contains(target)) return;
+      hide();
+    };
+
+    const handleWindowBlur = () => hide();
+    const handleVisibility = () => {
+      if (document.hidden) hide();
+    };
+
+    const handleMouseOut = (event) => {
+      if (!event.relatedTarget) {
+        hide();
+      }
+    };
+
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('mouseout', handleMouseOut);
+    window.addEventListener('resize', handleWindowBlur);
+    window.addEventListener('scroll', handleWindowBlur, true);
+    document.addEventListener('visibilitychange', handleVisibility);
+    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('pointerdown', handlePointerDown, true);
+
+    return () => {
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('mouseout', handleMouseOut);
+      window.removeEventListener('resize', handleWindowBlur);
+      window.removeEventListener('scroll', handleWindowBlur, true);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+  }, [isVisible, hide]);
 
   if (disabled || !content) return children;
 

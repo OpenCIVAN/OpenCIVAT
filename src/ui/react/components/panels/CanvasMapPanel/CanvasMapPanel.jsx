@@ -11,9 +11,11 @@
  * - Understand linking relationships between VGs and Views
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { PanelShell, CHROME_LEVELS, usePanelShell } from '@UI/react/components/panels/PanelShell';
 import { Icon } from '@UI/react/components/atoms/Icon';
+import { COMPANION_PANEL_ID } from '@UI/react/components/panels/CompanionPanel';
+import { useCanvasMap } from '@UI/react/context/CanvasMapContext';
 import { CanvasMapContent } from './CanvasMapContent';
 
 // Panel ID constant for external access
@@ -21,8 +23,8 @@ export const CANVAS_MAP_PANEL_ID = 'canvas-map';
 
 // Breakpoints for responsive sizing
 const CANVAS_MAP_BREAKPOINTS = {
-  minWidth: 280,
-  compactWidth: 320,
+  minWidth: 350,
+  compactWidth: 350,
   standardWidth: 380,
   expandedWidth: 480,
 };
@@ -33,22 +35,20 @@ const CANVAS_MAP_BREAKPOINTS = {
  * @param {Object} props
  * @param {string} props.workspaceId - Workspace ID for loading data
  */
+const MIN_PANEL_WIDTH = 350;
+const MIN_PANEL_HEIGHT = 520;
+const PANEL_CONTENT_PADDING = 8;
+const PANEL_HEADER_HEIGHT = 40;
+
 export function CanvasMapPanel({ workspaceId }) {
-  const { togglePanel } = usePanelShell();
-  const [companionOpen, setCompanionOpen] = useState(false);
-  const companionToggleRef = useRef(null);
-
-  const handleCompanionToggleReady = useCallback((toggleFn) => {
-    companionToggleRef.current = toggleFn;
-  }, []);
-
-  const handleCompanionOpenChange = useCallback((nextOpen) => {
-    setCompanionOpen(nextOpen);
-  }, []);
+  const { togglePanel, getPanelState, updateSize } = usePanelShell();
+  const canvasMapContext = useCanvasMap();
+  const companionState = getPanelState(COMPANION_PANEL_ID);
+  const companionOpen = companionState?.isOpen || false;
 
   const handleCompanionToggle = useCallback(() => {
-    companionToggleRef.current?.();
-  }, []);
+    togglePanel(COMPANION_PANEL_ID);
+  }, [togglePanel]);
 
   // Listen for toggle event (keyboard shortcut 'm')
   useEffect(() => {
@@ -59,6 +59,27 @@ export function CanvasMapPanel({ workspaceId }) {
     window.addEventListener('cia:toggle-canvas-map', handleToggle);
     return () => window.removeEventListener('cia:toggle-canvas-map', handleToggle);
   }, [togglePanel]);
+
+  const panelState = getPanelState(CANVAS_MAP_PANEL_ID);
+
+  useEffect(() => {
+    if (!canvasMapContext) return;
+    if (panelState?.isOpen) {
+      canvasMapContext.activateCanvasMap();
+    } else {
+      canvasMapContext.deactivateCanvasMap();
+    }
+    return () => canvasMapContext.deactivateCanvasMap();
+  }, [canvasMapContext, panelState?.isOpen]);
+
+  useEffect(() => {
+    if (!panelState?.size) return;
+    const nextWidth = Math.max(panelState.size.width, MIN_PANEL_WIDTH);
+    const nextHeight = Math.max(panelState.size.height, MIN_PANEL_HEIGHT);
+    if (nextWidth !== panelState.size.width || nextHeight !== panelState.size.height) {
+      updateSize(CANVAS_MAP_PANEL_ID, { width: nextWidth, height: nextHeight });
+    }
+  }, [panelState?.size, updateSize]);
 
   return (
     <PanelShell
@@ -79,22 +100,27 @@ export function CanvasMapPanel({ workspaceId }) {
       )}
       defaultWidth={380}
       defaultHeight={600}
-      minWidth={280}
-      minHeight={400}
+      minWidth={350}
+      minHeight={520}
       maxWidth={600}
       maxHeight={900}
       breakpoints={CANVAS_MAP_BREAKPOINTS}
     >
-      {({ width, height, sizeMode }) => (
+      {({ width, height, sizeMode }) => {
+        const contentWidth = Math.max(0, width - PANEL_CONTENT_PADDING * 2);
+        const contentHeight = Math.max(
+          0,
+          height - PANEL_HEADER_HEIGHT - PANEL_CONTENT_PADDING * 2
+        );
+        return (
         <CanvasMapContent
           workspaceId={workspaceId}
-          width={width}
-          height={height}
+          width={contentWidth}
+          height={contentHeight}
           sizeMode={sizeMode}
-          onCompanionToggleReady={handleCompanionToggleReady}
-          onCompanionOpenChange={handleCompanionOpenChange}
         />
-      )}
+        );
+      }}
     </PanelShell>
   );
 }

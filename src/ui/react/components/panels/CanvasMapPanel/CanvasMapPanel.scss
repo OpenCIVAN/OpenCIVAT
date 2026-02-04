@@ -81,18 +81,23 @@
   // -------------------------------------------------------------------------
   &__body {
     display: flex;
-    flex-direction: column;
+    flex-direction: row; // Horizontal: [companion?] [main-content] [companion?]
     flex: 1;
     min-height: 0;
     overflow: hidden;
   }
 
-  &__main {
+  &__main-content {
     display: flex;
     flex-direction: column;
     flex: 1;
     min-width: 0;
     overflow: hidden;
+  }
+
+  // Companion panel spans full height of body
+  &__body > .companion-panel {
+    flex-shrink: 0;
   }
 
   &__minimap-row {
@@ -104,10 +109,6 @@
 
   &__minimap-row .quick-nav-toolbar {
     margin: 0;
-  }
-
-  &__minimap-row .companion-panel {
-    height: 100%;
   }
 
   &__minimap-shell {

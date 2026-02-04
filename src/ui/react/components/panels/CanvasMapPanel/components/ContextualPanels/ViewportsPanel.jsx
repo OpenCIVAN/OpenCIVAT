@@ -36,7 +36,7 @@ export const ViewportsPanel = memo(function ViewportsPanel({
     <div className="contextual-panel viewports-panel">
       <PanelSection
         title="Your Viewports"
-        icon="frame"
+        icon="iframe"
         actions={<Badge count={viewports.length} size="sm" />}
         sizeMode={sizeMode}
       >
@@ -63,7 +63,7 @@ export const ViewportsPanel = memo(function ViewportsPanel({
                 }}
               >
                 <div className="viewports-panel__card-main">
-                  <Icon name="frame" size={14} />
+                  <Icon name="iframe" size={14} />
                   <div className="viewports-panel__card-meta">
                     <span className="viewports-panel__card-name">{vp.name}</span>
                     <span className="viewports-panel__card-position">{positionLabel}</span>

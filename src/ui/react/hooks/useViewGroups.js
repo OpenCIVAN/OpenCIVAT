@@ -20,7 +20,10 @@ export function useViewGroups(workspaceId = null) {
 
     // Load ViewGroups on mount or workspace change
     useEffect(() => {
-        if (!workspaceId) return;
+        if (!workspaceId) {
+            setIsLoading(false);
+            return;
+        }
 
         const loadViewGroups = async () => {
             setIsLoading(true);

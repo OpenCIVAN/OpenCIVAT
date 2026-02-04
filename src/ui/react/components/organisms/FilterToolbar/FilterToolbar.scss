@@ -298,6 +298,7 @@
     border: 1px solid $color-border-subtle;
     border-radius: $radius-md;
     transition: all $transition-fast;
+    flex-wrap: nowrap;
 
     &:focus-within {
       border-color: $color-border-default;
@@ -334,6 +335,13 @@
         height: 18px;
       }
     }
+  }
+
+  &__embedded-controls {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex-shrink: 0;
   }
 
   &__filter-toggle {
@@ -406,6 +414,30 @@
   &__embedded-filters {
     // Slide in animation when opened
     animation: embedded-filters-slide-in 0.2s ease-out;
+  }
+
+  // =========================================================================
+  // STACKED VARIANT - Controls wrap to second line (embedded only)
+  // =========================================================================
+
+  &--stacked {
+    .filter-toolbar__embedded-bar {
+      flex-wrap: wrap;
+      gap: $spacing-xs;
+
+      .search-input {
+        flex: 1 1 100%; // Full width on first row
+        min-width: 0;
+      }
+    }
+
+    .filter-toolbar__embedded-controls {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      flex: 1;
+      justify-content: flex-end;
+    }
   }
 
   @keyframes embedded-filters-slide-in {

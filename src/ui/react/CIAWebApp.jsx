@@ -58,12 +58,15 @@ import {
   useInstanceToolsFloating,
 } from "@UI/react/components/panels/FloatingPanel";
 import { PanelShellProvider } from "@UI/react/components/panels/PanelShell";
+import { UnifiedCompanionPanelShell } from "@UI/react/components/panels/CompanionPanel";
 import { CanvasMapPanel } from "@UI/react/components/panels/CanvasMapPanel";
+import { VGEditorPanelManager } from "@UI/react/components/panels/VGEditor";
 import { LayoutPanelProvider } from "@UI/react/components/panels/LayoutPanel/LayoutPanelContext";
 import { FloatingCanvasNavigator, useNavigatorButton } from "@UI/react/components/panels/LayoutPanel";
 import { CanvasOperationsPanel } from "@UI/react/components/panels/FloatingPanel/CanvasOperationsPanel";
 import { VRAccessibilityProvider } from "@UI/react/context/VRAccessibilityContext";
 import { AdaptiveProvider, useAdaptive } from "@UI/react/context/AdaptiveContext";
+import { CanvasMapProvider, VGEditorProvider } from "@UI/react/context";
 import { VRWristMenuProvider } from "@UI/react/components/organisms/VRWristMenu";
 import { VRWristMenu } from "@UI/react/components/organisms/VRWristMenu";
 
@@ -1630,10 +1633,12 @@ export function CIAWebApp({ username, userId, projectId }) {
       <VRWristMenuProvider>
         <VRAccessibilityProvider>
           <FloatingPanelProvider>
-            <PanelShellProvider>
-            <LeftPanelProvider>
-              <RightPanelProvider>
-                <LayoutPanelProvider canvasId={canvasId}>
+            <VGEditorProvider>
+              <CanvasMapProvider>
+                <PanelShellProvider>
+                  <LeftPanelProvider>
+                    <RightPanelProvider>
+                      <LayoutPanelProvider canvasId={canvasId}>
             <ThreeEdgeLayout
               // ─────────────────────────────────────────────────────────────
               // TOP BAR (48px Header)
@@ -1752,6 +1757,12 @@ export function CIAWebApp({ username, userId, projectId }) {
 
               {/* Canvas Map Panel (PanelShell floating panel) */}
               <CanvasMapPanel workspaceId={currentWorkspaceId} />
+
+              {/* Unified Companion Panel (PanelShell floating panel) */}
+              <UnifiedCompanionPanelShell workspaceId={currentWorkspaceId} />
+
+              {/* VG Editor Panels (PanelShell floating panels) */}
+              <VGEditorPanelManager workspaceId={currentWorkspaceId} />
 
               {/* Canvas Operations Panel */}
               <CanvasOperationsPanel
@@ -1923,10 +1934,12 @@ export function CIAWebApp({ username, userId, projectId }) {
 
             {/* VR Wrist Menu - renders only in VR mode */}
             <VRWristMenu showInDesktop={false} />
-            </LayoutPanelProvider>
-              </RightPanelProvider>
-            </LeftPanelProvider>
-            </PanelShellProvider>
+                      </LayoutPanelProvider>
+                    </RightPanelProvider>
+                  </LeftPanelProvider>
+                </PanelShellProvider>
+              </CanvasMapProvider>
+            </VGEditorProvider>
           </FloatingPanelProvider>
         </VRAccessibilityProvider>
       </VRWristMenuProvider>

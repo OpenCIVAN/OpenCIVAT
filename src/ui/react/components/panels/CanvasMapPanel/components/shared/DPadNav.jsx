@@ -30,7 +30,8 @@ export const SquareDPad = memo(function SquareDPad({
   centerLabel,
   isAtHome = false,
 }) {
-  const size = sizeMode === 'minimal' ? 76 : sizeMode === 'compact' ? 88 : 100;
+  // Balanced sizes - smaller than original but still usable
+  const size = sizeMode === 'minimal' ? 64 : sizeMode === 'compact' ? 72 : 84;
   const centerSize = Math.round(size * 0.38);
   const cornerRadius = 6;
   const gap = 2;
