@@ -1,6 +1,8 @@
 // SortDropdown.scss
 // Compact sort dropdown for panel toolbars
 
+@use "theme" as *;
+
 .sort-dropdown {
     display: inline-flex;
     align-items: center;
@@ -9,20 +11,20 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--color-text-muted);
+    color: $color-text-muted;
     font-size: 10px;
     font-family: inherit;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
 
     &:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--color-text-secondary);
+        background: $color-glass-light;
+        color: $color-text-secondary;
     }
 
     &--open {
-        background: rgba(255, 255, 255, 0.08);
-        color: var(--color-text-primary);
+        background: $color-glass-medium;
+        color: $color-text-primary;
     }
 
     &__icon {
@@ -54,13 +56,13 @@
         border: none;
         border-radius: 4px;
         background: transparent;
-        color: var(--color-text-muted);
+        color: $color-text-muted;
         cursor: pointer;
         transition: background 0.15s ease, color 0.15s ease;
 
         &:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--color-text-secondary);
+            background: $color-glass-light;
+            color: $color-text-secondary;
         }
     }
 
@@ -69,10 +71,10 @@
         z-index: 10000; // Must be higher than PanelShell (1000+)
         min-width: 120px;
         padding: 4px;
-        background: var(--color-bg-elevated, #1e1e2a);
-        border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
+        background: $color-bg-elevated;
+        border: 1px solid $color-border-default;
         border-radius: 8px;
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+        box-shadow: var(--shadow-lg);
         animation: sort-dropdown-enter 0.1s ease-out;
     }
 
@@ -85,7 +87,7 @@
         border: none;
         border-radius: 4px;
         background: transparent;
-        color: var(--color-text-secondary);
+        color: $color-text-secondary;
         font-size: 11px;
         font-family: inherit;
         text-align: left;
@@ -93,13 +95,13 @@
         transition: background 0.1s ease, color 0.1s ease;
 
         &:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--color-text-primary);
+            background: $color-glass-light;
+            color: $color-text-primary;
         }
 
         &--selected {
-            color: var(--color-text-primary);
-            background: rgba(255, 255, 255, 0.08);
+            color: $color-text-primary;
+            background: $color-glass-medium;
         }
 
         &-icon {
@@ -113,7 +115,7 @@
 
         &-check {
             flex-shrink: 0;
-            color: var(--color-accent-green, #34d399);
+            color: $color-accent-green;
         }
     }
 

@@ -6,8 +6,8 @@
 .link-badge {
     display: inline-flex;
     align-items: center;
-    background: rgba($color-accent-teal, 0.15);
-    border: 1px solid rgba($color-accent-teal, 0.3);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-teal 30%, transparent);
     border-radius: $radius-sm;
     color: $color-accent-teal;
     font-weight: 600;
@@ -15,8 +15,8 @@
     transition: $transition-fast;
 
     &:hover {
-        background: rgba($color-accent-teal, 0.25);
-        box-shadow: 0 0 8px rgba($color-accent-teal, 0.3);
+        background: color-mix(in srgb, $color-accent-teal 25%, transparent);
+        box-shadow: 0 0 8px color-mix(in srgb, $color-accent-teal 30%, transparent);
     }
 
     &:active {

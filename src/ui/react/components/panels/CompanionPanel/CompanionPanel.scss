@@ -335,10 +335,16 @@
     border-radius: $radius-sm;
     cursor: pointer;
     transition: all $transition-fast;
+    position: relative;
 
     &:hover {
       background: $color-glass-medium;
       border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    &:hover .companion-panel__template-actions {
+      opacity: 1;
+      pointer-events: auto;
     }
   }
 
@@ -389,6 +395,35 @@
     color: $color-text-muted;
     text-transform: capitalize;
     flex-shrink: 0;
+  }
+
+  &__template-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity $transition-fast;
+    flex-shrink: 0;
+  }
+
+  &__template-action {
+    border: 0;
+    background: $color-glass-medium;
+    color: $color-text-muted;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+
+    &:hover {
+      color: $color-text-primary;
+      background: $color-glass-strong;
+    }
+
+    &--danger {
+      color: $color-accent-red;
+    }
   }
 
   // ViewGroups placeholder (for empty state)

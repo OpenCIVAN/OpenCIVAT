@@ -4,10 +4,10 @@
  */
 
 // ModeTabs
-export { ModeTabs } from './ModeTabs';
+export { ModeTabs } from "./ModeTabs";
 
 // MapToolbar
-export { MapToolbar } from './MapToolbar';
+export { MapToolbar } from "./MapToolbar";
 
 // Minimap
 export {
@@ -19,16 +19,20 @@ export {
   CollaboratorIndicator,
   CursorIndicator,
   LinkLines,
-} from './Minimap';
+} from "./Minimap";
 
 // QuickNavToolbar
-export { QuickNavToolbar } from './QuickNavToolbar';
+export { QuickNavToolbar } from "./QuickNavToolbar";
 
 // CompanionPanel (re-exported from shared location)
-export { CompanionPanel, ViewListItem, DatasetItem } from '../../CompanionPanel';
+export {
+  CompanionPanel,
+  ViewListItem,
+  DatasetItem,
+} from "../../CompanionPanel";
 
 // BottomPanel
-export { CanvasMapBottomPanel } from './BottomPanel/CanvasMapBottomPanel';
+export { CanvasMapBottomPanel } from "./BottomPanel/CanvasMapBottomPanel";
 
 // ContextualPanels
 export {
@@ -39,15 +43,19 @@ export {
   TeamPanel,
   MeSubTab,
   TeamSubTab,
-} from './ContextualPanels';
+} from "./ContextualPanels";
 
-// Shared components
+// Shared components (domain-specific)
 export {
-  SectionHeader,
-  FilterChips,
+  PanelSection,
   VGListItem,
   BookmarkItem,
   CollaboratorItem,
   ViewportItem,
   LinkItem,
-} from './shared';
+  FloatingDPad,
+} from "./shared";
+
+// Re-exports from molecules (for backwards compatibility)
+export { SectionHeader } from "@UI/react/components/molecules/HeaderSection";
+export { ChipGroup as FilterChips } from "@UI/react/components/molecules/ChipGroup";

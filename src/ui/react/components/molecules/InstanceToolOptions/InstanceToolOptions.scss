@@ -31,7 +31,7 @@
 
   &--active {
     color: $color-accent-amber;
-    background: rgba($color-accent-amber, 0.1);
+    background: color-mix(in srgb, $color-accent-amber 10%, transparent);
 
     svg {
       color: $color-accent-amber;
@@ -152,8 +152,8 @@
     transition: all $transition-fast;
 
     &:hover:not(&--empty):not(:disabled) {
-      background: rgba($color-accent-blue, 0.15);
-      border-color: rgba($color-accent-blue, 0.4);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
       color: $color-accent-blue;
     }
 
@@ -169,13 +169,13 @@
     }
 
     &--special {
-      background: rgba($color-accent-amber, 0.1);
-      border-color: rgba($color-accent-amber, 0.3);
+      background: color-mix(in srgb, $color-accent-amber 10%, transparent);
+      border-color: color-mix(in srgb, $color-accent-amber 30%, transparent);
       color: $color-accent-amber;
 
       &:hover:not(:disabled) {
-        background: rgba($color-accent-amber, 0.2);
-        border-color: rgba($color-accent-amber, 0.5);
+        background: color-mix(in srgb, $color-accent-amber 20%, transparent);
+        border-color: color-mix(in srgb, $color-accent-amber 50%, transparent);
       }
     }
 
@@ -266,8 +266,8 @@
     }
 
     &--active {
-      background: rgba($color-accent-teal, 0.2);
-      border-color: rgba($color-accent-teal, 0.4);
+      background: color-mix(in srgb, $color-accent-teal 20%, transparent);
+      border-color: color-mix(in srgb, $color-accent-teal 40%, transparent);
       color: $color-accent-teal;
     }
   }
@@ -313,7 +313,7 @@
 
     &--active {
       border-color: $color-accent-purple;
-      background: rgba($color-accent-purple, 0.1);
+      background: color-mix(in srgb, $color-accent-purple 10%, transparent);
     }
   }
 

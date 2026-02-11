@@ -10,7 +10,7 @@
 
     // Status-specific styles
     &--online {
-        box-shadow: 0 0 0 2px rgba($color-accent-green, 0.2);
+        box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-green 20%, transparent);
     }
 
     &--offline {
@@ -18,15 +18,15 @@
     }
 
     &--busy {
-        box-shadow: 0 0 0 2px rgba($color-accent-red, 0.2);
+        box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-red 20%, transparent);
     }
 
     &--away {
-        box-shadow: 0 0 0 2px rgba($color-accent-amber, 0.2);
+        box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-amber 20%, transparent);
     }
 
     &--loading {
-        box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+        box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 20%, transparent);
     }
 
     // Pulse animation
@@ -37,19 +37,19 @@
     // VR mode - larger glow rings
     &--vr {
         &.status-dot--online {
-            box-shadow: 0 0 0 3px rgba($color-accent-green, 0.25);
+            box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-green 25%, transparent);
         }
 
         &.status-dot--busy {
-            box-shadow: 0 0 0 3px rgba($color-accent-red, 0.25);
+            box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-red 25%, transparent);
         }
 
         &.status-dot--away {
-            box-shadow: 0 0 0 3px rgba($color-accent-amber, 0.25);
+            box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-amber 25%, transparent);
         }
 
         &.status-dot--loading {
-            box-shadow: 0 0 0 3px rgba($color-accent-blue, 0.25);
+            box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-blue 25%, transparent);
         }
     }
 }

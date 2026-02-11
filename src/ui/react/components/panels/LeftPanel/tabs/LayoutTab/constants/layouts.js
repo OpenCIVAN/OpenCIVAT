@@ -18,7 +18,7 @@ export const BUILTIN_LAYOUTS = [
     { id: 'side-by-side', name: 'Side by Side', rows: 1, cols: 2 },
     { id: 'stacked', name: 'Stacked', rows: 2, cols: 1 },
     { id: '2x2', name: '2×2 Grid', rows: 2, cols: 2 },
-    { id: '1+2', name: '1 + 2', rows: 2, cols: 2, merged: 'top' },
+    { id: '1+2', name: '1 + 2', rows: 2, cols: 2, merged: 'left' },
     { id: '2+1', name: '2 + 1', rows: 2, cols: 2, merged: 'right' },
     { id: '3-up', name: '3-up', rows: 1, cols: 3 },
     { id: '3x3', name: '3×3 Grid', rows: 3, cols: 3 },
@@ -102,7 +102,7 @@ export const VIEW_TYPES = {
 export function getLayoutCapacity(layout) {
     if (!layout) return 1;
     // Merged layouts (1+2, 2+1) have 3 cells
-    if (layout.merged === 'top' || layout.merged === 'right') return 3;
+    if (layout.merged === 'top' || layout.merged === 'right' || layout.merged === 'left') return 3;
     return layout.rows * layout.cols;
 }
 

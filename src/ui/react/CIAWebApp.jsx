@@ -94,6 +94,7 @@ import { canvasHistory } from "@UI/react/store/canvasHistoryStore";
 // HOOKS
 // =============================================================================
 import { useWorkspaces } from "@UI/react/hooks/useWorkspaces.js";
+import { useViewGroupManagerSync } from "@UI/react/hooks/useViewGroupManagerSync";
 import { useCanvas } from "@UI/react/hooks/useCanvas.js";
 import { useRoomWorkspaceTransition } from "@UI/react/hooks/useRoomWorkspaceTransition.js";
 import {
@@ -127,6 +128,7 @@ const getInitialCanvasSize = () => {
 
 export function CIAWebApp({ username, userId, projectId }) {
   const { isVR } = useAdaptive();
+  useViewGroupManagerSync();
   // ===========================================================================
   // PHASE 3 INITIALIZATION
   // ===========================================================================
@@ -593,13 +595,13 @@ export function CIAWebApp({ username, userId, projectId }) {
     const handlePresenceChange = (users) => {
       const me = users.find((user) => user.isYou);
       if (me?.status) {
-        setUserStatus(me.status);
+        setUserStatus((prev) => (prev === me.status ? prev : me.status));
       }
     };
 
     const handleStatusChange = (status) => {
       if (status) {
-        setUserStatus(status);
+        setUserStatus((prev) => (prev === status ? prev : status));
       }
     };
 
@@ -1756,10 +1758,13 @@ export function CIAWebApp({ username, userId, projectId }) {
               <FloatingCanvasNavigator />
 
               {/* Canvas Map Panel (PanelShell floating panel) */}
-              <CanvasMapPanel workspaceId={currentWorkspaceId} />
+              <CanvasMapPanel workspaceId={currentWorkspaceId} projectId={projectId} />
 
               {/* Unified Companion Panel (PanelShell floating panel) */}
-              <UnifiedCompanionPanelShell workspaceId={currentWorkspaceId} />
+              <UnifiedCompanionPanelShell
+                workspaceId={currentWorkspaceId}
+                projectId={projectId}
+              />
 
               {/* VG Editor Panels (PanelShell floating panels) */}
               <VGEditorPanelManager workspaceId={currentWorkspaceId} />

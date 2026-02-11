@@ -1,8 +1,8 @@
 // Mixins: Etched & Backlit UI Patterns
 // Creates the distinctive "carved" and "illuminated" look from the new design system
 // These complement the existing glassmorphism mixins with more tactile, hardware-inspired effects
+// NOTE: Uses color-mix() instead of rgba($var) for CSS custom property compatibility
 
-@use "sass:color";
 @use "../tokens/colors" as *;
 @use "../tokens/effects" as *;
 @use "../tokens/spacing" as *;
@@ -60,10 +60,10 @@
   transition: all $transition-fast;
 
   @if $active {
-    background: rgba($accent-color, 0.15);
-    border: 1px solid rgba($accent-color, 0.4);
+    background: color-mix(in srgb, $accent-color 15%, transparent);
+    border: 1px solid color-mix(in srgb, $accent-color 40%, transparent);
     color: $accent-color;
-    box-shadow: 0 0 10px rgba($accent-color, 0.2);
+    box-shadow: 0 0 10px color-mix(in srgb, $accent-color 20%, transparent);
   } @else {
     background: linear-gradient(
       180deg,
@@ -77,8 +77,8 @@
 
   &:hover:not(:disabled) {
     @if $active {
-      background: rgba($accent-color, 0.2);
-      box-shadow: 0 0 15px rgba($accent-color, 0.3);
+      background: color-mix(in srgb, $accent-color 20%, transparent);
+      box-shadow: 0 0 15px color-mix(in srgb, $accent-color 30%, transparent);
     } @else {
       background: linear-gradient(
         180deg,
@@ -101,14 +101,14 @@
 
 /// Active state mixin - apply to .active class or [aria-pressed="true"]
 @mixin etched-toggle-active($accent-color: $color-accent-primary) {
-  background: rgba($accent-color, 0.15);
-  border: 1px solid rgba($accent-color, 0.4);
+  background: color-mix(in srgb, $accent-color 15%, transparent);
+  border: 1px solid color-mix(in srgb, $accent-color 40%, transparent);
   color: $accent-color;
-  box-shadow: 0 0 10px rgba($accent-color, 0.2);
+  box-shadow: 0 0 10px color-mix(in srgb, $accent-color 20%, transparent);
 
   &:hover {
-    background: rgba($accent-color, 0.2);
-    box-shadow: 0 0 15px rgba($accent-color, 0.3);
+    background: color-mix(in srgb, $accent-color 20%, transparent);
+    box-shadow: 0 0 15px color-mix(in srgb, $accent-color 30%, transparent);
   }
 }
 
@@ -117,7 +117,6 @@
 // ============================================================================
 
 /// Creates an etched backlit button effect - subtle glow that intensifies on hover/active
-/// This is the etched variant - see glass-mixins for the glass variant
 /// @param {Color} $accent-color - The color for the backlight effect
 /// @param {Boolean} $active - Whether the button is currently active
 @mixin etched-backlit-button(
@@ -129,8 +128,8 @@
   transition: all $transition-fast;
 
   @if $active {
-    background: rgba($accent-color, 0.15);
-    border: 1px solid rgba($accent-color, 0.4);
+    background: color-mix(in srgb, $accent-color 15%, transparent);
+    border: 1px solid color-mix(in srgb, $accent-color 40%, transparent);
     color: $accent-color;
   } @else {
     background: rgba(255, 255, 255, 0.04);
@@ -139,13 +138,13 @@
   }
 
   &:hover:not(:disabled) {
-    background: rgba($accent-color, 0.1);
-    border-color: rgba($accent-color, 0.3);
+    background: color-mix(in srgb, $accent-color 10%, transparent);
+    border-color: color-mix(in srgb, $accent-color 30%, transparent);
     color: $accent-color;
   }
 
   &:active:not(:disabled) {
-    background: rgba($accent-color, 0.15);
+    background: color-mix(in srgb, $accent-color 15%, transparent);
     transform: scale(0.98);
   }
 
@@ -339,7 +338,7 @@
   }
 
   &.selected {
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
     border-left-color: $color-accent-blue;
   }
 
@@ -445,7 +444,7 @@
 
     &:focus {
       border-color: $color-accent-primary;
-      box-shadow: 0 0 0 2px rgba($color-accent-primary, 0.15);
+      box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-primary 15%, transparent);
     }
   }
 
@@ -518,8 +517,8 @@
   }
 
   &.selected {
-    background: rgba($color-accent-blue, 0.1);
-    border-color: rgba($color-accent-blue, 0.4);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
   }
 
   // Thumbnail container

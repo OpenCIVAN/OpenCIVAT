@@ -7,6 +7,8 @@
  * view slot configuration.
  */
 
+import { apiClient } from '@Services/apiClient.js';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -193,6 +195,87 @@ export function getAllTemplates() {
 }
 
 // =============================================================================
+// SERVER-SIDE TEMPLATES
+// =============================================================================
+
+export async function loadServerTemplates({ projectId, workspaceId, scope = 'all' } = {}) {
+  if (!projectId && !workspaceId) return [];
+  try {
+    const endpoint = projectId
+      ? `/projects/${projectId}/viewgroup-templates?scope=${scope}`
+      : `/workspaces/${workspaceId}/viewgroup-templates?scope=${scope}`;
+    const response = await apiClient.get(endpoint);
+    return response?.templates || [];
+  } catch (err) {
+    console.warn('Failed to load server templates:', err);
+    return [];
+  }
+}
+
+export async function saveServerTemplate({ projectId, workspaceId, template, scope } = {}) {
+  if (!template) return null;
+  if (!projectId && !workspaceId) return null;
+  try {
+    const endpoint = projectId
+      ? `/projects/${projectId}/viewgroup-templates`
+      : `/workspaces/${workspaceId}/viewgroup-templates`;
+    const payload = {
+      name: template.name,
+      description: template.description || '',
+      layoutId: template.layoutId,
+      color: template.color,
+      viewSlots: template.viewSlots || 1,
+      scope: scope || template.scope || 'personal',
+      workspaceId,
+    };
+    const response = await apiClient.post(endpoint, payload);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(TEMPLATES_UPDATED_EVENT));
+    }
+    return response?.template || null;
+  } catch (err) {
+    console.warn('Failed to save server template:', err);
+    return null;
+  }
+}
+
+export async function updateServerTemplate({ projectId, workspaceId, templateId, updates } = {}) {
+  if (!templateId) return null;
+  if (!projectId && !workspaceId) return null;
+  try {
+    const endpoint = projectId
+      ? `/projects/${projectId}/viewgroup-templates/${templateId}`
+      : `/workspaces/${workspaceId}/viewgroup-templates/${templateId}`;
+    const response = await apiClient.put(endpoint, updates || {});
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(TEMPLATES_UPDATED_EVENT));
+    }
+    return response?.template || null;
+  } catch (err) {
+    console.warn('Failed to update server template:', err);
+    return null;
+  }
+}
+
+export async function deleteServerTemplate({ projectId, workspaceId, templateId } = {}) {
+  if (!templateId) return false;
+  if (!projectId && !workspaceId) return false;
+  try {
+    const endpoint = projectId
+      ? `/projects/${projectId}/viewgroup-templates/${templateId}`
+      : `/workspaces/${workspaceId}/viewgroup-templates/${templateId}`;
+    await apiClient.delete(endpoint);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(TEMPLATES_UPDATED_EVENT));
+    }
+    return true;
+  } catch (err) {
+    console.warn('Failed to delete server template:', err);
+    return false;
+  }
+}
+
+// =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
 
@@ -249,11 +332,17 @@ export function createViewGroupFromTemplate(template, options = {}) {
  * @returns {VGTemplate}
  */
 export function createTemplateFromViewGroup(viewGroup, options = {}) {
+  const resolvedLayoutId =
+    viewGroup.layoutId ||
+    viewGroup.layout?.id ||
+    viewGroup.layout?.type ||
+    'single';
+
   return {
     id: options.id || `template-${Date.now()}`,
     name: options.name || `${viewGroup.name} Template`,
     description: options.description || '',
-    layoutId: viewGroup.layoutId,
+    layoutId: resolvedLayoutId,
     color: viewGroup.color,
     viewSlots: viewGroup.views?.length || 1,
     scope: options.scope || 'personal',
@@ -294,6 +383,10 @@ export default {
   saveCustomTemplates,
   addCustomTemplate,
   getAllTemplates,
+  loadServerTemplates,
+  saveServerTemplate,
+  updateServerTemplate,
+  deleteServerTemplate,
   getTemplateById,
   getTemplatesByScope,
   createViewGroupFromTemplate,

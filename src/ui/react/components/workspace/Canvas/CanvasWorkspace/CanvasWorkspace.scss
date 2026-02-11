@@ -1,6 +1,5 @@
 // CanvasWorkspace.scss
 // Styles for CanvasWorkspace integration component - matches WorkspaceGrid styling
-@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -129,8 +128,8 @@
     transition: all $transition-base;
 
     &:hover {
-      background: rgba($color-accent-primary, 0.2);
-      box-shadow: 0 0 20px rgba($color-accent-primary, 0.3);
+      background: color-mix(in srgb, $color-accent-primary 20%, transparent);
+      box-shadow: 0 0 20px color-mix(in srgb, $color-accent-primary 30%, transparent);
       transform: translateY(-2px);
     }
   }
@@ -165,13 +164,13 @@
   justify-content: center;
 
   button {
-    background: rgba($color-bg-canvas, 0.8);
+    background: color-mix(in srgb, $color-bg-canvas 80%, transparent);
     border: 1px solid $color-border-subtle;
     color: $color-text-primary;
     font-weight: $font-weight-medium;
 
     &:hover {
-      background: rgba($color-bg-canvas, 0.95);
+      background: color-mix(in srgb, $color-bg-canvas 95%, transparent);
       border-color: $color-border-strong;
     }
   }
@@ -184,7 +183,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba($color-bg-primary, 0.65);
+  background: color-mix(in srgb, $color-bg-primary 65%, transparent);
   backdrop-filter: blur(6px);
 }
 
@@ -196,8 +195,8 @@
   padding: $spacing-lg $spacing-xl;
   border-radius: $radius-lg;
   border: 1px solid $color-border-subtle;
-  background: rgba($color-bg-canvas, 0.9);
-  box-shadow: 0 16px 40px rgba($color-bg-primary, 0.4);
+  background: color-mix(in srgb, $color-bg-canvas 90%, transparent);
+  box-shadow: 0 16px 40px color-mix(in srgb, $color-bg-primary 40%, transparent);
 }
 
 .canvas-workspace__loading-overlay--vr {
@@ -207,11 +206,11 @@
 .canvas-workspace__loading-card--vr {
   padding: $spacing-xl $spacing-2xl;
   gap: $spacing-md;
-  border-color: rgba($color-accent-primary, 0.35);
+  border-color: color-mix(in srgb, $color-accent-primary 35%, transparent);
   box-shadow:
-    0 20px 50px rgba($color-bg-primary, 0.55),
-    0 0 24px rgba($color-accent-primary, 0.25);
-  background: rgba($color-bg-canvas, 0.95);
+    0 20px 50px color-mix(in srgb, $color-bg-primary 55.00000000000001%, transparent),
+    0 0 24px color-mix(in srgb, $color-accent-primary 25%, transparent);
+  background: color-mix(in srgb, $color-bg-canvas 95%, transparent);
   animation: canvas-loading-glow 2.6s ease-in-out infinite;
 
   .canvas-workspace__spinner {
@@ -235,13 +234,13 @@
   0%,
   100% {
     box-shadow:
-      0 20px 50px rgba($color-bg-primary, 0.55),
-      0 0 18px rgba($color-accent-primary, 0.18);
+      0 20px 50px color-mix(in srgb, $color-bg-primary 55.00000000000001%, transparent),
+      0 0 18px color-mix(in srgb, $color-accent-primary 18%, transparent);
   }
   50% {
     box-shadow:
-      0 24px 60px rgba($color-bg-primary, 0.6),
-      0 0 30px rgba($color-accent-primary, 0.35);
+      0 24px 60px color-mix(in srgb, $color-bg-primary 60%, transparent),
+      0 0 30px color-mix(in srgb, $color-accent-primary 35%, transparent);
   }
 }
 
@@ -249,7 +248,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid rgba($color-accent-primary, 0.2);
+  border: 2px solid color-mix(in srgb, $color-accent-primary 20%, transparent);
   border-top-color: $color-accent-primary;
   animation: canvas-spinner 0.9s linear infinite;
 }
@@ -281,7 +280,7 @@
   right: $spacing-md;
   width: 200px;
   height: 150px;
-  background: rgba($color-bg-secondary, 0.95);
+  background: color-mix(in srgb, $color-bg-secondary 95%, transparent);
   border: 1px solid $color-border-subtle;
   border-radius: $radius-lg;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -313,7 +312,7 @@
   @include glass-subtle;
   border-bottom: 1px solid $color-border-subtle;
   flex-shrink: 0;
-  background: rgba($color-bg-secondary, 0.6);
+  background: color-mix(in srgb, $color-bg-secondary 60%, transparent);
 }
 
 .canvas-workspace__tools {
@@ -338,7 +337,7 @@
   }
 
   &.active {
-    background: rgba($color-accent-primary, 0.15);
+    background: color-mix(in srgb, $color-accent-primary 15%, transparent);
     border-color: $color-accent-primary;
     color: $color-accent-primary;
   }

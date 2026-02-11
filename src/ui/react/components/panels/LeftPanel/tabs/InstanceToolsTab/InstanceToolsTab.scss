@@ -317,8 +317,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-amber, 0.2);
-    border-color: rgba($color-accent-amber, 0.4);
+    background: color-mix(in srgb, $color-accent-amber 20%, transparent);
+    border-color: color-mix(in srgb, $color-accent-amber 40%, transparent);
     color: $color-accent-amber;
 
     svg {
@@ -561,8 +561,8 @@
     }
 
     &--active {
-      background: rgba($color-accent-teal, 0.2);
-      border-color: rgba($color-accent-teal, 0.4);
+      background: color-mix(in srgb, $color-accent-teal 20%, transparent);
+      border-color: color-mix(in srgb, $color-accent-teal 40%, transparent);
       color: $color-accent-teal;
     }
   }
@@ -666,8 +666,8 @@
     }
 
     &--active {
-      background: rgba($color-accent-green, 0.15);
-      border-color: rgba($color-accent-green, 0.4);
+      background: color-mix(in srgb, $color-accent-green 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
       color: $color-accent-green;
     }
   }
@@ -804,8 +804,8 @@
     }
 
     &--active {
-      background: rgba($color-accent-teal, 0.2);
-      border-color: rgba($color-accent-teal, 0.4);
+      background: color-mix(in srgb, $color-accent-teal 20%, transparent);
+      border-color: color-mix(in srgb, $color-accent-teal 40%, transparent);
       color: $color-accent-teal;
     }
   }
@@ -839,8 +839,8 @@
     }
 
     &--active {
-      background: rgba($color-accent-green, 0.15);
-      border-color: rgba($color-accent-green, 0.4);
+      background: color-mix(in srgb, $color-accent-green 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
       color: $color-accent-green;
     }
   }
@@ -996,28 +996,28 @@
     }
 
     &--add {
-      background: rgba($color-accent-pink, 0.1);
-      border-color: rgba($color-accent-pink, 0.3);
+      background: color-mix(in srgb, $color-accent-pink 10%, transparent);
+      border-color: color-mix(in srgb, $color-accent-pink 30%, transparent);
       color: $color-accent-pink;
 
       &:hover {
-        background: rgba($color-accent-pink, 0.2);
-        border-color: rgba($color-accent-pink, 0.5);
+        background: color-mix(in srgb, $color-accent-pink 20%, transparent);
+        border-color: color-mix(in srgb, $color-accent-pink 50%, transparent);
       }
     }
 
     &--click {
-      background: rgba($color-accent-green, 0.1);
-      border-color: rgba($color-accent-green, 0.3);
+      background: color-mix(in srgb, $color-accent-green 10%, transparent);
+      border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
       color: $color-accent-green;
 
       &:hover {
-        background: rgba($color-accent-green, 0.2);
-        border-color: rgba($color-accent-green, 0.5);
+        background: color-mix(in srgb, $color-accent-green 20%, transparent);
+        border-color: color-mix(in srgb, $color-accent-green 50%, transparent);
       }
 
       &.active {
-        background: rgba($color-accent-green, 0.25);
+        background: color-mix(in srgb, $color-accent-green 25%, transparent);
         border-color: $color-accent-green;
         animation: pulse-border 1.5s ease-in-out infinite;
       }
@@ -1025,8 +1025,8 @@
 
     &--open {
       &:hover {
-        background: rgba($color-accent-pink, 0.1);
-        border-color: rgba($color-accent-pink, 0.3);
+        background: color-mix(in srgb, $color-accent-pink 10%, transparent);
+        border-color: color-mix(in srgb, $color-accent-pink 30%, transparent);
         color: $color-accent-pink;
       }
     }
@@ -1039,8 +1039,8 @@
     gap: $spacing-sm;
     padding: $spacing-sm;
     margin-top: $spacing-sm;
-    background: rgba($color-accent-green, 0.15);
-    border: 1px solid rgba($color-accent-green, 0.4);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-green 40%, transparent);
     border-radius: $radius-sm;
     font-size: 10px;
     color: $color-accent-green;
@@ -1059,7 +1059,7 @@
 
     button {
       background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba($color-accent-green, 0.4);
+      border: 1px solid color-mix(in srgb, $color-accent-green 40%, transparent);
       border-radius: $radius-xs;
       padding: 3px 8px;
       font-size: 9px;
@@ -1078,10 +1078,10 @@
 @keyframes pulse-border {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba($color-accent-green, 0.4);
+    box-shadow: 0 0 0 0 color-mix(in srgb, $color-accent-green 40%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 3px rgba($color-accent-green, 0.2);
+    box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-green 20%, transparent);
   }
 }
 

@@ -2,7 +2,6 @@
 // Right-click context menu for ViewItem
 // Location: src/ui/react/components/common/ViewItem/components/ViewItemContextMenu.scss
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -116,7 +115,7 @@
     }
 
     &:hover {
-      background: rgba($color-accent-green, 0.15);
+      background: color-mix(in srgb, $color-accent-green 15%, transparent);
       color: $color-accent-green;
     }
   }
@@ -130,7 +129,7 @@
     }
 
     &:hover {
-      background: rgba($color-accent-red, 0.15);
+      background: color-mix(in srgb, $color-accent-red 15%, transparent);
       color: $color-accent-red;
     }
   }

@@ -72,8 +72,10 @@ export const LAYOUTS = {
   'side-by-side': { rows: 1, cols: 2, cells: 2 },
   'stacked': { rows: 2, cols: 1, cells: 2 },
   '2x2': { rows: 2, cols: 2, cells: 4 },
-  '1+2': { rows: 2, cols: 2, cells: 3, merged: 'top' },
+  '1+2': { rows: 2, cols: 2, cells: 3, merged: 'left' },
   '2+1': { rows: 2, cols: 2, cells: 3, merged: 'right' },
+  '3-up': { rows: 1, cols: 3, cells: 3 },
+  '3x3': { rows: 3, cols: 3, cells: 9 },
 };
 
 /**

@@ -1,7 +1,6 @@
 // src/ui/react/components/auth/UserMenu.scss
 // User menu dropdown styling
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -71,20 +70,14 @@
   right: 0;
   min-width: 220px;
 
-  // Frosted glass effect with subtle gradient
-  background: linear-gradient(
-    145deg,
-    rgba(30, 32, 38, 0.85) 0%,
-    rgba(20, 22, 28, 0.92) 100%
-  );
+  // Frosted glass effect
+  background: $color-glass-panel;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 
   border: 1px solid $color-border-default;
   border-radius: $radius-lg;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  box-shadow: var(--shadow-glass-lg);
   z-index: 1000;
   animation: slideDown $transition-fast $ease-out-expo;
   overflow: hidden;
@@ -165,15 +158,15 @@
   width: fit-content;
 
   &--dev {
-    background: color.adjust($color-warning, $alpha: -0.85);
+    background: color-mix(in srgb, $color-warning 15%, transparent);
     color: $color-warning;
-    border: 1px solid color.adjust($color-warning, $alpha: -0.7);
+    border: 1px solid color-mix(in srgb, $color-warning 30%, transparent);
   }
 
   &--admin {
-    background: color.adjust($color-accent-purple, $alpha: -0.85);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
     color: $color-accent-purple;
-    border: 1px solid color.adjust($color-accent-purple, $alpha: -0.7);
+    border: 1px solid color-mix(in srgb, $color-accent-purple 30%, transparent);
   }
 }
 
@@ -286,7 +279,7 @@
     color: $color-error;
 
     &:hover {
-      background: color.adjust($color-error, $alpha: -0.9);
+      background: color-mix(in srgb, $color-error 10%, transparent);
       color: $color-error;
     }
   }

@@ -60,12 +60,12 @@
 
   &:hover:not(:disabled) {
     color: $color-text-secondary;
-    background: rgba($color-accent-blue, 0.08);
+    background: color-mix(in srgb, $color-accent-blue 8%, transparent);
   }
 
   &--active {
     color: $color-accent-blue;
-    background: rgba($color-accent-blue, 0.15);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     border-color: $color-accent-blue;
     cursor: default;
   }
@@ -193,7 +193,7 @@
   text-align: left;
 
   &:hover {
-    background: rgba($color-accent-blue, 0.08);
+    background: color-mix(in srgb, $color-accent-blue 8%, transparent);
   }
 }
 

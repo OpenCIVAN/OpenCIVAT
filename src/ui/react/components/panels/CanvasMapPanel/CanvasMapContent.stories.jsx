@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 import { CanvasMapContent } from './CanvasMapContent';
+import { CanvasMapProvider } from '@UI/react/context/CanvasMapContext';
+import { AdaptiveProvider } from '@UI/react/context/AdaptiveContext';
 
 // Size presets for responsive testing
 const SIZE_PRESETS = [
@@ -13,20 +15,31 @@ const SIZE_PRESETS = [
   { name: 'Wide', width: 580, height: 720 },
 ];
 
+// Provider wrapper for stories
+const StoryProviders = ({ children }) => (
+  <AdaptiveProvider>
+    <CanvasMapProvider>
+      {children}
+    </CanvasMapProvider>
+  </AdaptiveProvider>
+);
+
 export default {
   title: 'Panels/CanvasMap/Production',
   component: CanvasMapContent,
   decorators: [
     (Story) => (
-      <div style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#020406',
-        padding: 24,
-        boxSizing: 'border-box',
-      }}>
-        <Story />
-      </div>
+      <StoryProviders>
+        <div style={{
+          width: '100vw',
+          height: '100vh',
+          background: '#020406',
+          padding: 24,
+          boxSizing: 'border-box',
+        }}>
+          <Story />
+        </div>
+      </StoryProviders>
     ),
   ],
   args: {

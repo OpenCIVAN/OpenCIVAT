@@ -40,6 +40,7 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
   totalVGCount = 0,
   activeVGCount = 0,
   filteredVGCount = 0,
+  workspaceName,
 }) {
   // Balanced sizes to match SquareDPad
   const dpadSize = sizeMode === 'compact' ? 72 : sizeMode === 'minimal' ? 64 : 84;
@@ -309,6 +310,30 @@ export const CanvasMapBottomPanel = memo(function CanvasMapBottomPanel({
         >
           {activeVGCount} active
         </span>
+        {workspaceName && (
+          <span
+            style={{
+              marginLeft: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: tokens.spacing.xs,
+              fontSize: '9px',
+              color: tokens.colors.text.muted,
+              background: tokens.colors.glass.subtle,
+              border: `1px solid ${tokens.colors.border.subtle}`,
+              borderRadius: tokens.radius.md,
+              padding: '2px 6px',
+              whiteSpace: 'nowrap',
+              maxWidth: '50%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+            title={`Workspace: ${workspaceName}`}
+          >
+            <Icon name="layers" size={10} />
+            Workspace: {workspaceName}
+          </span>
+        )}
       </div>
     </div>
   );

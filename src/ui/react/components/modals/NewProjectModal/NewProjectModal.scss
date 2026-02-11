@@ -48,10 +48,10 @@
 
   &--selected {
     border-color: $color-accent-blue;
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
 
     &:hover:not(:disabled) {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     }
   }
 
@@ -61,7 +61,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba($color-accent-blue, 0.15);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     border-radius: 6px;
     color: $color-accent-blue;
     flex-shrink: 0;
@@ -143,10 +143,10 @@
 
   &--selected {
     border-color: $color-accent-blue;
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
 
     &:hover:not(:disabled) {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     }
   }
 

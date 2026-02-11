@@ -6,11 +6,11 @@
 .hub-badge {
     display: inline-flex;
     align-items: center;
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     border-radius: $radius-sm;
     color: $color-accent-amber;
     font-weight: 600;
-    box-shadow: 0 0 4px rgba($color-accent-amber, 0.2);
+    box-shadow: 0 0 4px color-mix(in srgb, $color-accent-amber 20%, transparent);
 
     // Size variants
     &--small {

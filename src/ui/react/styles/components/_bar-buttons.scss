@@ -233,7 +233,7 @@
 
   // Active/at-home state
   &--active {
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     border-color: $color-accent-amber;
   }
 
@@ -321,7 +321,7 @@
   }
 
   &--mic-on {
-    background: rgba($color-accent-green, 0.2);
+    background: color-mix(in srgb, $color-accent-green 20%, transparent);
     border-color: $color-accent-green;
     color: $color-accent-green;
   }

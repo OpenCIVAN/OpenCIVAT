@@ -1,7 +1,6 @@
 // src/ui/react/components/auth/LoginButton.scss
 // Login button styling with variants
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -65,12 +64,12 @@
     padding: $spacing-md $spacing-xl;
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
-    background: color.adjust($color-accent-blue, $alpha: -0.85);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     border-color: $color-accent-blue;
     color: $color-accent-blue;
 
     &:hover:not(:disabled) {
-      background: color.adjust($color-accent-blue, $alpha: -0.7);
+      background: color-mix(in srgb, $color-accent-blue 30%, transparent);
       box-shadow: 0 0 20px $color-accent-blue-glow;
     }
   }

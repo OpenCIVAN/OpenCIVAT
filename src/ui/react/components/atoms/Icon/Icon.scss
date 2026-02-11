@@ -7,6 +7,8 @@
 //
 // =============================================================================
 
+@use "theme" as *;
+
 .cia-icon {
   // Core display
   display: inline-flex;
@@ -145,18 +147,18 @@
 
 .cia-icon {
   &--success {
-    color: var(--color-success, #22c55e);
+    color: $color-success;
   }
   &--warning {
-    color: var(--color-warning, #f59e0b);
+    color: $color-warning;
   }
   &--error {
-    color: var(--color-error, #ef4444);
+    color: $color-error;
   }
   &--info {
-    color: var(--color-info, #3b82f6);
+    color: $color-accent-blue;
   }
   &--muted {
-    color: var(--color-text-muted, rgba(255, 255, 255, 0.5));
+    color: $color-text-muted;
   }
 }

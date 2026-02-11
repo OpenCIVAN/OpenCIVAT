@@ -34,13 +34,14 @@ const CANVAS_MAP_BREAKPOINTS = {
  *
  * @param {Object} props
  * @param {string} props.workspaceId - Workspace ID for loading data
+ * @param {string} props.projectId - Project ID for template persistence
  */
 const MIN_PANEL_WIDTH = 350;
 const MIN_PANEL_HEIGHT = 520;
 const PANEL_CONTENT_PADDING = 8;
 const PANEL_HEADER_HEIGHT = 40;
 
-export function CanvasMapPanel({ workspaceId }) {
+export function CanvasMapPanel({ workspaceId, projectId }) {
   const { togglePanel, getPanelState, updateSize } = usePanelShell();
   const canvasMapContext = useCanvasMap();
   const companionState = getPanelState(COMPANION_PANEL_ID);
@@ -115,6 +116,7 @@ export function CanvasMapPanel({ workspaceId }) {
         return (
         <CanvasMapContent
           workspaceId={workspaceId}
+          projectId={projectId}
           width={contentWidth}
           height={contentHeight}
           sizeMode={sizeMode}

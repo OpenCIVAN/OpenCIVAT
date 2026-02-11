@@ -45,32 +45,32 @@
 
       // Color variants for active state
       &[data-color="blue"] {
-        background: rgba($color-accent-blue, 0.15);
+        background: color-mix(in srgb, $color-accent-blue 15%, transparent);
         color: $color-accent-blue;
       }
 
       &[data-color="green"] {
-        background: rgba($color-accent-green, 0.15);
+        background: color-mix(in srgb, $color-accent-green 15%, transparent);
         color: $color-accent-green;
       }
 
       &[data-color="pink"] {
-        background: rgba($color-accent-pink, 0.15);
+        background: color-mix(in srgb, $color-accent-pink 15%, transparent);
         color: $color-accent-pink;
       }
 
       &[data-color="amber"] {
-        background: rgba($color-accent-amber, 0.15);
+        background: color-mix(in srgb, $color-accent-amber 15%, transparent);
         color: $color-accent-amber;
       }
 
       &[data-color="teal"] {
-        background: rgba($color-accent-teal, 0.15);
+        background: color-mix(in srgb, $color-accent-teal 15%, transparent);
         color: $color-accent-teal;
       }
 
       &[data-color="purple"] {
-        background: rgba($color-accent-purple, 0.15);
+        background: color-mix(in srgb, $color-accent-purple 15%, transparent);
         color: $color-accent-purple;
       }
     }

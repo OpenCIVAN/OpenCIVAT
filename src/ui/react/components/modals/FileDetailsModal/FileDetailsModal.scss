@@ -77,7 +77,7 @@
 
   .tag {
     padding: 2px $spacing-sm;
-    background: rgba($color-accent-blue, 0.15);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     border-radius: $radius-sm;
     font-size: $font-size-xs;
     color: $color-accent-blue;

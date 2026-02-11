@@ -140,7 +140,7 @@
   &:focus {
     outline: none;
     border-color: $color-accent-primary;
-    box-shadow: 0 0 0 3px rgba($color-accent-primary, 0.15);
+    box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-primary 15%, transparent);
   }
 
   // Valid state (input matches expected value)
@@ -149,7 +149,7 @@
 
     &:focus {
       border-color: $color-success;
-      box-shadow: 0 0 0 3px rgba($color-success, 0.15);
+      box-shadow: 0 0 0 3px color-mix(in srgb, $color-success 15%, transparent);
     }
   }
 }
@@ -212,7 +212,7 @@
   // Focus state
   &:focus-visible + .confirmation-dialog__checkbox-text::before {
     border-color: $color-accent-primary;
-    box-shadow: 0 0 0 3px rgba($color-accent-primary, 0.15);
+    box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-primary 15%, transparent);
   }
 
   // Checked state
@@ -257,16 +257,16 @@
 // Warning button style (for warning severity)
 .modal__footer .btn--warning {
   color: $color-text-primary;
-  background: rgba($color-warning, 0.15);
-  border: 1px solid rgba($color-warning, 0.4);
+  background: color-mix(in srgb, $color-warning 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-warning 40%, transparent);
 
   &:hover:not(:disabled) {
-    background: rgba($color-warning, 0.25);
-    border-color: rgba($color-warning, 0.6);
+    background: color-mix(in srgb, $color-warning 25%, transparent);
+    border-color: color-mix(in srgb, $color-warning 60%, transparent);
   }
 
   &:active:not(:disabled) {
-    background: rgba($color-warning, 0.3);
+    background: color-mix(in srgb, $color-warning 30%, transparent);
   }
 
   &:disabled {

@@ -88,8 +88,8 @@
 
   &--listening {
     color: $color-accent-blue;
-    background: rgba($color-accent-blue, 0.1);
-    border-color: rgba($color-accent-blue, 0.2);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 20%, transparent);
 
     .voice-toggle__icon svg {
       color: $color-accent-blue;
@@ -101,14 +101,14 @@
     }
 
     &:hover {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     }
   }
 
   &--awake {
     color: $color-accent-green;
-    background: rgba($color-accent-green, 0.15);
-    border-color: rgba($color-accent-green, 0.3);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
 
     .voice-toggle__icon svg {
       color: $color-accent-green;
@@ -120,14 +120,14 @@
     }
 
     &:hover {
-      background: rgba($color-accent-green, 0.2);
+      background: color-mix(in srgb, $color-accent-green 20%, transparent);
     }
   }
 
   &--processing {
     color: $color-accent-amber;
-    background: rgba($color-accent-amber, 0.1);
-    border-color: rgba($color-accent-amber, 0.2);
+    background: color-mix(in srgb, $color-accent-amber 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-amber 20%, transparent);
 
     .voice-toggle__icon svg {
       color: $color-accent-amber;
@@ -135,7 +135,7 @@
     }
 
     &:hover {
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     }
   }
 
@@ -175,7 +175,7 @@
     left: 50%;
     transform: translateX(-50%);
     padding: $spacing-xs $spacing-sm;
-    background: rgba($color-bg-secondary, 0.95);
+    background: color-mix(in srgb, $color-bg-secondary 95%, transparent);
     backdrop-filter: blur(8px);
     border: 1px solid $color-border-default;
     border-radius: $radius-sm;

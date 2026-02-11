@@ -124,32 +124,32 @@
   &--info {
     .modal__icon {
       color: $color-accent-blue;
-      background: rgba($color-accent-blue, 0.1);
-      border-color: rgba($color-accent-blue, 0.2);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+      border-color: color-mix(in srgb, $color-accent-blue 20%, transparent);
     }
   }
 
   &--warning {
     .modal__icon {
       color: $color-warning;
-      background: rgba($color-warning, 0.1);
-      border-color: rgba($color-warning, 0.2);
+      background: color-mix(in srgb, $color-warning 10%, transparent);
+      border-color: color-mix(in srgb, $color-warning 20%, transparent);
     }
   }
 
   &--danger {
     .modal__icon {
       color: $color-error;
-      background: rgba($color-error, 0.1);
-      border-color: rgba($color-error, 0.2);
+      background: color-mix(in srgb, $color-error 10%, transparent);
+      border-color: color-mix(in srgb, $color-error 20%, transparent);
     }
   }
 
   &--success {
     .modal__icon {
       color: $color-success;
-      background: rgba($color-success, 0.1);
-      border-color: rgba($color-success, 0.2);
+      background: color-mix(in srgb, $color-success 10%, transparent);
+      border-color: color-mix(in srgb, $color-success 20%, transparent);
     }
   }
 }
@@ -193,8 +193,8 @@
 
   // Default info style (overridden by severity modifiers)
   color: $color-accent-blue;
-  background: rgba($color-accent-blue, 0.1);
-  border-color: rgba($color-accent-blue, 0.2);
+  background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+  border-color: color-mix(in srgb, $color-accent-blue 20%, transparent);
 }
 
 .modal__title {
@@ -352,50 +352,50 @@
   // Primary button style
   .btn--primary {
     color: $color-text-primary;
-    background: rgba($color-accent-primary, 0.15);
-    border: 1px solid rgba($color-accent-primary, 0.4);
+    background: color-mix(in srgb, $color-accent-primary 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-primary 40%, transparent);
 
     &:hover {
-      background: rgba($color-accent-primary, 0.25);
-      border-color: rgba($color-accent-primary, 0.6);
+      background: color-mix(in srgb, $color-accent-primary 25%, transparent);
+      border-color: color-mix(in srgb, $color-accent-primary 60%, transparent);
     }
 
     &:active {
-      background: rgba($color-accent-primary, 0.3);
+      background: color-mix(in srgb, $color-accent-primary 30%, transparent);
     }
   }
 
   // Danger button style
   .btn--danger {
     color: $color-error;
-    background: rgba($color-error, 0.1);
-    border: 1px solid rgba($color-error, 0.3);
+    background: color-mix(in srgb, $color-error 10%, transparent);
+    border: 1px solid color-mix(in srgb, $color-error 30%, transparent);
 
     &:hover {
       color: $color-text-primary;
-      background: rgba($color-error, 0.2);
-      border-color: rgba($color-error, 0.5);
+      background: color-mix(in srgb, $color-error 20%, transparent);
+      border-color: color-mix(in srgb, $color-error 50%, transparent);
     }
 
     &:active {
-      background: rgba($color-error, 0.25);
+      background: color-mix(in srgb, $color-error 25%, transparent);
     }
   }
 
   // Success button style
   .btn--success {
     color: $color-success;
-    background: rgba($color-success, 0.1);
-    border: 1px solid rgba($color-success, 0.3);
+    background: color-mix(in srgb, $color-success 10%, transparent);
+    border: 1px solid color-mix(in srgb, $color-success 30%, transparent);
 
     &:hover {
       color: $color-text-primary;
-      background: rgba($color-success, 0.2);
-      border-color: rgba($color-success, 0.5);
+      background: color-mix(in srgb, $color-success 20%, transparent);
+      border-color: color-mix(in srgb, $color-success 50%, transparent);
     }
 
     &:active {
-      background: rgba($color-success, 0.25);
+      background: color-mix(in srgb, $color-success 25%, transparent);
     }
   }
 }

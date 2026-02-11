@@ -121,8 +121,10 @@ export function useStatusBar() {
 
   useEffect(() => {
     const handlePresenceChange = (users) => {
-      setOnlineUsers(users || []);
-      setOnlineCount(users?.length || 1);
+      const safeUsers = users || [];
+      const nextCount = safeUsers.length || 1;
+      setOnlineUsers((prev) => (prev.length === safeUsers.length ? prev : safeUsers));
+      setOnlineCount((prev) => (prev === nextCount ? prev : nextCount));
     };
 
     // Subscribe to presence system

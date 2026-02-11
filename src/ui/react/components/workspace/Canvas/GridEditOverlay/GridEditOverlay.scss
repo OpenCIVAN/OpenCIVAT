@@ -19,7 +19,7 @@
       content: "";
       position: absolute;
       inset: 0;
-      border: 2px dashed rgba($color-accent-purple, 0.3);
+      border: 2px dashed color-mix(in srgb, $color-accent-purple 30%, transparent);
       border-radius: $radius-md;
       pointer-events: none;
     }
@@ -42,7 +42,7 @@
   padding: 0;
   border: 1px solid $color-border-default;
   border-radius: $radius-md;
-  background: rgba($color-bg-secondary, 0.9);
+  background: color-mix(in srgb, $color-bg-secondary 90%, transparent);
   color: $color-text-muted;
   cursor: pointer;
   pointer-events: auto;
@@ -56,8 +56,8 @@
   }
 
   &.active {
-    background: rgba($color-accent-purple, 0.15);
-    border-color: rgba($color-accent-purple, 0.4);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-purple 40%, transparent);
     color: $color-accent-purple;
   }
 }
@@ -113,9 +113,9 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border: 1px dashed rgba($color-accent-purple, 0.4);
+  border: 1px dashed color-mix(in srgb, $color-accent-purple 40%, transparent);
   border-radius: $radius-sm;
-  background: rgba($color-bg-secondary, 0.9);
+  background: color-mix(in srgb, $color-bg-secondary 90%, transparent);
   color: $color-accent-purple;
   font-size: 10px;
   cursor: pointer;
@@ -123,7 +123,7 @@
   transition: all $transition-fast;
 
   &:hover:not(:disabled) {
-    background: rgba($color-accent-purple, 0.15);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
     border-style: solid;
   }
 
@@ -156,7 +156,7 @@
   align-items: center;
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
-  background: rgba($color-bg-secondary, 0.95);
+  background: color-mix(in srgb, $color-bg-secondary 95%, transparent);
   border: 1px solid $color-border-default;
   border-radius: $radius-lg;
   backdrop-filter: blur(8px);
@@ -176,16 +176,16 @@
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  border: 1px solid rgba($color-accent-purple, 0.4);
+  border: 1px solid color-mix(in srgb, $color-accent-purple 40%, transparent);
   border-radius: $radius-sm;
-  background: rgba($color-accent-purple, 0.1);
+  background: color-mix(in srgb, $color-accent-purple 10%, transparent);
   color: $color-accent-purple;
   font-size: 11px;
   cursor: pointer;
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-accent-purple, 0.2);
+    background: color-mix(in srgb, $color-accent-purple 20%, transparent);
   }
 
   &--secondary {
@@ -212,7 +212,7 @@
   flex-direction: column;
   gap: 2px;
   padding: $spacing-xs $spacing-sm;
-  background: rgba($color-bg-secondary, 0.9);
+  background: color-mix(in srgb, $color-bg-secondary 90%, transparent);
   border: 1px solid $color-border-default;
   border-radius: $radius-sm;
   backdrop-filter: blur(4px);

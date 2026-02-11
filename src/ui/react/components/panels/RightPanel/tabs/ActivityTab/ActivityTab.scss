@@ -30,8 +30,8 @@
     gap: $spacing-sm;
     padding: $spacing-md;
     margin: $spacing-sm;
-    background: rgba($color-accent-green, 0.06);
-    border: 1px solid rgba($color-accent-green, 0.15);
+    background: color-mix(in srgb, $color-accent-green 6%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-green 15%, transparent);
     border-radius: $radius-lg;
     color: $color-accent-green;
     font-size: 12px;
@@ -74,7 +74,7 @@
     align-items: center;
     gap: $spacing-md;
     padding-top: $spacing-sm;
-    border-top: 1px solid rgba($color-accent-amber, 0.15);
+    border-top: 1px solid color-mix(in srgb, $color-accent-amber 15%, transparent);
     margin-top: $spacing-sm;
   }
 
@@ -192,7 +192,7 @@
     }
 
     &.active {
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
       color: $color-accent-amber;
     }
   }

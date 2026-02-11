@@ -218,6 +218,7 @@ const filesRouter = require("./routes/files");
 const annotationsRouter = require("./routes/annotations");
 const viewsRouter = require("./routes/views");
 const viewgroupsRouter = require("./routes/viewgroups");
+const viewgroupTemplatesRouter = require("./routes/viewgroupTemplates");
 const computeRouter = require("./routes/compute");
 const workspaceAnnotationsRouter = require("./routes/workspaceAnnotations");
 
@@ -267,6 +268,8 @@ app.use("/api/viewgroups", optionalAuth, viewgroupsRouter);
 app.use("/api/workspaces/:workspaceId/viewgroups", optionalAuth, viewgroupsRouter);
 app.use("/api/links", optionalAuth, viewgroupsRouter); // Link endpoints (/api/links/view, /api/links/viewgroup)
 app.use("/api/views", optionalAuth, viewgroupsRouter); // View reconciliation endpoints (/api/views/:viewId/reconciliation-status, etc.)
+app.use("/api/projects/:projectId/viewgroup-templates", optionalAuth, viewgroupTemplatesRouter);
+app.use("/api/workspaces/:workspaceId/viewgroup-templates", optionalAuth, viewgroupTemplatesRouter);
 app.use("/api/views", optionalAuth, thumbnailsRouter);
 // Thumbnail callback - mounted at /api/thumbnails for worker callbacks
 // Note: This is separate from thumbnailsRouter which is mounted at /api/views

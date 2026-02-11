@@ -30,17 +30,17 @@
 
     // Color variants
     &--color-cyan {
-        background: rgba($color-accent-teal, 0.2);
+        background: color-mix(in srgb, $color-accent-teal 20%, transparent);
         color: $color-accent-teal;
     }
 
     &--color-teal {
-        background: rgba($color-accent-teal, 0.2);
+        background: color-mix(in srgb, $color-accent-teal 20%, transparent);
         color: $color-accent-teal;
     }
 
     &--color-purple {
-        background: rgba($color-accent-purple, 0.2);
+        background: color-mix(in srgb, $color-accent-purple 20%, transparent);
         color: $color-accent-purple;
     }
 

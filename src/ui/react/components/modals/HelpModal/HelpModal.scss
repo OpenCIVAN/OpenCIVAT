@@ -453,7 +453,7 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
     border-radius: 8px;
     color: $color-accent-blue;
     flex-shrink: 0;

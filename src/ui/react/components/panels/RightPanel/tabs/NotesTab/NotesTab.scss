@@ -52,16 +52,16 @@
     }
 
     &--active {
-      background: rgba($color-accent-teal, 0.15);
+      background: color-mix(in srgb, $color-accent-teal 15%, transparent);
       color: $color-accent-teal;
 
       &[data-color="green"] {
-        background: rgba($color-accent-green, 0.15);
+        background: color-mix(in srgb, $color-accent-green 15%, transparent);
         color: $color-accent-green;
       }
 
       &[data-color="purple"] {
-        background: rgba($color-accent-purple, 0.15);
+        background: color-mix(in srgb, $color-accent-purple 15%, transparent);
         color: $color-accent-purple;
       }
     }
@@ -93,7 +93,7 @@
     }
 
     &--active {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       color: $color-accent-blue;
     }
   }
@@ -255,7 +255,7 @@
     }
 
     &--remove:hover {
-      background: rgba($color-error, 0.15);
+      background: color-mix(in srgb, $color-error 15%, transparent);
       color: $color-error;
     }
   }

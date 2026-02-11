@@ -31,14 +31,14 @@
     }
 
     &--active {
-      background: rgba($color-accent-purple, 0.15);
+      background: color-mix(in srgb, $color-accent-purple 15%, transparent);
       border-color: $color-accent-purple;
       color: $color-accent-purple;
     }
 
     &--custom {
       &.spawn-size-picker__btn--active {
-        background: rgba($color-accent-amber, 0.15);
+        background: color-mix(in srgb, $color-accent-amber 15%, transparent);
         border-color: $color-accent-amber;
         color: $color-accent-amber;
       }
@@ -123,12 +123,12 @@
     }
 
     &--apply {
-      background: rgba($color-accent-green, 0.2);
+      background: color-mix(in srgb, $color-accent-green 20%, transparent);
       border-color: $color-accent-green;
       color: $color-accent-green;
 
       &:hover {
-        background: rgba($color-accent-green, 0.3);
+        background: color-mix(in srgb, $color-accent-green 30%, transparent);
       }
     }
   }

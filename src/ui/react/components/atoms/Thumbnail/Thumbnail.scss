@@ -170,7 +170,7 @@
     .thumbnail__fallback--error {
       background: linear-gradient(
         135deg,
-        rgba($color-accent-red, 0.1) 0%,
+        color-mix(in srgb, $color-accent-red 10%, transparent) 0%,
         $color-bg-tertiary 100%
       );
     }

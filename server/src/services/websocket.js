@@ -15,6 +15,7 @@ class WebSocketManager {
     this.clients = new Map(); // Map<userId, Set<WebSocket>>
     this.rooms = new Map(); // Map<projectId, Set<WebSocket>>
     this.pool = null;
+    this.workspaceProjectCache = new Map(); // Map<workspaceId, projectId>
   }
 
   /**
@@ -326,6 +327,58 @@ class WebSocketManager {
    */
   broadcast(projectId, message) {
     this.broadcastToProject(projectId, message);
+  }
+
+  /**
+   * Broadcast message to all clients for a workspace (mapped to project room)
+   * @param {string} workspaceId - Workspace ID
+   * @param {string} type - Event type (e.g., "viewgroup:created")
+   * @param {object} payload - Event payload
+   * @param {WebSocket} exclude - Optional client to exclude
+   */
+  broadcastToWorkspace(workspaceId, type, payload = {}, exclude = null) {
+    if (!workspaceId) return;
+
+    const cachedProjectId = this.workspaceProjectCache.get(workspaceId);
+    if (cachedProjectId) {
+      this.broadcastToProject(
+        cachedProjectId,
+        {
+          type,
+          workspaceId,
+          ...payload,
+          timestamp: new Date().toISOString(),
+        },
+        exclude
+      );
+      return;
+    }
+
+    if (!this.pool) {
+      ws.warn("broadcastToWorkspace: pool not initialized");
+      return;
+    }
+
+    this.pool
+      .query("SELECT project_id FROM workspaces WHERE id = $1", [workspaceId])
+      .then((result) => {
+        const projectId = result.rows?.[0]?.project_id;
+        if (!projectId) return;
+        this.workspaceProjectCache.set(workspaceId, projectId);
+        this.broadcastToProject(
+          projectId,
+          {
+            type,
+            workspaceId,
+            ...payload,
+            timestamp: new Date().toISOString(),
+          },
+          exclude
+        );
+      })
+      .catch((error) => {
+        ws.error("broadcastToWorkspace failed:", error);
+      });
   }
 
   /**

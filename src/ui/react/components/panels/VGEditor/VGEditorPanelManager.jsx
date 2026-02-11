@@ -4,6 +4,7 @@
  */
 
 import React, { memo, useCallback, useEffect, useState } from 'react';
+import { usePanelShell } from '@UI/react/components/panels/PanelShell';
 import { useViewGroups } from '@UI/react/hooks/useViewGroups';
 import { viewGroupManager } from '@Core/data/managers/ViewGroupManager';
 import { VGEditorPanel } from './VGEditorPanel';
@@ -12,7 +13,8 @@ export const VG_EDITOR_OPEN_EVENT = 'cia:open-vg-editor';
 
 export const VGEditorPanelManager = memo(function VGEditorPanelManager({ workspaceId }) {
   const [openEditors, setOpenEditors] = useState(new Map());
-  const { createViewGroup, updateViewGroup, deleteViewGroup } = useViewGroups(workspaceId);
+  const { createViewGroup, updateViewGroup, deleteViewGroup, syncViewGroupNow } = useViewGroups(workspaceId);
+  const { openPanel } = usePanelShell();
 
   const normalizeViewGroup = useCallback((viewGroup) => {
     if (!viewGroup) return null;
@@ -51,11 +53,13 @@ export const VGEditorPanelManager = memo(function VGEditorPanelManager({ workspa
         });
         return next;
       });
+
+      openPanel(`vg-editor-${viewGroup.id}`);
     };
 
     window.addEventListener(VG_EDITOR_OPEN_EVENT, handleOpen);
     return () => window.removeEventListener(VG_EDITOR_OPEN_EVENT, handleOpen);
-  }, [normalizeViewGroup]);
+  }, [normalizeViewGroup, openPanel]);
 
   const handleClose = useCallback((vgId) => {
     setOpenEditors((prev) => {
@@ -105,6 +109,9 @@ export const VGEditorPanelManager = memo(function VGEditorPanelManager({ workspa
           layoutId: draft.layoutId,
         });
         await syncViewsToSlots(created.id, draft.views || []);
+        if (syncViewGroupNow) {
+          await syncViewGroupNow(created.id);
+        }
         handleClose(draft.id);
         const normalized = normalizeViewGroup(viewGroupManager.getViewGroup(created.id));
         window.dispatchEvent(new CustomEvent(VG_EDITOR_OPEN_EVENT, {
@@ -123,10 +130,13 @@ export const VGEditorPanelManager = memo(function VGEditorPanelManager({ workspa
         layoutId: draft.layoutId,
       });
       await syncViewsToSlots(existing.id, draft.views || []);
+      if (syncViewGroupNow) {
+        await syncViewGroupNow(existing.id);
+      }
     } catch (err) {
       console.error('Failed to update ViewGroup:', err);
     }
-  }, [createViewGroup, updateViewGroup, syncViewsToSlots, handleClose]);
+  }, [createViewGroup, updateViewGroup, syncViewsToSlots, handleClose, syncViewGroupNow]);
 
   const handleDelete = useCallback(async (vgId) => {
     if (!vgId) return;

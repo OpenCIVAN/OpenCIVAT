@@ -74,13 +74,13 @@
   transition: all $transition-fast;
 
   &:hover:not(:disabled) {
-    background: rgba($color-accent-blue, 0.08);
+    background: color-mix(in srgb, $color-accent-blue 8%, transparent);
     color: $color-text-secondary;
   }
 
   &--active {
-    background: rgba($color-accent-blue, 0.15);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
     color: $color-accent-blue;
   }
 }

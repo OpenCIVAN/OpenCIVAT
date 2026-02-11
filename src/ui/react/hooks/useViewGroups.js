@@ -17,29 +17,69 @@ export function useViewGroups(workspaceId = null) {
     const [activeViewGroupId, setActiveViewGroupId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const LOAD_TIMEOUT_MS = 12000;
 
     // Load ViewGroups on mount or workspace change
     useEffect(() => {
         if (!workspaceId) {
+            if (process.env.NODE_ENV === 'development') {
+                console.debug('[useViewGroups] No workspaceId provided, skipping load');
+            }
             setIsLoading(false);
+            setViewGroups([]);
             return;
         }
+
+        let isActive = true;
+
+        const withTimeout = (promise, ms) => new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                reject(new Error(`ViewGroup load timed out after ${ms}ms`));
+            }, ms);
+            promise
+                .then((result) => {
+                    clearTimeout(timer);
+                    resolve(result);
+                })
+                .catch((err) => {
+                    clearTimeout(timer);
+                    reject(err);
+                });
+        });
 
         const loadViewGroups = async () => {
             setIsLoading(true);
             setError(null);
             try {
+                if (process.env.NODE_ENV === 'development') {
+                    console.debug(`[useViewGroups] Loading ViewGroups for workspace: ${workspaceId}`);
+                }
                 viewGroupManager.initialize(workspaceId);
-                await viewGroupManager.loadFromServer(workspaceId);
-                setViewGroups(viewGroupManager.getAllViewGroups());
+                await withTimeout(viewGroupManager.loadFromServer(workspaceId), LOAD_TIMEOUT_MS);
+                const loaded = viewGroupManager.getAllViewGroups();
+                if (process.env.NODE_ENV === 'development') {
+                    console.debug(`[useViewGroups] Loaded ${loaded.length} ViewGroup(s)`, loaded);
+                }
+                if (isActive) {
+                    setViewGroups(loaded);
+                }
             } catch (err) {
-                setError(err.message);
+                console.error('[useViewGroups] Failed to load ViewGroups:', err);
+                if (isActive) {
+                    setError(err.message);
+                }
             } finally {
-                setIsLoading(false);
+                if (isActive) {
+                    setIsLoading(false);
+                }
             }
         };
 
         loadViewGroups();
+
+        return () => {
+            isActive = false;
+        };
     }, [workspaceId]);
 
     // Subscribe to ViewGroupManager events
@@ -121,6 +161,15 @@ export function useViewGroups(workspaceId = null) {
         }
     }, []);
 
+    const syncViewGroupNow = useCallback(async (viewGroupId) => {
+        try {
+            return await viewGroupManager.syncViewGroupNow(viewGroupId);
+        } catch (err) {
+            setError(err.message);
+            throw err;
+        }
+    }, []);
+
     const deleteViewGroup = useCallback(async (viewGroupId) => {
         try {
             await viewGroupManager.deleteViewGroup(viewGroupId);
@@ -185,6 +234,7 @@ export function useViewGroups(workspaceId = null) {
         // Actions
         createViewGroup,
         updateViewGroup,
+        syncViewGroupNow,
         deleteViewGroup,
         duplicateViewGroup,
         selectViewGroup,

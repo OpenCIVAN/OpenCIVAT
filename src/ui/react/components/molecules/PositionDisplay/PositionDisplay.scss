@@ -69,7 +69,7 @@
         letter-spacing: 1px;
         margin-left: $spacing-xs;
         padding: 2px 4px;
-        background: rgba($color-accent-sky, 0.15);
+        background: color-mix(in srgb, $color-accent-sky 15%, transparent);
         border-radius: $radius-xs;
     }
 
@@ -78,8 +78,8 @@
     // ==========================================================================
 
     &--at-home {
-        border-color: rgba($color-accent-sky, 0.3);
-        background: rgba($color-accent-sky, 0.05);
+        border-color: color-mix(in srgb, $color-accent-sky 30%, transparent);
+        background: color-mix(in srgb, $color-accent-sky 5%, transparent);
 
         .position-display__icon {
             color: $color-accent-sky;

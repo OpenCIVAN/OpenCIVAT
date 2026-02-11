@@ -1,5 +1,4 @@
 // src/ui/react/components/workspace/InstanceViewport/InstanceViewport.scss
-@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -98,7 +97,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   // Pinned state - just add a subtle indicator, no box-shadow change
   &--pinned {
     .instance-toolbar {
-      border-color: rgba($color-accent-primary, 0.3);
+      border-color: color-mix(in srgb, $color-accent-primary 30%, transparent);
     }
   }
 }
@@ -265,13 +264,13 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   &--primary {
-    background: rgba($color-accent-primary, 0.1);
-    border-color: rgba($color-accent-primary, 0.3);
+    background: color-mix(in srgb, $color-accent-primary 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-primary 30%, transparent);
     color: $color-accent-primary;
 
     &:hover:not(:disabled) {
-      background: rgba($color-accent-primary, 0.15);
-      border-color: rgba($color-accent-primary, 0.5);
+      background: color-mix(in srgb, $color-accent-primary 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-primary 50%, transparent);
     }
   }
 
@@ -315,8 +314,8 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   &.active {
-    background: rgba($color-accent-primary, 0.15);
-    border-color: rgba($color-accent-primary, 0.3);
+    background: color-mix(in srgb, $color-accent-primary 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-primary 30%, transparent);
     color: $color-accent-primary;
   }
 }
@@ -453,10 +452,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   &.active {
-    background: rgba($color-accent-primary, 0.15);
-    border-color: rgba($color-accent-primary, 0.3);
+    background: color-mix(in srgb, $color-accent-primary 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-primary 30%, transparent);
     color: $color-accent-primary;
-    box-shadow: 0 0 8px rgba($color-accent-primary, 0.2);
+    box-shadow: 0 0 8px color-mix(in srgb, $color-accent-primary 20%, transparent);
   }
 
   svg {
@@ -659,11 +658,11 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   &--primary {
-    background: rgba($color-accent-primary, 0.1);
+    background: color-mix(in srgb, $color-accent-primary 10%, transparent);
     color: $color-accent-primary;
 
     &:hover {
-      background: rgba($color-accent-primary, 0.15);
+      background: color-mix(in srgb, $color-accent-primary 15%, transparent);
     }
   }
 
@@ -671,7 +670,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
     color: $color-text-tertiary;
 
     &:hover {
-      background: rgba($color-error, 0.1);
+      background: color-mix(in srgb, $color-error 10%, transparent);
       color: $color-error;
     }
   }
@@ -727,8 +726,8 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
 .instance-viewport__size-notice-button {
   padding: 2px $spacing-xs;
-  background: rgba($color-accent-primary, 0.15);
-  border: 1px solid rgba($color-accent-primary, 0.3);
+  background: color-mix(in srgb, $color-accent-primary 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-primary 30%, transparent);
   border-radius: $radius-xs;
   color: $color-accent-primary;
   font-size: 10px;
@@ -737,8 +736,8 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   transition: all 0.15s ease;
 
   &:hover {
-    background: rgba($color-accent-primary, 0.25);
-    border-color: rgba($color-accent-primary, 0.5);
+    background: color-mix(in srgb, $color-accent-primary 25%, transparent);
+    border-color: color-mix(in srgb, $color-accent-primary 50%, transparent);
   }
 }
 
@@ -908,7 +907,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
     height: 0;
     background: $color-accent-primary;
     border-radius: $radius-full;
-    box-shadow: 0 0 8px rgba($color-accent-primary, 0.6);
+    box-shadow: 0 0 8px color-mix(in srgb, $color-accent-primary 60%, transparent);
     transition: height 0.15s ease;
   }
 
@@ -922,7 +921,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
     .option-icon {
       color: $color-accent-primary;
-      filter: drop-shadow(0 0 3px rgba($color-accent-primary, 0.5));
+      filter: drop-shadow(0 0 3px color-mix(in srgb, $color-accent-primary 50%, transparent));
     }
   }
 
@@ -936,20 +935,20 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   &.active {
-    background: rgba($color-accent-pink, 0.15);
-    border-color: rgba($color-accent-pink, 0.3);
+    background: color-mix(in srgb, $color-accent-pink 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-pink 30%, transparent);
     color: $color-accent-pink;
     padding-left: calc($spacing-sm + 8px);
 
     &::before {
       height: 70%;
       background: $color-accent-pink;
-      box-shadow: 0 0 10px rgba($color-accent-pink, 0.7);
+      box-shadow: 0 0 10px color-mix(in srgb, $color-accent-pink 70%, transparent);
     }
 
     .option-icon {
       color: $color-accent-pink;
-      filter: drop-shadow(0 0 4px rgba($color-accent-pink, 0.6));
+      filter: drop-shadow(0 0 4px color-mix(in srgb, $color-accent-pink 60%, transparent));
     }
   }
 
@@ -1304,10 +1303,10 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
 .instance-viewport--vr-mode {
   // Green VR glow effect
-  border-color: rgba($color-accent-green, 0.5);
+  border-color: color-mix(in srgb, $color-accent-green 50%, transparent);
 
-  box-shadow: 0 0 30px rgba($color-accent-green, 0.25),
-    0 0 15px rgba($color-accent-green, 0.2), inset 0 0 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 30px color-mix(in srgb, $color-accent-green 25%, transparent),
+    0 0 15px color-mix(in srgb, $color-accent-green 20%, transparent), inset 0 0 60px rgba(0, 0, 0, 0.5);
 
   // Pulsing animation for VR mode
   animation: vr-mode-pulse 3s ease-in-out infinite;
@@ -1316,12 +1315,12 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
 @keyframes vr-mode-pulse {
   0%,
   100% {
-    box-shadow: 0 0 30px rgba($color-accent-green, 0.25),
-      0 0 15px rgba($color-accent-green, 0.2), inset 0 0 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 30px color-mix(in srgb, $color-accent-green 25%, transparent),
+      0 0 15px color-mix(in srgb, $color-accent-green 20%, transparent), inset 0 0 60px rgba(0, 0, 0, 0.5);
   }
   50% {
-    box-shadow: 0 0 40px rgba($color-accent-green, 0.35),
-      0 0 20px rgba($color-accent-green, 0.3), inset 0 0 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 40px color-mix(in srgb, $color-accent-green 35%, transparent),
+      0 0 20px color-mix(in srgb, $color-accent-green 30%, transparent), inset 0 0 60px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -1335,7 +1334,7 @@ $animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
   align-items: center;
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
-  background: rgba($color-accent-green, 0.9);
+  background: color-mix(in srgb, $color-accent-green 90%, transparent);
   backdrop-filter: blur(8px);
   border-radius: $radius-full;
   font-size: 10px;

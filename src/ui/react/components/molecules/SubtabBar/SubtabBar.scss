@@ -91,7 +91,7 @@
   // Focus state
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.3) inset;
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 30%, transparent) inset;
   }
 }
 

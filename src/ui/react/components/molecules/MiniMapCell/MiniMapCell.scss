@@ -34,7 +34,7 @@
 
     &--selected {
         border-color: $color-accent-sky;
-        box-shadow: 0 0 0 2px rgba($color-accent-sky, 0.3);
+        box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-sky 30%, transparent);
         z-index: 2;
 
         &:hover {

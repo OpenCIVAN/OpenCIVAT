@@ -38,7 +38,7 @@
 
     &.active {
         border-color: $color-accent-sky;
-        box-shadow: 0 0 0 2px rgba($color-accent-sky, 0.2);
+        box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-sky 20%, transparent);
 
         .swatch-label {
             color: $color-accent-sky;

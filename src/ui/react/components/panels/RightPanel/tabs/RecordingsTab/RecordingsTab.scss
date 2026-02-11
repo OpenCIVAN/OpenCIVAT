@@ -35,8 +35,8 @@
     gap: $spacing-xs;
     padding: $spacing-sm;
     margin: $spacing-xs $spacing-sm;
-    background: rgba($color-accent-red, 0.1);
-    border: 1px solid rgba($color-accent-red, 0.3);
+    background: color-mix(in srgb, $color-accent-red 10%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-red 30%, transparent);
     border-radius: $radius-sm;
     color: $color-accent-red;
     font-size: $font-size-xs;
@@ -98,7 +98,7 @@
     font-size: 11px;
     color: $color-accent-amber;
     padding: 2px 6px;
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     border-radius: $radius-sm;
   }
 
@@ -114,7 +114,7 @@
     align-items: center;
     padding-top: $spacing-sm;
     margin-top: $spacing-sm;
-    border-top: 1px solid rgba($color-accent-red, 0.15);
+    border-top: 1px solid color-mix(in srgb, $color-accent-red 15%, transparent);
   }
 
   &__controls-left {
@@ -128,7 +128,7 @@
     gap: $spacing-xs;
     margin-top: $spacing-sm;
     padding-top: $spacing-sm;
-    border-top: 1px solid rgba($color-accent-red, 0.15);
+    border-top: 1px solid color-mix(in srgb, $color-accent-red 15%, transparent);
     max-height: 120px;
     overflow-y: auto;
   }
@@ -175,7 +175,7 @@
     &--blue {
       color: $color-accent-blue;
       &.marker-input__type-btn--active {
-        background: rgba($color-accent-blue, 0.15);
+        background: color-mix(in srgb, $color-accent-blue 15%, transparent);
         border-color: $color-accent-blue;
       }
     }
@@ -183,7 +183,7 @@
     &--red {
       color: $color-accent-red;
       &.marker-input__type-btn--active {
-        background: rgba($color-accent-red, 0.15);
+        background: color-mix(in srgb, $color-accent-red 15%, transparent);
         border-color: $color-accent-red;
       }
     }
@@ -191,7 +191,7 @@
     &--amber {
       color: $color-accent-amber;
       &.marker-input__type-btn--active {
-        background: rgba($color-accent-amber, 0.15);
+        background: color-mix(in srgb, $color-accent-amber 15%, transparent);
         border-color: $color-accent-amber;
       }
     }
@@ -199,7 +199,7 @@
     &--green {
       color: $color-accent-green;
       &.marker-input__type-btn--active {
-        background: rgba($color-accent-green, 0.15);
+        background: color-mix(in srgb, $color-accent-green 15%, transparent);
         border-color: $color-accent-green;
       }
     }
@@ -248,19 +248,19 @@
     color: $color-text-muted;
 
     &:hover {
-      background: rgba($color-accent-red, 0.15);
-      border-color: rgba($color-accent-red, 0.3);
+      background: color-mix(in srgb, $color-accent-red 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-red 30%, transparent);
       color: $color-accent-red;
     }
   }
 
   &__submit {
-    background: rgba($color-accent-green, 0.15);
-    border-color: rgba($color-accent-green, 0.3);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
     color: $color-accent-green;
 
     &:hover {
-      background: rgba($color-accent-green, 0.25);
+      background: color-mix(in srgb, $color-accent-green 25%, transparent);
     }
   }
 }
@@ -313,7 +313,7 @@
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba($color-accent-red, 0.15);
+      background: color-mix(in srgb, $color-accent-red 15%, transparent);
       color: $color-accent-red;
     }
   }
@@ -374,8 +374,8 @@
   }
 
   &--selected {
-    background: rgba($color-accent-red, 0.08);
-    border-color: rgba($color-accent-red, 0.3);
+    background: color-mix(in srgb, $color-accent-red 8%, transparent);
+    border-color: color-mix(in srgb, $color-accent-red 30%, transparent);
   }
 
   &__main {
@@ -391,7 +391,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba($color-accent-red, 0.15);
+    background: color-mix(in srgb, $color-accent-red 15%, transparent);
     border-radius: $radius-sm;
     color: $color-accent-red;
     flex-shrink: 0;
@@ -499,8 +499,8 @@
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: rgba($color-accent-red, 0.15);
-      border-color: rgba($color-accent-red, 0.3);
+      background: color-mix(in srgb, $color-accent-red 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-red 30%, transparent);
       color: $color-accent-red;
     }
   }
@@ -558,16 +558,16 @@
 
     &[data-color="green"] {
       &:hover:not(:disabled) {
-        background: rgba($color-accent-green, 0.15);
-        border-color: rgba($color-accent-green, 0.3);
+        background: color-mix(in srgb, $color-accent-green 15%, transparent);
+        border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
         color: $color-accent-green;
       }
     }
 
     &[data-color="blue"] {
       &:hover:not(:disabled) {
-        background: rgba($color-accent-blue, 0.15);
-        border-color: rgba($color-accent-blue, 0.3);
+        background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+        border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
         color: $color-accent-blue;
       }
     }
@@ -576,8 +576,8 @@
       flex: 0 0 auto;
 
       &:hover:not(:disabled) {
-        background: rgba($color-accent-red, 0.15);
-        border-color: rgba($color-accent-red, 0.3);
+        background: color-mix(in srgb, $color-accent-red 15%, transparent);
+        border-color: color-mix(in srgb, $color-accent-red 30%, transparent);
         color: $color-accent-red;
       }
     }
@@ -675,8 +675,8 @@
       }
 
       &--active {
-        background: rgba($color-accent-red, 0.15);
-        border-color: rgba($color-accent-red, 0.3);
+        background: color-mix(in srgb, $color-accent-red 15%, transparent);
+        border-color: color-mix(in srgb, $color-accent-red 30%, transparent);
         color: $color-accent-red;
       }
     }

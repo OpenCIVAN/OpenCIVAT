@@ -117,9 +117,10 @@ export class ViewGroupManager extends BaseManager {
 
         try {
             // Use query param — matches the GET / route in viewgroups router
+            // Include implicit groups so client can manage state transitions (SOLO -> NAMED)
             const endpoint = wsId
-                ? `/viewgroups?workspaceId=${wsId}`
-                : `/viewgroups?projectId=${this._projectId}`;
+                ? `/viewgroups?workspaceId=${wsId}&includeImplicit=true`
+                : `/viewgroups?projectId=${this._projectId}&includeImplicit=true`;
 
             const data = await apiClient.get(endpoint);
             const serverGroups = data.viewGroups || data || [];
@@ -281,10 +282,31 @@ export class ViewGroupManager extends BaseManager {
             viewGroup.setCanvasPosition(row, col, rowSpan, colSpan);
         }
 
+        // Emit local update immediately for UI responsiveness
+        this._emit('viewGroupUpdated', { viewGroup, isRemote: false });
+
         // Schedule sync to server
         this._scheduleSync(viewGroup);
 
         return viewGroup;
+    }
+
+    /**
+     * Force an immediate sync of a ViewGroup to the server.
+     */
+    async syncViewGroupNow(id) {
+        const viewGroup = this._viewGroups.get(id);
+        if (!viewGroup) {
+            this._log.warn(`ViewGroup not found: ${id}`);
+            return false;
+        }
+        try {
+            await this._syncToServer(viewGroup);
+            return true;
+        } catch (error) {
+            this._log.error(`Failed to sync ViewGroup ${id} immediately:`, error);
+            return false;
+        }
     }
 
     /**

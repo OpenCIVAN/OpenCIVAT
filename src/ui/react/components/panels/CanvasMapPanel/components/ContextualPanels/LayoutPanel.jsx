@@ -34,6 +34,7 @@ export const LayoutPanel = memo(function LayoutPanel({
   onDuplicate,
   onLink,
   onSaveTemplate,
+  onDelete,
   canvasRows,
   canvasCols,
   onAdjustRows,
@@ -79,8 +80,14 @@ export const LayoutPanel = memo(function LayoutPanel({
             <Button variant="ghost" size="sm" icon="link2" onClick={onLink}>
               {!isCompact && 'Link'}
             </Button>
-            <Button variant="ghost" size="sm" icon="save" onClick={onSaveTemplate}>
+            <Button variant="ghost" size="sm" icon="save" onClick={() => onSaveTemplate?.('personal')}>
               {!isCompact && 'Save Template'}
+            </Button>
+            <Button variant="ghost" size="sm" icon="share" onClick={() => onSaveTemplate?.('project')}>
+              {!isCompact && 'Save Project'}
+            </Button>
+            <Button variant="ghost" size="sm" icon="trash" onClick={onDelete}>
+              {!isCompact && 'Delete'}
             </Button>
           </div>
 

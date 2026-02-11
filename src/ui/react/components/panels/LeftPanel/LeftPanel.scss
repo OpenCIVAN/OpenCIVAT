@@ -41,39 +41,39 @@
 
   // Colored indicator line on right edge (based on active tab color)
   &[data-color="blue"] {
-    border-right: 1px solid rgba($color-accent-blue, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-blue 40%, transparent);
   }
 
   &[data-color="teal"] {
-    border-right: 1px solid rgba($color-accent-teal, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-teal 40%, transparent);
   }
 
   &[data-color="green"] {
-    border-right: 1px solid rgba($color-accent-green, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-green 40%, transparent);
   }
 
   &[data-color="pink"] {
-    border-right: 1px solid rgba($color-accent-pink, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-pink 40%, transparent);
   }
 
   &[data-color="amber"] {
-    border-right: 1px solid rgba($color-accent-amber, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-amber 40%, transparent);
   }
 
   &[data-color="indigo"] {
-    border-right: 1px solid rgba($color-accent-indigo, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-indigo 40%, transparent);
   }
 
   &[data-color="purple"] {
-    border-right: 1px solid rgba($color-accent-purple, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-purple 40%, transparent);
   }
 
   &[data-color="red"] {
-    border-right: 1px solid rgba($color-accent-red, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-red 40%, transparent);
   }
 
   &[data-color="cyan"] {
-    border-right: 1px solid rgba($color-accent-cyan, 0.4);
+    border-right: 1px solid color-mix(in srgb, $color-accent-cyan 40%, transparent);
   }
 }
 
@@ -121,65 +121,65 @@
 
     // Color variants based on data-color attribute
     &[data-color="blue"] {
-      --glow-color: #{rgba($color-accent-blue, 0.2)};
-      background: rgba($color-accent-blue, 0.15);
-      border: 1px solid rgba($color-accent-blue, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-blue 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-blue 40%, transparent);
       color: $color-accent-blue;
     }
 
     &[data-color="teal"] {
-      --glow-color: #{rgba($color-accent-teal, 0.2)};
-      background: rgba($color-accent-teal, 0.15);
-      border: 1px solid rgba($color-accent-teal, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-teal 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-teal 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-teal 40%, transparent);
       color: $color-accent-teal;
     }
 
     &[data-color="green"] {
-      --glow-color: #{rgba($color-accent-green, 0.2)};
-      background: rgba($color-accent-green, 0.15);
-      border: 1px solid rgba($color-accent-green, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-green 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-green 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-green 40%, transparent);
       color: $color-accent-green;
     }
 
     &[data-color="pink"] {
-      --glow-color: #{rgba($color-accent-pink, 0.2)};
-      background: rgba($color-accent-pink, 0.15);
-      border: 1px solid rgba($color-accent-pink, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-pink 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-pink 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-pink 40%, transparent);
       color: $color-accent-pink;
     }
 
     &[data-color="amber"] {
-      --glow-color: #{rgba($color-accent-amber, 0.2)};
-      background: rgba($color-accent-amber, 0.15);
-      border: 1px solid rgba($color-accent-amber, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-amber 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-amber 40%, transparent);
       color: $color-accent-amber;
     }
 
     &[data-color="indigo"] {
-      --glow-color: #{rgba($color-accent-indigo, 0.2)};
-      background: rgba($color-accent-indigo, 0.15);
-      border: 1px solid rgba($color-accent-indigo, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-indigo 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-indigo 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-indigo 40%, transparent);
       color: $color-accent-indigo;
     }
 
     &[data-color="purple"] {
-      --glow-color: #{rgba($color-accent-purple, 0.2)};
-      background: rgba($color-accent-purple, 0.15);
-      border: 1px solid rgba($color-accent-purple, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-purple 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-purple 40%, transparent);
       color: $color-accent-purple;
     }
 
     &[data-color="red"] {
-      --glow-color: #{rgba($color-accent-red, 0.2)};
-      background: rgba($color-accent-red, 0.15);
-      border: 1px solid rgba($color-accent-red, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-red 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-red 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-red 40%, transparent);
       color: $color-accent-red;
     }
 
     &[data-color="cyan"] {
-      --glow-color: #{rgba($color-accent-cyan, 0.2)};
-      background: rgba($color-accent-cyan, 0.15);
-      border: 1px solid rgba($color-accent-cyan, 0.4);
+      --glow-color: #{color-mix(in srgb, $color-accent-cyan 20%, transparent)};
+      background: color-mix(in srgb, $color-accent-cyan 15%, transparent);
+      border: 1px solid color-mix(in srgb, $color-accent-cyan 40%, transparent);
       color: $color-accent-cyan;
     }
   }
@@ -648,7 +648,7 @@
   border-radius: $radius-full;
 
   &--count {
-    background: rgba($color-accent-purple, 0.15);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
     color: $color-accent-purple;
   }
 

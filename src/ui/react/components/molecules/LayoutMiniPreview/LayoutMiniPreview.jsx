@@ -25,7 +25,7 @@ export const DEFAULT_LAYOUTS = {
   'side-by-side': { rows: 1, cols: 2, cells: 2 },
   'stacked': { rows: 2, cols: 1, cells: 2 },
   '2x2': { rows: 2, cols: 2, cells: 4 },
-  '1+2': { rows: 2, cols: 2, cells: 3, merged: 'top' },
+  '1+2': { rows: 2, cols: 2, cells: 3, merged: 'left' },
   '2+1': { rows: 2, cols: 2, cells: 3, merged: 'right' },
   '3x3': { rows: 3, cols: 3, cells: 9 },
   '1x3': { rows: 1, cols: 3, cells: 3 },
@@ -139,6 +139,32 @@ export const LayoutMiniPreview = memo(function LayoutMiniPreview({
         y: 0,
         width: cellWidth,
         height: size,
+        filled: effectiveFilledCount > 2,
+      });
+    } else if (merged === 'left') {
+      // 1+2 layout: left spans both rows, right has two cells
+      // Left (spans full height)
+      result.push({
+        x: 0,
+        y: 0,
+        width: cellWidth,
+        height: size,
+        filled: effectiveFilledCount > 0,
+      });
+      // Right top
+      result.push({
+        x: cellWidth + gap,
+        y: 0,
+        width: cellWidth,
+        height: cellHeight,
+        filled: effectiveFilledCount > 1,
+      });
+      // Right bottom
+      result.push({
+        x: cellWidth + gap,
+        y: cellHeight + gap,
+        width: cellWidth,
+        height: cellHeight,
         filled: effectiveFilledCount > 2,
       });
     } else {

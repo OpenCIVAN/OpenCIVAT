@@ -62,9 +62,9 @@
             padding: 1px;
             background: linear-gradient(
                 135deg,
-                rgba($color-accent-blue, 0.4),
-                rgba($color-accent-purple, 0.4),
-                rgba($color-accent-blue, 0.4)
+                color-mix(in srgb, $color-accent-blue 40%, transparent),
+                color-mix(in srgb, $color-accent-purple 40%, transparent),
+                color-mix(in srgb, $color-accent-blue 40%, transparent)
             );
             background-size: 200% 200%;
             animation: borderGlow 3s ease infinite;

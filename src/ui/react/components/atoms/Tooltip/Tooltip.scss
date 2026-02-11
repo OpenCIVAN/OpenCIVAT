@@ -10,7 +10,6 @@
  * - .tooltip__rich - Rich tooltip layout
  * - .kbd - Keyboard shortcut badge
  */
-@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -226,9 +225,9 @@
 
   // Modifier keys styling
   &--modifier {
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
     color: $color-accent-blue;
-    border-color: rgba($color-accent-blue, 0.2);
+    border-color: color-mix(in srgb, $color-accent-blue 20%, transparent);
   }
 }
 
@@ -345,7 +344,7 @@
   // Subtle gradient for depth
   background: linear-gradient(
     180deg,
-    color.adjust($color-bg-elevated, $lightness: 2%) 0%,
+    color-mix(in srgb, $color-bg-elevated, white 4%) 0%,
     $color-bg-elevated 100%
   );
 }
@@ -373,48 +372,48 @@
 
 // Error tooltip (for validation messages)
 .tooltip--error {
-  background: rgba($color-error, 0.1);
-  border-color: rgba($color-error, 0.3);
+  background: color-mix(in srgb, $color-error 10%, transparent);
+  border-color: color-mix(in srgb, $color-error 30%, transparent);
   color: $color-error;
 
   .tooltip__arrow {
-    background: rgba($color-error, 0.1);
-    border-color: rgba($color-error, 0.3);
+    background: color-mix(in srgb, $color-error 10%, transparent);
+    border-color: color-mix(in srgb, $color-error 30%, transparent);
   }
 }
 
 // Warning tooltip
 .tooltip--warning {
-  background: rgba($color-warning, 0.1);
-  border-color: rgba($color-warning, 0.3);
+  background: color-mix(in srgb, $color-warning 10%, transparent);
+  border-color: color-mix(in srgb, $color-warning 30%, transparent);
   color: $color-warning;
 
   .tooltip__arrow {
-    background: rgba($color-warning, 0.1);
-    border-color: rgba($color-warning, 0.3);
+    background: color-mix(in srgb, $color-warning 10%, transparent);
+    border-color: color-mix(in srgb, $color-warning 30%, transparent);
   }
 }
 
 // Success tooltip
 .tooltip--success {
-  background: rgba($color-success, 0.1);
-  border-color: rgba($color-success, 0.3);
+  background: color-mix(in srgb, $color-success 10%, transparent);
+  border-color: color-mix(in srgb, $color-success 30%, transparent);
   color: $color-success;
 
   .tooltip__arrow {
-    background: rgba($color-success, 0.1);
-    border-color: rgba($color-success, 0.3);
+    background: color-mix(in srgb, $color-success 10%, transparent);
+    border-color: color-mix(in srgb, $color-success 30%, transparent);
   }
 }
 
 // Info tooltip
 .tooltip--info {
-  background: rgba($color-accent-blue, 0.1);
-  border-color: rgba($color-accent-blue, 0.3);
+  background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+  border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
   color: $color-accent-blue;
 
   .tooltip__arrow {
-    background: rgba($color-accent-blue, 0.1);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
   }
 }

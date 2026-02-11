@@ -42,7 +42,7 @@
     gap: $spacing-sm;
     padding-bottom: $spacing-sm;
     margin-bottom: $spacing-sm;
-    border-bottom: 1px solid rgba($color-accent-purple, 0.15);
+    border-bottom: 1px solid color-mix(in srgb, $color-accent-purple 15%, transparent);
 
     svg {
       color: $color-accent-purple;
@@ -100,7 +100,7 @@
     align-items: center;
     margin-top: $spacing-sm;
     padding-top: $spacing-sm;
-    border-top: 1px solid rgba($color-accent-purple, 0.15);
+    border-top: 1px solid color-mix(in srgb, $color-accent-purple 15%, transparent);
   }
 
   &__stats-right {
@@ -224,6 +224,6 @@
 
   &:hover {
     color: $color-accent-primary;
-    background: rgba($color-accent-primary, 0.1);
+    background: color-mix(in srgb, $color-accent-primary 10%, transparent);
   }
 }

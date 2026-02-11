@@ -63,7 +63,7 @@
     }
 
     &.active {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     }
 
     // Color variants for active state
@@ -73,21 +73,21 @@
 
     &.active[data-color="teal"] {
       color: $color-accent-teal;
-      background: rgba($color-accent-teal, 0.15);
+      background: color-mix(in srgb, $color-accent-teal 15%, transparent);
     }
 
     &.active[data-color="purple"] {
       color: $color-accent-purple;
-      background: rgba($color-accent-purple, 0.15);
+      background: color-mix(in srgb, $color-accent-purple 15%, transparent);
     }
 
     // Exit button always shows active state
     &--exit {
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
       color: $color-accent-amber;
 
       &:hover {
-        background: rgba($color-accent-amber, 0.25);
+        background: color-mix(in srgb, $color-accent-amber 25%, transparent);
       }
     }
   }

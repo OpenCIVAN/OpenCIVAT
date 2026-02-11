@@ -1,7 +1,7 @@
 // Mixins: Glassmorphism with Colorful Accents
 // More blur, more transparency, colorful borders
+// NOTE: Uses color-mix() instead of rgba($var) for CSS custom property compatibility
 
-@use "sass:color";
 @use "../tokens/colors" as *;
 @use "../tokens/effects" as *;
 @use "../tokens/spacing" as *;
@@ -45,9 +45,9 @@
     padding: 1px; // Border width
     background: linear-gradient(
       135deg,
-      rgba($accent-color, 0.4),
-      rgba($accent-color, 0.1),
-      rgba($accent-color, 0.4)
+      color-mix(in srgb, $accent-color 40%, transparent),
+      color-mix(in srgb, $accent-color 10%, transparent),
+      color-mix(in srgb, $accent-color 40%, transparent)
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
@@ -60,8 +60,8 @@
 // Glass with top colored accent strip
 @mixin glass-with-top-accent($accent-color: $color-accent-primary) {
   @include glass($color-glass-panel, $blur-strong, $color-border-default);
-  border-top: 2px solid rgba($accent-color, 0.5);
-  box-shadow: $shadow-glass, 0 1px 0 rgba($accent-color, 0.2);
+  border-top: 2px solid color-mix(in srgb, $accent-color 50%, transparent);
+  box-shadow: $shadow-glass, 0 1px 0 color-mix(in srgb, $accent-color 20%, transparent);
 }
 
 // ============================================================================
@@ -104,8 +104,8 @@
   @include glass-card;
 
   &:hover {
-    border-color: rgba($accent-color, 0.4);
-    box-shadow: $shadow-lg, 0 0 20px rgba($accent-color, 0.15);
+    border-color: color-mix(in srgb, $accent-color 40%, transparent);
+    box-shadow: $shadow-lg, 0 0 20px color-mix(in srgb, $accent-color 15%, transparent);
   }
 }
 
@@ -114,21 +114,21 @@
 // ============================================================================
 
 @mixin glass-hover {
-  background: color.adjust($color-glass-medium, $alpha: 0.02);
+  background: $color-glass-strong;
   border-color: $color-hover-border;
   box-shadow: $shadow-md;
 }
 
 @mixin glass-active {
-  background: color.adjust($color-glass-strong, $alpha: 0.02);
+  background: $color-glass-strong;
   border-color: $color-active-border;
   box-shadow: $shadow-inner;
 }
 
 @mixin glass-focus($accent-color: $color-accent-primary) {
   outline: none;
-  border-color: rgba($accent-color, 0.5);
-  box-shadow: $shadow-glass, 0 0 0 3px rgba($accent-color, 0.15);
+  border-color: color-mix(in srgb, $accent-color 50%, transparent);
+  box-shadow: $shadow-glass, 0 0 0 3px color-mix(in srgb, $accent-color 15%, transparent);
 }
 
 // ============================================================================
@@ -168,18 +168,18 @@
 // Button with colorful accent
 @mixin glass-button-accent($accent-color: $color-accent-primary) {
   @include glass-button;
-  background: rgba($accent-color, 0.1);
-  border-color: rgba($accent-color, 0.3);
+  background: color-mix(in srgb, $accent-color 10%, transparent);
+  border-color: color-mix(in srgb, $accent-color 30%, transparent);
   color: $accent-color;
 
   &:hover:not(:disabled) {
-    background: rgba($accent-color, 0.15);
-    border-color: rgba($accent-color, 0.5);
-    box-shadow: $shadow-md, 0 0 20px rgba($accent-color, 0.2);
+    background: color-mix(in srgb, $accent-color 15%, transparent);
+    border-color: color-mix(in srgb, $accent-color 50%, transparent);
+    box-shadow: $shadow-md, 0 0 20px color-mix(in srgb, $accent-color 20%, transparent);
   }
 
   &:active:not(:disabled) {
-    background: rgba($accent-color, 0.2);
+    background: color-mix(in srgb, $accent-color 20%, transparent);
   }
 }
 
@@ -230,28 +230,28 @@
 // ============================================================================
 
 @mixin accent-glow($accent-color: $color-accent-primary) {
-  box-shadow: $shadow-glass, 0 0 20px rgba($accent-color, 0.3),
-    0 0 40px rgba($accent-color, 0.15);
+  box-shadow: $shadow-glass, 0 0 20px color-mix(in srgb, $accent-color 30%, transparent),
+    0 0 40px color-mix(in srgb, $accent-color 15%, transparent);
 }
 
 @mixin accent-glow-strong($accent-color: $color-accent-primary) {
-  box-shadow: $shadow-glass-lg, 0 0 30px rgba($accent-color, 0.4),
-    0 0 60px rgba($accent-color, 0.2);
+  box-shadow: $shadow-glass-lg, 0 0 30px color-mix(in srgb, $accent-color 40%, transparent),
+    0 0 60px color-mix(in srgb, $accent-color 20%, transparent);
 }
 
 @mixin error-glow {
-  box-shadow: $shadow-glass, 0 0 20px rgba($color-error, 0.3),
-    0 0 40px rgba($color-error, 0.15);
+  box-shadow: $shadow-glass, 0 0 20px color-mix(in srgb, $color-error 30%, transparent),
+    0 0 40px color-mix(in srgb, $color-error 15%, transparent);
 }
 
 @mixin success-glow {
-  box-shadow: $shadow-glass, 0 0 20px rgba($color-success, 0.3),
-    0 0 40px rgba($color-success, 0.15);
+  box-shadow: $shadow-glass, 0 0 20px color-mix(in srgb, $color-success 30%, transparent),
+    0 0 40px color-mix(in srgb, $color-success 15%, transparent);
 }
 
 @mixin info-glow {
-  box-shadow: $shadow-glass, 0 0 20px rgba($color-info, 0.3),
-    0 0 40px rgba($color-info, 0.15);
+  box-shadow: $shadow-glass, 0 0 20px color-mix(in srgb, $color-info 30%, transparent),
+    0 0 40px color-mix(in srgb, $color-info 15%, transparent);
 }
 
 // ============================================================================
@@ -304,7 +304,7 @@
 // Panel with colored glow around edges
 @mixin glass-panel-glow($accent-color: $color-accent-primary) {
   @include glass-panel;
-  box-shadow: $shadow-glass-lg, 0 0 40px rgba($accent-color, 0.1),
+  box-shadow: $shadow-glass-lg, 0 0 40px color-mix(in srgb, $accent-color 10%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
@@ -318,7 +318,6 @@
 
 // ============================================================================
 // ENHANCED GLASS MIXINS - Glowing Edges and macOS-style Depth
-// ADD THESE TO THE END of src/ui/react/styles/mixins/_glass-mixins.scss
 // ============================================================================
 
 // ============================================================================
@@ -378,7 +377,6 @@
 }
 
 // Static glowing border (non-animated, more professional)
-// This picks up colors from the background behind it (macOS style)
 @mixin border-glow-static(
   $accent-color: $color-accent-primary,
   $intensity: 0.4
@@ -387,8 +385,8 @@
 
   // Inner glow that makes edges colorful
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 0 0 1px rgba($accent-color, $intensity),
-    0 0 20px rgba($accent-color, $intensity * 0.4),
+    0 0 0 1px color-mix(in srgb, $accent-color #{$intensity * 100}%, transparent),
+    0 0 20px color-mix(in srgb, $accent-color #{$intensity * 40}%, transparent),
     0 8px 32px rgba(0, 0, 0, 0.4);
 
   // This creates the "edge picks up color from below" effect
@@ -408,7 +406,6 @@
 }
 
 // Contextual glow - border color adapts to what's behind it
-// This is the macOS frosted glass effect
 @mixin border-glow-contextual {
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -457,7 +454,7 @@
   // Optional accent glow
   @if $accent-color {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3),
-      0 0 20px rgba($accent-color, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 0 20px color-mix(in srgb, $accent-color 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.15),
       inset 0 -1px 0 rgba(0, 0, 0, 0.2);
   }
 
@@ -469,7 +466,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.15);
     @if $accent-color {
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.4),
-        0 0 30px rgba($accent-color, 0.4),
+        0 0 30px color-mix(in srgb, $accent-color 40%, transparent),
         inset 0 1px 0 rgba(255, 255, 255, 0.2),
         inset 0 -1px 0 rgba(0, 0, 0, 0.15);
     }
@@ -481,7 +478,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.3);
     @if $accent-color {
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3),
-        0 0 15px rgba($accent-color, 0.25),
+        0 0 15px color-mix(in srgb, $accent-color 25%, transparent),
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
         inset 0 2px 4px rgba(0, 0, 0, 0.3);
     }
@@ -541,7 +538,7 @@
 
   @if $accent-color {
     box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3),
-      0 0 40px rgba($accent-color, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 40px color-mix(in srgb, $accent-color 15%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.1),
       inset 0 -1px 0 rgba(0, 0, 0, 0.1);
   }
 
@@ -589,13 +586,13 @@
   }
 
   &.active {
-    background: rgba($accent-color, 0.15);
-    border-color: rgba($accent-color, 0.4);
+    background: color-mix(in srgb, $accent-color 15%, transparent);
+    border-color: color-mix(in srgb, $accent-color 40%, transparent);
     color: $accent-color;
     @include border-glow-static($accent-color, 0.6);
 
-    box-shadow: 0 0 20px rgba($accent-color, 0.3),
-      0 0 40px rgba($accent-color, 0.15), inset 0 1px 0 rgba($accent-color, 0.2);
+    box-shadow: 0 0 20px color-mix(in srgb, $accent-color 30%, transparent),
+      0 0 40px color-mix(in srgb, $accent-color 15%, transparent), inset 0 1px 0 color-mix(in srgb, $accent-color 20%, transparent);
   }
 }
 
@@ -616,20 +613,20 @@
 
 // Thumb for range sliders with glow
 @mixin slider-thumb($accent-color: $color-accent-primary) {
-  @include glass($color-glass-medium, $blur-medium, rgba($accent-color, 0.5));
+  @include glass($color-glass-medium, $blur-medium, color-mix(in srgb, $accent-color 50%, transparent));
   width: 16px;
   height: 16px;
   border-radius: $radius-full;
   cursor: grab;
 
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 12px rgba($accent-color, 0.4),
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 12px color-mix(in srgb, $accent-color 40%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
   transition: all 0.15s ease;
 
   &:hover {
     transform: scale(1.1);
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba($accent-color, 0.6),
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, $accent-color 60%, transparent),
       inset 0 1px 0 rgba(255, 255, 255, 0.3);
   }
 
@@ -642,8 +639,6 @@
 // ============================================================================
 // UTILITY CLASSES FOR SPECIAL EFFECTS
 // ============================================================================
-
-// Add these to global.scss after importing this file
 
 .has-glow-border {
   @include border-glow-static;
@@ -668,8 +663,8 @@
 // Backlit button - appears to glow from behind
 @mixin backlit-button($accent-color: $color-accent-primary) {
   position: relative;
-  background: rgba($accent-color, 0.08);
-  border: 1px solid rgba($accent-color, 0.25);
+  background: color-mix(in srgb, $accent-color 8%, transparent);
+  border: 1px solid color-mix(in srgb, $accent-color 25%, transparent);
   border-radius: $radius-md;
   padding: $spacing-sm $spacing-md;
   color: $accent-color;
@@ -685,8 +680,8 @@
     border-radius: inherit;
     background: radial-gradient(
       ellipse at center,
-      rgba($accent-color, 0.25) 0%,
-      rgba($accent-color, 0.1) 40%,
+      color-mix(in srgb, $accent-color 25%, transparent) 0%,
+      color-mix(in srgb, $accent-color 10%, transparent) 40%,
       transparent 70%
     );
     filter: blur(8px);
@@ -696,8 +691,8 @@
   }
 
   &:hover:not(:disabled) {
-    background: rgba($accent-color, 0.15);
-    border-color: rgba($accent-color, 0.5);
+    background: color-mix(in srgb, $accent-color 15%, transparent);
+    border-color: color-mix(in srgb, $accent-color 50%, transparent);
     transform: translateY(-1px);
 
     &::before {
@@ -707,18 +702,18 @@
 
   &.active,
   &:focus-visible {
-    background: rgba($accent-color, 0.2);
-    border-color: rgba($accent-color, 0.6);
-    box-shadow: 0 0 20px rgba($accent-color, 0.4),
-      0 0 40px rgba($accent-color, 0.2), inset 0 0 20px rgba($accent-color, 0.1);
+    background: color-mix(in srgb, $accent-color 20%, transparent);
+    border-color: color-mix(in srgb, $accent-color 60%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, $accent-color 40%, transparent),
+      0 0 40px color-mix(in srgb, $accent-color 20%, transparent), inset 0 0 20px color-mix(in srgb, $accent-color 10%, transparent);
 
     &::before {
       opacity: 1;
       filter: blur(12px);
       background: radial-gradient(
         ellipse at center,
-        rgba($accent-color, 0.4) 0%,
-        rgba($accent-color, 0.2) 40%,
+        color-mix(in srgb, $accent-color 40%, transparent) 0%,
+        color-mix(in srgb, $accent-color 20%, transparent) 40%,
         transparent 70%
       );
     }
@@ -729,17 +724,17 @@
 @mixin neon-glow($accent-color: $color-accent-pink) {
   position: relative;
   color: $accent-color;
-  text-shadow: 0 0 5px rgba($accent-color, 0.8),
-    0 0 10px rgba($accent-color, 0.6), 0 0 20px rgba($accent-color, 0.4),
-    0 0 40px rgba($accent-color, 0.2);
+  text-shadow: 0 0 5px color-mix(in srgb, $accent-color 80%, transparent),
+    0 0 10px color-mix(in srgb, $accent-color 60%, transparent), 0 0 20px color-mix(in srgb, $accent-color 40%, transparent),
+    0 0 40px color-mix(in srgb, $accent-color 20%, transparent);
 }
 
 // Neon border - glowing edge effect
 @mixin neon-border($accent-color: $color-accent-pink) {
-  border: 1px solid rgba($accent-color, 0.6);
-  box-shadow: 0 0 5px rgba($accent-color, 0.5),
-    0 0 10px rgba($accent-color, 0.3), 0 0 20px rgba($accent-color, 0.2),
-    inset 0 0 10px rgba($accent-color, 0.1);
+  border: 1px solid color-mix(in srgb, $accent-color 60%, transparent);
+  box-shadow: 0 0 5px color-mix(in srgb, $accent-color 50%, transparent),
+    0 0 10px color-mix(in srgb, $accent-color 30%, transparent), 0 0 20px color-mix(in srgb, $accent-color 20%, transparent),
+    inset 0 0 10px color-mix(in srgb, $accent-color 10%, transparent);
 }
 
 // Breathing glow animation - subtle pulse
@@ -749,12 +744,12 @@
   @keyframes breathe-glow {
     0%,
     100% {
-      box-shadow: 0 0 15px rgba($accent-color, 0.2),
-        0 0 30px rgba($accent-color, 0.1);
+      box-shadow: 0 0 15px color-mix(in srgb, $accent-color 20%, transparent),
+        0 0 30px color-mix(in srgb, $accent-color 10%, transparent);
     }
     50% {
-      box-shadow: 0 0 25px rgba($accent-color, 0.4),
-        0 0 50px rgba($accent-color, 0.2);
+      box-shadow: 0 0 25px color-mix(in srgb, $accent-color 40%, transparent),
+        0 0 50px color-mix(in srgb, $accent-color 20%, transparent);
     }
   }
 }
@@ -773,12 +768,12 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba($accent-color, 0.8) 20%,
+      color-mix(in srgb, $accent-color 80%, transparent) 20%,
       $accent-color 50%,
-      rgba($accent-color, 0.8) 80%,
+      color-mix(in srgb, $accent-color 80%, transparent) 80%,
       transparent 100%
     );
-    box-shadow: 0 0 10px rgba($accent-color, 0.5);
+    box-shadow: 0 0 10px color-mix(in srgb, $accent-color 50%, transparent);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -806,8 +801,8 @@
     height: 200%;
     background: radial-gradient(
       ellipse at center,
-      rgba($color1, 0.15) 0%,
-      rgba($color2, 0.1) 25%,
+      color-mix(in srgb, $color1 15%, transparent) 0%,
+      color-mix(in srgb, $color2 10%, transparent) 25%,
       transparent 60%
     );
     opacity: 0;
@@ -839,8 +834,8 @@
     height: 8px;
     background: $accent-color;
     border-radius: 50%;
-    box-shadow: 0 0 6px rgba($accent-color, 0.8),
-      0 0 12px rgba($accent-color, 0.5);
+    box-shadow: 0 0 6px color-mix(in srgb, $accent-color 80%, transparent),
+      0 0 12px color-mix(in srgb, $accent-color 50%, transparent);
     animation: pulse-dot 2s ease-in-out infinite;
   }
 }
@@ -864,12 +859,12 @@
 
   &:hover {
     color: $accent-color;
-    filter: drop-shadow(0 0 4px rgba($accent-color, 0.6));
+    filter: drop-shadow(0 0 4px color-mix(in srgb, $accent-color 60%, transparent));
   }
 
   &.active {
     color: $accent-color;
-    filter: drop-shadow(0 0 6px rgba($accent-color, 0.8));
+    filter: drop-shadow(0 0 6px color-mix(in srgb, $accent-color 80%, transparent));
   }
 }
 
@@ -890,12 +885,12 @@
     height: 0;
     background: $accent-color;
     border-radius: $radius-full;
-    box-shadow: 0 0 8px rgba($accent-color, 0.6);
+    box-shadow: 0 0 8px color-mix(in srgb, $accent-color 60%, transparent);
     transition: height 0.15s ease;
   }
 
   &:hover {
-    background: rgba($accent-color, 0.08);
+    background: color-mix(in srgb, $accent-color 8%, transparent);
     padding-left: calc($spacing-md + 6px);
 
     &::before {
@@ -906,10 +901,10 @@
 
 // Frosted glass with color tint
 @mixin frosted-tinted($tint-color: $color-accent-blue, $intensity: 0.05) {
-  background: rgba($tint-color, $intensity);
+  background: color-mix(in srgb, $tint-color #{$intensity * 100}%, transparent);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba($tint-color, 0.15);
+  border: 1px solid color-mix(in srgb, $tint-color 15%, transparent);
 }
 
 // Card with hover lift and glow
@@ -920,8 +915,8 @@
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5),
-      0 0 30px rgba($accent-color, 0.15);
-    border-color: rgba($accent-color, 0.3);
+      0 0 30px color-mix(in srgb, $accent-color 15%, transparent);
+    border-color: color-mix(in srgb, $accent-color 30%, transparent);
   }
 }
 
@@ -930,7 +925,6 @@
 // ============================================================================
 
 // Glass with left accent bar and gradient fade
-// This is THE pattern from toast notifications
 @mixin glass-with-left-accent(
   $accent-color: $color-accent-primary,
   $bar-width: 3px,
@@ -951,7 +945,6 @@
 }
 
 // Glass with right accent bar and gradient fade
-// Mirror of left accent for right-side panels
 @mixin glass-with-right-accent(
   $accent-color: $color-accent-primary,
   $bar-width: 3px,

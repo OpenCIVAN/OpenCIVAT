@@ -293,7 +293,7 @@
         }
 
         &.active {
-            background: rgba($color-accent-blue, 0.15);
+            background: color-mix(in srgb, $color-accent-blue 15%, transparent);
             color: $color-accent-blue;
         }
 
@@ -426,7 +426,7 @@
         &.active {
             border-color: $color-accent-blue;
             color: $color-accent-blue;
-            background: rgba($color-accent-blue, 0.15);
+            background: color-mix(in srgb, $color-accent-blue 15%, transparent);
         }
     }
 }
@@ -545,7 +545,7 @@
             transition: all 0.15s;
 
             &:hover {
-                background: rgba($color-accent-purple, 0.1);
+                background: color-mix(in srgb, $color-accent-purple 10%, transparent);
                 border-color: $color-accent-purple;
                 color: $color-accent-purple;
             }
@@ -738,7 +738,7 @@
         min-width: 48px;
 
         &:hover {
-            background: rgba($color-accent-purple, 0.15);
+            background: color-mix(in srgb, $color-accent-purple 15%, transparent);
             border-color: $color-accent-purple;
             color: $color-text-primary;
         }
@@ -904,8 +904,8 @@
         align-items: center;
         gap: $spacing-sm;
         padding: $spacing-sm;
-        background: rgba($color-accent-teal, 0.1);
-        border: 1px solid rgba($color-accent-teal, 0.3);
+        background: color-mix(in srgb, $color-accent-teal 10%, transparent);
+        border: 1px solid color-mix(in srgb, $color-accent-teal 30%, transparent);
         border-radius: $radius-md;
         font-size: $font-size-sm;
         color: $color-text-secondary;
@@ -924,7 +924,7 @@
             cursor: pointer;
 
             &:hover {
-                background: rgba($color-accent-red, 0.1);
+                background: color-mix(in srgb, $color-accent-red 10%, transparent);
             }
         }
     }
@@ -1304,7 +1304,7 @@
         transition: all 0.15s;
 
         &:hover {
-            background: rgba($color-accent-red, 0.1);
+            background: color-mix(in srgb, $color-accent-red 10%, transparent);
         }
     }
 

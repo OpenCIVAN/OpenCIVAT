@@ -60,22 +60,22 @@
 
   &--entering {
     color: $color-accent-amber;
-    background: rgba($color-accent-amber, 0.1);
-    border-color: rgba($color-accent-amber, 0.2);
+    background: color-mix(in srgb, $color-accent-amber 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-amber 20%, transparent);
 
     .vr-button__icon svg {
       color: $color-accent-amber;
     }
 
     &:hover {
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     }
   }
 
   &--active {
     color: $color-accent-green;
-    background: rgba($color-accent-green, 0.15);
-    border-color: rgba($color-accent-green, 0.3);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
 
     .vr-button__icon svg {
       color: $color-accent-green;
@@ -87,7 +87,7 @@
     }
 
     &:hover {
-      background: rgba($color-accent-green, 0.2);
+      background: color-mix(in srgb, $color-accent-green 20%, transparent);
     }
   }
 
@@ -164,7 +164,7 @@
   align-items: center;
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
-  background: rgba($color-accent-green, 0.9);
+  background: color-mix(in srgb, $color-accent-green 90%, transparent);
   backdrop-filter: blur(8px);
   border-radius: $radius-full;
   font-size: 10px;

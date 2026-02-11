@@ -1,4 +1,3 @@
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -31,10 +30,10 @@
 
     &__input {
         width: 100%;
-        --search-input-bg: rgba(0, 0, 0, 0.3);
+        --search-input-bg: #{$color-glass-medium};
         --search-input-border: #{$color-border-default};
         --search-input-focus-border: #{$color-accent-primary};
-        --search-input-focus-shadow: 0 0 0 2px #{rgba($color-accent-primary, 0.15)};
+        --search-input-focus-shadow: 0 0 0 2px #{color-mix(in srgb, $color-accent-primary 15%, transparent)};
         --search-input-color: #{$color-text-primary};
         --search-input-placeholder: #{$color-text-muted};
         --search-input-icon: #{$color-text-muted};

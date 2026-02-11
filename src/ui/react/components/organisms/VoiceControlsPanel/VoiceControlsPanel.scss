@@ -17,10 +17,10 @@
   padding: $spacing-xs $spacing-lg $spacing-xs $spacing-md;
 
   // Subtle tinted background
-  background: rgba($color-accent-green, 0.04);
+  background: color-mix(in srgb, $color-accent-green 4%, transparent);
 
   // Left accent border for visual separation
-  border-left: 2px solid rgba($color-accent-green, 0.3);
+  border-left: 2px solid color-mix(in srgb, $color-accent-green 30%, transparent);
   border-radius: 0 $radius-md $radius-md 0;
 
   // Extra right padding for activity bar clearance
@@ -28,8 +28,8 @@
 
   // Compact state (not in voice)
   &--compact {
-    background: rgba($color-accent-blue, 0.04);
-    border-left-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 4%, transparent);
+    border-left-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
     padding: $spacing-xs $spacing-lg $spacing-xs $spacing-md;
     padding-right: 24px;
   }
@@ -52,8 +52,8 @@
   align-items: center;
   gap: $spacing-sm;
   padding: $spacing-xs $spacing-md;
-  background: rgba($color-accent-green, 0.15);
-  border: 1px solid rgba($color-accent-green, 0.3);
+  background: color-mix(in srgb, $color-accent-green 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-green 30%, transparent);
   border-radius: $radius-md;
   color: $color-accent-green;
   font-size: $font-size-xs;
@@ -62,13 +62,13 @@
   transition: all $transition-fast;
 
   &:hover:not(:disabled) {
-    background: rgba($color-accent-green, 0.25);
-    border-color: rgba($color-accent-green, 0.5);
+    background: color-mix(in srgb, $color-accent-green 25%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 50%, transparent);
   }
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba($color-accent-green, 0.4);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-green 40%, transparent);
   }
 
   svg {
@@ -77,8 +77,8 @@
 
   // Joining/connecting state
   &--joining {
-    background: rgba($color-accent-blue, 0.15);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
     color: $color-accent-blue;
     cursor: wait;
 
@@ -202,7 +202,7 @@
     color: $color-accent-green;
 
     &:hover {
-      background: rgba($color-accent-green, 0.1);
+      background: color-mix(in srgb, $color-accent-green 10%, transparent);
     }
   }
 
@@ -211,7 +211,7 @@
     color: $color-accent-red;
 
     &:hover {
-      background: rgba($color-accent-red, 0.1);
+      background: color-mix(in srgb, $color-accent-red 10%, transparent);
     }
   }
 
@@ -223,7 +223,7 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4) inset;
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 40%, transparent) inset;
   }
 }
 
@@ -252,7 +252,7 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4) inset;
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 40%, transparent) inset;
   }
 }
 
@@ -269,8 +269,8 @@
   padding: 0 $spacing-sm;
   margin-left: $spacing-xs;
   border-radius: $radius-sm;
-  border: 1px solid rgba($color-accent-red, 0.3);
-  background: rgba($color-accent-red, 0.15);
+  border: 1px solid color-mix(in srgb, $color-accent-red 30%, transparent);
+  background: color-mix(in srgb, $color-accent-red 15%, transparent);
   color: $color-accent-red;
   font-size: 11px;
   font-weight: $font-weight-medium;
@@ -278,13 +278,13 @@
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-accent-red, 0.3);
-    border-color: rgba($color-accent-red, 0.5);
+    background: color-mix(in srgb, $color-accent-red 30%, transparent);
+    border-color: color-mix(in srgb, $color-accent-red 50%, transparent);
   }
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba($color-accent-red, 0.4);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-red 40%, transparent);
   }
 
   svg {
@@ -371,7 +371,7 @@
   }
 
   &--selected {
-    background: rgba($color-accent-blue, 0.12);
+    background: color-mix(in srgb, $color-accent-blue 12%, transparent);
   }
 }
 

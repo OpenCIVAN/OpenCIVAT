@@ -122,10 +122,8 @@ Icon.propTypes = {
     'aria-label': PropTypes.string,
 };
 
-Icon.defaultProps = {
-    size: 20,
-    className: '',
-};
+// NOTE: defaultProps on memo components are deprecated in React.
+// Defaults are provided via function parameters above.
 
 // =============================================================================
 // UTILITY EXPORTS

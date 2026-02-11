@@ -2,11 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install ALL dependencies (including server deps)
-RUN npm install --production=false
+# Install server dependencies first for better caching
+COPY server/package*.json ./server/
+RUN cd server && npm install --production=false
 
 # Copy server code
 COPY server ./server

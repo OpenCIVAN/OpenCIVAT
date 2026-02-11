@@ -16,6 +16,15 @@
  */
 
 import React, { memo, useMemo, useRef, useCallback, useState, useEffect } from 'react';
+
+// LocalStorage helper for showImplicitVGs
+const IMPLICIT_VGS_KEY = 'cia:canvas-map:showImplicitVGs';
+function loadShowImplicitVGs() {
+  try {
+    const stored = localStorage.getItem(IMPLICIT_VGS_KEY);
+    return stored ? JSON.parse(stored) : false;
+  } catch { return false; }
+}
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { useAdaptive } from '@UI/react/context/AdaptiveContext';
 import { useCanvasMap } from '@UI/react/context/CanvasMapContext';
@@ -35,7 +44,11 @@ import { ViewportsPanel, LayoutPanel, TeamPanel } from './components/ContextualP
 import { useCanvasMapState } from './hooks/useCanvasMapState';
 import { MAP_MODES, SIZE_MODE_BREAKPOINTS, LAYOUTS } from './utils/constants';
 import { formatCellRef, getVGDisplayName } from './utils/gridUtils';
-import { addCustomTemplate, createTemplateFromViewGroup } from '@Core/viewgroups/templates';
+import { addCustomTemplate, createTemplateFromViewGroup, saveServerTemplate } from '@Core/viewgroups/templates';
+import { viewGroupManager } from '@Core/data/managers/ViewGroupManager';
+import { viewConfigurationManager } from '@Core/data/managers/ViewConfigurationManager';
+import { workspaceManager } from '@Core/data/managers/WorkspaceManager';
+import { toast } from '@UI/react/store/toastStore';
 
 // Styles - Component styles are imported by each component
 import './CanvasMapPanel.scss';
@@ -45,19 +58,34 @@ import './CanvasMapPanel.scss';
  *
  * @param {Object} props
  * @param {string} props.workspaceId - Workspace ID for loading data
+ * @param {string} props.projectId - Project ID for template persistence
  * @param {number} props.width - Current panel width
  * @param {number} props.height - Current panel height
  * @param {string} props.sizeMode - 'compact' | 'standard' | 'expanded'
  */
 export const CanvasMapContent = memo(function CanvasMapContent({
   workspaceId,
+  projectId,
   width,
   height,
   sizeMode: panelSizeMode,
 }) {
   const { isVR } = useAdaptive();
   const canvasMapContext = useCanvasMap();
+  const placedVGIds = canvasMapContext?.placedVGIds || [];
+  const setPlacedVGs = canvasMapContext?.setPlacedVGs;
   const minimapContainerRef = useRef(null);
+  const prevZoomRef = useRef(null);
+
+  // Local state for showing implicit VGs (debug feature)
+  const [showImplicitVGs, setShowImplicitVGs] = useState(loadShowImplicitVGs);
+  const toggleShowImplicitVGs = useCallback(() => {
+    setShowImplicitVGs(prev => {
+      const next = !prev;
+      try { localStorage.setItem(IMPLICIT_VGS_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Load real data from hooks
@@ -73,6 +101,9 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     isLoading: vgLoading,
     createViewGroup,
     updateViewGroup,
+    duplicateViewGroup,
+    deleteViewGroup,
+    syncViewGroupNow,
   } = useViewGroups(workspaceId);
 
   // Collaborators
@@ -96,8 +127,10 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   }), [canvas]);
 
   // Transform ViewGroups to expected structure
+  // Use rawViewGroups when showImplicitVGs is enabled, otherwise visibleViewGroups
   const viewGroups = useMemo(() => {
-    return (visibleViewGroups || []).map(vg => {
+    const sourceVGs = showImplicitVGs ? rawViewGroups : visibleViewGroups;
+    return (sourceVGs || []).map(vg => {
       const canvasPosition = vg.getCanvasPosition?.()
         || vg.canvasPosition
         || vg.position
@@ -107,13 +140,15 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           rowSpan: vg.rowSpan,
           colSpan: vg.colSpan,
         } : null);
+      const resolvedLayoutId = vg.layoutId || vg.layout?.type || 'single';
+      const layout = LAYOUTS[resolvedLayoutId] || LAYOUTS.single;
 
       const normalizedPosition = canvasPosition
         ? {
           row: canvasPosition.row ?? 0,
           col: canvasPosition.col ?? 0,
-          rowSpan: canvasPosition.rowSpan ?? 1,
-          colSpan: canvasPosition.colSpan ?? 1,
+          rowSpan: canvasPosition.rowSpan ?? layout.rows ?? 1,
+          colSpan: canvasPosition.colSpan ?? layout.cols ?? 1,
         }
         : null;
 
@@ -126,8 +161,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         isLinked: !!vg.link,
         isShared: vg.isShared ?? (vg.sharedWith?.length > 0),
         isStarred: vg.isStarred ?? vg.starred ?? false,
-        layoutId: vg.layout?.type || 'single',
-        type: vg.layout?.type || 'single',
+        layoutId: resolvedLayoutId,
+        type: resolvedLayoutId,
         tags: vg.tags || [],
         position: normalizedPosition,
         views: (vg.views || vg.getViews?.() || vg.slots || [])
@@ -142,7 +177,25 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         link: vg.link,
       });
     });
-  }, [visibleViewGroups]);
+  }, [showImplicitVGs, rawViewGroups, visibleViewGroups]);
+
+  useEffect(() => {
+    if (!setCanvasSize) return;
+    let maxRow = canvasData.rows;
+    let maxCol = canvasData.cols;
+
+    viewGroups.forEach((vg) => {
+      if (!vg.position) return;
+      const bottomEdge = (vg.position.row ?? 0) + (vg.position.rowSpan ?? 1);
+      const rightEdge = (vg.position.col ?? 0) + (vg.position.colSpan ?? 1);
+      if (bottomEdge > maxRow) maxRow = bottomEdge;
+      if (rightEdge > maxCol) maxCol = rightEdge;
+    });
+
+    if (maxRow > canvasData.rows || maxCol > canvasData.cols) {
+      setCanvasSize({ rows: maxRow, cols: maxCol });
+    }
+  }, [canvasData.cols, canvasData.rows, setCanvasSize, viewGroups]);
 
   const vgTypeCategories = useMemo(() => ([
     {
@@ -236,10 +289,21 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     return filteredViewGroups.filter(vg => !vg.position);
   }, [filteredViewGroups]);
 
+  const activeVGIds = useMemo(
+    () => activeViewGroups.map((vg) => vg.id),
+    [activeViewGroups]
+  );
+
   useEffect(() => {
-    if (!canvasMapContext) return;
-    canvasMapContext.setPlacedVGs(activeViewGroups.map((vg) => vg.id));
-  }, [canvasMapContext, activeViewGroups]);
+    if (!setPlacedVGs) return;
+    if (
+      placedVGIds.length === activeVGIds.length &&
+      placedVGIds.every((id, idx) => id === activeVGIds[idx])
+    ) {
+      return;
+    }
+    setPlacedVGs(activeVGIds);
+  }, [activeVGIds, placedVGIds, setPlacedVGs]);
 
   // Transform viewports from canvas viewport
   const viewports = useMemo(() => {
@@ -256,12 +320,38 @@ export const CanvasMapContent = memo(function CanvasMapContent({
 
   const [customViewports, setCustomViewports] = useState([]);
   const [selectedViewportId, setSelectedViewportId] = useState(null);
+  const [workspaceLabel, setWorkspaceLabel] = useState(null);
 
   useEffect(() => {
     if (viewports.length === 0) return;
     setCustomViewports((prev) => (prev.length ? prev : viewports));
     setSelectedViewportId((prev) => prev ?? viewports[0]?.id ?? null);
   }, [viewports]);
+
+
+  useEffect(() => {
+    if (!workspaceId) {
+      setWorkspaceLabel(null);
+      return undefined;
+    }
+
+    const updateLabel = () => {
+      const ws = workspaceManager.getWorkspace(workspaceId);
+      setWorkspaceLabel(ws?.name || null);
+    };
+
+    updateLabel();
+    const unsubscribe = workspaceManager.subscribe(updateLabel);
+    return unsubscribe;
+  }, [workspaceId]);
+
+  const workspaceDisplayName = useMemo(() => {
+    if (!workspaceId) return null;
+    if (workspaceLabel) return workspaceLabel;
+    const shortId = workspaceId.slice(0, 8);
+    return `Workspace ${shortId}`;
+  }, [workspaceId, workspaceLabel]);
+
 
   const currentViewport = customViewports.find((vp) => vp.id === selectedViewportId) || customViewports[0];
   const currentPosition = currentViewport?.position || { row: 0, col: 0 };
@@ -367,6 +457,43 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     }));
   }, [baseCollaborators, state.collaboratorCursorVisibility]);
 
+  const focusedSlots = useMemo(() => {
+    if (!state.focusedVGId) return null;
+    const group = viewGroupManager.getViewGroup(state.focusedVGId);
+    if (!group) return null;
+    const capacity = group.getLayoutCapacity?.() || group.slots?.length || 0;
+    const slots = Array.from({ length: capacity }, (_, index) => {
+      const slot = group.getSlotAt?.(index) || group.slots?.find((s) => s.position === index);
+      if (!slot || slot.isEmpty?.()) return null;
+      return {
+        id: slot.viewId,
+        name: slot.viewName,
+        type: slot.viewType,
+        datasetId: slot.datasetId || null,
+        datasetName: slot.datasetName || null,
+      };
+    });
+    return slots;
+  }, [state.focusedVGId, rawViewGroups]);
+
+  useEffect(() => {
+    if (!state.setMinimapZoom) return;
+    if (state.focusedVGId && state.focusedVG?.position) {
+      if (prevZoomRef.current === null) {
+        prevZoomRef.current = state.minimapZoom;
+      }
+      const targetZoom = Math.max(state.minimapZoom, 140);
+      if (targetZoom !== state.minimapZoom) {
+        state.setMinimapZoom(targetZoom);
+      }
+      return;
+    }
+    if (prevZoomRef.current !== null) {
+      state.setMinimapZoom(prevZoomRef.current);
+      prevZoomRef.current = null;
+    }
+  }, [state.focusedVGId, state.focusedVG, state.minimapZoom, state.setMinimapZoom]);
+
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [followingUser, setFollowingUser] = useState(null);
 
@@ -404,10 +531,114 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     // TODO: Implement bookmark deletion
   }, []);
 
-  const handleAddVG = useCallback(() => {
-    console.log('Add ViewGroup');
-    // TODO: Implement VG creation
-  }, []);
+  const handleAddVG = useCallback(async () => {
+    // Check prerequisites
+    if (!workspaceId) {
+      toast.warning('No workspace selected. Please select a workspace first.');
+      console.error('[handleAddVG] Cannot create VG: No workspaceId provided');
+      return;
+    }
+
+    // UUID validation regex - workspaces need server-assigned IDs to persist VGs
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(workspaceId)) {
+      toast.warning('Workspace is still syncing. Please wait a moment and try again.');
+      console.warn(`[handleAddVG] Workspace "${workspaceId}" is not yet synced (not a UUID). Waiting for server confirmation.`);
+      return;
+    }
+
+    if (!createViewGroup || !updateViewGroup) {
+      toast.error('ViewGroup operations are not available.');
+      console.error('[handleAddVG] ViewGroup operations not available (createViewGroup or updateViewGroup is null)');
+      return;
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[handleAddVG] Creating ViewGroup...', { workspaceId });
+    }
+
+    try {
+      // Find the first available position on the canvas
+      const occupiedCells = new Set(
+        activeViewGroups.map(vg => `${vg.position?.row ?? 0}-${vg.position?.col ?? 0}`)
+      );
+
+      let targetRow = 0;
+      let targetCol = 0;
+      for (let r = 0; r < canvasData.rows; r++) {
+        for (let c = 0; c < canvasData.cols; c++) {
+          if (!occupiedCells.has(`${r}-${c}`)) {
+            targetRow = r;
+            targetCol = c;
+            break;
+          }
+        }
+        if (!occupiedCells.has(`${targetRow}-${targetCol}`)) break;
+      }
+
+      // Generate a unique name
+      const existingCount = viewGroups.length;
+      const newName = `ViewGroup ${existingCount + 1}`;
+
+      // Create the ViewGroup
+      const created = await createViewGroup('single', null);
+      if (!created) {
+        toast.error('Failed to create ViewGroup.');
+        console.error('[handleAddVG] createViewGroup returned null/undefined');
+        return;
+      }
+
+      // Update with name and position (makes it visible in UI)
+      const layout = LAYOUTS[created.layoutId || 'single'] || LAYOUTS.single;
+      await updateViewGroup(created.id, {
+        name: newName,
+        canvasPosition: {
+          row: targetRow,
+          col: targetCol,
+          rowSpan: layout.rows || 1,
+          colSpan: layout.cols || 1,
+        },
+      });
+      if (syncViewGroupNow) {
+        await syncViewGroupNow(created.id);
+      }
+
+      toast.success(`Created "${newName}"`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[handleAddVG] Success! Created ViewGroup "${newName}" at position (${targetRow}, ${targetCol})`);
+      }
+
+      window.dispatchEvent(new CustomEvent('cia:open-vg-editor', {
+        detail: {
+          viewGroup: {
+            id: created.id,
+            name: newName,
+            color: created.color,
+            layoutId: created.layoutId || 'single',
+            views: [],
+          },
+          isNewVG: false,
+        },
+      }));
+    } catch (err) {
+      toast.error(`Failed to create ViewGroup: ${err.message}`);
+      console.error('[handleAddVG] Failed to create ViewGroup:', err);
+    }
+  }, [workspaceId, createViewGroup, updateViewGroup, activeViewGroups, canvasData, viewGroups]);
+
+  const findNextOpenCell = useCallback(() => {
+    const occupied = new Set(
+      activeViewGroups.map(vg => `${vg.position?.row ?? 0}-${vg.position?.col ?? 0}`)
+    );
+    for (let r = 0; r < canvasData.rows; r += 1) {
+      for (let c = 0; c < canvasData.cols; c += 1) {
+        if (!occupied.has(`${r}-${c}`)) {
+          return { row: r, col: c };
+        }
+      }
+    }
+    return { row: 0, col: 0 };
+  }, [activeViewGroups, canvasData.cols, canvasData.rows]);
 
   const handleAdjustRows = useCallback((delta) => {
     if (!setCanvasSize || !canvasData) return;
@@ -424,18 +655,70 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const handleCanvasDrop = useCallback(async ({ row, col, data }) => {
     if (!data) return;
 
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const rectsOverlap = (a, b) => (
+      a.row < b.row + b.rowSpan
+      && a.row + a.rowSpan > b.row
+      && a.col < b.col + b.colSpan
+      && a.col + a.colSpan > b.col
+    );
+
+    const findFirstFit = (rowSpan, colSpan, ignoreId, startRow, startCol) => {
+      const rows = canvasData.rows;
+      const cols = canvasData.cols;
+      const candidates = [];
+      for (let r = 0; r <= rows - rowSpan; r += 1) {
+        for (let c = 0; c <= cols - colSpan; c += 1) {
+          candidates.push({ row: r, col: c });
+        }
+      }
+      // Start search from requested spot, then wrap around.
+      const startIndex = candidates.findIndex(
+        (pos) => pos.row === startRow && pos.col === startCol
+      );
+      const ordered = startIndex >= 0
+        ? [...candidates.slice(startIndex), ...candidates.slice(0, startIndex)]
+        : candidates;
+      for (const pos of ordered) {
+        const proposed = { row: pos.row, col: pos.col, rowSpan, colSpan };
+        const overlaps = activeViewGroups.some((vg) => {
+          if (vg.id === ignoreId || !vg.position) return false;
+          return rectsOverlap(proposed, vg.position);
+        });
+        if (!overlaps) return pos;
+      }
+      return null;
+    };
+
     if (data.type === 'vg-place') {
       const targetVG = rawViewGroups.find((vg) => vg.id === data.vgId);
       if (!targetVG || !updateViewGroup) return;
 
+      const layoutId = targetVG.layoutId || targetVG.layout?.type || 'single';
+      const layout = LAYOUTS[layoutId] || LAYOUTS.single;
       const position = targetVG.canvasPosition || targetVG.position || {};
-      const rowSpan = position.rowSpan || 1;
-      const colSpan = position.colSpan || 1;
+      const rowSpan = position.rowSpan || layout.rows || 1;
+      const colSpan = position.colSpan || layout.cols || 1;
+      const maxRow = Math.max(0, canvasData.rows - rowSpan);
+      const maxCol = Math.max(0, canvasData.cols - colSpan);
+      const clampedRow = clamp(row, 0, maxRow);
+      const clampedCol = clamp(col, 0, maxCol);
+      const candidate = findFirstFit(rowSpan, colSpan, targetVG.id, clampedRow, clampedCol);
+      const placeRow = candidate ? candidate.row : canvasData.rows;
+      const placeCol = candidate ? candidate.col : 0;
 
       try {
+        const nextRows = Math.max(canvasData.rows, placeRow + rowSpan);
+        const nextCols = Math.max(canvasData.cols, placeCol + colSpan);
+        if (setCanvasSize && (nextRows !== canvasData.rows || nextCols !== canvasData.cols)) {
+          setCanvasSize({ rows: nextRows, cols: nextCols });
+        }
         await updateViewGroup(targetVG.id, {
-          canvasPosition: { row, col, rowSpan, colSpan },
+          canvasPosition: { row: placeRow, col: placeCol, rowSpan, colSpan },
         });
+        if (syncViewGroupNow) {
+          await syncViewGroupNow(targetVG.id);
+        }
       } catch (err) {
         console.error('Failed to place ViewGroup:', err);
       }
@@ -448,26 +731,160 @@ export const CanvasMapContent = memo(function CanvasMapContent({
       try {
         const created = await createViewGroup(data.layoutId || 'single', data.templateId || null);
         if (!created) return;
+        const layout = LAYOUTS[created.layoutId || data.layoutId || 'single'] || LAYOUTS.single;
+        const rowSpan = layout.rows || 1;
+        const colSpan = layout.cols || 1;
+        const maxRow = Math.max(0, canvasData.rows - rowSpan);
+        const maxCol = Math.max(0, canvasData.cols - colSpan);
+        const clampedRow = clamp(row, 0, maxRow);
+        const clampedCol = clamp(col, 0, maxCol);
+        const candidate = findFirstFit(rowSpan, colSpan, null, clampedRow, clampedCol);
+        const placeRow = candidate ? candidate.row : canvasData.rows;
+        const placeCol = candidate ? candidate.col : 0;
+        const nextRows = Math.max(canvasData.rows, placeRow + rowSpan);
+        const nextCols = Math.max(canvasData.cols, placeCol + colSpan);
+        if (setCanvasSize && (nextRows !== canvasData.rows || nextCols !== canvasData.cols)) {
+          setCanvasSize({ rows: nextRows, cols: nextCols });
+        }
         await updateViewGroup(created.id, {
           name: data.templateName || created.name,
           color: data.color || created.color,
-          canvasPosition: { row, col, rowSpan: 1, colSpan: 1 },
+          canvasPosition: {
+            row: placeRow,
+            col: placeCol,
+            rowSpan,
+            colSpan,
+          },
         });
+        if (syncViewGroupNow) {
+          await syncViewGroupNow(created.id);
+        }
       } catch (err) {
         console.error('Failed to create ViewGroup from template:', err);
       }
     }
-  }, [rawViewGroups, createViewGroup, updateViewGroup]);
+  }, [rawViewGroups, createViewGroup, updateViewGroup, activeViewGroups, canvasData, setCanvasSize, syncViewGroupNow]);
 
   const handleVGDoubleClick = useCallback((vgId) => {
     state.handleVGDoubleClick(vgId);
-    const viewGroup = viewGroups.find((vg) => vg.id === vgId);
-    if (viewGroup) {
-      window.dispatchEvent(new CustomEvent('cia:open-vg-editor', {
-        detail: { viewGroup, isNewVG: false },
-      }));
+  }, [state]);
+
+  const handleDeleteVG = useCallback(async (vgId) => {
+    if (!vgId || !deleteViewGroup) return;
+    const target = viewGroups.find((vg) => vg.id === vgId);
+    const name = target?.name || 'ViewGroup';
+    const confirmed = window.confirm(`Delete "${name}"?`);
+    if (!confirmed) return;
+    try {
+      await deleteViewGroup(vgId);
+      toast.success(`Deleted "${name}"`);
+    } catch (err) {
+      toast.error(`Failed to delete "${name}"`);
+      console.error('Failed to delete ViewGroup:', err);
     }
-  }, [state, viewGroups]);
+  }, [deleteViewGroup, viewGroups]);
+
+  const handleFocusedVGRename = useCallback(async (newName) => {
+    if (!state.focusedVGId || !updateViewGroup) return;
+    if (!newName?.trim()) return;
+    try {
+      await updateViewGroup(state.focusedVGId, { name: newName.trim() });
+      if (syncViewGroupNow) {
+        await syncViewGroupNow(state.focusedVGId);
+      }
+    } catch (err) {
+      toast.error('Failed to rename ViewGroup');
+      console.error('Failed to rename ViewGroup:', err);
+    }
+  }, [state.focusedVGId, updateViewGroup, syncViewGroupNow]);
+
+  const handleFocusedVGSlotDrop = useCallback(async (slotIndex, data) => {
+    if (!state.focusedVGId || !data) return;
+    const group = viewGroupManager.getViewGroup(state.focusedVGId);
+    if (!group) return;
+    const capacity = group.getLayoutCapacity?.() || group.slots?.length || 0;
+    if (slotIndex < 0 || slotIndex >= capacity) return;
+
+    const ensureSync = async () => {
+      if (syncViewGroupNow) {
+        await syncViewGroupNow(group.id);
+      }
+    };
+
+    if (data.type === 'vg-import') {
+      const emptySlots = group.slots
+        ?.filter((slot) => slot?.isEmpty?.())
+        .map((slot) => slot.position) || [];
+      const viewsToAdd = (data.views || []).filter(Boolean).slice(0, emptySlots.length);
+
+      for (let i = 0; i < viewsToAdd.length; i += 1) {
+        const view = viewsToAdd[i];
+        const viewId = view.id || view.viewId;
+        if (!viewId) continue;
+        const viewName = view.name || view.viewName;
+        const viewType = view.type || view.viewType;
+        await viewGroupManager.setViewAtSlot(group.id, emptySlots[i], viewId, viewName, viewType, view.datasetId || null);
+      }
+      await ensureSync();
+      return;
+    }
+
+    if (data.type === 'dataset' || (data.datasetId && !data.view && !data.viewId)) {
+      if (!viewConfigurationManager?.createView) return;
+      try {
+        const newView = await viewConfigurationManager.createView(data.datasetId, {
+          name: data.name ? `${data.name} View` : 'Untitled View',
+          fileType: data.fileType,
+        });
+        if (!newView?.id) return;
+        await viewGroupManager.setViewAtSlot(
+          group.id,
+          slotIndex,
+          newView.id,
+          newView.name,
+          newView.type,
+          newView.datasetId || data.datasetId || null
+        );
+        await ensureSync();
+      } catch (err) {
+        console.error('Failed to create view from dataset:', err);
+        toast.error('Failed to create view from dataset');
+      }
+      return;
+    }
+
+    const viewData = data.view || data;
+    const viewId = viewData.id || viewData.viewId;
+    if (!viewId) return;
+    const viewName = viewData.name || viewData.viewName;
+    const viewType = viewData.type || viewData.viewType;
+    const datasetId = viewData.datasetId || data.datasetId || null;
+
+    const existingSlot = group.findSlotByViewId?.(viewId);
+    if (existingSlot && existingSlot.position !== slotIndex) {
+      await viewGroupManager.removeViewFromGroup(group.id, viewId);
+    }
+
+    await viewGroupManager.setViewAtSlot(group.id, slotIndex, viewId, viewName, viewType, datasetId);
+    await ensureSync();
+  }, [state.focusedVGId, syncViewGroupNow]);
+
+  const handleFocusedVGSlotClear = useCallback(async (slotIndex) => {
+    if (!state.focusedVGId) return;
+    const group = viewGroupManager.getViewGroup(state.focusedVGId);
+    if (!group) return;
+    const slot = group.getSlotAt?.(slotIndex);
+    if (!slot || slot.isEmpty?.()) return;
+    try {
+      await viewGroupManager.removeViewFromGroup(group.id, slot.viewId);
+      if (syncViewGroupNow) {
+        await syncViewGroupNow(group.id);
+      }
+    } catch (err) {
+      console.error('Failed to remove view from slot:', err);
+      toast.error('Failed to remove view');
+    }
+  }, [state.focusedVGId, syncViewGroupNow]);
 
   const handleMove = useCallback((direction) => {
     const delta = {
@@ -502,6 +919,90 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     setSelectedViewportId(viewportId);
     state.handleViewportClick(viewportId);
   }, [state]);
+
+  const handleVGRestore = useCallback(async (vgId) => {
+    if (!vgId || !updateViewGroup) return;
+    const target = rawViewGroups.find((vg) => vg.id === vgId);
+    if (!target) return;
+    const { row, col } = findNextOpenCell();
+    try {
+      await updateViewGroup(vgId, {
+        canvasPosition: { row, col, rowSpan: 1, colSpan: 1 },
+      });
+    } catch (err) {
+      console.error('Failed to restore ViewGroup:', err);
+    }
+  }, [rawViewGroups, updateViewGroup, findNextOpenCell]);
+
+  const handleDuplicateVG = useCallback(async (vgId) => {
+    if (!vgId || !duplicateViewGroup || !updateViewGroup) return;
+    try {
+      const data = await duplicateViewGroup(vgId, { linkOption: 'none' });
+      const created = data?.viewGroup || data;
+      if (!created?.id) return;
+      const { row, col } = findNextOpenCell();
+      await updateViewGroup(created.id, {
+        canvasPosition: { row, col, rowSpan: 1, colSpan: 1 },
+      });
+    } catch (err) {
+      console.error('Failed to duplicate ViewGroup:', err);
+    }
+  }, [duplicateViewGroup, updateViewGroup, findNextOpenCell]);
+
+  const handleOpenEditor = useCallback((vg) => {
+    if (!vg?.id) return;
+    const source = viewGroupManager.getViewGroup(vg.id) || vg;
+    window.dispatchEvent(new CustomEvent('cia:open-vg-editor', {
+      detail: { viewGroup: source, isNewVG: false },
+    }));
+  }, []);
+
+  useEffect(() => {
+    const handleGoto = (event) => {
+      const vgId = event?.detail?.viewGroupId;
+      if (!vgId) return;
+      state.handleVGClick(vgId);
+      if (state.mapMode !== MAP_MODES.LAYOUT) {
+        state.setMapMode?.(MAP_MODES.LAYOUT);
+      }
+    };
+
+      const handleTemplateCreate = async (event) => {
+        const detail = event?.detail || {};
+        if (!createViewGroup || !updateViewGroup) return;
+        try {
+          const created = await createViewGroup(detail.layoutId || 'single', detail.templateId || null);
+          if (!created) return;
+          const { row, col } = findNextOpenCell();
+          await updateViewGroup(created.id, {
+            name: detail.templateName || created.name,
+            color: detail.color || created.color,
+            canvasPosition: { row, col, rowSpan: 1, colSpan: 1 },
+          });
+          if (detail.openEditor) {
+            window.dispatchEvent(new CustomEvent('cia:open-vg-editor', {
+              detail: { viewGroup: created, isNewVG: false },
+            }));
+          }
+        } catch (err) {
+          console.error('Failed to create ViewGroup from template:', err);
+        }
+      };
+
+    window.addEventListener('cia:goto-viewgroup', handleGoto);
+    window.addEventListener('cia:create-vg-from-template', handleTemplateCreate);
+    return () => {
+      window.removeEventListener('cia:goto-viewgroup', handleGoto);
+      window.removeEventListener('cia:create-vg-from-template', handleTemplateCreate);
+    };
+  }, [
+    createViewGroup,
+    updateViewGroup,
+    findNextOpenCell,
+    state.handleVGClick,
+    state.mapMode,
+    state.setMapMode,
+  ]);
 
   const handleAddViewport = useCallback(() => {
     const nextId = `vp-${Date.now()}`;
@@ -553,18 +1054,25 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     // TODO: Implement viewport follow controls
   }, []);
 
-  const handleVGRestore = useCallback((vgId) => {
-    console.log('Restore ViewGroup:', vgId);
-    // TODO: Implement VG restoration
-  }, []);
-
-  const handleSaveTemplate = useCallback(() => {
-    if (!state.focusedVG) return;
+  const handleSaveTemplate = useCallback(async (scope = 'personal') => {
+    if (!state.focusedVG) {
+      toast.error('Select a ViewGroup to save as a template.');
+      return;
+    }
     const template = createTemplateFromViewGroup(state.focusedVG, {
       name: `${getVGDisplayName(state.focusedVG)} Template`,
+      scope,
     });
+    if (projectId || workspaceId) {
+      const saved = await saveServerTemplate({ projectId, workspaceId, template, scope });
+      if (saved) {
+        toast.success(`Saved template: ${saved.name}`);
+        return;
+      }
+    }
     addCustomTemplate(template);
-  }, [state.focusedVG]);
+    toast.success(`Saved template locally: ${template.name}`);
+  }, [projectId, state.focusedVG, workspaceId]);
 
   const handleFollow = useCallback((userId) => {
     const user = collaborators.find((collab) => collab.id === userId);
@@ -620,6 +1128,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
 
   // Calculate available heights
   const headerHeight = state.focusedVGId ? 40 : 0;
+  const toolbarVG = state.focusedVG || viewGroups.find((vg) => vg.id === state.selectedVGId);
   const tabsHeight = 40;
   const toolbarHeight = 40;
   const chromeHeight = headerHeight + tabsHeight + toolbarHeight;
@@ -650,7 +1159,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const minimapInnerHeight = Math.max(0, minimapHeight - MINIMAP_PADDING * 2);
 
   // ---------------------------------------------------------------------------
-  // Loading state
+  // Loading and empty states
   // ---------------------------------------------------------------------------
 
   if (vgLoading) {
@@ -659,8 +1168,45 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         <div className="canvas-map-v2__loading">
           Loading canvas data...
         </div>
+        <div className="canvas-map-v2__loading-footer">
+          <Icon name="layers" size={12} />
+          <span>
+            Workspace: {workspaceDisplayName || 'Unknown'}
+          </span>
+        </div>
       </div>
     );
+  }
+
+  // Show helpful message when no workspace is selected
+  if (!workspaceId) {
+    return (
+      <div className="canvas-map-v2" data-vr={isVR} data-size-mode={effectiveSizeMode}>
+        <div className="canvas-map-v2__empty-state">
+          <Icon name="map" size={32} />
+          <p>No workspace selected</p>
+          <span>Select or create a workspace to view the canvas map</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Debug logging in development
+  if (process.env.NODE_ENV === 'development') {
+    const implicitCount = rawViewGroups?.filter(vg => !vg.name && !vg.isExplicit)?.length || 0;
+    const explicitCount = rawViewGroups?.filter(vg => vg.name || vg.isExplicit)?.length || 0;
+    console.debug('[CanvasMapContent] Data summary:', {
+      workspaceId,
+      rawViewGroupsCount: rawViewGroups?.length || 0,
+      implicitCount,
+      explicitCount,
+      visibleViewGroupsCount: visibleViewGroups?.length || 0,
+      showImplicitVGs,
+      transformedViewGroupsCount: viewGroups?.length || 0,
+      activeViewGroupsCount: activeViewGroups?.length || 0,
+      totalViewsInVGs: viewGroups?.reduce((sum, vg) => sum + (vg.views?.length || 0), 0) || 0,
+      canvasData,
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -725,6 +1271,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         toggleShowViews={state.toggleShowViews}
         toggleShowVGs={state.toggleShowVGs}
         onAddVG={handleAddVG}
+        showImplicitVGs={showImplicitVGs}
+        toggleShowImplicitVGs={toggleShowImplicitVGs}
         sizeMode={effectiveSizeMode}
       />
 
@@ -738,9 +1286,70 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           >
             <div className="canvas-map-v2__minimap-shell" ref={minimapContainerRef}>
               <div className="canvas-map-v2__minimap-container">
+                {toolbarVG && (
+                  <div
+                    className="canvas-map-v2__focus-toolbar-wrapper"
+                    style={{ '--vg-color': toolbarVG.color }}
+                  >
+                    <div className="canvas-map-v2__focus-toolbar-name">
+                      {getVGDisplayName(toolbarVG)}
+                    </div>
+                    <div className="canvas-map-v2__focus-toolbar">
+                      <button
+                        type="button"
+                        className="canvas-map-v2__focus-btn"
+                        onClick={() => handleOpenEditor(toolbarVG)}
+                        title="Edit ViewGroup"
+                      >
+                        <Icon name="pencil" size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="canvas-map-v2__focus-btn"
+                        onClick={() => handleOpenEditor(toolbarVG)}
+                        title="Add view"
+                      >
+                        <Icon name="plus" size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="canvas-map-v2__focus-btn"
+                        onClick={() => handleDuplicateVG(toolbarVG?.id)}
+                        title="Duplicate ViewGroup"
+                      >
+                        <Icon name="copy" size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="canvas-map-v2__focus-btn"
+                        onClick={() => handleSaveTemplate('personal')}
+                        title="Save template"
+                      >
+                        <Icon name="save" size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="canvas-map-v2__focus-btn"
+                        onClick={() => handleSaveTemplate('project')}
+                        title="Save project template"
+                      >
+                        <Icon name="share" size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="canvas-map-v2__focus-btn canvas-map-v2__focus-btn--danger"
+                        onClick={() => handleDeleteVG(toolbarVG?.id)}
+                        title="Delete ViewGroup"
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <Minimap
                   canvas={canvasData}
                   viewGroups={filteredActiveViewGroups}
+                  collisionViewGroups={activeViewGroups}
                   viewports={customViewports}
                   collaborators={collaborators}
                   vgLinks={minimapVgLinks}
@@ -752,7 +1361,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                   focusedVG={state.focusedVG}
                   minimapZoom={state.minimapZoom}
                   showGridLabels
-                  showInternals={state.showInternals}
+                  showInternals={state.showInternals || !!state.focusedVGId}
                   showViewports={state.showViewports}
                   showCollaborators={state.showCollaborators}
                   showBookmarks={state.showBookmarks}
@@ -760,6 +1369,10 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                   selectedVGId={state.selectedVGId}
                   selectedViewportId={selectedViewportId}
                   highlightedLinkId={state.highlightedLinkId}
+                  focusedSlots={focusedSlots}
+                  onFocusedVGRename={handleFocusedVGRename}
+                  onFocusedVGSlotDrop={handleFocusedVGSlotDrop}
+                  onFocusedVGSlotClear={handleFocusedVGSlotClear}
                   onVGClick={state.handleVGClick}
                   onVGDoubleClick={handleVGDoubleClick}
                   onLinkClick={state.handleLinkClick}
@@ -798,8 +1411,9 @@ export const CanvasMapContent = memo(function CanvasMapContent({
           totalVGCount={viewGroups.length}
           activeVGCount={activeViewGroups.length}
           filteredVGCount={filteredViewGroups.length}
+          workspaceName={workspaceDisplayName}
         >
-          {state.mapMode === MAP_MODES.NAVIGATE && !state.focusedVGId && (
+          {state.mapMode === MAP_MODES.NAVIGATE && (
             <ViewportsPanel
               viewports={customViewports}
               selectedViewportId={selectedViewportId}
@@ -826,7 +1440,12 @@ export const CanvasMapContent = memo(function CanvasMapContent({
               onVGDoubleClick={handleVGDoubleClick}
               onVGRestore={handleVGRestore}
               onAddVG={handleAddVG}
+              onChangeLayout={() => handleOpenEditor(state.focusedVG)}
+              onAddView={() => handleOpenEditor(state.focusedVG)}
+              onDuplicate={() => handleDuplicateVG(state.focusedVG?.id)}
+              onLink={() => handleOpenEditor(state.focusedVG)}
               onSaveTemplate={handleSaveTemplate}
+              onDelete={() => handleDeleteVG(state.focusedVG?.id)}
               canvasRows={canvasData.rows}
               canvasCols={canvasData.cols}
               onAdjustRows={handleAdjustRows}

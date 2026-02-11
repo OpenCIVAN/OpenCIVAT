@@ -71,7 +71,7 @@
 
     font-size: $font-size-xs;
     font-weight: 600;
-    color: #fff;
+    color: white;
     line-height: 16px;
   }
 
@@ -296,7 +296,7 @@
     &--selected {
       background: var(--tag-color, $color-accent-blue);
       border-color: var(--tag-color, $color-accent-blue);
-      color: #fff;
+      color: white;
     }
   }
 

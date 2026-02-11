@@ -64,7 +64,7 @@
 
   &--selected {
     border-color: $color-accent-purple;
-    background: rgba($color-accent-purple, 0.05);
+    background: color-mix(in srgb, $color-accent-purple 5%, transparent);
 
     &:hover {
       border-color: $color-accent-purple;
@@ -216,7 +216,7 @@
 
   &--selected {
     border-color: $color-accent-purple;
-    background: rgba($color-accent-purple, 0.05);
+    background: color-mix(in srgb, $color-accent-purple 5%, transparent);
   }
 
   &__radio {

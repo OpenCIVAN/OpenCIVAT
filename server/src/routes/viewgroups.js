@@ -12,6 +12,9 @@ const { createLogger } = require('../utils/logger');
 
 const log = createLogger('viewgroups');
 
+// Debug: Log when this router is loaded
+log.info('ViewGroups router loaded');
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -230,17 +233,24 @@ router.get('/:id', async (req, res, next) => {
  * POST /api/workspaces/:workspaceId/viewgroups
  * Create a new ViewGroup
  *
- * Note: This route handles both:
- * - POST /api/viewgroups/workspaces/:workspaceId/viewgroups (when mounted at /api/viewgroups)
- * - POST /api/workspaces/:workspaceId/viewgroups/ (when mounted at /api/workspaces/:workspaceId/viewgroups)
+ * When mounted at /api/workspaces/:workspaceId/viewgroups, this handles POST to that path.
+ * When mounted at /api/viewgroups, use POST /api/viewgroups with workspaceId in body.
  */
-router.post(['/', '/workspaces/:workspaceId/viewgroups'], async (req, res, next) => {
+router.post('/', async (req, res, next) => {
+    log.info('POST /viewgroups hit', { params: req.params, bodyKeys: Object.keys(req.body || {}) });
     const { pool, wsManager } = req.app.locals;
 
     try {
         const user = getUser(req);
-        // workspaceId can come from route params or from the parent mount
-        const workspaceId = req.params.workspaceId;
+        // workspaceId can come from route params (when mounted at /api/workspaces/:workspaceId/viewgroups)
+        // or from request body (when calling POST /api/viewgroups directly)
+        const workspaceId = req.params.workspaceId || req.body.workspaceId;
+        log.info('Creating ViewGroup', { workspaceId, userName: user?.email });
+
+        if (!workspaceId) {
+            return res.status(400).json({ error: 'workspaceId is required' });
+        }
+
         const {
             name = 'New Group',
             layoutId = 'single',

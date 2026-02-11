@@ -1,4 +1,3 @@
-@use "sass:color";
 @use "theme" as *;
 
 .views-subtab {
@@ -75,7 +74,7 @@
     }
 
     &--active {
-      background: rgba($color-accent-blue, 0.1);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
       color: $color-accent-blue;
     }
   }

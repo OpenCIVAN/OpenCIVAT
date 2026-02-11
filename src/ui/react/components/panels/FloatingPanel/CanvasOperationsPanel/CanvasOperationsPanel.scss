@@ -14,7 +14,7 @@
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  background: rgba($color-bg-secondary, 0.95);
+  background: color-mix(in srgb, $color-bg-secondary 95%, transparent);
   border: 1px solid $color-border-default;
   border-radius: 12px;
   overflow: hidden;
@@ -138,7 +138,7 @@
   &__pending-badge {
     padding: 2px 8px;
     border-radius: 4px;
-    background: rgba($color-accent-amber, 0.2);
+    background: color-mix(in srgb, $color-accent-amber 20%, transparent);
     font-size: 10px;
     font-weight: 600;
     color: $color-accent-amber;
@@ -163,7 +163,7 @@
     }
 
     &--close:hover {
-      background: rgba($color-accent-red, 0.15);
+      background: color-mix(in srgb, $color-accent-red 15%, transparent);
       color: $color-accent-red;
     }
   }
@@ -224,8 +224,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-blue, 0.1);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
     color: $color-accent-blue;
   }
 
@@ -413,7 +413,7 @@
     }
 
     &--selected {
-      background: rgba($color-accent-blue, 0.1);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
     }
   }
 
@@ -529,32 +529,32 @@
   }
 
   &--outline-blue {
-    background: rgba($color-accent-blue, 0.1);
-    border: 1px solid rgba($color-accent-blue, 0.4);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-blue 40%, transparent);
     color: $color-accent-blue;
 
     &:hover {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     }
   }
 
   &--outline-red {
-    background: rgba($color-accent-red, 0.1);
-    border: 1px solid rgba($color-accent-red, 0.3);
+    background: color-mix(in srgb, $color-accent-red 10%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-red 30%, transparent);
     color: $color-accent-red;
 
     &:hover {
-      background: rgba($color-accent-red, 0.15);
+      background: color-mix(in srgb, $color-accent-red 15%, transparent);
     }
   }
 
   &--outline-amber {
-    background: rgba($color-accent-amber, 0.1);
-    border: 1px solid rgba($color-accent-amber, 0.3);
+    background: color-mix(in srgb, $color-accent-amber 10%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-amber 30%, transparent);
     color: $color-accent-amber;
 
     &:hover {
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     }
   }
 
@@ -605,32 +605,32 @@
   flex-shrink: 0;
 
   &--green {
-    background: rgba($color-accent-green, 0.2);
+    background: color-mix(in srgb, $color-accent-green 20%, transparent);
     color: $color-accent-green;
   }
 
   &--amber {
-    background: rgba($color-accent-amber, 0.2);
+    background: color-mix(in srgb, $color-accent-amber 20%, transparent);
     color: $color-accent-amber;
   }
 
   &--purple {
-    background: rgba($color-accent-purple, 0.2);
+    background: color-mix(in srgb, $color-accent-purple 20%, transparent);
     color: $color-accent-purple;
   }
 
   &--teal {
-    background: rgba($color-accent-teal, 0.2);
+    background: color-mix(in srgb, $color-accent-teal 20%, transparent);
     color: $color-accent-teal;
   }
 
   &--red {
-    background: rgba($color-accent-red, 0.2);
+    background: color-mix(in srgb, $color-accent-red 20%, transparent);
     color: $color-accent-red;
   }
 
   &--blue {
-    background: rgba($color-accent-blue, 0.2);
+    background: color-mix(in srgb, $color-accent-blue 20%, transparent);
     color: $color-accent-blue;
   }
 
@@ -660,43 +660,43 @@
   }
 
   &--teal {
-    background: rgba($color-accent-teal, 0.3);
+    background: color-mix(in srgb, $color-accent-teal 30%, transparent);
     border: 2px solid $color-accent-teal;
     color: $color-accent-teal;
   }
 
   &--pink {
-    background: rgba($color-accent-pink, 0.3);
+    background: color-mix(in srgb, $color-accent-pink 30%, transparent);
     border: 2px solid $color-accent-pink;
     color: $color-accent-pink;
   }
 
   &--blue {
-    background: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 30%, transparent);
     border: 2px solid $color-accent-blue;
     color: $color-accent-blue;
   }
 
   &--purple {
-    background: rgba($color-accent-purple, 0.3);
+    background: color-mix(in srgb, $color-accent-purple 30%, transparent);
     border: 2px solid $color-accent-purple;
     color: $color-accent-purple;
   }
 
   &--amber {
-    background: rgba($color-accent-amber, 0.3);
+    background: color-mix(in srgb, $color-accent-amber 30%, transparent);
     border: 2px solid $color-accent-amber;
     color: $color-accent-amber;
   }
 
   &--green {
-    background: rgba($color-accent-green, 0.3);
+    background: color-mix(in srgb, $color-accent-green 30%, transparent);
     border: 2px solid $color-accent-green;
     color: $color-accent-green;
   }
 
   &--red {
-    background: rgba($color-accent-red, 0.3);
+    background: color-mix(in srgb, $color-accent-red 30%, transparent);
     border: 2px solid $color-accent-red;
     color: $color-accent-red;
   }
@@ -731,17 +731,17 @@
   gap: 4px;
 
   &--green {
-    background: rgba($color-accent-green, 0.15);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
     color: $color-accent-green;
   }
 
   &--amber {
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     color: $color-accent-amber;
   }
 
   &--red {
-    background: rgba($color-accent-red, 0.15);
+    background: color-mix(in srgb, $color-accent-red 15%, transparent);
     color: $color-accent-red;
   }
 }
@@ -815,8 +815,8 @@
   transition: all 0.1s ease;
 
   &--selected {
-    background: rgba($color-accent-blue, 0.1);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
   }
 
   &__checkbox {
@@ -885,7 +885,7 @@
   border-left: 3px solid transparent;
 
   &--reverted {
-    background: rgba($color-bg-tertiary, 0.5);
+    background: color-mix(in srgb, $color-bg-tertiary 50%, transparent);
     opacity: 0.6;
 
     .operation-row__detail {
@@ -943,7 +943,7 @@
   overflow: hidden;
 
   &--reverted {
-    border-color: rgba($color-accent-green, 0.4);
+    border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
   }
 
   &__header {
@@ -1038,7 +1038,7 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: rgba($color-bg-secondary, 0.95);
+    background: color-mix(in srgb, $color-bg-secondary 95%, transparent);
     backdrop-filter: blur(8px);
   }
 
@@ -1152,8 +1152,8 @@
   border: 1px solid transparent;
 
   &--current {
-    background: rgba($color-accent-green, 0.1);
-    border-color: rgba($color-accent-green, 0.3);
+    background: color-mix(in srgb, $color-accent-green 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
   }
 
   &__icon {
@@ -1166,12 +1166,12 @@
     flex-shrink: 0;
 
     &--current {
-      background: rgba($color-accent-green, 0.2);
+      background: color-mix(in srgb, $color-accent-green 20%, transparent);
       color: $color-accent-green;
     }
 
     &--default {
-      background: rgba($color-accent-blue, 0.2);
+      background: color-mix(in srgb, $color-accent-blue 20%, transparent);
       color: $color-accent-blue;
     }
   }

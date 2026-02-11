@@ -38,9 +38,8 @@
 
   // V2Spec shadow with glow
   box-shadow:
-    0 12px 48px rgba(0, 0, 0, 0.5),
-    0 0 1px rgba(96, 165, 250, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    var(--shadow-glass-lg),
+    0 0 1px color-mix(in srgb, $color-accent-primary 30%, transparent);
 
   // VR mode adjustments
   &[data-vr="true"] {
@@ -58,22 +57,22 @@
   // Mode-specific color theming
   &--navigate {
     --mode-color: #{$color-accent-blue};
-    --mode-color-rgb: 59, 130, 246;
+    --mode-color-rgb: var(--color-accent-blue-rgb);
   }
 
   &--layout {
     --mode-color: #{$color-accent-green};
-    --mode-color-rgb: 34, 197, 94;
+    --mode-color-rgb: var(--color-accent-green-rgb);
   }
 
   &--links {
     --mode-color: #{$color-accent-purple};
-    --mode-color-rgb: 168, 85, 247;
+    --mode-color-rgb: var(--color-accent-purple-rgb);
   }
 
   &--team {
     --mode-color: #{$color-accent-amber};
-    --mode-color-rgb: 245, 158, 11;
+    --mode-color-rgb: var(--color-accent-amber-rgb);
   }
 
   // -------------------------------------------------------------------------
@@ -187,6 +186,70 @@
     position: relative;
   }
 
+  &__focus-toolbar-wrapper {
+    position: absolute;
+    top: $spacing-sm;
+    right: $spacing-sm;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  &__focus-toolbar-name {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: color-mix(in srgb, var(--vg-color) 16%, $color-glass-panel);
+    border: 1px solid color-mix(in srgb, var(--vg-color) 40%, transparent);
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font-size: 10px;
+    font-weight: $font-weight-semibold;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  &__focus-toolbar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    background: color-mix(in srgb, var(--vg-color) 18%, $color-glass-panel);
+    border: 1px solid color-mix(in srgb, var(--vg-color) 45%, transparent);
+    border-radius: $radius-md;
+    box-shadow: var(--shadow-md);
+    pointer-events: auto;
+  }
+
+  &__focus-btn {
+    border: 0;
+    background: $color-glass-panel;
+    color: $color-text-primary;
+    width: 28px;
+    height: 28px;
+    border-radius: $radius-sm;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: $color-glass-medium;
+    }
+
+    &--danger {
+      color: $color-accent-red;
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Contextual Panel - Takes 45% of available space
   // -------------------------------------------------------------------------
@@ -200,7 +263,7 @@
     // Subtle glassmorphism for depth
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-inner);
   }
 
   // -------------------------------------------------------------------------
@@ -214,6 +277,48 @@
     padding: $spacing-xl;
     color: $color-text-muted;
     font-size: $font-size-sm;
+  }
+
+  &__loading-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-sm;
+    border-top: 1px solid $color-border-subtle;
+    background: $color-bg-secondary;
+    color: $color-text-muted;
+    font-size: $font-size-xs;
+  }
+
+  &__empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: $spacing-md;
+    padding: $spacing-xl;
+    text-align: center;
+    color: $color-text-muted;
+
+    .icon {
+      opacity: 0.5;
+      color: $color-accent-blue;
+    }
+
+    p {
+      margin: 0;
+      font-size: $font-size-sm;
+      font-weight: 500;
+      color: $color-text-secondary;
+    }
+
+    span {
+      font-size: $font-size-xs;
+      max-width: 200px;
+      line-height: 1.4;
+    }
   }
 
   // -------------------------------------------------------------------------

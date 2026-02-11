@@ -100,8 +100,8 @@
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  background: rgba($color-success, 0.15);
-  border: 1px solid rgba($color-success, 0.3);
+  background: color-mix(in srgb, $color-success 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-success 30%, transparent);
   border-radius: $radius-full;
   font-size: 10px;
   color: $color-success;
@@ -260,8 +260,8 @@
   }
 
   &--danger:hover {
-    background: rgba($color-error, 0.15);
-    border-color: rgba($color-error, 0.3);
+    background: color-mix(in srgb, $color-error 15%, transparent);
+    border-color: color-mix(in srgb, $color-error 30%, transparent);
     color: $color-error;
   }
 

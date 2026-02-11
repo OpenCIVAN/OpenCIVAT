@@ -88,11 +88,11 @@
   }
 
   &--active {
-    background: rgba($color-accent-primary, 0.15);
+    background: color-mix(in srgb, $color-accent-primary 15%, transparent);
     color: $color-accent-primary;
 
     &:hover {
-      background: rgba($color-accent-primary, 0.2);
+      background: color-mix(in srgb, $color-accent-primary 20%, transparent);
     }
   }
 
@@ -100,7 +100,7 @@
     color: $color-error;
 
     &:hover {
-      background: rgba($color-error, 0.1);
+      background: color-mix(in srgb, $color-error 10%, transparent);
     }
   }
 
@@ -171,7 +171,7 @@
     &:focus {
       outline: none;
       border-color: $color-accent-primary;
-      box-shadow: 0 0 0 2px rgba($color-accent-primary, 0.2);
+      box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-primary 20%, transparent);
     }
   }
 }

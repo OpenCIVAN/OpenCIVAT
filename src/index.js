@@ -8,9 +8,21 @@ import { initializePhase0, initializePhase1 } from "@Init/appInitializer.js";
 import { app as log } from "@Utils/logger.js";
 import { startupLogger, isStartupProfilingEnabled } from "@Utils/startupLogger.js";
 import { Bootstrap } from "@UI/react/components/auth/Bootstrap";
+import { setLoggerFunction } from "@kitware/vtk.js/macros";
 
 // Import global styles
 import "@UI/react/styles/global.scss";
+
+// -----------------------------------------------------------------------------
+// VTK logging: suppress known noisy warnings (e.g., "No input!")
+// -----------------------------------------------------------------------------
+setLoggerFunction("error", (...args) => {
+  const message = args?.[0];
+  if (typeof message === "string" && message.includes("No input!")) {
+    return;
+  }
+  console.error(...args);
+});
 
 /**
  * Check browser compatibility

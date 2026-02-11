@@ -127,24 +127,24 @@
 
     &:hover:not(.canvas-header-bar__tool-btn--active) {
         color: $color-accent-blue;
-        background: rgba($color-accent-blue, 0.08);
+        background: color-mix(in srgb, $color-accent-blue 8%, transparent);
     }
 
     &--active {
         color: $color-accent-blue;
-        background: rgba($color-accent-blue, 0.15);
+        background: color-mix(in srgb, $color-accent-blue 15%, transparent);
         border-color: $color-accent-blue;
     }
 
     &--merge {
         &:hover:not(.canvas-header-bar__tool-btn--active) {
             color: $color-accent-purple;
-            background: rgba($color-accent-purple, 0.08);
+            background: color-mix(in srgb, $color-accent-purple 8%, transparent);
         }
 
         &.canvas-header-bar__tool-btn--active {
             color: $color-accent-purple;
-            background: rgba($color-accent-purple, 0.15);
+            background: color-mix(in srgb, $color-accent-purple 15%, transparent);
             border-color: $color-accent-purple;
         }
     }
@@ -152,12 +152,12 @@
     &--edit {
         &:hover:not(.canvas-header-bar__tool-btn--active) {
             color: $color-accent-amber;
-            background: rgba($color-accent-amber, 0.08);
+            background: color-mix(in srgb, $color-accent-amber 8%, transparent);
         }
 
         &.canvas-header-bar__tool-btn--active {
             color: $color-accent-amber;
-            background: rgba($color-accent-amber, 0.15);
+            background: color-mix(in srgb, $color-accent-amber 15%, transparent);
             border-color: $color-accent-amber;
         }
     }
@@ -224,12 +224,12 @@
 
     &:hover:not(.canvas-header-bar__mode-btn--active) {
         color: $color-accent-blue;
-        background: rgba($color-accent-blue, 0.08);
+        background: color-mix(in srgb, $color-accent-blue 8%, transparent);
     }
 
     &--active {
         color: $color-accent-blue;
-        background: rgba($color-accent-blue, 0.15);
+        background: color-mix(in srgb, $color-accent-blue 15%, transparent);
         border-color: $color-accent-blue;
     }
 }

@@ -60,13 +60,13 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.15);
-    border-color: rgba($color-accent-teal, 0.4);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-teal 40%, transparent);
     color: $color-accent-teal;
 
     &:hover {
-      background: rgba($color-accent-teal, 0.25);
-      border-color: rgba($color-accent-teal, 0.5);
+      background: color-mix(in srgb, $color-accent-teal 25%, transparent);
+      border-color: color-mix(in srgb, $color-accent-teal 50%, transparent);
     }
   }
 
@@ -131,13 +131,13 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.15);
-    border-color: rgba($color-accent-teal, 0.4);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-teal 40%, transparent);
     color: $color-accent-teal;
 
     &:hover:not(:disabled) {
-      background: rgba($color-accent-teal, 0.25);
-      border-color: rgba($color-accent-teal, 0.5);
+      background: color-mix(in srgb, $color-accent-teal 25%, transparent);
+      border-color: color-mix(in srgb, $color-accent-teal 50%, transparent);
     }
   }
 
@@ -184,7 +184,7 @@
   &:focus {
     outline: none;
     border-color: $color-accent-teal;
-    box-shadow: 0 0 0 2px rgba($color-accent-teal, 0.2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-teal 20%, transparent);
   }
 
   &:disabled {

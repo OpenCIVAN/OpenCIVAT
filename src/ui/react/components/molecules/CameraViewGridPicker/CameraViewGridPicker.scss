@@ -44,16 +44,16 @@
     }
 
     &.special {
-        background: rgba($color-accent-sky, 0.1);
-        border-color: rgba($color-accent-sky, 0.3);
+        background: color-mix(in srgb, $color-accent-sky 10%, transparent);
+        border-color: color-mix(in srgb, $color-accent-sky 30%, transparent);
 
         .camera-view-icon {
             color: $color-accent-sky;
         }
 
         &:hover {
-            background: rgba($color-accent-sky, 0.15);
-            border-color: rgba($color-accent-sky, 0.5);
+            background: color-mix(in srgb, $color-accent-sky 15%, transparent);
+            border-color: color-mix(in srgb, $color-accent-sky 50%, transparent);
         }
     }
 

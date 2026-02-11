@@ -6,7 +6,6 @@
  * VR-friendly with larger touch targets when [data-vr="true"]
  */
 
-@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -45,7 +44,7 @@
   align-items: center;
   justify-content: space-between;
   padding: $spacing-sm $spacing-md;
-  background: linear-gradient(135deg, rgba($color-accent-blue, 0.15), transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, $color-accent-blue 15%, transparent), transparent);
   border-bottom: 1px solid $color-border-subtle;
 }
 
@@ -236,8 +235,8 @@
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
   margin-bottom: $spacing-sm;
-  background: rgba($color-accent-amber, 0.15);
-  border: 1px solid rgba($color-accent-amber, 0.3);
+  background: color-mix(in srgb, $color-accent-amber 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-amber 30%, transparent);
   border-radius: $radius-sm;
   font-size: var(--font-size-xs);
   color: $color-accent-amber;
@@ -456,7 +455,7 @@
   border: 2px solid $color-accent-amber;
   border-radius: $radius-sm;
   pointer-events: none;
-  box-shadow: 0 0 12px rgba($color-accent-amber, 0.4);
+  box-shadow: 0 0 12px color-mix(in srgb, $color-accent-amber 40%, transparent);
   z-index: 10;
 }
 
@@ -544,8 +543,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-amber, 0.15);
-    border-color: rgba($color-accent-amber, 0.4);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-amber 40%, transparent);
     color: $color-accent-amber;
   }
 }
@@ -714,31 +713,31 @@
 
   &--active {
     &[data-color="purple"] {
-      background: rgba($color-accent-purple, 0.15);
+      background: color-mix(in srgb, $color-accent-purple 15%, transparent);
       border-color: $color-accent-purple;
       color: $color-accent-purple;
     }
 
     &[data-color="green"] {
-      background: rgba($color-accent-green, 0.15);
+      background: color-mix(in srgb, $color-accent-green 15%, transparent);
       border-color: $color-accent-green;
       color: $color-accent-green;
     }
 
     &[data-color="amber"] {
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
       border-color: $color-accent-amber;
       color: $color-accent-amber;
     }
 
     &[data-color="teal"] {
-      background: rgba($color-accent-teal, 0.15);
+      background: color-mix(in srgb, $color-accent-teal 15%, transparent);
       border-color: $color-accent-teal;
       color: $color-accent-teal;
     }
 
     &[data-color="gray"] {
-      background: rgba($color-text-muted, 0.1);
+      background: color-mix(in srgb, $color-text-muted 10%, transparent);
       border-color: $color-text-muted;
       color: $color-text-secondary;
     }
@@ -840,7 +839,7 @@
   transition: all 0.15s ease;
 
   &:hover {
-    background: color.adjust($color-accent-purple, $lightness: -5%);
+    background: color-mix(in srgb, $color-accent-purple, black 10%);
   }
 }
 
@@ -962,7 +961,7 @@
   transition: all 0.15s ease;
 
   &:hover {
-    background: color.adjust($color-accent-teal, $lightness: -5%);
+    background: color-mix(in srgb, $color-accent-teal, black 10%);
   }
 }
 

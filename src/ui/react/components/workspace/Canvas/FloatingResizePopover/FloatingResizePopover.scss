@@ -14,7 +14,7 @@
   z-index: 50;
 
   // Glassmorphism effect
-  background: rgba($color-bg-secondary, 0.85);
+  background: color-mix(in srgb, $color-bg-secondary 85%, transparent);
   backdrop-filter: blur(16px);
   border: 1px solid $color-border-default;
   border-radius: $radius-lg;
@@ -180,7 +180,7 @@
   }
 
   &:active:not(:disabled) {
-    background: rgba($color-accent-blue, 0.2);
+    background: color-mix(in srgb, $color-accent-blue 20%, transparent);
     color: $color-accent-blue;
   }
 
@@ -210,7 +210,7 @@
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-error, 0.1);
+    background: color-mix(in srgb, $color-error 10%, transparent);
     color: $color-error;
   }
 }

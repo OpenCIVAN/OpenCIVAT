@@ -24,7 +24,7 @@
   padding: 24px;
   background: linear-gradient(
     180deg,
-    rgba($color-accent-blue, 0.1) 0%,
+    color-mix(in srgb, $color-accent-blue 10%, transparent) 0%,
     transparent 100%
   );
   border-bottom: 1px solid $color-border-subtle;
@@ -75,17 +75,17 @@
 
   &--online {
     background: $color-success;
-    box-shadow: 0 0 0 2px rgba($color-success, 0.2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-success 20%, transparent);
   }
 
   &--away {
     background: $color-warning;
-    box-shadow: 0 0 0 2px rgba($color-warning, 0.2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-warning 20%, transparent);
   }
 
   &--busy {
     background: $color-error;
-    box-shadow: 0 0 0 2px rgba($color-error, 0.2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-error 20%, transparent);
   }
 
   &--offline {
@@ -106,22 +106,22 @@
   margin-top: 10px;
 
   &--owner {
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     color: $color-accent-amber;
   }
 
   &--admin {
-    background: rgba($color-accent-purple, 0.15);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
     color: $color-accent-purple;
   }
 
   &--member {
-    background: rgba($color-accent-blue, 0.15);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     color: $color-accent-blue;
   }
 
   &--viewer {
-    background: rgba($color-text-muted, 0.15);
+    background: color-mix(in srgb, $color-text-muted 15%, transparent);
     color: $color-text-muted;
   }
 }
@@ -229,10 +229,10 @@
 @keyframes status-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 2px rgba($color-success, 0.2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-success 20%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba($color-success, 0.1);
+    box-shadow: 0 0 0 4px color-mix(in srgb, $color-success 10%, transparent);
   }
 }
 

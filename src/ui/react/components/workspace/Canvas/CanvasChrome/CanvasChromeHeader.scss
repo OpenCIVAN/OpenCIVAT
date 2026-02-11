@@ -6,8 +6,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  min-height: 64px;
-  padding: 6px $spacing-md;
+  min-height: 52px;
+  padding: 4px $spacing-md;
   background: $color-bg-secondary;
   border-bottom: 1px solid $color-border-subtle;
   color: $color-text-secondary;
@@ -114,11 +114,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 6px;
+  padding: 3px 5px;
   border-radius: $radius-md;
   background: $color-glass-light;
   border: 1px solid $color-border-subtle;
-  min-height: 52px;
+  min-height: 40px;
 }
 
 .canvas-chrome-header__group--navigator {
@@ -165,8 +165,8 @@
 
   &.is-active {
     color: $color-accent-cyan;
-    background: rgba($color-accent-cyan, 0.12);
-    border-color: rgba($color-accent-cyan, 0.35);
+    background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
+    border-color: color-mix(in srgb, $color-accent-cyan 35%, transparent);
   }
 }
 
@@ -175,8 +175,8 @@
 
   &:hover:not(:disabled) {
     color: $color-accent-red;
-    background: rgba($color-accent-red, 0.12);
-    border-color: rgba($color-accent-red, 0.35);
+    background: color-mix(in srgb, $color-accent-red 12%, transparent);
+    border-color: color-mix(in srgb, $color-accent-red 35%, transparent);
   }
 }
 
@@ -205,8 +205,8 @@
   gap: $spacing-xs;
   padding: 4px 8px;
   border-radius: $radius-md;
-  border: 1px solid rgba($color-accent-teal, 0.35);
-  background: rgba($color-accent-teal, 0.12);
+  border: 1px solid color-mix(in srgb, $color-accent-teal 35%, transparent);
+  background: color-mix(in srgb, $color-accent-teal 12%, transparent);
   color: $color-accent-teal;
   cursor: pointer;
   min-width: 0;
@@ -214,7 +214,7 @@
   min-width: 0;
 
   &:hover {
-    background: rgba($color-accent-teal, 0.18);
+    background: color-mix(in srgb, $color-accent-teal 18%, transparent);
   }
 
   &:disabled {
@@ -223,7 +223,7 @@
   }
 
   &:disabled:hover {
-    background: rgba($color-accent-teal, 0.12);
+    background: color-mix(in srgb, $color-accent-teal 12%, transparent);
   }
 }
 
@@ -283,16 +283,16 @@
 
   &.is-active {
     color: $color-accent-blue;
-    border-color: rgba($color-accent-blue, 0.5);
-    background: rgba($color-accent-blue, 0.15);
+    border-color: color-mix(in srgb, $color-accent-blue 50%, transparent);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
   }
 }
 
 .canvas-chrome-header__mini-grid {
   display: grid;
-  grid-template-columns: repeat(var(--grid-cols, 1), 8px);
+  grid-template-columns: repeat(var(--grid-cols, 1), 6px);
   gap: 1px;
-  padding: 4px;
+  padding: 3px;
   border-radius: $radius-sm;
   border: 1px solid $color-border-subtle;
   background: rgba(0, 0, 0, 0.2);
@@ -306,13 +306,13 @@
 }
 
 .canvas-chrome-header__mini-cell {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.06);
 
   &.is-viewport {
-    background: rgba($color-accent-teal, 0.8);
+    background: color-mix(in srgb, $color-accent-teal 80%, transparent);
   }
 
   &.is-empty {
@@ -349,9 +349,9 @@
   font-size: 10px;
   padding: 2px 6px;
   border-radius: $radius-sm;
-  background: rgba($color-accent-blue, 0.2);
+  background: color-mix(in srgb, $color-accent-blue 20%, transparent);
   color: $color-accent-blue;
-  border: 1px solid rgba($color-accent-blue, 0.4);
+  border: 1px solid color-mix(in srgb, $color-accent-blue 40%, transparent);
   min-width: 32px;
   text-align: center;
 }
@@ -492,8 +492,8 @@
 
   &.is-active {
     color: $color-accent-cyan;
-    border-color: rgba($color-accent-cyan, 0.5);
-    background: rgba($color-accent-cyan, 0.12);
+    border-color: color-mix(in srgb, $color-accent-cyan 50%, transparent);
+    background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
   }
 }
 
@@ -541,7 +541,7 @@
   }
 
   &.is-active {
-    background: rgba($color-accent-cyan, 0.12);
+    background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
     color: $color-accent-cyan;
   }
 }
@@ -688,9 +688,9 @@
 }
 
 .canvas-chrome-header__toggle-input:checked + .canvas-chrome-header__toggle-track {
-  background: rgba($color-accent-cyan, 0.18);
-  border-color: rgba($color-accent-cyan, 0.5);
-  box-shadow: inset 0 0 0 1px rgba($color-accent-cyan, 0.2);
+  background: color-mix(in srgb, $color-accent-cyan 18%, transparent);
+  border-color: color-mix(in srgb, $color-accent-cyan 50%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, $color-accent-cyan 20%, transparent);
 }
 
 .canvas-chrome-header__toggle-input:checked + .canvas-chrome-header__toggle-track .canvas-chrome-header__toggle-thumb {

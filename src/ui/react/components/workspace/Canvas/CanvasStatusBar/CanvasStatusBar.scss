@@ -101,22 +101,22 @@
 
   &--full {
     color: $color-accent-green;
-    background: rgba($color-accent-green, 0.1);
+    background: color-mix(in srgb, $color-accent-green 10%, transparent);
   }
 
   &--compact {
     color: $color-accent-blue;
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
   }
 
   &--thumbnail {
     color: $color-accent-amber;
-    background: rgba($color-accent-amber, 0.1);
+    background: color-mix(in srgb, $color-accent-amber 10%, transparent);
   }
 
   &--snapshot {
     color: $color-accent-pink;
-    background: rgba($color-accent-pink, 0.1);
+    background: color-mix(in srgb, $color-accent-pink 10%, transparent);
   }
 }
 
@@ -155,16 +155,16 @@
   padding: 1px $spacing-xs;
   font-size: 9px;
   font-weight: $font-weight-medium;
-  background: rgba($color-accent-blue, 0.15);
-  border: 1px solid rgba($color-accent-blue, 0.3);
+  background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-blue 30%, transparent);
   border-radius: $radius-xs;
   color: $color-accent-blue;
   cursor: pointer;
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-accent-blue, 0.25);
-    border-color: rgba($color-accent-blue, 0.5);
+    background: color-mix(in srgb, $color-accent-blue 25%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 50%, transparent);
   }
 }
 

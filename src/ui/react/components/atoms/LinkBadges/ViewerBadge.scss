@@ -6,7 +6,7 @@
 .viewer-badge {
     display: inline-flex;
     align-items: center;
-    background: rgba($color-accent-blue, 0.15);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     border-radius: $radius-sm;
     color: $color-accent-blue;
     font-weight: 500;

@@ -63,6 +63,8 @@ const DEFAULT_TABS = {
  * @param {Function} [props.onDatasetDragEnd] - Dataset drag end handler
  * @param {Function} [props.onVGDragStart] - ViewGroup drag start handler
  * @param {Function} [props.onVGDragEnd] - ViewGroup drag end handler
+ * @param {Function} [props.onTemplateEdit] - Template edit handler
+ * @param {Function} [props.onTemplateDelete] - Template delete handler
  * @param {Function} [props.onTemplateDragStart] - Template drag start handler
  * @param {Function} [props.onTemplateDragEnd] - Template drag end handler
  * @param {string} [props.sizeMode='standard'] - Size mode for compact rendering
@@ -80,6 +82,8 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
   onDatasetClick,
   onViewGroupClick,
   onTemplateClick,
+  onTemplateEdit,
+  onTemplateDelete,
   onViewDragStart,
   onViewDragEnd,
   onDatasetDragStart,
@@ -110,6 +114,18 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
     if (canvasMapActive) return 'canvas-map';
     return 'idle';
   }, [vgEditorContext?.editorCount, canvasMapContext?.isActive]);
+
+  const setGlobalDragPayload = useCallback((payload) => {
+    if (typeof window !== 'undefined') {
+      window.__ciaDragPayload = payload;
+    }
+  }, []);
+
+  const clearGlobalDragPayload = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.__ciaDragPayload = null;
+    }
+  }, []);
 
   // Get enabled tabs for current mode
   const enabledTabs = TAB_CONFIGS[mode];
@@ -188,54 +204,88 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
     (e, vg) => {
       if (mode === 'vg-editor') {
         // VG import mode - drag to import all views
-        e.dataTransfer.setData(
-          'application/json',
-          JSON.stringify({
-            type: 'vg-import',
-            vgId: vg.id,
-            vgName: vg.name,
-            views: vg.views || [],
-          })
-        );
+        const payload = {
+          type: 'vg-import',
+          vgId: vg.id,
+          vgName: vg.name,
+          views: vg.views || [],
+        };
+        e.dataTransfer.setData('application/json', JSON.stringify(payload));
+        e.dataTransfer.setData('text/plain', JSON.stringify(payload));
       } else if (mode === 'canvas-map') {
         // VG place mode - drag to place on canvas
-        e.dataTransfer.setData(
-          'application/json',
-          JSON.stringify({
-            type: 'vg-place',
-            vgId: vg.id,
-            vgName: vg.name,
-            vgColor: vg.color,
-          })
-        );
+        const payload = {
+          type: 'vg-place',
+          vgId: vg.id,
+          vgName: vg.name,
+          vgColor: vg.color,
+        };
+        e.dataTransfer.setData('application/json', JSON.stringify(payload));
+        e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+        setGlobalDragPayload(payload);
       }
       onVGDragStart?.(e, vg);
     },
-    [mode, onVGDragStart]
+    [mode, onVGDragStart, setGlobalDragPayload]
   );
 
   // Wrap template drag handlers
   const handleTemplateDragStart = useCallback(
     (e, template) => {
-      e.dataTransfer.setData(
-        'application/json',
-        JSON.stringify({
-          type: 'template-create',
-          templateId: template.id,
-          templateName: template.name,
-          layoutId: template.layoutId,
-          color: template.color,
-        })
-      );
+      const resolvedLayoutId = template.layoutId || template.layout?.id || template.layout?.type || 'single';
+      const payload = {
+        type: 'template-create',
+        templateId: template.id,
+        templateName: template.name,
+        layoutId: resolvedLayoutId,
+        color: template.color,
+      };
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('application/json', JSON.stringify(payload));
+      e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+      setGlobalDragPayload(payload);
       onTemplateDragStart?.(e, template);
     },
-    [onTemplateDragStart]
+    [onTemplateDragStart, setGlobalDragPayload]
+  );
+
+  const handleVGDragEnd = useCallback(
+    (...args) => {
+      clearGlobalDragPayload();
+      onVGDragEnd?.(...args);
+    },
+    [clearGlobalDragPayload, onVGDragEnd]
+  );
+
+  const handleTemplateDragEnd = useCallback(
+    (...args) => {
+      clearGlobalDragPayload();
+      onTemplateDragEnd?.(...args);
+    },
+    [clearGlobalDragPayload, onTemplateDragEnd]
+  );
+
+  const handleDatasetDragStart = useCallback(
+    (e, dataset) => {
+      const payload = {
+        type: 'dataset',
+        datasetId: dataset.id,
+        name: dataset.name,
+        fileType: dataset.type,
+      };
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('application/json', JSON.stringify(payload));
+      e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+      onDatasetDragStart?.(e, dataset);
+    },
+    [onDatasetDragStart]
   );
 
   // Wrap view drag handlers to include provenance
   const handleViewDragStart = useCallback(
     (e, view, sourceVg) => {
       const dragData = {
+        type: 'view',
         view: {
           id: view.id,
           name: view.name,
@@ -251,7 +301,9 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
         dragData.sourceVgName = sourceVg.name;
       }
 
+      e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+      e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
       onViewDragStart?.(e, view);
     },
     [onViewDragStart]
@@ -278,14 +330,16 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
         onDatasetClick={onDatasetClick}
         onViewGroupClick={onViewGroupClick}
         onTemplateClick={onTemplateClick}
+        onTemplateEdit={onTemplateEdit}
+        onTemplateDelete={onTemplateDelete}
         onViewDragStart={handleViewDragStart}
         onViewDragEnd={onViewDragEnd}
-        onDatasetDragStart={onDatasetDragStart}
+        onDatasetDragStart={handleDatasetDragStart}
         onDatasetDragEnd={onDatasetDragEnd}
         onVGDragStart={handleVGDragStart}
-        onVGDragEnd={onVGDragEnd}
+        onVGDragEnd={handleVGDragEnd}
         onTemplateDragStart={handleTemplateDragStart}
-        onTemplateDragEnd={onTemplateDragEnd}
+        onTemplateDragEnd={handleTemplateDragEnd}
         sizeMode={sizeMode}
         side={side}
         onClose={onClose}

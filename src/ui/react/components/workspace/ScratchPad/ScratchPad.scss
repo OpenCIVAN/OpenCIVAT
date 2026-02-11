@@ -124,7 +124,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
     color: $color-accent-blue;
   }
 }
@@ -314,7 +314,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.15);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
     border-color: $color-accent-teal;
     color: $color-accent-teal;
   }

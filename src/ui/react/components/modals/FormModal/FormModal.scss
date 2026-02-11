@@ -78,7 +78,7 @@
   &:focus {
     outline: none;
     border-color: $color-accent-blue;
-    box-shadow: 0 0 0 3px rgba($color-accent-blue, 0.15);
+    box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-blue 15%, transparent);
   }
 
   &:disabled {
@@ -92,7 +92,7 @@
 
     &:focus {
       border-color: $color-error;
-      box-shadow: 0 0 0 3px rgba($color-error, 0.15);
+      box-shadow: 0 0 0 3px color-mix(in srgb, $color-error 15%, transparent);
     }
   }
 }
@@ -209,7 +209,7 @@
 
   &:focus-within {
     border-color: $color-accent-blue;
-    box-shadow: 0 0 0 3px rgba($color-accent-blue, 0.15);
+    box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-blue 15%, transparent);
   }
 
   &--error {
@@ -217,7 +217,7 @@
 
     &:focus-within {
       border-color: $color-error;
-      box-shadow: 0 0 0 3px rgba($color-error, 0.15);
+      box-shadow: 0 0 0 3px color-mix(in srgb, $color-error 15%, transparent);
     }
   }
 }
@@ -227,9 +227,9 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: rgba($color-accent-blue, 0.2);
+  background: color-mix(in srgb, $color-accent-blue 20%, transparent);
   color: $color-accent-blue;
-  border: 1px solid rgba($color-accent-blue, 0.3);
+  border: 1px solid color-mix(in srgb, $color-accent-blue 30%, transparent);
   border-radius: $radius-sm;
   font-size: $font-size-sm;
   line-height: 1;
@@ -243,9 +243,9 @@
   }
 
   &--invalid {
-    background: rgba($color-error, 0.15);
+    background: color-mix(in srgb, $color-error 15%, transparent);
     color: $color-error;
-    border-color: rgba($color-error, 0.3);
+    border-color: color-mix(in srgb, $color-error 30%, transparent);
   }
 }
 
@@ -336,7 +336,7 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba($color-accent-blue, 0.3);
+    box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-blue 30%, transparent);
   }
 
   &:disabled {

@@ -7,7 +7,6 @@
  * Row 2: [Mode Indicator] | [Contextual Info based on mode]
  */
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -289,16 +288,16 @@
   align-items: center;
   gap: 8px;
   padding: 5px 12px;
-  background: rgba($color-accent-purple, 0.06);
-  border: 1px solid rgba($color-accent-purple, 0.3);
+  background: color-mix(in srgb, $color-accent-purple 6%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-purple 30%, transparent);
   border-radius: 6px;
   cursor: pointer;
   transition: all $transition-fast;
 
   &:hover,
   &--open {
-    background: rgba($color-accent-purple, 0.12);
-    border-color: rgba($color-accent-purple, 0.5);
+    background: color-mix(in srgb, $color-accent-purple 12%, transparent);
+    border-color: color-mix(in srgb, $color-accent-purple 50%, transparent);
   }
 
   > svg {
@@ -349,8 +348,8 @@
 // Subset header
 .view-hub-flyout__subset-header {
   padding: 10px 14px;
-  background: rgba($color-accent-purple, 0.1);
-  border-bottom: 1px solid rgba($color-accent-purple, 0.2);
+  background: color-mix(in srgb, $color-accent-purple 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, $color-accent-purple 20%, transparent);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -420,7 +419,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.15);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
     border-color: $color-accent-teal;
     color: $color-accent-teal;
   }
@@ -467,7 +466,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     border-color: $color-accent-amber;
     color: $color-accent-amber;
   }
@@ -513,7 +512,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-amber, 0.1);
+    background: color-mix(in srgb, $color-accent-amber 10%, transparent);
     color: $color-accent-amber;
   }
 }
@@ -626,8 +625,8 @@
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: rgba($color-accent-green, 0.1);
-  border: 1px solid rgba($color-accent-green, 0.5);
+  background: color-mix(in srgb, $color-accent-green 10%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-green 50%, transparent);
   border-radius: 4px;
   color: $color-accent-green;
   cursor: pointer;
@@ -637,7 +636,7 @@
   letter-spacing: normal;
 
   &:hover {
-    background: rgba($color-accent-green, 0.2);
+    background: color-mix(in srgb, $color-accent-green 20%, transparent);
   }
 }
 
@@ -671,8 +670,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-purple, 0.12);
-    border-color: rgba($color-accent-purple, 0.25);
+    background: color-mix(in srgb, $color-accent-purple 12%, transparent);
+    border-color: color-mix(in srgb, $color-accent-purple 25%, transparent);
   }
 
   &--available {
@@ -747,7 +746,7 @@
   flex-shrink: 0;
 
   &:hover {
-    background: rgba($color-accent-red, 0.15);
+    background: color-mix(in srgb, $color-accent-red 15%, transparent);
   }
 }
 
@@ -756,7 +755,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: rgba($color-accent-green, 0.15);
+  background: color-mix(in srgb, $color-accent-green 15%, transparent);
   border: 1px solid $color-accent-green;
   border-radius: 4px;
   color: $color-accent-green;
@@ -895,7 +894,7 @@
 .links-dropdown__header-dataset-count {
   margin-left: auto;
   padding: 2px 6px;
-  background: rgba($color-accent-green, 0.15);
+  background: color-mix(in srgb, $color-accent-green 15%, transparent);
   color: $color-accent-green;
   border-radius: 10px;
   font-size: 9px;
@@ -1022,7 +1021,7 @@
 .links-dropdown__view-synced-badge {
   font-size: 9px;
   color: $color-accent-teal;
-  background: rgba($color-accent-teal, 0.15);
+  background: color-mix(in srgb, $color-accent-teal 15%, transparent);
   padding: 2px 6px;
   border-radius: 4px;
   text-transform: uppercase;
@@ -1056,7 +1055,7 @@
 
   &:hover {
     color: $color-accent-red;
-    background: rgba($color-accent-red, 0.1);
+    background: color-mix(in srgb, $color-accent-red 10%, transparent);
   }
 }
 
@@ -1103,8 +1102,8 @@
   width: 100%;
   padding: 8px 12px;
   margin-bottom: 10px;
-  background: rgba($color-accent-red, 0.1);
-  border: 1px solid rgba($color-accent-red, 0.3);
+  background: color-mix(in srgb, $color-accent-red 10%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-red 30%, transparent);
   border-radius: 4px;
   color: $color-accent-red;
   font-size: 11px;
@@ -1113,8 +1112,8 @@
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-accent-red, 0.2);
-    border-color: rgba($color-accent-red, 0.5);
+    background: color-mix(in srgb, $color-accent-red 20%, transparent);
+    border-color: color-mix(in srgb, $color-accent-red 50%, transparent);
   }
 
   svg {
@@ -1304,7 +1303,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.15);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
     border-color: var(--link-color, $color-accent-teal);
     color: var(--link-color, $color-accent-teal);
   }
@@ -1428,7 +1427,7 @@
 .sync-panel__instance-badge {
   font-size: 10px;
   color: $color-accent-teal;
-  background: rgba($color-accent-teal, 0.15);
+  background: color-mix(in srgb, $color-accent-teal 15%, transparent);
   padding: 3px 8px;
   border-radius: 10px;
   font-weight: 500;
@@ -1527,7 +1526,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.15);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
     border-color: $color-accent-teal;
     color: $color-accent-teal;
   }
@@ -1572,12 +1571,12 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.1);
+    background: color-mix(in srgb, $color-accent-teal 10%, transparent);
     color: $color-text-primary;
   }
 
   &--synced {
-    background: rgba($color-accent-teal, 0.05);
+    background: color-mix(in srgb, $color-accent-teal 5%, transparent);
     border-left: 2px solid $color-accent-teal;
   }
 
@@ -1760,7 +1759,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-teal, 0.15);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
     border-color: $color-accent-teal;
     color: $color-accent-teal;
   }
@@ -1826,7 +1825,7 @@
 // Synced section (compact)
 .sync-panel__section--synced {
   padding: 8px 12px;
-  background: rgba($color-accent-teal, 0.05);
+  background: color-mix(in srgb, $color-accent-teal 5%, transparent);
 }
 
 .sync-panel__synced-list {
@@ -1840,7 +1839,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px 4px 6px;
-  background: rgba($color-accent-teal, 0.12);
+  background: color-mix(in srgb, $color-accent-teal 12%, transparent);
   border-radius: 12px;
   font-size: 11px;
   color: $color-text-secondary;
@@ -1868,7 +1867,7 @@
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-accent-red, 0.15);
+    background: color-mix(in srgb, $color-accent-red 15%, transparent);
     color: $color-accent-red;
   }
 }
@@ -2008,12 +2007,12 @@
   flex-shrink: 0;
 
   &--same {
-    background: rgba($color-accent-teal, 0.15);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
     color: $color-accent-teal;
   }
 
   &--incompatible {
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     color: $color-accent-amber;
   }
 }
@@ -2053,7 +2052,7 @@
 .subset-picker-dropdown__header {
   padding: 12px 14px;
   border-bottom: 1px solid $color-border-subtle;
-  background: rgba($color-accent-purple, 0.08);
+  background: color-mix(in srgb, $color-accent-purple 8%, transparent);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2101,8 +2100,8 @@
   }
 
   &--selected {
-    background: rgba($color-accent-purple, 0.12);
-    border-color: rgba($color-accent-purple, 0.25);
+    background: color-mix(in srgb, $color-accent-purple 12%, transparent);
+    border-color: color-mix(in srgb, $color-accent-purple 25%, transparent);
   }
 }
 
@@ -2193,7 +2192,7 @@
     color: $color-accent-purple;
 
     &:hover:not(:disabled) {
-      color: color.adjust($color-accent-purple, $lightness: 10%);
+      color: color-mix(in srgb, $color-accent-purple, white 20%);
     }
   }
 

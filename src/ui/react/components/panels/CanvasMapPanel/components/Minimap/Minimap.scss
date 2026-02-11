@@ -12,9 +12,9 @@
   --accent-blue: #{$color-accent-blue};
   --accent-red: #{$color-accent-red};
   --grid-pitch: calc(var(--cell-size) + var(--grid-gap));
-  --label-bg: #060a12;
-  --label-border: rgba(96, 165, 250, 0.16);
-  --fade-color: rgba(6, 10, 18, 0.9);
+  --label-bg: #{$color-bg-primary};
+  --label-border: #{$color-border-default};
+  --fade-color: #{$color-bg-primary};
 
   position: relative;
   flex: 1;
@@ -22,12 +22,11 @@
   height: 100%;
   overflow: hidden;
   // V2Spec: Solid canvas backdrop
-  background: #060a12;
-  border: 1px solid rgba(96, 165, 250, 0.10);
+  background: $color-bg-primary;
+  border: 1px solid $color-border-subtle;
   border-radius: $radius-lg;
   // V2Spec: Subtle inset highlights
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03),
-              inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-inner);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
   &--pannable {
@@ -39,10 +38,10 @@
   }
 
   &--drop-target {
-    border-color: rgba(56, 189, 248, 0.6);
+    border-color: color-mix(in srgb, $color-accent-cyan 60%, transparent);
     box-shadow:
-      inset 0 0 0 1px rgba(56, 189, 248, 0.35),
-      0 0 0 2px rgba(56, 189, 248, 0.15);
+      inset 0 0 0 1px color-mix(in srgb, $color-accent-cyan 35%, transparent),
+      0 0 0 2px color-mix(in srgb, $color-accent-cyan 15%, transparent);
   }
 
   &__scroll {
@@ -70,7 +69,7 @@
 
   &__labels-corner {
     position: absolute;
-    background: #060a12;
+    background: $color-bg-primary;
     z-index: 10;
   }
 
@@ -90,7 +89,7 @@
       right: 0;
       bottom: -12px;
       height: 12px;
-      background: linear-gradient(180deg, rgba(6, 10, 18, 1) 0%, rgba(6, 10, 18, 0) 100%);
+      background: linear-gradient(180deg, var(--fade-color), transparent);
       pointer-events: none;
     }
   }
@@ -107,7 +106,7 @@
     font-size: clamp(8px, calc(var(--cell-size) / 6), 10px);
     font-weight: $font-weight-semibold;
     font-family: $font-family-mono;
-    color: #f59e0b;
+    color: $color-accent-amber;
 
     &:not(:last-child) {
       margin-right: var(--grid-gap);
@@ -136,7 +135,7 @@
       bottom: 0;
       right: -12px;
       width: 12px;
-      background: linear-gradient(90deg, rgba(6, 10, 18, 1) 0%, rgba(6, 10, 18, 0) 100%);
+      background: linear-gradient(90deg, var(--fade-color), transparent);
       pointer-events: none;
     }
   }
@@ -154,7 +153,7 @@
     font-size: clamp(8px, calc(var(--cell-size) / 6), 10px);
     font-weight: $font-weight-semibold;
     font-family: $font-family-mono;
-    color: #f59e0b;
+    color: $color-accent-amber;
     min-width: var(--header-size);
 
     &:not(:last-child) {
@@ -184,6 +183,133 @@
     width: 100%;
     height: 100%;
     z-index: 3;
+  }
+
+  &__drop-target {
+    position: absolute;
+    border: 1px dashed color-mix(in srgb, $color-accent-cyan 90%, transparent);
+    background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, $color-accent-cyan 20%, transparent) inset;
+    border-radius: 6px;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+
+  &__focused-overlay {
+    position: absolute;
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  &__focused-header {
+    position: absolute;
+    top: -26px;
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: color-mix(in srgb, var(--vg-color) 18%, $color-glass-panel);
+    border: 1px solid color-mix(in srgb, var(--vg-color) 50%, transparent);
+    border-radius: $radius-md;
+    pointer-events: auto;
+    box-shadow: var(--shadow-md);
+  }
+
+  &__focused-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 0;
+    color: $color-text-primary;
+    font-size: 11px;
+    font-weight: $font-weight-semibold;
+    cursor: pointer;
+  }
+
+  &__focused-name-input {
+    background: $color-glass-panel;
+    border: 1px solid color-mix(in srgb, var(--vg-color) 60%, transparent);
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    font-size: 11px;
+    padding: 2px 6px;
+    min-width: 120px;
+  }
+
+  &__focused-cells {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__focused-cell {
+    position: absolute;
+    border: 1px dashed $color-border-medium;
+    background: $color-glass-medium;
+    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    pointer-events: auto;
+    color: $color-text-muted;
+    font-size: 9px;
+    gap: 4px;
+    padding: 4px;
+    overflow: hidden;
+  }
+
+  &__focused-cell--filled {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--vg-color) 65%, $color-border-medium);
+    background: color-mix(in srgb, var(--vg-color) 18%, $color-glass-strong);
+    color: $color-text-primary;
+  }
+
+  &__focused-cell--drop {
+    border-color: color-mix(in srgb, $color-accent-cyan 90%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, $color-accent-cyan 30%, transparent) inset;
+  }
+
+  &__focused-cell-name {
+    font-size: 9px;
+    line-height: 1.2;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__focused-cell-empty {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: $color-text-muted;
+    font-size: 9px;
+  }
+
+  &__focused-cell-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    border: 0;
+    background: $color-glass-panel;
+    color: $color-text-muted;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-accent-red;
+      background: $color-glass-strong;
+    }
   }
 
   &__grid-paper {
@@ -244,7 +370,7 @@
     font-size: 9px;
     letter-spacing: 0.2px;
     color: $color-text-muted;
-    background: rgba(2, 6, 16, 0.65);
+    background: $color-glass-panel;
     border: 1px solid $color-border-subtle;
     border-radius: $radius-md;
     pointer-events: none;
@@ -408,11 +534,11 @@
 
   &__internal-cell {
     position: absolute;
-    background: rgba(0, 0, 0, 0.1);
+    background: $color-glass-light;
     border-radius: 2px;
 
     &--filled {
-      background: color-mix(in srgb, var(--vg-color) 30%, rgba(0, 0, 0, 0.2));
+      background: color-mix(in srgb, var(--vg-color) 30%, $color-glass-medium);
     }
   }
 }
@@ -549,7 +675,7 @@
   z-index: 160;
 
   &__pointer {
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(var(--shadow-xs));
   }
 
   &__name {

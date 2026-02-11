@@ -80,7 +80,7 @@
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
-    background: rgba($color-accent-teal, 0.2);
+    background: color-mix(in srgb, $color-accent-teal 20%, transparent);
     color: $color-accent-teal;
     font-size: 9px;
     font-weight: $font-weight-semibold;
@@ -164,7 +164,7 @@
       color: $color-error;
 
       &:hover {
-        background: rgba($color-error, 0.1);
+        background: color-mix(in srgb, $color-error 10%, transparent);
         color: $color-error;
       }
     }

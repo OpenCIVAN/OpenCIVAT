@@ -4,7 +4,6 @@
 //
 // REFACTORED: Removed duplicate item styles since we now use ViewItem component
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -112,7 +111,7 @@
   }
 
   &--active {
-    background: rgba($color-accent-blue, 0.15);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     border-color: $color-accent-blue;
     color: $color-accent-blue;
   }
@@ -342,7 +341,7 @@ body.dragging-view-item {
   }
 
   .canvas-navigator__minimap-cell--droppable:hover {
-    background: rgba($color-accent-green, 0.2);
+    background: color-mix(in srgb, $color-accent-green 20%, transparent);
   }
 }
 

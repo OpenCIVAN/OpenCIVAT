@@ -2,7 +2,6 @@
 // Development mode warning banner styling
 // FIXED: Position as fixed overlay (not in flex flow) per design spec
 
-@use "sass:color";
 @use "theme" as *;
 
 .dev-mode-banner {
@@ -21,10 +20,10 @@
 
   background: linear-gradient(
     90deg,
-    color.adjust($color-warning, $alpha: -0.75),
-    color.adjust($color-warning, $alpha: -0.85)
+    color-mix(in srgb, $color-warning 25%, transparent),
+    color-mix(in srgb, $color-warning 15%, transparent)
   );
-  border-bottom: 1px solid color.adjust($color-warning, $alpha: -0.5);
+  border-bottom: 1px solid color-mix(in srgb, $color-warning 50%, transparent);
   backdrop-filter: blur(8px);
 
   // Subtle animation on load
@@ -69,13 +68,13 @@
     padding: 0;
     background: transparent;
     border: none;
-    color: color.adjust($color-warning, $alpha: -0.3);
+    color: color-mix(in srgb, $color-warning 70%, transparent);
     cursor: pointer;
     border-radius: $radius-sm;
     transition: all $transition-fast;
 
     &:hover {
-      background: color.adjust($color-warning, $alpha: -0.6);
+      background: color-mix(in srgb, $color-warning 40%, transparent);
       color: $color-warning;
     }
   }

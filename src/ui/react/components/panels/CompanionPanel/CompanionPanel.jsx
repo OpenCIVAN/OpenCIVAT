@@ -213,6 +213,8 @@ const TABS = {
  * @param {Function} props.onDatasetClick - Dataset click handler
  * @param {Function} [props.onViewGroupClick] - ViewGroup click handler
  * @param {Function} [props.onTemplateClick] - Template click handler
+ * @param {Function} [props.onTemplateEdit] - Template edit handler
+ * @param {Function} [props.onTemplateDelete] - Template delete handler
  * @param {Function} [props.onViewDragStart] - View drag start handler
  * @param {Function} [props.onViewDragEnd] - View drag end handler
  * @param {Function} [props.onDatasetDragStart] - Dataset drag start handler
@@ -244,6 +246,8 @@ export const CompanionPanel = memo(function CompanionPanel({
   onDatasetClick,
   onViewGroupClick,
   onTemplateClick,
+  onTemplateEdit,
+  onTemplateDelete,
   onViewDragStart,
   onViewDragEnd,
   onDatasetDragStart,
@@ -744,6 +748,11 @@ export const CompanionPanel = memo(function CompanionPanel({
             {filteredTemplates.length > 0 ? (
               <div className="companion-panel__template-list">
                 {filteredTemplates.map((template) => (
+                  (() => {
+                    const isServerTemplate = !!template.projectId;
+                    const canEdit = !!onTemplateEdit && isServerTemplate && !template.isBuiltin;
+                    const canDelete = !!onTemplateDelete && isServerTemplate && !template.isBuiltin;
+                    return (
                   <div
                     key={template.id}
                     className="companion-panel__template-item"
@@ -781,7 +790,39 @@ export const CompanionPanel = memo(function CompanionPanel({
                     {template.scope && (
                       <span className="companion-panel__template-scope">{template.scope}</span>
                     )}
+                    {(canEdit || canDelete) && (
+                      <div className="companion-panel__template-actions">
+                        {canEdit && (
+                          <button
+                            type="button"
+                            className="companion-panel__template-action"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onTemplateEdit?.(template);
+                            }}
+                            title="Edit template"
+                          >
+                            <Icon name="pencil" size={12} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="companion-panel__template-action companion-panel__template-action--danger"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onTemplateDelete?.(template);
+                            }}
+                            title="Delete template"
+                          >
+                            <Icon name="trash" size={12} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
+                    );
+                  })()
                 ))}
               </div>
             ) : (

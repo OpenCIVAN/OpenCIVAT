@@ -1,5 +1,4 @@
 // src/ui/react/components/modals/SubsetSelectorModal/SubsetSelectorModal.scss
-@use "sass:color";
 @use "theme" as *;
 
 .subset-selector-modal__backdrop {
@@ -125,7 +124,7 @@
     align-items: center;
     gap: $spacing-xs;
     padding: $spacing-sm $spacing-md;
-    background: rgba($color-success, 0.15);
+    background: color-mix(in srgb, $color-success 15%, transparent);
     border-radius: $radius-md;
     font-size: $font-size-sm;
     color: $color-success;
@@ -189,16 +188,16 @@
     justify-content: center;
     width: 36px;
     flex-shrink: 0;
-    background: rgba($color-accent-amber, 0.1);
-    border: 1px solid rgba($color-accent-amber, 0.3);
+    background: color-mix(in srgb, $color-accent-amber 10%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-amber 30%, transparent);
     border-radius: $radius-md;
     color: $color-accent-amber;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover {
-        background: rgba($color-accent-amber, 0.2);
-        border-color: rgba($color-accent-amber, 0.5);
+        background: color-mix(in srgb, $color-accent-amber 20%, transparent);
+        border-color: color-mix(in srgb, $color-accent-amber 50%, transparent);
     }
 }
 
@@ -219,7 +218,7 @@
     white-space: nowrap;
 
     &:hover {
-        background: color.adjust($color-accent-amber, $lightness: 5%);
+        background: color-mix(in srgb, $color-accent-amber, white 10%);
         transform: translateY(-1px);
     }
 
@@ -242,8 +241,8 @@
     width: 100%;
 
     &:hover {
-        background: rgba($color-success, 0.1);
-        border-color: rgba($color-success, 0.3);
+        background: color-mix(in srgb, $color-success 10%, transparent);
+        border-color: color-mix(in srgb, $color-success 30%, transparent);
     }
 
     svg {
@@ -270,7 +269,7 @@
     justify-content: center;
     width: 24px;
     height: 24px;
-    background: rgba($color-success, 0.2);
+    background: color-mix(in srgb, $color-success 20%, transparent);
     border-radius: $radius-sm;
     color: $color-success;
     margin-left: $spacing-xs;
@@ -305,7 +304,7 @@
     }
 
     &--selected {
-        background: rgba($color-success, 0.1);
+        background: color-mix(in srgb, $color-success 10%, transparent);
         color: $color-text-primary;
 
         svg {
@@ -366,7 +365,7 @@
     align-items: center;
     gap: $spacing-xs;
     padding: $spacing-xs $spacing-sm;
-    background: rgba($color-success, 0.1);
+    background: color-mix(in srgb, $color-success 10%, transparent);
     border-radius: $radius-sm;
     font-size: $font-size-sm;
     color: $color-success;
@@ -436,7 +435,7 @@
         }
 
         &:hover {
-            border-color: rgba($color-accent-amber, 0.5);
+            border-color: color-mix(in srgb, $color-accent-amber 50%, transparent);
         }
     }
 
@@ -461,7 +460,7 @@
     transition: all $transition-fast;
 
     &:hover:not(:disabled) {
-        background: color.adjust($color-success, $lightness: 5%);
+        background: color-mix(in srgb, $color-success, white 10%);
     }
 
     &:disabled {

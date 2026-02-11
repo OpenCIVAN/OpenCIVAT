@@ -3,8 +3,8 @@
 //
 // COMPLEMENTS: _glass-mixins.scss (materials), _etched-mixins.scss (effects)
 // USE FOR: Structural patterns, interactive states, common layouts
+// NOTE: Uses color-mix() instead of rgba($var) for CSS custom property compatibility
 
-@use "sass:color";
 @use "../tokens/colors" as *;
 @use "../tokens/effects" as *;
 @use "../tokens/spacing" as *;
@@ -108,8 +108,8 @@
 
   // Selected state
   &--selected {
-    background: rgba($color-accent-blue, 0.1);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
   }
 
   // Active/loaded indicator
@@ -262,8 +262,8 @@
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  background: rgba($color, 0.1);
-  border: 1px solid rgba($color, 0.3);
+  background: color-mix(in srgb, $color 10%, transparent);
+  border: 1px solid color-mix(in srgb, $color 30%, transparent);
   border-radius: $radius-full;
   font-size: 10px;
   color: $color;
@@ -271,14 +271,14 @@
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color, 0.15);
-    border-color: rgba($color, 0.4);
+    background: color-mix(in srgb, $color 15%, transparent);
+    border-color: color-mix(in srgb, $color 40%, transparent);
   }
 
   &--active,
   &.active {
-    background: rgba($color, 0.2);
-    border-color: rgba($color, 0.5);
+    background: color-mix(in srgb, $color 20%, transparent);
+    border-color: color-mix(in srgb, $color 50%, transparent);
   }
 }
 

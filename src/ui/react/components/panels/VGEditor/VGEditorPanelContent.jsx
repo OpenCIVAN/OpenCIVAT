@@ -20,10 +20,12 @@
  * />
  */
 
-import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
+import React, { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Icon } from '@UI/react/components/atoms/Icon';
 import { useVGEditor } from '@UI/react/context/VGEditorContext';
 import { BUILTIN_LAYOUTS, VIEW_TYPES, getLayoutCapacity, getLayoutById } from '../LeftPanel/tabs/LayoutTab/constants/layouts';
+import { viewConfigurationManager } from '@Core/data/managers/ViewConfigurationManager';
+import { toast } from '@UI/react/store/toastStore';
 import './VGEditorPanel.scss';
 
 // =============================================================================
@@ -42,7 +44,7 @@ const QUICK_LAYOUTS = BUILTIN_LAYOUTS.slice(0, 7);
 /**
  * Editable name component for ViewGroup
  */
-const EditableName = memo(function EditableName({ value, onChange, color }) {
+const EditableName = memo(function EditableName({ value, onChange, color, onEdit }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const inputRef = useRef(null);
@@ -71,6 +73,11 @@ const EditableName = memo(function EditableName({ value, onChange, color }) {
     }
   };
 
+  const startEdit = () => {
+    setIsEditing(true);
+    onEdit?.();
+  };
+
   if (isEditing) {
     return (
       <input
@@ -87,12 +94,25 @@ const EditableName = memo(function EditableName({ value, onChange, color }) {
   }
 
   return (
-    <span
-      className="vg-editor-panel__name"
-      onDoubleClick={() => setIsEditing(true)}
-      title="Double-click to rename"
-    >
-      {value}
+    <span className="vg-editor-panel__name-wrapper">
+      <span
+        className="vg-editor-panel__name"
+        onClick={startEdit}
+        title="Click to rename"
+      >
+        {value}
+      </span>
+      <button
+        type="button"
+        className="vg-editor-panel__rename"
+        onClick={(e) => {
+          e.stopPropagation();
+          startEdit();
+        }}
+        title="Rename ViewGroup"
+      >
+        <Icon name="pencil" size={12} />
+      </button>
     </span>
   );
 });
@@ -121,6 +141,16 @@ const LayoutMiniButton = memo(function LayoutMiniButton({ layout, isActive, colo
         <div className="layout-mini-btn__grid layout-mini-btn__grid--merged-right">
           <div className="layout-mini-btn__cell" />
           <div className="layout-mini-btn__cell layout-mini-btn__cell--merged" />
+          <div className="layout-mini-btn__cell" />
+        </div>
+      );
+    }
+    if (layout.merged === 'left') {
+      // 1+2 layout (main left, details right)
+      return (
+        <div className="layout-mini-btn__grid layout-mini-btn__grid--merged-left">
+          <div className="layout-mini-btn__cell layout-mini-btn__cell--merged" />
+          <div className="layout-mini-btn__cell" />
           <div className="layout-mini-btn__cell" />
         </div>
       );
@@ -187,7 +217,8 @@ const GridCell = memo(function GridCell({
       e.preventDefault();
       setIsDragOver(false);
       try {
-        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+        const payload = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
+        const data = JSON.parse(payload);
         onDrop?.(index, data);
       } catch (err) {
         console.warn('Invalid drop data:', err);
@@ -284,6 +315,8 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
   }));
   const [selectedCells, setSelectedCells] = useState([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [dragPayloadIsView, setDragPayloadIsView] = useState(false);
 
   // Context
   const editorContext = useVGEditor();
@@ -292,6 +325,55 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
   // Get current layout
   const layout = getLayoutById(viewGroup.layoutId) || DEFAULT_LAYOUT;
   const capacity = getLayoutCapacity(layout);
+  const filledCount = useMemo(() => viewGroup.views.filter(Boolean).length, [viewGroup.views]);
+  const isFull = filledCount >= capacity;
+  const showFullOverlay = isFull && isDragActive && dragPayloadIsView;
+
+  const parseDragPayload = useCallback((event) => {
+    const raw = event.dataTransfer?.getData('application/json') || event.dataTransfer?.getData('text/plain');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      return null;
+    }
+  }, []);
+
+  const isViewPayload = useCallback((data) => {
+    if (!data) return false;
+    if (data.type === 'view' || data.type === 'dataset' || data.type === 'vg-import') return true;
+    if (data.view || data.viewId) return true;
+    if (data.datasetId && !data.vgId) return true;
+    return false;
+  }, []);
+
+  const handleGridDragEnter = useCallback((e) => {
+    const data = parseDragPayload(e);
+    const isView = isViewPayload(data);
+    if (!isView) return;
+    setIsDragActive(true);
+    setDragPayloadIsView(true);
+  }, [parseDragPayload, isViewPayload]);
+
+  const handleGridDragOver = useCallback((e) => {
+    const data = parseDragPayload(e);
+    if (!isViewPayload(data)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragActive(true);
+    setDragPayloadIsView(true);
+  }, [parseDragPayload, isViewPayload]);
+
+  const handleGridDragLeave = useCallback((e) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setIsDragActive(false);
+    setDragPayloadIsView(false);
+  }, []);
+
+  const handleGridDrop = useCallback(() => {
+    setIsDragActive(false);
+    setDragPayloadIsView(false);
+  }, []);
 
   // Register with context on mount
   useEffect(() => {
@@ -360,7 +442,7 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
 
   // Handle drop into cell
   const handleCellDrop = useCallback(
-    (cellIndex, data) => {
+    async (cellIndex, data) => {
       if (data.type === 'vg-import') {
         // Import all views from another VG
         const availableSlots = [];
@@ -381,15 +463,40 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
 
         setViewGroup((prev) => ({ ...prev, views: newViews }));
         setHasChanges(true);
-      } else if (data.view) {
+      } else if (data.type === 'dataset' || (data.datasetId && !data.view)) {
+        try {
+          const newView = await viewConfigurationManager.createView(data.datasetId, {
+            name: data.name ? `${data.name} View` : 'Untitled View',
+            fileType: data.fileType,
+          });
+          const newViews = [...viewGroup.views];
+          newViews[cellIndex] = {
+            id: newView.id,
+            name: newView.name,
+            type: newView.type,
+            datasetId: newView.datasetId,
+            datasetName: data.name || newView.datasetName,
+          };
+          setViewGroup((prev) => ({ ...prev, views: newViews }));
+          setHasChanges(true);
+        } catch (err) {
+          console.error('Failed to create view from dataset:', err);
+          toast.error('Failed to create view from dataset');
+        }
+      } else if (data.view || data.viewId) {
         // Single view drop
+        const viewData = data.view || {
+          id: data.viewId || data.id,
+          name: data.viewName || data.name,
+          type: data.viewType || data.type,
+        };
         const newViews = [...viewGroup.views];
         newViews[cellIndex] = {
-          id: data.view.id,
-          name: data.view.name,
-          type: data.view.type,
-          datasetId: data.datasetId,
-          datasetName: data.datasetName,
+          id: viewData.id,
+          name: viewData.name,
+          type: viewData.type,
+          datasetId: data.datasetId || viewData.datasetId,
+          datasetName: data.datasetName || viewData.datasetName,
           sourceVgId: data.sourceVgId,
           sourceVgName: data.sourceVgName,
         };
@@ -506,6 +613,45 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
       );
     }
 
+    if (layout.merged === 'left') {
+      return (
+        <div className="vg-editor-panel__grid vg-editor-panel__grid--merged-left">
+          <div className="vg-editor-panel__grid-merged-left">
+            <GridCell
+              index={0}
+              view={viewGroup.views[0]}
+              isSelected={selectedCells.includes(0)}
+              isEmpty={!viewGroup.views[0]}
+              color={viewGroup.color}
+              onSelect={handleCellSelect}
+              onDrop={handleCellDrop}
+              onRemoveView={handleRemoveView}
+            />
+          </div>
+          <GridCell
+            index={1}
+            view={viewGroup.views[1]}
+            isSelected={selectedCells.includes(1)}
+            isEmpty={!viewGroup.views[1]}
+            color={viewGroup.color}
+            onSelect={handleCellSelect}
+            onDrop={handleCellDrop}
+            onRemoveView={handleRemoveView}
+          />
+          <GridCell
+            index={2}
+            view={viewGroup.views[2]}
+            isSelected={selectedCells.includes(2)}
+            isEmpty={!viewGroup.views[2]}
+            color={viewGroup.color}
+            onSelect={handleCellSelect}
+            onDrop={handleCellDrop}
+            onRemoveView={handleRemoveView}
+          />
+        </div>
+      );
+    }
+
     // Standard grid
     return (
       <div
@@ -544,6 +690,7 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
           className="vg-editor-panel__color-dot"
           style={{ background: viewGroup.color }}
         />
+        <span className="vg-editor-panel__name-label">Name</span>
         <EditableName
           value={viewGroup.name}
           onChange={handleNameChange}
@@ -561,7 +708,7 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
         )}
         <div className="vg-editor-panel__header-spacer" />
         <span className="vg-editor-panel__meta">
-          {layout.name} &bull; {viewGroup.views.filter(Boolean).length}/{capacity} views
+          {layout.name} &bull; {filledCount}/{capacity} views
         </span>
       </div>
 
@@ -583,11 +730,27 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
 
       {/* Grid area */}
       <div className="vg-editor-panel__content">
-        {renderGrid()}
+        <div
+          className="vg-editor-panel__grid-shell"
+          onDragEnter={handleGridDragEnter}
+          onDragOver={handleGridDragOver}
+          onDragLeave={handleGridDragLeave}
+          onDrop={handleGridDrop}
+        >
+          {renderGrid()}
+          {showFullOverlay && (
+            <div className="vg-editor-panel__grid-overlay">
+              <Icon name="swap" size={16} />
+              <span>Full — drop on a cell to replace</span>
+            </div>
+          )}
+        </div>
 
         {/* Drop hint */}
         <p className="vg-editor-panel__drop-hint">
-          Drag views from the companion panel to fill cells
+          {isFull
+            ? 'ViewGroup is full. Drop on a cell to replace.'
+            : 'Drag views from the companion panel to fill cells'}
         </p>
       </div>
 

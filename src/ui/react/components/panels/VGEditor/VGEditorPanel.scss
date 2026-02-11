@@ -30,6 +30,34 @@
     background: $color-glass-subtle;
   }
 
+  &__name-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: $color-text-muted;
+  }
+
+  &__name-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__rename {
+    border: 0;
+    background: transparent;
+    color: $color-text-muted;
+    padding: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+
+    &:hover {
+      color: $color-text-primary;
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+
   &__color-dot {
     width: 12px;
     height: 12px;
@@ -123,6 +151,13 @@
   }
 
   // Grid
+  &__grid-shell {
+    position: relative;
+    flex: 1;
+    min-height: 200px;
+    display: flex;
+  }
+
   &__grid {
     display: grid;
     gap: $spacing-sm;
@@ -142,6 +177,30 @@
       grid-template-rows: 1fr 1fr;
       gap: $spacing-sm;
     }
+
+    &--merged-left {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: $spacing-sm;
+    }
+  }
+
+  &__grid-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px dashed rgba(56, 189, 248, 0.7);
+    border-radius: $radius-md;
+    color: $color-text-primary;
+    font-size: 12px;
+    font-weight: $font-weight-semibold;
+    pointer-events: none;
+    z-index: 4;
   }
 
   &__grid-merged-top {
@@ -151,6 +210,11 @@
   &__grid-merged-right {
     grid-row: 1 / -1;
     grid-column: 2;
+  }
+
+  &__grid-merged-left {
+    grid-row: 1 / -1;
+    grid-column: 1;
   }
 
   // Cells
@@ -194,6 +258,7 @@
       background: rgba(34, 211, 238, 0.1);
       transform: scale(1.02);
     }
+
   }
 
   &__cell-icon {
@@ -395,6 +460,18 @@
 
       .layout-mini-btn__cell--merged {
         grid-row: 1 / -1;
+      }
+    }
+
+    &--merged-left {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 1px;
+
+      .layout-mini-btn__cell--merged {
+        grid-row: 1 / -1;
+        grid-column: 1;
       }
     }
   }

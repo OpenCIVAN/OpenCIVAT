@@ -2,7 +2,6 @@
 // Sliding panel that appears below ViewItem on hover
 // Location: src/ui/react/components/common/ViewItem/components/SlidingPanel.scss
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -10,7 +9,7 @@
 // =============================================================================
 
 .sliding-panel {
-  background: rgba($color-bg-secondary, 0.95);
+  background: color-mix(in srgb, $color-bg-secondary 95%, transparent);
   backdrop-filter: $blur-medium;
   border: 1px solid $color-border-default;
   border-top: none;
@@ -112,32 +111,32 @@
   // Active color states
   &--active {
     &.sliding-panel__btn--purple {
-      background: rgba($color-accent-purple, 0.2);
+      background: color-mix(in srgb, $color-accent-purple 20%, transparent);
       color: $color-accent-purple;
     }
 
     &.sliding-panel__btn--amber {
-      background: rgba($color-accent-amber, 0.2);
+      background: color-mix(in srgb, $color-accent-amber 20%, transparent);
       color: $color-accent-amber;
     }
 
     &.sliding-panel__btn--pink {
-      background: rgba($color-accent-pink, 0.2);
+      background: color-mix(in srgb, $color-accent-pink 20%, transparent);
       color: $color-accent-pink;
     }
 
     &.sliding-panel__btn--teal {
-      background: rgba($color-accent-teal, 0.2);
+      background: color-mix(in srgb, $color-accent-teal 20%, transparent);
       color: $color-accent-teal;
     }
 
     &.sliding-panel__btn--green {
-      background: rgba($color-accent-green, 0.2);
+      background: color-mix(in srgb, $color-accent-green 20%, transparent);
       color: $color-accent-green;
     }
 
     &.sliding-panel__btn--blue {
-      background: rgba($color-accent-blue, 0.2);
+      background: color-mix(in srgb, $color-accent-blue 20%, transparent);
       color: $color-accent-blue;
     }
   }

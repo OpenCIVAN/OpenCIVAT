@@ -96,19 +96,26 @@ export function useCanvasMapState({
   });
   const [showViews, setShowViewsState] = useState(() => {
     if (hasStoredPreference('showViews')) {
-      return loadPreference('showViews', false);
+      return loadPreference('showViews', true);
     }
-    const legacyDisplayMode = loadPreference('displayMode', 'vg');
-    return legacyDisplayMode === 'view';
+    if (hasStoredPreference('displayMode')) {
+      const legacyDisplayMode = loadPreference('displayMode', 'vg');
+      return legacyDisplayMode === 'view';
+    }
+    // Default to true to show views when they exist
+    return true;
   });
   const [showVGs, setShowVGsState] = useState(() => {
     if (hasStoredPreference('showVGs')) {
       return loadPreference('showVGs', true);
     }
-    const legacyDisplayMode = loadPreference('displayMode', 'vg');
-    if (legacyDisplayMode === 'view') {
-      const legacyShowVGOutlines = loadPreference('showVGOutlines', false);
-      return !!legacyShowVGOutlines;
+    if (hasStoredPreference('displayMode')) {
+      const legacyDisplayMode = loadPreference('displayMode', 'vg');
+      if (legacyDisplayMode === 'view') {
+        const legacyShowVGOutlines = loadPreference('showVGOutlines', false);
+        return !!legacyShowVGOutlines;
+      }
+      return true;
     }
     return true;
   });
@@ -169,6 +176,11 @@ export function useCanvasMapState({
   // Sub-tabs
   const [linksSubTab, setLinksSubTab] = useState(LINKS_SUB_TABS.VG);
   const [collaborateSubTab, setCollaborateSubTab] = useState(COLLABORATE_SUB_TABS.ME);
+
+  // Debug: Show implicit (SOLO) ViewGroups
+  const [showImplicitVGs, setShowImplicitVGsState] = useState(() =>
+    loadPreference('showImplicitVGs', false)
+  );
 
   // Selection state (not persisted)
   const [selectedVGId, setSelectedVGId] = useState(null);
@@ -385,9 +397,8 @@ export function useCanvasMapState({
 
   const handleVGDoubleClick = useCallback((vgId) => {
     setFocusedVGId(vgId);
-    setMapMode(MAP_MODES.LAYOUT);
     callbacks.onVGFocus?.(vgId);
-  }, [setMapMode, callbacks]);
+  }, [callbacks]);
 
   const handleBackFromFocus = useCallback(() => {
     setFocusedVGId(null);
@@ -464,6 +475,19 @@ export function useCanvasMapState({
     setCompanionOpen(prev => !prev);
   }, [setCompanionOpen]);
 
+  const setShowImplicitVGs = useCallback((show) => {
+    setShowImplicitVGsState(show);
+    savePreference('showImplicitVGs', show);
+  }, []);
+
+  const toggleShowImplicitVGs = useCallback(() => {
+    setShowImplicitVGsState(prev => {
+      const next = !prev;
+      savePreference('showImplicitVGs', next);
+      return next;
+    });
+  }, []);
+
   // -------------------------------------------------------------------------
   // Return API
   // -------------------------------------------------------------------------
@@ -488,6 +512,7 @@ export function useCanvasMapState({
     collaboratorCursorVisibility,
     linksSubTab,
     collaborateSubTab,
+    showImplicitVGs,
     selectedVGId,
     selectedViewportId,
     highlightedLinkId,
@@ -551,6 +576,8 @@ export function useCanvasMapState({
     toggleCompanion,
     toggleToolbarPosition,
     toggleCollaboratorCursor,
+    setShowImplicitVGs,
+    toggleShowImplicitVGs,
   };
 }
 

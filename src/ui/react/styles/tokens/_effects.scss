@@ -26,17 +26,17 @@ $blur-extreme: blur(24px); // Heavy blur for overlays
 // SHADOWS
 // ============================================================================
 
-// Subtle shadows for dark theme
-$shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-$shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
-$shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5);
-$shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.6);
-$shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.7);
-$shadow-2xl: 0 20px 40px rgba(0, 0, 0, 0.8);
+// Theme-aware shadows via CSS custom properties (defined in _colors.scss)
+$shadow-xs: var(--shadow-xs);
+$shadow-sm: var(--shadow-sm);
+$shadow-md: var(--shadow-md);
+$shadow-lg: var(--shadow-lg);
+$shadow-xl: var(--shadow-xl);
+$shadow-2xl: var(--shadow-2xl);
 
 // Inner shadows for depth
-$shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-$shadow-inner-lg: inset 0 4px 8px rgba(0, 0, 0, 0.4);
+$shadow-inner: var(--shadow-inner);
+$shadow-inner-lg: var(--shadow-inner-lg);
 
 // Glow effects (for accent elements)
 $glow-accent: 0 0 20px rgba(76, 175, 80, 0.3);
@@ -60,12 +60,9 @@ $glow-green: 0 0 20px rgba(52, 211, 153, 0.3), 0 0 40px rgba(52, 211, 153, 0.15)
 
 $glow-amber: 0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.15);
 
-// Glassmorphism shadows (combination of shadow + border light)
-$shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37),
-  inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
-
-$shadow-glass-lg: 0 12px 48px 0 rgba(0, 0, 0, 0.5),
-  inset 0 1px 2px 0 rgba(255, 255, 255, 0.12);
+// Glassmorphism shadows (theme-aware via CSS custom properties)
+$shadow-glass: var(--shadow-glass);
+$shadow-glass-lg: var(--shadow-glass-lg);
 
 // ============================================================================
 // TRANSITIONS

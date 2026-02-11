@@ -52,7 +52,7 @@
     gap: $spacing-sm;
     padding-bottom: $spacing-sm;
     margin-bottom: $spacing-sm;
-    border-bottom: 1px solid rgba($color-accent-green, 0.15);
+    border-bottom: 1px solid color-mix(in srgb, $color-accent-green 15%, transparent);
 
     svg {
       color: $color-accent-green;
@@ -90,7 +90,7 @@
     justify-content: center;
     padding-top: $spacing-sm;
     margin-top: $spacing-sm;
-    border-top: 1px solid rgba($color-accent-green, 0.15);
+    border-top: 1px solid color-mix(in srgb, $color-accent-green 15%, transparent);
   }
 
   &__controls {
@@ -99,7 +99,7 @@
     align-items: center;
     padding-top: $spacing-sm;
     margin-top: $spacing-sm;
-    border-top: 1px solid rgba($color-accent-green, 0.15);
+    border-top: 1px solid color-mix(in srgb, $color-accent-green 15%, transparent);
   }
 
   &__controls-left {
@@ -141,8 +141,8 @@
   }
 
   &--speaking {
-    border-color: rgba($color-accent-green, 0.4);
-    background: rgba($color-accent-green, 0.08);
+    border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
+    background: color-mix(in srgb, $color-accent-green 8%, transparent);
   }
 
   &__avatar {
@@ -323,8 +323,8 @@
   justify-content: center;
   gap: $spacing-sm;
   padding: $spacing-sm $spacing-md;
-  background: rgba($color-accent-amber, 0.1);
-  border: 1px solid rgba($color-accent-amber, 0.3);
+  background: color-mix(in srgb, $color-accent-amber 10%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-amber 30%, transparent);
   border-radius: $radius-md;
   margin-bottom: $spacing-sm;
   font-size: 11px;
@@ -336,8 +336,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-green, 0.15);
-    border-color: rgba($color-accent-green, 0.4);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
     color: $color-accent-green;
 
     svg {

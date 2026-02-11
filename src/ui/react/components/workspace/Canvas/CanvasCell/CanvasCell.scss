@@ -7,7 +7,6 @@
 // - Color-coded radial options with smooth animations
 // - Position badge in bottom-right corner
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -66,7 +65,7 @@
 
     &.canvas-cell--selected {
       .canvas-cell__empty-container {
-        background: rgba($color-accent-teal, 0.15);
+        background: color-mix(in srgb, $color-accent-teal 15%, transparent);
         border-color: $color-accent-teal;
       }
     }
@@ -74,7 +73,7 @@
 
   &--drag-over {
     .canvas-cell__empty-container {
-      background: rgba($color-accent-primary, 0.1) !important;
+      background: color-mix(in srgb, $color-accent-primary 10%, transparent) !important;
       border-color: $color-accent-primary !important;
       border-style: solid !important;
     }
@@ -137,14 +136,14 @@
   // ==========================================================================
 
   &--highlighted {
-    border-color: rgba($color-accent-primary, 0.5);
+    border-color: color-mix(in srgb, $color-accent-primary 50%, transparent);
   }
 
   &--selectable {
     cursor: pointer;
 
     &:hover {
-      outline: 2px solid rgba($color-accent-teal, 0.5);
+      outline: 2px solid color-mix(in srgb, $color-accent-teal 50%, transparent);
       outline-offset: -2px;
     }
   }
@@ -315,17 +314,17 @@
 
   &:hover {
     border-color: $color-accent-primary;
-    background: rgba($color-accent-primary, 0.15);
+    background: color-mix(in srgb, $color-accent-primary 15%, transparent);
     color: $color-accent-primary;
     transform: scale(1.1);
-    box-shadow: 0 0 20px rgba($color-accent-primary, 0.3);
+    box-shadow: 0 0 20px color-mix(in srgb, $color-accent-primary 30%, transparent);
   }
 
   &--active {
-    background: rgba($color-accent-primary, 0.2);
+    background: color-mix(in srgb, $color-accent-primary 20%, transparent);
     border-color: $color-accent-primary;
     color: $color-accent-primary;
-    box-shadow: 0 0 24px rgba($color-accent-primary, 0.4);
+    box-shadow: 0 0 24px color-mix(in srgb, $color-accent-primary 40%, transparent);
 
     &:hover {
       transform: scale(1.05);
@@ -393,45 +392,45 @@
   // ==========================================================================
 
   &--blue {
-    border-color: rgba($color-accent-blue, 0.5);
-    --option-glow: rgba($color-accent-blue, 0.4);
+    border-color: color-mix(in srgb, $color-accent-blue 50%, transparent);
+    --option-glow: color-mix(in srgb, $color-accent-blue 40%, transparent);
 
     &:hover {
       border-color: $color-accent-blue;
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       color: $color-accent-blue;
     }
   }
 
   &--amber {
-    border-color: rgba($color-accent-amber, 0.5);
-    --option-glow: rgba($color-accent-amber, 0.4);
+    border-color: color-mix(in srgb, $color-accent-amber 50%, transparent);
+    --option-glow: color-mix(in srgb, $color-accent-amber 40%, transparent);
 
     &:hover {
       border-color: $color-accent-amber;
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
       color: $color-accent-amber;
     }
   }
 
   &--teal {
-    border-color: rgba($color-accent-teal, 0.5);
-    --option-glow: rgba($color-accent-teal, 0.4);
+    border-color: color-mix(in srgb, $color-accent-teal 50%, transparent);
+    --option-glow: color-mix(in srgb, $color-accent-teal 40%, transparent);
 
     &:hover {
       border-color: $color-accent-teal;
-      background: rgba($color-accent-teal, 0.15);
+      background: color-mix(in srgb, $color-accent-teal 15%, transparent);
       color: $color-accent-teal;
     }
   }
 
   &--purple {
-    border-color: rgba($color-accent-purple, 0.5);
-    --option-glow: rgba($color-accent-purple, 0.4);
+    border-color: color-mix(in srgb, $color-accent-purple 50%, transparent);
+    --option-glow: color-mix(in srgb, $color-accent-purple 40%, transparent);
 
     &:hover {
       border-color: $color-accent-purple;
-      background: rgba($color-accent-purple, 0.15);
+      background: color-mix(in srgb, $color-accent-purple 15%, transparent);
       color: $color-accent-purple;
     }
   }
@@ -760,7 +759,7 @@
   opacity: 0.6;
 
   &:hover {
-    background: rgba($color-error, 0.15);
+    background: color-mix(in srgb, $color-error 15%, transparent);
     color: $color-error;
     opacity: 1;
   }
@@ -833,8 +832,8 @@
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  background: rgba($color-accent-red, 0.15);
-  border: 1px solid rgba($color-accent-red, 0.3);
+  background: color-mix(in srgb, $color-accent-red 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-red 30%, transparent);
   border-radius: $radius-sm;
   color: $color-accent-red;
   font-size: 11px;
@@ -842,7 +841,7 @@
   transition: all 0.15s ease;
 
   &:hover {
-    background: rgba($color-accent-red, 0.25);
+    background: color-mix(in srgb, $color-accent-red 25%, transparent);
     border-color: $color-accent-red;
   }
 }

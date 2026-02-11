@@ -12,7 +12,6 @@
  * - .global-search__recent - Recent searches section
  * - .global-search__empty - Empty state
  */
-@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -179,8 +178,8 @@
     color: white;
 
     &:hover {
-      background: color.adjust($color-accent-blue, $lightness: 5%);
-      border-color: color.adjust($color-accent-blue, $lightness: 5%);
+      background: color-mix(in srgb, $color-accent-blue, white 10%);
+      border-color: color-mix(in srgb, $color-accent-blue, white 10%);
     }
   }
 
@@ -305,7 +304,7 @@
   }
 
   &--selected {
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
 
     &::before {
       content: "";
@@ -319,7 +318,7 @@
     }
 
     &:hover {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     }
   }
 
@@ -334,32 +333,32 @@
     flex-shrink: 0;
 
     &--project {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       color: $color-accent-blue;
     }
 
     &--dataset {
-      background: rgba($color-accent-teal, 0.15);
+      background: color-mix(in srgb, $color-accent-teal 15%, transparent);
       color: $color-accent-teal;
     }
 
     &--view {
-      background: rgba($color-accent-purple, 0.15);
+      background: color-mix(in srgb, $color-accent-purple 15%, transparent);
       color: $color-accent-purple;
     }
 
     &--person {
-      background: rgba($color-accent-pink, 0.15);
+      background: color-mix(in srgb, $color-accent-pink 15%, transparent);
       color: $color-accent-pink;
     }
 
     &--annotation {
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
       color: $color-accent-amber;
     }
 
     &--room {
-      background: rgba($color-accent-green, 0.15);
+      background: color-mix(in srgb, $color-accent-green 15%, transparent);
       color: $color-accent-green;
     }
   }
@@ -381,7 +380,7 @@
 
     // Highlight matching text
     mark {
-      background: rgba($color-accent-amber, 0.3);
+      background: color-mix(in srgb, $color-accent-amber 30%, transparent);
       color: inherit;
       border-radius: 2px;
       padding: 0 2px;

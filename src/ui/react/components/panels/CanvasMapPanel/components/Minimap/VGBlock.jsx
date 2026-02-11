@@ -39,8 +39,11 @@ export const VGBlock = memo(function VGBlock({
   isGhosted,
   showInternals,
   subtle = false,
+  draggable = false,
   onClick,
   onDoubleClick,
+  onDragStart,
+  onDragEnd,
 }) {
   const name = displayName || getVGDisplayName(vg);
   const layout = LAYOUTS[vg.layoutId] || LAYOUTS.single;
@@ -118,6 +121,29 @@ export const VGBlock = memo(function VGBlock({
         height: internalHeight,
         filled: views.length > 2,
       });
+    } else if (merged === 'left') {
+      // 1+2 layout (merged left)
+      cells.push({
+        x: padding,
+        y: padding,
+        width: cellWidth,
+        height: internalHeight,
+        filled: views.length > 0,
+      });
+      cells.push({
+        x: padding + cellWidth + internalGap,
+        y: padding,
+        width: cellWidth,
+        height: cellHeight,
+        filled: views.length > 1,
+      });
+      cells.push({
+        x: padding + cellWidth + internalGap,
+        y: padding + cellHeight + internalGap,
+        width: cellWidth,
+        height: cellHeight,
+        filled: views.length > 2,
+      });
     } else {
       // Standard grid
       for (let r = 0; r < rows; r++) {
@@ -147,6 +173,9 @@ export const VGBlock = memo(function VGBlock({
         ${!isExplicit ? 'vg-block--implicit' : ''}
         ${subtle ? 'vg-block--subtle' : ''}`}
       style={style}
+      draggable={draggable && !subtle}
+      onDragStart={draggable && !subtle ? onDragStart : undefined}
+      onDragEnd={draggable && !subtle ? onDragEnd : undefined}
       onClick={subtle ? undefined : onClick}
       onDoubleClick={subtle ? undefined : onDoubleClick}
       role={subtle ? undefined : 'button'}

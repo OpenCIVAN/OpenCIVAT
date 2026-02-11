@@ -331,13 +331,14 @@ function GridZonesLayout({
         if (secondaryTopBar && isValidElement(secondaryTopBar)) {
             // Clone and inject layout dimensions so component can use them
             // The wrapper uses flex to ensure children fill width
+            const isDomElement = typeof secondaryTopBar.type === 'string';
             return (
                 <div
                     className="three-edge-layout__sec-top three-edge-layout__sec-top--component"
                     style={{ display: 'flex', width: '100%' }}
                 >
                     {cloneElement(secondaryTopBar, {
-                        ...layoutDimensions,
+                        ...(isDomElement ? {} : layoutDimensions),
                         style: { ...(secondaryTopBar.props?.style || {}), width: '100%' }
                     })}
                 </div>
@@ -371,13 +372,14 @@ function GridZonesLayout({
     const renderSecondaryBottomBar = () => {
         // Pattern 2: Rendered component (preferred)
         if (secondaryBottomBar && isValidElement(secondaryBottomBar)) {
+            const isDomElement = typeof secondaryBottomBar.type === 'string';
             return (
                 <div
                     className="three-edge-layout__sec-bot three-edge-layout__sec-bot--component"
                     style={{ display: 'flex', width: '100%' }}
                 >
                     {cloneElement(secondaryBottomBar, {
-                        ...layoutDimensions,
+                        ...(isDomElement ? {} : layoutDimensions),
                         style: { ...(secondaryBottomBar.props?.style || {}), width: '100%' }
                     })}
                 </div>

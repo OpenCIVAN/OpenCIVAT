@@ -127,8 +127,8 @@
     justify-content: center;
     gap: 6px;
     padding: $spacing-sm;
-    background: rgba($color-accent-purple, 0.15);
-    border: 1px solid rgba($color-accent-purple, 0.3);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-purple 30%, transparent);
     border-radius: $radius-sm;
     color: $color-accent-purple;
     font-size: 11px;
@@ -136,8 +136,8 @@
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba($color-accent-purple, 0.25);
-      border-color: rgba($color-accent-purple, 0.5);
+      background: color-mix(in srgb, $color-accent-purple 25%, transparent);
+      border-color: color-mix(in srgb, $color-accent-purple 50%, transparent);
     }
   }
 }
@@ -212,8 +212,8 @@
   justify-content: center;
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
-  background: rgba($color-accent-purple, 0.08);
-  border-bottom: 1px solid rgba($color-accent-purple, 0.15);
+  background: color-mix(in srgb, $color-accent-purple 8%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, $color-accent-purple 15%, transparent);
   font-size: 10px;
   color: $color-text-muted;
 
@@ -242,8 +242,8 @@
   align-items: center;
   justify-content: space-between;
   padding: $spacing-sm;
-  background: rgba($color-accent-amber, 0.1);
-  border-bottom: 1px solid rgba($color-accent-amber, 0.2);
+  background: color-mix(in srgb, $color-accent-amber 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, $color-accent-amber 20%, transparent);
 
   .batch-count {
     font-size: 11px;
@@ -275,10 +275,10 @@
 
     &--danger {
       color: $color-error;
-      border-color: rgba($color-error, 0.3);
+      border-color: color-mix(in srgb, $color-error 30%, transparent);
 
       &:hover {
-        background: rgba($color-error, 0.15);
+        background: color-mix(in srgb, $color-error 15%, transparent);
       }
     }
   }
@@ -401,8 +401,8 @@
   }
 
   &--pinned {
-    border-color: rgba($color-accent-purple, 0.3);
-    background: rgba($color-accent-purple, 0.05);
+    border-color: color-mix(in srgb, $color-accent-purple 30%, transparent);
+    background: color-mix(in srgb, $color-accent-purple 5%, transparent);
   }
 
   &--compact {
@@ -541,8 +541,8 @@
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
-    background: rgba($color-accent-purple, 0.15);
-    border: 1px solid rgba($color-accent-purple, 0.3);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-purple 30%, transparent);
     border-radius: $radius-xs;
     color: $color-accent-purple;
     font-size: 10px;
@@ -550,7 +550,7 @@
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba($color-accent-purple, 0.25);
+      background: color-mix(in srgb, $color-accent-purple 25%, transparent);
     }
   }
 
@@ -622,8 +622,8 @@
   }
 
   &--pinned {
-    border-color: rgba($color-accent-amber, 0.3);
-    background: rgba($color-accent-amber, 0.05);
+    border-color: color-mix(in srgb, $color-accent-amber 30%, transparent);
+    background: color-mix(in srgb, $color-accent-amber 5%, transparent);
   }
 
   &--compact {
@@ -635,7 +635,7 @@
     width: 28px;
     height: 28px;
     border-radius: $radius-sm;
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -673,15 +673,15 @@
     text-transform: uppercase;
 
     &[data-color="amber"] {
-      background: rgba($color-accent-amber, 0.15);
+      background: color-mix(in srgb, $color-accent-amber 15%, transparent);
       color: $color-accent-amber;
     }
     &[data-color="teal"] {
-      background: rgba($color-accent-teal, 0.15);
+      background: color-mix(in srgb, $color-accent-teal 15%, transparent);
       color: $color-accent-teal;
     }
     &[data-color="blue"] {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       color: $color-accent-blue;
     }
   }
@@ -744,8 +744,8 @@
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
-    background: rgba($color-accent-amber, 0.15);
-    border: 1px solid rgba($color-accent-amber, 0.3);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-amber 30%, transparent);
     border-radius: $radius-xs;
     color: $color-accent-amber;
     font-size: 10px;
@@ -753,7 +753,7 @@
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba($color-accent-amber, 0.25);
+      background: color-mix(in srgb, $color-accent-amber 25%, transparent);
     }
   }
 
@@ -930,8 +930,8 @@
     }
 
     &.active {
-      background: rgba($color-accent-purple, 0.15);
-      border-color: rgba($color-accent-purple, 0.3);
+      background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-purple 30%, transparent);
       color: $color-accent-purple;
     }
   }
@@ -964,8 +964,8 @@
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
-    background: rgba($color-accent-blue, 0.15);
-    border: 1px solid rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-blue 30%, transparent);
     border-radius: $radius-xs;
     color: $color-accent-blue;
     font-size: 10px;
@@ -1041,7 +1041,7 @@
     align-items: center;
     gap: 4px;
     padding: 2px 6px;
-    background: rgba($color-accent-purple, 0.15);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
     border-radius: $radius-xs;
     font-size: 10px;
     color: $color-accent-purple;
@@ -1069,8 +1069,8 @@
 
   &__submit-error {
     padding: $spacing-sm;
-    background: rgba($color-error, 0.1);
-    border: 1px solid rgba($color-error, 0.3);
+    background: color-mix(in srgb, $color-error 10%, transparent);
+    border: 1px solid color-mix(in srgb, $color-error 30%, transparent);
     border-radius: $radius-sm;
     color: $color-error;
     font-size: 11px;
@@ -1130,13 +1130,13 @@
 .filter-editor {
   .filter-editor__type-btn.active,
   .filter-editor__scope-btn.active {
-    background: rgba($color-accent-amber, 0.15);
-    border-color: rgba($color-accent-amber, 0.3);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-amber 30%, transparent);
     color: $color-accent-amber;
   }
 
   .filter-editor__tag {
-    background: rgba($color-accent-amber, 0.15);
+    background: color-mix(in srgb, $color-accent-amber 15%, transparent);
     color: $color-accent-amber;
   }
 

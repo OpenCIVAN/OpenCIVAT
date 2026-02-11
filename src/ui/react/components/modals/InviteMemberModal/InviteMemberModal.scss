@@ -28,7 +28,7 @@
 
   &:focus-within {
     border-color: $color-accent-blue;
-    box-shadow: 0 0 0 3px rgba($color-accent-blue, 0.15);
+    box-shadow: 0 0 0 3px color-mix(in srgb, $color-accent-blue 15%, transparent);
   }
 
   &--error {
@@ -36,7 +36,7 @@
 
     &:focus-within {
       border-color: $color-error;
-      box-shadow: 0 0 0 3px rgba($color-error, 0.15);
+      box-shadow: 0 0 0 3px color-mix(in srgb, $color-error 15%, transparent);
     }
   }
 
@@ -77,8 +77,8 @@
   gap: 4px;
   height: 26px;
   padding: 0 6px 0 10px;
-  background: rgba($color-accent-blue, 0.15);
-  border: 1px solid rgba($color-accent-blue, 0.3);
+  background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-blue 30%, transparent);
   border-radius: 13px;
   font-size: 12px;
   color: $color-accent-blue;
@@ -109,7 +109,7 @@
 
     &:hover {
       opacity: 1;
-      background: rgba($color-accent-blue, 0.2);
+      background: color-mix(in srgb, $color-accent-blue 20%, transparent);
     }
 
     &:focus {
@@ -117,7 +117,7 @@
     }
 
     &:focus-visible {
-      box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.5);
+      box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 50%, transparent);
     }
 
     &:disabled {
@@ -128,19 +128,19 @@
 
   // Invalid email styling
   &--invalid {
-    background: rgba($color-error, 0.15);
-    border-color: rgba($color-error, 0.3);
+    background: color-mix(in srgb, $color-error 15%, transparent);
+    border-color: color-mix(in srgb, $color-error 30%, transparent);
     color: $color-error;
 
     .email-tag__remove {
       color: $color-error;
 
       &:hover {
-        background: rgba($color-error, 0.2);
+        background: color-mix(in srgb, $color-error 20%, transparent);
       }
 
       &:focus-visible {
-        box-shadow: 0 0 0 2px rgba($color-error, 0.5);
+        box-shadow: 0 0 0 2px color-mix(in srgb, $color-error 50%, transparent);
       }
     }
   }
@@ -199,10 +199,10 @@
 
     &--selected {
       border-color: $color-accent-blue;
-      background: rgba($color-accent-blue, 0.1);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
 
       &:hover:not(:disabled) {
-        background: rgba($color-accent-blue, 0.15);
+        background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       }
 
       .role-selector__icon {
@@ -217,14 +217,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba($color-text-muted, 0.1);
+    background: color-mix(in srgb, $color-text-muted 10%, transparent);
     border-radius: 6px;
     color: $color-text-secondary;
     flex-shrink: 0;
     transition: all $transition-fast;
 
     .role-selector__option--selected & {
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     }
   }
 

@@ -10,7 +10,6 @@
 // SOLUTION: Use minmax() for center column and proper fr units that respond
 // to the collapsed state.
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -356,7 +355,7 @@
 
   &:hover,
   &--active {
-    background: rgba($color-accent-primary, 0.4);
+    background: color-mix(in srgb, $color-accent-primary 40%, transparent);
   }
 
   // Left panel resize handle - positioned at RIGHT edge of left panel
@@ -388,7 +387,7 @@
 
   &:hover,
   &--active {
-    background: rgba($color-accent-primary, 0.4);
+    background: color-mix(in srgb, $color-accent-primary 40%, transparent);
   }
 
   // Left panel resize handle - at right edge of overlay panel

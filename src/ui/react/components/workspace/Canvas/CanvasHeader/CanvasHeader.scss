@@ -72,7 +72,7 @@
 
   &:hover:not(:disabled) {
     color: $color-text-secondary;
-    background: rgba($color-accent-blue, 0.08);
+    background: color-mix(in srgb, $color-accent-blue 8%, transparent);
   }
 
   &--active {
@@ -177,7 +177,7 @@
   &:focus {
     outline: none;
     border-color: $color-accent-blue;
-    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 20%, transparent);
   }
 
   &:disabled {
@@ -217,7 +217,7 @@
   &:focus {
     outline: none;
     border-color: $color-accent-blue;
-    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 20%, transparent);
   }
 
   &:disabled {

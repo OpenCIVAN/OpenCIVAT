@@ -189,7 +189,7 @@
 
       &:focus {
         border-color: $color-accent-primary;
-        box-shadow: 0 0 0 2px rgba($color-accent-primary, 0.15);
+        box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-primary 15%, transparent);
       }
     }
 
@@ -312,20 +312,20 @@
 
     // Color variants
     &--blue:hover {
-      background: rgba($color-accent-blue, 0.1);
-      border-color: rgba($color-accent-blue, 0.3);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+      border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
       color: $color-accent-blue;
     }
 
     &--green:hover {
-      background: rgba($color-accent-green, 0.1);
-      border-color: rgba($color-accent-green, 0.3);
+      background: color-mix(in srgb, $color-accent-green 10%, transparent);
+      border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
       color: $color-accent-green;
     }
 
     &--danger:hover {
-      background: rgba($color-error, 0.1);
-      border-color: rgba($color-error, 0.3);
+      background: color-mix(in srgb, $color-error 10%, transparent);
+      border-color: color-mix(in srgb, $color-error 30%, transparent);
       color: $color-error;
     }
   }
@@ -344,8 +344,8 @@
     justify-content: center;
     gap: $spacing-sm;
     padding: $spacing-md;
-    background: rgba($color-accent-blue, 0.1);
-    border: 2px dashed rgba($color-accent-blue, 0.4);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border: 2px dashed color-mix(in srgb, $color-accent-blue 40%, transparent);
     border-radius: $radius-sm;
     color: $color-accent-blue;
     font-size: $font-size-xs;
@@ -748,8 +748,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-purple, 0.15);
-    border-color: rgba($color-accent-purple, 0.4);
+    background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-purple 40%, transparent);
     color: $color-accent-purple;
   }
 }
@@ -776,8 +776,8 @@
   }
 
   &--selected {
-    background: rgba($color-accent-blue, 0.15);
-    border-color: rgba($color-accent-blue, 0.4);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
   }
 
   &--folder {

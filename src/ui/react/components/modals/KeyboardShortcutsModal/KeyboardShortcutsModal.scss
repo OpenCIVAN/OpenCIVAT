@@ -61,11 +61,11 @@
   }
 
   &--active {
-    background: rgba($color-accent-blue, 0.15);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
     color: $color-accent-blue;
 
     &:hover {
-      background: rgba($color-accent-blue, 0.2);
+      background: color-mix(in srgb, $color-accent-blue 20%, transparent);
     }
   }
 

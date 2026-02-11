@@ -254,8 +254,8 @@
 
     &.is-active {
         color: $color-accent-cyan;
-        border-color: rgba($color-accent-cyan, 0.5);
-        background: rgba($color-accent-cyan, 0.12);
+        border-color: color-mix(in srgb, $color-accent-cyan 50%, transparent);
+        background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
     }
 }
 

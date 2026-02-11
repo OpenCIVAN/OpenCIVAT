@@ -62,7 +62,7 @@
   border-radius: 50%;
   background: $color-error;
   animation: recording-pulse 1.5s ease-in-out infinite;
-  box-shadow: 0 0 8px rgba($color-error, 0.5);
+  box-shadow: 0 0 8px color-mix(in srgb, $color-error 50%, transparent);
 }
 
 @keyframes recording-pulse {
@@ -129,7 +129,7 @@
   // Active state - being recorded
   &--active {
     .recording-item__icon {
-      background: rgba($color-success, 0.15);
+      background: color-mix(in srgb, $color-success 15%, transparent);
       color: $color-success;
     }
 
@@ -194,7 +194,7 @@
     &:hover {
       border-color: $color-error;
       color: $color-error;
-      background: rgba($color-error, 0.05);
+      background: color-mix(in srgb, $color-error 5%, transparent);
     }
 
     &:focus {

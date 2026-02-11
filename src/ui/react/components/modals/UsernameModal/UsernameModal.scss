@@ -43,7 +43,7 @@
     align-items: center;
     justify-content: center;
     background: $color-accent-primary-glow;
-    border: 1px solid rgba($color-accent-primary, 0.3);
+    border: 1px solid color-mix(in srgb, $color-accent-primary 30%, transparent);
     border-radius: $radius-full;
     color: $color-accent-primary;
     @include accent-glow($color-accent-primary);
@@ -122,12 +122,12 @@
     font-weight: $font-weight-semibold;
     border-radius: $radius-md;
     color: $color-text-primary;
-    background: rgba($color-success, 0.15);
-    border-color: rgba($color-success, 0.4);
+    background: color-mix(in srgb, $color-success 15%, transparent);
+    border-color: color-mix(in srgb, $color-success 40%, transparent);
 
     &:hover:not(:disabled) {
-      background: rgba($color-success, 0.25);
-      border-color: rgba($color-success, 0.6);
+      background: color-mix(in srgb, $color-success 25%, transparent);
+      border-color: color-mix(in srgb, $color-success 60%, transparent);
       transform: translateY(-2px);
       @include success-glow;
     }

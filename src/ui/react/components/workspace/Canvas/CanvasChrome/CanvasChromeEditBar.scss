@@ -47,8 +47,8 @@
 
   &.is-active {
     color: $color-accent-teal;
-    border-color: rgba($color-accent-teal, 0.5);
-    background: rgba($color-accent-teal, 0.15);
+    border-color: color-mix(in srgb, $color-accent-teal 50%, transparent);
+    background: color-mix(in srgb, $color-accent-teal 15%, transparent);
   }
 }
 
@@ -65,8 +65,8 @@
 .canvas-chrome-edit-bar__done {
   padding: 6px 12px;
   border-radius: $radius-sm;
-  border: 1px solid rgba($color-accent-green, 0.5);
-  background: rgba($color-accent-green, 0.15);
+  border: 1px solid color-mix(in srgb, $color-accent-green 50%, transparent);
+  background: color-mix(in srgb, $color-accent-green 15%, transparent);
   color: $color-accent-green;
   font-size: 11px;
   font-weight: 600;
@@ -74,6 +74,6 @@
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-accent-green, 0.25);
+    background: color-mix(in srgb, $color-accent-green 25%, transparent);
   }
 }

@@ -254,6 +254,6 @@
   // When panel is popped out, show as active
   &--active {
     color: var(--panel-color, $color-accent-blue);
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
   }
 }

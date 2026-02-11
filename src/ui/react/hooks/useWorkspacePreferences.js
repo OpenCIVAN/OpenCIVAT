@@ -184,21 +184,41 @@ export function useWorkspacePreferences(projectId, options = {}) {
      * Update a single preference field
      */
     const updatePreference = useCallback((key, value) => {
-        setPreferences((prev) => ({
-            ...prev,
-            [key]: value,
-        }));
+        setPreferences((prev) => {
+            if (Object.is(prev[key], value)) {
+                return prev;
+            }
+            return {
+                ...prev,
+                [key]: value,
+            };
+        });
     }, []);
 
     /**
      * Update multiple preferences at once
      */
     const updatePreferences = useCallback((updates) => {
-        setPreferences((prev) => ({
-            ...prev,
-            ...updates,
-        }));
+        setPreferences((prev) => {
+            const keys = Object.keys(updates || {});
+            if (keys.length === 0) return prev;
+            const hasChanges = keys.some((key) => !Object.is(prev[key], updates[key]));
+            if (!hasChanges) return prev;
+            return {
+                ...prev,
+                ...updates,
+            };
+        });
     }, []);
+
+    const setViewMode = useCallback((mode) => updatePreference('viewMode', mode), [updatePreference]);
+    const setOpenWorkspaceIds = useCallback((ids) => updatePreference('openWorkspaceIds', ids), [updatePreference]);
+    const setActiveWorkspaceId = useCallback((id) => updatePreference('activeWorkspaceId', id), [updatePreference]);
+    const setWorkspaceOrder = useCallback((order) => updatePreference('workspaceOrder', order), [updatePreference]);
+    const setTileMaximizedWorkspaceId = useCallback(
+        (id) => updatePreference('tileMaximizedWorkspaceId', id),
+        [updatePreference]
+    );
 
     /**
      * Update window position for a workspace
@@ -286,11 +306,11 @@ export function useWorkspacePreferences(projectId, options = {}) {
         tileMaximizedWorkspaceId: preferences.tileMaximizedWorkspaceId,
 
         // Setters
-        setViewMode: (mode) => updatePreference('viewMode', mode),
-        setOpenWorkspaceIds: (ids) => updatePreference('openWorkspaceIds', ids),
-        setActiveWorkspaceId: (id) => updatePreference('activeWorkspaceId', id),
-        setWorkspaceOrder: (order) => updatePreference('workspaceOrder', order),
-        setTileMaximizedWorkspaceId: (id) => updatePreference('tileMaximizedWorkspaceId', id),
+        setViewMode,
+        setOpenWorkspaceIds,
+        setActiveWorkspaceId,
+        setWorkspaceOrder,
+        setTileMaximizedWorkspaceId,
         setWindowPosition,
         setWindowSize,
         setViewportPosition,

@@ -16,6 +16,7 @@ import { ToastContainer } from "@UI/react/components/molecules/Toast";
 import { LoginButton } from "@UI/react/components/auth/LoginButton";
 import { DevModeBanner } from "@UI/react/components/auth/DevModeBanner";
 import { DevUserProvider } from "@UI/react/context/DevUserContext.jsx";
+import { ThemeToggle } from "@UI/react/components/layout/Header/components/ThemeToggle";
 
 import "./Bootstrap.scss";
 
@@ -399,6 +400,11 @@ export function Bootstrap() {
 
     return (
         <>
+            {bootstrapState !== 'ready' && (
+                <div className="bootstrap-theme-toggle">
+                    <ThemeToggle />
+                </div>
+            )}
             {content}
             <ToastContainer />
         </>

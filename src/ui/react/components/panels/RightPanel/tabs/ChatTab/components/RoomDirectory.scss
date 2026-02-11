@@ -1,4 +1,3 @@
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -118,7 +117,7 @@
   transition: all $transition-fast;
 
   &:hover:not(:disabled) {
-    background: color.adjust($color-accent-purple, $lightness: 5%);
+    background: color-mix(in srgb, $color-accent-purple, white 10%);
   }
 
   &:disabled {
@@ -140,8 +139,8 @@
   align-items: center;
   gap: $spacing-xs;
   padding: $spacing-sm $spacing-md;
-  background: rgba($color-accent-red, 0.1);
-  border: 1px solid rgba($color-accent-red, 0.3);
+  background: color-mix(in srgb, $color-accent-red 10%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-red 30%, transparent);
   border-radius: $radius-md;
   margin: $spacing-md;
   color: $color-accent-red;
@@ -209,7 +208,7 @@
 
   &:hover {
     background: rgba(255, 255, 255, 0.05);
-    border-color: rgba($color-accent-purple, 0.3);
+    border-color: color-mix(in srgb, $color-accent-purple 30%, transparent);
   }
 }
 
@@ -286,14 +285,14 @@
   font-weight: $font-weight-medium;
 
   &--readable {
-    background: rgba($color-accent-blue, 0.15);
-    border: 1px solid rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-blue 30%, transparent);
     color: $color-accent-blue;
   }
 
   &--guest {
-    background: rgba($color-accent-green, 0.15);
-    border: 1px solid rgba($color-accent-green, 0.3);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-green 30%, transparent);
     color: $color-accent-green;
   }
 }
@@ -303,8 +302,8 @@
   align-items: center;
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-md;
-  background: rgba($color-accent-purple, 0.2);
-  border: 1px solid rgba($color-accent-purple, 0.3);
+  background: color-mix(in srgb, $color-accent-purple 20%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-purple 30%, transparent);
   border-radius: $radius-md;
   color: $color-accent-purple;
   font-size: $font-size-sm;
@@ -316,8 +315,8 @@
   align-self: center;
 
   &:hover:not(:disabled) {
-    background: rgba($color-accent-purple, 0.3);
-    border-color: rgba($color-accent-purple, 0.5);
+    background: color-mix(in srgb, $color-accent-purple 30%, transparent);
+    border-color: color-mix(in srgb, $color-accent-purple 50%, transparent);
     color: white;
   }
 
@@ -340,7 +339,7 @@
   align-items: flex-start;
   gap: $spacing-xs;
   padding: $spacing-sm $spacing-md;
-  background: rgba($color-accent-purple, 0.05);
+  background: color-mix(in srgb, $color-accent-purple 5%, transparent);
   border-top: 1px solid $color-border-subtle;
   font-size: $font-size-xs;
   color: $color-text-muted;

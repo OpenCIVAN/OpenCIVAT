@@ -60,7 +60,7 @@
 
     &--active {
       color: $color-accent-blue;
-      background: rgba($color-accent-blue, 0.1);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
     }
   }
 }
@@ -178,7 +178,7 @@
     }
 
     &.active {
-      background: rgba($color-accent-blue, 0.1);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
       color: $color-accent-blue;
     }
   }
@@ -209,7 +209,7 @@
     border-radius: $radius-sm;
 
     &:hover {
-      background: rgba($color-accent-blue, 0.1);
+      background: color-mix(in srgb, $color-accent-blue 10%, transparent);
     }
   }
 }
@@ -281,7 +281,7 @@
     }
 
     &.unread {
-      background: rgba($color-accent-blue, 0.05);
+      background: color-mix(in srgb, $color-accent-blue 5%, transparent);
 
       .notification-bell__title {
         font-weight: 600;
@@ -459,7 +459,7 @@
       color: $color-accent-red;
 
       &:hover {
-        background: rgba($color-accent-red, 0.1);
+        background: color-mix(in srgb, $color-accent-red 10%, transparent);
       }
     }
   }

@@ -140,15 +140,15 @@
 
   &.is-active {
     color: $color-accent-cyan;
-    background: rgba($color-accent-cyan, 0.12);
-    border-color: rgba($color-accent-cyan, 0.4);
+    background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
+    border-color: color-mix(in srgb, $color-accent-cyan 40%, transparent);
   }
 }
 
 .canvas-footer2__icon-btn--purple.is-active {
   color: $color-accent-purple;
-  background: rgba($color-accent-purple, 0.15);
-  border-color: rgba($color-accent-purple, 0.45);
+  background: color-mix(in srgb, $color-accent-purple 15%, transparent);
+  border-color: color-mix(in srgb, $color-accent-purple 45%, transparent);
 }
 
 .canvas-footer2__links {

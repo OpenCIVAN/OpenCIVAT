@@ -18,11 +18,11 @@
 
   // Gradient fade based on position
   &--left {
-    background: linear-gradient(90deg, rgba(6, 10, 18, 0.0), rgba(6, 10, 18, 0.55));
+    background: linear-gradient(90deg, transparent, $color-glass-strong);
   }
 
   &--right {
-    background: linear-gradient(270deg, rgba(6, 10, 18, 0.0), rgba(6, 10, 18, 0.55));
+    background: linear-gradient(270deg, transparent, $color-glass-strong);
   }
 
   // Inner container with glassmorphism
@@ -33,7 +33,7 @@
     background: $color-glass-frosted;
     backdrop-filter: $blur-strong;
     -webkit-backdrop-filter: $blur-strong;
-    box-shadow: $shadow-glass, inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow-glass);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -94,7 +94,7 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.15s ease;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    box-shadow: none;
 
     &:hover:not(:disabled) {
       background: $color-glass-medium;
@@ -110,25 +110,25 @@
     // Active state with glow
     &--active {
       border-color: $color-accent-blue;
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       color: $color-accent-blue;
-      box-shadow: 0 0 12px rgba($color-accent-blue, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 12px color-mix(in srgb, $color-accent-blue 40%, transparent);
     }
 
     // Cyan accent variant
     &--cyan.quick-nav-toolbar__btn--active {
       border-color: $color-accent-cyan;
-      background: rgba($color-accent-cyan, 0.15);
+      background: color-mix(in srgb, $color-accent-cyan 15%, transparent);
       color: $color-accent-cyan;
-      box-shadow: 0 0 12px rgba($color-accent-cyan, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 12px color-mix(in srgb, $color-accent-cyan 40%, transparent);
     }
 
     // Blue accent variant (default active)
     &--blue.quick-nav-toolbar__btn--active {
       border-color: $color-accent-blue;
-      background: rgba($color-accent-blue, 0.15);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       color: $color-accent-blue;
-      box-shadow: 0 0 12px rgba($color-accent-blue, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 12px color-mix(in srgb, $color-accent-blue 40%, transparent);
     }
 
     // VR mode - larger touch targets

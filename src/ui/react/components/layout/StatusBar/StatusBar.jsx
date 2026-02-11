@@ -323,7 +323,8 @@ export function StatusBar() {
     // Subscribe to presence system for online user count
     useEffect(() => {
         const handlePresenceChange = (users) => {
-            setOnlineCount(users.length);
+            const nextCount = users.length;
+            setOnlineCount((prev) => (prev === nextCount ? prev : nextCount));
         };
 
         const cleanup = presenceSystem.onPresenceChange(handlePresenceChange);

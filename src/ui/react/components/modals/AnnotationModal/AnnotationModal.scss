@@ -77,33 +77,33 @@
   }
 
   &--active {
-    background: rgba($color-accent-green, 0.1);
-    border-color: rgba($color-accent-green, 0.4);
+    background: color-mix(in srgb, $color-accent-green 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
     color: $color-accent-green;
   }
 
   // Type-specific colors when active
   &--note.annotation-modal__type--active {
-    background: rgba($color-accent-green, 0.1);
-    border-color: rgba($color-accent-green, 0.4);
+    background: color-mix(in srgb, $color-accent-green 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
     color: $color-accent-green;
   }
 
   &--warning.annotation-modal__type--active {
-    background: rgba($color-warning, 0.1);
-    border-color: rgba($color-warning, 0.4);
+    background: color-mix(in srgb, $color-warning 10%, transparent);
+    border-color: color-mix(in srgb, $color-warning 40%, transparent);
     color: $color-warning;
   }
 
   &--info.annotation-modal__type--active {
-    background: rgba($color-accent-blue, 0.1);
-    border-color: rgba($color-accent-blue, 0.4);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
     color: $color-accent-blue;
   }
 
   &--measurement.annotation-modal__type--active {
-    background: rgba($color-accent-purple, 0.1);
-    border-color: rgba($color-accent-purple, 0.4);
+    background: color-mix(in srgb, $color-accent-purple 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-purple 40%, transparent);
     color: $color-accent-purple;
   }
 }

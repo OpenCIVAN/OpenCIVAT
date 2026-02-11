@@ -116,8 +116,8 @@
   }
 
   &--selected {
-    background: rgba($color-accent-blue, 0.1);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
 
     .workspace-picker__item-name {
       color: $color-accent-blue;
@@ -186,7 +186,7 @@
   transition: all $transition-fast;
 
   &:hover {
-    background: rgba($color-accent-blue, 0.05);
+    background: color-mix(in srgb, $color-accent-blue 5%, transparent);
     border-color: $color-accent-blue;
     color: $color-accent-blue;
   }
@@ -220,13 +220,13 @@
   }
 
   &--confirm {
-    background: rgba($color-accent-blue, 0.15);
-    border: 1px solid rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-accent-blue 30%, transparent);
     color: $color-accent-blue;
 
     &:hover:not(:disabled) {
-      background: rgba($color-accent-blue, 0.25);
-      border-color: rgba($color-accent-blue, 0.5);
+      background: color-mix(in srgb, $color-accent-blue 25%, transparent);
+      border-color: color-mix(in srgb, $color-accent-blue 50%, transparent);
     }
 
     &:disabled {

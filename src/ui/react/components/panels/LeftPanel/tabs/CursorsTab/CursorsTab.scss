@@ -79,8 +79,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-sky, 0.15);
-    border-color: rgba($color-accent-sky, 0.3);
+    background: color-mix(in srgb, $color-accent-sky 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-sky 30%, transparent);
     color: $color-accent-sky;
   }
 }
@@ -120,8 +120,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-blue, 0.15);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
     color: $color-accent-blue;
   }
 }
@@ -131,8 +131,8 @@
   align-items: center;
   gap: $spacing-xs;
   padding: $spacing-xs $spacing-sm;
-  background: rgba($color-accent-green, 0.15);
-  border: 1px solid rgba($color-accent-green, 0.3);
+  background: color-mix(in srgb, $color-accent-green 15%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-green 30%, transparent);
   border-radius: $radius-sm;
   font-size: 11px;
   color: $color-accent-green;
@@ -194,8 +194,8 @@
   }
 
   &--active {
-    background: rgba($color-accent-sky, 0.15);
-    border-color: rgba($color-accent-sky, 0.3);
+    background: color-mix(in srgb, $color-accent-sky 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-sky 30%, transparent);
     color: $color-accent-sky;
   }
 }
@@ -226,13 +226,13 @@
   }
 
   &--self {
-    background: rgba($color-accent-sky, 0.08);
-    border-color: rgba($color-accent-sky, 0.2);
+    background: color-mix(in srgb, $color-accent-sky 8%, transparent);
+    border-color: color-mix(in srgb, $color-accent-sky 20%, transparent);
   }
 
   &--following {
-    background: rgba($color-accent-green, 0.08);
-    border-color: rgba($color-accent-green, 0.3);
+    background: color-mix(in srgb, $color-accent-green 8%, transparent);
+    border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
   }
 
   // Presence indicator (small dot)
@@ -318,8 +318,8 @@
     }
 
     &--active {
-      background: rgba($color-accent-green, 0.15);
-      border-color: rgba($color-accent-green, 0.3);
+      background: color-mix(in srgb, $color-accent-green 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-green 30%, transparent);
       color: $color-accent-green;
     }
   }
@@ -454,8 +454,8 @@
   transition: all $transition-fast;
 
   &--on {
-    background: rgba($color-accent-sky, 0.15);
-    border-color: rgba($color-accent-sky, 0.3);
+    background: color-mix(in srgb, $color-accent-sky 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-sky 30%, transparent);
     color: $color-accent-sky;
   }
 }

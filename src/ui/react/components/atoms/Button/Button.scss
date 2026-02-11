@@ -8,7 +8,6 @@
  * - .icon-btn - Square icon button
  * - .btn-group - Container for grouped buttons
  */
-@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -82,13 +81,13 @@
     color: white;
 
     &:hover:not(:disabled):not(.btn--disabled) {
-      background: color.adjust($color-accent-blue, $lightness: 8%);
-      border-color: color.adjust($color-accent-blue, $lightness: 8%);
+      background: color-mix(in srgb, $color-accent-blue, white 16%);
+      border-color: color-mix(in srgb, $color-accent-blue, white 16%);
     }
 
     &:active:not(:disabled):not(.btn--disabled) {
-      background: color.adjust($color-accent-blue, $lightness: -5%);
-      border-color: color.adjust($color-accent-blue, $lightness: -5%);
+      background: color-mix(in srgb, $color-accent-blue, black 10%);
+      border-color: color-mix(in srgb, $color-accent-blue, black 10%);
     }
   }
 
@@ -114,13 +113,13 @@
     color: white;
 
     &:hover:not(:disabled):not(.btn--disabled) {
-      background: color.adjust($color-error, $lightness: 8%);
-      border-color: color.adjust($color-error, $lightness: 8%);
+      background: color-mix(in srgb, $color-error, white 16%);
+      border-color: color-mix(in srgb, $color-error, white 16%);
     }
 
     &:active:not(:disabled):not(.btn--disabled) {
-      background: color.adjust($color-error, $lightness: -5%);
-      border-color: color.adjust($color-error, $lightness: -5%);
+      background: color-mix(in srgb, $color-error, black 10%);
+      border-color: color-mix(in srgb, $color-error, black 10%);
     }
   }
 
@@ -151,7 +150,7 @@
     }
 
     &:active:not(:disabled):not(.btn--disabled) {
-      color: color.adjust($color-accent-blue, $lightness: -10%);
+      color: color-mix(in srgb, $color-accent-blue, black 20%);
     }
   }
 
@@ -360,17 +359,17 @@
   // ============================================================================
 
   &--primary {
-    background: rgba($color-accent-blue, 0.15);
-    border-color: rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
     color: $color-accent-blue;
 
     &:hover:not(:disabled):not(.icon-btn--disabled) {
-      background: rgba($color-accent-blue, 0.25);
-      border-color: rgba($color-accent-blue, 0.5);
+      background: color-mix(in srgb, $color-accent-blue 25%, transparent);
+      border-color: color-mix(in srgb, $color-accent-blue 50%, transparent);
     }
 
     &:active:not(:disabled):not(.icon-btn--disabled) {
-      background: rgba($color-accent-blue, 0.3);
+      background: color-mix(in srgb, $color-accent-blue 30%, transparent);
     }
   }
 
@@ -391,17 +390,17 @@
   }
 
   &--danger {
-    background: rgba($color-error, 0.1);
-    border-color: rgba($color-error, 0.3);
+    background: color-mix(in srgb, $color-error 10%, transparent);
+    border-color: color-mix(in srgb, $color-error 30%, transparent);
     color: $color-error;
 
     &:hover:not(:disabled):not(.icon-btn--disabled) {
-      background: rgba($color-error, 0.2);
-      border-color: rgba($color-error, 0.5);
+      background: color-mix(in srgb, $color-error 20%, transparent);
+      border-color: color-mix(in srgb, $color-error 50%, transparent);
     }
 
     &:active:not(:disabled):not(.icon-btn--disabled) {
-      background: rgba($color-error, 0.25);
+      background: color-mix(in srgb, $color-error 25%, transparent);
     }
   }
 
@@ -443,8 +442,8 @@
   // ============================================================================
 
   &--active {
-    background: rgba($color-accent-blue, 0.2) !important;
-    border-color: rgba($color-accent-blue, 0.4) !important;
+    background: color-mix(in srgb, $color-accent-blue 20%, transparent) !important;
+    border-color: color-mix(in srgb, $color-accent-blue 40%, transparent) !important;
     color: $color-accent-blue !important;
   }
 

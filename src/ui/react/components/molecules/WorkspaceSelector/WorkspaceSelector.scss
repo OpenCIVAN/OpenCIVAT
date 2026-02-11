@@ -243,6 +243,6 @@
   transition: all 0.15s ease;
 
   &:hover {
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
   }
 }

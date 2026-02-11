@@ -79,8 +79,8 @@
     &:hover { background: rgba(255, 255, 255, 0.08); color: $color-text-secondary; }
 
     &--active {
-      background: rgba($color-accent-amber, 0.2);
-      border-color: rgba($color-accent-amber, 0.4);
+      background: color-mix(in srgb, $color-accent-amber 20%, transparent);
+      border-color: color-mix(in srgb, $color-accent-amber 40%, transparent);
       color: $color-accent-amber;
     }
   }

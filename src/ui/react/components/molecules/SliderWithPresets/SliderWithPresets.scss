@@ -1,7 +1,6 @@
 // src/ui/react/components/molecules/SliderWithPresets/SliderWithPresets.scss
 // Slider with presets molecule styles
 
-@use "sass:color";
 @use "theme" as *;
 
 // ============================================================================
@@ -21,8 +20,8 @@
             &::before {
                 background: linear-gradient(
                     90deg,
-                    rgba($color-error, 0.3),
-                    rgba($color-error, 0.15)
+                    color-mix(in srgb, $color-error 30%, transparent),
+                    color-mix(in srgb, $color-error 15%, transparent)
                 );
             }
         }
@@ -85,8 +84,8 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: $color-error;
-    background: rgba($color-error, 0.15);
-    border: 1px solid rgba($color-error, 0.3);
+    background: color-mix(in srgb, $color-error 15%, transparent);
+    border: 1px solid color-mix(in srgb, $color-error 30%, transparent);
     border-radius: $radius-sm;
 }
 
@@ -142,11 +141,11 @@
         background: linear-gradient(
             90deg,
             $color-accent-primary,
-            color.adjust($color-accent-primary, $lightness: 10%)
+            color-mix(in srgb, $color-accent-primary, white 20%)
         );
         border-radius: $radius-full 0 0 $radius-full;
         pointer-events: none;
-        box-shadow: 0 0 8px rgba($color-accent-primary, 0.4);
+        box-shadow: 0 0 8px color-mix(in srgb, $color-accent-primary 40%, transparent);
     }
 
     &::-webkit-slider-thumb {
@@ -159,7 +158,7 @@
         cursor: grab;
         border: 2px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3),
-            0 0 0 2px rgba($color-accent-primary, 0.2);
+            0 0 0 2px color-mix(in srgb, $color-accent-primary 20%, transparent);
         transition: transform $transition-fast, box-shadow $transition-fast;
 
         &:hover {
@@ -192,7 +191,7 @@
         background: linear-gradient(
             90deg,
             $color-accent-primary,
-            color.adjust($color-accent-primary, $lightness: 10%)
+            color-mix(in srgb, $color-accent-primary, white 20%)
         );
         border-radius: $radius-full 0 0 $radius-full;
     }
@@ -233,8 +232,8 @@
     }
 
     &.active {
-        background: rgba($color-accent-primary, 0.2);
-        border-color: rgba($color-accent-primary, 0.4);
+        background: color-mix(in srgb, $color-accent-primary 20%, transparent);
+        border-color: color-mix(in srgb, $color-accent-primary 40%, transparent);
         color: $color-accent-primary;
         font-weight: $font-weight-semibold;
     }
@@ -254,7 +253,7 @@
     color: $color-error;
     text-align: center;
     padding: $spacing-xs;
-    background: rgba($color-error, 0.08);
+    background: color-mix(in srgb, $color-error 8%, transparent);
     border-radius: $radius-sm;
     margin-top: $spacing-xs;
 }

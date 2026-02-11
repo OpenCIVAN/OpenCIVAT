@@ -9,10 +9,10 @@
     // Active state styling
     &--active {
         color: var(--labeled-button-accent);
-        background: rgba($color-accent-blue, 0.1);
+        background: color-mix(in srgb, $color-accent-blue 10%, transparent);
 
         &:hover:not(:disabled) {
-            background: rgba($color-accent-blue, 0.15);
+            background: color-mix(in srgb, $color-accent-blue 15%, transparent);
         }
 
         .btn__icon {

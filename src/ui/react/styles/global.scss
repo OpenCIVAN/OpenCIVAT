@@ -1,4 +1,4 @@
-// global.scss - Base styles and resets with dark glassmorphism theme
+// global.scss - Base styles and resets with theme support
 @use "theme" as *;
 
 // Export CSS custom properties for inline styles and JavaScript access
@@ -26,56 +26,50 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-// Enhanced body styles for global.scss
-// This replaces the body section in your global.scss file
-
+// Enhanced body styles with theme-aware background
 body {
   font-family: $font-family-base;
 
-  // Multi-layer gradient mesh - MORE VISIBLE for glass effect
-  background: 
-    // Blue glow (top-left) - cool scientific feel
+  // Multi-layer gradient mesh using theme-aware CSS custom properties
+  background:
+    // Blue glow (top-left)
     radial-gradient(
       ellipse 900px 700px at 15% 20%,
-      rgba(96, 165, 250, 0.12) 0%,
-      rgba(96, 165, 250, 0.05) 30%,
+      var(--body-gradient-blue) 0%,
       transparent 60%
     ),
-    // Purple glow (top-right) - analytical
+    // Purple glow (top-right)
     radial-gradient(
         ellipse 800px 600px at 85% 15%,
-        rgba(192, 132, 252, 0.1) 0%,
-        rgba(192, 132, 252, 0.04) 30%,
+        var(--body-gradient-purple) 0%,
         transparent 60%
       ),
-    // Pink accent (bottom-right) - warmth
+    // Pink accent (bottom-right)
     radial-gradient(
         ellipse 700px 700px at 80% 75%,
-        rgba(251, 113, 133, 0.09) 0%,
-        rgba(251, 113, 133, 0.03) 30%,
+        var(--body-gradient-pink) 0%,
         transparent 60%
       ),
-    // Emerald glow (bottom-left) - vitality
+    // Emerald glow (bottom-left)
     radial-gradient(
         ellipse 650px 550px at 20% 80%,
-        rgba(52, 211, 153, 0.09) 0%,
-        rgba(52, 211, 153, 0.03) 30%,
+        var(--body-gradient-green) 0%,
         transparent 60%
       ),
-    // Subtle amber center - warmth
+    // Subtle amber center
     radial-gradient(
         ellipse 500px 500px at 50% 50%,
-        rgba(251, 191, 36, 0.05) 0%,
+        var(--body-gradient-amber) 0%,
         transparent 60%
       ),
     // Violet wash overall
     radial-gradient(
         ellipse 1200px 1200px at 50% 50%,
-        rgba(167, 139, 250, 0.03) 0%,
+        var(--body-gradient-violet) 0%,
         transparent 70%
       ),
-    // True black base
-    #000000;
+    // Base color
+    var(--body-bg);
 
   color: $color-text-primary;
   text-rendering: optimizeLegibility;
@@ -83,7 +77,10 @@ body {
   line-height: $line-height-normal;
   position: relative;
 
-  // SUBTLE noise texture (much lighter, less crosshatch)
+  // Theme transition for smooth switching
+  transition: background 0.3s ease, color 0.3s ease;
+
+  // SUBTLE noise texture
   &::before {
     content: "";
     position: fixed;
@@ -99,7 +96,7 @@ body {
     );
     pointer-events: none;
     z-index: 1;
-    opacity: 0.3;
+    opacity: var(--body-noise-opacity);
   }
 
   // Ultra-slow rotating gradient (3 minutes per cycle)
@@ -112,38 +109,19 @@ body {
     height: 200%;
     background: radial-gradient(
         ellipse 800px 400px at center,
-        rgba(110, 182, 255, 0.04) 0%,
+        var(--body-gradient-blue) 0%,
         transparent 50%
       ),
       radial-gradient(
         ellipse 600px 600px at 60% 40%,
-        rgba(192, 132, 252, 0.03) 0%,
+        var(--body-gradient-purple) 0%,
         transparent 50%
       );
     pointer-events: none;
     z-index: 0;
     animation: ultra-slow-rotate 180s linear infinite;
-    opacity: 0.7;
+    opacity: var(--body-rotate-opacity);
   }
-}
-
-// Add this keyframes at the end of global.scss if not already present
-@keyframes ultra-slow-rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-// Optional: Add this if you want the frosted glass to show even MORE
-// This enhances the blur saturation on glass elements
-.glass-panel,
-.glass-card,
-[class*="glass-"] {
-  // Increase the saturation to make colors behind glass more vibrant
-  backdrop-filter: var(--blur, blur(12px)) saturate(150%);
-  -webkit-backdrop-filter: var(--blur, blur(12px)) saturate(150%);
 }
 
 @keyframes ultra-slow-rotate {
@@ -155,12 +133,10 @@ body {
   }
 }
 
-// Optional: Add this if you want the frosted glass to show even MORE
-// This enhances the blur saturation on glass elements
+// Glass enhancement for glass elements
 .glass-panel,
 .glass-card,
 [class*="glass-"] {
-  // Increase the saturation to make colors behind glass more vibrant
   backdrop-filter: var(--blur, blur(12px)) saturate(150%);
   -webkit-backdrop-filter: var(--blur, blur(12px)) saturate(150%);
 }
@@ -198,7 +174,7 @@ select {
 }
 
 // ============================================================================
-// CUSTOM SCROLLBAR (Dark Theme)
+// CUSTOM SCROLLBAR (Theme-aware)
 // ============================================================================
 
 ::-webkit-scrollbar {
@@ -251,9 +227,9 @@ select {
   border-color: $color-accent-primary;
 
   &:hover:not(:disabled) {
-    background: rgba(110, 182, 255, 0.25);
-    box-shadow: 0 0 20px rgba(110, 182, 255, 0.3),
-      0 0 40px rgba(110, 182, 255, 0.15);
+    background: color-mix(in srgb, $color-accent-primary 25%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, $color-accent-primary 30%, transparent),
+      0 0 40px color-mix(in srgb, $color-accent-primary 15%, transparent);
     transform: translateY(-1px);
   }
 }
@@ -348,7 +324,7 @@ select {
 
   &__spawn-btn {
     padding: $spacing-xs;
-    background: rgba(76, 175, 80, 0.15);
+    background: color-mix(in srgb, $color-accent-green 15%, transparent);
     border: 1px solid $color-accent-primary;
     border-radius: $radius-sm;
     color: $color-accent-primary;
@@ -359,7 +335,7 @@ select {
     transition: all $transition-fast;
 
     &:hover {
-      background: rgba(76, 175, 80, 0.25);
+      background: color-mix(in srgb, $color-accent-green 25%, transparent);
       @include accent-glow;
       transform: scale(1.1);
     }
@@ -559,8 +535,8 @@ select {
   gap: $spacing-xs;
 
   // Subtle glass button matching camera picker style
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: $color-glass-subtle;
+  border: 1px solid $color-border-subtle;
   border-radius: $radius-md;
   cursor: pointer;
   transition: all $transition-fast;
@@ -571,21 +547,21 @@ select {
   }
 
   &:hover:not(.empty) {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: $color-glass-medium;
+    border-color: $color-border-medium;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--shadow-md);
   }
 
   &.hovered {
-    background: rgba(100, 150, 255, 0.12);
-    border-color: rgba(100, 150, 255, 0.4);
+    background: color-mix(in srgb, $color-accent-blue 12%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
   }
 
   &.active {
-    border: 1px solid rgba(100, 150, 255, 0.5);
-    background: rgba(100, 150, 255, 0.15);
-    box-shadow: 0 0 12px rgba(100, 150, 255, 0.3);
+    border: 1px solid color-mix(in srgb, $color-accent-blue 50%, transparent);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, $color-accent-blue 30%, transparent);
   }
 
   .position-grid-icon {
@@ -601,11 +577,11 @@ select {
   }
 
   &:hover .position-grid-icon {
-    color: rgba(100, 150, 255, 1);
+    color: $color-accent-blue;
   }
 
   &.active .position-grid-icon {
-    color: rgba(100, 150, 255, 1);
+    color: $color-accent-blue;
   }
 }
 
@@ -615,13 +591,13 @@ select {
   right: $spacing-xs;
   width: 18px;
   height: 18px;
-  background: rgba(100, 150, 255, 0.9);
+  background: $color-accent-blue;
   border-radius: $radius-full;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 0 8px rgba(100, 150, 255, 0.5);
+  box-shadow: 0 0 8px color-mix(in srgb, $color-accent-blue 50%, transparent);
   animation: pop-in $transition-fast $ease-out-back;
 }
 
@@ -632,8 +608,8 @@ select {
   left: $spacing-sm;
   right: $spacing-sm;
   padding: $spacing-xs $spacing-sm;
-  background: rgba(100, 150, 255, 0.08);
-  border: 1px solid rgba(100, 150, 255, 0.15);
+  background: color-mix(in srgb, $color-accent-blue 8%, transparent);
+  border: 1px solid color-mix(in srgb, $color-accent-blue 15%, transparent);
   border-radius: $radius-sm;
   text-align: center;
   font-size: $font-size-xs;

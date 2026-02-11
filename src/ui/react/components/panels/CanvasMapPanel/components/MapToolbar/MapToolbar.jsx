@@ -100,7 +100,9 @@ export const MapToolbar = memo(function MapToolbar({
   onCreateLink,
   onBreakLink,
 
-  // Companion panel
+  // Debug: implicit VGs
+  showImplicitVGs,
+  toggleShowImplicitVGs,
 
   sizeMode = 'standard',
 }) {
@@ -134,6 +136,15 @@ export const MapToolbar = memo(function MapToolbar({
         title="Views"
         activeColor="var(--accent-blue)"
       />
+      {toggleShowImplicitVGs && (
+        <ToolbarBtn
+          icon="eye"
+          active={showImplicitVGs}
+          onClick={toggleShowImplicitVGs}
+          title={showImplicitVGs ? "Hide implicit VGs" : "Show implicit VGs (debug)"}
+          activeColor="var(--accent-amber)"
+        />
+      )}
 
       <Separator />
 

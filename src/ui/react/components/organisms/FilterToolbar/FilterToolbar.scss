@@ -16,7 +16,7 @@
   --search-input-bg: #{$color-bg-secondary};
   --search-input-border: #{$color-border-subtle};
   --search-input-focus-border: #{$color-accent-blue};
-  --search-input-focus-shadow: 0 0 0 2px #{rgba($color-accent-blue, 0.2)};
+  --search-input-focus-shadow: 0 0 0 2px #{color-mix(in srgb, $color-accent-blue 20%, transparent)};
   --search-input-color: #{$color-text-primary};
   --search-input-placeholder: #{$color-text-tertiary};
   --search-input-icon: #{$color-text-tertiary};

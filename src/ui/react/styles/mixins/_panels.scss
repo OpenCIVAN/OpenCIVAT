@@ -1,5 +1,5 @@
 // panels.scss - Complete styles for all panels with glassmorphism
-@use "sass:color";
+// NOTE: Uses color-mix() instead of color.adjust() for CSS custom property compatibility
 @use "theme" as *;
 
 // ============================================================================
@@ -221,35 +221,35 @@
 
   button {
     @include glass-button;
-    background: color.adjust($color-accent-primary, $alpha: -0.85);
+    background: color-mix(in srgb, $color-accent-primary 15%, transparent);
     color: $color-accent-primary;
     font-weight: $font-weight-semibold;
 
     &:hover:not(:disabled) {
-      background: color.adjust($color-accent-primary, $alpha: -0.7);
+      background: color-mix(in srgb, $color-accent-primary 30%, transparent);
       @include accent-glow;
     }
 
     &:active:not(:disabled) {
-      background: color.adjust($color-accent-primary, $alpha: -0.6);
+      background: color-mix(in srgb, $color-accent-primary 40%, transparent);
     }
 
     &.secondary {
-      background: color.adjust($color-accent-blue, $alpha: -0.85);
+      background: color-mix(in srgb, $color-accent-blue 15%, transparent);
       color: $color-accent-blue;
 
       &:hover:not(:disabled) {
-        background: color.adjust($color-accent-blue, $alpha: -0.7);
+        background: color-mix(in srgb, $color-accent-blue 30%, transparent);
         box-shadow: $shadow-glass, 0 0 20px $color-accent-blue-glow;
       }
     }
 
     &.danger {
-      background: color.adjust($color-error, $alpha: -0.85);
+      background: color-mix(in srgb, $color-error 15%, transparent);
       color: $color-error;
 
       &:hover:not(:disabled) {
-        background: color.adjust($color-error, $alpha: -0.7);
+        background: color-mix(in srgb, $color-error 30%, transparent);
         @include error-glow;
       }
     }

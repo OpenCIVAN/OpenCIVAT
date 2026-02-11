@@ -1,7 +1,6 @@
 // tabs/FilesTab/FilesTab.scss
 // Files tab styling - darker theme matching LayoutPanel
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -64,8 +63,8 @@
 .upload-dropzone-overlay {
   position: absolute;
   inset: 0;
-  background: rgba($color-accent-blue, 0.15);
-  border: 2px dashed rgba($color-accent-blue, 0.5);
+  background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+  border: 2px dashed color-mix(in srgb, $color-accent-blue 50%, transparent);
   border-radius: $radius-md;
   z-index: $z-popover;
   display: flex;
@@ -79,9 +78,9 @@
     align-items: center;
     gap: $spacing-sm;
     padding: $spacing-lg;
-    background: rgba($color-bg-primary, 0.95);
+    background: color-mix(in srgb, $color-bg-primary 95%, transparent);
     border-radius: $radius-md;
-    border: 1px solid rgba($color-accent-blue, 0.3);
+    border: 1px solid color-mix(in srgb, $color-accent-blue 30%, transparent);
 
     svg {
       color: $color-accent-blue;
@@ -102,7 +101,7 @@
 .panel-loading-overlay {
   position: absolute;
   inset: 0;
-  background: rgba($color-bg-primary, 0.85);
+  background: color-mix(in srgb, $color-bg-primary 85%, transparent);
   z-index: $z-popover - 1; // Below dropzone but above content
   display: flex;
   align-items: center;
@@ -168,12 +167,12 @@
   }
 
   &--selected {
-    background: rgba($color-accent-blue, 0.15);
-    border-color: rgba($color-accent-blue, 0.4);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 40%, transparent);
   }
 
   &--can-viz:hover {
-    border-color: rgba($color-accent-green, 0.4);
+    border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
   }
 
   &__icon {
@@ -366,19 +365,19 @@
     }
 
     &--primary {
-      background: rgba($color-accent-green, 0.15);
-      border-color: rgba($color-accent-green, 0.4);
+      background: color-mix(in srgb, $color-accent-green 15%, transparent);
+      border-color: color-mix(in srgb, $color-accent-green 40%, transparent);
       color: $color-accent-green;
 
       &:hover {
-        background: rgba($color-accent-green, 0.25);
+        background: color-mix(in srgb, $color-accent-green 25%, transparent);
       }
     }
 
     &--danger {
       &:hover {
-        background: rgba($color-error, 0.15);
-        border-color: rgba($color-error, 0.4);
+        background: color-mix(in srgb, $color-error 15%, transparent);
+        border-color: color-mix(in srgb, $color-error 40%, transparent);
         color: $color-error;
       }
     }
@@ -624,7 +623,7 @@
       color: $color-accent-red;
 
       &:hover {
-        background: rgba($color-accent-red, 0.1);
+        background: color-mix(in srgb, $color-accent-red 10%, transparent);
         color: $color-accent-red;
       }
     }
@@ -665,8 +664,8 @@
   }
 
   &.selected {
-    background: rgba($color-accent-blue, 0.25);
-    outline: 1px solid rgba($color-accent-blue, 0.5);
+    background: color-mix(in srgb, $color-accent-blue 25%, transparent);
+    outline: 1px solid color-mix(in srgb, $color-accent-blue 50%, transparent);
   }
 
   &.loaded {
@@ -835,18 +834,18 @@
       color: $color-accent-amber;
 
       &:hover {
-        color: color.adjust($color-accent-amber, $lightness: -10%);
+        color: color-mix(in srgb, $color-accent-amber, black 20%);
       }
     }
 
     // Add to workspace button - more prominent
     &--add {
       color: $color-accent-green;
-      background: rgba($color-accent-green, 0.1);
+      background: color-mix(in srgb, $color-accent-green 10%, transparent);
 
       &:hover {
         color: $color-accent-green;
-        background: rgba($color-accent-green, 0.2);
+        background: color-mix(in srgb, $color-accent-green 20%, transparent);
       }
     }
   }
@@ -907,9 +906,9 @@
   }
 
   &.selected {
-    background: rgba($color-accent-blue, 0.2);
-    border-color: rgba($color-accent-blue, 0.6);
-    box-shadow: 0 0 0 1px rgba($color-accent-blue, 0.3);
+    background: color-mix(in srgb, $color-accent-blue 20%, transparent);
+    border-color: color-mix(in srgb, $color-accent-blue 60%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, $color-accent-blue 30%, transparent);
   }
 
   .thumbnail {
@@ -971,17 +970,17 @@
       color: $color-accent-amber;
 
       &:hover {
-        color: color.adjust($color-accent-amber, $lightness: -10%);
+        color: color-mix(in srgb, $color-accent-amber, black 20%);
       }
     }
 
     // Add to workspace button - more prominent
     &--add {
       color: $color-accent-green;
-      background: rgba($color-accent-green, 0.3);
+      background: color-mix(in srgb, $color-accent-green 30%, transparent);
 
       &:hover {
-        background: rgba($color-accent-green, 0.5);
+        background: color-mix(in srgb, $color-accent-green 50%, transparent);
       }
     }
   }

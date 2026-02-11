@@ -44,7 +44,7 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba($color-accent-blue, 0.4);
+    box-shadow: 0 0 0 2px color-mix(in srgb, $color-accent-blue 40%, transparent);
   }
 
   // Empty state (no active view)
@@ -329,11 +329,11 @@
   text-align: left;
 
   &:hover {
-    background: rgba($color-accent-blue, 0.1);
+    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
   }
 
   &--active {
-    background: rgba($color-accent-blue, 0.15);
+    background: color-mix(in srgb, $color-accent-blue 15%, transparent);
 
     .active-view-selector__item-name {
       color: $color-text-primary;

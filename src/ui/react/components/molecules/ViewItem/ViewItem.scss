@@ -2,7 +2,6 @@
 // Adaptive ViewItem component styles - Desktop & VR modes
 // Location: src/ui/react/components/common/ViewItem/ViewItem.scss
 
-@use "sass:color";
 @use "theme" as *;
 
 // =============================================================================
@@ -484,7 +483,7 @@
   }
 
   &.view-item--trashed {
-    background: linear-gradient(145deg, $color-error-bg 0%, rgba($color-error, 0.02) 100%);
+    background: linear-gradient(145deg, $color-error-bg 0%, color-mix(in srgb, $color-error 2%, transparent) 100%);
     border-color: $color-error-border;
   }
 
@@ -629,7 +628,7 @@
   }
 
   &--expiring {
-    border-color: rgba($color-accent-amber, 0.3);
+    border-color: color-mix(in srgb, $color-accent-amber 30%, transparent);
   }
 
   &--confirm-delete {
