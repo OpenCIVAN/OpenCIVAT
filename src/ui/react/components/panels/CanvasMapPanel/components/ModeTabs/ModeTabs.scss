@@ -8,7 +8,7 @@
   display: flex;
   background: $color-glass-light;
   border-bottom: 1px solid $color-border-subtle;
-  height: 40px;
+  height: 34px;
 
   &__tab {
     flex: 1;
@@ -17,7 +17,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 7px 8px;
+    padding: 5px 8px;
     border: none;
     background: transparent;
     color: $color-text-muted;
@@ -61,12 +61,13 @@
   // Compact mode - icon only
   &[data-size-mode="compact"] {
     .mode-tabs__tab {
-      padding: 6px 4px;
+      padding: 4px 4px;
     }
   }
 
   // VR mode adjustments
   &[data-vr="true"] {
+    height: 44px;
     .mode-tabs__tab {
       padding: $spacing-md;
       font-size: $font-size-sm;

@@ -56,6 +56,7 @@ import { useState, useRef, useCallback, useEffect, useId } from "react";
  * @property {number} [offset=8] - Distance from trigger
  * @property {boolean} [interactive=false] - Allow hovering over tooltip
  * @property {boolean} [disabled=false] - Disable tooltip
+ * @property {boolean} [allowFlip=true] - Allow viewport-aware flip
  * @property {Function} [onOpenChange] - Callback when visibility changes
  */
 
@@ -87,9 +88,10 @@ const SKIP_DELAY_DURATION = 300;
  * @param {DOMRect} tooltipRect - Tooltip element bounding rect
  * @param {Placement} placement - Desired placement
  * @param {number} offset - Offset from trigger
+ * @param {boolean} allowFlip - Whether to allow viewport-aware flipping
  * @returns {{ position: Position, arrowPosition: ArrowPosition, actualPlacement: Placement }}
  */
-function calculatePosition(triggerRect, tooltipRect, placement, offset) {
+function calculatePosition(triggerRect, tooltipRect, placement, offset, allowFlip) {
   const viewport = {
     width: window.innerWidth,
     height: window.innerHeight,
@@ -126,36 +128,38 @@ function calculatePosition(triggerRect, tooltipRect, placement, offset) {
       y = triggerRect.top - tooltipRect.height - offset;
   }
 
-  // Check if tooltip would overflow and flip if needed
-  const wouldOverflowTop = y < 8;
-  const wouldOverflowBottom = y + tooltipRect.height > viewport.height - 8;
-  const wouldOverflowLeft = x < 8;
-  const wouldOverflowRight = x + tooltipRect.width > viewport.width - 8;
+  if (allowFlip) {
+    // Check if tooltip would overflow and flip if needed
+    const wouldOverflowTop = y < 8;
+    const wouldOverflowBottom = y + tooltipRect.height > viewport.height - 8;
+    const wouldOverflowLeft = x < 8;
+    const wouldOverflowRight = x + tooltipRect.width > viewport.width - 8;
 
-  // Vertical flip
-  if (placement === "top" && wouldOverflowTop && !wouldOverflowBottom) {
-    y = triggerRect.bottom + offset;
-    actualPlacement = "bottom";
-  } else if (
-    placement === "bottom" &&
-    wouldOverflowBottom &&
-    !wouldOverflowTop
-  ) {
-    y = triggerRect.top - tooltipRect.height - offset;
-    actualPlacement = "top";
-  }
+    // Vertical flip
+    if (placement === "top" && wouldOverflowTop && !wouldOverflowBottom) {
+      y = triggerRect.bottom + offset;
+      actualPlacement = "bottom";
+    } else if (
+      placement === "bottom" &&
+      wouldOverflowBottom &&
+      !wouldOverflowTop
+    ) {
+      y = triggerRect.top - tooltipRect.height - offset;
+      actualPlacement = "top";
+    }
 
-  // Horizontal flip
-  if (placement === "left" && wouldOverflowLeft && !wouldOverflowRight) {
-    x = triggerRect.right + offset;
-    actualPlacement = "right";
-  } else if (
-    placement === "right" &&
-    wouldOverflowRight &&
-    !wouldOverflowLeft
-  ) {
-    x = triggerRect.left - tooltipRect.width - offset;
-    actualPlacement = "left";
+    // Horizontal flip
+    if (placement === "left" && wouldOverflowLeft && !wouldOverflowRight) {
+      x = triggerRect.right + offset;
+      actualPlacement = "right";
+    } else if (
+      placement === "right" &&
+      wouldOverflowRight &&
+      !wouldOverflowLeft
+    ) {
+      x = triggerRect.left - tooltipRect.width - offset;
+      actualPlacement = "left";
+    }
   }
 
   // Constrain to viewport
@@ -217,6 +221,7 @@ export function useTooltip(options = {}) {
     offset = 8,
     interactive = false,
     disabled = false,
+    allowFlip = true,
     onOpenChange,
   } = options;
 
@@ -263,13 +268,14 @@ export function useTooltip(options = {}) {
       triggerRect,
       tooltipRect,
       placement,
-      offset
+      offset,
+      allowFlip
     );
 
     setPosition(result.position);
     setArrowPosition(result.arrowPosition);
     setActualPlacement(result.actualPlacement);
-  }, [placement, offset]);
+  }, [placement, offset, allowFlip]);
 
   /**
    * Show tooltip immediately

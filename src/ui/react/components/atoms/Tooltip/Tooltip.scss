@@ -43,12 +43,14 @@
 // ============================================================================
 
 .tooltip {
+  --tooltip-bg: #{$color-glass-panel};
+  --tooltip-border: #{$color-border-glow};
   position: fixed;
   z-index: 10001; // Above dropdowns and modals
   max-width: 250px;
   padding: 6px 10px;
-  background: $color-glass-panel;
-  border: 1px solid $color-border-glow;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
   border-radius: 6px;
   box-shadow: $shadow-glass;
   backdrop-filter: $blur-strong;
@@ -102,10 +104,13 @@
   position: absolute;
   width: 8px;
   height: 8px;
-  background: $color-glass-panel;
-  border: 1px solid $color-border-glow;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
   transform: rotate(45deg);
   pointer-events: none;
+  backdrop-filter: $blur-strong;
+  -webkit-backdrop-filter: $blur-strong;
+  box-shadow: $shadow-glass;
 
   // Position arrow for top placement
   .tooltip--top & {
@@ -344,7 +349,7 @@
 // Already designed for dark mode, but add any necessary adjustments
 .tooltip {
   // Subtle gradient for depth
-  background: linear-gradient(
+  --tooltip-bg: linear-gradient(
     180deg,
     color-mix(in srgb, $color-bg-elevated, white 4%) 0%,
     $color-bg-elevated 100%
@@ -374,48 +379,28 @@
 
 // Error tooltip (for validation messages)
 .tooltip--error {
-  background: color-mix(in srgb, $color-error 10%, transparent);
-  border-color: color-mix(in srgb, $color-error 30%, transparent);
+  --tooltip-bg: color-mix(in srgb, $color-error 10%, transparent);
+  --tooltip-border: color-mix(in srgb, $color-error 30%, transparent);
   color: $color-error;
-
-  .tooltip__arrow {
-    background: color-mix(in srgb, $color-error 10%, transparent);
-    border-color: color-mix(in srgb, $color-error 30%, transparent);
-  }
 }
 
 // Warning tooltip
 .tooltip--warning {
-  background: color-mix(in srgb, $color-warning 10%, transparent);
-  border-color: color-mix(in srgb, $color-warning 30%, transparent);
+  --tooltip-bg: color-mix(in srgb, $color-warning 10%, transparent);
+  --tooltip-border: color-mix(in srgb, $color-warning 30%, transparent);
   color: $color-warning;
-
-  .tooltip__arrow {
-    background: color-mix(in srgb, $color-warning 10%, transparent);
-    border-color: color-mix(in srgb, $color-warning 30%, transparent);
-  }
 }
 
 // Success tooltip
 .tooltip--success {
-  background: color-mix(in srgb, $color-success 10%, transparent);
-  border-color: color-mix(in srgb, $color-success 30%, transparent);
+  --tooltip-bg: color-mix(in srgb, $color-success 10%, transparent);
+  --tooltip-border: color-mix(in srgb, $color-success 30%, transparent);
   color: $color-success;
-
-  .tooltip__arrow {
-    background: color-mix(in srgb, $color-success 10%, transparent);
-    border-color: color-mix(in srgb, $color-success 30%, transparent);
-  }
 }
 
 // Info tooltip
 .tooltip--info {
-  background: color-mix(in srgb, $color-accent-blue 10%, transparent);
-  border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
+  --tooltip-bg: color-mix(in srgb, $color-accent-blue 10%, transparent);
+  --tooltip-border: color-mix(in srgb, $color-accent-blue 30%, transparent);
   color: $color-accent-blue;
-
-  .tooltip__arrow {
-    background: color-mix(in srgb, $color-accent-blue 10%, transparent);
-    border-color: color-mix(in srgb, $color-accent-blue 30%, transparent);
-  }
 }

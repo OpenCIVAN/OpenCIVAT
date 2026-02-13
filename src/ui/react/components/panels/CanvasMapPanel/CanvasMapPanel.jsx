@@ -25,10 +25,10 @@ export const CANVAS_MAP_PANEL_ID = 'canvas-map';
 
 // Breakpoints for responsive sizing
 const CANVAS_MAP_BREAKPOINTS = {
-  minWidth: 350,
-  compactWidth: 350,
-  standardWidth: 380,
-  expandedWidth: 480,
+  minWidth: 380,
+  compactWidth: 380,
+  standardWidth: 420,
+  expandedWidth: 500,
 };
 
 /**
@@ -38,7 +38,7 @@ const CANVAS_MAP_BREAKPOINTS = {
  * @param {string} props.workspaceId - Workspace ID for loading data
  * @param {string} props.projectId - Project ID for template persistence
  */
-const MIN_PANEL_WIDTH = 350;
+const MIN_PANEL_WIDTH = 380;
 const MIN_PANEL_HEIGHT = 520;
 const PANEL_CONTENT_PADDING = 8;
 const PANEL_HEADER_HEIGHT = 40;
@@ -52,10 +52,6 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
   const handleCompanionToggle = useCallback(() => {
     togglePanel(COMPANION_PANEL_ID);
   }, [togglePanel]);
-
-  const handleEditToggle = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('cia:canvas-map-edit'));
-  }, []);
 
   const currentWorkspace = useMemo(() => {
     if (!workspaceId || !workspaces?.length) return null;
@@ -73,6 +69,10 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
   }, [togglePanel]);
 
   const panelState = getPanelState(CANVAS_MAP_PANEL_ID);
+  const headerTitle = useMemo(() => {
+    const width = panelState?.size?.width ?? CANVAS_MAP_BREAKPOINTS.standardWidth;
+    return width <= CANVAS_MAP_BREAKPOINTS.standardWidth ? 'Map' : 'Canvas Map';
+  }, [panelState?.size?.width]);
 
   useEffect(() => {
     if (!canvasMapContext) return;
@@ -106,7 +106,7 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
-          <span className="canvas-map-header__title">Canvas Map</span>
+          <span className="canvas-map-header__title">{headerTitle}</span>
           <span className="canvas-map-header__separator">·</span>
           {currentWorkspace && (
             <WorkspaceSelector
@@ -122,36 +122,24 @@ export function CanvasMapPanel({ workspaceId, projectId, workspaces, onOpenWorks
         </div>
       )}
       headerActions={(
-        <>
-          <Tooltip content="Edit layout" placement="bottom" delay={400}>
-            <button
-              className="panel-header__button"
-              onClick={handleEditToggle}
-              type="button"
-              aria-label="Edit layout"
-            >
-              <Icon name="pencil" size={12} />
-            </button>
-          </Tooltip>
-          <Tooltip
-            content={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
-            placement="bottom"
-            delay={400}
+        <Tooltip
+          content={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
+          placement="bottom"
+          delay={400}
+        >
+          <button
+            className="panel-header__button"
+            onClick={handleCompanionToggle}
+            type="button"
+            aria-label={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
           >
-            <button
-              className="panel-header__button"
-              onClick={handleCompanionToggle}
-              type="button"
-              aria-label={companionOpen ? 'Hide companion panel' : 'Show companion panel'}
-            >
-              <Icon name={companionOpen ? 'panelRightClose' : 'panelRightOpen'} size={12} />
-            </button>
-          </Tooltip>
-        </>
+            <Icon name={companionOpen ? 'panelRightClose' : 'panelRightOpen'} size={12} />
+          </button>
+        </Tooltip>
       )}
       defaultWidth={380}
       defaultHeight={600}
-      minWidth={350}
+      minWidth={380}
       minHeight={520}
       maxWidth={600}
       maxHeight={900}

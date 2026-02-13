@@ -39,8 +39,6 @@ export function PanelHeader({
   minimized,
   minimizable,
   closable,
-  sizeMode,
-  width,
   onDragStart,
   onMinimize,
   onClose,
@@ -48,8 +46,6 @@ export function PanelHeader({
   headerContent,
 }) {
   const isFull = chrome === CHROME_LEVELS.FULL;
-  const isCompact = chrome === CHROME_LEVELS.COMPACT;
-  const isDev = process.env.NODE_ENV === 'development';
   const minimizeLabel = minimized ? 'Expand' : (isFull ? 'Minimize' : 'Collapse');
 
   return (
@@ -81,15 +77,8 @@ export function PanelHeader({
         </span>
       )}
 
-      {/* Size indicator (dev mode, FULL only) */}
-      {isFull && isDev && (
-        <span className="panel-header__size-indicator">
-          {width}px • {sizeMode}
-        </span>
-      )}
-
-      {/* Spacer */}
-      <span className="panel-header__spacer" />
+      {/* Spacer (only needed when no headerContent, since __content has flex:1) */}
+      {!headerContent && <span className="panel-header__spacer" />}
 
       {/* Buttons */}
       <div className="panel-header__buttons">

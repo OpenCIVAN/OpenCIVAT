@@ -24,6 +24,9 @@ const ToolbarBtn = memo(function ToolbarBtn({
   disabled,
   title,
   size = 14,
+  placement = 'top',
+  tooltipOffset = 6,
+  allowFlip = false,
 }) {
   const { isVR } = useAdaptive();
 
@@ -43,7 +46,7 @@ const ToolbarBtn = memo(function ToolbarBtn({
   if (!title) return button;
 
   return (
-    <Tooltip content={title} placement="bottom" delay={400}>
+    <Tooltip content={title} placement={placement} offset={tooltipOffset} delay={400} allowFlip={allowFlip}>
       {button}
     </Tooltip>
   );
@@ -62,7 +65,6 @@ const Separator = memo(function Separator() {
 export const MapToolbar = memo(function MapToolbar({
   minimapZoom,
   showViewports,
-  showBookmarks,
   showInternals,
   showCursors,
 
@@ -71,7 +73,6 @@ export const MapToolbar = memo(function MapToolbar({
   onZoomOut,
   onResetView,
   toggleShowViewports,
-  toggleShowBookmarks,
   toggleShowInternals,
   toggleShowCursors,
 
@@ -115,13 +116,6 @@ export const MapToolbar = memo(function MapToolbar({
         activeColor="var(--accent-green)"
       />
       <ToolbarBtn
-        icon="bookmark"
-        active={showBookmarks}
-        onClick={toggleShowBookmarks}
-        title="Bookmarks"
-        activeColor="var(--accent-amber)"
-      />
-      <ToolbarBtn
         icon="users"
         active={showCursors}
         onClick={toggleShowCursors}
@@ -131,7 +125,7 @@ export const MapToolbar = memo(function MapToolbar({
 
       {/* Remote lock badge */}
       {remoteLock && !isEditMode && (
-        <Tooltip content={`${remoteLock.lockedByName || 'Someone'} is editing`} placement="bottom" delay={400}>
+        <Tooltip content={`${remoteLock.lockedByName || 'Someone'} is editing`} placement="top" delay={400} allowFlip={false}>
           <span className="map-toolbar__lock-badge" aria-label={`${remoteLock.lockedByName || 'Someone'} is editing`}>
             <Icon name="lock" size={12} />
             <span>{remoteLock.lockedByName || 'Locked'}</span>
@@ -152,7 +146,7 @@ export const MapToolbar = memo(function MapToolbar({
 
       <div className="map-toolbar__spacer" />
 
-      <Tooltip content={editTooltip} placement="bottom" delay={400}>
+      <Tooltip content={editTooltip} placement="top" offset={6} delay={400} allowFlip={false}>
         <button
           type="button"
           className={`map-toolbar__edit-btn ${isEditMode ? 'map-toolbar__edit-btn--active' : ''}`}

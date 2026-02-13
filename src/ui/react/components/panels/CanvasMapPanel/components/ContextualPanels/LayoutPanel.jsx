@@ -40,6 +40,8 @@ export const LayoutPanel = memo(function LayoutPanel({
   canvasCols,
   onAdjustRows,
   onAdjustCols,
+  canRemoveRows = true,
+  canRemoveCols = true,
   onToggleSnap,
   onNameGroup,
   sizeMode = 'standard',
@@ -243,7 +245,7 @@ export const LayoutPanel = memo(function LayoutPanel({
                 type="button"
                 className="layout-panel__stepper-btn"
                 onClick={() => onAdjustCols?.(-1)}
-                disabled={!onAdjustCols || (canvasCols ?? 0) <= 1}
+                disabled={!onAdjustCols || !canRemoveCols || (canvasCols ?? 0) <= 1}
               >
                 <Icon name="minus" size={10} />
               </button>
@@ -266,7 +268,7 @@ export const LayoutPanel = memo(function LayoutPanel({
                 type="button"
                 className="layout-panel__stepper-btn"
                 onClick={() => onAdjustRows?.(-1)}
-                disabled={!onAdjustRows || (canvasRows ?? 0) <= 1}
+                disabled={!onAdjustRows || !canRemoveRows || (canvasRows ?? 0) <= 1}
               >
                 <Icon name="minus" size={10} />
               </button>

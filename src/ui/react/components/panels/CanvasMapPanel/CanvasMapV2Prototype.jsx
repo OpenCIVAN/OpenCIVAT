@@ -151,7 +151,7 @@ export const CanvasMapV2Prototype = memo(function CanvasMapV2Prototype({
     { id: 'active', label: 'Active', icon: 'checkCircle', predicate: (vg) => vg.isActive },
     { id: 'linked', label: 'Linked', icon: 'link2', predicate: (vg) => vg.isLinked },
     { id: 'shared', label: 'Shared', icon: 'share2', predicate: (vg) => vg.isShared },
-    { id: 'starred', label: 'Starred', icon: 'star', predicate: (vg) => vg.isStarred },
+    { id: 'starred', label: 'Bookmarked', icon: 'bookmark', predicate: (vg) => vg.isStarred },
   ]), []);
 
   const vgFilter = useListFilter({

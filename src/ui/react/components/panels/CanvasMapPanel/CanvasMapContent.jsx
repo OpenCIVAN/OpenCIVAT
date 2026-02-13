@@ -291,7 +291,7 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     { id: 'active', label: 'Active', icon: 'checkCircle', predicate: (vg) => vg.isActive },
     { id: 'linked', label: 'Linked', icon: 'link2', predicate: (vg) => vg.isLinked },
     { id: 'shared', label: 'Shared', icon: 'share2', predicate: (vg) => vg.isShared },
-    { id: 'starred', label: 'Starred', icon: 'star', predicate: (vg) => vg.isStarred },
+    { id: 'starred', label: 'Bookmarked', icon: 'bookmark', predicate: (vg) => vg.isStarred },
   ]), []);
 
   const vgSortOptions = useMemo(() => ([
@@ -437,6 +437,67 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   const isAtHome =
     currentPosition.row === canvasData.homePosition.row &&
     currentPosition.col === canvasData.homePosition.col;
+
+  const resizeConstraints = useMemo(() => {
+    const rows = canvasData?.rows || 1;
+    const cols = canvasData?.cols || 1;
+    const nextRows = rows - 1;
+    const nextCols = cols - 1;
+
+    const topBlockers = [];
+    const bottomBlockers = [];
+    const leftBlockers = [];
+    const rightBlockers = [];
+
+    const items = [];
+    activeViewGroups.forEach((vg) => {
+      if (!vg?.position) return;
+      items.push({
+        row: vg.position.row ?? 0,
+        col: vg.position.col ?? 0,
+        rowSpan: vg.position.rowSpan ?? 1,
+        colSpan: vg.position.colSpan ?? 1,
+      });
+    });
+    customViewports.forEach((vp) => {
+      if (!vp?.position) return;
+      items.push({
+        row: vp.position.row ?? 0,
+        col: vp.position.col ?? 0,
+        rowSpan: vp.size?.rows ?? vp.rows ?? 1,
+        colSpan: vp.size?.cols ?? vp.cols ?? 1,
+      });
+    });
+
+    if (nextRows >= 1 || nextCols >= 1) {
+      items.forEach((item) => {
+        const rowEnd = item.row + item.rowSpan;
+        const colEnd = item.col + item.colSpan;
+        if (item.row <= 0) topBlockers.push(item);
+        if (item.col <= 0) leftBlockers.push(item);
+        if (nextRows >= 1 && rowEnd > nextRows) bottomBlockers.push(item);
+        if (nextCols >= 1 && colEnd > nextCols) rightBlockers.push(item);
+      });
+    }
+
+    const canRemoveTop = rows > 1 && topBlockers.length === 0;
+    const canRemoveBottom = rows > 1 && bottomBlockers.length === 0;
+    const canRemoveLeft = cols > 1 && leftBlockers.length === 0;
+    const canRemoveRight = cols > 1 && rightBlockers.length === 0;
+
+    return {
+      canRemoveTop,
+      canRemoveBottom,
+      canRemoveLeft,
+      canRemoveRight,
+      canRemoveRows: canRemoveBottom,
+      canRemoveCols: canRemoveRight,
+      topBlockerCount: topBlockers.length,
+      bottomBlockerCount: bottomBlockers.length,
+      leftBlockerCount: leftBlockers.length,
+      rightBlockerCount: rightBlockers.length,
+    };
+  }, [activeViewGroups, canvasData.rows, canvasData.cols, customViewports]);
 
   // Transform collaborators to expected structure
   const baseCollaborators = useMemo(() => {
@@ -721,16 +782,122 @@ export const CanvasMapContent = memo(function CanvasMapContent({
     return { row: 0, col: 0 };
   }, [activeViewGroups, canvasData.cols, canvasData.rows]);
 
-  const handleExpandCanvas = useCallback((direction) => {
+  const handleResizeCanvas = useCallback(async (directionOrPayload, actionArg = 'add') => {
     if (!setCanvasSize || !canvasData) return;
-    if (direction === 'top' || direction === 'bottom') {
-      const newRows = Math.max(1, canvasData.rows + 1);
-      setCanvasSize({ rows: newRows, cols: canvasData.cols });
-    } else if (direction === 'left' || direction === 'right') {
-      const newCols = Math.max(1, canvasData.cols + 1);
-      setCanvasSize({ rows: canvasData.rows, cols: newCols });
+    const payload = typeof directionOrPayload === 'string'
+      ? { direction: directionOrPayload, action: actionArg }
+      : (directionOrPayload || {});
+    const direction = payload.direction;
+    const action = payload.action || 'add';
+    if (!direction) return;
+
+    const isRow = direction === 'top' || direction === 'bottom';
+    const isTop = direction === 'top';
+    const isLeft = direction === 'left';
+    const isBottom = direction === 'bottom';
+    const isRight = direction === 'right';
+    const delta = action === 'remove' ? -1 : 1;
+    const deltaRows = isRow ? delta : 0;
+    const deltaCols = isRow ? 0 : delta;
+
+    const canRemoveForDirection = (() => {
+      if (direction === 'top') return resizeConstraints.canRemoveTop;
+      if (direction === 'bottom') return resizeConstraints.canRemoveBottom;
+      if (direction === 'left') return resizeConstraints.canRemoveLeft;
+      return resizeConstraints.canRemoveRight;
+    })();
+
+    const blockerCountForDirection = (() => {
+      if (direction === 'top') return resizeConstraints.topBlockerCount;
+      if (direction === 'bottom') return resizeConstraints.bottomBlockerCount;
+      if (direction === 'left') return resizeConstraints.leftBlockerCount;
+      return resizeConstraints.rightBlockerCount;
+    })();
+
+    if (delta < 0 && !canRemoveForDirection) {
+      const count = blockerCountForDirection;
+      const directionLabel = isTop
+        ? 'top row'
+        : isBottom
+          ? 'bottom row'
+          : isLeft
+            ? 'left column'
+            : 'right column';
+      toast.warning(
+        count > 0
+          ? `Cannot remove ${directionLabel} — ${count} item${count === 1 ? '' : 's'} would be clipped.`
+          : `Cannot remove ${directionLabel}.`
+      );
+      return;
     }
-  }, [setCanvasSize, canvasData]);
+
+    const shiftContent = async (rowDelta, colDelta) => {
+      if (!rowDelta && !colDelta) return true;
+      const vgTargets = activeViewGroups.filter((vg) => vg?.position);
+      if (vgTargets.length > 0 && !updateViewGroup) {
+        toast.error('ViewGroup operations are not available.');
+        return false;
+      }
+      try {
+        if (vgTargets.length > 0) {
+          await Promise.all(vgTargets.map((vg) => {
+            if (!vg?.position) return null;
+            const nextPosition = {
+              ...vg.position,
+              row: (vg.position.row ?? 0) + rowDelta,
+              col: (vg.position.col ?? 0) + colDelta,
+            };
+            return updateViewGroup(vg.id, { canvasPosition: nextPosition });
+          }).filter(Boolean));
+        }
+        if (syncViewGroupNow && vgTargets.length > 0) {
+          await Promise.all(vgTargets.map((vg) => (
+            vg?.id ? syncViewGroupNow(vg.id) : null
+          )).filter(Boolean));
+        }
+        setCustomViewports((prev) => prev.map((vp) => ({
+          ...vp,
+          position: {
+            ...vp.position,
+            row: (vp.position?.row ?? 0) + rowDelta,
+            col: (vp.position?.col ?? 0) + colDelta,
+          },
+        })));
+        return true;
+      } catch (err) {
+        toast.error('Failed to shift canvas content.');
+        console.error('Failed to shift canvas content:', err);
+        return false;
+      }
+    };
+
+    const nextRows = Math.max(1, canvasData.rows + deltaRows);
+    const nextCols = Math.max(1, canvasData.cols + deltaCols);
+
+    if (action === 'add') {
+      if (isTop || isLeft) {
+        setCanvasSize({ rows: nextRows, cols: nextCols });
+        await shiftContent(isTop ? 1 : 0, isLeft ? 1 : 0);
+        return;
+      }
+      setCanvasSize({ rows: nextRows, cols: nextCols });
+      return;
+    }
+
+    if (isTop || isLeft) {
+      const shifted = await shiftContent(isTop ? -1 : 0, isLeft ? -1 : 0);
+      if (shifted) {
+        setCanvasSize({ rows: nextRows, cols: nextCols });
+      }
+      return;
+    }
+
+    setCanvasSize({ rows: nextRows, cols: nextCols });
+  }, [activeViewGroups, canvasData, resizeConstraints, setCanvasSize, syncViewGroupNow, updateViewGroup]);
+
+  const handleExpandCanvas = useCallback((direction, action) => {
+    handleResizeCanvas(direction, action);
+  }, [handleResizeCanvas]);
 
   const handleViewportMove = useCallback(({ id, toRow, toCol }) => {
     setCustomViewports((prev) =>
@@ -745,16 +912,14 @@ export const CanvasMapContent = memo(function CanvasMapContent({
   }, []);
 
   const handleAdjustRows = useCallback((delta) => {
-    if (!setCanvasSize || !canvasData) return;
-    const newRows = Math.max(1, canvasData.rows + delta);
-    setCanvasSize({ rows: newRows, cols: canvasData.cols });
-  }, [setCanvasSize, canvasData]);
+    if (!delta) return;
+    handleResizeCanvas('bottom', delta > 0 ? 'add' : 'remove');
+  }, [handleResizeCanvas]);
 
   const handleAdjustCols = useCallback((delta) => {
-    if (!setCanvasSize || !canvasData) return;
-    const newCols = Math.max(1, canvasData.cols + delta);
-    setCanvasSize({ rows: canvasData.rows, cols: newCols });
-  }, [setCanvasSize, canvasData]);
+    if (!delta) return;
+    handleResizeCanvas('right', delta > 0 ? 'add' : 'remove');
+  }, [handleResizeCanvas]);
 
   const handleCanvasDrop = useCallback(async ({ row, col, data }) => {
     if (!data) return;
@@ -2060,14 +2225,12 @@ export const CanvasMapContent = memo(function CanvasMapContent({
         <MapToolbar
           minimapZoom={state.minimapZoom}
           showViewports={state.showViewports}
-          showBookmarks={state.showBookmarks}
           showInternals={state.showInternals}
           showCursors={state.showCursors}
         onZoomIn={state.handleZoomIn}
         onZoomOut={state.handleZoomOut}
         onResetView={handleResetMinimapView}
         toggleShowViewports={state.toggleShowViewports}
-        toggleShowBookmarks={state.toggleShowBookmarks}
         toggleShowInternals={state.toggleShowInternals}
         toggleShowCursors={state.toggleShowCursors}
         isEditMode={isEditMode}
@@ -2149,6 +2312,13 @@ export const CanvasMapContent = memo(function CanvasMapContent({
                   onCellAssign={handleCellAssign}
                   onTargetingResolve={handleTargetingResolve}
                   dimmedVGIds={dimmedVGIds}
+                  canRemoveRows={resizeConstraints.canRemoveRows}
+                  canRemoveCols={resizeConstraints.canRemoveCols}
+                  canRemoveTop={resizeConstraints.canRemoveTop}
+                  canRemoveBottom={resizeConstraints.canRemoveBottom}
+                  canRemoveLeft={resizeConstraints.canRemoveLeft}
+                  canRemoveRight={resizeConstraints.canRemoveRight}
+                  isVR={isVR}
                   onExpandCanvas={handleExpandCanvas}
                   onViewportMove={handleViewportMove}
                 />
@@ -2248,6 +2418,8 @@ export const CanvasMapContent = memo(function CanvasMapContent({
               canvasCols={canvasData.cols}
               onAdjustRows={handleAdjustRows}
               onAdjustCols={handleAdjustCols}
+              canRemoveRows={resizeConstraints.canRemoveRows}
+              canRemoveCols={resizeConstraints.canRemoveCols}
               sizeMode={effectiveSizeMode}
             />
           )}

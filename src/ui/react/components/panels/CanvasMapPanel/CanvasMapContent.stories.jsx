@@ -16,8 +16,8 @@ const SIZE_PRESETS = [
 ];
 
 // Provider wrapper for stories
-const StoryProviders = ({ children }) => (
-  <AdaptiveProvider>
+const StoryProviders = ({ children, initialMode = 'desktop' }) => (
+  <AdaptiveProvider initialMode={initialMode} autoSyncVR={false}>
     <CanvasMapProvider>
       {children}
     </CanvasMapProvider>
@@ -29,7 +29,7 @@ export default {
   component: CanvasMapContent,
   decorators: [
     (Story) => (
-      <StoryProviders>
+      <StoryProviders initialMode="desktop">
         <div style={{
           width: '100vw',
           height: '100vh',
@@ -116,6 +116,74 @@ export const Default = {
           />
         </div>
       </div>
+    );
+  },
+};
+
+export const VRMode = {
+  render: (args) => {
+    const [width, setWidth] = useState(args.width);
+    const [height, setHeight] = useState(args.height);
+
+    return (
+      <StoryProviders initialMode="vr">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            padding: '12px 16px',
+            background: 'rgba(96, 165, 250, 0.08)',
+            borderRadius: 8,
+            border: '1px solid rgba(96, 165, 250, 0.18)',
+          }}>
+            <span style={{ color: 'rgba(248, 250, 252, 0.7)', fontSize: 12 }}>Presets:</span>
+            {SIZE_PRESETS.map((preset) => (
+              <button
+                key={preset.name}
+                type="button"
+                onClick={() => { setWidth(preset.width); setHeight(preset.height); }}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: '1px solid rgba(96, 165, 250, 0.2)',
+                  background: width === preset.width ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                  color: width === preset.width ? '#3b82f6' : 'rgba(248, 250, 252, 0.7)',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                }}
+              >
+                {preset.name} ({preset.width}x{preset.height})
+              </button>
+            ))}
+            <span style={{
+              marginLeft: 'auto',
+              padding: '4px 10px',
+              background: 'rgba(96, 165, 250, 0.1)',
+              borderRadius: 6,
+              color: '#22d3ee',
+              fontSize: 11,
+              fontFamily: 'monospace',
+            }}>
+              {width} x {height} (VR)
+            </span>
+          </div>
+
+          <div style={{
+            width,
+            height,
+            borderRadius: 8,
+            overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+          }}>
+            <CanvasMapContent
+              workspaceId="story-workspace"
+              width={width}
+              height={height}
+            />
+          </div>
+        </div>
+      </StoryProviders>
     );
   },
 };

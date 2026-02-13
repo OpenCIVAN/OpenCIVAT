@@ -330,7 +330,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .canvas-map-header__title {
@@ -340,11 +342,16 @@
   letter-spacing: 0.5px;
   color: $color-text-secondary;
   white-space: nowrap;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
 .canvas-map-header__separator {
   color: $color-text-muted;
   margin-top: -1px;
+  flex-shrink: 0;
 }
 
 .canvas-map-header__workspace-empty {
@@ -354,16 +361,27 @@
 }
 
 .canvas-map-header .workspace-selector {
-  max-width: 200px;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+  flex-shrink: 1;
+  overflow: hidden;
 }
 
 .canvas-map-header .workspace-selector__trigger {
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   padding: 2px 6px;
-  gap: 6px;
+  gap: 4px;
   border-radius: $radius-sm;
 }
 
 .canvas-map-header .workspace-selector__name {
   font-size: 11px;
+  max-width: 100%;
+}
+
+.canvas-map-header .workspace-selector__info {
+  min-width: 0;
 }

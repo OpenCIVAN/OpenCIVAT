@@ -72,6 +72,7 @@ import './Tooltip.scss';
  * @property {boolean} [disabled=false] - Disable tooltip
  * @property {boolean} [arrow=true] - Show arrow pointer
  * @property {number} [offset=8] - Distance from trigger
+ * @property {boolean} [allowFlip=true] - Allow viewport-aware flip
  * @property {'hover'|'click'|'focus'} [trigger='hover'] - How to trigger tooltip
  * @property {boolean} [interactive=false] - Allow hovering over tooltip content
  * @property {number} [maxWidth=250] - Max width before wrapping
@@ -231,6 +232,7 @@ function Tooltip({
     disabled = false,
     arrow = true,
     offset = 8,
+    allowFlip = true,
     trigger = 'hover',
     interactive = false,
     maxWidth = 250,
@@ -283,7 +285,8 @@ function Tooltip({
         hideDelay: isInteractive ? Math.max(hideDelay, 100) : hideDelay,
         offset: effectiveOffset,
         interactive: isInteractive,
-        disabled
+        disabled,
+        allowFlip
     });
 
     /**

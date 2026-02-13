@@ -108,6 +108,13 @@ export const Minimap = memo(function Minimap({
   // Canvas expansion & viewport drag
   onExpandCanvas,
   onViewportMove,
+  canRemoveRows = true,
+  canRemoveCols = true,
+  isVR = false,
+  canRemoveTop,
+  canRemoveBottom,
+  canRemoveLeft,
+  canRemoveRight,
 }) {
   const { rows, cols } = canvas;
   const containerRef = useRef(null);
@@ -483,8 +490,21 @@ export const Minimap = memo(function Minimap({
         setIsDragOver(false);
         setDropTarget(null);
       }}
-      {...panning.panProps}
     >
+      <div
+        className="minimap__edge-guard minimap__edge-guard--top"
+        aria-hidden="true"
+        style={{
+          width: gridWidth + headerWidth + MINIMAP_CONSTANTS.SCROLL_PADDING,
+        }}
+      />
+      <div
+        className="minimap__edge-guard minimap__edge-guard--left"
+        aria-hidden="true"
+        style={{
+          height: gridHeight + headerHeight + MINIMAP_CONSTANTS.SCROLL_PADDING,
+        }}
+      />
       {showGridLabels && !isFocused && (
         <div className="minimap__labels">
           <div
@@ -577,12 +597,16 @@ export const Minimap = memo(function Minimap({
 
       {/* Scrollable content wrapper */}
       <div
-        className="minimap__scroll"
-        style={{
-          padding: `${MINIMAP_CONSTANTS.SCROLL_PADDING}px`,
-          transform: `translate(${-panning.panOffset.x}px, ${-panning.panOffset.y}px)`,
-        }}
+        className="minimap__viewport"
+        {...panning.panProps}
       >
+        <div
+          className="minimap__scroll"
+          style={{
+            padding: `${MINIMAP_CONSTANTS.SCROLL_PADDING}px`,
+            transform: `translate(${-panning.panOffset.x}px, ${-panning.panOffset.y}px)`,
+          }}
+        >
         {/* Field grid disabled to match spec (cleaner grid) */}
         {/* Link lines (Links mode, VG sub-tab) */}
         {/* Link lines removed — Links mode consolidated */}
@@ -595,11 +619,11 @@ export const Minimap = memo(function Minimap({
             paddingTop: labelOffsetY,
             }}
           >
-          {/* Main grid area */}
-          <div className="minimap__grid-area">
-            {/* Grid cells */}
-            <div
-              className="minimap__grid"
+            {/* Main grid area */}
+            <div className="minimap__grid-area">
+          {/* Grid cells */}
+              <div
+                className="minimap__grid"
               style={{
                 width: gridWidth,
                 height: gridHeight,
@@ -840,6 +864,13 @@ export const Minimap = memo(function Minimap({
                 cellSize={cellSize}
                 onExpand={onExpandCanvas}
                 isEditMode={isEditMode}
+                canRemoveRows={canRemoveRows}
+                canRemoveCols={canRemoveCols}
+                canRemoveTop={canRemoveTop}
+                canRemoveBottom={canRemoveBottom}
+                canRemoveLeft={canRemoveLeft}
+                canRemoveRight={canRemoveRight}
+                isVR={isVR}
               />
             )}
 
@@ -857,6 +888,7 @@ export const Minimap = memo(function Minimap({
                 ))}
               </div>
             )}
+        </div>
         </div>
       </div>
     </div>

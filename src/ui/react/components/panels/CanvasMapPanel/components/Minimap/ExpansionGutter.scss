@@ -17,18 +17,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
+    gap: 6px;
+    border: 1px dashed transparent;
     background: transparent;
-    cursor: pointer;
+    cursor: default;
     pointer-events: auto;
-    opacity: 0;
-    transition: opacity 0.2s ease, background 0.2s ease;
-    color: $color-accent-teal;
+    transition: background 0.2s ease, border-color 0.2s ease;
 
     &:hover {
-      opacity: 1;
       background: color-mix(in srgb, $color-accent-teal 8%, transparent);
-      border: 1px dashed $color-accent-teal;
+      border-color: color-mix(in srgb, $color-accent-teal 50%, transparent);
+    }
+
+    &:hover .expansion-gutter__button {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     &--top {
@@ -45,12 +48,89 @@
     &--left {
       top: 0;
       left: calc(var(--gutter-size) * -1);
+      flex-direction: column;
       border-radius: $radius-sm 0 0 $radius-sm;
     }
 
     &--right {
       top: 0;
+      flex-direction: column;
       border-radius: 0 $radius-sm $radius-sm 0;
     }
+  }
+
+  &__button {
+    width: var(--button-size, calc(var(--gutter-size) * 0.9));
+    height: var(--button-size, calc(var(--gutter-size) * 0.9));
+    border-radius: 999px;
+    border: 1px dashed currentColor;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    position: relative;
+    transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+      background: color-mix(in srgb, currentColor 18%, transparent);
+      transform: scale(1.03);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &__zone:hover &__button:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  &__button--add {
+    color: $color-accent-teal;
+  }
+
+  &__button--remove {
+    color: $color-accent-amber;
+  }
+
+  &__button--combo {
+    color: $color-accent-teal;
+  }
+
+  &__combo-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, $color-accent-amber 25%, $color-bg-primary);
+    border: 1px solid color-mix(in srgb, $color-accent-amber 55%, transparent);
+    color: $color-accent-amber;
+    box-shadow: 0 0 6px color-mix(in srgb, $color-accent-amber 35%, transparent);
+  }
+}
+
+.canvas-map-v2[data-vr="true"] {
+  .expansion-gutter__zone {
+    gap: 10px;
+    background: color-mix(in srgb, $color-accent-teal 6%, transparent);
+    border-color: color-mix(in srgb, $color-accent-teal 35%, transparent);
+  }
+
+  .expansion-gutter__button {
+    opacity: 0.9;
+    pointer-events: auto;
+  }
+
+  .expansion-gutter__button:disabled {
+    opacity: 0.35;
   }
 }

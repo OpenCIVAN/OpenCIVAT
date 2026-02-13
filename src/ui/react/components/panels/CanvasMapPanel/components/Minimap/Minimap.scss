@@ -85,6 +85,16 @@
     border-bottom: 1px solid var(--label-border);
     overflow: visible;
     z-index: 8;
+    overflow: hidden;
+    isolation: isolate;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--label-bg);
+      pointer-events: none;
+    }
 
     &::after {
       content: '';
@@ -120,6 +130,28 @@
   &__grid-area {
     display: flex;
     position: relative;
+    overflow: visible;
+  }
+
+  &__edge-guard {
+    position: absolute;
+    background: var(--label-bg);
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  &__edge-guard--top {
+    top: 0;
+    right: auto;
+    height: calc(var(--header-height) + var(--scroll-padding));
+    border-bottom: 1px solid var(--label-border);
+  }
+
+  &__edge-guard--left {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: calc(var(--header-width) + var(--scroll-padding));
   }
 
   &__labels-left {
@@ -131,6 +163,16 @@
     border-right: 1px solid var(--label-border);
     overflow: visible;
     z-index: 8;
+    overflow: hidden;
+    isolation: isolate;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--label-bg);
+      pointer-events: none;
+    }
 
     &::after {
       content: '';
@@ -163,6 +205,14 @@
     color: $color-accent-amber;
     min-width: var(--header-width);
     text-align: center;
+  }
+
+  &__viewport {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 2;
   }
 
   &__grid {
