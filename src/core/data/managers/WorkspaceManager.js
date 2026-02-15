@@ -696,7 +696,7 @@ class WorkspaceManagerClass {
   async loadWorkspaces(userId, projectId = null, roomId = null) {
     try {
       this._resetCaches();
-      log.debug("WorkspaceManager.loadWorkspaces params:", {
+      log.trace("WorkspaceManager.loadWorkspaces params:", {
         userId,
         projectId,
         roomId,
@@ -726,7 +726,7 @@ class WorkspaceManagerClass {
         `/workspaces${params.toString() ? `?${params.toString()}` : ""}`
       );
       const data = await response.json();
-      log.debug("WorkspaceManager.loadWorkspaces response:", data);
+      log.trace("WorkspaceManager.loadWorkspaces response:", data);
       let serverWorkspaces = data.workspaces || [];
 
       if (roomId && serverWorkspaces.length === 0) {

@@ -182,7 +182,7 @@ CreateOpenPopover.propTypes = {
     workspaces: PropTypes.arrayOf(PropTypes.shape({
         id: PropTypes.string.isRequired,
         name: PropTypes.string.isRequired,
-        type: PropTypes.oneOf(['workspace', 'subset', 'scratch']),
+        type: PropTypes.oneOf(['workspace', 'subset', 'scratch', 'project', 'personal', 'breakout']),
         isOpen: PropTypes.bool,
     })).isRequired,
     onCreateWorkspace: PropTypes.func,

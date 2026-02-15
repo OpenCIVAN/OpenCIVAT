@@ -56,17 +56,41 @@ export const LayoutPanel = memo(function LayoutPanel({
   }, []);
 
   const handleTemplateDragStart = useCallback((event, template) => {
+    if (!event?.dataTransfer) return;
     const payload = {
       type: 'template-create',
       templateId: template.id || null,
       templateName: template.label,
       layoutId: template.layoutId || 'single',
     };
+    const safeSetDragData = (type) => {
+      try {
+        event.dataTransfer.setData(type, JSON.stringify(payload));
+      } catch {
+        // Firefox may reject some custom MIME types.
+      }
+    };
     event.dataTransfer.effectAllowed = 'copy';
-    event.dataTransfer.setData('application/json', JSON.stringify(payload));
-    event.dataTransfer.setData('text/plain', JSON.stringify(payload));
+    safeSetDragData('text');
+    safeSetDragData('text/plain');
+    safeSetDragData('application/json');
+    safeSetDragData('application/x-cia-drag');
     if (typeof window !== 'undefined') {
       window.__ciaDragPayload = payload;
+    }
+    // Custom drag image for better visibility
+    if (typeof document !== 'undefined') {
+      const ghost = document.createElement('div');
+      ghost.textContent = `⊞ ${template.label}`;
+      ghost.style.cssText = 'position:fixed;left:-999px;top:-999px;padding:8px 14px;border-radius:6px;background:rgba(56,189,248,0.9);color:#fff;font-size:13px;font-weight:600;border:2px dashed rgba(255,255,255,0.7);pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+      document.body.appendChild(ghost);
+      try {
+        event.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+      } catch {
+        // Fall back to native drag preview.
+      }
+      const cleanupDelay = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent) ? 120 : 0;
+      setTimeout(() => { try { document.body.removeChild(ghost); } catch {} }, cleanupDelay);
     }
   }, []);
 
@@ -225,7 +249,7 @@ export const LayoutPanel = memo(function LayoutPanel({
                 draggable
                 onDragStart={(event) => handleTemplateDragStart(event, template)}
                 onDragEnd={handleTemplateDragEnd}
-                aria-label="Drag to canvas"
+                aria-label={`Template ${template.label}. Drag to canvas`}
               >
                 <Icon name="layoutGrid" size={12} />
                 <span>{template.label}</span>

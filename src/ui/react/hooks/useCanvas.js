@@ -382,7 +382,7 @@ export function useCanvas(canvasId = null) {
     async (newSize) => {
       if (!canvas) {
         if (process.env.NODE_ENV === "development") {
-          console.warn("[useCanvas] setCanvasSize called but canvas is null");
+          console.debug("[useCanvas] setCanvasSize called but canvas is null");
         }
         return;
       }

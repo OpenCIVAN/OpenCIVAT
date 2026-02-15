@@ -62,14 +62,14 @@ export const LEFT_PANEL_TABS = [
         contentComponent: 'DatasetsPanelContent',
     },
     // VISUALIZATION
-    // {
-    //     id: 'views',
-    //     icon: 'eye',
-    //     label: 'Views',
-    //     color: 'purple',
-    //     group: 'visualization',
-    //     contentComponent: 'ViewsPanelContent',
-    // },
+    {
+        id: 'views',
+        icon: 'eye',
+        label: 'Views',
+        color: 'purple',
+        group: 'visualization',
+        contentComponent: 'ViewsPanelContent',
+    },
     // NOTE: 'layout' and 'navigator' tabs removed — superseded by CanvasMapPanel (PanelShell)
     {
         id: 'tools',

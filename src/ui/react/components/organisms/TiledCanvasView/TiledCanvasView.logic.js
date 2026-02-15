@@ -20,6 +20,9 @@ export const CANVAS_SIZING = {
  * Workspace type configurations
  */
 export const WORKSPACE_TYPE_CONFIG = {
+    project: { icon: 'square', prefix: null, color: 'blue' },
+    personal: { icon: 'user', prefix: null, color: 'green' },
+    breakout: { icon: 'mic', prefix: 'Breakout:', color: 'blue' },
     workspace: { icon: 'square', prefix: null, color: 'blue' },
     subset: { icon: 'filter', prefix: 'Subset:', color: 'amber' },
     scratch: { icon: 'pencil', prefix: null, color: 'green' },

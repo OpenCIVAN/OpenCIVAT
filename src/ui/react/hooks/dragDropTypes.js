@@ -87,12 +87,32 @@ export function serializeDragData(type, data) {
  * @param {'move' | 'copy' | 'link'} [effectAllowed='move'] - Allowed drag effect
  */
 export function setDragData(dataTransfer, type, data, effectAllowed = 'move') {
-    dataTransfer.effectAllowed = effectAllowed;
+    if (!dataTransfer) return;
+
+    try {
+        dataTransfer.effectAllowed = effectAllowed;
+    } catch {
+        // Ignore unsupported effect updates.
+    }
 
     const serialized = serializeDragData(type, data);
     Object.entries(serialized).forEach(([mimeType, value]) => {
-        dataTransfer.setData(mimeType, value);
+        try {
+            dataTransfer.setData(mimeType, value);
+        } catch {
+            // Firefox can reject some custom MIME types; keep drag alive.
+        }
     });
+
+    // Firefox requires at least one readable text payload for reliable drag start.
+    try {
+        const hasText = Array.from(dataTransfer.types || []).includes(DRAG_TYPES.TEXT);
+        if (!hasText) {
+            dataTransfer.setData(DRAG_TYPES.TEXT, JSON.stringify(data ?? {}));
+        }
+    } catch {
+        // Best effort only.
+    }
 }
 
 // =============================================================================

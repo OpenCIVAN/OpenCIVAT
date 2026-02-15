@@ -3888,7 +3888,7 @@ console.log('Tools:', tools);
   async applySharedState(instanceData, state, sourceUserId) {
     // Guard against applying state before VTK is initialized
     if (!instanceData?.sceneObjects) {
-      log.warn("Cannot apply state: VTK not initialized yet");
+      log.debug("Cannot apply state: VTK not initialized yet");
       return;
     }
 

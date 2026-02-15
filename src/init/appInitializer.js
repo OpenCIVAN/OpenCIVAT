@@ -474,7 +474,11 @@ export async function initializePhase2() {
     if (synced) {
       log.debug("Y.js already synced");
     } else {
-      log.warn("Y.js sync timeout, continuing anyway");
+      if (process.env.NODE_ENV === "development") {
+        log.debug("Y.js sync timeout, continuing anyway");
+      } else {
+        log.warn("Y.js sync timeout, continuing anyway");
+      }
     }
     emitProgress('yjs-sync', 'complete', 17);
 

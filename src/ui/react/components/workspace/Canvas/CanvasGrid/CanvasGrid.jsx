@@ -25,6 +25,7 @@ import { useCanvas, useSubsets } from '@UI/react/hooks/useCanvas.js';
 import { useViewportSize } from '@UI/react/hooks';
 import { useCanvasDimensions, RENDER_MODES } from '@UI/react/hooks/useCanvasDimensions.js';
 import { canvasManager } from '@Core/data/managers/CanvasManager.js';
+import { viewGroupManager } from '@Core/data/managers/ViewGroupManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { useViewportEventListener, dispatchViewportChanged } from '@UI/react/hooks/useViewportSync';
@@ -42,6 +43,14 @@ import './CanvasGrid.scss';
 // 8px gap per canvas-theme-explorer-v2 prototype specification
 const GAP = 8; // Gap between cells in pixels
 const VIEWPORT_PADDING = { top: 12, left: 12 };
+
+// Layout span lookup for template drop preview
+const LAYOUT_SPANS = {
+    'single': { rows: 1, cols: 1 }, 'side-by-side': { rows: 1, cols: 2 },
+    'stacked': { rows: 2, cols: 1 }, '2x2': { rows: 2, cols: 2 },
+    '1+2': { rows: 2, cols: 2 }, '2+1': { rows: 2, cols: 2 },
+    '3-up': { rows: 1, cols: 3 }, '3x3': { rows: 3, cols: 3 },
+};
 
 // =============================================================================
 // LOADING STATE COMPONENT
@@ -114,6 +123,9 @@ export function CanvasGrid({
     // Drag state for edge drop zones
     const [isDragActive, setIsDragActive] = useState(false);
     const [dragModifiers, setDragModifiers] = useState({ shift: false, ctrl: false, alt: false });
+
+    // Template drop preview state
+    const [templateDropPreview, setTemplateDropPreview] = useState(null);
 
     // Pan state (for pan tool)
     const [isPanning, setIsPanning] = useState(false);
@@ -869,6 +881,7 @@ export function CanvasGrid({
         const handleDragEnd = () => {
             setIsDragActive(false);
             setDragModifiers({ shift: false, ctrl: false, alt: false });
+            setTemplateDropPreview(null);
         };
 
         const handleDragOver = (e) => {
@@ -891,6 +904,40 @@ export function CanvasGrid({
             window.removeEventListener('drop', handleDragEnd);
             window.removeEventListener('dragover', handleDragOver);
         };
+    }, []);
+
+    // ==========================================================================
+    // TEMPLATE DROP PREVIEW (grid-level dragover for multi-cell preview)
+    // ==========================================================================
+
+    const handleGridDragOver = useCallback((e) => {
+        const payload = window.__ciaDragPayload;
+        if (!payload || payload.type !== 'template-create') {
+            // React skips re-render if value is already null (Object.is comparison)
+            setTemplateDropPreview(null);
+            return;
+        }
+        if (!gridRef.current || !measurementsReady) return;
+        const rect = gridRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left - VIEWPORT_PADDING.left;
+        const y = e.clientY - rect.top - VIEWPORT_PADDING.top;
+        const hoverCol = Math.floor(x / (cellSize.width + GAP));
+        const hoverRow = Math.floor(y / (cellSize.height + GAP));
+        const span = LAYOUT_SPANS[payload.layoutId] || { rows: 1, cols: 1 };
+        const absRow = viewport.row + hoverRow;
+        const absCol = viewport.col + hoverCol;
+        setTemplateDropPreview({
+            row: absRow, col: absCol,
+            rowSpan: span.rows, colSpan: span.cols,
+            color: payload.color,
+        });
+    }, [measurementsReady, cellSize, viewport.row, viewport.col]);
+
+    const handleGridDragLeave = useCallback((e) => {
+        // Only clear if leaving the grid entirely (not entering a child)
+        if (gridRef.current && !gridRef.current.contains(e.relatedTarget)) {
+            setTemplateDropPreview(null);
+        }
     }, []);
 
     // ==========================================================================
@@ -1284,47 +1331,8 @@ export function CanvasGrid({
         log.debug('handleCellDrop', { row, col, dropData });
 
         try {
-            // Handle push actions with modifiers
-            // Per spec: Shift = wrap to next row, Ctrl = close last view
-            if (dropData.action === 'push') {
-                const { direction, modifiers = {} } = dropData;
-                log.debug(`Push ${direction} at [${row}, ${col}] with modifiers:`, modifiers);
-
-                // Calculate the actual insert position based on push direction
-                // When dropping on PUSH_DOWN zone of cell [1,0], insert at [2,0] (below)
-                // When dropping on PUSH_RIGHT zone of cell [1,0], insert at [1,1] (right)
-                let insertRow = row;
-                let insertCol = col;
-
-                switch (direction) {
-                    case 'down':
-                        insertRow = row + 1;
-                        break;
-                    case 'up':
-                        // Insert at current position, push existing up
-                        // But we need to ensure row doesn't go negative
-                        insertRow = Math.max(0, row);
-                        break;
-                    case 'right':
-                        insertCol = col + 1;
-                        break;
-                    case 'left':
-                        insertCol = Math.max(0, col);
-                        break;
-                }
-
-                // Push existing views to make room at the insert position
-                await canvasManager.pushPlacements(canvasId, insertRow, insertCol, direction, {
-                    wrap: modifiers.shift || false,
-                    closeLast: modifiers.ctrl || false,
-                });
-
-                // Update row/col to the insert position for placing the new view
-                row = insertRow;
-                col = insertCol;
-
-                // Fall through to standard drop handling to place the new view
-            }
+            const targetRowSpan = dropData?.existingPlacement?.rowSpan || dropData?.rowSpan || 1;
+            const targetColSpan = dropData?.existingPlacement?.colSpan || dropData?.colSpan || 1;
 
             // Handle swap actions - when dropping ON an existing view
             // This replaces the existing view with the dropped one
@@ -1406,6 +1414,8 @@ export function CanvasGrid({
                         file: dropData,
                         targetRow: row,
                         targetCol: col,
+                        rowSpan: targetRowSpan,
+                        colSpan: targetColSpan,
                         canvasId,
                     },
                 }));
@@ -1413,7 +1423,10 @@ export function CanvasGrid({
             }
 
             // Case 2: Dataset dropped (create new view)
-            if (dropData.type === 'dataset' || (dropData.datasetId && !dropData.viewConfigId)) {
+            // Match minimap semantics: only dataset payloads, not view payloads that also carry datasetId.
+            const isDatasetDrop = dropData.type === 'dataset'
+                || (dropData.datasetId && !dropData.view && !dropData.viewId && !dropData.viewConfigId);
+            if (isDatasetDrop) {
                 log.debug(`Creating new view for dataset ${dropData.datasetId} at [${row}, ${col}]`);
 
                 window.dispatchEvent(new CustomEvent('cia:request-instance', {
@@ -1424,28 +1437,33 @@ export function CanvasGrid({
                         spawnNew: true,
                         targetRow: row,
                         targetCol: col,
+                        rowSpan: targetRowSpan,
+                        colSpan: targetColSpan,
                         canvasId,
                     },
                 }));
                 return;
             }
 
-            // Case 3: ViewItem dropped (existing view from Views/Datasets tab)
+            // Case 3: View dropped (existing view from Views/Datasets tab/companion)
             // ARCHITECTURE:
-            // - If view is NOT on canvas: PLACE IT (move, not copy)
-            // - If view IS on canvas: DUPLICATE it (copy)
-            // - Alt+drop = create fully linked view (regardless of placement status)
-            if (dropData.viewConfigId || dropData.type === 'view' || dropData.type === 'view-item') {
-                const sourceViewId = dropData.viewConfigId || dropData.viewId || dropData.id;
-                const datasetId = dropData.datasetId;
-                const createLinked = dropData.modifiers?.alt; // Alt key = create linked view
+            // - Default: MOVE existing view to new location
+            // - Alt+drop or explicit duplicate request: DUPLICATE
+            const isViewDrop = dropData.type === 'view'
+                || dropData.type === 'view-item'
+                || Boolean(dropData.view)
+                || Boolean(dropData.viewId)
+                || Boolean(dropData.viewConfigId);
+            if (isViewDrop) {
+                const viewData = dropData.view || dropData;
+                const sourceViewId = dropData.viewConfigId || dropData.viewId || viewData.id || viewData.viewId;
+                const datasetId = viewData.datasetId || dropData.datasetId;
+                if (!sourceViewId) return;
+                const duplicateRequested = Boolean(dropData.duplicate || dropData.modifiers?.alt);
+                const createLinked = Boolean(dropData.modifiers?.alt); // Alt+drop = linked duplicate
 
-                // Check if view is already on the canvas
-                const isAlreadyOnCanvas = canvasManager.isViewOnCanvas(sourceViewId);
-
-                if (isAlreadyOnCanvas) {
-                    // View already placed - duplicate it
-                    log.debug(`ViewItem dropped - creating duplicate of ${sourceViewId} at [${row}, ${col}]`);
+                if (duplicateRequested) {
+                    log.debug(`ViewItem dropped - duplicating ${sourceViewId} at [${row}, ${col}]`);
                     window.dispatchEvent(new CustomEvent('cia:request-instance', {
                         detail: {
                             datasetId: datasetId,
@@ -1453,20 +1471,24 @@ export function CanvasGrid({
                             spawnNew: true,
                             targetRow: row,
                             targetCol: col,
+                            rowSpan: targetRowSpan,
+                            colSpan: targetColSpan,
                             canvasId,
                             createLinked,
                         },
                     }));
                 } else {
-                    // View not on canvas - place it (move, not copy)
-                    log.debug(`ViewItem dropped - placing view ${sourceViewId} at [${row}, ${col}]`);
+                    log.debug(`ViewItem dropped - moving/placing view ${sourceViewId} at [${row}, ${col}]`);
                     window.dispatchEvent(new CustomEvent('cia:request-instance', {
                         detail: {
                             datasetId: datasetId,
-                            viewConfigId: sourceViewId, // Use viewConfigId to place, not duplicate
-                            spawnNew: false, // Not spawning new, placing existing
+                            viewConfigId: sourceViewId,
+                            spawnNew: false,
+                            moveExisting: true,
                             targetRow: row,
                             targetCol: col,
+                            rowSpan: targetRowSpan,
+                            colSpan: targetColSpan,
                             canvasId,
                             createLinked,
                         },
@@ -1475,9 +1497,26 @@ export function CanvasGrid({
                 return;
             }
 
+            // Case 4: Template VG dropped (create new ViewGroup at this position)
+            if (dropData.type === 'template-create') {
+                log.debug(`Template VG dropped: ${dropData.layoutId} at [${row}, ${col}]`);
+                window.dispatchEvent(new CustomEvent('cia:create-vg-from-template', {
+                    detail: {
+                        templateId: dropData.templateId,
+                        templateName: dropData.templateName,
+                        layoutId: dropData.layoutId,
+                        color: dropData.color,
+                        targetRow: row,
+                        targetCol: col,
+                        canvasId,
+                    },
+                }));
+                return;
+            }
+
             // Unknown format - log warning instead of silently failing
             log.warn('Unknown drop data format:', dropData);
-            log.warn('Expected one of: type="file", type="dataset", type="view", or viewConfigId');
+            log.warn('Expected one of: type="file", type="dataset", type="view", type="template-create", or viewConfigId');
 
         } catch (error) {
             log.error('Drop failed:', error);
@@ -1629,9 +1668,46 @@ export function CanvasGrid({
         handleFocusView,
     ]);
 
+    // Self-contained VG data for border rendering — subscribes directly to ViewGroupManager
+    // so borders work regardless of how the prop chain passes (or doesn't pass) viewGroups.
+    const [liveViewGroups, setLiveViewGroups] = useState([]);
+    useEffect(() => {
+        const refresh = () => {
+            try {
+                const all = viewGroupManager.getAllViewGroups();
+                const withPos = all
+                    .filter(vg => {
+                        const pos = vg.getCanvasPosition?.() || vg.canvasPosition;
+                        return pos && pos.row !== undefined;
+                    })
+                    .map(vg => ({
+                        id: vg.id,
+                        name: vg.name,
+                        color: vg.color,
+                        canvasPosition: vg.getCanvasPosition?.() || vg.canvasPosition,
+                    }));
+                setLiveViewGroups(withPos);
+            } catch (err) {
+                log.warn('[CanvasGrid] Failed to refresh VG data for borders:', err);
+            }
+        };
+        refresh();
+        viewGroupManager.on('viewGroupCreated', refresh);
+        viewGroupManager.on('viewGroupUpdated', refresh);
+        viewGroupManager.on('viewGroupDeleted', refresh);
+        return () => {
+            viewGroupManager.off('viewGroupCreated', refresh);
+            viewGroupManager.off('viewGroupUpdated', refresh);
+            viewGroupManager.off('viewGroupDeleted', refresh);
+        };
+    }, []);
+
+    // Use prop if provided, otherwise fall back to self-contained data
+    const effectiveViewGroupsForBorders = viewGroups?.length ? viewGroups : liveViewGroups;
+
     const viewGroupBorders = useMemo(() => {
-        if (!showViewGroupBorders || !viewGroups?.length || !measurementsReady) return null;
-        if (!isGridMode || isFocusView || isSubsetView) return null;
+        if (!showViewGroupBorders || !effectiveViewGroupsForBorders?.length || !measurementsReady) return null;
+        if (isFocusView || isSubsetView) return null;
 
         const overlays = [];
         const viewportRow = effectiveViewport.row;
@@ -1639,7 +1715,7 @@ export function CanvasGrid({
         const viewportEndRow = viewportRow + effectiveViewport.rows;
         const viewportEndCol = viewportCol + effectiveViewport.cols;
 
-        viewGroups.forEach((group) => {
+        effectiveViewGroupsForBorders.forEach((group) => {
             const position = group.canvasPosition || group.position || group.canvasPos;
             if (!position) return;
 
@@ -1698,9 +1774,8 @@ export function CanvasGrid({
         );
     }, [
         showViewGroupBorders,
-        viewGroups,
+        effectiveViewGroupsForBorders,
         measurementsReady,
-        isGridMode,
         isFocusView,
         isSubsetView,
         effectiveViewport,
@@ -1996,6 +2071,8 @@ export function CanvasGrid({
                         onClick={handleGridClick}
                         onContextMenu={handleContextMenu}
                         onMouseDown={handlePanStart}
+                        onDragOver={handleGridDragOver}
+                        onDragLeave={handleGridDragLeave}
                     >
                         {/* Show focus view, subset view, or normal grid */}
                         {isFocusView ? (
@@ -2022,6 +2099,23 @@ export function CanvasGrid({
                         )}
 
                         {viewGroupBorders}
+
+                        {templateDropPreview && measurementsReady && (() => {
+                            const viewCol = templateDropPreview.col - viewport.col;
+                            const viewRow = templateDropPreview.row - viewport.row;
+                            const left = VIEWPORT_PADDING.left + viewCol * (cellSize.width + GAP);
+                            const top = VIEWPORT_PADDING.top + viewRow * (cellSize.height + GAP);
+                            const width = templateDropPreview.colSpan * cellSize.width + (templateDropPreview.colSpan - 1) * GAP;
+                            const height = templateDropPreview.rowSpan * cellSize.height + (templateDropPreview.rowSpan - 1) * GAP;
+                            return (
+                                <div className="canvas-grid__viewgroup-overlay">
+                                    <div
+                                        className="canvas-grid__viewgroup-outline canvas-grid__viewgroup-outline--preview"
+                                        style={{ left, top, width, height, '--viewgroup-color': templateDropPreview.color || 'var(--color-accent-purple)' }}
+                                    />
+                                </div>
+                            );
+                        })()}
 
                         {showCoordinates && isGridMode && !isFocusView && !isSubsetView && measurementsReady && (
                             <div

@@ -167,7 +167,7 @@ MiniCanvasHeader.propTypes = {
     workspace: PropTypes.shape({
         id: PropTypes.string.isRequired,
         name: PropTypes.string.isRequired,
-        type: PropTypes.oneOf(['workspace', 'subset', 'scratch']),
+        type: PropTypes.oneOf(['workspace', 'subset', 'scratch', 'project', 'personal', 'breakout']),
         hasChanges: PropTypes.bool,
         hasBreakout: PropTypes.bool,
         breakoutUsers: PropTypes.number,

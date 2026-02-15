@@ -23,6 +23,7 @@ import { useMinimapPanning } from '../../hooks/useMinimapPanning';
 import { useMinimapCellSize } from '../../hooks/useMinimapCellSize';
 import { MAP_MODES, MINIMAP_CONSTANTS, LAYOUTS } from '../../utils/constants';
 import { colToLetter, clamp } from '../../utils/gridUtils';
+import { parseDragData } from '@UI/react/hooks/dragDropTypes';
 import { VGFocusedView } from './VGFocusedView';
 import { ExpansionGutter } from './ExpansionGutter';
 import './Minimap.scss';
@@ -121,6 +122,7 @@ export const Minimap = memo(function Minimap({
   const containerRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState(null);
+  const dragPayloadRef = useRef(null);
 
   // Edit mode VG move state
   const [movingVG, setMovingVG] = useState(null); // { vg, startX, startY }
@@ -188,30 +190,53 @@ export const Minimap = memo(function Minimap({
   const focusedLayout = useMemo(() => {
     if (!focusedVG) return null;
     return LAYOUTS[focusedVG.layoutId] || LAYOUTS.single;
-  }, [focusedVG]);
+  }, [focusedVG, focusedVG?.layoutId]);
 
   const parseDragPayload = useCallback((event) => {
-    const jsonPayload = event.dataTransfer?.getData('application/json');
-    const textPayload = event.dataTransfer?.getData('text/plain');
-    const raw = jsonPayload || textPayload;
+    const parsed = parseDragData(event?.dataTransfer);
+    if (parsed) {
+      dragPayloadRef.current = parsed;
+      return parsed;
+    }
+
+    const readData = (type) => {
+      try {
+        return event?.dataTransfer?.getData?.(type) || '';
+      } catch {
+        return '';
+      }
+    };
+    const raw = readData('application/x-cia-drag')
+      || readData('application/json')
+      || readData('text')
+      || readData('text/plain');
     if (raw) {
       try {
-        return JSON.parse(raw);
-      } catch (err) {
+        const parsed = JSON.parse(raw);
+        dragPayloadRef.current = parsed;
+        return parsed;
+      } catch {
         // Fall through to global drag payload
       }
     }
+
     if (typeof window !== 'undefined' && window.__ciaDragPayload) {
+      dragPayloadRef.current = window.__ciaDragPayload;
       return window.__ciaDragPayload;
     }
-    return null;
+
+    return dragPayloadRef.current;
   }, []);
 
-  const isViewPayload = useCallback((data) => {
-    if (!data) return false;
-    if (data.type === 'view' || data.type === 'dataset' || data.type === 'vg-import') return true;
-    if (data.view || data.viewId) return true;
-    if (data.datasetId && !data.vgId) return true;
+  const isViewPayload = useCallback((payload) => {
+    if (!payload) return false;
+    if (payload.type === 'vg-place' || payload.type === 'vg-import' || payload.type === 'template-create') {
+      return false;
+    }
+    if (payload.type === 'dataset') return true;
+    if (payload.type === 'view' || payload.type === 'view-item') return true;
+    if (payload.view || payload.viewId || payload.viewConfigId) return true;
+    if (payload.datasetId && !payload.templateId) return true;
     return false;
   }, []);
 
@@ -223,12 +248,22 @@ export const Minimap = memo(function Minimap({
       vgName: vg.name,
       vgColor: vg.color,
     };
+    const safeSetDragData = (type) => {
+      try {
+        event.dataTransfer.setData(type, JSON.stringify(payload));
+      } catch {
+        // Firefox may reject some custom MIME types.
+      }
+    };
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('application/json', JSON.stringify(payload));
-    event.dataTransfer.setData('text/plain', JSON.stringify(payload));
+    safeSetDragData('text');
+    safeSetDragData('text/plain');
+    safeSetDragData('application/json');
+    safeSetDragData('application/x-cia-drag');
     if (typeof window !== 'undefined') {
       window.__ciaDragPayload = payload;
     }
+    dragPayloadRef.current = payload;
     setIsDragOver(true);
   }, []);
 
@@ -238,6 +273,7 @@ export const Minimap = memo(function Minimap({
     if (typeof window !== 'undefined') {
       window.__ciaDragPayload = null;
     }
+    dragPayloadRef.current = null;
   }, []);
 
   // ── Edit mode: pointer-event VG move handler ─────────────────────────
@@ -280,7 +316,7 @@ export const Minimap = memo(function Minimap({
       window.removeEventListener('pointerup', handlePointerUp);
 
       if (containerRef.current) {
-        try { containerRef.current.releasePointerCapture(pointerId); } catch {}
+        try { containerRef.current.releasePointerCapture(pointerId); } catch { }
       }
 
       // Finalize move using ref (avoids stale closure)
@@ -334,7 +370,7 @@ export const Minimap = memo(function Minimap({
 
   const resolveSpanForData = useCallback((data) => {
     if (!data) return { rowSpan: 1, colSpan: 1 };
-    if (data.type === 'vg-place') {
+    if (data.type === 'vg-place' || data.type === 'vg-import') {
       const vg = viewGroups.find((group) => group.id === data.vgId);
       if (!vg) return { rowSpan: 1, colSpan: 1 };
       const layoutId = vg.layoutId || 'single';
@@ -367,9 +403,20 @@ export const Minimap = memo(function Minimap({
     const { rowSpan, colSpan } = resolveSpanForData(data);
     const maxCol = Math.max(0, cols - colSpan);
     const maxRow = Math.max(0, rows - rowSpan);
-    const col = clamp(rawCol, 0, maxCol);
-    const row = clamp(rawRow, 0, maxRow);
-    return { row, col, rowSpan, colSpan };
+    const startCol = clamp(rawCol, 0, maxCol);
+    const startRow = clamp(rawRow, 0, maxRow);
+    const desiredCol = Math.max(0, rawCol);
+    const desiredRow = Math.max(0, rawRow);
+    const outsideCanvas = rawRow > maxRow || rawCol > maxCol;
+    return {
+      rowSpan,
+      colSpan,
+      startRow,
+      startCol,
+      desiredRow,
+      desiredCol,
+      outsideCanvas,
+    };
   }, [cols, labelOffsetX, labelOffsetY, panning.panOffset.x, panning.panOffset.y, renderPitch, resolveSpanForData, rows]);
 
   const rectsOverlap = useCallback((a, b) => (
@@ -406,17 +453,78 @@ export const Minimap = memo(function Minimap({
     return null;
   }, [collisionGroups, cols, rectsOverlap, rows]);
 
+  const isDropRectColliding = useCallback((rect, ignoreId) => {
+    return collisionGroups.some((vg) => {
+      if (vg.id === ignoreId || !vg.position) return false;
+      return rectsOverlap(rect, vg.position);
+    });
+  }, [collisionGroups, rectsOverlap]);
+
   const computeDropTarget = useCallback((event, data) => {
     const base = computeDropPosition(event, data);
     if (!base) return null;
     const { rowSpan, colSpan } = base;
-    const ignoreId = data?.type === 'vg-place' ? data.vgId : null;
-    const candidate = findFirstFit(rowSpan, colSpan, ignoreId, base.row, base.col);
+    const isTemplateDrop = data?.type === 'template-create' || data?.templateId || (data?.layoutId && !data?.vgId);
+    const requiresCollisionFreePlacement = data?.type === 'vg-place'
+      || data?.type === 'vg-import'
+      || isTemplateDrop;
+    if (!requiresCollisionFreePlacement && isViewPayload(data)) {
+      // Views/datasets may target cells inside VG footprints so they can be inserted into VGs.
+      return {
+        row: Math.max(0, base.desiredRow),
+        col: Math.max(0, base.desiredCol),
+        rowSpan,
+        colSpan,
+      };
+    }
+
+    const ignoreId = (data?.type === 'vg-place' || data?.type === 'vg-import') ? data.vgId : null;
+    const desired = {
+      row: base.desiredRow,
+      col: base.desiredCol,
+      rowSpan,
+      colSpan,
+    };
+
+    // If dragging outside the current canvas bounds and spot is clear, preview exact expansion target.
+    if (base.outsideCanvas && !isDropRectColliding(desired, ignoreId)) {
+      return desired;
+    }
+
+    const candidate = findFirstFit(rowSpan, colSpan, ignoreId, base.startRow, base.startCol);
     if (candidate) {
       return { ...candidate, rowSpan, colSpan };
     }
+
+    // No fit in current bounds: expand in the drag direction and keep it collision-free.
+    const expansionStart = {
+      row: Math.max(rows, base.desiredRow),
+      col: Math.max(0, base.desiredCol),
+      rowSpan,
+      colSpan,
+    };
+    if (!isDropRectColliding(expansionStart, ignoreId)) {
+      return expansionStart;
+    }
+
+    for (let r = expansionStart.row; r < expansionStart.row + rows + 6; r += 1) {
+      for (let c = 0; c < Math.max(cols + 6, expansionStart.col + 1); c += 1) {
+        const probe = { row: r, col: c, rowSpan, colSpan };
+        if (!isDropRectColliding(probe, ignoreId)) {
+          return probe;
+        }
+      }
+    }
+
     return { row: rows, col: 0, rowSpan, colSpan };
-  }, [computeDropPosition, findFirstFit, rows]);
+  }, [cols, computeDropPosition, findFirstFit, isDropRectColliding, isViewPayload, rows]);
+
+  const shouldIgnoreCanvasDrop = useCallback((data) => {
+    // Focused mode has its own slot-level drop zones.
+    if (focusedVG) return true;
+    if (!data) return false;
+    return false;
+  }, [focusedVG]);
 
   const gridCells = useMemo(() => {
     const cells = [];
@@ -457,7 +565,8 @@ export const Minimap = memo(function Minimap({
       onDragEnter={(e) => {
         if (!onDropItem) return;
         const payload = parseDragPayload(e);
-        if (payload && isViewPayload(payload)) return;
+        if (payload && shouldIgnoreCanvasDrop(payload)) return;
+        e.preventDefault();
         setIsDragOver(true);
       }}
       onDragLeave={(e) => {
@@ -465,13 +574,22 @@ export const Minimap = memo(function Minimap({
         if (e.currentTarget.contains(e.relatedTarget)) return;
         setIsDragOver(false);
         setDropTarget(null);
+        dragPayloadRef.current = null;
       }}
       onDragOver={(e) => {
         if (!onDropItem) return;
         const payload = parseDragPayload(e);
-        if (payload && isViewPayload(payload)) return;
+        if (payload && shouldIgnoreCanvasDrop(payload)) return;
         e.preventDefault();
-        e.dataTransfer.dropEffect = payload?.type === 'vg-place' ? 'move' : 'copy';
+        const isViewLike = payload?.type === 'view'
+          || payload?.type === 'view-item'
+          || !!payload?.view
+          || !!payload?.viewId
+          || !!payload?.viewConfigId;
+        const isMove = payload?.type === 'vg-place'
+          || payload?.type === 'vg-import'
+          || isViewLike;
+        e.dataTransfer.dropEffect = isMove ? 'move' : 'copy';
         setIsDragOver(true);
         const data = payload || { type: 'unknown' };
         const target = computeDropTarget(e, data);
@@ -482,14 +600,18 @@ export const Minimap = memo(function Minimap({
         e.preventDefault();
         const data = parseDragPayload(e);
         if (!data) return;
-        if (isViewPayload(data)) return;
+        if (shouldIgnoreCanvasDrop(data)) return;
 
-        const target = computeDropTarget(e, data);
+        const normalizedData = data.type === 'vg-import' && !focusedVG
+          ? { ...data, type: 'vg-place' }
+          : data;
+        const target = computeDropTarget(e, normalizedData);
         if (!target) return;
 
-        onDropItem({ row: target.row, col: target.col, data });
+        onDropItem({ row: target.row, col: target.col, data: normalizedData });
         setIsDragOver(false);
         setDropTarget(null);
+        dragPayloadRef.current = null;
       }}
     >
       <div
@@ -608,316 +730,318 @@ export const Minimap = memo(function Minimap({
             transform: `translate(${-panning.panOffset.x}px, ${-panning.panOffset.y}px)`,
           }}
         >
-        {/* Field grid disabled to match spec (cleaner grid) */}
-        {/* Link lines (Links mode, VG sub-tab) */}
-        {/* Link lines removed — Links mode consolidated */}
+          {/* Field grid disabled to match spec (cleaner grid) */}
+          {/* Link lines (Links mode, VG sub-tab) */}
+          {/* Link lines removed — Links mode consolidated */}
 
-        {/* Grid with labels */}
-        <div
+          {/* Grid with labels */}
+          <div
             className="minimap__container"
             style={{
-            paddingLeft: labelOffsetX,
-            paddingTop: labelOffsetY,
+              paddingLeft: labelOffsetX,
+              paddingTop: labelOffsetY,
             }}
           >
             {/* Main grid area */}
             <div className="minimap__grid-area">
-          {/* Grid cells */}
+              {/* Grid cells */}
               <div
                 className="minimap__grid"
-              style={{
-                width: gridWidth,
-                height: gridHeight,
-              }}
-            >
-              <svg
-                className="minimap__grid-cells"
-                width={gridWidth}
-                height={gridHeight}
-                viewBox={`0 0 ${gridWidth} ${gridHeight}`}
-                aria-hidden="true"
+                style={{
+                  width: gridWidth,
+                  height: gridHeight,
+                }}
               >
-                {gridCells}
-                <rect
-                  x={0.5}
-                  y={0.5}
-                  width={canvasWidth}
-                  height={canvasHeight}
-                  fill="none"
-                  strokeWidth={1}
-                  strokeDasharray="5 3"
-                  className="minimap__grid-outline"
-                />
-              </svg>
-
-              <div className="minimap__grid-content" onClick={() => {
-                if (!panning.didPanRef.current) onDeselect?.();
-              }}>
-                {dropTarget && (
-                  <div
-                    className="minimap__drop-target"
-                    style={{
-                      left: dropTarget.col * renderPitch,
-                      top: dropTarget.row * renderPitch,
-                      width: dropTarget.colSpan * cellSize + (dropTarget.colSpan - 1) * renderGap,
-                      height: dropTarget.rowSpan * cellSize + (dropTarget.rowSpan - 1) * renderGap,
-                    }}
+                <svg
+                  className="minimap__grid-cells"
+                  width={gridWidth}
+                  height={gridHeight}
+                  viewBox={`0 0 ${gridWidth} ${gridHeight}`}
+                  aria-hidden="true"
+                >
+                  {gridCells}
+                  <rect
+                    x={0.5}
+                    y={0.5}
+                    width={canvasWidth}
+                    height={canvasHeight}
+                    fill="none"
+                    strokeWidth={1}
+                    strokeDasharray="5 3"
+                    className="minimap__grid-outline"
                   />
-                )}
-                {/* VG Blocks (VG mode, or subtle outlines in VIEW mode) */}
-                {showVGs && viewGroups.map(vg => {
-                  if (!vg.position) return null;
-                  const isSelected = selectedVGId === vg.id;
-                  const isGhosted = false; // Links mode removed
-                  const isSubtle = showViews && showVGs;
-                  const isFocused = focusedVG?.id === vg.id;
-                  const allowInternals = mapMode === MAP_MODES.LAYOUT && showInternals;
-                  const isDimmedByFocus = !!focusedVG && focusedVG.id !== vg.id;
-                  const isDimmedBySearch = dimmedVGIds?.has(vg.id) ?? false;
+                </svg>
 
-                  return (
-                    <VGBlock
-                      key={vg.id}
-                      vg={vg}
-                      cellSize={cellSize}
-                      gap={renderGap}
-                      isSelected={isSelected}
-                      isGhosted={isGhosted}
-                      showInternals={allowInternals && (!focusedVG || focusedVG?.id === vg.id) && !isFocused}
-                      subtle={isSubtle}
-                      draggable={!isSubtle}
-                      onDragStart={(e) => handleVGDragStart(e, vg)}
-                      onDragEnd={handleVGDragEnd}
-                      onClick={() => onVGClick(vg.id)}
-                      onDoubleClick={() => onVGDoubleClick(vg.id)}
-                      isEditMode={isEditMode}
-                      onPointerDown={isEditMode ? handleVGPointerDown : undefined}
-                      isBeingMoved={movingVG?.vg?.id === vg.id}
-                      onRemove={isEditMode ? onRemoveVG : undefined}
-                      changeStatus={getChangeStatus(vg.id)}
-                      dimmed={isDimmedByFocus || isDimmedBySearch}
-                    />
-                  );
-                })}
+                <div className="minimap__grid-content" onClick={() => {
+                  if (!panning.didPanRef.current) onDeselect?.();
+                }}>
+                  {/* VG Blocks (VG mode, or subtle outlines in VIEW mode) */}
+                  {showVGs && viewGroups.map(vg => {
+                    if (!vg.position) return null;
+                    const isSelected = selectedVGId === vg.id;
+                    const isGhosted = false; // Links mode removed
+                    const isSubtle = showViews && showVGs;
+                    const isFocused = focusedVG?.id === vg.id;
+                    const allowInternals = mapMode === MAP_MODES.LAYOUT && showInternals;
+                    const isDimmedByFocus = !!focusedVG && focusedVG.id !== vg.id;
+                    const isDimmedBySearch = dimmedVGIds?.has(vg.id) ?? false;
 
-                {/* Ghost footprint during VG move in edit mode */}
-                {moveGhost && (
-                  <div
-                    className="minimap__move-ghost"
-                    style={{
-                      left: moveGhost.col * renderPitch,
-                      top: moveGhost.row * renderPitch,
-                      width: moveGhost.colSpan * cellSize + (moveGhost.colSpan - 1) * renderGap,
-                      height: moveGhost.rowSpan * cellSize + (moveGhost.rowSpan - 1) * renderGap,
-                      '--ghost-color': moveGhost.color,
-                    }}
-                  />
-                )}
-
-                {/* Ghost outlines for removed VGs in edit mode */}
-                {isEditMode && removedVGGhosts.map(ghost => (
-                  <div
-                    key={`removed-${ghost.id}`}
-                    className="minimap__removed-ghost"
-                    style={{
-                      left: ghost.position.col * renderPitch,
-                      top: ghost.position.row * renderPitch,
-                      width: (ghost.position.colSpan || 1) * cellSize + ((ghost.position.colSpan || 1) - 1) * renderGap,
-                      height: (ghost.position.rowSpan || 1) * cellSize + ((ghost.position.rowSpan || 1) - 1) * renderGap,
-                      '--ghost-color': ghost.color || 'var(--color-text-muted)',
-                    }}
-                  />
-                ))}
-
-                {/* Ghost outlines for moved VGs at original positions */}
-                {isEditMode && movedVGGhosts.map((ghost) => (
-                  <div
-                    key={`moved-ghost-${ghost.id}`}
-                    className="minimap__moved-ghost"
-                    style={{
-                      left: ghost.originalPosition.col * renderPitch,
-                      top: ghost.originalPosition.row * renderPitch,
-                      width: (ghost.originalPosition.colSpan || 1) * cellSize + ((ghost.originalPosition.colSpan || 1) - 1) * renderGap,
-                      height: (ghost.originalPosition.rowSpan || 1) * cellSize + ((ghost.originalPosition.rowSpan || 1) - 1) * renderGap,
-                    }}
-                  />
-                ))}
-
-                {/* View Cells (View mode) */}
-                {showViews && flattenedViews.map(view => (
-                  <ViewCell
-                    key={view.id}
-                    view={view}
-                    cellSize={cellSize}
-                    gap={renderGap}
-                    isSelected={selectedVGId === view.vgId}
-                    onClick={() => onVGClick(view.vgId)}
-                  />
-                ))}
-
-                {/* Viewport indicators */}
-                {showViewports && (
-                  mapMode === MAP_MODES.VIEWPORTS ||
-                  mapMode === MAP_MODES.LAYOUT ||
-                  mapMode === MAP_MODES.TEAM
-                ) && viewports.map(vp => {
-                  if (!vp.position) return null;
-                  const vpLeft = vp.position.col * renderPitch;
-                  const vpTop = vp.position.row * renderPitch;
-                  const vpWidth = vp.size.cols * cellSize + (vp.size.cols - 1) * renderGap;
-                  const tooltip = `${vp.name} viewport`;
-                  const overlayWidth = Math.min(84, Math.max(24, vpWidth));
-
-                  return (
-                    <React.Fragment key={vp.id}>
-                      <Tooltip content={tooltip} placement="top" delay={400}>
-                        <div
-                          className="minimap__overlay-hit minimimap__overlay-hit--viewport"
-                          style={{
-                            left: vpLeft + 4,
-                            top: vpTop + 2,
-                            width: overlayWidth,
-                            height: 18,
-                          }}
-                          aria-label={tooltip}
-                        />
-                      </Tooltip>
-                      <ViewportIndicator
-                        viewport={vp}
+                    return (
+                      <VGBlock
+                        key={`${vg.id}-${vg.layoutId}`}
+                        vg={vg}
                         cellSize={cellSize}
                         gap={renderGap}
-                        isSelected={selectedViewportId === vp.id}
-                        onViewportMove={onViewportMove}
+                        isSelected={isSelected}
+                        isGhosted={isGhosted}
+                        showInternals={allowInternals && (!focusedVG || focusedVG?.id === vg.id) && !isFocused}
+                        subtle={isSubtle}
+                        draggable={!isSubtle}
+                        onDragStart={(e) => handleVGDragStart(e, vg)}
+                        onDragEnd={handleVGDragEnd}
+                        onClick={() => onVGClick(vg.id)}
+                        onDoubleClick={() => onVGDoubleClick(vg.id)}
+                        isEditMode={isEditMode}
+                        onPointerDown={isEditMode ? handleVGPointerDown : undefined}
+                        isBeingMoved={movingVG?.vg?.id === vg.id}
+                        onRemove={isEditMode ? onRemoveVG : undefined}
+                        changeStatus={getChangeStatus(vg.id)}
+                        dimmed={isDimmedByFocus || isDimmedBySearch}
                       />
-                    </React.Fragment>
-                  );
-                })}
+                    );
+                  })}
 
-                {/* Collaborator viewport indicators */}
-                {showCollaborators && (
-                  mapMode === MAP_MODES.VIEWPORTS ||
-                  mapMode === MAP_MODES.TEAM
-                ) && collaborators.filter(c => c.isOnline && c.viewport).map(collab => {
-                  const vp = collab.viewport;
-                  if (!vp) return null;
-                  const collabLeft = vp.col * renderPitch;
-                  const collabTop = vp.row * renderPitch;
-                  const collabWidth = vp.cols * cellSize + (vp.cols - 1) * renderGap;
-                  const tooltip = `${collab.name}${collab.isBroadcasting ? ' (Broadcasting)' : ''}`;
-                  const overlayLeft = Math.max(0, collabLeft + collabWidth - 28);
-                  const overlayTop = Math.max(0, collabTop - 10);
+                  {/* Ghost footprint during VG move in edit mode */}
+                  {moveGhost && (
+                    <div
+                      className="minimap__move-ghost"
+                      style={{
+                        left: moveGhost.col * renderPitch,
+                        top: moveGhost.row * renderPitch,
+                        width: moveGhost.colSpan * cellSize + (moveGhost.colSpan - 1) * renderGap,
+                        height: moveGhost.rowSpan * cellSize + (moveGhost.rowSpan - 1) * renderGap,
+                        '--ghost-color': moveGhost.color,
+                      }}
+                    />
+                  )}
 
-                  return (
-                    <React.Fragment key={collab.id}>
-                      <Tooltip content={tooltip} placement="top" delay={400}>
+                  {/* Ghost outlines for removed VGs in edit mode */}
+                  {isEditMode && removedVGGhosts.map(ghost => (
+                    <div
+                      key={`removed-${ghost.id}`}
+                      className="minimap__removed-ghost"
+                      style={{
+                        left: ghost.position.col * renderPitch,
+                        top: ghost.position.row * renderPitch,
+                        width: (ghost.position.colSpan || 1) * cellSize + ((ghost.position.colSpan || 1) - 1) * renderGap,
+                        height: (ghost.position.rowSpan || 1) * cellSize + ((ghost.position.rowSpan || 1) - 1) * renderGap,
+                        '--ghost-color': ghost.color || 'var(--color-text-muted)',
+                      }}
+                    />
+                  ))}
+
+                  {/* Ghost outlines for moved VGs at original positions */}
+                  {isEditMode && movedVGGhosts.map((ghost) => (
+                    <div
+                      key={`moved-ghost-${ghost.id}`}
+                      className="minimap__moved-ghost"
+                      style={{
+                        left: ghost.originalPosition.col * renderPitch,
+                        top: ghost.originalPosition.row * renderPitch,
+                        width: (ghost.originalPosition.colSpan || 1) * cellSize + ((ghost.originalPosition.colSpan || 1) - 1) * renderGap,
+                        height: (ghost.originalPosition.rowSpan || 1) * cellSize + ((ghost.originalPosition.rowSpan || 1) - 1) * renderGap,
+                      }}
+                    />
+                  ))}
+
+                  {/* View Cells (View mode) */}
+                  {showViews && flattenedViews.map(view => (
+                    <ViewCell
+                      key={view.id}
+                      view={view}
+                      cellSize={cellSize}
+                      gap={renderGap}
+                      isSelected={selectedVGId === view.vgId}
+                      onClick={() => onVGClick(view.vgId)}
+                    />
+                  ))}
+
+                  {/* Viewport indicators */}
+                  {showViewports && (
+                    mapMode === MAP_MODES.VIEWPORTS ||
+                    mapMode === MAP_MODES.LAYOUT ||
+                    mapMode === MAP_MODES.TEAM
+                  ) && viewports.map(vp => {
+                    if (!vp.position) return null;
+                    const vpLeft = vp.position.col * renderPitch;
+                    const vpTop = vp.position.row * renderPitch;
+                    const vpWidth = vp.size.cols * cellSize + (vp.size.cols - 1) * renderGap;
+                    const tooltip = `${vp.name} viewport`;
+                    const overlayWidth = Math.min(84, Math.max(24, vpWidth));
+
+                    return (
+                      <React.Fragment key={vp.id}>
+                        <Tooltip content={tooltip} placement="top" delay={400}>
+                          <div
+                            className="minimap__overlay-hit minimimap__overlay-hit--viewport"
+                            style={{
+                              left: vpLeft + 4,
+                              top: vpTop + 2,
+                              width: overlayWidth,
+                              height: 18,
+                            }}
+                            aria-label={tooltip}
+                          />
+                        </Tooltip>
+                        <ViewportIndicator
+                          viewport={vp}
+                          cellSize={cellSize}
+                          gap={renderGap}
+                          isSelected={selectedViewportId === vp.id}
+                          onViewportMove={onViewportMove}
+                        />
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* Collaborator viewport indicators */}
+                  {showCollaborators && (
+                    mapMode === MAP_MODES.VIEWPORTS ||
+                    mapMode === MAP_MODES.TEAM
+                  ) && collaborators.filter(c => c.isOnline && c.viewport).map(collab => {
+                    const vp = collab.viewport;
+                    if (!vp) return null;
+                    const collabLeft = vp.col * renderPitch;
+                    const collabTop = vp.row * renderPitch;
+                    const collabWidth = vp.cols * cellSize + (vp.cols - 1) * renderGap;
+                    const tooltip = `${collab.name}${collab.isBroadcasting ? ' (Broadcasting)' : ''}`;
+                    const overlayLeft = Math.max(0, collabLeft + collabWidth - 28);
+                    const overlayTop = Math.max(0, collabTop - 10);
+
+                    return (
+                      <React.Fragment key={collab.id}>
+                        <Tooltip content={tooltip} placement="top" delay={400}>
+                          <div
+                            className="minimap__overlay-hit minimimap__overlay-hit--collab"
+                            style={{
+                              left: overlayLeft,
+                              top: overlayTop,
+                              width: 24,
+                              height: 16,
+                            }}
+                            aria-label={tooltip}
+                          />
+                        </Tooltip>
+                        <CollaboratorIndicator
+                          collaborator={collab}
+                          cellSize={cellSize}
+                          gap={renderGap}
+                          showName={mapMode === MAP_MODES.TEAM}
+                        />
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* Cursor tooltip anchors */}
+                  {showCursors && mapMode === MAP_MODES.TEAM && collaboratorsWithCursors.map(collab => {
+                    const cursor = collab.cursor;
+                    if (!cursor) return null;
+                    const cursorLeft = cursor.col * renderPitch + (cursor.colOffset || 0) * cellSize;
+                    const cursorTop = cursor.row * renderPitch + (cursor.rowOffset || 0) * cellSize;
+                    const tooltip = collab.name;
+                    const overlayLeft = Math.max(0, cursorLeft - 6);
+                    const overlayTop = Math.max(0, cursorTop - 6);
+
+                    return (
+                      <Tooltip key={`cursor-tooltip-${collab.id}`} content={tooltip} placement="top" delay={400}>
                         <div
-                          className="minimap__overlay-hit minimimap__overlay-hit--collab"
+                          className="minimap__overlay-hit minimimap__overlay-hit--cursor"
                           style={{
                             left: overlayLeft,
                             top: overlayTop,
-                            width: 24,
+                            width: 16,
                             height: 16,
                           }}
                           aria-label={tooltip}
                         />
                       </Tooltip>
-                      <CollaboratorIndicator
-                        collaborator={collab}
-                        cellSize={cellSize}
-                        gap={renderGap}
-                        showName={mapMode === MAP_MODES.TEAM}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-
-                {/* Cursor tooltip anchors */}
-                {showCursors && mapMode === MAP_MODES.TEAM && collaboratorsWithCursors.map(collab => {
-                  const cursor = collab.cursor;
-                  if (!cursor) return null;
-                  const cursorLeft = cursor.col * renderPitch + (cursor.colOffset || 0) * cellSize;
-                  const cursorTop = cursor.row * renderPitch + (cursor.rowOffset || 0) * cellSize;
-                  const tooltip = collab.name;
-                  const overlayLeft = Math.max(0, cursorLeft - 6);
-                  const overlayTop = Math.max(0, cursorTop - 6);
-
-                  return (
-                    <Tooltip key={`cursor-tooltip-${collab.id}`} content={tooltip} placement="top" delay={400}>
-                      <div
-                        className="minimap__overlay-hit minimimap__overlay-hit--cursor"
-                        style={{
-                          left: overlayLeft,
-                          top: overlayTop,
-                          width: 16,
-                          height: 16,
-                        }}
-                        aria-label={tooltip}
-                      />
-                    </Tooltip>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Expansion gutters at grid edges */}
+              {onExpandCanvas && (
+                <ExpansionGutter
+                  gridWidth={canvasWidth}
+                  gridHeight={canvasHeight}
+                  cellSize={cellSize}
+                  onExpand={onExpandCanvas}
+                  isEditMode={isEditMode}
+                  canRemoveRows={canRemoveRows}
+                  canRemoveCols={canRemoveCols}
+                  canRemoveTop={canRemoveTop}
+                  canRemoveBottom={canRemoveBottom}
+                  canRemoveLeft={canRemoveLeft}
+                  canRemoveRight={canRemoveRight}
+                  isVR={isVR}
+                />
+              )}
+
+              {/* Cursor indicators (overlaid on grid) */}
+              {showCursors && mapMode === MAP_MODES.TEAM && (
+                <div className="minimap__cursors">
+                  {collaboratorsWithCursors.map(collab => (
+                    <CursorIndicator
+                      key={`cursor-${collab.id}`}
+                      collaborator={collab}
+                      cellSize={cellSize}
+                      gap={renderGap}
+                      showName={false}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-
-            {/* Expansion gutters at grid edges */}
-            {onExpandCanvas && (
-              <ExpansionGutter
-                gridWidth={canvasWidth}
-                gridHeight={canvasHeight}
-                cellSize={cellSize}
-                onExpand={onExpandCanvas}
-                isEditMode={isEditMode}
-                canRemoveRows={canRemoveRows}
-                canRemoveCols={canRemoveCols}
-                canRemoveTop={canRemoveTop}
-                canRemoveBottom={canRemoveBottom}
-                canRemoveLeft={canRemoveLeft}
-                canRemoveRight={canRemoveRight}
-                isVR={isVR}
-              />
-            )}
-
-            {/* Cursor indicators (overlaid on grid) */}
-            {showCursors && mapMode === MAP_MODES.TEAM && (
-              <div className="minimap__cursors">
-                {collaboratorsWithCursors.map(collab => (
-                  <CursorIndicator
-                    key={`cursor-${collab.id}`}
-                    collaborator={collab}
-                    cellSize={cellSize}
-                    gap={renderGap}
-                    showName={false}
-                  />
-                ))}
-              </div>
-            )}
-        </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    {focusedVG && (
-      <VGFocusedView
-        focusedVG={focusedVG}
-        focusedSlots={focusedSlots}
-        focusedLayout={focusedLayout}
-        containerWidth={containerWidth || 300}
-        containerHeight={containerHeight || 300}
-        onSlotDrop={onFocusedVGSlotDrop}
-        onSlotClear={onFocusedVGSlotClear}
-        onBackToCanvas={onBackFromFocus}
-        parseDragPayload={parseDragPayload}
-        isViewPayload={isViewPayload}
-        quickOps={quickOps}
-        onCellDragComplete={onCellDragComplete}
-        onCellAssign={onCellAssign}
-        onTargetingResolve={onTargetingResolve}
-        onApplyTemplate={onApplyTemplate}
-        onMergeCells={onMergeCells}
-        onSplitCell={onSplitCell}
-        onOpenEditor={onOpenEditor}
-      />
-    )}
+      {/* Drop target indicator — rendered at root level to stay above focused overlay */}
+      {dropTarget && (
+        <div
+          className="minimap__drop-target"
+          style={{
+            left: MINIMAP_CONSTANTS.SCROLL_PADDING + labelOffsetX + dropTarget.col * renderPitch - panning.panOffset.x,
+            top: MINIMAP_CONSTANTS.SCROLL_PADDING + labelOffsetY + dropTarget.row * renderPitch - panning.panOffset.y,
+            width: dropTarget.colSpan * cellSize + (dropTarget.colSpan - 1) * renderGap,
+            height: dropTarget.rowSpan * cellSize + (dropTarget.rowSpan - 1) * renderGap,
+          }}
+        />
+      )}
+
+      {focusedVG && (
+        <VGFocusedView
+          focusedVG={focusedVG}
+          focusedSlots={focusedSlots}
+          focusedLayout={focusedLayout}
+          containerWidth={containerWidth || 300}
+          containerHeight={containerHeight || 300}
+          onSlotDrop={onFocusedVGSlotDrop}
+          onSlotClear={onFocusedVGSlotClear}
+          onBackToCanvas={onBackFromFocus}
+          parseDragPayload={parseDragPayload}
+          isViewPayload={isViewPayload}
+          quickOps={quickOps}
+          onCellDragComplete={onCellDragComplete}
+          onCellAssign={onCellAssign}
+          onTargetingResolve={onTargetingResolve}
+          onApplyTemplate={onApplyTemplate}
+          onMergeCells={onMergeCells}
+          onSplitCell={onSplitCell}
+          onOpenEditor={onOpenEditor}
+        />
+      )}
 
       {/* Panning indicator */}
       {panning.canPan && !isFocused && (

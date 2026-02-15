@@ -4,7 +4,6 @@
  * Create, organize, place, and manage all ViewConfigurations in the workspace.
  *
  * Features:
- * - Canvas Navigator (shared with Layout tab, in Views mode)
  * - Multiple view modes: List, By Status, By Dataset, Grid
  * - Three sections: On Canvas, Not Placed, Recently Deleted
  * - View creation from datasets
@@ -24,10 +23,6 @@ import { PanelHeader } from '../../components/PanelHeader';
 import { SectionNavGroup, FilterToolbar } from '@UI/react/components/organisms';
 import { EmptyState } from '@UI/react/components/molecules/EmptyState';
 import { ViewItem, InactiveViewItem, TrashedViewItem } from '@UI/react/components/molecules/ViewItem';
-// NOTE: CanvasNavigator, useLayoutPanelContext, useLayoutPanel imports removed
-// after LayoutPanel UI cleanup. This component is no longer registered in the
-// LeftPanel tab registry (superseded by CanvasMapPanel).
-import { useLayoutPanelContext } from '@UI/react/components/panels/LayoutPanel/LayoutPanelContext';
 import { useViewsTab, VIEW_MODES } from './hooks/useViewsTab';
 import { viewLifecycleService } from '@Services';
 import './ViewsTab.scss';
@@ -130,18 +125,6 @@ export function ViewsPanelContent({ workspaceId }) {
     // HOOKS
     // =========================================================================
 
-    // Get layout panel context for CanvasNavigator
-    // Note: useLayoutPanel must be called unconditionally (React hooks rules)
-    // When context exists, we use context.logic; otherwise use standalone
-    const layoutContext = useLayoutPanelContext();
-
-    // Create standalone logic - this is always called but may not be used
-    // Pass workspaceId for canvas initialization
-    const standaloneLogic = useLayoutPanel({ canvasId: workspaceId });
-
-    // Prefer context logic if available, fall back to standalone
-    const layoutLogic = layoutContext?.logic || standaloneLogic;
-
     const {
         views,
         allViews,
@@ -235,18 +218,6 @@ export function ViewsPanelContent({ workspaceId }) {
     // Build sections for SectionNavGroup (BY_STATUS view mode)
     const viewStatusSections = useMemo(() => [
         {
-            id: 'navigator',
-            icon: 'grid3x3',
-            label: 'Canvas Navigator',
-            color: '#c084fc', // purple
-            content: (
-                <CanvasNavigator
-                    isDocked={true}
-                    logic={layoutLogic}
-                />
-            ),
-        },
-        {
             id: 'onCanvas',
             icon: 'eye',
             label: 'On Canvas',
@@ -324,7 +295,6 @@ export function ViewsPanelContent({ workspaceId }) {
             ),
         },
     ], [
-        layoutLogic,
         onCanvasViews,
         notPlacedViews,
         recentlyDeletedViews,
@@ -342,18 +312,13 @@ export function ViewsPanelContent({ workspaceId }) {
     const renderByStatusContent = () => (
         <SectionNavGroup
             sections={viewStatusSections}
-            defaultSectionId="navigator"
+            defaultSectionId="onCanvas"
             size="sm"
         />
     );
 
     const renderByDatasetContent = () => (
         <div className="views-tab__by-dataset">
-            {/* Canvas Navigator at top */}
-            <div className="views-tab__navigator-container">
-                <CanvasNavigator isDocked={true} logic={layoutLogic} />
-            </div>
-
             {/* Dataset groups */}
             <div className="views-tab__dataset-list">
                 {viewsByDataset.length === 0 ? (
@@ -401,11 +366,6 @@ export function ViewsPanelContent({ workspaceId }) {
 
     const renderListContent = () => (
         <div className="views-tab__flat-list">
-            {/* Canvas Navigator at top */}
-            <div className="views-tab__navigator-container">
-                <CanvasNavigator isDocked={true} logic={layoutLogic} />
-            </div>
-
             {/* All views in a flat list */}
             <div className="views-tab__list views-tab__list--scrollable">
                 {views.length === 0 ? (
@@ -439,12 +399,7 @@ export function ViewsPanelContent({ workspaceId }) {
 
     const renderGridContent = () => (
         <div className="views-tab__grid-view">
-            {/* Canvas Navigator takes priority */}
-            <div className="views-tab__navigator-container views-tab__navigator-container--large">
-                <CanvasNavigator isDocked={true} logic={layoutLogic} />
-            </div>
-
-            {/* Compact view list below */}
+            {/* Compact view list */}
             <div className="views-tab__grid-list">
                 {views.map(view => (
                     <div

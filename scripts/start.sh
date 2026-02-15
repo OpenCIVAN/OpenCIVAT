@@ -3,6 +3,9 @@
 
 set -e  # Exit on error
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "$SCRIPT_DIR/ensure-matrix-network.sh"
+
 echo "🚀 Starting CIA Web..."
 echo ""
 
@@ -49,8 +52,10 @@ echo ""
 
 # Start Docker services
 echo "🐳 Starting Docker services (PostgreSQL, MinIO, Redis, API, Y.js, VTK Worker, Thumbnail Worker)..."
+ensure_matrix_network
 docker-compose up -d
 
+ensure_matrix_network
 # Start Matrix Federation services
 echo ""
 echo "🔐 Starting Matrix Federation services (Synapse, Matrix DB, Matrix Redis)..."

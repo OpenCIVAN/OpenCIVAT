@@ -27,18 +27,33 @@ export function useLinkDragSource(view) {
             const img = new Image();
             img.src =
                 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-            e.dataTransfer.setDragImage(img, 0, 0);
+            try {
+                e.dataTransfer.setDragImage(img, 0, 0);
+            } catch {
+                // Ignore setDragImage failures in Firefox.
+            }
 
             // Store view ID in drag data
-            e.dataTransfer.setData(
-                'application/x-cia-view-link',
-                JSON.stringify({
-                    viewId: view.id,
-                    viewName: view.name,
-                    viewColor: view.color,
-                })
-            );
-            e.dataTransfer.effectAllowed = 'link';
+            const payload = JSON.stringify({
+                viewId: view.id,
+                viewName: view.name,
+                viewColor: view.color,
+            });
+            try {
+                e.dataTransfer.setData('application/x-cia-view-link', payload);
+            } catch {
+                // Keep drag alive if custom MIME type is rejected.
+            }
+            try {
+                e.dataTransfer.setData('text/plain', payload);
+            } catch {
+                // Best effort fallback.
+            }
+            try {
+                e.dataTransfer.effectAllowed = 'link';
+            } catch {
+                // Ignore unsupported effect updates.
+            }
 
             startDrag(view, rect, startPos);
             setIsDragging(true);

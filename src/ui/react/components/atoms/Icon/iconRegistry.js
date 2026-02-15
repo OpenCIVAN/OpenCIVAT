@@ -47,6 +47,7 @@ export const ICON_REGISTRY = {
   close: "close",
   x: "close",
   check: "check",
+  circleCheck: "check_circle",
   done: "done",
   edit: "edit",
   delete: "delete",
@@ -213,10 +214,13 @@ export const ICON_REGISTRY = {
   grid3x3: "grid_3x3",
   layoutGrid: "view_module",
   layoutList: "view_list",
+  alignCenter: "center_focus_strong",
   aspectRatio: "aspect_ratio",
   list: "list",
   layout: "dashboard",
   dashboard: "dashboard",
+  frame: "square",
+  package: "archive",
   panelLeftClose: "left_panel_close",
   panelLeftOpen: "left_panel_open",
   panelRightClose: "right_panel_close",
@@ -307,6 +311,7 @@ export const ICON_REGISTRY = {
   // SHAPES & GEOMETRY
   // ═══════════════════════════════════════════════════════════════════════════
   circle: "circle",
+  circleDashed: "circle",
   circleDot: "radio_button_checked",
   radioDot: "radio_button_checked",
   square: "square",
@@ -339,8 +344,10 @@ export const ICON_REGISTRY = {
   // LINKS & EXTERNAL
   // ═══════════════════════════════════════════════════════════════════════════
   link: "link",
+  link2: "link",
   addLink: "add_link",
   linkOff: "link_off",
+  unlink2: "link_off",
   externalLink: "open_in_new",
   doorOpen: "meeting_room",
   logout: "logout",

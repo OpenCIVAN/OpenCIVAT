@@ -38,34 +38,11 @@ const DROP_ZONES = {
     NONE: 'none',
     PLACE: 'place',      // Empty cell center - green
     SWAP: 'swap',        // Occupied cell center (60%) - blue
-    PUSH_UP: 'push-up',      // Top 20% - amber
-    PUSH_DOWN: 'push-down',  // Bottom 20% - amber
-    PUSH_LEFT: 'push-left',  // Left 20% - amber
-    PUSH_RIGHT: 'push-right', // Right 20% - amber
 };
 
 // Calculate which drop zone based on mouse position within cell
 function getDropZone(e, cellRef, isEmpty) {
     if (!cellRef.current) return DROP_ZONES.NONE;
-
-    const rect = cellRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const width = rect.width;
-    const height = rect.height;
-
-    // Calculate relative position (0-1)
-    const relX = x / width;
-    const relY = y / height;
-
-    // Edge threshold is 20% per spec
-    const edgeThreshold = 0.20;
-
-    // Check edges first (push zones)
-    if (relY < edgeThreshold) return DROP_ZONES.PUSH_UP;
-    if (relY > 1 - edgeThreshold) return DROP_ZONES.PUSH_DOWN;
-    if (relX < edgeThreshold) return DROP_ZONES.PUSH_LEFT;
-    if (relX > 1 - edgeThreshold) return DROP_ZONES.PUSH_RIGHT;
 
     // Center zone - Place for empty, Swap for occupied
     return isEmpty ? DROP_ZONES.PLACE : DROP_ZONES.SWAP;
@@ -170,7 +147,6 @@ export const CanvasCell = memo(function CanvasCell({
     onSelect,
     onDrop,
     onSwap,
-    onPush,
     onAddContent,
     onRemove,
     onFocusView, // Handler to enter focus mode for this view
@@ -361,6 +337,8 @@ export const CanvasCell = memo(function CanvasCell({
                     return { type: 'dataset', datasetId: parsed.datasetId || parsed.id, ...parsed };
                 } else if (parsed.type === 'view-item' || parsed.type === 'view') {
                     return { type: 'view', viewConfigId: parsed.viewId || parsed.viewConfigId || parsed.id, ...parsed };
+                } else if (parsed.type === 'template-create') {
+                    return { type: 'template-create', ...parsed };
                 } else if (parsed.type === 'file' || parsed.path || parsed.isFile) {
                     return { type: 'file', ...parsed, isFile: true };
                 } else {
@@ -373,6 +351,9 @@ export const CanvasCell = memo(function CanvasCell({
             if (data) {
                 try {
                     const parsed = JSON.parse(data);
+                    if (parsed.type === 'template-create') {
+                        return { type: 'template-create', ...parsed };
+                    }
                     if (parsed.viewConfigId || parsed.viewId || parsed.id) {
                         return { type: 'view', viewConfigId: parsed.viewConfigId || parsed.viewId || parsed.id, ...parsed };
                     }
@@ -419,10 +400,10 @@ export const CanvasCell = memo(function CanvasCell({
         const dropData = parseDropData(e);
         if (!dropData) return;
 
-        // Get modifier keys for push behavior
+        // Preserve modifier keys (e.g. Alt for duplicate-on-drop semantics)
         const modifiers = {
-            shift: e.shiftKey,   // Wrap to next row
-            ctrl: e.ctrlKey,     // Close last view
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey,
             alt: e.altKey,
         };
 
@@ -451,24 +432,10 @@ export const CanvasCell = memo(function CanvasCell({
                 }
                 break;
 
-            case DROP_ZONES.PUSH_UP:
-            case DROP_ZONES.PUSH_DOWN:
-            case DROP_ZONES.PUSH_LEFT:
-            case DROP_ZONES.PUSH_RIGHT:
-                // Push in direction
-                const direction = dropZone.replace('push-', '');
-                if (onPush) {
-                    onPush(row, col, direction, dropData, modifiers);
-                } else if (onDrop) {
-                    // Fallback to onDrop with push info
-                    onDrop(row, col, { ...dropData, action: 'push', direction, modifiers });
-                }
-                break;
-
             default:
                 console.warn('Unknown drop zone:', dropZone);
         }
-    }, [activeDropZone, parseDropData, isEmpty, row, col, placement, onDrop, onSwap, onPush]);
+    }, [activeDropZone, parseDropData, isEmpty, row, col, placement, onDrop, onSwap]);
 
     // ==========================================================================
     // CELL DRAGGING (Edit Mode)
@@ -492,8 +459,23 @@ export const CanvasCell = memo(function CanvasCell({
             sourcePlacementId: placement?.id,
         };
 
-        e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+        const serialized = JSON.stringify(dragData);
+        const safeSetDragData = (type) => {
+            try {
+                e.dataTransfer.setData(type, serialized);
+            } catch {
+                // Keep drag alive if browser rejects a MIME type.
+            }
+        };
+
+        safeSetDragData('application/json');
+        safeSetDragData('text');
+        safeSetDragData('text/plain');
+        safeSetDragData('application/x-cia-drag');
         e.dataTransfer.effectAllowed = 'move';
+        if (typeof window !== 'undefined') {
+            window.__ciaDragPayload = dragData;
+        }
 
         // Add dragging class after a small delay for visual feedback
         requestAnimationFrame(() => {
@@ -503,6 +485,9 @@ export const CanvasCell = memo(function CanvasCell({
 
     const handleDragEnd = useCallback(() => {
         cellRef.current?.classList.remove('canvas-cell--dragging');
+        if (typeof window !== 'undefined') {
+            window.__ciaDragPayload = null;
+        }
     }, []);
 
     // ==========================================================================
@@ -805,30 +790,6 @@ function DropZoneOverlay({ zone, isEmpty }) {
                     className: 'drop-zone--swap',
                     icon: 'arrowLeftRight',
                     label: 'Swap',
-                };
-            case DROP_ZONES.PUSH_UP:
-                return {
-                    className: 'drop-zone--push drop-zone--push-up',
-                    icon: 'arrowUp',
-                    label: 'Push Up',
-                };
-            case DROP_ZONES.PUSH_DOWN:
-                return {
-                    className: 'drop-zone--push drop-zone--push-down',
-                    icon: 'arrowDown',
-                    label: 'Push Down',
-                };
-            case DROP_ZONES.PUSH_LEFT:
-                return {
-                    className: 'drop-zone--push drop-zone--push-left',
-                    icon: 'arrowLeft',
-                    label: 'Push Left',
-                };
-            case DROP_ZONES.PUSH_RIGHT:
-                return {
-                    className: 'drop-zone--push drop-zone--push-right',
-                    icon: 'arrowRight',
-                    label: 'Push Right',
                 };
             default:
                 return null;

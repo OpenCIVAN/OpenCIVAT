@@ -396,7 +396,7 @@ export const VGEditorPanelContent = memo(function VGEditorPanelContent({
         vgColor: viewGroup.color,
       });
     }
-  }, [viewGroup.name, viewGroup.color, editorPanelId, editorContext]);
+  }, [viewGroup.name, viewGroup.color, editorPanelId]); // editorContext removed — updateEditor is stable (useCallback with no deps)
 
   // Handle panel focus for active state
   const handlePanelFocus = useCallback(() => {

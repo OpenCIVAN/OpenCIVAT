@@ -247,6 +247,7 @@ const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
     onClose,
     showCoordinates,
     showViewGroupBorders,
+    viewGroups = [],
     isFocused = false,
     footer1Props,
     footer2,
@@ -455,6 +456,7 @@ const WorkspaceFloatingWindow = React.memo(function WorkspaceFloatingWindow({
                     canvasId={canvasId}
                     showCoordinates={showCoordinates}
                     showViewGroupBorders={showViewGroupBorders}
+                    viewGroups={viewGroups}
                     isEnsuringCanvas={isEnsuringCanvas}
                     canvas={canvas}
                     loading={loading}
@@ -1381,6 +1383,7 @@ function CanvasWorkspaceInner({
 
     // ViewGroup data for header and footer (shared source of truth)
     const {
+        viewGroups: allViewGroups,
         visibleViewGroups,
         activeViewGroupId,
         createViewGroup,
@@ -1395,8 +1398,15 @@ function CanvasWorkspaceInner({
     editModeDataRef.current = { visibleViewGroups, canvas };
 
     const { isLinked: isViewGroupLinked } = useViewGroupLinks(activeViewGroupId);
-    const formattedViewGroups = useMemo(() => (
-        visibleViewGroups.map(vg => ({
+    const formattedViewGroups = useMemo(() => {
+        const visibleIds = new Set(visibleViewGroups.map(vg => vg.id));
+        const merged = [...visibleViewGroups];
+        for (const vg of (allViewGroups || [])) {
+            if (visibleIds.has(vg.id)) continue;
+            const pos = vg.getCanvasPosition?.() || vg.canvasPosition;
+            if (pos && pos.row !== undefined) merged.push(vg);
+        }
+        return merged.map(vg => ({
             id: vg.id,
             name: vg.name || 'Untitled Group',
             color: vg.color,
@@ -1405,8 +1415,8 @@ function CanvasWorkspaceInner({
             canvasPosition: vg.getCanvasPosition?.() || vg.canvasPosition,
             linkedTo: vg.link?.targetGroupId || null,
             linkedToName: vg.link?.targetGroupName || null,
-        }))
-    ), [visibleViewGroups]);
+        }));
+    }, [allViewGroups, visibleViewGroups]);
 
     const activeHeaderViewGroup = useMemo(() => (
         formattedViewGroups.find(vg => vg.id === activeViewGroupId) || null
@@ -2233,6 +2243,7 @@ function CanvasWorkspaceInner({
                                             onClose={() => handleCloseWorkspaceWindow(workspace.id)}
                                             showCoordinates={showCoordinates}
                                             showViewGroupBorders={showViewGroupBorders}
+                                            viewGroups={formattedViewGroups}
                                             isFocused={isFocused}
                                             footer1Props={sharedFooter1Props}
                                             footer2={sharedFooter2}

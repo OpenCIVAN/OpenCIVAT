@@ -220,7 +220,17 @@
   border: 2px solid var(--viewgroup-color, $color-accent-purple);
   border-radius: $radius-md;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
-  background: color-mix(in srgb, var(--viewgroup-color, #7c3aed) 8%, transparent);
+
+  &--preview {
+    border-style: dashed;
+    background: color-mix(in srgb, var(--viewgroup-color, #7c3aed) 12%, transparent);
+    animation: canvas-grid__preview-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes canvas-grid__preview-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 // =============================================================================

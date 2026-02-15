@@ -196,6 +196,7 @@ export class ViewGroupManager extends BaseManager {
             color = this._getNextColor(),
             workspaceId = this._workspaceId,
             canvasPosition = { row: 0, col: 0, rowSpan: 1, colSpan: 1 },
+            isExplicit = false,
         } = options;
 
         // Guard: workspace must be a valid UUID for server persistence
@@ -211,6 +212,7 @@ export class ViewGroupManager extends BaseManager {
             color,
             workspaceId,
             canvasPosition,
+            isExplicit,
             ownerId: getUserId(),
             ownerName: getUserName(),
         });
@@ -274,7 +276,10 @@ export class ViewGroupManager extends BaseManager {
         }
 
         // Apply updates locally
-        if (updates.name !== undefined) viewGroup.setName(updates.name);
+        if (updates.name !== undefined) {
+            viewGroup.setName(updates.name);
+            viewGroup.isExplicit = true; // User named it → promote to explicit
+        }
         if (updates.color !== undefined) viewGroup.setColor(updates.color);
         if (updates.layoutId !== undefined) viewGroup.setLayout(updates.layoutId);
         if (updates.canvasPosition !== undefined) {
@@ -394,8 +399,29 @@ export class ViewGroupManager extends BaseManager {
             return false;
         }
 
+        const targetSlot = viewGroup.getSlotAt(position);
+        if (!targetSlot) {
+            this._log.warn(`Slot not found: ${groupId}:${position}`);
+            return false;
+        }
+
+        const replacedViewId = targetSlot.viewId && targetSlot.viewId !== viewId
+            ? targetSlot.viewId
+            : null;
+        if (replacedViewId) {
+            viewGroup.removeViewFromSlot(position);
+            this._emit('viewRemoved', {
+                groupId,
+                viewId: replacedViewId,
+                position,
+                reason: 'replaced',
+            });
+        }
+
         viewGroup.setViewAtSlot(position, viewId, viewName, viewType, datasetId);
         this._scheduleSync(viewGroup);
+        this._emit('viewGroupUpdated', { viewGroup, isRemote: false });
+        this._emit('viewAdded', { groupId, viewId, position });
 
         return true;
     }

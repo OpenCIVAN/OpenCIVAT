@@ -153,6 +153,41 @@ export function CIAWebApp({ username, userId, projectId }) {
     initPhase3();
   }, []);
 
+  // ===========================================================================
+  // DRAG/DROP COMPATIBILITY GUARD
+  // ===========================================================================
+  useEffect(() => {
+    const ensureDragPayload = (event) => {
+      const dataTransfer = event?.dataTransfer;
+      if (!dataTransfer) return;
+
+      // Firefox can cancel dragstart when no text payload exists yet.
+      try {
+        if ((dataTransfer.types?.length || 0) === 0) {
+          dataTransfer.setData('text/plain', 'cia-drag');
+        }
+      } catch {
+        // Best effort only.
+      }
+    };
+
+    const clearGlobalPayload = () => {
+      if (typeof window !== 'undefined') {
+        window.__ciaDragPayload = null;
+      }
+    };
+
+    window.addEventListener('dragstart', ensureDragPayload, true);
+    window.addEventListener('dragend', clearGlobalPayload);
+    window.addEventListener('drop', clearGlobalPayload);
+
+    return () => {
+      window.removeEventListener('dragstart', ensureDragPayload, true);
+      window.removeEventListener('dragend', clearGlobalPayload);
+      window.removeEventListener('drop', clearGlobalPayload);
+    };
+  }, []);
+
   const [workspaceRoomId, setWorkspaceRoomId] = useState(null);
 
   // ===========================================================================

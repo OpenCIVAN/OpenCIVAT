@@ -22,7 +22,7 @@ import { InstanceToolsPanel } from "@UI/react/components/panels/InstanceToolsPan
 import { AnnotationsPanelContent } from "./tabs/AnnotationsTab";
 import { BookmarksFiltersPanelContent } from "./tabs/BookmarksFiltersTab";
 import { CursorsPanelContent } from "./tabs/CursorsTab";
-// NOTE: layout, navigator, views, and CanvasMap tabs superseded by CanvasMapPanel (PanelShell)
+import { ViewsPanelContent } from "./tabs/ViewsTab";
 
 // =============================================================================
 // REGISTER ALL TAB COMPONENTS
@@ -33,6 +33,7 @@ registerLeftPanelTab("files", FilesTabV2);
 registerLeftPanelTab("datasets", DatasetsTabV2);
 
 // VISUALIZATION
+registerLeftPanelTab("views", ViewsPanelContent);
 registerLeftPanelTab("tools", InstanceToolsPanel);
 
 // SPATIAL & STATE
@@ -44,5 +45,5 @@ registerLeftPanelTab("cursors", CursorsPanelContent);
 
 // Log registration status in development
 if (process.env.NODE_ENV === "development") {
-  console.log("[LeftPanel] 6 tab components registered (layout/navigator/views migrated to CanvasMapPanel)");
+  console.log("[LeftPanel] 7 tab components registered (layout/navigator migrated to CanvasMapPanel)");
 }

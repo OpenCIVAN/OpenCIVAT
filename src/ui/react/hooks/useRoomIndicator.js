@@ -22,7 +22,7 @@ import {
 } from "@UI/react/hooks/useAsyncData.js";
 import { createLogger } from "@Utils/logger.js";
 
-const log = createLogger("room-indicator");
+const log = createLogger("rooms");
 
 /**
  * useRoomIndicator - Complete hook for RoomPresenceIndicator component

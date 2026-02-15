@@ -267,12 +267,14 @@
 
   &__drop-target {
     position: absolute;
-    border: 1px dashed color-mix(in srgb, $color-accent-cyan 90%, transparent);
-    background: color-mix(in srgb, $color-accent-cyan 12%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, $color-accent-cyan 20%, transparent) inset;
+    border: 2px dashed color-mix(in srgb, $color-accent-cyan 90%, transparent);
+    background: color-mix(in srgb, $color-accent-cyan 15%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, $color-accent-cyan 30%, transparent) inset,
+      0 0 8px color-mix(in srgb, $color-accent-cyan 25%, transparent);
     border-radius: 6px;
     pointer-events: none;
-    z-index: 5;
+    z-index: 10;
   }
 
 

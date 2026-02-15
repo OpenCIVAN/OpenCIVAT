@@ -117,14 +117,52 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
 
   const setGlobalDragPayload = useCallback((payload) => {
     if (typeof window !== 'undefined') {
+      const nextToken = (window.__ciaDragPayloadToken || 0) + 1;
+      window.__ciaDragPayloadToken = nextToken;
       window.__ciaDragPayload = payload;
+      return nextToken;
+    }
+    return 0;
+  }, []);
+
+  const clearGlobalDragPayload = useCallback((delayMs = 0) => {
+    if (typeof window !== 'undefined') {
+      const tokenAtClear = window.__ciaDragPayloadToken || 0;
+      const clear = () => {
+        if ((window.__ciaDragPayloadToken || 0) !== tokenAtClear) return;
+        window.__ciaDragPayload = null;
+      };
+      if (delayMs > 0) {
+        window.setTimeout(clear, delayMs);
+        return;
+      }
+      clear();
     }
   }, []);
 
-  const clearGlobalDragPayload = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      window.__ciaDragPayload = null;
+  const safeSetDragData = useCallback((dataTransfer, type, payload) => {
+    if (!dataTransfer) return;
+    try {
+      dataTransfer.setData(type, JSON.stringify(payload));
+    } catch {
+      // Firefox may reject some custom MIME types; keep dragstart alive.
     }
+  }, []);
+
+  const applyDragPreview = useCallback((event, label, color = 'rgba(34, 211, 238, 0.9)') => {
+    if (typeof document === 'undefined' || !event?.dataTransfer) return;
+    const ghost = document.createElement('div');
+    ghost.textContent = label;
+    ghost.style.cssText = `position:fixed;left:-999px;top:-999px;padding:8px 14px;border-radius:6px;background:${color};color:#fff;font-size:12px;font-weight:600;border:2px dashed rgba(255,255,255,0.75);pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);`;
+    document.body.appendChild(ghost);
+    try {
+      event.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+    } catch {
+      // If unsupported, native drag preview will be used.
+    }
+    window.setTimeout(() => {
+      try { document.body.removeChild(ghost); } catch { }
+    }, 0);
   }, []);
 
   // Get enabled tabs for current mode
@@ -210,8 +248,13 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
           vgName: vg.name,
           views: vg.views || [],
         };
-        e.dataTransfer.setData('application/json', JSON.stringify(payload));
-        e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+        e.dataTransfer.effectAllowed = 'copy';
+        safeSetDragData(e.dataTransfer, 'text', payload);
+        safeSetDragData(e.dataTransfer, 'text/plain', payload);
+        safeSetDragData(e.dataTransfer, 'application/json', payload);
+        safeSetDragData(e.dataTransfer, 'application/x-cia-drag', payload);
+        applyDragPreview(e, `VG: ${vg.name || 'ViewGroup'}`, 'rgba(59, 130, 246, 0.9)');
+        setGlobalDragPayload(payload);
       } else if (mode === 'canvas-map') {
         // VG place mode - drag to place on canvas
         const payload = {
@@ -220,13 +263,17 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
           vgName: vg.name,
           vgColor: vg.color,
         };
-        e.dataTransfer.setData('application/json', JSON.stringify(payload));
-        e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+        e.dataTransfer.effectAllowed = 'move';
+        safeSetDragData(e.dataTransfer, 'text', payload);
+        safeSetDragData(e.dataTransfer, 'text/plain', payload);
+        safeSetDragData(e.dataTransfer, 'application/json', payload);
+        safeSetDragData(e.dataTransfer, 'application/x-cia-drag', payload);
+        applyDragPreview(e, `Place: ${vg.name || 'ViewGroup'}`, 'rgba(20, 184, 166, 0.9)');
         setGlobalDragPayload(payload);
       }
       onVGDragStart?.(e, vg);
     },
-    [mode, onVGDragStart, setGlobalDragPayload]
+    [applyDragPreview, mode, onVGDragStart, safeSetDragData, setGlobalDragPayload]
   );
 
   // Wrap template drag handlers
@@ -241,17 +288,20 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
         color: template.color,
       };
       e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('application/json', JSON.stringify(payload));
-      e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+      safeSetDragData(e.dataTransfer, 'text', payload);
+      safeSetDragData(e.dataTransfer, 'text/plain', payload);
+      safeSetDragData(e.dataTransfer, 'application/json', payload);
+      safeSetDragData(e.dataTransfer, 'application/x-cia-drag', payload);
+      applyDragPreview(e, `Template: ${template.name || 'Layout'}`);
       setGlobalDragPayload(payload);
       onTemplateDragStart?.(e, template);
     },
-    [onTemplateDragStart, setGlobalDragPayload]
+    [applyDragPreview, onTemplateDragStart, safeSetDragData, setGlobalDragPayload]
   );
 
   const handleVGDragEnd = useCallback(
     (...args) => {
-      clearGlobalDragPayload();
+      clearGlobalDragPayload(80);
       onVGDragEnd?.(...args);
     },
     [clearGlobalDragPayload, onVGDragEnd]
@@ -259,7 +309,7 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
 
   const handleTemplateDragEnd = useCallback(
     (...args) => {
-      clearGlobalDragPayload();
+      clearGlobalDragPayload(80);
       onTemplateDragEnd?.(...args);
     },
     [clearGlobalDragPayload, onTemplateDragEnd]
@@ -273,12 +323,18 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
         name: dataset.name,
         fileType: dataset.type,
       };
-      e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('application/json', JSON.stringify(payload));
-      e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+      if (e?.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'copy';
+      }
+      safeSetDragData(e?.dataTransfer, 'text', payload);
+      safeSetDragData(e?.dataTransfer, 'text/plain', payload);
+      safeSetDragData(e?.dataTransfer, 'application/json', payload);
+      safeSetDragData(e?.dataTransfer, 'application/x-cia-drag', payload);
+      applyDragPreview(e, `Dataset: ${dataset?.name || 'Dataset'}`, 'rgba(59, 130, 246, 0.9)');
+      setGlobalDragPayload(payload);
       onDatasetDragStart?.(e, dataset);
     },
-    [onDatasetDragStart]
+    [applyDragPreview, onDatasetDragStart, safeSetDragData]
   );
 
   // Wrap view drag handlers to include provenance
@@ -301,12 +357,34 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
         dragData.sourceVgName = sourceVg.name;
       }
 
-      e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('application/json', JSON.stringify(dragData));
-      e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+      if (e?.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'copy';
+      }
+      safeSetDragData(e?.dataTransfer, 'text', dragData);
+      safeSetDragData(e?.dataTransfer, 'text/plain', dragData);
+      safeSetDragData(e?.dataTransfer, 'application/json', dragData);
+      safeSetDragData(e?.dataTransfer, 'application/x-cia-drag', dragData);
+      applyDragPreview(e, `View: ${view?.name || 'View'}`, 'rgba(34, 197, 94, 0.9)');
+      setGlobalDragPayload(dragData);
       onViewDragStart?.(e, view);
     },
-    [onViewDragStart]
+    [applyDragPreview, onViewDragStart, safeSetDragData, setGlobalDragPayload]
+  );
+
+  const handleViewDragEnd = useCallback(
+    (...args) => {
+      clearGlobalDragPayload(80);
+      onViewDragEnd?.(...args);
+    },
+    [clearGlobalDragPayload, onViewDragEnd]
+  );
+
+  const handleDatasetDragEnd = useCallback(
+    (...args) => {
+      clearGlobalDragPayload(80);
+      onDatasetDragEnd?.(...args);
+    },
+    [clearGlobalDragPayload, onDatasetDragEnd]
   );
 
   // Handle tab change
@@ -333,9 +411,9 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
         onTemplateEdit={onTemplateEdit}
         onTemplateDelete={onTemplateDelete}
         onViewDragStart={handleViewDragStart}
-        onViewDragEnd={onViewDragEnd}
+        onViewDragEnd={handleViewDragEnd}
         onDatasetDragStart={handleDatasetDragStart}
-        onDatasetDragEnd={onDatasetDragEnd}
+        onDatasetDragEnd={handleDatasetDragEnd}
         onVGDragStart={handleVGDragStart}
         onVGDragEnd={handleVGDragEnd}
         onTemplateDragStart={handleTemplateDragStart}

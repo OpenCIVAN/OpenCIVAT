@@ -104,7 +104,7 @@ export function useRoomsTab(options = {}) {
   const projectId = propProjectId || sessionProjectId || sessionRoomId;
   const lastLoggedProjectId = useRef(null);
 
-  // Debug: Log which projectId we're using (only when it changes)
+  // Verbose startup diagnostics (gated by logger category/level).
   useEffect(() => {
     if (lastLoggedProjectId.current === projectId) return;
     lastLoggedProjectId.current = projectId;

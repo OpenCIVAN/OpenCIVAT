@@ -11,6 +11,9 @@ import { Icon, Button } from '@UI/react/components/atoms';
  * Workspace type configurations
  */
 const WORKSPACE_TYPE_CONFIG = {
+    project: { icon: null, prefix: null, color: 'blue' },
+    personal: { icon: 'user', prefix: null, color: 'green' },
+    breakout: { icon: 'mic', prefix: 'Breakout:', color: 'blue' },
     workspace: { icon: null, prefix: null, color: 'blue' },
     subset: { icon: 'filter', prefix: 'Subset:', color: 'amber' },
     scratch: { icon: 'pencil', prefix: null, color: 'green' },
@@ -128,7 +131,7 @@ FullCanvasHeader.propTypes = {
     workspace: PropTypes.shape({
         id: PropTypes.string.isRequired,
         name: PropTypes.string.isRequired,
-        type: PropTypes.oneOf(['workspace', 'subset', 'scratch']),
+        type: PropTypes.oneOf(['workspace', 'subset', 'scratch', 'project', 'personal', 'breakout']),
         hasChanges: PropTypes.bool,
         hasBreakout: PropTypes.bool,
         breakoutUsers: PropTypes.number,

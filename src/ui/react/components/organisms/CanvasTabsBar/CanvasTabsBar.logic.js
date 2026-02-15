@@ -18,6 +18,21 @@ export const CANVAS_TABS_CONFIG = {
  * Workspace type configurations
  */
 export const WORKSPACE_TYPES = {
+    project: {
+        icon: 'square',
+        prefix: null,
+        color: 'blue',
+    },
+    personal: {
+        icon: 'user',
+        prefix: null,
+        color: 'green',
+    },
+    breakout: {
+        icon: 'mic',
+        prefix: 'Breakout:',
+        color: 'blue',
+    },
     workspace: {
         icon: 'square',
         prefix: null,

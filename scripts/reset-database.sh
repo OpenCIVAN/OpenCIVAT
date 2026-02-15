@@ -8,6 +8,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "$SCRIPT_DIR/ensure-matrix-network.sh"
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -72,12 +75,8 @@ fi
 
 echo "🔄 Resetting database and Y.js state..."
 
-# Ensure the Matrix network exists (required by docker-compose.yml)
 echo "🌐 Ensuring Docker networks exist..."
-if ! docker network inspect cia_matrix_network > /dev/null 2>&1; then
-    echo "   Creating cia_matrix_network..."
-    docker network create cia_matrix_network || true
-fi
+ensure_matrix_network
 
 # Stop and remove volumes (this clears postgres AND restarts y-websocket fresh)
 echo "🛑 Stopping containers and removing volumes..."
@@ -109,14 +108,18 @@ if [ "$REBUILD_MODE" = true ]; then
         echo -e "   ${GREEN}Build completed${NC}"
     fi
 
-    echo "🚀 Starting containers..."
+echo "🚀 Starting containers..."
+    ensure_matrix_network
+    ./scripts/wait-for-synapse.sh
     if ! run_or_fail docker compose up -d; then
         echo -e "${RED}❌ Failed to start containers${NC}"
         docker compose logs --tail=50
         exit 1
     fi
 else
-    echo "🚀 Starting with fresh database..."
+echo "🚀 Starting with fresh database..."
+    ensure_matrix_network
+    ./scripts/wait-for-synapse.sh
     if ! run_or_fail docker compose up -d; then
         echo -e "${RED}❌ Failed to start containers${NC}"
         echo "Checking logs..."

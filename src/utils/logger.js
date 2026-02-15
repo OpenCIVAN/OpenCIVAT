@@ -53,6 +53,7 @@ const DEFAULT_CATEGORIES = {
   // Collaboration
   presence: false, // User presence updates (noisy)
   cursor: false, // Cursor position updates (very noisy)
+  rooms: false, // Room tab diagnostics (verbose)
 
   // Features
   vr: true, // VR/XR events
@@ -71,7 +72,7 @@ function getConfig() {
     typeof window !== "undefined" &&
     (window.location?.hostname === "localhost" ||
       window.location?.hostname === "127.0.0.1");
-  const defaultLevel = isLocalhost ? "debug" : "warn";
+  const defaultLevel = isLocalhost ? "info" : "warn";
 
   const level =
     urlParams.get("log") ||
@@ -149,6 +150,7 @@ const CATEGORY_COLORS = {
   // Collaboration
   presence: "#fd79a8",
   cursor: "#a29bfe",
+  rooms: "#ff8f1f",
   // Features
   vr: "#00d2d3",
   files: "#74b9ff",
@@ -227,6 +229,7 @@ const loggers = {
   // Collaboration
   presence: createLogger("presence"),
   cursor: createLogger("cursor"),
+  rooms: createLogger("rooms"),
   // Features
   vr: createLogger("vr"),
   files: createLogger("files"),
@@ -482,6 +485,7 @@ export const {
   render,
   presence,
   cursor,
+  rooms,
   vr,
   files,
   auth,

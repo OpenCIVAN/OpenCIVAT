@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { viewGroupManager } from '@Core/data/managers/ViewGroupManager.js';
 import { VIEWGROUP_STATES } from '@Core/data/models/ViewGroup.js';
+import { viewGroup as viewGroupLog } from '@Utils/logger.js';
 
 /**
  * Main hook for ViewGroup management
@@ -17,16 +18,21 @@ export function useViewGroups(workspaceId = null) {
     const [activeViewGroupId, setActiveViewGroupId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const LOAD_TIMEOUT_MS = 12000;
+    const LOAD_TIMEOUT_MS = 25000;
+
+    const syncFromManager = useCallback(() => {
+        const all = viewGroupManager.getAllViewGroups?.() || [];
+        setViewGroups([...all]);
+        return all;
+    }, []);
 
     // Load ViewGroups on mount or workspace change
     useEffect(() => {
         if (!workspaceId) {
-            if (process.env.NODE_ENV === 'development') {
-                console.debug('[useViewGroups] No workspaceId provided, skipping load');
-            }
+            viewGroupLog.trace('[useViewGroups] No workspaceId provided, skipping load');
             setIsLoading(false);
             setViewGroups([]);
+            setError(null);
             return;
         }
 
@@ -51,22 +57,26 @@ export function useViewGroups(workspaceId = null) {
             setIsLoading(true);
             setError(null);
             try {
-                if (process.env.NODE_ENV === 'development') {
-                    console.debug(`[useViewGroups] Loading ViewGroups for workspace: ${workspaceId}`);
-                }
+                viewGroupLog.trace(`[useViewGroups] Loading ViewGroups for workspace: ${workspaceId}`);
                 viewGroupManager.initialize(workspaceId);
+
+                // Show any currently cached groups immediately to reduce blank flashes.
+                const cached = viewGroupManager.getAllViewGroups?.() || [];
+                if (cached.length > 0 && isActive) {
+                    setViewGroups([...cached]);
+                }
+
                 await withTimeout(viewGroupManager.loadFromServer(workspaceId), LOAD_TIMEOUT_MS);
-                const loaded = viewGroupManager.getAllViewGroups();
-                if (process.env.NODE_ENV === 'development') {
-                    console.debug(`[useViewGroups] Loaded ${loaded.length} ViewGroup(s)`, loaded);
-                }
-                if (isActive) {
-                    setViewGroups(loaded);
-                }
+                const loaded = syncFromManager();
+                viewGroupLog.trace(`[useViewGroups] Loaded ${loaded.length} ViewGroup(s)`, loaded);
             } catch (err) {
-                console.error('[useViewGroups] Failed to load ViewGroups:', err);
+                viewGroupLog.error('[useViewGroups] Failed to load ViewGroups:', err);
                 if (isActive) {
                     setError(err.message);
+                    const fallback = viewGroupManager.getAllViewGroups?.() || [];
+                    if (fallback.length > 0) {
+                        setViewGroups([...fallback]);
+                    }
                 }
             } finally {
                 if (isActive) {
@@ -80,33 +90,35 @@ export function useViewGroups(workspaceId = null) {
         return () => {
             isActive = false;
         };
-    }, [workspaceId]);
+    }, [workspaceId, syncFromManager]);
 
     // Subscribe to ViewGroupManager events
     useEffect(() => {
-        const handleCreated = ({ viewGroup }) => {
-            setViewGroups(prev => [...prev, viewGroup]);
+        const handleCreated = () => {
+            syncFromManager();
         };
 
-        const handleUpdated = ({ viewGroup }) => {
-            setViewGroups(prev =>
-                prev.map(vg => vg.id === viewGroup.id ? viewGroup : vg)
-            );
+        const handleUpdated = () => {
+            syncFromManager();
         };
 
         const handleDeleted = ({ viewGroupId }) => {
-            setViewGroups(prev => prev.filter(vg => vg.id !== viewGroupId));
+            syncFromManager();
             if (activeViewGroupId === viewGroupId) {
                 setActiveViewGroupId(null);
             }
         };
 
-        const handleLinked = ({ originatorGroupId, targetGroupId }) => {
-            setViewGroups(viewGroupManager.getAllViewGroups());
+        const handleLinked = () => {
+            syncFromManager();
         };
 
-        const handleUnlinked = ({ groupId }) => {
-            setViewGroups(viewGroupManager.getAllViewGroups());
+        const handleUnlinked = () => {
+            syncFromManager();
+        };
+
+        const handleViewChanged = () => {
+            syncFromManager();
         };
 
         viewGroupManager.on('viewGroupCreated', handleCreated);
@@ -114,6 +126,8 @@ export function useViewGroups(workspaceId = null) {
         viewGroupManager.on('viewGroupDeleted', handleDeleted);
         viewGroupManager.on('viewGroupLinked', handleLinked);
         viewGroupManager.on('viewGroupUnlinked', handleUnlinked);
+        viewGroupManager.on('viewAdded', handleViewChanged);
+        viewGroupManager.on('viewRemoved', handleViewChanged);
 
         return () => {
             viewGroupManager.off('viewGroupCreated', handleCreated);
@@ -121,8 +135,10 @@ export function useViewGroups(workspaceId = null) {
             viewGroupManager.off('viewGroupDeleted', handleDeleted);
             viewGroupManager.off('viewGroupLinked', handleLinked);
             viewGroupManager.off('viewGroupUnlinked', handleUnlinked);
+            viewGroupManager.off('viewAdded', handleViewChanged);
+            viewGroupManager.off('viewRemoved', handleViewChanged);
         };
-    }, [activeViewGroupId]);
+    }, [activeViewGroupId, syncFromManager]);
 
     // Filter to only visible ViewGroups (hide solo implicit groups)
     const visibleViewGroups = useMemo(() => {
@@ -143,6 +159,7 @@ export function useViewGroups(workspaceId = null) {
                 layoutId,
                 workspaceId,
                 name: templateId ? `From Template` : `New Group`,
+                isExplicit: true,
             });
             setActiveViewGroupId(viewGroup.id);
             return viewGroup;

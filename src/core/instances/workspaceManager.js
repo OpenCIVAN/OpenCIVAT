@@ -785,7 +785,7 @@ class WorkspaceManager {
     }
 
     if (!instance.handler?.resumeInstance) {
-      log.warn(`Handler for instance ${instanceId} doesn't support resume`);
+      log.debug(`Handler for instance ${instanceId} doesn't support resume`);
       return false;
     }
 

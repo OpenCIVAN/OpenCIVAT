@@ -166,7 +166,7 @@ CanvasTab.propTypes = {
     workspace: PropTypes.shape({
         id: PropTypes.string.isRequired,
         name: PropTypes.string.isRequired,
-        type: PropTypes.oneOf(['workspace', 'subset', 'scratch']),
+        type: PropTypes.oneOf(['workspace', 'subset', 'scratch', 'project', 'personal', 'breakout']),
         isOpen: PropTypes.bool,
         hasChanges: PropTypes.bool,
         hasBreakout: PropTypes.bool,

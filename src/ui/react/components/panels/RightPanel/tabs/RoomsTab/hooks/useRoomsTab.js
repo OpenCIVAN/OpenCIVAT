@@ -101,7 +101,7 @@ export function useRoomsTab(options = {}) {
   // Get project ID from props or sessionManager
   const projectId = propProjectId || sessionManager.getProjectId?.() || sessionManager.getRoomId?.();
 
-  // Debug: Log which projectId we're using
+  // Verbose startup diagnostics (gated by logger category/level).
   log.debug("useRoomsTab initialized with projectId:", {
     fromProps: propProjectId,
     fromSessionManager: sessionManager.getProjectId?.(),
