@@ -168,7 +168,9 @@ export const VGFocusedView = memo(function VGFocusedView({
       dragStartRef.current = null;
 
       if (!isDragging) {
-        // Threshold not crossed — treat as click
+        // Threshold not crossed: explicit click fallback because pointerdown
+        // prevents default and some browsers won't emit click on filled cells.
+        handleCellClick(cellIndex, upEvt);
         return;
       }
 
@@ -189,7 +191,7 @@ export const VGFocusedView = memo(function VGFocusedView({
 
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
-  }, [quickOps, focusedSlots, onCellDragComplete]);
+  }, [quickOps, focusedSlots, onCellDragComplete, handleCellClick]);
 
   // Hit-test pointer position against rendered cell rects
   const hitTestCells = useCallback((clientX, clientY, excludeIndex) => {

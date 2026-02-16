@@ -1695,10 +1695,12 @@ export function CanvasGrid({
         viewGroupManager.on('viewGroupCreated', refresh);
         viewGroupManager.on('viewGroupUpdated', refresh);
         viewGroupManager.on('viewGroupDeleted', refresh);
+        viewGroupManager.on('ready', refresh);
         return () => {
             viewGroupManager.off('viewGroupCreated', refresh);
             viewGroupManager.off('viewGroupUpdated', refresh);
             viewGroupManager.off('viewGroupDeleted', refresh);
+            viewGroupManager.off('ready', refresh);
         };
     }, []);
 

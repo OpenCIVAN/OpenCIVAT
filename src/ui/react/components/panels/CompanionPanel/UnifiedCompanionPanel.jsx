@@ -324,7 +324,8 @@ export const UnifiedCompanionPanel = memo(function UnifiedCompanionPanel({
         fileType: dataset.type,
       };
       if (e?.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'copy';
+        // Views support both move (default) and copy (duplicate via modifier).
+        e.dataTransfer.effectAllowed = 'copyMove';
       }
       safeSetDragData(e?.dataTransfer, 'text', payload);
       safeSetDragData(e?.dataTransfer, 'text/plain', payload);

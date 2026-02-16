@@ -22,9 +22,15 @@ export function useViewGroups(workspaceId = null) {
 
     const syncFromManager = useCallback(() => {
         const all = viewGroupManager.getAllViewGroups?.() || [];
-        setViewGroups([...all]);
-        return all;
-    }, []);
+        const filtered = workspaceId
+            ? all.filter((vg) => {
+                const vgWorkspaceId = vg?.workspaceId ?? vg?.workspace_id ?? null;
+                return !vgWorkspaceId || vgWorkspaceId === workspaceId;
+            })
+            : all;
+        setViewGroups([...filtered]);
+        return filtered;
+    }, [workspaceId]);
 
     // Load ViewGroups on mount or workspace change
     useEffect(() => {
@@ -61,22 +67,18 @@ export function useViewGroups(workspaceId = null) {
                 viewGroupManager.initialize(workspaceId);
 
                 // Show any currently cached groups immediately to reduce blank flashes.
-                const cached = viewGroupManager.getAllViewGroups?.() || [];
-                if (cached.length > 0 && isActive) {
-                    setViewGroups([...cached]);
-                }
+                syncFromManager();
+                if (!isActive) return;
 
                 await withTimeout(viewGroupManager.loadFromServer(workspaceId), LOAD_TIMEOUT_MS);
+                if (!isActive) return;
                 const loaded = syncFromManager();
                 viewGroupLog.trace(`[useViewGroups] Loaded ${loaded.length} ViewGroup(s)`, loaded);
             } catch (err) {
                 viewGroupLog.error('[useViewGroups] Failed to load ViewGroups:', err);
                 if (isActive) {
                     setError(err.message);
-                    const fallback = viewGroupManager.getAllViewGroups?.() || [];
-                    if (fallback.length > 0) {
-                        setViewGroups([...fallback]);
-                    }
+                    syncFromManager();
                 }
             } finally {
                 if (isActive) {
@@ -121,6 +123,10 @@ export function useViewGroups(workspaceId = null) {
             syncFromManager();
         };
 
+        const handleReady = () => {
+            syncFromManager();
+        };
+
         viewGroupManager.on('viewGroupCreated', handleCreated);
         viewGroupManager.on('viewGroupUpdated', handleUpdated);
         viewGroupManager.on('viewGroupDeleted', handleDeleted);
@@ -128,6 +134,7 @@ export function useViewGroups(workspaceId = null) {
         viewGroupManager.on('viewGroupUnlinked', handleUnlinked);
         viewGroupManager.on('viewAdded', handleViewChanged);
         viewGroupManager.on('viewRemoved', handleViewChanged);
+        viewGroupManager.on('ready', handleReady);
 
         return () => {
             viewGroupManager.off('viewGroupCreated', handleCreated);
@@ -137,6 +144,7 @@ export function useViewGroups(workspaceId = null) {
             viewGroupManager.off('viewGroupUnlinked', handleUnlinked);
             viewGroupManager.off('viewAdded', handleViewChanged);
             viewGroupManager.off('viewRemoved', handleViewChanged);
+            viewGroupManager.off('ready', handleReady);
         };
     }, [activeViewGroupId, syncFromManager]);
 

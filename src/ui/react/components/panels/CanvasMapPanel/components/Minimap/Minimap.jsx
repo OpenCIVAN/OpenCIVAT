@@ -122,6 +122,7 @@ export const Minimap = memo(function Minimap({
   const containerRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState(null);
+  const dropTargetRef = useRef(null);
   const dragPayloadRef = useRef(null);
 
   // Edit mode VG move state
@@ -574,6 +575,7 @@ export const Minimap = memo(function Minimap({
         if (e.currentTarget.contains(e.relatedTarget)) return;
         setIsDragOver(false);
         setDropTarget(null);
+        dropTargetRef.current = null;
         dragPayloadRef.current = null;
       }}
       onDragOver={(e) => {
@@ -589,11 +591,21 @@ export const Minimap = memo(function Minimap({
         const isMove = payload?.type === 'vg-place'
           || payload?.type === 'vg-import'
           || isViewLike;
-        e.dataTransfer.dropEffect = isMove ? 'move' : 'copy';
+        const allowed = String(e.dataTransfer?.effectAllowed || '').toLowerCase();
+        const allowsCopy = !allowed || allowed === 'all' || allowed === 'uninitialized' || allowed.includes('copy');
+        const allowsMove = !allowed || allowed === 'all' || allowed === 'uninitialized' || allowed.includes('move');
+        let preferredDropEffect = isMove ? 'move' : 'copy';
+        if (preferredDropEffect === 'move' && !allowsMove && allowsCopy) {
+          preferredDropEffect = 'copy';
+        } else if (preferredDropEffect === 'copy' && !allowsCopy && allowsMove) {
+          preferredDropEffect = 'move';
+        }
+        e.dataTransfer.dropEffect = preferredDropEffect;
         setIsDragOver(true);
         const data = payload || { type: 'unknown' };
         const target = computeDropTarget(e, data);
         setDropTarget(target);
+        dropTargetRef.current = target;
       }}
       onDrop={(e) => {
         if (!onDropItem || !containerRef.current) return;
@@ -605,12 +617,15 @@ export const Minimap = memo(function Minimap({
         const normalizedData = data.type === 'vg-import' && !focusedVG
           ? { ...data, type: 'vg-place' }
           : data;
-        const target = computeDropTarget(e, normalizedData);
+        // Use the last drag-over target when available so the drop position
+        // matches the visible indicator even if drop-event coordinates wobble.
+        const target = dropTargetRef.current || computeDropTarget(e, normalizedData);
         if (!target) return;
 
         onDropItem({ row: target.row, col: target.col, data: normalizedData });
         setIsDragOver(false);
         setDropTarget(null);
+        dropTargetRef.current = null;
         dragPayloadRef.current = null;
       }}
     >

@@ -127,26 +127,46 @@ export class ViewGroupManager extends BaseManager {
 
             this._log.debug(`Found ${serverGroups.length} ViewGroup(s) on server`);
 
-            let addedCount = 0;
+            let upsertedCount = 0;
+            const serverIds = new Set();
             for (const serverGroup of serverGroups) {
-                if (this._viewGroups.has(serverGroup.id)) {
-                    continue;
-                }
-
                 try {
+                    if (!serverGroup?.id) continue;
+                    serverIds.add(serverGroup.id);
                     const viewGroup = ViewGroup.fromServerResponse(serverGroup);
+                    const existing = this._viewGroups.get(viewGroup.id);
+                    if (existing) {
+                        this._removeLinkObservers(existing);
+                    }
                     this._viewGroups.set(viewGroup.id, viewGroup);
                     this._setupLinkObservers(viewGroup);
-                    addedCount++;
+                    upsertedCount++;
                 } catch (error) {
                     this._log.error(`Failed to load ViewGroup ${serverGroup.id}:`, error);
                 }
             }
 
-            this._log.info(`Loaded ${addedCount} ViewGroup(s) from server`);
+            // Keep manager state in sync for this workspace by removing stale groups
+            // that were not returned by the server in this load.
+            let removedCount = 0;
+            if (wsId) {
+                for (const [groupId, viewGroup] of this._viewGroups.entries()) {
+                    if ((viewGroup?.workspaceId || null) !== wsId) continue;
+                    if (serverIds.has(groupId)) continue;
+                    this._removeLinkObservers(viewGroup);
+                    this._viewGroups.delete(groupId);
+                    removedCount++;
+                }
+            }
+
+            this._log.info(
+                `Loaded ${upsertedCount} ViewGroup(s) from server`
+                + (removedCount > 0 ? ` (removed ${removedCount} stale)` : '')
+            );
 
             this._isReady = true;
-            this._emit('ready', { count: this._viewGroups.size });
+            const scopeCount = wsId ? this.getViewGroupsForWorkspace(wsId).length : this._viewGroups.size;
+            this._emit('ready', { count: scopeCount, workspaceId: wsId });
 
             return serverGroups.length;
         } catch (error) {
