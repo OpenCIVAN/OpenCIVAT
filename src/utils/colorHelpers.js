@@ -3,17 +3,21 @@
  * Extracted from components to be reusable across the app
  */
 
+import { hexToRgb as hexToRgb255, rgbToHex as rgbToHex255 } from './colorUtils.js';
+
+const DEFAULT_RGB_NORMALIZED = [96 / 255, 165 / 255, 250 / 255];
+
 /**
  * Parse hex color to RGB array [0-1]
  * @param {string} hexColor - Color in hex format (#RRGGBB)
  * @returns {[number, number, number]} RGB array with values 0-1
  */
 export function hexToRgb(hexColor) {
-  const hex = hexColor.replace("#", "");
-  const r = parseInt(hex.substring(0, 2), 16) / 255;
-  const g = parseInt(hex.substring(2, 4), 16) / 255;
-  const b = parseInt(hex.substring(4, 6), 16) / 255;
-  return [r, g, b];
+  const { r, g, b } = hexToRgb255(hexColor);
+  if ([r, g, b].some((value) => Number.isNaN(value))) {
+    return DEFAULT_RGB_NORMALIZED;
+  }
+  return [r / 255, g / 255, b / 255];
 }
 
 /**
@@ -33,11 +37,16 @@ export function clamp(value, min, max) {
  * @returns {string} Hex color (#RRGGBB)
  */
 export function rgbToHex(rgb) {
-  const toHex = (n) => {
-    const hex = Math.round(n * 255).toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  };
-  return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
+  if (!Array.isArray(rgb) || rgb.length < 3) {
+    return rgbToHex255(96, 165, 250);
+  }
+
+  const [r, g, b] = rgb;
+  return rgbToHex255(
+    clamp(r, 0, 1) * 255,
+    clamp(g, 0, 1) * 255,
+    clamp(b, 0, 1) * 255
+  );
 }
 
 /**

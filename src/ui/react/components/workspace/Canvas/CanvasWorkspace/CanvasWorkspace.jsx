@@ -39,6 +39,7 @@ import { canvasManager } from '@Core/data/managers/CanvasManager.js';
 import { getViewConfigurationManager, getDatasetManager } from '@Init/appInitializer.js';
 import { sessionManager } from '@Core/session/sessionManager.js';
 import { workspaceManager } from '@Core/instances/workspaceManager.js';
+import { vrManager } from '@Core/vr/VRManager.js';
 import { workspace as log } from '@Utils/logger.js';
 import { normalizeInstanceToolsResult } from '@UI/react/utils/instanceTools.js';
 import { useCanvasHistory } from '@UI/react/store/canvasHistoryStore';
@@ -500,6 +501,7 @@ function CanvasWorkspaceInner({
 }) {
     const layoutContext = useLayoutContext();
     const { isVR } = useAdaptive();
+    const [isInImmersiveSession, setIsInImmersiveSession] = useState(() => vrManager.isInVR());
     const setLeftDockedOpen = layoutContext?.setLeftOpen || (() => { });
     const setRightDockedOpen = layoutContext?.setRightOpen || (() => { });
     // Use sessionManager room ID as fallback project ID
@@ -721,6 +723,27 @@ function CanvasWorkspaceInner({
             }
         };
     }, []);
+
+    useEffect(() => {
+        const handleSessionStarted = () => setIsInImmersiveSession(true);
+        const handleSessionEnded = () => setIsInImmersiveSession(false);
+
+        vrManager.on('sessionStarted', handleSessionStarted);
+        vrManager.on('sessionEnded', handleSessionEnded);
+        setIsInImmersiveSession(vrManager.isInVR());
+
+        return () => {
+            vrManager.off('sessionStarted', handleSessionStarted);
+            vrManager.off('sessionEnded', handleSessionEnded);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!isInImmersiveSession) return;
+        setLeftPanelOpen(false);
+        setRightPanelOpen(false);
+        setShowSubsetPanel(false);
+    }, [isInImmersiveSession]);
 
     // Handle workspace change
     const handleWorkspaceChange = useCallback((workspaceId) => {
@@ -2105,13 +2128,31 @@ function CanvasWorkspaceInner({
                 onCopyView={handleDuplicateView}
                 onOpenSettings={handleViewSettings}
                 isVRAvailable={true}
-                isInVR={false}
-                onToggleVR={() => {
-                    log.debug('VR toggle requested');
+                isInVR={isInImmersiveSession}
+                onToggleVR={async () => {
+                    if (isInImmersiveSession) {
+                        await vrManager.exitVR();
+                        return;
+                    }
+
+                    if (!contextActiveView?.id) {
+                        log.warn('Cannot enter VR: no active view selected');
+                        return;
+                    }
+
+                    const instance = workspaceManager.getInstanceByViewId(contextActiveView.id);
+                    const glContext = instance?.handler?.getWebGLContext?.();
+
+                    await vrManager.enterVR(glContext, {
+                        navigationMode: 'teleport',
+                        deviceProfile: 'meta-quest',
+                        optionalFeatures: ['bounded-floor', 'local-floor', 'hand-tracking', 'layers'],
+                    });
                 }}
             />
         </div>
     ), [
+        isInImmersiveSession,
         activeCanvasId,
         contextActiveView,
         contextUpdateLink,
@@ -2243,7 +2284,7 @@ function CanvasWorkspaceInner({
                 </div>
             ) : shouldRenderChrome ? (
                 <CanvasChrome
-                    className="canvas-workspace"
+                    className={`canvas-workspace ${isInImmersiveSession ? 'canvas-workspace--immersive' : ''}`}
                     headerProps={{
                         canGoBack,
                         onGoBack: goBack,

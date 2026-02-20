@@ -345,6 +345,30 @@
 }
 
 // ============================================================================
+// IMMERSIVE VR MODE
+// ============================================================================
+
+.canvas-workspace--immersive {
+  min-width: 0;
+
+  .canvas-chrome-header,
+  .canvas-chrome-edit-bar,
+  .footer1-instance-tools,
+  .canvas-footer2,
+  .canvas-info-footer,
+  .edge-trigger,
+  .floating-panel {
+    display: none !important;
+  }
+
+  .canvas-workspace__content,
+  .canvas-workspace__canvas {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+// ============================================================================
 // RESPONSIVE
 // ============================================================================
 

@@ -89,7 +89,7 @@ function VRLaunchModal({
 
   // Configuration state
   const [selectionType, setSelectionType] = useState("full");
-  const [navigationMode, setNavigationMode] = useState("fly");
+  const [navigationMode, setNavigationMode] = useState("teleport");
   const [scalePreset, setScalePreset] = useState("normal");
   const [customScale, setCustomScale] = useState(1.0);
   const [useCustomScale, setUseCustomScale] = useState(false);
@@ -203,6 +203,8 @@ function VRLaunchModal({
         sessionId: session.id,
         scale: effectiveScale,
         navigationMode,
+        deviceProfile: "meta-quest",
+        optionalFeatures: ["bounded-floor", "local-floor", "hand-tracking", "layers"],
       });
 
       toast.success("VR session started");
@@ -284,7 +286,7 @@ function VRLaunchModal({
         {!checkingSupport && vrSupported && vrCapabilities && (
           <div className="vr-launch-modal__status vr-launch-modal__status--supported">
             <Icon name="check" size={16} />
-            <span>VR headset detected</span>
+            <span>VR headset detected (Meta Quest Browser recommended)</span>
           </div>
         )}
 

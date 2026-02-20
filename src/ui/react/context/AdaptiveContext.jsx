@@ -269,7 +269,9 @@ export function AdaptiveProvider({ children, initialMode = 'desktop', initialDen
 
         // Subscribe to VRManager events
         vrManager.on('vrEntered', handleVREnter);
+        vrManager.on('sessionStarted', handleVREnter);
         vrManager.on('vrExited', handleVRExit);
+        vrManager.on('sessionEnded', handleVRExit);
 
         // Check initial state - if already in VR, set mode
         if (vrManager.isInVR?.()) {
@@ -278,7 +280,9 @@ export function AdaptiveProvider({ children, initialMode = 'desktop', initialDen
 
         return () => {
             vrManager.off('vrEntered', handleVREnter);
+            vrManager.off('sessionStarted', handleVREnter);
             vrManager.off('vrExited', handleVRExit);
+            vrManager.off('sessionEnded', handleVRExit);
         };
     }, [autoSyncVR]);
 

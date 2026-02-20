@@ -61,6 +61,7 @@ class VRManager extends BaseManager {
     // Frame timing
     this._lastFrameTime = 0;
     this._frameCount = 0;
+    this._sessionConfig = null;
 
     // Bind methods for event handlers
     this._handleSessionEnd = this._handleSessionEnd.bind(this);
@@ -149,7 +150,7 @@ class VRManager extends BaseManager {
    * @param {WebGLRenderingContext} glContext - Optional WebGL context to use
    * @returns {Promise<void>}
    */
-  async enterVR(glContext = null) {
+  async enterVR(glContext = null, options = {}) {
     log.info("VRManager.enterVR() - Starting VR session");
 
     if (this._xrSession) {
@@ -172,11 +173,24 @@ class VRManager extends BaseManager {
 
       log.debug("Requesting immersive-vr session...");
 
+      const requestedFeatures = {
+        requiredFeatures: Array.isArray(options.requiredFeatures)
+          ? options.requiredFeatures
+          : ["local-floor"],
+        optionalFeatures: Array.isArray(options.optionalFeatures)
+          ? options.optionalFeatures
+          : ["bounded-floor", "hand-tracking", "layers"],
+      };
+
+      this._sessionConfig = {
+        sessionId: options.sessionId || null,
+        navigationMode: options.navigationMode || "fly",
+        scale: options.scale ?? 1,
+        deviceProfile: options.deviceProfile || "generic",
+      };
+
       // Request immersive session with features
-      this._xrSession = await navigator.xr.requestSession("immersive-vr", {
-        requiredFeatures: ["local-floor"],
-        optionalFeatures: ["bounded-floor", "hand-tracking", "layers"],
-      });
+      this._xrSession = await navigator.xr.requestSession("immersive-vr", requestedFeatures);
 
       log.debug("XR session obtained, setting up event listeners...");
 
@@ -224,6 +238,12 @@ class VRManager extends BaseManager {
       this._emit("sessionStarted", {
         session: this._xrSession,
         referenceSpace: this._referenceSpace,
+        sessionType: "immersive-vr",
+        config: this._sessionConfig,
+      });
+      this._emit("vrEntered", {
+        sessionType: "immersive-vr",
+        config: this._sessionConfig,
       });
       this._emit("modeChanged", { mode: this._mode });
 
@@ -335,6 +355,7 @@ class VRManager extends BaseManager {
     this._frameId = null;
     this._isRendering = false;
     this._frameCount = 0;
+    this._sessionConfig = null;
 
     // Reset mode
     const wasIsolated = this._mode === "isolated";
@@ -343,6 +364,7 @@ class VRManager extends BaseManager {
 
     // Emit events
     this._emit("sessionEnded", { wasIsolated });
+    this._emit("vrExited", { wasIsolated });
     this._emit("modeChanged", { mode: this._mode });
   }
 
@@ -826,6 +848,15 @@ class VRManager extends BaseManager {
    */
   getXRLayer() {
     return this._xrLayer;
+  }
+
+
+  /**
+   * Get current session configuration
+   * @returns {{sessionId:string|null,navigationMode:string,scale:number,deviceProfile:string}|null}
+   */
+  getSessionConfig() {
+    return this._sessionConfig ? { ...this._sessionConfig } : null;
   }
 
   // ===========================================================================
